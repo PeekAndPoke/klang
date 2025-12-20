@@ -72,6 +72,7 @@ function queryPattern(pattern, from, to) {
                     // Get note from noteVal or inherit it from eh.value
                     ...(typeof noteVal?.value === 'object' && noteVal.value?.note ? noteVal.value : { note: String(eh.value) }),
                 },
+                cutoff: eh?.cutoff ?? h.cutoff
             };
         });
 

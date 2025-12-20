@@ -23,7 +23,7 @@ class StrudelSynth(
         val pattern = strudel.compile(
             """
             note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-              .sound("sawtooth").lpf(800)
+              .sound("square").lpf(800)
             """.trimIndent()
         )
 
@@ -50,13 +50,12 @@ class StrudelSynth(
         for (i in 0 until topN) {
             val item = result.getArrayElement(i)
             if (item.hasMember("notesExpanded")) {
-                val baseT = item.getMember("t").asDouble()
                 val sub = item.getMember("notesExpanded")
                 val m = sub.arraySize
                 for (j in 0 until m) {
                     val ev = sub.getArrayElement(j)
                     val t = safeNumber(ev.getMember("t"))
-                    val dur = safeNumber(ev.getMember("dur"))
+                    val dur = safeNumber(ev.getMember("dur")) * 4
                     val v = ev.getMember("value")
                     val note = when {
                         v.hasMember("note") -> v.getMember("note").asString()
@@ -64,13 +63,18 @@ class StrudelSynth(
                         else -> "a4"
                     }
                     val wave = if (v.hasMember("s")) v.getMember("s").asString() else null
-                    val cutoff = if (v.hasMember("cutoff") && v.getMember("cutoff").isNumber) v.getMember("cutoff").asDouble() else null
-                    events += Ev(baseT + t, dur, note, wave, cutoff)
+                    val cutoff = when {
+                        v.hasMember("cutoff") && v.getMember("cutoff").isNumber -> v.getMember("cutoff").asDouble()
+                        ev.hasMember("cutoff") && ev.getMember("cutoff").isNumber -> ev.getMember("cutoff").asDouble()
+                        else -> null
+                    }
+                    // JS side already returns absolute t in cycles for sub-events; don't add parent base time
+                    events += Ev(t, dur, note, wave, cutoff)
                 }
             }
         }
 
-        println("[StrudelSynth] gathered ${events.size} sub-events in one cycle")
+        println("[StrudelSynth] gathered ${events.size} sub-events in window")
 
         // Simple audio output
         val format = AudioFormat(sampleRate.toFloat(), 16, 1, true, false)
@@ -78,21 +82,38 @@ class StrudelSynth(
         line.open(format)
         line.start()
 
-        // Sort by start time; render sequentially (ignoring true start positions for now)
+        // Sort by start time; render sequentially inserting silence so t/dur are respected (simple timing)
         val sorted = events.sortedBy { it.t }
+
+        // Map cycles -> seconds for this demo (adjust if you want it faster/slower)
+        val cps = 2.0 // 2 cycles per second => 1 cycle = 0.5s
+        val secPerCycle = 1.0 / cps
+
+        var cursorSec = 0.0
         for (e in sorted) {
             val midi = noteNameToMidi(e.note)
             val hz = midiToFreq(midi)
-            // Temporary: 1 cycle = 0.25s just to audition
-            val seconds = e.dur * 2
-            val buf = renderTone(freq = hz, seconds = seconds, amp = 0.8, wave = e.wave, cutoffHz = e.cutoff)
+
+            val startSec = e.t * secPerCycle
+            val durSec = (e.dur * secPerCycle).coerceAtLeast(0.10)
+
+            // write silence for gap
+            val gapSec = (startSec - cursorSec).coerceAtLeast(0.0)
+            if (gapSec > 0.0) {
+                val gapFrames = (gapSec * sampleRate).toInt()
+                if (gapFrames > 0) {
+                    val silence = ByteArray(gapFrames * 2)
+                    line.write(silence, 0, silence.size)
+                }
+                cursorSec += gapSec
+            }
+
+            val buf = renderTone(freq = hz, seconds = durSec, amp = 0.8, wave = e.wave, cutoffHz = e.cutoff)
             line.write(buf, 0, buf.size)
+            cursorSec += durSec
+
             println(
-                "[StrudelSynth] note=${e.note} wave=${e.wave} cutoff=${e.cutoff} midi=${"%.1f".format(midi)} hz=${"%.2f".format(hz)} durCyc=${
-                    "%.3f".format(
-                        e.dur
-                    )
-                }"
+                "[StrudelSynth] note=${e.note} wave=${e.wave} cutoff=${e.cutoff} midi=${"%.1f".format(midi)} hz=${"%.2f".format(hz)} tCyc=${"%.3f".format(e.t)} durCyc=${"%.3f".format(e.dur)}"
             )
         }
 
@@ -150,9 +171,10 @@ class StrudelSynth(
         // One-pole LPF state
         var y = 0.0
         val alpha = cutoffHz?.let { c ->
-            val cutoff = c.coerceIn(40.0, 20_000.0)
-            val rc = 1.0 / (2.0 * Math.PI * cutoff)
-            1.0 / (rc * sampleRate + 1.0)
+            val nyquist = 0.5 * sampleRate
+            val cutoff = c.coerceIn(40.0, nyquist - 1.0)
+            // one-pole LPF coefficient in exponential form
+            1.0 - kotlin.math.exp(-2.0 * Math.PI * cutoff / sampleRate)
         }
 
         for (i in 0 until frames) {
