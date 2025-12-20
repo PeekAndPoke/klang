@@ -2,10 +2,6 @@ package io.peekandpoke
 
 import Strudel
 import org.graalvm.polyglot.Context
-import org.graalvm.polyglot.Source
-import org.graalvm.polyglot.Value
-import org.graalvm.polyglot.io.IOAccess
-import java.io.File
 import java.nio.file.Path
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
@@ -47,61 +43,7 @@ fun main() {
         )
     }
 
-    complexJsLodashTest()
-
     complexJsStrudelTest()
-}
-
-fun complexJsLodashTest() {
-    // 1. Point to your JS file
-    val jsFile = File("./jssrc/index.js")
-
-    // 2. Create a context with "CommonJS" and "File Access" enabled
-    val context = Context.newBuilder("js")
-        .allowIO(IOAccess.ALL)               // Required to read node_modules
-        .allowExperimentalOptions(true)
-        // Enable CommonJS support
-        .option("js.commonjs-require", "true")
-        // Tell it where to look for modules (usually the current dir)
-        .option("js.commonjs-require-cwd", File(".").absolutePath)
-        .build()
-
-//    // Polyfills
-//    context.eval(
-//        "js",
-//        """
-//    (function () {
-//      // browser-ish globals some libs probe for:
-//      if (typeof globalThis.window === "undefined") globalThis.window = globalThis;
-//      if (typeof globalThis.self === "undefined") globalThis.self = globalThis;
-//
-//      // minimal performance.now() for timing
-//      if (typeof globalThis.performance === "undefined") {
-//        globalThis.performance = { now: function () { return Date.now(); } };
-//      } else if (typeof globalThis.performance.now !== "function") {
-//        globalThis.performance.now = function () { return Date.now(); };
-//      }
-//    })();
-//    """.trimIndent()
-//    )
-
-    context.use {
-        // 3. Load and execute the file
-        val source = Source.newBuilder("js", jsFile).build()
-        val exports = context.eval(source)
-
-        // The 'test' function is a member of the returned exports object
-        val testFunction = exports.getMember("test")
-
-        if (testFunction == null || !testFunction.canExecute()) {
-            println("Could not find or execute 'test' in module.exports")
-            return
-        }
-
-        val testFnResult = testFunction.execute()
-
-        println("Test fn result: $testFnResult")
-    }
 }
 
 // ... existing code ...
