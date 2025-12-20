@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# goto directory of this script
+cd "$(dirname "$0")" || exit
+
+pwd
+
+npm install
+
 ./node_modules/.bin/esbuild ./strudel-entry.mjs \
 --bundle \
 --format=esm \
