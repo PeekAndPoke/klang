@@ -14,7 +14,8 @@
     "@strudel/core": "1.2.5",
     "@strudel/mini": "1.2.5",
     "@strudel/transpiler": "1.2.5",
-    "@perf-tools/performance": "1.1.1"
+    "@perf-tools/performance": "1.1.1",
+    "pretty-format": "30.2.0"
   },
   "devDependencies": {
     "esbuild": "^0.27.2"

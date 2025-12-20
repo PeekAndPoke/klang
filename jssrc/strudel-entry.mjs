@@ -5,57 +5,7 @@ import * as core from "@strudel/core";
 import * as mini from "@strudel/mini";
 import * as transpiler from "@strudel/transpiler";
 
-
-// noinspection JSUnusedGlobalSymbols
-/**
- * Headless adapter:
- * - Stores one "current" pattern
- * - Allows querying events in an interval
- *
- * Note: We intentionally avoid WebAudio and any "play" functions.
- */
-function createEngine() {
-    let pattern = null;
-
-    // noinspection JSUnusedGlobalSymbols
-    return {
-        // Accept either an already-built Pattern, or a function producing one.
-        // For now, we keep it simple: caller passes a function name and args, or you can wire a parser later.
-        setPatternFromFn(fnName, ...args) {
-            const fn = core[fnName];
-            if (typeof fn !== "function") {
-                throw new Error(`No such core function: ${fnName}`);
-            }
-            return fn(...args);
-        },
-
-        // For a first test, allow installing a Pattern directly (from JS evaluation)
-        setPattern(p) {
-            pattern = p;
-            return true;
-        },
-
-        /**
-         * Query events between fromSec and toSec.
-         * Returns plain JSON-ish objects to cross the polyglot boundary cleanly.
-         */
-        query(fromSec, toSec) {
-            if (!pattern) return [];
-
-            const out = [];
-            // Many Strudel Pattern objects support query-like semantics that yield Haps/values.
-            // We normalize everything into {t, dur, value}.
-            pattern.query(fromSec, toSec, (ev) => {
-                out.push({
-                    t: ev.time ?? ev.t ?? ev.begin ?? ev.start ?? fromSec,
-                    dur: ev.duration ?? ev.dur ?? (ev.span?.duration ?? 0),
-                    value: ev.value ?? ev.val ?? ev
-                });
-            });
-            return out;
-        },
-    };
-}
+import {format as prettyFormat} from 'pretty-format'
 
 // noinspection JSUnusedGlobalSymbols
 /**
@@ -84,11 +34,58 @@ return (function() {
     return fn(...values);
 }
 
+// noinspection JSUnusedGlobalSymbols
+/**
+ * Query events between fromSec and toSec.
+ * Returns plain JSON-ish objects to cross the polyglot boundary cleanly.
+ */
+function queryPattern(pattern, from, to) {
+    if (!pattern) return [];
+
+    // Many Strudel Pattern objects support query-like semantics that yield Haps/values.
+    // We normalize everything into {t, dur, value}.
+    const haps = pattern.queryArc(from, to)
+
+    return haps.map(h => {
+        const base = {
+            t: Number(h.part?.begin?.valueOf?.() ?? 0),
+            dur: Number((h.part?.end?.valueOf?.() ?? 0) - (h.part?.begin?.valueOf?.() ?? 0)),
+            value: h.value
+        };
+
+        console.log(JSON.stringify(base))
+
+        if (!h?.value || h.value.note == null) return {...base, notesExpanded: []};
+
+        // 1) Expand mini-notation within the same time window
+        const expanded = mini.mini(h.value.note).queryArc(0, base.dur);
+
+        // 2) Map each token to a note-value event
+        const expandedNotes = expanded.map(eh => {
+            const nval = core.note(eh.value); // eh.value is like "a" or "c3"
+
+            return {
+                t: Number(eh.part?.begin?.valueOf?.() ?? 0),
+                dur: Number((eh.part?.end?.valueOf?.() ?? 0) - (eh.part?.begin?.valueOf?.() ?? 0)),
+                // carry a uniform shape: { note: string }
+                value: typeof nval?.value === 'object' && nval.value?.note ? nval.value : {note: String(eh.value)},
+            };
+        });
+
+        return {...base, notesExpanded: expandedNotes};
+    });
+}
+
 export {
+    // Polyfills
     performance,
+    // Helper libs
+    prettyFormat,
+    // Strudel
     core,
     mini,
     transpiler,
-    createEngine,
+    // Strudel interop
     compile,
+    queryPattern,
 };
