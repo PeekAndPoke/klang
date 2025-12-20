@@ -42,7 +42,7 @@ class StrudelSynth(
 //        println("[AUDIO] expanded sub-events: $subCount")
 
         // Flatten sub-events from notesExpanded
-        data class Ev(val t: Double, val dur: Double, val note: String)
+        data class Ev(val t: Double, val dur: Double, val note: String, val wave: String?, val cutoff: Double?)
 
         val events = mutableListOf<Ev>()
         val topN = result.arraySize
@@ -63,7 +63,9 @@ class StrudelSynth(
                         v.isString -> v.asString()
                         else -> "a4"
                     }
-                    events += Ev(baseT + t, dur, note)
+                    val wave = if (v.hasMember("s")) v.getMember("s").asString() else null
+                    val cutoff = if (v.hasMember("cutoff") && v.getMember("cutoff").isNumber) v.getMember("cutoff").asDouble() else null
+                    events += Ev(baseT + t, dur, note, wave, cutoff)
                 }
             }
         }
@@ -76,12 +78,6 @@ class StrudelSynth(
         line.open(format)
         line.start()
 
-        // TEST TONE first
-        val test = renderTone(freq = 440.0, seconds = 0.5, amp = 0.6)
-        println("[AUDIO] writing test tone: ${test.size} bytes")
-        line.write(test, 0, test.size)
-        line.drain()
-
         // Sort by start time; render sequentially (ignoring true start positions for now)
         val sorted = events.sortedBy { it.t }
         for (e in sorted) {
@@ -89,10 +85,10 @@ class StrudelSynth(
             val hz = midiToFreq(midi)
             // Temporary: 1 cycle = 0.25s just to audition
             val seconds = e.dur * 2
-            val buf = renderTone(freq = hz, seconds = seconds, amp = 1.0)
+            val buf = renderTone(freq = hz, seconds = seconds, amp = 0.8, wave = e.wave, cutoffHz = e.cutoff)
             line.write(buf, 0, buf.size)
             println(
-                "[StrudelSynth] note=${e.note} midi=${"%.1f".format(midi)} hz=${"%.2f".format(hz)} durCyc=${
+                "[StrudelSynth] note=${e.note} wave=${e.wave} cutoff=${e.cutoff} midi=${"%.1f".format(midi)} hz=${"%.2f".format(hz)} durCyc=${
                     "%.3f".format(
                         e.dur
                     )
@@ -139,23 +135,56 @@ class StrudelSynth(
         return midi.toDouble()
     }
 
-    private fun renderTone(freq: Double, seconds: Double, amp: Double = 0.2): ByteArray {
+    private fun renderTone(
+        freq: Double,
+        seconds: Double,
+        amp: Double = 0.2,
+        wave: String? = null,
+        cutoffHz: Double? = null,
+    ): ByteArray {
         val frames = (seconds * sampleRate).toInt().coerceAtLeast(1)
         val out = ByteArray(frames * 2) // mono int16 LE
         var phase = 0.0
         val inc = 2.0 * Math.PI * freq / sampleRate
+
+        // One-pole LPF state
+        var y = 0.0
+        val alpha = cutoffHz?.let { c ->
+            val cutoff = c.coerceIn(40.0, 20_000.0)
+            val rc = 1.0 / (2.0 * Math.PI * cutoff)
+            1.0 / (rc * sampleRate + 1.0)
+        }
+
         for (i in 0 until frames) {
             val env = when {
                 i < 256 -> i / 256.0
                 i > frames - 512 -> (frames - i) / 512.0
                 else -> 1.0
             }
-            val sample = kotlin.math.sin(phase) * amp * env
+            val raw = when (wave?.lowercase()) {
+                "saw", "sawtooth" -> oscSaw(phase) * (amp * 0.6)
+                "square" -> oscSquare(phase) * (amp * 0.5)
+                else -> kotlin.math.sin(phase) * amp
+            } * env
+
+            val sample = if (alpha != null) {
+                y += alpha * (raw - y); y
+            } else raw
+
             phase += inc
+            if (phase >= 2.0 * Math.PI) phase -= 2.0 * Math.PI
+
             val s = (sample.coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt()
             out[i * 2] = (s and 0xff).toByte()
             out[i * 2 + 1] = ((s ushr 8) and 0xff).toByte()
         }
         return out
     }
+
+    private fun oscSaw(phase: Double): Double {
+        val x = phase / (2.0 * Math.PI)
+        return 2.0 * (x - kotlin.math.floor(x + 0.5))
+    }
+
+    private fun oscSquare(phase: Double): Double = if (kotlin.math.sin(phase) >= 0.0) 1.0 else -1.0
 }

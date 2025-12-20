@@ -53,26 +53,31 @@ function queryPattern(pattern, from, to) {
             value: h.value
         };
 
-        console.log(JSON.stringify(base))
-
         if (!h?.value || h.value.note == null) return {...base, notesExpanded: []};
 
         // 1) Expand mini-notation within the same time window
-        const expanded = mini.mini(h.value.note).queryArc(0, base.dur);
+        const expanded = mini.mini(h.value.note).queryArc(base.t, base.t + base.dur);
 
         // 2) Map each token to a note-value event
-        const expandedNotes = expanded.map(eh => {
-            const nval = core.note(eh.value); // eh.value is like "a" or "c3"
+        const notesExpanded = expanded.map(eh => {
+            const noteVal = core.note(eh.value); // eh.value is like "a" or "c3"
 
             return {
                 t: Number(eh.part?.begin?.valueOf?.() ?? 0),
                 dur: Number((eh.part?.end?.valueOf?.() ?? 0) - (eh.part?.begin?.valueOf?.() ?? 0)),
                 // carry a uniform shape: { note: string }
-                value: typeof nval?.value === 'object' && nval.value?.note ? nval.value : {note: String(eh.value)},
+                value: {
+                    // Inherit from parent hap
+                    ...(h.value || {}),
+                    // Get note from noteVal or inherit it from eh.value
+                    ...(typeof noteVal?.value === 'object' && noteVal.value?.note ? noteVal.value : { note: String(eh.value) }),
+                },
             };
         });
 
-        return {...base, notesExpanded: expandedNotes};
+        notesExpanded.forEach(ne => console.log(JSON.stringify(ne)));
+
+        return {...base, notesExpanded};
     });
 }
 
