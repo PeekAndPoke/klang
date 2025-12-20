@@ -23,7 +23,7 @@ class StrudelSynth(
         val pattern = strudel.compile(
             """
             note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-              .sound("square").lpf(800)
+              .sound("saw").lpf(800)
             """.trimIndent()
         )
 
@@ -186,6 +186,7 @@ class StrudelSynth(
             val raw = when (wave?.lowercase()) {
                 "saw", "sawtooth" -> oscSaw(phase) * (amp * 0.6)
                 "square" -> oscSquare(phase) * (amp * 0.5)
+                "tri", "triangle" -> oscTri(phase) * (amp * 0.7)
                 else -> kotlin.math.sin(phase) * amp
             } * env
 
@@ -209,4 +210,9 @@ class StrudelSynth(
     }
 
     private fun oscSquare(phase: Double): Double = if (kotlin.math.sin(phase) >= 0.0) 1.0 else -1.0
+
+    private fun oscTri(phase: Double): Double {
+        // Triangle via asin(sin) normalized to [-1,1]
+        return (2.0 / Math.PI) * kotlin.math.asin(kotlin.math.sin(phase))
+    }
 }
