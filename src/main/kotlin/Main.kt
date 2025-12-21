@@ -42,7 +42,7 @@ suspend fun main() {
             val pattern = strudel.compile(
                 """
             note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-              .sound("square").lpf(500)
+              .sound("saw").lpf(800).resonance(0.9)
             """.trimIndent()
             )
 

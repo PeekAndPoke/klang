@@ -29,7 +29,7 @@ class StrudelSynth(
                 { SimpleOsc.oscSaw(it) * 0.6 }
             }
 
-            "square" -> {
+            "sqr", "square" -> {
                 { SimpleOsc.oscSquare(it) * 0.5 }
             }
 
@@ -48,7 +48,7 @@ class StrudelSynth(
         val note: String,
         val gain: Double,
         val osc: OscFn,
-        val cutoff: Double?,
+        val filters: List<FilterFn>,
     )
 
     fun extractEvents(pattern: Value, from: Double, to: Double): List<StrudelEvent> {
@@ -63,6 +63,8 @@ class StrudelSynth(
                 val sub = item.getMember("notesExpanded")
                 val m = sub.arraySize
                 for (j in 0 until m) {
+                    val filters = mutableListOf<FilterFn>()
+
                     // Get element
                     val event = sub.getArrayElement(j)
                     // Get timing
@@ -79,8 +81,16 @@ class StrudelSynth(
                         ?: 1.0
                     // Get waveform
                     val osc = simpleOsc(value.getMember("s").safeStringOrNull())
-                    // Get Low pass filter
-                    val cutoff = value.getMember("cutoff").safeNumberOrNull()
+                    // get LPF/HPF resonance
+                    val resonance = value.getMember("resonance").safeNumberOrNull()
+                    // Apply low pass filter?
+                    value.getMember("cutoff").safeNumberOrNull()?.let {
+                        filters.add(SimpleFilters.createLPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
+                    }
+                    // Apply high pass filter?
+                    value.getMember("hcutoff").safeNumberOrNull()?.let {
+                        filters.add(SimpleFilters.createHPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
+                    }
 
                     // add event
                     events += StrudelEvent(
@@ -89,7 +99,7 @@ class StrudelSynth(
                         note = note,
                         gain = gain,
                         osc = osc,
-                        cutoff = cutoff,
+                        filters = filters,
                     )
                 }
             }
@@ -132,20 +142,14 @@ class StrudelSynth(
                 cursorSec += gapSec
             }
 
-            val buf = renderTone(freq = hz, seconds = durSec, gain = e.gain, osc = e.osc, cutoffHz = e.cutoff)
+            val buf = renderTone(freq = hz, seconds = durSec, gain = e.gain, osc = e.osc, filters = e.filters)
             line.write(buf, 0, buf.size)
             cursorSec += durSec
 
             println(
-                "[StrudelSynth] note=${e.note} gain=${e.gain} osc=${e.osc.name()} cutoff=${e.cutoff} midi=${
-                    "%.1f".format(
-                        midi
-                    )
-                } hz=${
-                    "%.2f".format(
-                        hz
-                    )
-                } tCyc=${"%.3f".format(e.t)} durCyc=${"%.3f".format(e.dur)}"
+                "[StrudelSynth] note=${e.note} gain=${e.gain} osc=${e.osc.name()} filters=${e.filters.size} " +
+                        "midi=${"%.1f".format(midi)} hz=${"%.2f".format(hz)} " +
+                        "tCyc=${"%.3f".format(e.t)} durCyc=${"%.3f".format(e.dur)}"
             )
         }
 
@@ -160,22 +164,12 @@ class StrudelSynth(
         seconds: Double,
         gain: Double,
         osc: OscFn,
-        cutoffHz: Double? = null,
+        filters: List<FilterFn>,
     ): ByteArray {
         val frames = (seconds * sampleRate).toInt().coerceAtLeast(1)
         val out = ByteArray(frames * 2) // mono int16 LE
         var phase = 0.0
         val inc = 2.0 * Math.PI * freq / sampleRate
-
-        // One-pole LPF state
-        var y = 0.0
-
-        val lowPass = cutoffHz?.let { c ->
-            val nyquist = 0.5 * sampleRate
-            val cutoff = c.coerceIn(40.0, nyquist - 1.0)
-            // one-pole LPF coefficient in exponential form
-            1.0 - kotlin.math.exp(-2.0 * Math.PI * cutoff / sampleRate)
-        }
 
         for (i in 0 until frames) {
             val env = when {
@@ -184,18 +178,15 @@ class StrudelSynth(
                 else -> 1.0
             }
 
-            // apply oscillator
-            val raw = osc(phase) * gain * env
+            // create sample through oscillator
+            var sample = osc(phase) * gain * env
 
-            // apply low pass
-            val sample = if (lowPass != null) {
-                y += lowPass * (raw - y)
-                // return
-                y
-            } else {
-                raw
+            // apply all filters
+            for (filter in filters) {
+                sample = filter(sample)
             }
 
+            // Progress phase
             phase += inc
             if (phase >= 2.0 * Math.PI) phase -= 2.0 * Math.PI
 
