@@ -13,6 +13,7 @@
   "dependencies": {
     "@strudel/core": "1.2.5",
     "@strudel/mini": "1.2.5",
+    "@strudel/tonal": "1.2.5",
     "@strudel/transpiler": "1.2.5",
     "@perf-tools/performance": "1.1.1",
     "pretty-format": "30.2.0"

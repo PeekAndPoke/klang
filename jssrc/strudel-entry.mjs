@@ -1,37 +1,55 @@
 // Polyfill
 import * as performance from '@perf-tools/performance';
-
-import * as core from "@strudel/core";
-import * as mini from "@strudel/mini";
-import * as transpiler from "@strudel/transpiler";
-
+// Debug
 import {format as prettyFormat} from 'pretty-format'
+// Strudel
+import * as core from "@strudel/core";
+import {evalScope} from "@strudel/core";
+
+import * as mini from "@strudel/mini";
+import { miniAllStrings } from '@strudel/mini';
+
+import { transpiler } from "@strudel/transpiler";
+
+await evalScope(
+    import('@strudel/core'),
+    import('@strudel/mini'),
+    import('@strudel/tonal'),
+    // import('@strudel/tonal'),
+);
+
+miniAllStrings(); // allows using single quotes for mini notation / skip transpilation
 
 // noinspection JSUnusedGlobalSymbols
 /**
  * Expose "compile like the REPL" in a headless-safe way:
  * - returns a Pattern object you can queryArc on.
  */
-function compile(code) {
+async function compile(strudelCode) {
+
+    // const pat = transpiler('note("c3 [e3,g3]")', { wrapAsync: false, addReturn: false, simpleLocs: true });
+
+    console.log("Evaluating strudel code\n", strudelCode)
+
+    const strudelCodeEscaped = strudelCode.replaceAll(/`/g, "\\`");
+
+    const res = await evaluate(`
+${strudelCodeEscaped}    
+    `)
+
+    console.log("Result Pattern", res)
+
+    return res.pattern
     // The goal is to evaluate `code` in an environment where core/mini functions exist,
     // and the last expression is a Pattern.
     //
     // We avoid `eval` directly by building a Function with explicit parameters.
-    const env = {...core, ...mini, ...transpiler};
-
-    const names = Object.keys(env);
-    const values = names.map(k => env[k]);
-
-    // Important: wrap in parentheses so expressions like `s("bd*4")` work as expression.
-    // Also allow multi-line code by returning the last expression.
-    const fn = new Function(...names, `
-"use strict";
-return (function() {
-  return ${code};
-})();
-`);
-
-    return fn(...values);
+    //
+    // return (async () => {
+    //     return await evaluate(`
+    //         ${strudelCodeEscaped}
+    //     `, transpiler);
+    // })();
 }
 
 // noinspection JSUnusedGlobalSymbols
@@ -72,7 +90,7 @@ function queryPattern(pattern, from, to) {
                     // Inherit from parent hap
                     ...(h.value || {}),
                     // Get note from noteVal or inherit it from eh.value
-                    ...(typeof noteVal?.value === 'object' && noteVal.value?.note ? noteVal.value : { note: String(eh.value) }),
+                    ...(typeof noteVal?.value === 'object' && noteVal.value?.note ? noteVal.value : {note: String(eh.value)}),
                 },
             };
         });

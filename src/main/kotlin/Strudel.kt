@@ -1,15 +1,17 @@
 package io.peekandpoke
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Source
 import org.graalvm.polyglot.Value
-import org.graalvm.polyglot.io.IOAccess
+import org.graalvm.polyglot.proxy.ProxyExecutable
 import java.nio.file.Path
+import java.util.function.Consumer
 
 class Strudel(private val bundlePath: Path) : AutoCloseable {
     val ctx: Context = Context.newBuilder("js")
-        .allowIO(IOAccess.ALL) // needed for filesystem module loading :contentReference[oaicite:4]{index=4}
-        .option("js.esm-eval-returns-exports", "true") // return module namespace :contentReference[oaicite:5]{index=5}
+        .option("js.esm-eval-returns-exports", "true")
         .build()
 
     val source = Source.newBuilder("js", bundlePath.toFile())
@@ -31,10 +33,63 @@ class Strudel(private val bundlePath: Path) : AutoCloseable {
         "(v) => { try { return JSON.stringify(v); } catch(e) { return String(e); } }",
     )
 
+    /**
+     * Convert a JavaScript Promise (as Polyglot Value) into a Kotlin Deferred.
+     *
+     * - If the Promise resolves, the Deferred completes with the mapped result.
+     * - If the Promise rejects, the Deferred completes exceptionally.
+     */
+    fun <T> Value.promiseToDeferred(
+        map: (Value) -> T
+    ): Deferred<T> {
+        require(this.hasMember("then")) {
+            "Value does not look like a Promise/thenable (missing member 'then'): $this"
+        }
+
+        val deferred = CompletableDeferred<T>()
+
+        val onFulfilled = ProxyExecutable { args ->
+            try {
+                val resolved = args.getOrNull(0) ?: throw IllegalStateException("Promise resolved with no value")
+                deferred.complete(map(resolved))
+            } catch (t: Throwable) {
+                deferred.completeExceptionally(t)
+            }
+            null
+        }
+
+        val onRejected = ProxyExecutable { args ->
+            val reason = args.getOrNull(0)
+            deferred.completeExceptionally(
+                RuntimeException(
+                    buildString {
+                        append("JS Promise rejected")
+                        if (reason != null) append(": ").append(reason.toString())
+                    }
+                )
+            )
+            null
+        }
+
+        // Register callbacks: promise.then(onFulfilled, onRejected)
+        this.invokeMember("then", onFulfilled, onRejected)
+        return deferred
+    }
+
+    /**
+     * Convenience: await the JS Promise from a suspending Kotlin context.
+     */
+    suspend fun <T> Value.awaitPromise(map: (Value) -> T): T =
+        this.promiseToDeferred(map).await()
+
     fun coreHasExecutableMember(name: String): Boolean = core.hasMember(name) && core.getMember(name).canExecute()
 
-    fun compile(code: String): Value =
-        compileFn.execute(code)
+    fun compile(code: String): Deferred<Value?> {
+        val promise = compileFn.execute(code)
+
+        return promise.promiseToDeferred { it }
+    }
+
 
     fun queryPattern(pattern: Value, from: Double, to: Double): Value =
         queryPatternFn.execute(pattern, from, to)

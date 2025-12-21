@@ -32,7 +32,7 @@ suspend fun main() {
         )
     }
 
-    complexJsStrudelTest()
+//    complexJsStrudelTest()
 
     // Run the minimal audio demo using StrudelSynth
     run {
@@ -44,12 +44,22 @@ suspend fun main() {
             note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
               .sound("saw").lpf(800).resonance(0.9)
             """.trimIndent()
-            )
+            ).await()!!
+
+            println("pattern: $pattern")
+
+            pattern.invokeMember("queryArc", 0.0, 10.0).also {
+                val n = it.arraySize
+                for (i in 0 until n) {
+                    val ev = it.getArrayElement(i)
+                    println(ev)
+                }
+            }
 
             synth.play(pattern)
-            println("Done")
-            delay(2.seconds)
-            println("Exiting")
+//            println("Done")
+//            delay(2.seconds)
+//            println("Exiting")
         } finally {
             strudel.close()
         }
