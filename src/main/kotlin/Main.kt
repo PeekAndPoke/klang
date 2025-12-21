@@ -1,9 +1,7 @@
 package io.peekandpoke
 
-import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
 import java.nio.file.Path
-import kotlin.time.Duration.Companion.seconds
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -37,18 +35,24 @@ suspend fun main() {
     // Run the minimal audio demo using StrudelSynth
     run {
         val strudel = Strudel(Path.of("./build/strudel-bundle.mjs"))
-        val synth = StrudelSynth(strudel)
+        val synth = StrudelSynth(
+            strudel = strudel,
+            sampleRate = 48_000,
+            oscillators = oscillators {},
+            cps = 0.5,
+        )
+
         try {
-            val pattern = strudel.compile(
-                """
-            note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-              .sound("saw").lpf(800).resonance(0.9)
+            val pat = """
+                note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
+                .sound("sine").lpf(sine.range(800, 4000).slow(4))
             """.trimIndent()
-            ).await()!!
 
-            println("pattern: $pattern")
+            val compiled = strudel.compile(pat).await()!!
 
-            pattern.invokeMember("queryArc", 0.0, 10.0).also {
+            println("pattern: $compiled")
+
+            compiled.invokeMember("queryArc", 0.0, 10.0).also {
                 val n = it.arraySize
                 for (i in 0 until n) {
                     val ev = it.getArrayElement(i)
@@ -56,10 +60,8 @@ suspend fun main() {
                 }
             }
 
-            synth.play(pattern)
-//            println("Done")
-//            delay(2.seconds)
-//            println("Exiting")
+            synth.play(compiled)
+            println("Done")
         } finally {
             strudel.close()
         }

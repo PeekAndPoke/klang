@@ -7,7 +7,6 @@ import io.peekandpoke.GraalJsBridge.safeStringOrNull
 import org.graalvm.polyglot.Value
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
-import kotlin.math.sin
 
 /**
  * Very small, blocking demo synth that:
@@ -21,35 +20,105 @@ import kotlin.math.sin
 class StrudelSynth(
     private val strudel: Strudel,
     val sampleRate: Int = 48_000,
+    val oscillators: Oscillators,
+    val cps: Double = 0.5,
 ) {
-    companion object {
-
-        fun simpleOsc(name: String?): OscFn = when (name) {
-            "saw", "sawtooth" -> {
-                { SimpleOsc.oscSaw(it) * 0.6 }
-            }
-
-            "sqr", "square" -> {
-                { SimpleOsc.oscSquare(it) * 0.5 }
-            }
-
-            "tri", "triangle" -> {
-                { SimpleOsc.oscTri(it) * 0.7 }
-            }
-
-            else -> ::sin
-        }
-    }
-
-    // Flatten sub-events from notesExpanded
+    /**
+     * Strudel sound event.
+     *
+     * Trying to stay as close as possible to the class DoughVoice:
+     * https://codeberg.org/uzu/strudel/src/branch/main/packages/supradough/dough.mjs
+     */
     data class StrudelEvent(
         val t: Double,
         val dur: Double,
+        // Frequency and note
         val note: String,
         val gain: Double,
-        val osc: OscFn,
+        // Oscilator
+        val osc: String?,
         val filters: List<FilterFn>,
-    )
+        // ADSR envelope
+        val attack: Double?,
+        val decay: Double?,
+        val sustain: Double?,
+        val release: Double?,
+        // Vibrato
+        val vibrato: Double?,
+        val vibratoMod: Double?,
+        // HPF / LPF
+        val cutoff: Double?,
+        val hcutoff: Double?,
+        val resonance: Double?,
+        // ???
+        val bandf: Double?,
+        val coarse: Double?,
+        val crush: Double?,
+        val distort: Double?,
+    ) {
+        companion object {
+            fun of(event: Value, sampleRate: Int): StrudelEvent {
+                val filters = mutableListOf<FilterFn>()
+
+                // Get timing
+                val t = event.getMember("t").safeNumber(0.0)
+                // Get duration
+                val dur = event.getMember("dur").safeNumber(0.0)
+                // Get details
+                val value = event.getMember("value")
+                // Get note
+                val note = value.getMember("note").safeString("")
+                // Get gain
+                val gain = value.getMember("gain").safeNumberOrNull()
+                    ?: value.getMember("amp").safeNumberOrNull()
+                    ?: 1.0
+                // Get waveform
+                val osc = value.getMember("s").safeStringOrNull()
+                // get LPF/HPF resonance
+                val resonance = value.getMember("resonance").safeNumberOrNull()
+                // Apply low pass filter?
+                val cutoff = value.getMember("cutoff").safeNumberOrNull()
+                cutoff?.let {
+                    filters.add(SimpleFilters.createLPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
+                }
+                // Apply high pass filter?
+                val hcutoff = value.getMember("hcutoff").safeNumberOrNull()
+                hcutoff?.let {
+                    filters.add(SimpleFilters.createHPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
+                }
+
+                // add event
+                return StrudelEvent(
+                    t = t,
+                    dur = dur,
+                    // Frequency and note
+                    note = note,
+                    gain = gain,
+                    // Oscilator
+                    osc = osc,
+                    filters = filters,
+                    // ADSR envelope
+                    attack = null, // TODO ...
+                    decay = null, // TODO ...
+                    sustain = null, // TODO ...
+                    release = null, // TODO ...
+                    // Vibrato
+                    vibrato = null, // TODO ...
+                    vibratoMod = null,  // TODO ...
+                    // HPF / LPF
+                    cutoff = cutoff,
+                    hcutoff = hcutoff,
+                    resonance = resonance,
+                    // ???
+                    bandf = null, // TODO ...
+                    coarse = null, // TODO ...
+                    crush = null, // TODO ...
+                    distort = null, // TODO ...
+                )
+            }
+        }
+    }
+
 
     fun extractEvents(pattern: Value, from: Double, to: Double): List<StrudelEvent> {
         val result = strudel.queryPattern(pattern, from, to)
@@ -59,50 +128,10 @@ class StrudelSynth(
 
         for (i in 0 until topN) {
             val item = result.getArrayElement(i)
-            if (item.hasMember("notesExpanded")) {
-                val sub = item.getMember("notesExpanded")
-                val m = sub.arraySize
-                for (j in 0 until m) {
-                    val filters = mutableListOf<FilterFn>()
 
-                    // Get element
-                    val event = sub.getArrayElement(j)
-                    // Get timing
-                    val t = event.getMember("t").safeNumber(0.0)
-                    // Get duration
-                    val dur = event.getMember("dur").safeNumber(0.0)
-                    // Get details
-                    val value = event.getMember("value")
-                    // Get note
-                    val note = value.getMember("note").safeString("")
-                    // Get gain
-                    val gain = value.getMember("gain").safeNumberOrNull()
-                        ?: value.getMember("amp").safeNumberOrNull()
-                        ?: 1.0
-                    // Get waveform
-                    val osc = simpleOsc(value.getMember("s").safeStringOrNull())
-                    // get LPF/HPF resonance
-                    val resonance = value.getMember("resonance").safeNumberOrNull()
-                    // Apply low pass filter?
-                    value.getMember("cutoff").safeNumberOrNull()?.let {
-                        filters.add(SimpleFilters.createLPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
-                    }
-                    // Apply high pass filter?
-                    value.getMember("hcutoff").safeNumberOrNull()?.let {
-                        filters.add(SimpleFilters.createHPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
-                    }
+            println(strudel.prettyFormat(item))
 
-                    // add event
-                    events += StrudelEvent(
-                        t = t,
-                        dur = dur,
-                        note = note,
-                        gain = gain,
-                        osc = osc,
-                        filters = filters,
-                    )
-                }
-            }
+            events += StrudelEvent.of(item, sampleRate)
         }
 
         return events.sortedBy { it.t }
@@ -142,15 +171,11 @@ class StrudelSynth(
                 cursorSec += gapSec
             }
 
-            val buf = renderTone(freq = hz, seconds = durSec, gain = e.gain, osc = e.osc, filters = e.filters)
+            val buf = renderTone(e)
             line.write(buf, 0, buf.size)
             cursorSec += durSec
 
-            println(
-                "[StrudelSynth] note=${e.note} gain=${e.gain} osc=${e.osc.name()} filters=${e.filters.size} " +
-                        "midi=${"%.1f".format(midi)} hz=${"%.2f".format(hz)} " +
-                        "tCyc=${"%.3f".format(e.t)} durCyc=${"%.3f".format(e.dur)}"
-            )
+            println(e.toString())
         }
 
         line.drain()
@@ -160,12 +185,15 @@ class StrudelSynth(
 
 
     private fun renderTone(
-        freq: Double,
-        seconds: Double,
-        gain: Double,
-        osc: OscFn,
-        filters: List<FilterFn>,
+        e: StrudelEvent,
     ): ByteArray {
+        val secPerCycle = 1.0 / cps
+
+        val midi = StrudelNotes.noteNameToMidi(e.note)
+        val freq = StrudelNotes.midiToFreq(midi)
+        val seconds = (e.dur * secPerCycle).coerceAtLeast(0.0)
+        val osc = oscillators.getByName(e.osc)
+
         val frames = (seconds * sampleRate).toInt().coerceAtLeast(1)
         val out = ByteArray(frames * 2) // mono int16 LE
         var phase = 0.0
@@ -179,10 +207,10 @@ class StrudelSynth(
             }
 
             // create sample through oscillator
-            var sample = osc(phase) * gain * env
+            var sample = osc(phase) * e.gain * env
 
             // apply all filters
-            for (filter in filters) {
+            for (filter in e.filters) {
                 sample = filter(sample)
             }
 
