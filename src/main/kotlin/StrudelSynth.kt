@@ -37,6 +37,8 @@ class StrudelSynth(
         val gain: Double,
         // Oscilator
         val osc: String?,
+        val density: Double?,
+        // Filters
         val filters: List<FilterFn>,
         // ADSR envelope
         val attack: Double?,
@@ -72,8 +74,11 @@ class StrudelSynth(
                 val gain = value.getMember("gain").safeNumberOrNull()
                     ?: value.getMember("amp").safeNumberOrNull()
                     ?: 1.0
-                // Get waveform
+                // Get Oscillator parameters
                 val osc = value.getMember("s").safeStringOrNull()
+                    ?: value.getMember("wave").safeStringOrNull()
+                    ?: value.getMember("sound").safeStringOrNull()
+                val density = value.getMember("density").safeNumberOrNull()
                 // get LPF/HPF resonance
                 val resonance = value.getMember("resonance").safeNumberOrNull()
                 // Apply low pass filter?
@@ -96,6 +101,8 @@ class StrudelSynth(
                     gain = gain,
                     // Oscilator
                     osc = osc,
+                    density = density,
+                    // Filters
                     filters = filters,
                     // ADSR envelope
                     attack = null, // TODO ...
@@ -192,7 +199,10 @@ class StrudelSynth(
         val midi = StrudelNotes.noteNameToMidi(e.note)
         val freq = StrudelNotes.midiToFreq(midi)
         val seconds = (e.dur * secPerCycle).coerceAtLeast(0.0)
-        val osc = oscillators.getByName(e.osc)
+        val osc = oscillators.get(
+            name = e.osc,
+            density = e.density,
+        )
 
         val frames = (seconds * sampleRate).toInt().coerceAtLeast(1)
         val out = ByteArray(frames * 2) // mono int16 LE

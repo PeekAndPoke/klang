@@ -38,15 +38,29 @@ suspend fun main() {
         val synth = StrudelSynth(
             strudel = strudel,
             sampleRate = 48_000,
-            oscillators = oscillators {},
+            oscillators = oscillators(sampleRate = 48_000),
             cps = 0.5,
         )
 
         try {
-            val pat = """
+            val smallTownBoy = """
                 note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-                .sound("sine").lpf(sine.range(800, 4000).slow(4))
+                .sound("supersaw").hpf(sine.range(800, 4000).slow(8))
             """.trimIndent()
+
+            val crackle = """
+                s("crackle*4")
+                .density("<0.01 0.04 0.2 0.5>").slow(2).gain(0.1)
+            """.trimIndent()
+
+            val dust = """
+                s("dust*4")
+                .density("<0.01 0.04 0.2 0.5>").slow(2).gain(0.01)
+            """.trimIndent()
+
+            val pat = smallTownBoy
+//            val pat = crackle
+//            val pat = dust
 
             val compiled = strudel.compile(pat).await()!!
 
