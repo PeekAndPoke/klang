@@ -328,7 +328,7 @@ class Oscillators private constructor(
 
     val silence: OscFn = { 0.0 }
 
-    fun get(e: StrudelSynth.StrudelEvent, freqHz: Double?): OscFn = get(
+    fun get(e: StrudelEvent, freqHz: Double?): OscFn = get(
         name = e.osc,
         freqHz = freqHz,
         density = e.density,

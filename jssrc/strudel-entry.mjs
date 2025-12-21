@@ -26,30 +26,13 @@ miniAllStrings(); // allows using single quotes for mini notation / skip transpi
  * - returns a Pattern object you can queryArc on.
  */
 async function compile(strudelCode) {
-
-    // const pat = transpiler('note("c3 [e3,g3]")', { wrapAsync: false, addReturn: false, simpleLocs: true });
-
-    console.log("Evaluating strudel code\n", strudelCode)
-
     const strudelCodeEscaped = strudelCode.replaceAll(/`/g, "\\`");
 
     const res = await evaluate(`
 ${strudelCodeEscaped}    
     `)
 
-    console.log("Result Pattern", res)
-
     return res.pattern
-    // The goal is to evaluate `code` in an environment where core/mini functions exist,
-    // and the last expression is a Pattern.
-    //
-    // We avoid `eval` directly by building a Function with explicit parameters.
-    //
-    // return (async () => {
-    //     return await evaluate(`
-    //         ${strudelCodeEscaped}
-    //     `, transpiler);
-    // })();
 }
 
 // noinspection JSUnusedGlobalSymbols
@@ -71,7 +54,7 @@ function queryPattern(pattern, from, to) {
             value: h.value
         };
 
-        console.log("HAP", prettyFormat(h));
+        // console.log("HAP", prettyFormat(h));
 
         if (!h?.value || h.value.note == null) return {...base, notesExpanded: []};
 

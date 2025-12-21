@@ -1,5 +1,6 @@
 package io.peekandpoke
 
+import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
 import java.nio.file.Path
 
@@ -30,12 +31,10 @@ suspend fun main() {
         )
     }
 
-//    complexJsStrudelTest()
-
     // Run the minimal audio demo using StrudelSynth
     run {
         val strudel = Strudel(Path.of("./build/strudel-bundle.mjs"))
-        val synth = StrudelSynth(
+        val audio = StrudelAudioRenderer(
             strudel = strudel,
             sampleRate = 48_000,
             oscillators = oscillators(sampleRate = 48_000),
@@ -103,77 +102,12 @@ suspend fun main() {
                 }
             }
 
-            synth.play(compiled)
+            audio.start(compiled)
+            delay(10_000)
+            audio.stop()
             println("Done")
         } finally {
             strudel.close()
         }
     }
-}
-
-// ... existing code ...
-fun complexJsStrudelTest() {
-
-    val strudel = Strudel(Path.of("./build/strudel-bundle.mjs"))
-//    println("strudel: $strudel")
-//    println("strudel.core: ${strudel.core}")
-//    println("strudel.mini: ${strudel.mini}")
-//    println("strudel.transpiler: ${strudel.transpiler}")
-//    println("strudel.compile: ${strudel.compileFn}")
-
-//    val keys = strudel.core.memberKeys
-//    println(keys.take(50))
-
-//    val seq = strudel.core.invokeMember("sequence", "a c e")
-
-//    run {
-//        val seq = strudel.compile(
-//            """
-//            note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-//                .sound("sawtooth").lpf(800)
-//        """.trimIndent()
-//        )
-//
-//        println("seq: $seq")
-//
-//        println("== seq.queryArc(0.0, 10.0) ==========================================")
-//
-//        val queryArcResult = seq.invokeMember("queryArc", 0.0, 10.0)
-//        queryArcResult.also {
-//            println("num events returned: ${it.arraySize}")
-//
-//            for (i in 0 until it.arraySize) {
-//                val ev = queryArcResult.getArrayElement(i)
-//                println(ev) // prints the JS object; good enough for this check
-//            }
-//        }
-//    }
-
-    run {
-
-        val noteRes = strudel.core.invokeMember("note", "a b c d")
-        println("noteRes: $noteRes")
-        val haps = strudel.queryPattern(noteRes, 0.0, 5.0)
-        haps.also {
-            println("num events returned: ${it.arraySize}")
-
-            for (i in 0 until it.arraySize) {
-                val ev = it.getArrayElement(i)
-                println(ev) // prints the JS object; good enough for this check
-            }
-        }
-    }
-
-//    run {
-//        val fromMini = strudel.mini.invokeMember("mini", "a c e")
-//
-//        val res = strudel.queryPattern(fromMini, 0.0, 10.0)
-//
-//        for (i in 0 until res.arraySize) {
-//            val ev = res.getArrayElement(i)
-//            println(ev)
-//        }
-//    }
-
-    strudel.close()
 }

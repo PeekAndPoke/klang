@@ -9,6 +9,7 @@ object GraalJsBridge {
 
         return when {
             isNumber -> asDouble()
+            hasMember("valueOf") -> invokeMember("valueOf")?.asDouble()
             else -> null
         }
     }

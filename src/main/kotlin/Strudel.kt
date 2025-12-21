@@ -25,13 +25,8 @@ class Strudel(private val bundlePath: Path) : AutoCloseable {
     val transpiler = exports.getMember("transpiler")
 
     val compileFn = exports.getMember("compile")
-    val queryPatternFn = exports.getMember("queryPattern")
 
     val prettyFormatFn = exports.getMember("prettyFormat")
-    val jsonStringifyFn = ctx.eval(
-        "js",
-        "(v) => { try { return JSON.stringify(v); } catch(e) { return String(e); } }",
-    )
 
     /**
      * Convert a JavaScript Promise (as Polyglot Value) into a Kotlin Deferred.
@@ -88,14 +83,6 @@ class Strudel(private val bundlePath: Path) : AutoCloseable {
         val promise = compileFn.execute(code)
 
         return promise.promiseToDeferred { it }
-    }
-
-
-    fun queryPattern(pattern: Value, from: Double, to: Double): Value =
-        queryPatternFn.execute(pattern, from, to)
-
-    fun jsonStringify(value: Value): Value? {
-        return jsonStringifyFn.execute(value)
     }
 
     fun prettyFormat(value: Any?): Value? {
