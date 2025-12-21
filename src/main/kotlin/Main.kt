@@ -43,9 +43,9 @@ suspend fun main() {
         )
 
         try {
-            val smallTownBoy = """
+            val smallTownBoyBass = """
                 note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-                .sound("supersaw").hpf(sine.range(800, 4000).slow(8))
+                .sound("supersaw").lpf(sine.range(800, 4000).slow(8))
             """.trimIndent()
 
             val crackle = """
@@ -58,9 +58,38 @@ suspend fun main() {
                 .density("<0.01 0.04 0.2 0.5>").slow(2).gain(0.01)
             """.trimIndent()
 
-            val pat = smallTownBoy
+            val impulse = """note("c6").sound("impulse").gain(0.05)""".trimIndent()
+
+            val whiteNoise = """
+                s("white").gain("<0.01 0.04 0.2 0.5>")
+                """.trimIndent()
+
+            val brownNoise = """
+                s("brown").gain("<0.01 0.04 0.2 0.5>")
+                """.trimIndent()
+
+            val pinkNoise = """
+                s("pink").gain("<0.01 0.04 0.2 0.5>")
+                """.trimIndent()
+
+            val supersaw = """
+                note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
+                  .sound("supersaw")
+                  .detune("<.3 .3 .3 5.0>")
+                  .gain(0.25)
+//                  .hpf(100)
+//                  .spread(".8")
+//                  .unison("2 7")
+            """.trimIndent()
+
+//            val pat = smallTownBoyBass
 //            val pat = crackle
 //            val pat = dust
+//            val pat = impulse
+//            val pat = whiteNoise
+//            val pat = brownNoise
+//            val pat = pinkNoise
+            val pat = supersaw
 
             val compiled = strudel.compile(pat).await()!!
 

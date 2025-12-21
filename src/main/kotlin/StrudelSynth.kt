@@ -36,8 +36,16 @@ class StrudelSynth(
         val note: String,
         val gain: Double,
         // Oscilator
+        /** Oscillator name, see [Oscillators.get] */
         val osc: String?,
+        /** density for dust, crackle */
         val density: Double?,
+        /** Used for: supersaw */
+        val spread: Double?,
+        /** Used for: supersaw */
+        val detune: Double?,
+        /** Used for: supersaw */
+        val unison: Double?,
         // Filters
         val filters: List<FilterFn>,
         // ADSR envelope
@@ -79,6 +87,9 @@ class StrudelSynth(
                     ?: value.getMember("wave").safeStringOrNull()
                     ?: value.getMember("sound").safeStringOrNull()
                 val density = value.getMember("density").safeNumberOrNull()
+                val spread = value.getMember("spread").safeNumberOrNull()
+                val detune = value.getMember("detune").safeNumberOrNull()
+                val unison = value.getMember("unison").safeNumberOrNull()
                 // get LPF/HPF resonance
                 val resonance = value.getMember("resonance").safeNumberOrNull()
                 // Apply low pass filter?
@@ -102,6 +113,9 @@ class StrudelSynth(
                     // Oscilator
                     osc = osc,
                     density = density,
+                    unison = unison,
+                    detune = detune,
+                    spread = spread,
                     // Filters
                     filters = filters,
                     // ADSR envelope
@@ -199,10 +213,7 @@ class StrudelSynth(
         val midi = StrudelNotes.noteNameToMidi(e.note)
         val freq = StrudelNotes.midiToFreq(midi)
         val seconds = (e.dur * secPerCycle).coerceAtLeast(0.0)
-        val osc = oscillators.get(
-            name = e.osc,
-            density = e.density,
-        )
+        val osc = oscillators.get(e = e, freqHz = freq)
 
         val frames = (seconds * sampleRate).toInt().coerceAtLeast(1)
         val out = ByteArray(frames * 2) // mono int16 LE
