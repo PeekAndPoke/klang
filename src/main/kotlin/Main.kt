@@ -39,7 +39,14 @@ suspend fun main() {
         val strudel = Strudel(Path.of("./build/strudel-bundle.mjs"))
         val synth = StrudelSynth(strudel)
         try {
-            synth.playOneCycleDemo()
+            val pattern = strudel.compile(
+                """
+            note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
+              .sound("square").lpf(500)
+            """.trimIndent()
+            )
+
+            synth.play(pattern)
             println("Done")
             delay(2.seconds)
             println("Exiting")

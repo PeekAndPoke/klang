@@ -4,8 +4,10 @@ import io.peekandpoke.GraalJsBridge.safeNumber
 import io.peekandpoke.GraalJsBridge.safeNumberOrNull
 import io.peekandpoke.GraalJsBridge.safeString
 import io.peekandpoke.GraalJsBridge.safeStringOrNull
+import org.graalvm.polyglot.Value
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
+import kotlin.math.sin
 
 /**
  * Very small, blocking demo synth that:
@@ -20,27 +22,37 @@ class StrudelSynth(
     private val strudel: Strudel,
     val sampleRate: Int = 48_000,
 ) {
+    companion object {
+
+        fun simpleOsc(name: String?): OscFn = when (name) {
+            "saw", "sawtooth" -> {
+                { SimpleOsc.oscSaw(it) * 0.6 }
+            }
+
+            "square" -> {
+                { SimpleOsc.oscSquare(it) * 0.5 }
+            }
+
+            "tri", "triangle" -> {
+                { SimpleOsc.oscTri(it) * 0.7 }
+            }
+
+            else -> ::sin
+        }
+    }
+
     // Flatten sub-events from notesExpanded
     data class StrudelEvent(
         val t: Double,
         val dur: Double,
         val note: String,
         val gain: Double,
-        val wave: String?,
+        val osc: OscFn,
         val cutoff: Double?,
     )
 
-    fun playOneCycleDemo() {
-        val pattern = strudel.compile(
-            """
-            note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-              .sound("saw").lpf(500).gain(1.0)
-            """.trimIndent()
-        )
-
-        val span = 32.0
-
-        val result = strudel.queryPattern(pattern, 0.0, span)
+    fun extractEvents(pattern: Value, from: Double, to: Double): List<StrudelEvent> {
+        val result = strudel.queryPattern(pattern, from, to)
 
         val events = mutableListOf<StrudelEvent>()
         val topN = result.arraySize
@@ -66,7 +78,7 @@ class StrudelSynth(
                         ?: value.getMember("amp").safeNumberOrNull()
                         ?: 1.0
                     // Get waveform
-                    val wave = value.getMember("s").safeStringOrNull()
+                    val osc = simpleOsc(value.getMember("s").safeStringOrNull())
                     // Get Low pass filter
                     val cutoff = value.getMember("cutoff").safeNumberOrNull()
 
@@ -76,12 +88,18 @@ class StrudelSynth(
                         dur = dur,
                         note = note,
                         gain = gain,
-                        wave = wave,
+                        osc = osc,
                         cutoff = cutoff,
                     )
                 }
             }
         }
+
+        return events.sortedBy { it.t }
+    }
+
+    fun play(pattern: Value, cps: Double = 0.5) {
+        val events = extractEvents(pattern, 0.0, 10.0)
 
         println("[StrudelSynth] gathered ${events.size} sub-events in window")
 
@@ -91,15 +109,12 @@ class StrudelSynth(
         line.open(format)
         line.start()
 
-        // Sort by start time; render sequentially inserting silence so t/dur are respected (simple timing)
-        val sorted = events.sortedBy { it.t }
-
         // Map cycles -> seconds for this demo (adjust if you want it faster/slower)
-        val cps = 0.5 // 2 cycles per second => 1 cycle = 0.5s
         val secPerCycle = 1.0 / cps
 
         var cursorSec = 0.0
-        for (e in sorted) {
+
+        for (e in events) {
             val midi = StrudelNotes.noteNameToMidi(e.note)
             val hz = StrudelNotes.midiToFreq(midi)
 
@@ -117,12 +132,12 @@ class StrudelSynth(
                 cursorSec += gapSec
             }
 
-            val buf = renderTone(freq = hz, seconds = durSec, gain = e.gain, wave = e.wave, cutoffHz = e.cutoff)
+            val buf = renderTone(freq = hz, seconds = durSec, gain = e.gain, osc = e.osc, cutoffHz = e.cutoff)
             line.write(buf, 0, buf.size)
             cursorSec += durSec
 
             println(
-                "[StrudelSynth] note=${e.note} gain=${e.gain} wave=${e.wave} cutoff=${e.cutoff} midi=${
+                "[StrudelSynth] note=${e.note} gain=${e.gain} osc=${e.osc.name()} cutoff=${e.cutoff} midi=${
                     "%.1f".format(
                         midi
                     )
@@ -144,7 +159,7 @@ class StrudelSynth(
         freq: Double,
         seconds: Double,
         gain: Double,
-        wave: String? = null,
+        osc: OscFn,
         cutoffHz: Double? = null,
     ): ByteArray {
         val frames = (seconds * sampleRate).toInt().coerceAtLeast(1)
@@ -154,7 +169,8 @@ class StrudelSynth(
 
         // One-pole LPF state
         var y = 0.0
-        val alpha = cutoffHz?.let { c ->
+
+        val lowPass = cutoffHz?.let { c ->
             val nyquist = 0.5 * sampleRate
             val cutoff = c.coerceIn(40.0, nyquist - 1.0)
             // one-pole LPF coefficient in exponential form
@@ -167,16 +183,18 @@ class StrudelSynth(
                 i > frames - 512 -> (frames - i) / 512.0
                 else -> 1.0
             }
-            val raw = when (wave?.lowercase()) {
-                "saw", "sawtooth" -> oscSaw(phase) * (gain * 0.6)
-                "square" -> oscSquare(phase) * (gain * 0.5)
-                "tri", "triangle" -> oscTri(phase) * (gain * 0.7)
-                else -> kotlin.math.sin(phase) * gain
-            } * env
 
-            val sample = if (alpha != null) {
-                y += alpha * (raw - y); y
-            } else raw
+            // apply oscillator
+            val raw = osc(phase) * gain * env
+
+            // apply low pass
+            val sample = if (lowPass != null) {
+                y += lowPass * (raw - y)
+                // return
+                y
+            } else {
+                raw
+            }
 
             phase += inc
             if (phase >= 2.0 * Math.PI) phase -= 2.0 * Math.PI
@@ -186,17 +204,5 @@ class StrudelSynth(
             out[i * 2 + 1] = ((s ushr 8) and 0xff).toByte()
         }
         return out
-    }
-
-    private fun oscSaw(phase: Double): Double {
-        val x = phase / (2.0 * Math.PI)
-        return 2.0 * (x - kotlin.math.floor(x + 0.5))
-    }
-
-    private fun oscSquare(phase: Double): Double = if (kotlin.math.sin(phase) >= 0.0) 1.0 else -1.0
-
-    private fun oscTri(phase: Double): Double {
-        // Triangle via asin(sin) normalized to [-1,1]
-        return (2.0 / Math.PI) * kotlin.math.asin(kotlin.math.sin(phase))
     }
 }

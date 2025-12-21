@@ -10,10 +10,12 @@ repositories {
 }
 
 dependencies {
+    // Kotlin
+    implementation(kotlin("reflect"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    // GraalVM
     implementation("org.graalvm.polyglot:polyglot:24.2.2")
     implementation("org.graalvm.polyglot:js:24.2.2")
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     // tests
     testImplementation(kotlin("test"))
 
