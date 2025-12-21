@@ -53,6 +53,8 @@ function queryPattern(pattern, from, to) {
             value: h.value
         };
 
+        console.log("HAP", prettyFormat(h));
+
         if (!h?.value || h.value.note == null) return {...base, notesExpanded: []};
 
         // 1) Expand mini-notation within the same time window
@@ -72,7 +74,6 @@ function queryPattern(pattern, from, to) {
                     // Get note from noteVal or inherit it from eh.value
                     ...(typeof noteVal?.value === 'object' && noteVal.value?.note ? noteVal.value : { note: String(eh.value) }),
                 },
-                cutoff: eh?.cutoff ?? h.cutoff
             };
         });
 

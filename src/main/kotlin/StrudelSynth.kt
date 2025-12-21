@@ -1,9 +1,11 @@
 package io.peekandpoke
 
-import org.graalvm.polyglot.Value
+import io.peekandpoke.GraalJsBridge.safeNumber
+import io.peekandpoke.GraalJsBridge.safeNumberOrNull
+import io.peekandpoke.GraalJsBridge.safeString
+import io.peekandpoke.GraalJsBridge.safeStringOrNull
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
-import kotlin.math.pow
 
 /**
  * Very small, blocking demo synth that:
@@ -18,33 +20,29 @@ class StrudelSynth(
     private val strudel: Strudel,
     val sampleRate: Int = 48_000,
 ) {
+    // Flatten sub-events from notesExpanded
+    data class StrudelEvent(
+        val t: Double,
+        val dur: Double,
+        val note: String,
+        val gain: Double,
+        val wave: String?,
+        val cutoff: Double?,
+    )
 
     fun playOneCycleDemo() {
         val pattern = strudel.compile(
             """
             note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-              .sound("saw").lpf(800)
+              .sound("saw").lpf(500).gain(1.0)
             """.trimIndent()
         )
 
-        val span = 8.0
+        val span = 32.0
 
         val result = strudel.queryPattern(pattern, 0.0, span)
 
-//        println("[AUDIO] top-level items: ${result.arraySize}")
-//        var subCount = 0L
-//        for (i in 0 until result.arraySize) {
-//            val item = result.getArrayElement(i)
-//            if (item.hasMember("notesExpanded")) {
-//                subCount += item.getMember("notesExpanded").arraySize
-//            }
-//        }
-//        println("[AUDIO] expanded sub-events: $subCount")
-
-        // Flatten sub-events from notesExpanded
-        data class Ev(val t: Double, val dur: Double, val note: String, val wave: String?, val cutoff: Double?)
-
-        val events = mutableListOf<Ev>()
+        val events = mutableListOf<StrudelEvent>()
         val topN = result.arraySize
 
         for (i in 0 until topN) {
@@ -53,23 +51,34 @@ class StrudelSynth(
                 val sub = item.getMember("notesExpanded")
                 val m = sub.arraySize
                 for (j in 0 until m) {
-                    val ev = sub.getArrayElement(j)
-                    val t = safeNumber(ev.getMember("t"))
-                    val dur = safeNumber(ev.getMember("dur")) * 4
-                    val v = ev.getMember("value")
-                    val note = when {
-                        v.hasMember("note") -> v.getMember("note").asString()
-                        v.isString -> v.asString()
-                        else -> "a4"
-                    }
-                    val wave = if (v.hasMember("s")) v.getMember("s").asString() else null
-                    val cutoff = when {
-                        v.hasMember("cutoff") && v.getMember("cutoff").isNumber -> v.getMember("cutoff").asDouble()
-                        ev.hasMember("cutoff") && ev.getMember("cutoff").isNumber -> ev.getMember("cutoff").asDouble()
-                        else -> null
-                    }
-                    // JS side already returns absolute t in cycles for sub-events; don't add parent base time
-                    events += Ev(t, dur, note, wave, cutoff)
+                    // Get element
+                    val event = sub.getArrayElement(j)
+                    // Get timing
+                    val t = event.getMember("t").safeNumber(0.0)
+                    // Get duration
+                    val dur = event.getMember("dur").safeNumber(0.0)
+                    // Get details
+                    val value = event.getMember("value")
+                    // Get note
+                    val note = value.getMember("note").safeString("")
+                    // Get gain
+                    val gain = value.getMember("gain").safeNumberOrNull()
+                        ?: value.getMember("amp").safeNumberOrNull()
+                        ?: 1.0
+                    // Get waveform
+                    val wave = value.getMember("s").safeStringOrNull()
+                    // Get Low pass filter
+                    val cutoff = value.getMember("cutoff").safeNumberOrNull()
+
+                    // add event
+                    events += StrudelEvent(
+                        t = t,
+                        dur = dur,
+                        note = note,
+                        gain = gain,
+                        wave = wave,
+                        cutoff = cutoff,
+                    )
                 }
             }
         }
@@ -86,13 +95,13 @@ class StrudelSynth(
         val sorted = events.sortedBy { it.t }
 
         // Map cycles -> seconds for this demo (adjust if you want it faster/slower)
-        val cps = 2.0 // 2 cycles per second => 1 cycle = 0.5s
+        val cps = 0.5 // 2 cycles per second => 1 cycle = 0.5s
         val secPerCycle = 1.0 / cps
 
         var cursorSec = 0.0
         for (e in sorted) {
-            val midi = noteNameToMidi(e.note)
-            val hz = midiToFreq(midi)
+            val midi = StrudelNotes.noteNameToMidi(e.note)
+            val hz = StrudelNotes.midiToFreq(midi)
 
             val startSec = e.t * secPerCycle
             val durSec = (e.dur * secPerCycle).coerceAtLeast(0.10)
@@ -108,12 +117,20 @@ class StrudelSynth(
                 cursorSec += gapSec
             }
 
-            val buf = renderTone(freq = hz, seconds = durSec, amp = 0.8, wave = e.wave, cutoffHz = e.cutoff)
+            val buf = renderTone(freq = hz, seconds = durSec, gain = e.gain, wave = e.wave, cutoffHz = e.cutoff)
             line.write(buf, 0, buf.size)
             cursorSec += durSec
 
             println(
-                "[StrudelSynth] note=${e.note} wave=${e.wave} cutoff=${e.cutoff} midi=${"%.1f".format(midi)} hz=${"%.2f".format(hz)} tCyc=${"%.3f".format(e.t)} durCyc=${"%.3f".format(e.dur)}"
+                "[StrudelSynth] note=${e.note} gain=${e.gain} wave=${e.wave} cutoff=${e.cutoff} midi=${
+                    "%.1f".format(
+                        midi
+                    )
+                } hz=${
+                    "%.2f".format(
+                        hz
+                    )
+                } tCyc=${"%.3f".format(e.t)} durCyc=${"%.3f".format(e.dur)}"
             )
         }
 
@@ -122,44 +139,11 @@ class StrudelSynth(
         line.close()
     }
 
-    private fun safeNumber(v: Value): Double = try {
-        when {
-            v.isNumber -> v.asDouble()
-            v.canInvokeMember("valueOf") -> v.invokeMember("valueOf").asDouble()
-            else -> v.asDouble()
-        }
-    } catch (_: Exception) {
-        0.0
-    }
-
-    private fun midiToFreq(m: Double): Double = 440.0 * 2.0.pow((m - 69.0) / 12.0)
-
-    private val noteIndex = mapOf(
-        'c' to 0, 'd' to 2, 'e' to 4, 'f' to 5, 'g' to 7, 'a' to 9, 'b' to 11
-    )
-
-    private fun noteNameToMidi(s: String): Double {
-        if (s.isEmpty()) return 69.0
-        val str = s.trim().lowercase()
-        var i = 0
-        val letter = str[i]
-        val base = noteIndex[letter] ?: 9
-        i++
-        var acc = 0
-        while (i < str.length && (str[i] == 'b' || str[i] == '#')) {
-            acc += if (str[i] == '#') 1 else -1
-            i++
-        }
-        val oct = if (i < str.length) str.substring(i).toIntOrNull() ?: 4 else 4
-        val midi = (oct + 1) * 12 + base + acc
-
-        return midi.toDouble()
-    }
 
     private fun renderTone(
         freq: Double,
         seconds: Double,
-        amp: Double = 0.2,
+        gain: Double,
         wave: String? = null,
         cutoffHz: Double? = null,
     ): ByteArray {
@@ -184,10 +168,10 @@ class StrudelSynth(
                 else -> 1.0
             }
             val raw = when (wave?.lowercase()) {
-                "saw", "sawtooth" -> oscSaw(phase) * (amp * 0.6)
-                "square" -> oscSquare(phase) * (amp * 0.5)
-                "tri", "triangle" -> oscTri(phase) * (amp * 0.7)
-                else -> kotlin.math.sin(phase) * amp
+                "saw", "sawtooth" -> oscSaw(phase) * (gain * 0.6)
+                "square" -> oscSquare(phase) * (gain * 0.5)
+                "tri", "triangle" -> oscTri(phase) * (gain * 0.7)
+                else -> kotlin.math.sin(phase) * gain
             } * env
 
             val sample = if (alpha != null) {
