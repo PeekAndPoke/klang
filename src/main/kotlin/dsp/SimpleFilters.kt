@@ -1,18 +1,17 @@
-package io.peekandpoke
+package io.peekandpoke.dsp
 
-import java.lang.Math.PI
 import kotlin.math.exp
 import kotlin.math.tan
 
 object SimpleFilters {
 
-    fun createLPF(cutoffHz: Double, q: Double?, sampleRate: Double): Filter =
+    fun createLPF(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
         when (q) {
             null -> OnePoleLPF(cutoffHz, sampleRate)
             else -> SvfLPF(cutoffHz, q, sampleRate)
         }
 
-    fun createHPF(cutoffHz: Double, q: Double?, sampleRate: Double): Filter =
+    fun createHPF(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
         when (q) {
             null -> OnePoleHPF(cutoffHz, sampleRate)
             else -> SvfHPF(cutoffHz, q, sampleRate)
@@ -20,14 +19,14 @@ object SimpleFilters {
 
     // --- Implementations ---
 
-    class OnePoleLPF(cutoffHz: Double, sampleRate: Double) : Filter {
+    class OnePoleLPF(cutoffHz: Double, sampleRate: Double) : AudioFilter {
         private var y = 0.0
         private val lowPass: Double
 
         init {
             val nyquist = 0.5 * sampleRate
             val cutoff = cutoffHz.coerceIn(5.0, nyquist - 1.0)
-            lowPass = 1.0 - exp(-2.0 * PI * cutoff / sampleRate)
+            lowPass = 1.0 - exp(-2.0 * Math.PI * cutoff / sampleRate)
         }
 
         override fun process(buffer: DoubleArray, offset: Int, length: Int) {
@@ -41,7 +40,7 @@ object SimpleFilters {
         }
     }
 
-    class OnePoleHPF(cutoffHz: Double, sampleRate: Double) : Filter {
+    class OnePoleHPF(cutoffHz: Double, sampleRate: Double) : AudioFilter {
         private var y = 0.0
         private var xPrev = 0.0
         private val a: Double
@@ -49,7 +48,7 @@ object SimpleFilters {
         init {
             val nyquist = 0.5 * sampleRate
             val cutoff = cutoffHz.coerceIn(5.0, nyquist - 1.0)
-            a = exp(-2.0 * PI * cutoff / sampleRate)
+            a = exp(-2.0 * Math.PI * cutoff / sampleRate)
         }
 
         override fun process(buffer: DoubleArray, offset: Int, length: Int) {
@@ -64,7 +63,7 @@ object SimpleFilters {
     }
 
     // State Variable Filter (Shared logic)
-    abstract class BaseSvf(cutoffHz: Double, q: Double, sampleRate: Double) : Filter {
+    abstract class BaseSvf(cutoffHz: Double, q: Double, sampleRate: Double) : AudioFilter {
         protected var ic1eq = 0.0
         protected var ic2eq = 0.0
         protected val a1: Double
@@ -77,7 +76,7 @@ object SimpleFilters {
             val fc = cutoffHz.coerceIn(5.0, nyquist - 1.0)
             val Q = q.coerceIn(0.1, 50.0)
 
-            val g = tan(PI * fc / sampleRate)
+            val g = tan(Math.PI * fc / sampleRate)
             k = 1.0 / Q
             a1 = 1.0 / (1.0 + g * (g + k))
             a2 = g * a1

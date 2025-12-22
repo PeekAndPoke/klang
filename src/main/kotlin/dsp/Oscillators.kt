@@ -1,6 +1,7 @@
-package io.peekandpoke
+package io.peekandpoke.dsp
 
 import io.peekandpoke.Numbers.TWO_PI
+import io.peekandpoke.StrudelEvent
 import kotlin.math.*
 import kotlin.random.Random
 import kotlin.reflect.KFunction
@@ -24,8 +25,6 @@ typealias SupersawFactory = (
     panspread: Double,
     rng: Random,
 ) -> OscFn
-
-fun oscFn(block: OscFn) = block
 
 fun oscillators(sampleRate: Int, build: Oscillators.Builder.() -> Unit = {}) =
     Oscillators.Builder(sampleRate).apply(build).build()
@@ -98,7 +97,7 @@ class Oscillators private constructor(
             val end = offset + length
             val norm = 2.0 / Math.PI
             for (i in offset until end) {
-                buffer[i] = gain * norm * kotlin.math.asin(sin(p))
+                buffer[i] = gain * norm * asin(sin(p))
                 p += phaseInc
                 if (p >= TWO_PI) p -= TWO_PI
             }

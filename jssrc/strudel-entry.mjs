@@ -4,7 +4,7 @@ import * as performance from '@perf-tools/performance';
 import {format as prettyFormat} from 'pretty-format'
 // Strudel
 import * as core from "@strudel/core";
-import {evalScope, isNote, register} from "@strudel/core";
+import {evalScope, register} from "@strudel/core";
 
 import * as mini from "@strudel/mini";
 import {miniAllStrings} from "@strudel/mini";
@@ -33,13 +33,9 @@ register(
  * - returns a Pattern object you can queryArc on.
  */
 const compile = async (strudelCode) => {
-    const strudelCodeEscaped = strudelCode.replaceAll(/`/g, "\\`");
-
     miniAllStrings(); // allows using single quotes for mini notation / skip transpilation
 
-    const evalRes = await evaluate(`
-${strudelCodeEscaped}    
-    `)
+    const evalRes = await evaluate(strudelCode)
 
     // console.log(res)
     // console.log("===================================================================")
@@ -58,14 +54,12 @@ const queryPattern = (pattern, from, to) => {
 export {
     // Polyfills
     performance,
-    // Helper libs
+    // helpers
     prettyFormat,
     // Strudel
     core,
     mini,
     tonal,
-    // tonaljs,
-    // transpiler,
     // Strudel interop
     compile,
     queryPattern,
