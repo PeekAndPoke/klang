@@ -7,7 +7,7 @@ import io.peekandpoke.dsp.SimpleFilters
 import io.peekandpoke.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.graal.GraalJsHelpers.safeStringOrNull
-import io.peekandpoke.graal.GraalJsHelpers.safeTpString
+import io.peekandpoke.graal.GraalJsHelpers.safeToStringOrNull
 import org.graalvm.polyglot.Value
 
 class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : StrudelPattern {
@@ -50,24 +50,35 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
 
         // Get details from "value" field
         val value = event.getMember("value")
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Get note
-        val note = value.getMember("note").safeTpString("")
+        val note = value.getMember("note").safeToStringOrNull()
         // scale
         val scale = event.getMember("context")?.getMember("scale").safeStringOrNull()
         // Get gain
         val gain = value.getMember("gain").safeNumberOrNull()
             ?: value.getMember("amp").safeNumberOrNull()
             ?: 1.0
-        // Get Oscillator parameters
-        val osc = value.getMember("s").safeStringOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
+        // Get sound parameters / sample bank and index
+        val sound = value.getMember("s").safeStringOrNull()
             ?: value.getMember("wave").safeStringOrNull()
             ?: value.getMember("sound").safeStringOrNull()
+        val bank = value.getMember("bank").safeStringOrNull()
+        val soundIndex = value.getMember("n").safeNumberOrNull()?.toInt()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
+        // Get Oscillator parameters
         val density = value.getMember("density").safeNumberOrNull()
         val spread = value.getMember("spread").safeNumberOrNull()
         val detune = value.getMember("detune").safeNumberOrNull()
         val unison = value.getMember("unison").safeNumberOrNull()
         // get LPF/HPF resonance
         val resonance = value.getMember("resonance").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Apply low pass filter?
         val cutoff = value.getMember("cutoff").safeNumberOrNull()
         cutoff?.let {
@@ -88,8 +99,11 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             note = note,
             scale = scale,
             gain = gain,
+            // Sound samples
+            sound = sound,
+            bank = bank,
+            soundIndex = soundIndex,
             // Oscilator
-            osc = osc,
             density = density,
             unison = unison,
             detune = detune,

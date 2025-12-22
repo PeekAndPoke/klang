@@ -83,7 +83,7 @@ object GraalJsHelpers {
         return safeStringOrNull() ?: default
     }
 
-    fun Value?.safeTpStringOrNull(): String? {
+    fun Value?.safeToStringOrNull(): String? {
         if (this == null) return null
 
         return when {
@@ -94,7 +94,7 @@ object GraalJsHelpers {
         }
     }
 
-    fun Value?.safeTpString(default: String): String {
-        return safeTpStringOrNull() ?: default
+    fun Value?.safeToString(default: String): String {
+        return safeToStringOrNull() ?: default
     }
 }

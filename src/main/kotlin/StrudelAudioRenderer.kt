@@ -1,8 +1,8 @@
 package io.peekandpoke
 
-import io.peekandpoke.Numbers.TWO_PI
 import io.peekandpoke.dsp.*
 import io.peekandpoke.utils.MinHeap
+import io.peekandpoke.utils.Numbers.TWO_PI
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -268,7 +268,8 @@ class StrudelAudioRenderer(
 
             if (head.endFrame <= blockStart) continue
 
-            val freqHz = StrudelNotes.resolveFreq(head.e.note, head.e.scale)
+            // TODO: ... what if it is not a note ...
+            val freqHz = StrudelNotes.resolveFreq(head.e.note ?: "", head.e.scale)
             val osc = oscillators.get(e = head.e, freqHz = freqHz)
 
             // Bake the filter for better performance

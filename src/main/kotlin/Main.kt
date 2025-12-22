@@ -139,10 +139,14 @@ suspend fun main() {
                 note("c!2 [eb,<g a bb a>]")
             """.trimIndent()
 
+            val simpleDrums = """
+                sound("sd sd:2").bank("AkaiMPC60 KRZ")
+            """.trimIndent()
+
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
 //            val pat = smallTownBoy
-            val pat = tetris
+//            val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
@@ -153,14 +157,17 @@ suspend fun main() {
 //            val pat = pinkNoise
 //            val pat = supersaw
 //            val pat = polyphone
+            val pat = simpleDrums
 
             val sanitized = pat.lines()
                 .filter { !it.trim().startsWith("//") }
                 .joinToString(" ")
 
             val compiled = strudel.compile(sanitized).await()
+            strudel.dumpPatternArc(compiled)
 
-//            strudel.dumpPatternArc(compiled)
+            val events = compiled.queryArc(0.0, 2.0, 44_100)
+            println(events)
 
             val audio = StrudelAudioRenderer(
                 pattern = compiled,

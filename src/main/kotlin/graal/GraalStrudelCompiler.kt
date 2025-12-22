@@ -1,7 +1,6 @@
 package io.peekandpoke.graal
 
 import io.peekandpoke.StrudelCompiler
-import io.peekandpoke.StrudelPattern
 import io.peekandpoke.graal.GraalJsHelpers.promiseToDeferred
 import kotlinx.coroutines.Deferred
 import org.graalvm.polyglot.Context
@@ -72,7 +71,7 @@ class GraalStrudelCompiler(esmBundlePath: Path) : StrudelCompiler, AutoCloseable
     /**
      * Compiles the given strudel [pattern]
      */
-    override fun compile(pattern: String): Deferred<StrudelPattern> {
+    override fun compile(pattern: String): Deferred<GraalStrudelPattern> {
         val promise = compileFn.execute(pattern)
 
         return promise.promiseToDeferred {
@@ -107,11 +106,19 @@ class GraalStrudelCompiler(esmBundlePath: Path) : StrudelCompiler, AutoCloseable
                 val n = it.arraySize
                 for (i in 0 until n) {
                     val ev = it.getArrayElement(i)
-                    println(ev)
+                    println(
+                        prettyFormatFn.execute(ev)
+                    )
                 }
             }
         }
     }
+
+    /**
+     * Queries events from the given [pattern] between [from] and [to] cycles and debug dumps them.
+     */
+    fun dumpPatternArc(pattern: GraalStrudelPattern, from: Double = 0.0, to: Double = 2.0) =
+        dumpPatternArc(pattern = pattern.value, from = from, to = to)
 
     override fun close() = ctx.close()
 }
