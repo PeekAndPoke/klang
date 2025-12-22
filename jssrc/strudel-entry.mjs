@@ -35,55 +35,6 @@ ${strudelCodeEscaped}
     return res.pattern
 }
 
-// noinspection JSUnusedGlobalSymbols
-/**
- * Query events between fromSec and toSec.
- * Returns plain JSON-ish objects to cross the polyglot boundary cleanly.
- */
-function queryPattern(pattern, from, to) {
-    if (!pattern) return [];
-
-    // Many Strudel Pattern objects support query-like semantics that yield Haps/values.
-    // We normalize everything into {t, dur, value}.
-    const haps = pattern.queryArc(from, to)
-
-    return haps.map(h => {
-        const base = {
-            t: Number(h.part?.begin?.valueOf?.() ?? 0),
-            dur: Number((h.part?.end?.valueOf?.() ?? 0) - (h.part?.begin?.valueOf?.() ?? 0)),
-            value: h.value
-        };
-
-        // console.log("HAP", prettyFormat(h));
-
-        if (!h?.value || h.value.note == null) return {...base, notesExpanded: []};
-
-        // 1) Expand mini-notation within the same time window
-        const expanded = mini.mini(h.value.note).queryArc(base.t, base.t + base.dur);
-
-        // 2) Map each token to a note-value event
-        const notesExpanded = expanded.map(eh => {
-            const noteVal = core.note(eh.value); // eh.value is like "a" or "c3"
-
-            return {
-                t: Number(eh.part?.begin?.valueOf?.() ?? 0),
-                dur: Number((eh.part?.end?.valueOf?.() ?? 0) - (eh.part?.begin?.valueOf?.() ?? 0)),
-                // carry a uniform shape: { note: string }
-                value: {
-                    // Inherit from parent hap
-                    ...(h.value || {}),
-                    // Get note from noteVal or inherit it from eh.value
-                    ...(typeof noteVal?.value === 'object' && noteVal.value?.note ? noteVal.value : {note: String(eh.value)}),
-                },
-            };
-        });
-
-        notesExpanded.forEach(ne => console.log(JSON.stringify(ne)));
-
-        return {...base, notesExpanded};
-    });
-}
-
 export {
     // Polyfills
     performance,
@@ -95,5 +46,4 @@ export {
     transpiler,
     // Strudel interop
     compile,
-    queryPattern,
 };

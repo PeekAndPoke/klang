@@ -4,7 +4,6 @@ import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.graalvm.polyglot.Value
-import java.util.PriorityQueue
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import kotlin.time.Duration.Companion.milliseconds
@@ -29,7 +28,7 @@ class StrudelAudioRenderer(
     /** How often we query Strudel (milliseconds). */
     val fetchPeriodMs: Long = 25L,
     /** Fixed render quantum in frames. */
-    val blockFrames: Int = 2048,
+    val blockFrames: Int = 512,
     /**
      * External scope makes lifecycle control easier (tests/apps).
      * Default is fine for a small demo.
@@ -43,13 +42,14 @@ class StrudelAudioRenderer(
         val e: StrudelEvent,
     )
 
-    private data class Voice(
+    private class Voice(
         val startFrame: Long,
         val endFrame: Long,
         val gain: Double,
         val osc: OscFn,
-        val filters: List<FilterFn>,
+        val filter: FilterFn,
         val freqHz: Double,
+        val phaseInc: Double,
         var phase: Double = 0.0,
     )
 
@@ -64,8 +64,13 @@ class StrudelAudioRenderer(
     private val scheduled = MinHeap<ScheduledEvent> { a, b -> a.startFrame < b.startFrame }
     private val activeVoices = ArrayList<Voice>(64)
 
-    private var fetchJob: Job? = null
-    private var audioJob: Job? = null
+    // Reusable buffers to avoid allocation in loop
+    private val mixBuffer = DoubleArray(blockFrames)
+    private val voiceBuffer = DoubleArray(blockFrames)
+
+    // Coroutine Jobs
+    private var fetchJob: Job? = null // Job for fetching new events
+    private var audioJob: Job? = null // Job for mixing audio
 
     private val droppedEvents = atomic(0)
 
@@ -73,11 +78,14 @@ class StrudelAudioRenderer(
         val result = pattern.invokeMember("queryArc", fromCycles, toCycles)
 
         val events = mutableListOf<StrudelEvent>()
-        val topN = result.arraySize
-        for (i in 0 until topN) {
+        val count = result.arraySize
+
+        for (i in 0 until count) {
             val item = result.getArrayElement(i)
+//            println(strudel.prettyFormat(item))
             events += StrudelEvent.of(item, sampleRate)
         }
+
         return events.sortedBy { it.begin }
     }
 
@@ -118,55 +126,60 @@ class StrudelAudioRenderer(
 
         // Scheduler state in Strudel-time (cycles)
         val initialEvents = extractEvents(pattern, 0.0, 2.0)
-        for(e in initialEvents) {
-            val scheduledEvent = e.toScheduled(framesPerCycle)
-            scheduled.push(scheduledEvent)
+        for (e in initialEvents) {
+            // Ensure we don't double-schedule if initialEvents returns things outside (unlikely but safe)
+            if (e.begin >= 0.0 && e.begin < 2.0) {
+                val scheduledEvent = e.toScheduled(framesPerCycle)
+                scheduled.push(scheduledEvent)
+            }
         }
 
         var queryCursorCycles = 2.0
 
-        // prefetch the first notes... otherwiese thay are missing
-
-
         fetchJob = scope.launch(Dispatchers.Default.limitedParallelism(1)) {
-            val overlapSec = 0.00
-            val overlapCycles = overlapSec / secPerCycle
+            // We fetch strictly in chunks of 1.0 cycle to ensure consistency
+            val fetchChunk = 1.0
 
             while (isActive && running.value) {
                 val nowFrame = cursorFrame.value
                 val nowSec = nowFrame.toDouble() / sampleRate.toDouble()
                 val nowCycles = nowSec / secPerCycle
 
-                val fromCycles = maxOf(queryCursorCycles, nowCycles - overlapCycles)
-                val toCycles = nowCycles + (lookaheadSec / secPerCycle)
+                // We want to maintain a buffer of future events up to this point
+                val targetCycles = nowCycles + (lookaheadSec / secPerCycle)
 
-                try {
-                    val events = extractEvents(pattern, fromCycles, toCycles)
-                    val due = events.filter { it.begin >= fromCycles }
+                // Advance the cursor in full cycle steps until we meet the target
+                while (queryCursorCycles < targetCycles) {
+                    val from = queryCursorCycles
+                    val to = from + fetchChunk
 
-                    println("num events: ${events.size}, due: ${due.size}, dropped: ${events.size - due.size}")
+                    try {
+                        // Query the arc for the next full cycle
+                        val events = extractEvents(pattern, from, to)
 
-                    for (e in due) {
-                        val startFrame = (e.begin * framesPerCycle).toLong()
-                        val durFrames = (e.dur * framesPerCycle).toLong().coerceAtLeast(1L)
-                        val endFrame = startFrame + durFrames
+                        // Crucial: Filter events to only schedule those that *start* within this window.
+                        // queryArc returns all events active in the window, so without this,
+                        // a note spanning multiple cycles would be scheduled multiple times.
+                        val newEvents = events.filter { it.begin >= from && it.begin < to }
 
-                        val scheduledEvent = ScheduledEvent(
-                            startFrame = startFrame,
-                            endFrame = endFrame,
-                            e = e,
-                        )
+                        // println("Scheduling [${from}..${to}): found ${newEvents.size} events")
 
-                        val res = channel.trySend(scheduledEvent)
+                        for (e in newEvents) {
+                            val scheduledEvent = e.toScheduled(framesPerCycle)
+                            val res = channel.trySend(scheduledEvent)
 
-                        if (res.isFailure) {
-                            droppedEvents.incrementAndGet()
+                            if (res.isFailure) {
+                                droppedEvents.incrementAndGet()
+                            }
                         }
-                    }
 
-                    queryCursorCycles = toCycles
-                } catch (t: Throwable) {
-                    t.printStackTrace()
+                        // Successfully processed this chunk, advance the cursor strictly
+                        queryCursorCycles = to
+                    } catch (t: Throwable) {
+                        t.printStackTrace()
+                        // If fetching fails, break inner loop to retry after delay
+                        break
+                    }
                 }
 
                 delay(fetchPeriodMs)
@@ -186,7 +199,12 @@ class StrudelAudioRenderer(
                         scheduled.push(ev)
                     }
 
-                    renderBlockInto(out, frames = blockFrames)
+                    // Prepare new voices
+                    createVoices()
+                    // Do the mixing
+                    renderBlockInto(out)
+
+                    // Write to the audio buffer
                     line.write(out, 0, out.size)
                 }
             } finally {
@@ -216,9 +234,9 @@ class StrudelAudioRenderer(
 
     override fun close() = stop()
 
-    private fun renderBlockInto(out: ByteArray, frames: Int) {
+    private fun createVoices() {
         val blockStart = cursorFrame.value
-        val blockEndExclusive = blockStart + frames.toLong()
+        val blockEndExclusive = blockStart + blockFrames
 
         // 1) Promote scheduled events due in this block to active voices
         while (true) {
@@ -232,68 +250,130 @@ class StrudelAudioRenderer(
             val freqHz = StrudelNotes.midiToFreq(midi)
             val osc = oscillators.get(e = head.e, freqHz = freqHz)
 
+            // Bake the filter for better performance
+            val bakedFilters = combineFilters(head.e.filters)
+
+            // Pre-calculate increment once
+            val phaseInc = 2.0 * Math.PI * freqHz / sampleRate.toDouble()
+
             activeVoices += Voice(
                 startFrame = head.startFrame,
                 endFrame = head.endFrame,
                 gain = head.e.gain,
                 osc = osc,
-                filters = head.e.filters,
+                filter = bakedFilters,
                 freqHz = freqHz,
+                phaseInc = phaseInc,
                 phase = 0.0,
             )
         }
+    }
 
-        val attackFrames = 256
-        val releaseFrames = 512
+    private fun renderBlockInto(out: ByteArray) {
+        val blockStart = cursorFrame.value
+        val blockEndExclusive = blockStart + blockFrames
 
-        for (i in 0 until frames) {
-            val frameIndex = blockStart + i.toLong()
-            var mix = 0.0
+        // Clear the mix buffer
+        mixBuffer.fill(0.0)
 
-            var v = 0
-            while (v < activeVoices.size) {
-                val voice = activeVoices[v]
+        var v = 0
+        while (v < activeVoices.size) {
+            val voice = activeVoices[v]
 
-                if (frameIndex < voice.startFrame) {
-                    v++
-                    continue
-                }
-                if (frameIndex >= voice.endFrame) {
-                    activeVoices.removeAt(v)
-                    continue
-                }
-
-                val local = (frameIndex - voice.startFrame).toInt()
-                val total = (voice.endFrame - voice.startFrame).toInt().coerceAtLeast(1)
-
-                val env = when {
-                    local < attackFrames -> local / attackFrames.toDouble()
-                    local > total - releaseFrames -> (total - local) / releaseFrames.toDouble()
-                    else -> 1.0
-                }.coerceIn(0.0, 1.0)
-
-                val inc = 2.0 * Math.PI * voice.freqHz / sampleRate.toDouble()
-                var s = voice.osc(voice.phase) * voice.gain * env
-
-                for (filter in voice.filters) {
-                    s = filter(s)
-                }
-
-                voice.phase += inc
-                if (voice.phase >= 2.0 * Math.PI) voice.phase -= 2.0 * Math.PI
-
-                mix += s
+            if (blockEndExclusive <= voice.startFrame) {
+                // Voice hasn't started yet (shouldn't happen with current logic but safe to check)
                 v++
+                continue
             }
 
-            val sample = mix.coerceIn(-1.0, 1.0)
-            val pcm = (sample * Short.MAX_VALUE).toInt()
+            if (blockStart >= voice.endFrame) {
+                // Voice finished, Swap and Pop
+                val lastIdx = activeVoices.size - 1
+                if (v < lastIdx) {
+                    activeVoices[v] = activeVoices[lastIdx]
+                }
+                activeVoices.removeAt(lastIdx)
+                continue
+            }
 
+            // Calculate valid range for this voice within the block
+            // e.g., if voice starts at frame 10 of this 512 block, offset is 10
+            val vStart = maxOf(blockStart, voice.startFrame)
+            val vEnd = minOf(blockEndExclusive, voice.endFrame)
+
+            val bufferOffset = (vStart - blockStart).toInt()
+            val length = (vEnd - vStart).toInt()
+
+            // 1. Generate Audio into voiceBuffer
+            // This call is now a single virtual call per block (fast!)
+            // The loop inside 'process' is tight and vectorizable
+            voice.phase = voice.osc.process(
+                buffer = voiceBuffer,
+                offset = bufferOffset,
+                length = length,
+                phase = voice.phase,
+                phaseInc = voice.phaseInc
+            )
+
+            // 2. Apply Filters & Envelope & Mix
+            // Note: We could also make filters block-processing capable,
+            // but even just looping here is better than a lambda per sample.
+
+            // Simple envelope logic (approximate for block)
+            // To do this perfectly accurately per sample, we'd calculate env inside loop
+            // For performance, simple logic:
+            val attackFrames = 256.0
+            // For a proper envelope, we need relative position.
+            var relPos = (vStart - voice.startFrame).toInt()
+
+            for (i in 0 until length) {
+                val idx = bufferOffset + i
+                var s = voiceBuffer[idx]
+
+                // Apply Filter (still per-sample, but tight loop)
+                s = voice.filter(s)
+
+                // Simple Attack Envelope
+                // (You can expand this to full ADSR later)
+                var env = 1.0
+                if (relPos < attackFrames) {
+                    env = relPos / attackFrames
+                }
+
+                // Accumulate to mix
+                mixBuffer[idx] += s * voice.gain * env
+                relPos++
+            }
+
+            v++
+        }
+
+        // Convert Double Mix to Byte Output
+        for (i in 0 until blockFrames) {
+            val sample = mixBuffer[i].coerceIn(-1.0, 1.0)
+            val pcm = (sample * Short.MAX_VALUE).toInt()
             out[i * 2] = (pcm and 0xff).toByte()
             out[i * 2 + 1] = ((pcm ushr 8) and 0xff).toByte()
         }
 
         cursorFrame.value = blockEndExclusive
+    }
+
+    private fun combineFilters(filters: List<FilterFn>): FilterFn {
+        if (filters.isEmpty()) return { s -> s }
+        if (filters.size == 1) return filters[0]
+
+        // Convert List to Array to avoid Iterator allocation/overhead in the hot loop
+        val arr = filters.toTypedArray()
+
+        return { sample ->
+            var s = sample
+            // Standard array loop is very fast
+            for (i in arr.indices) {
+                s = arr[i](s)
+            }
+            s
+        }
     }
 
     private class MinHeap<T>(private val less: (T, T) -> Boolean) {

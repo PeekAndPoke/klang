@@ -1,10 +1,19 @@
 package io.peekandpoke
 
+import io.peekandpoke.Numbers.TWO_PI
 import kotlin.math.*
 import kotlin.random.Random
 import kotlin.reflect.KFunction
 
-typealias OscFn = (frequency: Double) -> Double
+fun interface OscFn {
+    /**
+     * Fills [buffer] starting at [offset] for [length] samples.
+     * Uses [phase] as the starting phase and increments it by [phaseInc] per sample.
+     * Returns the next phase value.
+     */
+    fun process(buffer: DoubleArray, offset: Int, length: Int, phase: Double, phaseInc: Double): Double
+}
+
 typealias NoiseFactory = (rng: Random) -> OscFn
 typealias DustFactory = (sampleRate: Int, density: Double, rng: Random) -> OscFn
 typealias SupersawFactory = (
@@ -48,28 +57,66 @@ class Oscillators private constructor(
             this.toString()
         }
 
-        fun sine(gain: Double = 1.0): OscFn = { phase ->
-            gain * sin(phase)
+        fun sine(gain: Double = 1.0) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+            var p = startPhase
+            val end = offset + length
+            for (i in offset until end) {
+                buffer[i] = gain * sin(p)
+                p += phaseInc
+                if (p >= TWO_PI) p -= TWO_PI
+            }
+            p
         }
 
-        fun sawtooth(gain: Double = 0.6): OscFn = { phase ->
-            val x = phase / (2.0 * Math.PI)
-            gain * 2.0 * (x - floor(x + 0.5))
+        fun sawtooth(gain: Double = 0.6) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+            var p = startPhase
+            val end = offset + length
+            val invTwoPi = 1.0 / TWO_PI
+
+            for (i in offset until end) {
+                val x = p * invTwoPi
+                buffer[i] = gain * 2.0 * (x - floor(x + 0.5))
+                p += phaseInc
+                if (p >= TWO_PI) p -= TWO_PI
+            }
+            p
         }
 
-        fun square(gain: Double = 0.5): OscFn = { phase ->
-            gain * if (sin(phase) >= 0.0) 1.0 else -1.0
+        fun square(gain: Double = 0.5) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+            var p = startPhase
+            val end = offset + length
+            for (i in offset until end) {
+                buffer[i] = gain * if (sin(p) >= 0.0) 1.0 else -1.0
+                p += phaseInc
+                if (p >= TWO_PI) p -= TWO_PI
+            }
+            p
         }
 
-        fun triangle(gain: Double = 0.7): OscFn = { phase ->
-            // Triangle via asin(sin) normalized to [-1,1]
-            gain * (2.0 / Math.PI) * kotlin.math.asin(sin(phase))
+        fun triangle(gain: Double = 0.7) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+            var p = startPhase
+            val end = offset + length
+            val norm = 2.0 / Math.PI
+            for (i in offset until end) {
+                buffer[i] = gain * norm * kotlin.math.asin(sin(p))
+                p += phaseInc
+                if (p >= TWO_PI) p -= TWO_PI
+            }
+            p
         }
 
-        fun zawtooth(gain: Double = 1.0): OscFn = { phase ->
-            val x = phase / (2.0 * Math.PI)
-            val frac = x - floor(x)
-            gain * (frac * 2.0 - 1.0)
+        fun zawtooth(gain: Double = 1.0) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+            var p = startPhase
+            val end = offset + length
+            val invTwoPi = 1.0 / TWO_PI
+            for (i in offset until end) {
+                val x = p * invTwoPi
+                val frac = x - floor(x)
+                buffer[i] = gain * (frac * 2.0 - 1.0)
+                p += phaseInc
+                if (p >= TWO_PI) p -= TWO_PI
+            }
+            p
         }
 
         fun supersaw(
@@ -84,135 +131,149 @@ class Oscillators private constructor(
             val v = voices.coerceIn(1, 16)
             val sr = sampleRate.toDouble()
 
-            // JS stores per-voice phase in cycles [0,1)
-            val phase = DoubleArray(v) { rng.nextDouble() }
+            // Internal state for supersaw phases (independent of Voice phase)
+            val phases = DoubleArray(v) { rng.nextDouble() }
 
             val g1 = sqrt(1.0 - panspread.coerceIn(0.0, 1.0))
             val g2 = sqrt(panspread.coerceIn(0.0, 1.0))
+            val invV = 1.0 / v.toDouble()
 
-            return { _ ->
-                var sl = 0.0
-                var srSum = 0.0
+            // Pre-calculate detunes to avoid doing it per sample
+            val detunes = DoubleArray(v) { n ->
+                val det = getUnisonDetune(v, detuneSemitones, n)
+                val freqAdjusted = applySemitoneDetuneToFrequency(baseFreqHz, det)
+                freqAdjusted / sr // This is the increment
+            }
 
-                for (n in 0 until v) {
-                    val det = getUnisonDetune(v, detuneSemitones, n)
-                    val freqAdjusted = applySemitoneDetuneToFrequency(baseFreqHz, det)
-                    val dt = freqAdjusted / sr
+            return OscFn { buffer, offset, length, _, _ ->
+                // Supersaw ignores the master phase/phaseInc because it manages its own stack
+                val end = offset + length
 
-                    val isOdd = (n and 1) == 1
-                    val gainL = if (isOdd) g2 else g1
-                    val gainR = if (isOdd) g1 else g2
+                for (i in offset until end) {
+                    var sl = 0.0
+                    var srSum = 0.0
 
-                    val p = polyBlep(phase[n], dt)
-                    val s = 2.0 * phase[n] - 1.0 - p
+                    for (n in 0 until v) {
+                        val dt = detunes[n]
+                        val isOdd = (n and 1) == 1
+                        val gainL = if (isOdd) g2 else g1
+                        val gainR = if (isOdd) g1 else g2
 
-                    sl += s * gainL
-                    srSum += s * gainR
+                        val p = polyBlep(phases[n], dt)
+                        val s = 2.0 * phases[n] - 1.0 - p
 
-                    phase[n] += dt
-                    if (phase[n] > 1.0) phase[n] -= 1.0
+                        sl += s * gainL
+                        srSum += s * gainR
+
+                        phases[n] += dt
+                        if (phases[n] > 1.0) phases[n] -= 1.0
+                    }
+                    buffer[i] = gain * (sl + srSum) * invV
                 }
-
-                // Mono output for now, like your JS "return sl + sr"
-                gain * (sl + srSum) / v.toDouble()
+                0.0 // Dummy return
             }
         }
 
         fun pulze(
             duty: Double = 0.5,
             gain: Double = 1.0,
-        ): OscFn = { phase ->
+        ) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+            var p = startPhase
+            val end = offset + length
             val d = duty.coerceIn(0.0, 1.0)
-            val x = phase / (2.0 * PI)                  // cycles
-            val cyclePos = x - floor(x)                 // [0, 1)
-            gain * if (cyclePos < d) 1.0 else -1.0
+            val invTwoPi = 1.0 / TWO_PI
+
+            for (i in offset until end) {
+                val x = p * invTwoPi
+                val cyclePos = x - floor(x)
+                buffer[i] = gain * if (cyclePos < d) 1.0 else -1.0
+                p += phaseInc
+                if (p >= TWO_PI) p -= TWO_PI
+            }
+            p
         }
 
         fun impulse(): OscFn {
             var lastPhase = Double.POSITIVE_INFINITY
 
-            @Suppress("AssignedValueIsNeverRead")
-            return { phase ->
-                val v = if (phase < lastPhase) 1.0 else 0.0
-                lastPhase = phase
-                v
+            return OscFn { buffer, offset, length, startPhase, phaseInc ->
+                var p = startPhase
+                val end = offset + length
+                for (i in offset until end) {
+                    buffer[i] = if (p < lastPhase) 1.0 else 0.0
+                    lastPhase = p
+                    p += phaseInc
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
+                p
             }
+        }
+
+        val silence =  OscFn { buffer, offset, length, _, _ ->
+            buffer.fill(0.0, offset, offset + length)
+            0.0
         }
 
         // Noise //////////////////////////////////////////////////////////////////////
+        // Note: Noises ignore phase/phaseInc, they just fill random
 
-        fun whiteNoise(
-            rng: Random,
-            gain: Double = 1.0,
-        ): OscFn = { _ ->
-            gain * (rng.nextDouble() * 2.0 - 1.0)
+        fun whiteNoise(rng: Random, gain: Double = 1.0) = OscFn { buffer, offset, length, _, _ ->
+            val end = offset + length
+            for (i in offset until end) {
+                buffer[i] = gain * (rng.nextDouble() * 2.0 - 1.0)
+            }
+            0.0
         }
 
-        fun brownNoise(
-            rng: Random,
-            gain: Double = 1.0,
-        ): OscFn {
+        fun brownNoise(rng: Random, gain: Double = 1.0): OscFn {
             var out = 0.0
-            return { _ ->
-                val white = rng.nextDouble() * 2.0 - 1.0
-                out = (out + 0.02 * white) / 1.02
-                gain * out
+            return OscFn { buffer, offset, length, _, _ ->
+                val end = offset + length
+                for (i in offset until end) {
+                    val white = rng.nextDouble() * 2.0 - 1.0
+                    out = (out + 0.02 * white) / 1.02
+                    buffer[i] = gain * out
+                }
+                0.0
             }
         }
 
-        fun pinkNoise(
-            rng: Random,
-            gain: Double = 1.0,
-        ): OscFn {
-            var b0 = 0.0
-            var b1 = 0.0
-            var b2 = 0.0
-            var b3 = 0.0
-            var b4 = 0.0
-            var b5 = 0.0
-            var b6 = 0.0
+        fun pinkNoise(rng: Random, gain: Double = 1.0): OscFn {
+            var b0 = 0.0; var b1 = 0.0; var b2 = 0.0; var b3 = 0.0; var b4 = 0.0; var b5 = 0.0; var b6 = 0.0
 
-            @Suppress("AssignedValueIsNeverRead")
-            return { _ ->
-                val white = rng.nextDouble() * 2.0 - 1.0
-
-                b0 = 0.99886 * b0 + white * 0.0555179
-                b1 = 0.99332 * b1 + white * 0.0750759
-                b2 = 0.96900 * b2 + white * 0.1538520
-                b3 = 0.86650 * b3 + white * 0.3104856
-                b4 = 0.55000 * b4 + white * 0.5329522
-                b5 = -0.7616 * b5 - white * 0.0168980
-
-                val pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362
-                b6 = white * 0.115926
-
-                gain * (pink * 0.11)
+            return OscFn { buffer, offset, length, _, _ ->
+                val end = offset + length
+                for (i in offset until end) {
+                    val white = rng.nextDouble() * 2.0 - 1.0
+                    b0 = 0.99886 * b0 + white * 0.0555179
+                    b1 = 0.99332 * b1 + white * 0.0750759
+                    b2 = 0.96900 * b2 + white * 0.1538520
+                    b3 = 0.86650 * b3 + white * 0.3104856
+                    b4 = 0.55000 * b4 + white * 0.5329522
+                    b5 = -0.7616 * b5 - white * 0.0168980
+                    val pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362
+                    b6 = white * 0.115926
+                    buffer[i] = gain * (pink * 0.11)
+                }
+                0.0
             }
         }
 
         fun dust(
-            /** Sample rate */
             sampleRate: Int,
-            /**
-             * Strudel-style density in [0, 1].
-             * 0.0 = no impulses, 1.0 = very crackly.
-             */
             density: Double,
-            /**
-             * Maximum impulse rate (impulses per second) when density == 1.0.
-             * Tune this to taste:
-             * - ~200: "dust" / light grains
-             * - ~800: "crackle" / vinyl-ish
-             */
             maxRateHz: Double,
-            /** Random */
             rng: Random,
-        ): OscFn = { _ ->
+        ) = OscFn { buffer, offset, length, _, _ ->
             val d = density.coerceIn(0.0, 1.0)
             val rateHz = d * maxRateHz
             val p = (rateHz / sampleRate.toDouble()).coerceIn(0.0, 1.0)
+            val end = offset + length
 
-            if (rng.nextDouble() < p) rng.nextDouble() else 0.0
+            for (i in offset until end) {
+                buffer[i] = if (rng.nextDouble() < p) rng.nextDouble() else 0.0
+            }
+            0.0
         }
 
         private fun polyBlep(tIn: Double, dt: Double): Double {
@@ -325,8 +386,6 @@ class Oscillators private constructor(
             crackle = crackle,
         )
     }
-
-    val silence: OscFn = { 0.0 }
 
     fun get(e: StrudelEvent, freqHz: Double?): OscFn = get(
         name = e.osc,

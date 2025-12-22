@@ -57,10 +57,12 @@ data class StrudelEvent(
         fun of(event: Value, sampleRate: Int): StrudelEvent {
             val filters = mutableListOf<FilterFn>()
 
+            val part = event.getMember("part")
+
             // Begin
-            val begin = event.getMember("part")?.getMember("begin")?.safeNumber(0.0) ?: 0.0
+            val begin = part?.getMember("begin")?.safeNumber(0.0) ?: 0.0
             // End
-            val end = event.getMember("part")?.getMember("end")?.safeNumber(0.0) ?: 0.0
+            val end = part?.getMember("end")?.safeNumber(0.0) ?: 0.0
             // Get duration
             val dur = end - begin
 
