@@ -4,6 +4,7 @@ import io.peekandpoke.GraalJsBridge.safeNumber
 import io.peekandpoke.GraalJsBridge.safeNumberOrNull
 import io.peekandpoke.GraalJsBridge.safeString
 import io.peekandpoke.GraalJsBridge.safeStringOrNull
+import io.peekandpoke.GraalJsBridge.safeTpString
 import org.graalvm.polyglot.Value
 
 /**
@@ -19,8 +20,9 @@ data class StrudelEvent(
     val end: Double,
     /** The duration of the note */
     val dur: Double,
-    // Frequency and note
+    // note, scale, gain
     val note: String,
+    val scale: String?,
     val gain: Double,
     // Oscilator
     /** Oscillator name, see [Oscillators.get] */
@@ -69,7 +71,9 @@ data class StrudelEvent(
             // Get details from "value" field
             val value = event.getMember("value")
             // Get note
-            val note = value.getMember("note").safeString("")
+            val note = value.getMember("note").safeTpString("")
+            // scale
+            val scale = event.getMember("context")?.getMember("scale").safeStringOrNull()
             // Get gain
             val gain = value.getMember("gain").safeNumberOrNull()
                 ?: value.getMember("amp").safeNumberOrNull()
@@ -102,6 +106,7 @@ data class StrudelEvent(
                 dur = dur,
                 // Frequency and note
                 note = note,
+                scale = scale,
                 gain = gain,
                 // Oscilator
                 osc = osc,

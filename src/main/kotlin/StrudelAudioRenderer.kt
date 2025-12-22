@@ -247,8 +247,7 @@ class StrudelAudioRenderer(
 
             if (head.endFrame <= blockStart) continue
 
-            val midi = StrudelNotes.noteNameToMidi(head.e.note)
-            val freqHz = StrudelNotes.midiToFreq(midi)
+            val freqHz =  StrudelNotes.resolveFreq(head.e.note, head.e.scale)
             val osc = oscillators.get(e = head.e, freqHz = freqHz)
 
             // Bake the filter for better performance
@@ -324,19 +323,36 @@ class StrudelAudioRenderer(
             // To do this perfectly accurately per sample, we'd calculate env inside loop
             // For performance, simple logic:
             val attackFrames = 256.0
+            val releaseFrames = 512.0 // Fade out over ~10ms
             val invAttack = 1.0 / attackFrames
+            val invRelease = 1.0 / releaseFrames
 
+            // Calculate where the release phase should start for this voice
+            val totalFrames = (voice.endFrame - voice.startFrame).toInt()
+            val releaseStart = (totalFrames - releaseFrames).toInt().coerceAtLeast(0)
+
+            // Current position relative to the start of the voice
             var relPos = (vStart - voice.startFrame).toInt()
 
             for (i in 0 until length) {
                 val idx = bufferOffset + i
-                val s = voiceBuffer[idx] // This is already filtered now!
+                val s = voiceBuffer[idx]
 
-                // Fast Envelope Math
+                // Envelope Logic
                 var env = 1.0
+
                 if (relPos < attackFrames) {
-                    env = relPos * invAttack // Mul is faster than Div
+                    // Attack Phase
+                    env = relPos * invAttack
+                } else if (relPos >= releaseStart) {
+                    // Release Phase (Fade out)
+                    val relInRelease = relPos - releaseStart
+                    // Linear fade out: 1.0 -> 0.0
+                    env = 1.0 - (relInRelease * invRelease)
                 }
+
+                // Safety clamp to avoid negative gain if we overshoot slightly
+                if (env < 0.0) env = 0.0
 
                 // Accumulate to mix
                 mixBuffer[idx] += s * voice.gain * env

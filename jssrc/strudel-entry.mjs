@@ -15,7 +15,6 @@ await evalScope(
     import('@strudel/core'),
     import('@strudel/mini'),
     import('@strudel/tonal'),
-    // import('@strudel/tonal'),
 );
 
 miniAllStrings(); // allows using single quotes for mini notation / skip transpilation
