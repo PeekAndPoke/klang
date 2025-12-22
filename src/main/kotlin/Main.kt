@@ -38,7 +38,7 @@ suspend fun main() {
             strudel = strudel,
             sampleRate = 48_000,
             oscillators = oscillators(sampleRate = 48_000),
-            cps = 0.5,
+            cps = 0.6,
         )
 
         try {

@@ -12,39 +12,10 @@ import {miniAllStrings} from "@strudel/mini";
 import * as tonal from "@strudel/tonal";
 
 await evalScope(
-    import('@strudel/tonal'),
     import('@strudel/core'),
     import('@strudel/mini'),
-    // import('@strudel/midi'),
-    // import('@strudel/hydra'),
-    // import('@strudel/soundfonts'),
+    import('@strudel/tonal'),
 );
-
-// import * as tonaljs from "@tonaljs/tonal"
-// import {Scale} from "@tonaljs/tonal";
-//
-// console.log("-----------------------------------------------------------------------------------")
-// const cMinor = Scale.get("c minor")
-// console.log("cMinor", prettyFormat(cMinor))
-//
-// console.log("-----------------------------------------------------------------------------------")
-// const s = "C4:minor";
-// console.log(s.split(" ", ":").filter(Boolean)); // should be ["C4", "minor"]
-//
-// console.log("-----------------------------------------------------------------------------------")
-// const r = /^([a-gA-G])([#bsf]*)(-?[0-9]*)$/;
-// for (const x of ["C-1", "Eb-1", "C4", "Bb2", "F#3", "c"]) {
-//     const m = r.exec(x);
-//     console.log(x, "=>", m ? m.slice(1) : null);
-// }
-//
-// console.log("-----------------------------------------------------------------------------------")
-// console.log("RegExp sanity:", /^C4:minor$/.test("C4:minor"));
-// console.log("strudel tonal keys:", Object.keys(tonal).slice(0, 20));
-//
-// console.log("-----------------------------------------------------------------------------------")
-// console.log("isNote()", isNote("C-1"))
-
 
 register(
     'debug',

@@ -85,7 +85,7 @@ class StrudelAudioRenderer(
             val item = result.getArrayElement(i)
             events += StrudelEvent.of(item, sampleRate).also {
 //            println(strudel.prettyFormat(item))
-                println("${it.note} ${it.scale}")
+//                println("${it.note} ${it.scale}")
             }
         }
 
