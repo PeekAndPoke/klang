@@ -1,8 +1,13 @@
 package io.peekandpoke
 
 import io.peekandpoke.graal.GraalStrudelCompiler
+import io.peekandpoke.samples.SampleBankIndex
+import io.peekandpoke.samples.SampleBankIndexLoader
+import io.peekandpoke.samples.SampleDownloader
+import io.peekandpoke.utils.DiskUrlCache
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
+import java.net.URI
 import java.nio.file.Path
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
@@ -166,6 +171,9 @@ suspend fun main() {
             )
 
             audio.start()
+
+            sanityCheckSamplesIndex()
+
             delay(600_000)
             audio.stop()
             println("Done")
@@ -174,4 +182,32 @@ suspend fun main() {
             strudel.close()
         }
     }
+}
+
+suspend fun sanityCheckSamplesIndex() {
+    val samplesUrl =
+        URI.create("https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json")
+    val aliasUrl = URI.create("https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json")
+
+    val loader = SampleBankIndexLoader(
+        downloader = SampleDownloader(),
+        cache = DiskUrlCache(Path.of("./cache/index")),
+    )
+
+    val index: SampleBankIndex = loader.load(
+        sampleMapUrl = samplesUrl,
+        aliasUrl = aliasUrl,
+    )
+
+    println("banks=${index.banks.size}")
+
+    // A couple of spot checks (pick any bank/sound you know exists)
+    println("AkaiMPC60 sounds=${index.banks["AkaiMPC60"]?.size}")
+    println("AkaiMPC60 bd variants=${index.banks["AkaiMPC60"]?.get("bd")?.size}")
+
+    // Print one resolved URL to verify _base concatenation
+    val firstUrl = index.banks["AkaiMPC60"]?.get("bd")?.firstOrNull()
+    println("AkaiMPC60 bd[0]=$firstUrl")
+
+    println("alias MPC60 -> ${index.bankAliases["MPC60"]}")
 }

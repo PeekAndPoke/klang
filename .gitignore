@@ -45,3 +45,4 @@ bin/
 .DS_Store
 
 jssrc/node_modules
+cache/
