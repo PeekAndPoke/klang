@@ -38,7 +38,7 @@ suspend fun main() {
             strudel = strudel,
             sampleRate = 48_000,
             oscillators = oscillators(sampleRate = 48_000),
-            cps = 0.6,
+            cps = 0.55,
         )
 
         try {
@@ -59,10 +59,36 @@ suspend fun main() {
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                     .sound("supersaw").unison(16).lpf(sine.range(400, 2000).slow(4)),
                     // melody
-                    n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")
+                    arrange(
+                      [8, silence],
+                      [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
+                    )
                     .scale("C4:minor")
                     .sound("triangle")
-                )
+                ).gain(0.5)
+                
+            """.trimIndent()
+
+            val tetris = """
+                note("<
+                [e5 [b4 c5] d5 [c5 b4]]
+                [a4 [a4 c5] e5 [d5 c5]]
+                [b4 [~ c5] d5 e5]
+                [c5 a4 a4 ~]
+                [[~ d5] [~ f5] a5 [g5 f5]]
+                [e5 [~ c5] e5 [d5 c5]]
+                [b4 [b4 c5] d5 e5]
+                [c5 a4 a4 ~]
+                ,
+                [[e2 e3]*4]
+                [[a2 a3]*4]
+                [[g#2 g#3]*2 [e2 e3]*2]
+                [a2 a3 a2 a3 a2 a3 b1 c2]
+                [[d2 d3]*4]
+                [[c2 c3]*4]
+                [[b1 b2]*2 [e2 e3]*2]
+                [[a1 a2]*4]
+                >").sound("supersaw").unison(4).detune(sine.range(0.3, 0.6).slow(8)).gain(0.5)
             """.trimIndent()
 
             val c4Minor = """
@@ -114,6 +140,7 @@ suspend fun main() {
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
             val pat = smallTownBoy
+//            val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
@@ -125,22 +152,19 @@ suspend fun main() {
 //            val pat = supersaw
 //            val pat = polyphone
 
-            val compiled = strudel.compile(pat).await()!!
+            val sanitized = pat.lines()
+                .filter { !it.trim().startsWith("//") }
+                .joinToString(" ")
 
-            println("pattern: $compiled")
+            val compiled = strudel.compile(sanitized).await()!!
 
-            strudel.queryPattern(compiled, 0.0, 2.0)?.also {
-                val n = it.arraySize
-                for (i in 0 until n) {
-                    val ev = it.getArrayElement(i)
-                    println(ev)
-                }
-            }
+//            strudel.dumpPatternArc(compiled)
 
             audio.start(compiled)
             delay(600_000)
             audio.stop()
             println("Done")
+
         } finally {
             strudel.close()
         }

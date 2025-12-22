@@ -36,7 +36,7 @@ class Strudel(private val bundlePath: Path) : AutoCloseable {
      * - If the Promise rejects, the Deferred completes exceptionally.
      */
     fun <T> Value.promiseToDeferred(
-        map: (Value) -> T
+        map: (Value) -> T,
     ): Deferred<T> {
         require(this.hasMember("then")) {
             "Value does not look like a Promise/thenable (missing member 'then'): $this"
@@ -86,12 +86,26 @@ class Strudel(private val bundlePath: Path) : AutoCloseable {
         return promise.promiseToDeferred { it }
     }
 
-    fun queryPattern(pattern: Value?, from: Double,to: Double): Value? {
+    fun queryPattern(pattern: Value?, from: Double, to: Double): Value? {
         return queryPatternFn.execute(pattern, from, to)
     }
 
     fun prettyFormat(value: Any?): Value? {
         return prettyFormatFn.execute(value)
+    }
+
+    fun dumpPatternArc(value: Value?, from: Double = 0.0, to: Double = 2.0) {
+        value?.let {
+            println("pattern: $value")
+
+            queryPattern(value, from, to)?.also {
+                val n = it.arraySize
+                for (i in 0 until n) {
+                    val ev = it.getArrayElement(i)
+                    println(ev)
+                }
+            }
+        }
     }
 
     override fun close() = ctx.close()
