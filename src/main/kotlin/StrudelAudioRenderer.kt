@@ -316,9 +316,9 @@ class StrudelAudioRenderer(
                 phaseInc = voice.phaseInc
             )
 
-            // 2. Apply Filters & Envelope & Mix
-            // Note: We could also make filters block-processing capable,
-            // but even just looping here is better than a lambda per sample.
+            // 2. Apply Filters (Block processing!)
+            // The filter mutates voiceBuffer in-place using tight loops
+            voice.filter.process(voiceBuffer, bufferOffset, length)
 
             // Simple envelope logic (approximate for block)
             // To do this perfectly accurately per sample, we'd calculate env inside loop
