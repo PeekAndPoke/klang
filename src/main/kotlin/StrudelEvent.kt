@@ -57,12 +57,6 @@ data class StrudelEvent(
         fun of(event: Value, sampleRate: Int): StrudelEvent {
             val filters = mutableListOf<FilterFn>()
 
-//            const base = {
-//                t: Number(h.part?.begin?.valueOf?.() ?? 0),
-//                dur: Number((h.part?.end?.valueOf?.() ?? 0) - (h.part?.begin?.valueOf?.() ?? 0)),
-//                value: h.value
-//            };
-
             // Begin
             val begin = event.getMember("part")?.getMember("begin")?.safeNumber(0.0) ?: 0.0
             // End

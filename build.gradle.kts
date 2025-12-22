@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.2.21"
+    id("org.jetbrains.kotlinx.atomicfu") version "0.30.0-beta"
 }
 
 group = "io.peekandpoke"

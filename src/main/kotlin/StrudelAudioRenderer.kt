@@ -1,33 +1,40 @@
 package io.peekandpoke
 
+import kotlinx.atomicfu.atomic
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import org.graalvm.polyglot.Value
 import java.util.PriorityQueue
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
-import kotlin.concurrent.thread
-import kotlin.concurrent.withLock
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Real-time-ish audio renderer:
- * - fetches events from Strudel in a lookahead window (scheduler thread)
- * - enqueues time-stamped events (startFrame/endFrame)
- * - renders audio in fixed blocks (audio thread)
+ * - fetches events from Strudel in a lookahead window (scheduler coroutine)
+ * - pushes time-stamped events into a channel
+ * - audio coroutine drains channel, schedules voices, and renders blocks
  *
- * Note: Uses SourceDataLine (blocking). This is good enough for now and matches your current setup.
+ * Important for glitch-free audio:
+ * - avoid locks/suspension in the audio loop
+ * - use a sufficiently large SourceDataLine buffer
  */
 class StrudelAudioRenderer(
     private val strudel: Strudel,
     val sampleRate: Int = 48_000,
     val oscillators: Oscillators,
     val cps: Double = 0.5,
-    /** How far ahead we query Strudel (seconds). */
-    val lookaheadSec: Double = 0.5,
+    /** How far ahead we query Strudel (cycles->seconds via cps). */
+    val lookaheadSec: Double = 1.0,
     /** How often we query Strudel (milliseconds). */
     val fetchPeriodMs: Long = 25L,
     /** Fixed render quantum in frames. */
-    val blockFrames: Int = 512,
+    val blockFrames: Int = 2048,
+    /**
+     * External scope makes lifecycle control easier (tests/apps).
+     * Default is fine for a small demo.
+     */
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : AutoCloseable {
 
     private data class ScheduledEvent(
@@ -46,19 +53,21 @@ class StrudelAudioRenderer(
         var phase: Double = 0.0,
     )
 
-    private val running = AtomicBoolean(false)
+    private val running = atomic(false)
+    private val cursorFrame = atomic(0L)
 
-    private val queueLock = ReentrantLock()
-    private val scheduled = PriorityQueue<ScheduledEvent>(compareBy { it.startFrame })
+    // Scheduler-owned output channel; audio coroutine drains it.
+    // We keep it buffered to absorb bursts from queryArc.
+    private var eventChannel: Channel<ScheduledEvent>? = null
 
+    // These are audio-owned (only touched by audio coroutine) => no locks needed.
+    private val scheduled = MinHeap<ScheduledEvent> { a, b -> a.startFrame < b.startFrame }
     private val activeVoices = ArrayList<Voice>(64)
 
-    private var audioThread: Thread? = null
-    private var fetchThread: Thread? = null
+    private var fetchJob: Job? = null
+    private var audioJob: Job? = null
 
-    // Audio time cursor (frames since start)
-    @Volatile
-    private var cursorFrame: Long = 0L
+    private val droppedEvents = atomic(0)
 
     fun extractEvents(pattern: Value, fromCycles: Double, toCycles: Double): List<StrudelEvent> {
         val result = pattern.invokeMember("queryArc", fromCycles, toCycles)
@@ -67,39 +76,64 @@ class StrudelAudioRenderer(
         val topN = result.arraySize
         for (i in 0 until topN) {
             val item = result.getArrayElement(i)
-
-            println(strudel.prettyFormat(item))
-
             events += StrudelEvent.of(item, sampleRate)
         }
         return events.sortedBy { it.begin }
     }
 
-    /**
-     * Starts streaming audio until [stop] is called.
-     */
+    private fun StrudelEvent.toScheduled(framesPerCycle: Double): ScheduledEvent {
+        val startFrame = (begin * framesPerCycle).toLong()
+        val durFrames = (dur * framesPerCycle).toLong().coerceAtLeast(1L)
+        val endFrame = startFrame + durFrames
+
+        val scheduledEvent = ScheduledEvent(
+            startFrame = startFrame,
+            endFrame = endFrame,
+            e = this,
+        )
+
+        return scheduledEvent
+    }
+
     fun start(pattern: Value) {
-        if (!running.compareAndSet(false, true)) return
+        if (!running.compareAndSet(expect = false, update = true)) return
+
+        // Fresh channel per run (makes stop/start robust)
+        val channel = Channel<ScheduledEvent>(capacity = 8192)
+        eventChannel = channel
 
         val format = AudioFormat(sampleRate.toFloat(), 16, 1, true, false)
         val line = AudioSystem.getSourceDataLine(format)
-        line.open(format)
+
+        val bufferMs = 500
+        val bytesPerFrame = 2 // mono, 16-bit
+        val bufferFrames = (sampleRate * bufferMs / 1000.0).toInt()
+        val bufferBytes = bufferFrames * bytesPerFrame
+
+        line.open(format, bufferBytes)
         line.start()
 
         val secPerCycle = 1.0 / cps
         val framesPerCycle = secPerCycle * sampleRate.toDouble()
 
         // Scheduler state in Strudel-time (cycles)
-        var queryCursorCycles = 0.0
+        val initialEvents = extractEvents(pattern, 0.0, 2.0)
+        for(e in initialEvents) {
+            val scheduledEvent = e.toScheduled(framesPerCycle)
+            scheduled.push(scheduledEvent)
+        }
 
-        fetchThread = thread(name = "strudel-fetch", isDaemon = true) {
-            // Keep a small overlap to avoid missing boundary events.
-            val overlapSec = 0.10
+        var queryCursorCycles = 2.0
+
+        // prefetch the first notes... otherwiese thay are missing
+
+
+        fetchJob = scope.launch(Dispatchers.Default.limitedParallelism(1)) {
+            val overlapSec = 0.00
             val overlapCycles = overlapSec / secPerCycle
 
-            while (running.get()) {
-                // Audio cursor -> current cycle
-                val nowFrame = cursorFrame
+            while (isActive && running.value) {
+                val nowFrame = cursorFrame.value
                 val nowSec = nowFrame.toDouble() / sampleRate.toDouble()
                 val nowCycles = nowSec / secPerCycle
 
@@ -108,109 +142,114 @@ class StrudelAudioRenderer(
 
                 try {
                     val events = extractEvents(pattern, fromCycles, toCycles)
-
-                    // Enqueue only events that start at/after fromCycles
-                    // (crude de-dupe by time; overlap is small so this works acceptably for now)
                     val due = events.filter { it.begin >= fromCycles }
 
-                    queueLock.withLock {
-                        for (e in due) {
-                            val startFrame = (e.begin * framesPerCycle).toLong()
-                            val durFrames = (e.dur * framesPerCycle).toLong().coerceAtLeast(1L)
-                            val endFrame = startFrame + durFrames
-                            scheduled.add(ScheduledEvent(startFrame = startFrame, endFrame = endFrame, e = e))
+                    println("num events: ${events.size}, due: ${due.size}, dropped: ${events.size - due.size}")
+
+                    for (e in due) {
+                        val startFrame = (e.begin * framesPerCycle).toLong()
+                        val durFrames = (e.dur * framesPerCycle).toLong().coerceAtLeast(1L)
+                        val endFrame = startFrame + durFrames
+
+                        val scheduledEvent = ScheduledEvent(
+                            startFrame = startFrame,
+                            endFrame = endFrame,
+                            e = e,
+                        )
+
+                        val res = channel.trySend(scheduledEvent)
+
+                        if (res.isFailure) {
+                            droppedEvents.incrementAndGet()
                         }
                     }
 
-                    // Move cursor forward but keep some overlap implicitly via fromCycles computation
                     queryCursorCycles = toCycles
                 } catch (t: Throwable) {
-                    // Keep going; missing one fetch should be tolerated by lookahead.
                     t.printStackTrace()
                 }
 
-                try {
-                    Thread.sleep(fetchPeriodMs)
-                } catch (_: InterruptedException) {
-                    // ignore
-                }
+                delay(fetchPeriodMs)
             }
         }
 
-        audioThread = thread(name = "strudel-audio", isDaemon = true) {
-            val out = ByteArray(blockFrames * 2) // mono int16 LE
+        audioJob = scope.launch(Dispatchers.IO.limitedParallelism(1)) {
+            val out = ByteArray(blockFrames * 2)
 
-            while (running.get()) {
-                renderBlockInto(out, frames = blockFrames)
-                line.write(out, 0, out.size)
+            try {
+                while (isActive && running.value) {
+                    while (true) {
+                        val ev: ScheduledEvent = channel.tryReceive().getOrNull() ?: run {
+                            delay(5.milliseconds)
+                            break;
+                        }
+                        scheduled.push(ev)
+                    }
+
+                    renderBlockInto(out, frames = blockFrames)
+                    line.write(out, 0, out.size)
+                }
+            } finally {
+                line.drain()
+                line.stop()
+                line.close()
             }
-
-            line.drain()
-            line.stop()
-            line.close()
         }
     }
 
     fun stop() {
-        running.set(false)
-        audioThread?.interrupt()
-        fetchThread?.interrupt()
-        audioThread = null
-        fetchThread = null
+        if (!running.compareAndSet(expect = true, update = false)) return
 
-        queueLock.withLock {
-            scheduled.clear()
-        }
+        fetchJob?.cancel()
+        audioJob?.cancel()
+        fetchJob = null
+        audioJob = null
+
+        eventChannel?.close()
+        eventChannel = null
+
+        // Audio-owned state; safe to clear here for next start().
+        scheduled.clear()
         activeVoices.clear()
-        cursorFrame = 0L
+        cursorFrame.value = 0L
     }
 
     override fun close() = stop()
 
     private fun renderBlockInto(out: ByteArray, frames: Int) {
-        val secPerCycle = 1.0 / cps
-
-        // 1) Move scheduled events that are due into active voices
-        val blockStart = cursorFrame
+        val blockStart = cursorFrame.value
         val blockEndExclusive = blockStart + frames.toLong()
 
-        queueLock.withLock {
-            while (true) {
-                val head = scheduled.peek() ?: break
-                if (head.startFrame >= blockEndExclusive) break
+        // 1) Promote scheduled events due in this block to active voices
+        while (true) {
+            val head = scheduled.peek() ?: break
+            if (head.startFrame >= blockEndExclusive) break
+            scheduled.pop()
 
-                scheduled.poll()
+            if (head.endFrame <= blockStart) continue
 
-                // If it already ended, skip
-                if (head.endFrame <= blockStart) continue
+            val midi = StrudelNotes.noteNameToMidi(head.e.note)
+            val freqHz = StrudelNotes.midiToFreq(midi)
+            val osc = oscillators.get(e = head.e, freqHz = freqHz)
 
-                val midi = StrudelNotes.noteNameToMidi(head.e.note)
-                val freqHz = StrudelNotes.midiToFreq(midi)
-                val osc = oscillators.get(e = head.e, freqHz = freqHz)
-
-                activeVoices += Voice(
-                    startFrame = head.startFrame,
-                    endFrame = head.endFrame,
-                    gain = head.e.gain,
-                    osc = osc,
-                    filters = head.e.filters,
-                    freqHz = freqHz,
-                    phase = 0.0,
-                )
-            }
+            activeVoices += Voice(
+                startFrame = head.startFrame,
+                endFrame = head.endFrame,
+                gain = head.e.gain,
+                osc = osc,
+                filters = head.e.filters,
+                freqHz = freqHz,
+                phase = 0.0,
+            )
         }
 
-        // 2) Render + mix
-        // Very simple envelope like the demo: short fade in/out in samples
         val attackFrames = 256
         val releaseFrames = 512
 
         for (i in 0 until frames) {
             val frameIndex = blockStart + i.toLong()
-
             var mix = 0.0
 
-            // Iterate backwards so we can remove dead voices cheaply
             var v = 0
             while (v < activeVoices.size) {
                 val voice = activeVoices[v]
@@ -219,7 +258,6 @@ class StrudelAudioRenderer(
                     v++
                     continue
                 }
-
                 if (frameIndex >= voice.endFrame) {
                     activeVoices.removeAt(v)
                     continue
@@ -248,7 +286,6 @@ class StrudelAudioRenderer(
                 v++
             }
 
-            // Soft clamp (still crude, but prevents instant overload)
             val sample = mix.coerceIn(-1.0, 1.0)
             val pcm = (sample * Short.MAX_VALUE).toInt()
 
@@ -256,6 +293,59 @@ class StrudelAudioRenderer(
             out[i * 2 + 1] = ((pcm ushr 8) and 0xff).toByte()
         }
 
-        cursorFrame += frames.toLong()
+        cursorFrame.value = blockEndExclusive
+    }
+
+    private class MinHeap<T>(private val less: (T, T) -> Boolean) {
+        private val data = ArrayList<T>()
+
+        fun clear() = data.clear()
+        fun peek(): T? = data.firstOrNull()
+
+        fun push(x: T) {
+            data.add(x)
+            siftUp(data.lastIndex)
+        }
+
+        fun pop(): T? {
+            if (data.isEmpty()) return null
+            val root = data[0]
+            val last = data.removeAt(data.lastIndex)
+            if (data.isNotEmpty()) {
+                data[0] = last
+                siftDown(0)
+            }
+            return root
+        }
+
+        private fun siftUp(i0: Int) {
+            var i = i0
+            while (i > 0) {
+                val p = (i - 1) / 2
+                if (!less(data[i], data[p])) break
+                val tmp = data[i]
+                data[i] = data[p]
+                data[p] = tmp
+                i = p
+            }
+        }
+
+        private fun siftDown(i0: Int) {
+            var i = i0
+            while (true) {
+                val l = i * 2 + 1
+                val r = i * 2 + 2
+                var m = i
+
+                if (l < data.size && less(data[l], data[m])) m = l
+                if (r < data.size && less(data[r], data[m])) m = r
+                if (m == i) break
+
+                val tmp = data[i]
+                data[i] = data[m]
+                data[m] = tmp
+                i = m
+            }
+        }
     }
 }

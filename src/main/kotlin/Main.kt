@@ -73,12 +73,16 @@ suspend fun main() {
 
             val supersaw = """
                 note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-                  .sound("supersaw")
-                  .detune("<.3 .3 .3 5.0>")
+                  .sound("sine")
+//                  .detune("<.3 .3 .3 1.0>")
                   .gain(0.25)
 //                  .hpf(100)
 //                  .spread(".8")
 //                  .unison("2 7")
+            """.trimIndent()
+
+            val polyphone = """
+                note("c!2 [eb,<g a bb a>]")
             """.trimIndent()
 
 //            val pat = smallTownBoyBass
@@ -88,7 +92,8 @@ suspend fun main() {
 //            val pat = whiteNoise
 //            val pat = brownNoise
 //            val pat = pinkNoise
-            val pat = supersaw
+//            val pat = supersaw
+            val pat = polyphone
 
             val compiled = strudel.compile(pat).await()!!
 
@@ -103,7 +108,7 @@ suspend fun main() {
             }
 
             audio.start(compiled)
-            delay(10_000)
+            delay(60_000)
             audio.stop()
             println("Done")
         } finally {
