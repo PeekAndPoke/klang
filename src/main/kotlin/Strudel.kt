@@ -7,10 +7,10 @@ import org.graalvm.polyglot.Source
 import org.graalvm.polyglot.Value
 import org.graalvm.polyglot.proxy.ProxyExecutable
 import java.nio.file.Path
-import java.util.function.Consumer
 
 class Strudel(private val bundlePath: Path) : AutoCloseable {
     val ctx: Context = Context.newBuilder("js")
+//        .allowIO(IOAccess.ALL)
         .option("js.esm-eval-returns-exports", "true")
         .build()
 
@@ -25,6 +25,7 @@ class Strudel(private val bundlePath: Path) : AutoCloseable {
     val transpiler = exports.getMember("transpiler")
 
     val compileFn = exports.getMember("compile")
+    val queryPatternFn = exports.getMember("queryPattern")
 
     val prettyFormatFn = exports.getMember("prettyFormat")
 
@@ -83,6 +84,10 @@ class Strudel(private val bundlePath: Path) : AutoCloseable {
         val promise = compileFn.execute(code)
 
         return promise.promiseToDeferred { it }
+    }
+
+    fun queryPattern(pattern: Value?, from: Double,to: Double): Value? {
+        return queryPatternFn.execute(pattern, from, to)
     }
 
     fun prettyFormat(value: Any?): Value? {

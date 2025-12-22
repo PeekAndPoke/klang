@@ -83,8 +83,10 @@ class StrudelAudioRenderer(
 
         for (i in 0 until count) {
             val item = result.getArrayElement(i)
+            events += StrudelEvent.of(item, sampleRate).also {
 //            println(strudel.prettyFormat(item))
-            events += StrudelEvent.of(item, sampleRate)
+                println("${it.note} ${it.scale}")
+            }
         }
 
         return events.sortedBy { it.begin }

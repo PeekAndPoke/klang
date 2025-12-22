@@ -21,6 +21,7 @@ object StrudelNotes {
     private val SCALES = mapOf(
         "major" to listOf(0, 2, 4, 5, 7, 9, 11),
         "minor" to listOf(0, 2, 3, 5, 7, 8, 10),
+        "aeolian" to listOf(0, 2, 3, 5, 7, 8, 10),
         "dorian" to listOf(0, 2, 3, 5, 7, 9, 10),
         "phrygian" to listOf(0, 1, 3, 5, 7, 8, 10),
         "lydian" to listOf(0, 2, 4, 6, 7, 9, 10),

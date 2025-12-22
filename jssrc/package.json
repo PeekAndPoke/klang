@@ -14,7 +14,11 @@
     "@strudel/core": "1.2.5",
     "@strudel/mini": "1.2.5",
     "@strudel/tonal": "1.2.5",
+    "@strudel/midi": "1.2.5",
+    "@strudel/hydra": "1.2.5",
+    "@strudel/soundfonts": "1.2.5",
     "@strudel/transpiler": "1.2.5",
+    "@tonaljs/tonal": "4.10.0",
     "@perf-tools/performance": "1.1.1",
     "pretty-format": "30.2.0"
   },

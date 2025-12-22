@@ -48,7 +48,7 @@ suspend fun main() {
             """.trimIndent()
 
             val smallTownBoyMelody = """
-                note("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")
+                n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")
                 .scale("C4:minor")
                 .sound("saw")
             """.trimIndent()
@@ -59,10 +59,14 @@ suspend fun main() {
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                     .sound("supersaw").unison(16).lpf(sine.range(400, 2000).slow(4)),
                     // melody
-                    note("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")
+                    n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")
                     .scale("C4:minor")
-                    .sound("saw")
+                    .sound("triangle")
                 )
+            """.trimIndent()
+
+            val c4Minor = """
+                n("0 1 2 3 4 5 6 7").scale("C4:minor")
             """.trimIndent()
 
             val numberNotes = """
@@ -110,6 +114,7 @@ suspend fun main() {
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
             val pat = smallTownBoy
+//            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
 //            val pat = dust
@@ -122,18 +127,18 @@ suspend fun main() {
 
             val compiled = strudel.compile(pat).await()!!
 
-//            println("pattern: $compiled")
-//
-//            compiled.invokeMember("queryArc", 0.0, 10.0).also {
-//                val n = it.arraySize
-//                for (i in 0 until n) {
-//                    val ev = it.getArrayElement(i)
-//                    println(ev)
-//                }
-//            }
+            println("pattern: $compiled")
+
+            strudel.queryPattern(compiled, 0.0, 2.0)?.also {
+                val n = it.arraySize
+                for (i in 0 until n) {
+                    val ev = it.getArrayElement(i)
+                    println(ev)
+                }
+            }
 
             audio.start(compiled)
-            delay(60_000)
+            delay(600_000)
             audio.stop()
             println("Done")
         } finally {
