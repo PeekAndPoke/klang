@@ -1,5 +1,6 @@
 package io.peekandpoke
 
+import io.peekandpoke.Numbers.TWO_PI
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -47,7 +48,7 @@ class StrudelAudioRenderer(
         val endFrame: Long,
         val gain: Double,
         val osc: OscFn,
-        val filter: FilterFn,
+        val filter: Filter,
         val freqHz: Double,
         val phaseInc: Double,
         var phase: Double = 0.0,
@@ -254,7 +255,7 @@ class StrudelAudioRenderer(
             val bakedFilters = combineFilters(head.e.filters)
 
             // Pre-calculate increment once
-            val phaseInc = 2.0 * Math.PI * freqHz / sampleRate.toDouble()
+            val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
 
             activeVoices += Voice(
                 startFrame = head.startFrame,
@@ -323,21 +324,18 @@ class StrudelAudioRenderer(
             // To do this perfectly accurately per sample, we'd calculate env inside loop
             // For performance, simple logic:
             val attackFrames = 256.0
-            // For a proper envelope, we need relative position.
+            val invAttack = 1.0 / attackFrames
+
             var relPos = (vStart - voice.startFrame).toInt()
 
             for (i in 0 until length) {
                 val idx = bufferOffset + i
-                var s = voiceBuffer[idx]
+                val s = voiceBuffer[idx] // This is already filtered now!
 
-                // Apply Filter (still per-sample, but tight loop)
-                s = voice.filter(s)
-
-                // Simple Attack Envelope
-                // (You can expand this to full ADSR later)
+                // Fast Envelope Math
                 var env = 1.0
                 if (relPos < attackFrames) {
-                    env = relPos / attackFrames
+                    env = relPos * invAttack // Mul is faster than Div
                 }
 
                 // Accumulate to mix
@@ -359,21 +357,10 @@ class StrudelAudioRenderer(
         cursorFrame.value = blockEndExclusive
     }
 
-    private fun combineFilters(filters: List<FilterFn>): FilterFn {
-        if (filters.isEmpty()) return { s -> s }
+    private fun combineFilters(filters: List<Filter>): Filter {
+        if (filters.isEmpty()) return NoOpFilter
         if (filters.size == 1) return filters[0]
-
-        // Convert List to Array to avoid Iterator allocation/overhead in the hot loop
-        val arr = filters.toTypedArray()
-
-        return { sample ->
-            var s = sample
-            // Standard array loop is very fast
-            for (i in arr.indices) {
-                s = arr[i](s)
-            }
-            s
-        }
+        return ChainFilter(filters)
     }
 
     private class MinHeap<T>(private val less: (T, T) -> Boolean) {

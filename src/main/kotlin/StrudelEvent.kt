@@ -34,7 +34,7 @@ data class StrudelEvent(
     /** Used for: supersaw */
     val unison: Double?,
     // Filters
-    val filters: List<FilterFn>,
+    val filters: List<Filter>,
     // ADSR envelope
     val attack: Double?,
     val decay: Double?,
@@ -55,7 +55,7 @@ data class StrudelEvent(
 ) {
     companion object {
         fun of(event: Value, sampleRate: Int): StrudelEvent {
-            val filters = mutableListOf<FilterFn>()
+            val filters = mutableListOf<Filter>()
 
             val part = event.getMember("part")
 
