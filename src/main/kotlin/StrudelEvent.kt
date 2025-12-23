@@ -1,6 +1,7 @@
 package io.peekandpoke
 
 import io.peekandpoke.dsp.AudioFilter
+import io.peekandpoke.dsp.Oscillators
 import io.peekandpoke.samples.SampleRequest
 
 /**
@@ -64,10 +65,9 @@ data class StrudelEvent(
     val crush: Double?,
     val distort: Double?,
 ) {
-    val isSampleSound: Boolean
-        get() {
-            return note == null && sound != null
-        }
+    val isOscillator = Oscillators.isOsc(sound)
+
+    val isSampleSound = !isOscillator
 
     val sampleRequest: SampleRequest = SampleRequest(bank, sound, soundIndex)
 }

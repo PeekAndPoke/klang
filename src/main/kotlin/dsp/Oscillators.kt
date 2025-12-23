@@ -2,9 +2,9 @@ package io.peekandpoke.dsp
 
 import io.peekandpoke.StrudelEvent
 import io.peekandpoke.utils.Numbers.TWO_PI
+import io.peekandpoke.utils.safeEnumOrNull
 import kotlin.math.*
 import kotlin.random.Random
-import kotlin.reflect.KFunction
 
 fun interface OscFn {
     /**
@@ -49,11 +49,14 @@ class Oscillators private constructor(
     val crackle: DustFactory,
 ) {
     companion object {
-        @Suppress("UNCHECKED_CAST")
-        fun OscFn.name() = try {
-            (this as? KFunction<Double>)?.name ?: this.toString()
-        } catch (_: Exception) {
-            this.toString()
+        private val namesSet = Names.entries.map { it.name }.toSet()
+
+        fun isOsc(sound: String?): Boolean {
+            if (sound == null) return false
+
+            val s = parseNameMul(sound).first
+
+            return namesSet.contains(s)
         }
 
         fun sine(gain: Double = 1.0) = OscFn { buffer, offset, length, startPhase, phaseInc ->
@@ -304,13 +307,61 @@ class Oscillators private constructor(
             return n * (b - a) + a
         }
 
+        /**
+         * parses something like "crackle*8" / "dust*2" / "crackle" (defaults to 1)
+         *
+         * return the sound name in lowercase and the multiplier as a Pair
+         */
         private fun parseNameMul(name: String): Pair<String, Int> {
             // Accept "crackle*8" / "dust*2" / "crackle" (defaults to 1)
             val parts = name.split('*', limit = 2)
             val base = parts[0].lowercase()
             val mul = parts.getOrNull(1)?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+
             return base to mul
         }
+    }
+
+    @Suppress("EnumEntryName")
+    enum class Names {
+        // Sine
+        sin, sine,
+
+        // Square
+        sqr, square, pulse,
+
+        // Triangle
+        tri, triangle,
+
+        // Sawtooth
+        saw, sawtooth,
+
+        // Zawtooth
+        zaw, zawtooth, z_zawtooth,
+
+        // Supersaw
+        supersaw, z_supersaw,
+
+        // Pulze
+        pulze, z_pulze,
+
+        // Impulse
+        impulse,
+
+        // White Noise
+        white, whitenoise,
+
+        // Brown noise
+        brown, brownnoise,
+
+        // Pink noise
+        pink, pinknoise,
+
+        // Dust
+        dust,
+
+        // Crackle
+        crackle,
     }
 
     class Builder(val sampleRate: Int) {
@@ -411,14 +462,16 @@ class Oscillators private constructor(
         val panSpread = (spread ?: 0.4)
 
         return parseNameMul(name).let { (base, mul) ->
-            when (base) {
+            val baseEnum = safeEnumOrNull<Names>(base)
+
+            when (baseEnum) {
                 // Oscillators
-                "saw", "sawtooth" -> sawtooth
-                "sqr", "square", "pulse" -> square
-                "tri", "triangle" -> triangle
-                "sin", "sine" -> sine
-                "zaw", "zawtooth", "z_zawtooth" -> zawtooth
-                "supersaw", "z_supersaw" -> if (freqHz != null) {
+                Names.saw, Names.sawtooth -> sawtooth
+                Names.sqr, Names.square, Names.pulse -> square
+                Names.tri, Names.triangle -> triangle
+                Names.sin, Names.sine -> sine
+                Names.zaw, Names.zawtooth, Names.z_zawtooth -> zawtooth
+                Names.supersaw, Names.z_supersaw -> if (freqHz != null) {
                     this.supersaw(
                         /* sampleRate */ sampleRate,
                         /* baseFreqHz */  freqHz,
@@ -430,15 +483,16 @@ class Oscillators private constructor(
                 } else {
                     silence
                 }
-                "pulze", "z_pulze" -> pulze // TODO: parameterize
-                "impulse" -> this.impulse()
+
+                Names.pulze, Names.z_pulze -> pulze // TODO: parameterize
+                Names.impulse -> this.impulse()
 
                 // Noises
-                "white", "whitenoise" -> this.whiteNoise(rng)
-                "brown", "brownnoise" -> this.brownNoise(rng)
-                "pink", "pinknoise" -> this.pinkNoise(rng)
-                "dust" -> this.dust(sampleRate, density, rng)
-                "crackle" -> this.crackle(sampleRate, density, rng)
+                Names.white, Names.whitenoise -> this.whiteNoise(rng)
+                Names.brown, Names.brownnoise -> this.brownNoise(rng)
+                Names.pink, Names.pinknoise -> this.pinkNoise(rng)
+                Names.dust -> this.dust(sampleRate, density, rng)
+                Names.crackle -> this.crackle(sampleRate, density, rng)
 
                 else -> silence
             }

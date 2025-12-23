@@ -336,6 +336,7 @@ class StrudelAudioRenderer(
         val note = scheduled.e.note
         val sound = scheduled.e.sound
 
+
         val voice: Voice? = when {
             note != null -> {
                 // TODO: ... what if it is not a note ...
