@@ -15,8 +15,11 @@ class SampleBankIndexLoader(
         isLenient = true
     },
 ) {
-
-    suspend fun load(sampleMapUrl: URI, aliasUrl: URI? = null): SampleBankIndex = coroutineScope {
+    suspend fun load(
+        sampleMapUrl: URI,
+        aliasUrl: URI? = null,
+        defaultBank: String = "RolandTR909",
+    ): SampleBankIndex = coroutineScope {
         val sampleMapBytes = async {
             cache.getOrPut(sampleMapUrl, "json") { downloader.download(sampleMapUrl) }
         }
@@ -29,7 +32,7 @@ class SampleBankIndexLoader(
         val sampleMapJson = sampleMapBytes.await().toString(StandardCharsets.UTF_8)
         val aliasJson = aliasBytes.await()?.toString(StandardCharsets.UTF_8)
 
-        val (banks, defaultBank) = parseTidalDrumMachines(sampleMapJson)
+        val banks = parseTidalDrumMachines(sampleMapJson)
         val bankAliases = aliasJson?.let { parseTidalDrumMachinesAliases(it) } ?: emptyMap()
 
         SampleBankIndex(
@@ -70,7 +73,7 @@ class SampleBankIndexLoader(
 
     // ... existing code (parseTidalDrumMachines, splitBankSound, etc.) ...
 
-    private fun parseTidalDrumMachines(jsonText: String): Pair<Map<String, Map<String, List<String>>>, String?> {
+    private fun parseTidalDrumMachines(jsonText: String): Map<String, Map<String, List<String>>> {
         val root = json.parseToJsonElement(jsonText)
         val obj = root as? JsonObject
             ?: throw IllegalArgumentException("Sample map JSON must be an object")
@@ -108,7 +111,7 @@ class SampleBankIndexLoader(
             sounds.mapValues { (_, urls) -> urls.toList() }
         }
 
-        return frozen to null
+        return frozen
     }
 
     private fun splitBankSound(key: String): Pair<String, String>? {

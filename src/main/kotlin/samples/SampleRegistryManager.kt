@@ -20,8 +20,8 @@ class DecodedSample(
 /** What the pattern asks for (bank + sound + optional variant index). */
 data class SampleRequest(
     val bank: String?,
-    val sound: String,
-    val index: Int? = null,
+    val sound: String?,
+    val index: Int?,
 )
 
 /** A fully resolved variant (exact URL choice). */
@@ -38,7 +38,7 @@ data class SampleBankIndex(
     /** optional alias mapping, e.g. "909" -> "RolandTR909" */
     val bankAliases: Map<String, String> = emptyMap(),
     /** used when request.bank is null */
-    val defaultBank: String? = null,
+    val defaultBank: String = "RolandTR909",
 )
 
 interface SampleStorage {
@@ -77,7 +77,7 @@ class SampleRegistry(
             ?: return CompletableDeferred(
                 DecodedSample(sampleRate = 0, pcm = FloatArray(0))
             ).also {
-                (it as CompletableDeferred).completeExceptionally(
+                it.completeExceptionally(
                     IllegalArgumentException("Unknown sample: bank=${req.bank} sound=${req.sound}")
                 )
             }
@@ -102,23 +102,28 @@ class SampleRegistry(
     fun getIfLoaded(req: SampleRequest): DecodedSample? {
         val resolved = resolveUrl(req) ?: return null
         val d = inFlightOrLoaded[resolved] ?: return null
+
         return if (d.isCompleted && !d.isCancelled) d.getCompleted() else null
     }
 
     private fun resolveUrl(req: SampleRequest): SampleId? {
-        val bank = canonicalBank(req.bank ?: index.defaultBank ?: return null) ?: return null
+        val sound = req.sound ?: return null
+
+        val bank = canonicalBank(req.bank ?: index.defaultBank) ?: return null
         val sounds = index.banks[bank] ?: return null
         val variants = sounds[req.sound] ?: return null
         if (variants.isEmpty()) return null
 
         val idx = (req.index ?: 0).floorMod(variants.size)
-        val url = variants[idx]
+        // Slight URL encode ... javas URLEncoder is broken
+        val url = variants[idx].replace(" ", "%20")
 
-        return SampleId(bank = bank, sound = req.sound, index = idx, url = url)
+//        println(url)
+
+        return SampleId(bank = bank, sound = sound, index = idx, url = url)
     }
 
-    private fun canonicalBank(bank: String): String? =
-        index.bankAliases[bank] ?: bank
+    private fun canonicalBank(bank: String): String = index.bankAliases[bank] ?: bank
 
     private suspend fun loadAndDecode(id: SampleId): DecodedSample {
         val cacheKey = cacheKeyFor(id.url)
@@ -132,8 +137,12 @@ class SampleRegistry(
         return decoder.decodeMonoFloatPcm(wavBytes)
     }
 
-    private fun cacheKeyFor(url: String): String =
-        "wav_" + url.sha256Hex()
+    private fun cacheKeyFor(url: String): String {
+
+        val filename = url.substringAfterLast('/')
+
+        return "wav_" + filename + url.sha256Hex()
+    }
 
     private fun Int.floorMod(mod: Int): Int {
         val r = this % mod

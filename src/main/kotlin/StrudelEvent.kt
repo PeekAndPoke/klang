@@ -1,6 +1,7 @@
 package io.peekandpoke
 
 import io.peekandpoke.dsp.AudioFilter
+import io.peekandpoke.samples.SampleRequest
 
 /**
  * Strudel sound event.
@@ -62,4 +63,11 @@ data class StrudelEvent(
     val coarse: Double?,
     val crush: Double?,
     val distort: Double?,
-)
+) {
+    val isSampleSound: Boolean
+        get() {
+            return note == null && sound != null
+        }
+
+    val sampleRequest: SampleRequest = SampleRequest(bank, sound, soundIndex)
+}

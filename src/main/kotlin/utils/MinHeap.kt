@@ -6,6 +6,9 @@ internal class MinHeap<T>(private val less: (T, T) -> Boolean) {
     fun clear() = data.clear()
     fun peek(): T? = data.firstOrNull()
 
+    /** Number of elements currently in the heap (debugging/metrics). */
+    fun size(): Int = data.size
+
     fun push(x: T) {
         data.add(x)
         siftUp(data.lastIndex)

@@ -1,9 +1,7 @@
 package io.peekandpoke
 
 import io.peekandpoke.graal.GraalStrudelCompiler
-import io.peekandpoke.samples.SampleBankIndex
-import io.peekandpoke.samples.SampleBankIndexLoader
-import io.peekandpoke.samples.SampleDownloader
+import io.peekandpoke.samples.*
 import io.peekandpoke.utils.DiskUrlCache
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
@@ -79,7 +77,7 @@ suspend fun main() {
                         [e5 [~ c5] e5 [d5 c5]]
                         [b4 [b4 c5] d5 e5]
                         [c5 a4 a4 ~]
-                    >`).sound("triangle").gain(0.5),
+                    >`).sound("supersaw").unison(8).detune(0.2).gain(0.5),
                     note(`<
                         [[e2 e3]*4]
                         [[a2 a3]*4]
@@ -89,7 +87,8 @@ suspend fun main() {
                         [[c2 c3]*4]
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
-                    >`).sound("sine").unison(4).detune(sine.range(0.3, 0.6).slow(8)).gain(0.5)
+                    >`).sound("sine").unison(4).detune(sine.range(0.3, 0.6).slow(8)).gain(0.5),
+                    sound("bd hh sd oh").fast(2).gain(2.0),
                 ).gain(0.5)
             """.trimIndent()
 
@@ -140,13 +139,16 @@ suspend fun main() {
             """.trimIndent()
 
             val simpleDrums = """
-                sound("sd sd:2").bank("AkaiMPC60 KRZ")
+                stack(
+                  n("0 1 2 3 4 5 6 7").scale("C4:minor"),
+                  sound("bd hh sd oh").fast(2).gain(2.0),
+                )
             """.trimIndent()
 
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
 //            val pat = smallTownBoy
-//            val pat = tetris
+            val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
@@ -157,23 +159,24 @@ suspend fun main() {
 //            val pat = pinkNoise
 //            val pat = supersaw
 //            val pat = polyphone
-            val pat = simpleDrums
+//            val pat = simpleDrums
 
-            val sanitized = pat.lines()
-                .filter { !it.trim().startsWith("//") }
-                .joinToString(" ")
-
-            val compiled = strudel.compile(sanitized).await()
+            val compiled = strudel.compile(pat).await()
             strudel.dumpPatternArc(compiled)
 
-            val events = compiled.queryArc(0.0, 2.0, 44_100)
-            println(events)
+            val events = compiled.queryArc(0.0, 4.0, 44_100)
+            events.forEach {
+                println("${it.begin} ${it.note} ${it.sound}")
+            }
+
+            val samples = createSampleRegistry()
 
             val audio = StrudelAudioRenderer(
                 pattern = compiled,
                 options = StrudelAudioRenderer.RenderOptions(
                     sampleRate = 44_100,
-                    cps = 0.4
+                    cps = 0.5,
+                    samples = samples,
                 ),
             )
 
@@ -189,6 +192,31 @@ suspend fun main() {
             strudel.close()
         }
     }
+}
+
+suspend fun createSampleRegistry(): SampleRegistry {
+    val samplesUrl =
+        URI.create("https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json")
+
+    val aliasUrl =
+        URI.create("https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json")
+
+    val loader = SampleBankIndexLoader(
+        downloader = SampleDownloader(),
+        cache = DiskUrlCache(Path.of("./cache/index")),
+    )
+
+    val index: SampleBankIndex = loader.load(
+        sampleMapUrl = samplesUrl,
+        aliasUrl = aliasUrl,
+    )
+
+    return SampleRegistry(
+        index = index,
+        decoder = WavDecoder(),
+        downloader = SampleDownloader(),
+        storage = DiskSampleStorage(Path.of("./cache/samples")),
+    )
 }
 
 suspend fun sanityCheckSamplesIndex() {
