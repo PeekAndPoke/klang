@@ -44,5 +44,5 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-jssrc/node_modules
-cache/
+/jssrc/node_modules
+/cache

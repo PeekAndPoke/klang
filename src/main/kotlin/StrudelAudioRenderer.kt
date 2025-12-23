@@ -2,7 +2,6 @@ package io.peekandpoke
 
 import io.peekandpoke.dsp.*
 import io.peekandpoke.samples.SampleRegistry
-import io.peekandpoke.samples.SampleRequest
 import io.peekandpoke.utils.MinHeap
 import io.peekandpoke.utils.Numbers.TWO_PI
 import kotlinx.atomicfu.atomic
@@ -212,7 +211,7 @@ class StrudelAudioRenderer(
                                 // TODO: fix this in the StrudelEvent and introduce a sealed class
                                 //    Sound -> Note:Sound | Sample: Sound
                                 if (e.isSampleSound) {
-                                    reg.prefetch(e.sampleRequest).start()
+                                    reg.prefetch(e.sampleRequest)
                                 }
                             }
                             // ///////////////////////////////////////////////////////////////////////////////////////
@@ -280,7 +279,7 @@ class StrudelAudioRenderer(
             // prefetch samples
             samples?.let { reg ->
                 if (e.isSampleSound) {
-                    reg.prefetch(e.sampleRequest).start()
+                    reg.prefetch(e.sampleRequest)
                 }
             }
         }
@@ -358,27 +357,23 @@ class StrudelAudioRenderer(
             }
 
             scheduled.e.isSampleSound && sound != null -> {
-                if (reg != null && reg.canResolve(scheduled.e.sampleRequest)) {
-                    reg.getIfLoaded(SampleRequest(scheduled.e.bank, sound, scheduled.e.soundIndex))?.let { decoded ->
+                reg?.getIfLoaded(scheduled.e.sampleRequest)?.let { decoded ->
 
-                        val startFrame = scheduled.startFrame
-                        val rate = decoded.sampleRate.toDouble() / sampleRate.toDouble()
-                        val totalOutFrames = (decoded.pcm.size / rate).toLong()
-                        val endFrame = startFrame + totalOutFrames
+                    val startFrame = scheduled.startFrame
+                    val rate = decoded.sampleRate.toDouble() / sampleRate.toDouble()
+                    val totalOutFrames = (decoded.pcm.size / rate).toLong()
+                    val endFrame = startFrame + totalOutFrames
 
-                        SampleVoice(
-                            startFrame = startFrame,
-                            endFrame = endFrame,
-                            gain = scheduled.e.gain,
-                            filter = bakedFilters,
-                            pcm = decoded.pcm,
-                            pcmSampleRate = decoded.sampleRate,
-                            rate = rate,
-                            playhead = 0.0,
-                        )
-                    }
-                } else {
-                    null
+                    SampleVoice(
+                        startFrame = startFrame,
+                        endFrame = endFrame,
+                        gain = scheduled.e.gain,
+                        filter = bakedFilters,
+                        pcm = decoded.pcm,
+                        pcmSampleRate = decoded.sampleRate,
+                        rate = rate,
+                        playhead = 0.0,
+                    )
                 }
             }
 
@@ -491,8 +486,8 @@ class StrudelAudioRenderer(
                     // Fill voiceBuffer with sample data (linear interpolation)
                     val pcm = voice.pcm
                     val pcmMax = pcm.size - 1
+                    val gain = voice.gain
 
-                    val startRelFrames = (vStart - voice.startFrame)
                     var ph = voice.playhead
 
                     for (i in 0 until length) {
@@ -505,8 +500,8 @@ class StrudelAudioRenderer(
                             voiceBuffer[idxOut] = 0.0
                         } else {
                             val frac = ph - base.toDouble()
-                            val a = pcm[base].toDouble()
-                            val b = pcm[base + 1].toDouble()
+                            val a = pcm[base] * gain
+                            val b = pcm[base + 1] * gain
                             voiceBuffer[idxOut] = a + (b - a) * frac
                         }
 

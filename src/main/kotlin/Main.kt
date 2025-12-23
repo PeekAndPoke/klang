@@ -1,11 +1,13 @@
 package io.peekandpoke
 
 import io.peekandpoke.graal.GraalStrudelCompiler
-import io.peekandpoke.samples.*
-import io.peekandpoke.utils.DiskUrlCache
+import io.peekandpoke.samples.SampleBankIndexLoader
+import io.peekandpoke.samples.SampleRegistry
+import io.peekandpoke.samples.decoders.WavDecoder
+import io.peekandpoke.utils.AssetLoader
+import io.peekandpoke.utils.withDiskCache
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
-import java.net.URI
 import java.nio.file.Path
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
@@ -54,17 +56,19 @@ suspend fun main() {
                 stack(
                     // bass
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-                    .sound("supersaw").unison(16).lpf(sine.range(400, 2000).slow(4)),
+                    .sound("supersaw").unison(8)
+                    .lpf(400),
                     // melody
                     arrange(
                       [8, silence],
                       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
                     )
                     .scale("C4:minor")
-                    .sound("triangle"),
+                    .hpf(400)
+                    .sound("triangle").gain(0.8),
                     // Drums
-                    sound("bd hh sd hh").fast(2).gain(2.0),
-                ).gain(0.5)
+                    sound("bd hh sd hh").fast(2).gain(0.75),
+                )
                 
             """.trimIndent()
 
@@ -79,7 +83,7 @@ suspend fun main() {
                         [e5 [~ c5] e5 [d5 c5]]
                         [b4 [b4 c5] d5 e5]
                         [c5 a4 a4 ~]
-                    >`).sound("supersaw").unison(8).detune(0.2).gain(0.5),
+                    >`).sound("supersaw").unison(4).detune(wchoose([0.3, 1.00], [1.0, 0.05])).gain(0.5),
                     note(`<
                         [[e2 e3]*4]
                         [[a2 a3]*4]
@@ -89,9 +93,9 @@ suspend fun main() {
                         [[c2 c3]*4]
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
-                    >`).sound("sine").unison(4).detune(sine.range(0.3, 0.6).slow(8)).gain(0.5),
-                    sound("bd hh sd hh").fast(2).gain(2.0),
-                ).gain(0.5)
+                    >`).sound("sine").unison(4).detune(sine.range(0.3, 0.6).slow(8)).gain(0.6),
+                    sound("bd hh sd hh").fast(2).gain(0.75),
+                )
             """.trimIndent()
 
             val c4Minor = """
@@ -147,10 +151,24 @@ suspend fun main() {
                 )
             """.trimIndent()
 
+            val strangerThings = """
+                stack(
+                    n("0 2 4 6 7 6 4 2")
+                      .scale("<c3:major>/2")
+                      .s("supersaw")
+                      .distort(0.7)
+                      .superimpose((x) => x.detune("<0.5>"))
+                      .lpenv(perlin.slow(3).range(1, 4))
+                      .lpf(perlin.slow(2).range(100, 2000))
+                      .gain(0.6),
+                    note("<a1 e2>/8").clip(0.8).struct("x*8").s("supersaw").gain(0.5),
+                )
+            """.trimIndent()
+
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
-            val pat = smallTownBoy
-//            val pat = tetris
+//            val pat = smallTownBoy
+            val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
@@ -162,6 +180,7 @@ suspend fun main() {
 //            val pat = supersaw
 //            val pat = polyphone
 //            val pat = simpleDrums
+//            val pat = strangerThings
 
             val compiled = strudel.compile(pat).await()
             strudel.dumpPatternArc(compiled)
@@ -184,8 +203,6 @@ suspend fun main() {
 
             audio.start()
 
-            sanityCheckSamplesIndex()
-
             delay(600_000)
             audio.stop()
             println("Done")
@@ -198,17 +215,16 @@ suspend fun main() {
 
 suspend fun createSampleRegistry(): SampleRegistry {
     val samplesUrl =
-        URI.create("https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json")
+        "https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json"
 
     val aliasUrl =
-        URI.create("https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json")
+        "https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json"
 
-    val loader = SampleBankIndexLoader(
-        downloader = SampleDownloader(),
-        cache = DiskUrlCache(Path.of("./cache/index")),
+    val bankLoader = SampleBankIndexLoader(
+        loader = AssetLoader.default.withDiskCache(Path.of("./cache/index")),
     )
 
-    val index: SampleBankIndex = loader.load(
+    val index: SampleRegistry.SampleBankIndex = bankLoader.load(
         sampleMapUrl = samplesUrl,
         aliasUrl = aliasUrl,
     )
@@ -216,35 +232,6 @@ suspend fun createSampleRegistry(): SampleRegistry {
     return SampleRegistry(
         index = index,
         decoder = WavDecoder(),
-        downloader = SampleDownloader(),
-        storage = DiskSampleStorage(Path.of("./cache/samples")),
+        loader = AssetLoader.default.withDiskCache(Path.of("./cache/samples")),
     )
-}
-
-suspend fun sanityCheckSamplesIndex() {
-    val samplesUrl =
-        URI.create("https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json")
-    val aliasUrl = URI.create("https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json")
-
-    val loader = SampleBankIndexLoader(
-        downloader = SampleDownloader(),
-        cache = DiskUrlCache(Path.of("./cache/index")),
-    )
-
-    val index: SampleBankIndex = loader.load(
-        sampleMapUrl = samplesUrl,
-        aliasUrl = aliasUrl,
-    )
-
-    println("banks=${index.banks.size}")
-
-    // A couple of spot checks (pick any bank/sound you know exists)
-    println("AkaiMPC60 sounds=${index.banks["AkaiMPC60"]?.size}")
-    println("AkaiMPC60 bd variants=${index.banks["AkaiMPC60"]?.get("bd")?.size}")
-
-    // Print one resolved URL to verify _base concatenation
-    val firstUrl = index.banks["AkaiMPC60"]?.get("bd")?.firstOrNull()
-    println("AkaiMPC60 bd[0]=$firstUrl")
-
-    println("alias MPC60 -> ${index.bankAliases["MPC60"]}")
 }

@@ -1,4 +1,4 @@
-package io.peekandpoke.samples
+package io.peekandpoke.samples.decoders
 
 import java.io.ByteArrayInputStream
 import javax.sound.sampled.AudioFormat
@@ -12,8 +12,7 @@ import javax.sound.sampled.AudioSystem
  * - sampleRate as in file (resample later in renderer/registry if needed)
  */
 class WavDecoder {
-
-    fun decodeMonoFloatPcm(wavBytes: ByteArray): DecodedSample {
+    fun decodeMonoFloatPcm(wavBytes: ByteArray): MonoSamplePCM {
         val bais = ByteArrayInputStream(wavBytes)
         AudioSystem.getAudioInputStream(bais).use { ais ->
             val base = ais.format
@@ -50,7 +49,7 @@ class WavDecoder {
                     mono[i] = (sum / channels.toFloat())
                 }
 
-                return DecodedSample(sampleRate = target.sampleRate.toInt(), pcm = mono)
+                return MonoSamplePCM(sampleRate = target.sampleRate.toInt(), pcm = mono)
             }
         }
     }

@@ -1,41 +1,33 @@
 package io.peekandpoke.samples
 
-import kotlinx.coroutines.async
+import io.peekandpoke.utils.AssetLoader
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.*
-import java.net.URI
 import java.nio.charset.StandardCharsets
 
-
 class SampleBankIndexLoader(
-    private val downloader: SampleDownloader,
-    private val cache: io.peekandpoke.utils.UrlCache,
+    private val loader: AssetLoader,
     private val json: Json = Json {
         ignoreUnknownKeys = true
         isLenient = true
     },
 ) {
     suspend fun load(
-        sampleMapUrl: URI,
-        aliasUrl: URI? = null,
+        sampleMapUrl: String,
+        aliasUrl: String? = null,
         defaultBank: String = "RolandTR909",
-    ): SampleBankIndex = coroutineScope {
-        val sampleMapBytes = async {
-            cache.getOrPut(sampleMapUrl, "json") { downloader.download(sampleMapUrl) }
-        }
-        val aliasBytes = async {
-            aliasUrl?.let { url ->
-                cache.getOrPut(url, "json") { downloader.download(url) }
-            }
-        }
+    ): SampleRegistry.SampleBankIndex = coroutineScope {
+        val sampleMapBytes = loader.download(sampleMapUrl)?.toString(StandardCharsets.UTF_8)
 
-        val sampleMapJson = sampleMapBytes.await().toString(StandardCharsets.UTF_8)
-        val aliasJson = aliasBytes.await()?.toString(StandardCharsets.UTF_8)
+        val aliasBytes = aliasUrl?.let { loader.download(aliasUrl)?.toString(StandardCharsets.UTF_8) }
 
-        val banks = parseTidalDrumMachines(sampleMapJson)
-        val bankAliases = aliasJson?.let { parseTidalDrumMachinesAliases(it) } ?: emptyMap()
+        val banks = sampleMapBytes
+            ?.let { parseBankFile(it) } ?: emptyMap()
 
-        SampleBankIndex(
+        val bankAliases = aliasBytes
+            ?.let { parseAliasFile(it) } ?: emptyMap()
+
+        SampleRegistry.SampleBankIndex(
             banks = banks,
             bankAliases = bankAliases,
             defaultBank = defaultBank,
@@ -53,7 +45,7 @@ class SampleBankIndexLoader(
      * We invert it to:
      * "MPC60" -> "AkaiMPC60"
      */
-    private fun parseTidalDrumMachinesAliases(jsonText: String): Map<String, String> {
+    private fun parseAliasFile(jsonText: String): Map<String, String> {
         val root = json.parseToJsonElement(jsonText)
         val obj = root as? JsonObject
             ?: throw IllegalArgumentException("Alias JSON must be an object")
@@ -71,9 +63,44 @@ class SampleBankIndexLoader(
         return out
     }
 
-    // ... existing code (parseTidalDrumMachines, splitBankSound, etc.) ...
 
-    private fun parseTidalDrumMachines(jsonText: String): Map<String, Map<String, List<String>>> {
+    /**
+     * Parse bank file.
+     *
+     * For percussive banks the shape is:
+     *
+     * {
+     *   "_base": "https://raw.githubusercontent.com/ritchse/tidal-drum-machines/main/machines/",
+     *   "AJKPercusyn_bd": ["AJKPercusyn/ajkpercusyn-bd/Bassdrum.wav"],
+     *   "AJKPercusyn_cb": [
+     *     "AJKPercusyn/ajkpercusyn-cb/Cowbell.wav",
+     *     "AJKPercusyn/ajkpercusyn-cb/Snarepop.wav"
+     *   ],
+     *   "AJKPercusyn_ht": ["AJKPercusyn/ajkpercusyn-ht/Tom.wav"],
+     *   "AJKPercusyn_sd": ["AJKPercusyn/ajkpercusyn-sd/Noise.wav"],
+     *   "AkaiLinn_bd": ["AkaiLinn/akailinn-bd/Bassdrum.wav"],
+     *   "AkaiLinn_cb": ["AkaiLinn/akailinn-cb/Cowbell.wav"],
+     *   "AkaiLinn_cp": ["AkaiLinn/akailinn-cp/Clap.wav"],
+     *   "AkaiLinn_cr": ["AkaiLinn/akailinn-cr/Crash.wav"],
+     *   "AkaiLinn_hh": ["AkaiLinn/akailinn-hh/Closed Hat.wav"],
+     *   "AkaiLinn_ht": ["AkaiLinn/akailinn-ht/Tom H.wav"],
+     *   "AkaiLinn_lt": ["AkaiLinn/akailinn-lt/Tom L.wav"],
+     *   "AkaiLinn_mt": ["AkaiLinn/akailinn-mt/Tom M.wav"],
+     *   "AkaiLinn_oh": ["AkaiLinn/akailinn-oh/Open Hat.wav"],
+     *   "AkaiLinn_rd": ["AkaiLinn/akailinn-rd/Ride.wav"],
+     *   "AkaiLinn_sd": ["AkaiLinn/akailinn-sd/SD.wav"],
+     *   "AkaiLinn_sh": ["AkaiLinn/akailinn-sh/Shuffle.wav"],
+     *   "AkaiLinn_tb": ["AkaiLinn/akailinn-tb/Tambourin.wav"],
+     *   "AkaiMPC60_bd": [
+     *     "AkaiMPC60/akaimpc60-bd/0 Bassdrum.wav",
+     *     "AkaiMPC60/akaimpc60-bd/Bassdrum Gated.wav"
+     *   ],
+     *   ...
+     * }
+     *
+     * TODO: what other kinds of shapes are there?
+     */
+    private fun parseBankFile(jsonText: String): Map<String, Map<String, List<String>>> {
         val root = json.parseToJsonElement(jsonText)
         val obj = root as? JsonObject
             ?: throw IllegalArgumentException("Sample map JSON must be an object")
@@ -102,7 +129,7 @@ class SampleBankIndexLoader(
                     p
                 } else {
                     base + p.trimStart('/')
-                }
+                }.replace(" ", "%20") // simple URL encode
                 target += fullUrl
             }
         }
@@ -123,6 +150,6 @@ class SampleBankIndexLoader(
         return bank to sound
     }
 
-    private fun kotlinx.serialization.json.JsonElement.asStringOrNull(): String? =
+    private fun JsonElement.asStringOrNull(): String? =
         (this as? JsonPrimitive)?.contentOrNull
 }
