@@ -52,7 +52,8 @@ class Oscillators private constructor(
         private val namesSet = Names.entries.map { it.name }.toSet()
 
         fun isOsc(sound: String?): Boolean {
-            if (sound == null) return false
+            // No sound mean sine wave oscillator
+            if (sound == null) return true
 
             val s = parseNameMul(sound).first
 

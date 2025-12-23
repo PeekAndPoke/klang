@@ -319,15 +319,16 @@ class StrudelAudioRenderer(
             if (head.startFrame >= blockEndExclusive) break
             scheduled.pop()
 
-            if (head.startFrame < blockStart) continue
+            // Has this voice already ended?
+            if (head.endFrame <= blockStart) continue
 
-            makeVoice(scheduled = head)?.let { voice ->
+            makeVoice(scheduled = head, nowFrame = blockStart)?.let { voice ->
                 activeVoices += voice
             }
         }
     }
 
-    private fun makeVoice(scheduled: ScheduledEvent): Voice? {
+    private fun makeVoice(scheduled: ScheduledEvent, nowFrame: Long): Voice? {
         // Bake the filter for better performance
         val bakedFilters = combineFilters(scheduled.e.filters)
 
@@ -336,10 +337,11 @@ class StrudelAudioRenderer(
         val note = scheduled.e.note
         val sound = scheduled.e.sound
 
+        val isOsci = scheduled.e.isOscillator && note != null
+        val isSample = scheduled.e.isSampleSound && sound != null
 
         val voice: Voice? = when {
-            note != null -> {
-                // TODO: ... what if it is not a note ...
+            isOsci -> {
                 val freqHz = StrudelNotes.resolveFreq(note, scheduled.e.scale)
                 val osc = oscillators.get(e = scheduled.e, freqHz = freqHz)
                 // Pre-calculate increment once
@@ -357,23 +359,43 @@ class StrudelAudioRenderer(
                 )
             }
 
-            scheduled.e.isSampleSound && sound != null -> {
+            isSample -> {
                 reg?.getIfLoaded(scheduled.e.sampleRequest)?.let { decoded ->
+                    // C4 = 261.63 Hz (most sampler/instrument defaults treat samples as “middle C”)
+                    val baseSamplePitchHz = 261.63
 
-                    val startFrame = scheduled.startFrame
-                    val rate = decoded.sampleRate.toDouble() / sampleRate.toDouble()
-                    val totalOutFrames = (decoded.pcm.size / rate).toLong()
-                    val endFrame = startFrame + totalOutFrames
+                    // Target pitch: if we have a note, use it; otherwise keep original pitch
+                    val targetHz = scheduled.e.note?.let { note ->
+                        StrudelNotes.resolveFreq(note, scheduled.e.scale)
+                    } ?: baseSamplePitchHz
+
+                    val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
+
+                    // sampleFrames per outputFrame, including pitch
+                    val rate = (decoded.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
+
+                    // If event is late, start inside the sample
+                    val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)
+                    val playhead0 = lateFrames.toDouble() * rate
+
+                    val pcmSize = decoded.pcm.size
+                    if (pcmSize <= 1) return null
+                    if (playhead0 >= (pcmSize - 1).toDouble()) return null
+
+                    val remainingOutFrames =
+                        ((pcmSize.toDouble() - playhead0) / rate).toLong().coerceAtLeast(1L)
+
+                    val endFrame = nowFrame + remainingOutFrames
 
                     SampleVoice(
-                        startFrame = startFrame,
+                        startFrame = nowFrame,
                         endFrame = endFrame,
                         gain = scheduled.e.gain,
                         filter = bakedFilters,
                         pcm = decoded.pcm,
                         pcmSampleRate = decoded.sampleRate,
                         rate = rate,
-                        playhead = 0.0,
+                        playhead = playhead0,
                     )
                 }
             }

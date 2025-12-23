@@ -39,6 +39,9 @@ suspend fun main() {
 
     // Run the minimal audio demo using StrudelSynth
     run {
+        // Song collections:
+        // https://github.com/eefano/strudel-songs-collection
+
         val strudel = GraalStrudelCompiler(Path.of("./build/strudel-bundle.mjs"))
         try {
             val smallTownBoyBass = """
@@ -83,7 +86,8 @@ suspend fun main() {
                         [e5 [~ c5] e5 [d5 c5]]
                         [b4 [b4 c5] d5 e5]
                         [c5 a4 a4 ~]
-                    >`).sound("supersaw").unison(4).detune(wchoose([0.3, 1.00], [1.0, 0.05])).gain(0.5),
+                    >`).sound("triangle").unison(2).detune(wchoose([0.2, 1.00], [0.4, 0.05]))
+                    .hpf(800).gain("0.4"),
                     note(`<
                         [[e2 e3]*4]
                         [[a2 a3]*4]
@@ -93,8 +97,9 @@ suspend fun main() {
                         [[c2 c3]*4]
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
-                    >`).sound("sine").unison(4).detune(sine.range(0.3, 0.6).slow(8)).gain(0.6),
-                    sound("bd hh sd hh").fast(2).gain(0.75),
+                    >`).sound("sine").unison(4).detune(sine.range(0.3, 0.6).slow(8))
+                    .lpf(800).gain(0.6),
+                    sound("bd hh sd hh").fast(wchoose([2, 1.0], [1, 0.1])).gain(0.5),
                 )
             """.trimIndent()
 
@@ -146,9 +151,17 @@ suspend fun main() {
 
             val simpleDrums = """
                 stack(
-                  n("0 1 2 3 4 5 6 7").scale("C4:minor"),
-                  sound("bd hh sd oh").fast(2).gain(2.0),
+                  //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
+                  sound("bd hh sd oh")
+//                  .lpf("100 200 300 400 500 600 700 800")
+                  .fast(2)
+                  .gain(1.0),
+                  
                 )
+            """.trimIndent()
+
+            val snareScale = """
+                n("0 1 2 3 4 5 6 7").scale("c3:major").sound("sd")
             """.trimIndent()
 
             val strangerThings = """
@@ -168,7 +181,7 @@ suspend fun main() {
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
 //            val pat = smallTownBoy
-            val pat = tetris
+//            val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
@@ -180,6 +193,7 @@ suspend fun main() {
 //            val pat = supersaw
 //            val pat = polyphone
 //            val pat = simpleDrums
+            val pat = snareScale
 //            val pat = strangerThings
 
             val compiled = strudel.compile(pat).await()
@@ -196,7 +210,7 @@ suspend fun main() {
                 pattern = compiled,
                 options = StrudelAudioRenderer.RenderOptions(
                     sampleRate = 44_100,
-                    cps = 0.6,
+                    cps = 0.2,
                     samples = samples,
                 ),
             )
