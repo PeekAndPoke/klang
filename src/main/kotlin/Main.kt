@@ -61,7 +61,9 @@ suspend fun main() {
                       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
                     )
                     .scale("C4:minor")
-                    .sound("triangle")
+                    .sound("triangle"),
+                    // Drums
+                    sound("bd hh sd hh").fast(2).gain(2.0),
                 ).gain(0.5)
                 
             """.trimIndent()
@@ -88,7 +90,7 @@ suspend fun main() {
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
                     >`).sound("sine").unison(4).detune(sine.range(0.3, 0.6).slow(8)).gain(0.5),
-                    sound("bd hh sd oh").fast(2).gain(2.0),
+                    sound("bd hh sd hh").fast(2).gain(2.0),
                 ).gain(0.5)
             """.trimIndent()
 
@@ -147,8 +149,8 @@ suspend fun main() {
 
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
-//            val pat = smallTownBoy
-            val pat = tetris
+            val pat = smallTownBoy
+//            val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
@@ -175,7 +177,7 @@ suspend fun main() {
                 pattern = compiled,
                 options = StrudelAudioRenderer.RenderOptions(
                     sampleRate = 44_100,
-                    cps = 0.5,
+                    cps = 0.6,
                     samples = samples,
                 ),
             )
