@@ -31,6 +31,8 @@ object StrudelTones {
 
     fun midiToFreq(m: Double): Double = 440.0 * 2.0.pow((m - 69.0) / 12.0)
 
+    fun noteToFreq(note: String): Double = midiToFreq(noteNameToMidi(note))
+
     fun noteNameToMidi(noteRaw: String): Double {
         if (noteRaw.isEmpty()) return 69.0
         val note = noteRaw.trim()

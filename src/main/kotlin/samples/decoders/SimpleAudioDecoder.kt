@@ -11,13 +11,15 @@ import javax.sound.sampled.AudioSystem
  * - mono FloatArray in [-1, 1]
  * - sampleRate as in file (resample later in renderer/registry if needed)
  */
-class WavDecoder {
-    fun decodeMonoFloatPcm(wavBytes: ByteArray): MonoSamplePCM {
-        val bais = ByteArrayInputStream(wavBytes)
+class SimpleAudioDecoder {
+    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePCM {
+        val bais = ByteArrayInputStream(audioBytes)
+        // This will automatically detect WAV, MP3, etc. if SPIs are present
         AudioSystem.getAudioInputStream(bais).use { ais ->
             val base = ais.format
 
             // Convert to PCM_SIGNED 16-bit for predictable decoding
+            // Note: MP3SPI returns decoded PCM, but we force a consistent format here
             val target = AudioFormat(
                 AudioFormat.Encoding.PCM_SIGNED,
                 base.sampleRate,

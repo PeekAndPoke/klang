@@ -27,7 +27,7 @@ class StrudelPlayer(
     /** The pattern to play */
     val pattern: StrudelPattern,
     /** Options on how to render the sound */
-    val options: RenderOptions = RenderOptions(),
+    val options: Options,
     /**
      * External scope makes lifecycle control easier (tests/apps).
      * Default is fine for a small demo.
@@ -35,32 +35,54 @@ class StrudelPlayer(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : AutoCloseable {
 
-    companion object {
-        val defaultSampleRegistry: Samples? = run {
-            null
-        }
-    }
-
-    data class RenderOptions(
+    class Options private constructor(
         /** Playback sample rate */
-        val sampleRate: Int = 48_000,
+        val sampleRate: Int,
         /** Oscillator factory */
-        val oscillators: Oscillators = oscillators(sampleRate),
+        val oscillators: Oscillators,
         /** Sample registry for drum machines etc.*/
-        val samples: Samples? = defaultSampleRegistry,
+        val samples: Samples,
         /** Cycles per second */
-        val cps: Double = 0.5,
+        val cps: Double,
         /** How far ahead we query Strudel (cycles->seconds via cps). */
-        val lookaheadSec: Double = 1.0,
+        val lookaheadSec: Double,
         /** How often we query Strudel (milliseconds). */
-        val fetchPeriodMs: Long = 250L,
+        val fetchPeriodMs: Long,
         /** Fixed render quantum in frames. */
-        val blockFrames: Int = 1024,
+        val blockFrames: Int,
         /** Number of cycles to prefetch before starting playback. Needed to not miss the start. */
-        val prefetchCycles: Int = ceil(maxOf(2.0, cps * 2)).toInt(),
+        val prefetchCycles: Int,
     ) {
         companion object {
-            val default = RenderOptions()
+            suspend operator fun invoke(
+                /** Playback sample rate */
+                sampleRate: Int = 48_000,
+                /** Oscillator factory */
+                oscillators: Oscillators = oscillators(sampleRate),
+                /** Sample registry for drum machines etc.*/
+                samples: Samples? = null,
+                /** Cycles per second */
+                cps: Double = 0.5,
+                /** How far ahead we query Strudel (cycles->seconds via cps). */
+                lookaheadSec: Double = 1.0,
+                /** How often we query Strudel (milliseconds). */
+                fetchPeriodMs: Long = 250L,
+                /** Fixed render quantum in frames. */
+                blockFrames: Int = 1024,
+                /** Number of cycles to prefetch before starting playback. Needed to not miss the start. */
+                prefetchCycles: Int = ceil(maxOf(2.0, cps * 2)).toInt(),
+            ): Options {
+                return Options(
+                    sampleRate = sampleRate,
+                    oscillators = oscillators,
+                    samples = samples ?: Samples.create(),
+                    cps = cps,
+                    lookaheadSec = lookaheadSec,
+                    fetchPeriodMs = fetchPeriodMs,
+                    blockFrames = blockFrames,
+                    prefetchCycles = prefetchCycles
+                )
+            }
         }
     }
 
@@ -102,7 +124,7 @@ class StrudelPlayer(
     // Convenience accessors for RenderOptions
     private val sampleRate: Int get() = options.sampleRate
     private val oscillators: Oscillators get() = options.oscillators
-    private val samples: Samples? get() = options.samples
+    private val samples: Samples get() = options.samples
     private val cps: Double get() = options.cps
     private val prefetchCycles: Int get() = options.prefetchCycles
     private val lookaheadSec: Double get() = options.lookaheadSec
@@ -170,7 +192,7 @@ class StrudelPlayer(
         val format = AudioFormat(sampleRate.toFloat(), 16, 1, true, false)
         val line = AudioSystem.getSourceDataLine(format)
 
-        val bufferMs = 200
+        val bufferMs = 500
         val bytesPerFrame = 2 // mono, 16-bit
         val bufferFrames = (sampleRate * bufferMs / 1000.0).toInt()
         val bufferBytes = bufferFrames * bytesPerFrame
@@ -272,18 +294,18 @@ class StrudelPlayer(
     private fun prefetchEventsAndSamples() {
         val prefetched = fetchEventsSorted(0.0, prefetchCycles.toDouble())
 
-        for (e in prefetched) {
-            // schedule events
-            val scheduledEvent = e.toScheduled()
-            scheduled.push(scheduledEvent)
-
-            // prefetch samples
-            samples?.let { reg ->
-                if (e.isSampleSound) {
-                    reg.prefetch(e.sampleRequest)
-                }
-            }
+        // Schedule events
+        prefetched.forEach {
+            scheduled.push(it.toScheduled())
         }
+
+        // Preload samples
+        prefetched.filter { it.isSampleSound }
+            .map { e -> e.sampleRequest }
+            .distinct()
+            .forEach { sampleRequest ->
+                samples.prefetch(sampleRequest)
+            }
     }
 
     private fun fetchEventsSorted(from: Double, to: Double): List<StrudelPatternEvent> {
@@ -334,7 +356,6 @@ class StrudelPlayer(
         val bakedFilters = combineFilters(scheduled.e.filters)
 
         // Tone or sound voice?
-        val reg = samples
         val note = scheduled.e.note
         val sound = scheduled.e.sound
 
@@ -361,9 +382,9 @@ class StrudelPlayer(
             }
 
             isSample -> {
-                reg?.getIfLoaded(scheduled.e.sampleRequest)?.let { decoded ->
-                    // C4 = 261.63 Hz (most sampler/instrument defaults treat samples as “middle C”)
-                    val baseSamplePitchHz = 261.63
+                samples.getIfLoaded(scheduled.e.sampleRequest)?.let { (sampleId, decoded) ->
+                    // Take the pitch of the sample as the basis
+                    val baseSamplePitchHz = sampleId.sample.pitchHz
 
                     // Target pitch: if we have a note, use it; otherwise keep original pitch
                     val targetHz = scheduled.e.note?.let { note ->
@@ -371,6 +392,8 @@ class StrudelPlayer(
                     } ?: baseSamplePitchHz
 
                     val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
+
+                    // print(pitchRatio.toString().padEnd(5) + " ") // ... seems to be ok
 
                     // sampleFrames per outputFrame, including pitch
                     val rate = (decoded.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio

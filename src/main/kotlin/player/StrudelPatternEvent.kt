@@ -69,5 +69,6 @@ data class StrudelPatternEvent(
 
     val isSampleSound = !isOscillator
 
-    val sampleRequest: SampleRequest = SampleRequest(bank, sound, soundIndex)
+    val sampleRequest: SampleRequest =
+        SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
 }

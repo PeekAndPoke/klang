@@ -4,6 +4,7 @@ import io.peekandpoke.utils.sha256Hex
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
@@ -53,7 +54,10 @@ class DiskUrlCache(
             val tmp = path.resolveSibling("${path.fileName}.tmp")
             Files.write(tmp, bytes)
             // Move to final location
-            Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING)
+            try {
+                Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING)
+            } catch (_: NoSuchFileException) {
+            }
 
             // return
             bytes

@@ -18,6 +18,8 @@ dependencies {
     // GraalVM
     implementation("org.graalvm.polyglot:polyglot:24.2.2")
     implementation("org.graalvm.polyglot:js:24.2.2")
+    // MP3
+    implementation("com.googlecode.soundlibs:mp3spi:1.9.5.4")
     // tests
     testImplementation(kotlin("test"))
 

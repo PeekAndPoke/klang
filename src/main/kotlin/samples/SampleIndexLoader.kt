@@ -1,6 +1,8 @@
 package io.peekandpoke.samples
 
+import io.peekandpoke.tones.StrudelTones
 import io.peekandpoke.utils.AssetLoader
+import io.peekandpoke.utils.isUrlWithProtocol
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.*
 import java.nio.charset.StandardCharsets
@@ -16,33 +18,35 @@ class SampleIndexLoader(
         library: SampleCatalogue,
     ): Samples.Index = coroutineScope {
 
-        val banks = mutableMapOf<String, Samples.Bank>()
+        val collectedBanks = mutableMapOf<String, Samples.Bank>()
+        val collectedAliases = mutableMapOf<String, String>()
 
-        library.banks.forEach { bank ->
+        library.coordinates.forEach { bank ->
             run {
-                val sampleMapBytes = loader.download(bank.soundsUri)?.toString(StandardCharsets.UTF_8)
-
+                val loaded = loader.download(bank.soundsUri)?.toString(StandardCharsets.UTF_8)
                 // Load the banks data
-                val banksData = sampleMapBytes
-                    ?.let { parseBankFile(it) } ?: emptyMap()
-
-                // merge with existing data
-                banksData.forEach { (bankName, sounds) ->
-                    val existingBank = banks[bankName] ?: Samples.Bank(bankName)
-                    banks[bankName] = existingBank.copy(sounds = sounds)
+                loaded?.let { parseSoundsFile(bank.defaultPitchHz, it) }?.let { parsed ->
+                    // merge with existing data
+                    parsed.forEach { bank ->
+                        val existingBank = collectedBanks[bank.name] ?: Samples.Bank(bank.name)
+                        collectedBanks[bank.name] = existingBank.plusSounds(sounds = bank.sounds)
+                    }
                 }
             }
 
-//            // TODO: aliases
-//            val aliases = bank.aliasUris.map {
-//
-//            }
+            bank.aliasUris.forEach { alias ->
+                val loaded = loader.download(alias)?.toString(StandardCharsets.UTF_8)
+
+                loaded?.let { parseAliasFile(it) }?.let { parsed ->
+                    collectedAliases += parsed
+                }
+            }
         }
 
         // return
         Samples.Index(
-            defaultBank = library.defaultBank,
-            banks = banks.values.toList(),
+            banks = collectedBanks.values.toList(),
+            aliases = collectedAliases.toMap(),
         )
     }
 
@@ -80,6 +84,7 @@ class SampleIndexLoader(
      * Parse bank file.
      *
      * For percussive banks the shape is:
+     * https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json
      *
      * {
      *   "_base": "https://raw.githubusercontent.com/ritchse/tidal-drum-machines/main/machines/",
@@ -110,9 +115,47 @@ class SampleIndexLoader(
      *   ...
      * }
      *
+     * Then there a banks that have multiple sample for different pitches like this one:
+     * https://raw.githubusercontent.com/felixroos/dough-samples/main/piano.json
+     *
+     * {
+     *   "_base": "https://raw.githubusercontent.com/felixroos/dough-samples/main/piano/",
+     *   "piano": {
+     *     "A0": "A0v8.mp3",
+     *     "C1": "C1v8.mp3",
+     *     "Ds1": "Ds1v8.mp3",
+     *     "Fs1": "Fs1v8.mp3",
+     *     "A1": "A1v8.mp3",
+     *     "C2": "C2v8.mp3",
+     *     "Ds2": "Ds2v8.mp3",
+     *     "Fs2": "Fs2v8.mp3",
+     *     "A2": "A2v8.mp3",
+     *     "C3": "C3v8.mp3",
+     *     "Ds3": "Ds3v8.mp3",
+     *     "Fs3": "Fs3v8.mp3",
+     *     "A3": "A3v8.mp3",
+     *     "C4": "C4v8.mp3",
+     *     "Ds4": "Ds4v8.mp3",
+     *     "Fs4": "Fs4v8.mp3",
+     *     "A4": "A4v8.mp3",
+     *     "C5": "C5v8.mp3",
+     *     "Fs5": "Fs5v8.mp3",
+     *     "A5": "A5v8.mp3",
+     *     "C6": "C6v8.mp3",
+     *     "Ds6": "Ds6v8.mp3",
+     *     "Fs6": "Fs6v8.mp3",
+     *     "A6": "A6v8.mp3",
+     *     "C7": "C7v8.mp3",
+     *     "Ds7": "Ds7v8.mp3",
+     *     "Fs7": "Fs7v8.mp3",
+     *     "A7": "A7v8.mp3",
+     *     "C8": "C8v8.mp3"
+     *   }
+     * }
+     *
      * TODO: what other kinds of shapes are there?
      */
-    private fun parseBankFile(jsonText: String): Map<String, Map<String, List<String>>> {
+    private fun parseSoundsFile(defaultPitchHz: Double, jsonText: String): List<Samples.Bank> {
         val root = json.parseToJsonElement(jsonText)
         val obj = root as? JsonObject
             ?: throw IllegalArgumentException("Sample map JSON must be an object")
@@ -125,40 +168,59 @@ class SampleIndexLoader(
             ?.let { "$it/" }
             ?: ""
 
-        val banks = linkedMapOf<String, LinkedHashMap<String, MutableList<String>>>()
+        val banks = mutableMapOf<String, Samples.Bank>()
 
         for ((key, value) in obj) {
             if (key == "_base") continue
 
-            val (bank, sound) = splitBankSound(key) ?: continue
-            val list = (value as? JsonArray)?.mapNotNull { it.asStringOrNull() } ?: continue
+            val (bankName, soundName) = splitBankAndSound(key)
 
-            val target = banks.getOrPut(bank) { linkedMapOf() }
-                .getOrPut(sound) { mutableListOf() }
+            val sound: Samples.Sound? = when (value) {
+                // Is this a bank based pattern?
+                is JsonArray -> {
+                    val samples = value.mapNotNull { it.asStringOrNull()?.sanitizeUrl(base) }
+                        .map { url -> Samples.Sample(note = null, pitchHz = defaultPitchHz, url = url) }
 
-            for (p in list) {
-                val fullUrl = if (p.startsWith("http://") || p.startsWith("https://")) {
-                    p
-                } else {
-                    base + p.trimStart('/')
-                }.replace(" ", "%20") // simple URL encode
-                target += fullUrl
+                    Samples.Sound(key = soundName, samples = samples)
+                }
+
+                // Is this a sound with different pitches?
+                is JsonObject -> {
+                    val samples = value.mapNotNull {
+                        val note = it.key
+                        val pitch = StrudelTones.noteToFreq(note)
+                        val url = it.value.asStringOrNull()?.sanitizeUrl(base) ?: return@mapNotNull null
+
+                        Samples.Sample(note = note, pitchHz = pitch, url = url)
+                    }
+
+                    Samples.Sound(key = soundName, samples = samples)
+                }
+
+                else -> null
+            }
+
+            // Add the sound to the bank
+            sound?.let {
+                banks[bankName] = (banks[bankName] ?: Samples.Bank(bankName)).plusSounds(listOf(sound))
             }
         }
 
-        val frozen = banks.mapValues { (_, sounds) ->
-            sounds.mapValues { (_, urls) -> urls.toList() }
-        }
-
-        return frozen
+        return banks.values.toList()
     }
 
-    private fun splitBankSound(key: String): Pair<String, String>? {
-        val idx = key.lastIndexOf('_')
-        if (idx <= 0 || idx >= key.lastIndex) return null
-        val bank = key.substring(0, idx)
-        val sound = key.substring(idx + 1)
-        if (bank.isBlank() || sound.isBlank()) return null
+    private fun String.sanitizeUrl(base: String) = if (isUrlWithProtocol()) {
+        this
+    } else {
+        base.trimEnd('/') + '/' + trimStart('/')
+    }.replace(" ", "%20") // simple URL encode
+
+    private fun splitBankAndSound(key: String): Pair<String, String> {
+
+        val parts = key.split('_')
+        val sound = parts.last()
+        val bank = parts.dropLast(1).joinToString("_")
+
         return bank to sound
     }
 

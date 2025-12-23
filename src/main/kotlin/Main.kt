@@ -2,6 +2,7 @@ package io.peekandpoke
 
 import io.peekandpoke.graal.GraalStrudelCompiler
 import io.peekandpoke.player.StrudelPlayer
+import io.peekandpoke.samples.SampleCatalogue
 import io.peekandpoke.samples.Samples
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
@@ -15,6 +16,12 @@ suspend fun main() {
     println("VM Name:      ${System.getProperty("java.vm.name")}")
     println("VM Vendor:    ${System.getProperty("java.vendor")}")
     println("VM Version:   ${System.getProperty("java.vm.version")}")
+
+    helloJs()
+    helloStrudel()
+}
+
+private fun helloJs() {
 
     // Create a context for JavaScript
     Context.create("js").use { context ->
@@ -33,26 +40,27 @@ suspend fun main() {
         """.trimIndent()
         )
     }
+}
 
+private suspend fun helloStrudel() {
     // Run the minimal audio demo using StrudelSynth
-    run {
-        // Song collections:
-        // https://github.com/eefano/strudel-songs-collection
+    // Song collections:
+    // https://github.com/eefano/strudel-songs-collection
 
-        val strudel = GraalStrudelCompiler(Path.of("./build/strudel-bundle.mjs"))
-        try {
-            val smallTownBoyBass = """
+    val strudel = GraalStrudelCompiler(Path.of("./build/strudel-bundle.mjs"))
+    try {
+        val smallTownBoyBass = """
                 note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                 .sound("supersaw").unison(16).lpf(sine.range(400, 2000).slow(4))
             """.trimIndent()
 
-            val smallTownBoyMelody = """
+        val smallTownBoyMelody = """
                 n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")
                 .scale("C4:minor")
                 .sound("saw")
             """.trimIndent()
 
-            val smallTownBoy = """
+        val smallTownBoy = """
                 stack(
                     // bass
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
@@ -72,7 +80,7 @@ suspend fun main() {
                 
             """.trimIndent()
 
-            val tetris = """
+        val tetris = """
                 stack(
                     note(`<
                         [e5 [b4 c5] d5 [c5 b4]]
@@ -83,8 +91,8 @@ suspend fun main() {
                         [e5 [~ c5] e5 [d5 c5]]
                         [b4 [b4 c5] d5 e5]
                         [c5 a4 a4 ~]
-                    >`).sound("triangle").unison(2).detune(wchoose([0.2, 1.00], [0.4, 0.05]))
-                    .hpf(800).gain("0.4"),
+                    >`).sound("piano")
+                    .gain("1.0"),
                     note(`<
                         [[e2 e3]*4]
                         [[a2 a3]*4]
@@ -94,45 +102,45 @@ suspend fun main() {
                         [[c2 c3]*4]
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
-                    >`).sound("sine").unison(4).detune(sine.range(0.3, 0.6).slow(8))
-                    .lpf(800).gain(0.6),
+                    >`).sound("piano")
+                    .gain(0.6),
                     sound("bd hh sd hh").fast(wchoose([2, 1.0], [1, 0.1])).gain(0.5),
                 )
             """.trimIndent()
 
-            val c4Minor = """
+        val c4Minor = """
                 n("0 1 2 3 4 5 6 7").scale("C4:minor")
             """.trimIndent()
 
-            val numberNotes = """
+        val numberNotes = """
                 note("40 42 44 46")
             """.trimIndent()
 
-            val crackle = """
+        val crackle = """
                 s("crackle*4")
                 .density("<0.01 0.04 0.2 0.5>").slow(2).gain(0.1)
             """.trimIndent()
 
-            val dust = """
+        val dust = """
                 s("dust*4")
                 .density("<0.01 0.04 0.2 0.5>").slow(2).gain(0.01)
             """.trimIndent()
 
-            val impulse = """note("c6").sound("impulse").gain(0.05)""".trimIndent()
+        val impulse = """note("c6").sound("impulse").gain(0.05)""".trimIndent()
 
-            val whiteNoise = """
+        val whiteNoise = """
                 s("white").gain("<0.01 0.04 0.2 0.5>")
                 """.trimIndent()
 
-            val brownNoise = """
+        val brownNoise = """
                 s("brown").gain("<0.01 0.04 0.2 0.5>")
                 """.trimIndent()
 
-            val pinkNoise = """
+        val pinkNoise = """
                 s("pink").gain("<0.01 0.04 0.2 0.5>")
                 """.trimIndent()
 
-            val supersaw = """
+        val supersaw = """
                 note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                   .sound("sine")
 //                  .detune("<.3 .3 .3 1.0>")
@@ -142,11 +150,11 @@ suspend fun main() {
 //                  .unison("2 7")
             """.trimIndent()
 
-            val polyphone = """
+        val polyphone = """
                 note("c!2 [eb,<g a bb a>]")
             """.trimIndent()
 
-            val simpleDrums = """
+        val simpleDrums = """
                 stack(
                   //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
                   sound("bd hh sd oh")
@@ -157,14 +165,14 @@ suspend fun main() {
                 )
             """.trimIndent()
 
-            /**
-             * This produces each drum sound twice.
-             * Why? Because of the lpf() producing twice as many events as the sound()
-             * Therefore the drum sounds re schedules twice ...
-             *
-             * TODO: fix this in the [io.peekandpoke.player.StrudelPlayer]
-             */
-            val doubleSampleBug = """
+        /**
+         * This produces each drum sound twice.
+         * Why? Because of the lpf() producing twice as many events as the sound()
+         * Therefore the drum sounds re schedules twice ...
+         *
+         * TODO: fix this in the [io.peekandpoke.player.StrudelPlayer]
+         */
+        val doubleSampleBug = """
                 stack(
                   //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
                   sound("bd hh sd oh")
@@ -175,11 +183,11 @@ suspend fun main() {
                 )
             """.trimIndent()
 
-            val snareScale = """
+        val snareScale = """
                 n("0 1 2 3 4 5 6 7").scale("c3:major").sound("sd")
             """.trimIndent()
 
-            val strangerThings = """
+        val strangerThings = """
                 stack(
                     n("0 2 4 6 7 6 4 2")
                       .scale("<c3:major>/2")
@@ -193,10 +201,14 @@ suspend fun main() {
                 )
             """.trimIndent()
 
+        val piano = """
+            note("c e g e").sound("piano")
+        """.trimIndent()
+
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
 //            val pat = smallTownBoy
-//            val pat = tetris
+        val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
@@ -207,37 +219,40 @@ suspend fun main() {
 //            val pat = pinkNoise
 //            val pat = supersaw
 //            val pat = polyphone
-            val pat = simpleDrums
+//            val pat = simpleDrums
 //            val pat = snareScale
 //            val pat = strangerThings
+//            val pat = piano
 
-            val compiled = strudel.compile(pat).await()
-            strudel.dumpPatternArc(compiled)
+        val compiled = strudel.compile(pat).await()
+        strudel.dumpPatternArc(compiled)
 
-            val events = compiled.queryArc(0.0, 4.0, 44_100)
-            events.forEach {
-                println("${it.begin} ${it.note} ${it.sound}")
-            }
-
-            val samples = Samples.createDefault()
-
-            val audio = StrudelPlayer(
-                pattern = compiled,
-                options = StrudelPlayer.RenderOptions(
-                    sampleRate = 44_100,
-                    cps = 0.2,
-                    samples = samples,
-                ),
-            )
-
-            audio.start()
-
-            delay(600_000)
-            audio.stop()
-            println("Done")
-
-        } finally {
-            strudel.close()
+        val events = compiled.queryArc(0.0, 4.0, 44_100)
+        events.forEach {
+            println("${it.begin} ${it.note} ${it.sound}")
         }
+
+        val samples = Samples.create(
+//            catalogue = SampleCatalogue.default,
+            catalogue = SampleCatalogue.of(SampleCatalogue.piano),
+        )
+
+        val audio = StrudelPlayer(
+            pattern = compiled,
+            options = StrudelPlayer.Options(
+                sampleRate = 48_000,
+                cps = 0.5,
+                samples = samples,
+            ),
+        )
+
+        audio.start()
+
+        delay(600_000)
+        audio.stop()
+        println("Done")
+
+    } finally {
+        strudel.close()
     }
 }
