@@ -1,9 +1,10 @@
-package io.peekandpoke
+package io.peekandpoke.player
 
 import io.peekandpoke.dsp.*
-import io.peekandpoke.samples.SampleRegistry
+import io.peekandpoke.samples.Samples
+import io.peekandpoke.tones.StrudelTones
 import io.peekandpoke.utils.MinHeap
-import io.peekandpoke.utils.Numbers.TWO_PI
+import io.peekandpoke.utils.Numbers
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -22,7 +23,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * - avoid locks/suspension in the audio loop
  * - use a sufficiently large SourceDataLine buffer
  */
-class StrudelAudioRenderer(
+class StrudelPlayer(
     /** The pattern to play */
     val pattern: StrudelPattern,
     /** Options on how to render the sound */
@@ -35,7 +36,7 @@ class StrudelAudioRenderer(
 ) : AutoCloseable {
 
     companion object {
-        val defaultSampleRegistry: SampleRegistry? = run {
+        val defaultSampleRegistry: Samples? = run {
             null
         }
     }
@@ -46,7 +47,7 @@ class StrudelAudioRenderer(
         /** Oscillator factory */
         val oscillators: Oscillators = oscillators(sampleRate),
         /** Sample registry for drum machines etc.*/
-        val samples: SampleRegistry? = defaultSampleRegistry,
+        val samples: Samples? = defaultSampleRegistry,
         /** Cycles per second */
         val cps: Double = 0.5,
         /** How far ahead we query Strudel (cycles->seconds via cps). */
@@ -66,7 +67,7 @@ class StrudelAudioRenderer(
     private data class ScheduledEvent(
         val startFrame: Long,
         val endFrame: Long,
-        val e: StrudelEvent,
+        val e: StrudelPatternEvent,
     )
 
     private sealed interface Voice {
@@ -101,7 +102,7 @@ class StrudelAudioRenderer(
     // Convenience accessors for RenderOptions
     private val sampleRate: Int get() = options.sampleRate
     private val oscillators: Oscillators get() = options.oscillators
-    private val samples: SampleRegistry? get() = options.samples
+    private val samples: Samples? get() = options.samples
     private val cps: Double get() = options.cps
     private val prefetchCycles: Int get() = options.prefetchCycles
     private val lookaheadSec: Double get() = options.lookaheadSec
@@ -285,7 +286,7 @@ class StrudelAudioRenderer(
         }
     }
 
-    private fun fetchEventsSorted(from: Double, to: Double): List<StrudelEvent> {
+    private fun fetchEventsSorted(from: Double, to: Double): List<StrudelPatternEvent> {
 //        println("Fetching events $from -> $to")
 
         val events = pattern.queryArc(from, to, sampleRate)
@@ -295,7 +296,7 @@ class StrudelAudioRenderer(
             .sortedBy { it.begin }
     }
 
-    private fun StrudelEvent.toScheduled(): ScheduledEvent {
+    private fun StrudelPatternEvent.toScheduled(): ScheduledEvent {
         val startFrame = (begin * framesPerCycle).toLong()
         val durFrames = (dur * framesPerCycle).toLong().coerceAtLeast(1L)
         val endFrame = startFrame + durFrames
@@ -342,10 +343,10 @@ class StrudelAudioRenderer(
 
         val voice: Voice? = when {
             isOsci -> {
-                val freqHz = StrudelNotes.resolveFreq(note, scheduled.e.scale)
+                val freqHz = StrudelTones.resolveFreq(note, scheduled.e.scale)
                 val osc = oscillators.get(e = scheduled.e, freqHz = freqHz)
                 // Pre-calculate increment once
-                val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
+                val phaseInc = Numbers.TWO_PI * freqHz / sampleRate.toDouble()
 
                 SynthVoice(
                     startFrame = scheduled.startFrame,
@@ -366,7 +367,7 @@ class StrudelAudioRenderer(
 
                     // Target pitch: if we have a note, use it; otherwise keep original pitch
                     val targetHz = scheduled.e.note?.let { note ->
-                        StrudelNotes.resolveFreq(note, scheduled.e.scale)
+                        StrudelTones.resolveFreq(note, scheduled.e.scale)
                     } ?: baseSamplePitchHz
 
                     val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)

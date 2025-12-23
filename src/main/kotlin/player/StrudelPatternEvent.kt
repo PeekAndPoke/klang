@@ -1,4 +1,4 @@
-package io.peekandpoke
+package io.peekandpoke.player
 
 import io.peekandpoke.dsp.AudioFilter
 import io.peekandpoke.dsp.Oscillators
@@ -10,7 +10,7 @@ import io.peekandpoke.samples.SampleRequest
  * For the moment: ... trying to stay close to the class DoughVoice:
  * https://codeberg.org/uzu/strudel/src/branch/main/packages/supradough/dough.mjs
  */
-data class StrudelEvent(
+data class StrudelPatternEvent(
     /** The begin of the note */
     val begin: Double,
     /** The end of the note */
@@ -65,7 +65,7 @@ data class StrudelEvent(
     val crush: Double?,
     val distort: Double?,
 ) {
-    val isOscillator = Oscillators.isOsc(sound)
+    val isOscillator = Oscillators.Companion.isOsc(sound)
 
     val isSampleSound = !isOscillator
 

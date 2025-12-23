@@ -1,6 +1,6 @@
 package io.peekandpoke.dsp
 
-import io.peekandpoke.StrudelEvent
+import io.peekandpoke.player.StrudelPatternEvent
 import io.peekandpoke.utils.Numbers.TWO_PI
 import io.peekandpoke.utils.safeEnumOrNull
 import kotlin.math.*
@@ -438,7 +438,7 @@ class Oscillators private constructor(
         )
     }
 
-    fun get(e: StrudelEvent, freqHz: Double?): OscFn = get(
+    fun get(e: StrudelPatternEvent, freqHz: Double?): OscFn = get(
         name = e.sound,
         freqHz = freqHz,
         density = e.density,

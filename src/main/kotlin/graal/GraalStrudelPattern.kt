@@ -1,22 +1,22 @@
 package io.peekandpoke.graal
 
-import io.peekandpoke.StrudelEvent
-import io.peekandpoke.StrudelPattern
 import io.peekandpoke.dsp.AudioFilter
 import io.peekandpoke.dsp.SimpleFilters
 import io.peekandpoke.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.graal.GraalJsHelpers.safeStringOrNull
 import io.peekandpoke.graal.GraalJsHelpers.safeToStringOrNull
+import io.peekandpoke.player.StrudelPattern
+import io.peekandpoke.player.StrudelPatternEvent
 import org.graalvm.polyglot.Value
 
 class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : StrudelPattern {
 
-    override fun queryArc(from: Double, to: Double, sampleRate: Int): List<StrudelEvent> {
+    override fun queryArc(from: Double, to: Double, sampleRate: Int): List<StrudelPatternEvent> {
         val arc = graal.queryPattern(value, from, to)
             ?: return emptyList()
 
-        val events = mutableListOf<StrudelEvent>()
+        val events = mutableListOf<StrudelPatternEvent>()
         val count = arc.arraySize
 
         for (i in 0 until count) {
@@ -34,7 +34,7 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
     /**
      * Converts the js-value into a StrudelEvent.
      */
-    fun Value.toStrudelEvent(sampleRate: Int): StrudelEvent {
+    fun Value.toStrudelEvent(sampleRate: Int): StrudelPatternEvent {
         val event = this
 
         val filters = mutableListOf<AudioFilter>()
@@ -91,7 +91,7 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         }
 
         // add event
-        return StrudelEvent(
+        return StrudelPatternEvent(
             begin = begin,
             end = end,
             dur = dur,

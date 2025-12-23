@@ -5,7 +5,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.*
 import java.nio.charset.StandardCharsets
 
-class SampleBankIndexLoader(
+class SampleIndexLoader(
     private val loader: AssetLoader,
     private val json: Json = Json {
         ignoreUnknownKeys = true
@@ -13,24 +13,36 @@ class SampleBankIndexLoader(
     },
 ) {
     suspend fun load(
-        sampleMapUrl: String,
-        aliasUrl: String? = null,
-        defaultBank: String = "RolandTR909",
-    ): SampleRegistry.SampleBankIndex = coroutineScope {
-        val sampleMapBytes = loader.download(sampleMapUrl)?.toString(StandardCharsets.UTF_8)
+        library: SampleCatalogue,
+    ): Samples.Index = coroutineScope {
 
-        val aliasBytes = aliasUrl?.let { loader.download(aliasUrl)?.toString(StandardCharsets.UTF_8) }
+        val banks = mutableMapOf<String, Samples.Bank>()
 
-        val banks = sampleMapBytes
-            ?.let { parseBankFile(it) } ?: emptyMap()
+        library.banks.forEach { bank ->
+            run {
+                val sampleMapBytes = loader.download(bank.soundsUri)?.toString(StandardCharsets.UTF_8)
 
-        val bankAliases = aliasBytes
-            ?.let { parseAliasFile(it) } ?: emptyMap()
+                // Load the banks data
+                val banksData = sampleMapBytes
+                    ?.let { parseBankFile(it) } ?: emptyMap()
 
-        SampleRegistry.SampleBankIndex(
-            banks = banks,
-            bankAliases = bankAliases,
-            defaultBank = defaultBank,
+                // merge with existing data
+                banksData.forEach { (bankName, sounds) ->
+                    val existingBank = banks[bankName] ?: Samples.Bank(bankName)
+                    banks[bankName] = existingBank.copy(sounds = sounds)
+                }
+            }
+
+//            // TODO: aliases
+//            val aliases = bank.aliasUris.map {
+//
+//            }
+        }
+
+        // return
+        Samples.Index(
+            defaultBank = library.defaultBank,
+            banks = banks.values.toList(),
         )
     }
 

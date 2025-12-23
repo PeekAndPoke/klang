@@ -1,11 +1,8 @@
 package io.peekandpoke
 
 import io.peekandpoke.graal.GraalStrudelCompiler
-import io.peekandpoke.samples.SampleBankIndexLoader
-import io.peekandpoke.samples.SampleRegistry
-import io.peekandpoke.samples.decoders.WavDecoder
-import io.peekandpoke.utils.AssetLoader
-import io.peekandpoke.utils.withDiskCache
+import io.peekandpoke.player.StrudelPlayer
+import io.peekandpoke.samples.Samples
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
 import java.nio.file.Path
@@ -153,7 +150,25 @@ suspend fun main() {
                 stack(
                   //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
                   sound("bd hh sd oh")
-//                  .lpf("100 200 300 400 500 600 700 800")
+                  .lpf("100 200 300 400 500 600 700 800")
+                  .fast(2)
+                  .gain(1.0),
+                  
+                )
+            """.trimIndent()
+
+            /**
+             * This produces each drum sound twice.
+             * Why? Because of the lpf() producing twice as many events as the sound()
+             * Therefore the drum sounds re schedules twice ...
+             *
+             * TODO: fix this in the [io.peekandpoke.player.StrudelPlayer]
+             */
+            val doubleSampleBug = """
+                stack(
+                  //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
+                  sound("bd hh sd oh")
+                  .lpf("100 200 300 400 500 600 700 800")
                   .fast(2)
                   .gain(1.0),
                   
@@ -192,8 +207,8 @@ suspend fun main() {
 //            val pat = pinkNoise
 //            val pat = supersaw
 //            val pat = polyphone
-//            val pat = simpleDrums
-            val pat = snareScale
+            val pat = simpleDrums
+//            val pat = snareScale
 //            val pat = strangerThings
 
             val compiled = strudel.compile(pat).await()
@@ -204,11 +219,11 @@ suspend fun main() {
                 println("${it.begin} ${it.note} ${it.sound}")
             }
 
-            val samples = createSampleRegistry()
+            val samples = Samples.createDefault()
 
-            val audio = StrudelAudioRenderer(
+            val audio = StrudelPlayer(
                 pattern = compiled,
-                options = StrudelAudioRenderer.RenderOptions(
+                options = StrudelPlayer.RenderOptions(
                     sampleRate = 44_100,
                     cps = 0.2,
                     samples = samples,
@@ -225,27 +240,4 @@ suspend fun main() {
             strudel.close()
         }
     }
-}
-
-suspend fun createSampleRegistry(): SampleRegistry {
-    val samplesUrl =
-        "https://raw.githubusercontent.com/felixroos/dough-samples/main/tidal-drum-machines.json"
-
-    val aliasUrl =
-        "https://raw.githubusercontent.com/todepond/samples/main/tidal-drum-machines-alias.json"
-
-    val bankLoader = SampleBankIndexLoader(
-        loader = AssetLoader.default.withDiskCache(Path.of("./cache/index")),
-    )
-
-    val index: SampleRegistry.SampleBankIndex = bankLoader.load(
-        sampleMapUrl = samplesUrl,
-        aliasUrl = aliasUrl,
-    )
-
-    return SampleRegistry(
-        index = index,
-        decoder = WavDecoder(),
-        loader = AssetLoader.default.withDiskCache(Path.of("./cache/samples")),
-    )
 }
