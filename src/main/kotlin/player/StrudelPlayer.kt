@@ -115,6 +115,12 @@ class StrudelPlayer(
             val feedback: Double,
         )
 
+        class Vibrato(
+            val rate: Double,
+            val depth: Double,
+            var phase: Double = 0.0,
+        )
+
         val orbit: Int
         val startFrame: Long
         val endFrame: Long
@@ -123,6 +129,7 @@ class StrudelPlayer(
         val filter: AudioFilter
         val envelope: Envelope
         val delay: Delay
+        val vibrato: Vibrato
     }
 
     private class SynthVoice(
@@ -134,13 +141,11 @@ class StrudelPlayer(
         override val filter: AudioFilter,
         override val envelope: Voice.Envelope,
         override val delay: Voice.Delay,
+        override val vibrato: Voice.Vibrato,
         val osc: OscFn,
         val freqHz: Double,
         val phaseInc: Double,
-        val vibratoRate: Double,
-        val vibratoDepth: Double,
         var phase: Double = 0.0,
-        var lfoPhase: Double = 0.0,
     ) : Voice
 
     private class SampleVoice(
@@ -152,6 +157,7 @@ class StrudelPlayer(
         override val filter: AudioFilter,
         override val envelope: Voice.Envelope,
         override val delay: Voice.Delay,
+        override val vibrato: Voice.Vibrato,
         val pcm: FloatArray,
         val pcmSampleRate: Int,
         val rate: Double,          // sampleFrames per outputFrame
@@ -434,6 +440,16 @@ class StrudelPlayer(
         )
 
         // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Vibrato / LFO
+        val vibratoDepth = (scheduled.e.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
+        val vibratoRate = if (vibratoDepth > 0.0) scheduled.e.vibrato ?: 5.0 else 0.0
+        val vibrato = Voice.Vibrato(
+            depth = vibratoDepth,
+            rate = vibratoRate,
+            phase = 0.0,
+        )
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Tone or sound voice?
         val note = scheduled.e.note
         val sound = scheduled.e.sound
@@ -450,9 +466,6 @@ class StrudelPlayer(
                 // Pre-calculate increment once
                 val phaseInc = Numbers.TWO_PI * freqHz / sampleRate.toDouble()
 
-                val vibratoDepth = (scheduled.e.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
-                val vibratoRate = if (vibratoDepth > 0.0) scheduled.e.vibrato ?: 5.0 else 0.0
-
                 SynthVoice(
                     orbit = orbit,
                     startFrame = scheduled.startFrame,
@@ -463,11 +476,10 @@ class StrudelPlayer(
                     filter = bakedFilters,
                     envelope = envelope,
                     delay = delay,
+                    vibrato = vibrato,
                     freqHz = freqHz,
                     phaseInc = phaseInc,
                     phase = 0.0,
-                    vibratoDepth = vibratoDepth,
-                    vibratoRate = vibratoRate,
                 )
             }
 
@@ -510,6 +522,7 @@ class StrudelPlayer(
                         filter = bakedFilters,
                         envelope = envelope,
                         delay = delay,
+                        vibrato = vibrato,
                         pcm = decoded.pcm,
                         pcmSampleRate = decoded.sampleRate,
                         rate = rate,
@@ -639,32 +652,31 @@ class StrudelPlayer(
             // Apply routing, get orbit and init orbit if needed
             val orbit = orbits.getOrInit(voice.orbit, voice)
 
+            // vibrato / modulation
+            val modulationBuffer: DoubleArray?
+            if (voice.vibrato.depth > 0.0) {
+                // Use the re-usable buffer
+                modulationBuffer = freqModBuffer
+
+                // Fill the buffer
+                val lfoInc = Numbers.TWO_PI * voice.vibrato.rate / sampleRate.toDouble()
+                var lfoP = voice.vibrato.phase
+
+                // Fill modulation buffer for the exact range we are about to process
+                for (i in 0 until length) {
+                    // 1.0 + (sin(lfo) * depth)
+                    modulationBuffer[bufferOffset + i] = 1.0 + sin(lfoP) * voice.vibrato.depth
+                    lfoP += lfoInc
+                }
+                // Update LFO phase for next block
+                voice.vibrato.phase = lfoP
+            } else {
+                // Not needed
+                modulationBuffer = null
+            }
+
             when (voice) {
                 is SynthVoice -> {
-                    // Do we have vibrato?
-                    val modBuffer: DoubleArray?
-
-                    if (voice.vibratoDepth > 0.0) {
-                        // Use the re-usable buffer
-                        modBuffer = freqModBuffer
-
-                        // Fill the buffer
-                        val lfoInc = Numbers.TWO_PI * voice.vibratoRate / sampleRate.toDouble()
-                        var lfoP = voice.lfoPhase
-
-                        // Fill modulation buffer for the exact range we are about to process
-                        for (i in 0 until length) {
-                            // 1.0 + (sin(lfo) * depth)
-                            modBuffer[bufferOffset + i] = 1.0 + sin(lfoP) * voice.vibratoDepth
-                            lfoP += lfoInc
-                        }
-                        // Update LFO phase for next block
-                        voice.lfoPhase = lfoP
-                    } else {
-                        // Not needed
-                        modBuffer = null
-                    }
-
                     // Generate Audio into voiceBuffer
                     voice.phase = voice.osc.process(
                         buffer = voiceBuffer,
@@ -672,7 +684,7 @@ class StrudelPlayer(
                         length = length,
                         phase = voice.phase,
                         phaseInc = voice.phaseInc,
-                        phaseMod = modBuffer,
+                        phaseMod = modulationBuffer,
                     )
                     // 2. Apply Filters
                     voice.filter.process(voiceBuffer, bufferOffset, length)
@@ -687,6 +699,7 @@ class StrudelPlayer(
                     val gain = voice.gain
 
                     var ph = voice.playhead
+                    val baseRate = voice.rate
 
                     for (i in 0 until length) {
                         val idxOut = bufferOffset + i
@@ -703,8 +716,15 @@ class StrudelPlayer(
                             voiceBuffer[idxOut] = a + (b - a) * frac
                         }
 
-                        ph += voice.rate
+                        // Advance playhead
+                        // If vibrato is active, modulate the rate
+                        ph += if (modulationBuffer != null) {
+                            baseRate * modulationBuffer[idxOut]
+                        } else {
+                            baseRate
+                        }
                     }
+
                     // Update playhead!
                     voice.playhead = ph
                     // Process filters

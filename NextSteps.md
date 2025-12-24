@@ -7,8 +7,6 @@ before adding more effects like Reverb that would also need to be stereo-aware.
 
 # Reverb (room, size)
 
-# Modulation: Vibrato
-
 # Filter Control
 
 You have bakedFilters, but common use cases require dynamic control over the filter parameters per event (Low Pass, High
@@ -32,3 +30,14 @@ Once Stereo and Reverb are done, "coloring" the sound is next.
 
 -> sine wave osc is "clipping" on note-change with gain > 0.7
 -> soft-clipping implemented but not solving it fully
+
+# Sliding notes (pitch bend)
+
+Should be possible now that we have LFO / Vibrato.
+
+////////////////////////////////////////////////////////////////////////////////////////////  
+// DONE   
+////////////////////////////////////////////////////////////////////////////////////////////
+
+(x) Modulation: Vibrato
+

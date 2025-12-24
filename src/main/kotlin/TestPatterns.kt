@@ -218,7 +218,7 @@ object TestPatterns {
 
     val vibratoTestOne = """
         n("1 3 5 7").scale("C4:minor")
-        .sound("sine")
+        .sound("piano")
         .gain(1.0)
         .slow(4) 
         .vib(8)
