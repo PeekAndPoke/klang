@@ -86,6 +86,12 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val release = value.getMember("release").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Delay
+        val delay = value.getMember("delay").safeNumberOrNull()
+        val delayTime = value.getMember("delaytime").safeNumberOrNull()
+        val delayFeedback = value.getMember("delayfeedback").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Apply low pass filter?
         val cutoff = value.getMember("cutoff").safeNumberOrNull()
         cutoff?.let {
@@ -129,6 +135,10 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             cutoff = cutoff,
             hcutoff = hcutoff,
             resonance = resonance,
+            // Delay
+            delay = delay,
+            delayTime = delayTime,
+            delayFeedback = delayFeedback,
             // ???
             bandf = null, // TODO ...
             coarse = null, // TODO ...

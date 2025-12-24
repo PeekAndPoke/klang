@@ -59,6 +59,11 @@ data class StrudelPatternEvent(
     val hcutoff: Double?,
     val resonance: Double?,
 
+    // Delay
+    val delay: Double?, // Mix amount (0.0 to 1.0)
+    val delayTime: Double?, // Time in seconds
+    val delayFeedback: Double?, // Feedback amount (0.0 to <1.0)
+
     // ???
     val bandf: Double?,
     val coarse: Double?,

@@ -102,12 +102,19 @@ class StrudelPlayer(
             var level: Double = 0.0,
         )
 
+        class Delay(
+            val amount: Double, // mix amount 0 .. 1
+            val time: Double,
+            val feedback: Double,
+        )
+
         val startFrame: Long
         val endFrame: Long
         val gateEndFrame: Long
         val gain: Double
         val filter: AudioFilter
         val envelope: Envelope
+        val delay: Delay
     }
 
     private class SynthVoice(
@@ -117,6 +124,7 @@ class StrudelPlayer(
         override val gain: Double,
         override val filter: AudioFilter,
         override val envelope: Voice.Envelope,
+        override val delay: Voice.Delay,
         val osc: OscFn,
         val freqHz: Double,
         val phaseInc: Double,
@@ -130,6 +138,7 @@ class StrudelPlayer(
         override val gain: Double,
         override val filter: AudioFilter,
         override val envelope: Voice.Envelope,
+        override val delay: Voice.Delay,
         val pcm: FloatArray,
         val pcmSampleRate: Int,
         val rate: Double,          // sampleFrames per outputFrame
@@ -165,6 +174,15 @@ class StrudelPlayer(
     // Reusable buffers to avoid allocation in loop
     private val mixBuffer = DoubleArray(blockFrames)
     private val voiceBuffer = DoubleArray(blockFrames)
+
+    // ////////////////////////////////////////////////////////////////////////////////////
+    // Global effects V1:
+    // TODO: - delay lines per voice
+    //       - configurable maxDelaySeconds ... or take it from the settings
+    //       -> see orbits: https://strudel.cc/learn/effects/#orbits
+    private val delaySendBuffer = DoubleArray(blockFrames)
+    private val globalDelay = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate)
+    // ////////////////////////////////////////////////////////////////////////////////////
 
     // Coroutine Jobs
     private var fetchJob: Job? = null // Job for fetching new events
@@ -383,6 +401,14 @@ class StrudelPlayer(
         )
 
         // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Delay
+        val delay = Voice.Delay(
+            amount = scheduled.e.delay ?: 0.0,
+            time = scheduled.e.delayTime ?: 0.0,
+            feedback = scheduled.e.delayFeedback ?: 0.0,
+        )
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Tone or sound voice?
         val note = scheduled.e.note
         val sound = scheduled.e.sound
@@ -407,6 +433,7 @@ class StrudelPlayer(
                     osc = osc,
                     filter = bakedFilters,
                     envelope = envelope,
+                    delay = delay,
                     freqHz = freqHz,
                     phaseInc = phaseInc,
                     phase = 0.0,
@@ -450,6 +477,7 @@ class StrudelPlayer(
                         gain = scheduled.e.gain,
                         filter = bakedFilters,
                         envelope = envelope,
+                        delay = delay,
                         pcm = decoded.pcm,
                         pcmSampleRate = decoded.sampleRate,
                         rate = rate,
@@ -470,11 +498,10 @@ class StrudelPlayer(
 
         // Clear the mix buffer
         mixBuffer.fill(0.0)
-
-//        if (activeVoices.size > 2) {
-//            println()
-//            println("active voices: ${activeVoices.size} | schedule: ${scheduled.size()}")
-//        }
+        // TODO: use "orbits" for multiple global channels
+        //  https://strudel.cc/learn/effects/#orbits
+        delaySendBuffer.fill(0.0)
+        var foundDelayParams = false
 
         var v = 0
         while (v < activeVoices.size) {
@@ -504,6 +531,22 @@ class StrudelPlayer(
 
             val bufferOffset = (vStart - blockStart).toInt()
             val length = (vEnd - vStart).toInt()
+
+
+            // Capture delay params from the first voice that has them active
+            // (Simple "Last one wins" or "First one wins" strategy for global effect)
+            // We check the scheduled event inside the voice?
+            // Ah, we didn't store the raw event or delay params in Voice yet.
+            // We need to add delay params to Voice/Envelope or access them.
+
+            // Let's assume we add `delay`, `delayTime`, `delayFeedback` to Voice interface first.
+            // (See Step 3 below)
+
+            if (!foundDelayParams && voice.delay.amount > 0) {
+                globalDelay.delayTimeSeconds = voice.delay.time
+                globalDelay.feedback = voice.delay.feedback
+                foundDelayParams = true
+            }
 
             when (voice) {
                 is SynthVoice -> {
@@ -557,9 +600,12 @@ class StrudelPlayer(
                 }
             }
 
-            // next ...
+            // goto next voice ...
             v++
         }
+
+        // Process Global delay
+        globalDelay.process(input = delaySendBuffer, output = mixBuffer, length = blockFrames)
 
         // Convert Double Mix to Byte Output
         for (i in 0 until blockFrames) {
@@ -585,14 +631,17 @@ class StrudelPlayer(
 
         var absPos = vStart - voice.startFrame
         val gateEndPos = voice.gateEndFrame - voice.startFrame
-
-        // Initialize with the stored level
         var currentEnv = env.level
+
+        // Optimization: check if we need to write to send buffer
+        val delayAmount = voice.delay.amount
+        val sendToDelay = delayAmount > 0.0
 
         for (i in 0 until length) {
             val idx = bufferOffset + i
             val s = voiceBuffer[idx]
 
+            // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             // Envelope Logic
             if (absPos >= gateEndPos) {
                 // Release Phase
@@ -615,9 +664,20 @@ class StrudelPlayer(
 
             if (currentEnv < 0.0) currentEnv = 0.0
 
-            // Accumulate to mix
-            mixBuffer[idx] += s * voice.gain * currentEnv
 
+            // /////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // 1. Master Mix (Dry)
+            val dryVal = s * voice.gain * currentEnv
+            mixBuffer[idx] += dryVal
+
+            // /////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // 2. Delay Send (Wet)
+            if (sendToDelay) {
+                val wetVal = dryVal * delayAmount
+                delaySendBuffer[idx] += wetVal
+            }
+
+            // Move ahead ...
             absPos++
         }
 
