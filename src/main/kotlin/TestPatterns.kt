@@ -22,15 +22,19 @@ object TestPatterns {
                     .gain(0.5),
                     // melody
                     arrange(
-//                      [8, silence],
+                      [8, silence],
                       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
                     )
-                    .scale("C5:minor")
-                    .adsr("0.0:0.5:0.3:0.0")
-                    .hpf(1000)
-                    .sound("sine").gain(0.8),
+                    .scale("C4:minor")
+                    .adsr("0.05:0.5:0.5:0.5")
+                    .hpf(400)
+                    .sound("triangle").gain(0.5),
                     // Drums
-                    sound("bd hh sd hh").fast(2).gain(0.75),
+                    sound("bd hh sd hh")
+                     .orbit(1)
+                     .gain(0.75)
+                     .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.25)
+                     .fast(2),
                 )
                 
             """.trimIndent()
@@ -214,7 +218,7 @@ object TestPatterns {
 
     //    val active = smallTownBoyBass
 //    val active = smallTownBoyMelody
-//    val active = smallTownBoy
+    val active = smallTownBoy
 //    val active = tetris
 //    val active = c4Minor
 //    val active = numberNotes
@@ -236,5 +240,5 @@ object TestPatterns {
     //    val active = delayOffBeatDrums
 //    val active = delayDubTripletsDrums
 //    val active = delaySlapBackDrums
-    val active = twoOrbits
+//    val active = twoOrbits
 }
