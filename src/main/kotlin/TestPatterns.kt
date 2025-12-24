@@ -32,8 +32,8 @@ object TestPatterns {
                     // Drums
                     sound("bd hh sd hh")
                      .orbit(1)
-                     .gain(0.75)
-                     .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.25)
+                     .gain(0.5)
+                     .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.66)
                      .fast(2),
                 )
                 
