@@ -79,6 +79,13 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val resonance = value.getMember("resonance").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // ADRS
+        val attack = value.getMember("attack").safeNumberOrNull()
+        val decay = value.getMember("decay").safeNumberOrNull()
+        val sustain = value.getMember("sustain").safeNumberOrNull()
+        val release = value.getMember("release").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Apply low pass filter?
         val cutoff = value.getMember("cutoff").safeNumberOrNull()
         cutoff?.let {
@@ -111,10 +118,10 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             // Filters
             filters = filters,
             // ADSR envelope
-            attack = null, // TODO ...
-            decay = null, // TODO ...
-            sustain = null, // TODO ...
-            release = null, // TODO ...
+            attack = attack,
+            decay = decay,
+            sustain = sustain,
+            release = release,
             // Vibrato
             vibrato = null, // TODO ...
             vibratoMod = null,  // TODO ...

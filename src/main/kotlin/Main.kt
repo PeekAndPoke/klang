@@ -201,6 +201,15 @@ private suspend fun helloStrudel() {
             note("c e g e").sound("piano")
         """.trimIndent()
 
+        val asdrTest = """
+            note("c3")
+              .s("sine")
+              .attack(0.5)
+              .decay(0.2)
+              .sustain(0.3)
+              .release(1.0)            
+        """.trimIndent()
+
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
 //            val pat = smallTownBoy
@@ -215,17 +224,19 @@ private suspend fun helloStrudel() {
 //            val pat = pinkNoise
 //            val pat = supersaw
 //            val pat = polyphone
-        val pat = simpleDrums
+//        val pat = simpleDrums
 //            val pat = snareScale
 //            val pat = strangerThings
 //            val pat = piano
+        val pat = asdrTest
 
         val compiled = strudel.compile(pat).await()
         strudel.dumpPatternArc(compiled)
 
         val events = compiled.queryArc(0.0, 4.0, 44_100)
         events.forEach {
-            println("${it.begin} ${it.note} ${it.sound}")
+            strudel.prettyFormat(it)
+//            println("${it.begin} ${it.note} ${it.sound}")
         }
 
         val samples = Samples.create(

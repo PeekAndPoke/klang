@@ -65,7 +65,7 @@ data class StrudelPatternEvent(
     val crush: Double?,
     val distort: Double?,
 ) {
-    val isOscillator = Oscillators.Companion.isOsc(sound)
+    val isOscillator = Oscillators.isOsc(sound)
 
     val isSampleSound = !isOscillator
 

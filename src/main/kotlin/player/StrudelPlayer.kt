@@ -89,21 +89,34 @@ class StrudelPlayer(
     private data class ScheduledEvent(
         val startFrame: Long,
         val endFrame: Long,
+        val gateEndFrame: Long,  // When the note key is lifted
         val e: StrudelPatternEvent,
     )
 
     private sealed interface Voice {
+        class Envelope(
+            val attackFrames: Double,
+            val decayFrames: Double,
+            val sustainLevel: Double,
+            val releaseFrames: Double,
+            var level: Double = 0.0,
+        )
+
         val startFrame: Long
         val endFrame: Long
+        val gateEndFrame: Long
         val gain: Double
         val filter: AudioFilter
+        val envelope: Envelope
     }
 
     private class SynthVoice(
         override val startFrame: Long,
         override val endFrame: Long,
+        override val gateEndFrame: Long,
         override val gain: Double,
         override val filter: AudioFilter,
+        override val envelope: Voice.Envelope,
         val osc: OscFn,
         val freqHz: Double,
         val phaseInc: Double,
@@ -113,8 +126,10 @@ class StrudelPlayer(
     private class SampleVoice(
         override val startFrame: Long,
         override val endFrame: Long,
+        override val gateEndFrame: Long,
         override val gain: Double,
         override val filter: AudioFilter,
+        override val envelope: Voice.Envelope,
         val pcm: FloatArray,
         val pcmSampleRate: Int,
         val rate: Double,          // sampleFrames per outputFrame
@@ -313,11 +328,19 @@ class StrudelPlayer(
     private fun StrudelPatternEvent.toScheduled(): ScheduledEvent {
         val startFrame = (begin * framesPerCycle).toLong()
         val durFrames = (dur * framesPerCycle).toLong().coerceAtLeast(1L)
-        val endFrame = startFrame + durFrames
+
+        // If release is not specified, we use a tiny fade out (0.05s) to avoid clicks
+        val releaseSec = release ?: 0.05
+        val releaseFrames = (releaseSec * sampleRate).toLong()
+
+        // The voice must live until: start + duration + release
+        val gateEndFrame = startFrame + durFrames
+        val endFrame = gateEndFrame + releaseFrames
 
         val scheduledEvent = ScheduledEvent(
             startFrame = startFrame,
             endFrame = endFrame,
+            gateEndFrame = gateEndFrame,
             e = this,
         )
 
@@ -344,9 +367,22 @@ class StrudelPlayer(
     }
 
     private fun makeVoice(scheduled: ScheduledEvent, nowFrame: Long): Voice? {
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Bake the filter for better performance
         val bakedFilters = combineFilters(scheduled.e.filters)
 
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Setup Envelope
+        // Defaults: Attack=0.01s, Decay=0.0s, Sustain=1.0, Release=from scheduled logic
+        val envelope = Voice.Envelope(
+            attackFrames = (scheduled.e.attack ?: 0.01) * sampleRate,
+            decayFrames = (scheduled.e.decay ?: 0.0) * sampleRate,
+            sustainLevel = scheduled.e.sustain ?: 1.0,
+            // We calculated total release frames in toScheduled, we can reverse it or just re-calc
+            releaseFrames = (scheduled.endFrame - scheduled.gateEndFrame).toDouble()
+        )
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Tone or sound voice?
         val note = scheduled.e.note
         val sound = scheduled.e.sound
@@ -354,6 +390,8 @@ class StrudelPlayer(
         val isOsci = scheduled.e.isOscillator && note != null
         val isSample = scheduled.e.isSampleSound && sound != null
 
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Switch
         val voice: Voice? = when {
             isOsci -> {
                 val freqHz = StrudelTones.resolveFreq(note, scheduled.e.scale)
@@ -364,9 +402,11 @@ class StrudelPlayer(
                 SynthVoice(
                     startFrame = scheduled.startFrame,
                     endFrame = scheduled.endFrame,
+                    gateEndFrame = scheduled.gateEndFrame,
                     gain = scheduled.e.gain,
                     osc = osc,
                     filter = bakedFilters,
+                    envelope = envelope,
                     freqHz = freqHz,
                     phaseInc = phaseInc,
                     phase = 0.0,
@@ -406,8 +446,10 @@ class StrudelPlayer(
                     SampleVoice(
                         startFrame = nowFrame,
                         endFrame = endFrame,
+                        gateEndFrame = scheduled.gateEndFrame,
                         gain = scheduled.e.gain,
                         filter = bakedFilters,
+                        envelope = envelope,
                         pcm = decoded.pcm,
                         pcmSampleRate = decoded.sampleRate,
                         rate = rate,
@@ -475,50 +517,10 @@ class StrudelPlayer(
                         phase = voice.phase,
                         phaseInc = voice.phaseInc
                     )
-
-                    // 2. Apply Filters (Block processing!)
-                    // The filter mutates voiceBuffer in-place using tight loops
+                    // 2. Apply Filters
                     voice.filter.process(voiceBuffer, bufferOffset, length)
-
-                    // Simple envelope logic (approximate for block)
-                    // To do this perfectly accurately per sample, we'd calculate env inside loop
-                    // For performance, simple logic:
-                    val attackFrames = 256.0
-                    val releaseFrames = 512.0 // Fade out over ~10ms
-                    val invAttack = 1.0 / attackFrames
-                    val invRelease = 1.0 / releaseFrames
-
-                    // Calculate where the release phase should start for this voice
-                    val totalFrames = (voice.endFrame - voice.startFrame).toInt()
-                    val releaseStart = (totalFrames - releaseFrames).toInt().coerceAtLeast(0)
-
-                    // Current position relative to the start of the voice
-                    var relPos = (vStart - voice.startFrame).toInt()
-
-                    for (i in 0 until length) {
-                        val idx = bufferOffset + i
-                        val s = voiceBuffer[idx]
-
-                        // Envelope Logic
-                        var env = 1.0
-
-                        if (relPos < attackFrames) {
-                            // Attack Phase
-                            env = relPos * invAttack
-                        } else if (relPos >= releaseStart) {
-                            // Release Phase (Fade out)
-                            val relInRelease = relPos - releaseStart
-                            // Linear fade out: 1.0 -> 0.0
-                            env = 1.0 - (relInRelease * invRelease)
-                        }
-
-                        // Safety clamp to avoid negative gain if we overshoot slightly
-                        if (env < 0.0) env = 0.0
-
-                        // Accumulate to mix
-                        mixBuffer[idx] += s * voice.gain * env
-                        relPos++
-                    }
+                    // 3. Apply env and mix down
+                    applyEnvelopeAndMix(voice, vStart, length, bufferOffset)
                 }
 
                 is SampleVoice -> {
@@ -546,17 +548,12 @@ class StrudelPlayer(
 
                         ph += voice.rate
                     }
-
                     // Update playhead!
                     voice.playhead = ph
-
                     // Process filters
                     voice.filter.process(voiceBuffer, bufferOffset, length)
-
-                    for (i in 0 until length) {
-                        val idx = bufferOffset + i
-                        mixBuffer[idx] += voiceBuffer[idx] * voice.gain
-                    }
+                    // Apply env and mix down
+                    applyEnvelopeAndMix(voice, vStart, length, bufferOffset)
                 }
             }
 
@@ -574,6 +571,60 @@ class StrudelPlayer(
 
         cursorFrame.value = blockEndExclusive
     }
+
+    private fun applyEnvelopeAndMix(
+        voice: Voice,
+        vStart: Long,
+        length: Int,
+        bufferOffset: Int,
+    ) {
+        val env = voice.envelope
+        val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
+        val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
+        val relRate = if (env.releaseFrames > 0) env.sustainLevel / env.releaseFrames else 1.0
+
+        var absPos = vStart - voice.startFrame
+        val gateEndPos = voice.gateEndFrame - voice.startFrame
+
+        // Initialize with the stored level
+        var currentEnv = env.level
+
+        for (i in 0 until length) {
+            val idx = bufferOffset + i
+            val s = voiceBuffer[idx]
+
+            // Envelope Logic
+            if (absPos >= gateEndPos) {
+                // Release Phase
+                val relPos = absPos - gateEndPos
+                currentEnv = env.sustainLevel - (relPos * relRate)
+            } else {
+                // Gate Open
+                if (absPos < env.attackFrames) {
+                    // Attack
+                    currentEnv = absPos * attRate
+                } else if (absPos < env.attackFrames + env.decayFrames) {
+                    // Decay
+                    val decPos = absPos - env.attackFrames
+                    currentEnv = 1.0 - (decPos * decRate)
+                } else {
+                    // Sustain
+                    currentEnv = env.sustainLevel
+                }
+            }
+
+            if (currentEnv < 0.0) currentEnv = 0.0
+
+            // Accumulate to mix
+            mixBuffer[idx] += s * voice.gain * currentEnv
+
+            absPos++
+        }
+
+        // Save the last level back to the envelope state
+        env.level = currentEnv
+    }
+
 
     private fun combineFilters(filters: List<AudioFilter>): AudioFilter {
         if (filters.isEmpty()) return NoOpAudioFilter
