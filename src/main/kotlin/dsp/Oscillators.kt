@@ -10,9 +10,20 @@ fun interface OscFn {
     /**
      * Fills [buffer] starting at [offset] for [length] samples.
      * Uses [phase] as the starting phase and increments it by [phaseInc] per sample.
+     *
+     * [phaseMod] is an optional array of modulation factors (1.0 = no change).
+     * If provided, it must be at least as large as [buffer] (or valid at [offset]).
+     *
      * Returns the next phase value.
      */
-    fun process(buffer: DoubleArray, offset: Int, length: Int, phase: Double, phaseInc: Double): Double
+    fun process(
+        buffer: DoubleArray,
+        offset: Int,
+        length: Int,
+        phase: Double,
+        phaseInc: Double,
+        phaseMod: DoubleArray?,
+    ): Double
 }
 
 typealias NoiseFactory = (rng: Random) -> OscFn
@@ -33,6 +44,7 @@ class Oscillators private constructor(
     val sampleRate: Int,
     val rng: Random,
     // Oscillators
+    val silence: OscFn,
     val sine: OscFn,
     val sawtooth: OscFn,
     val square: OscFn,
@@ -60,69 +72,121 @@ class Oscillators private constructor(
             return namesSet.contains(s)
         }
 
-        fun sine(gain: Double = 1.0) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+        val silenceFn = OscFn { buffer, offset, length, _, _, _ ->
+            buffer.fill(0.0, offset, offset + length)
+            0.0
+        }
+
+        fun sineFn(gain: Double = 1.0) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
             var p = startPhase
             val end = offset + length
-            for (i in offset until end) {
-                buffer[i] = gain * sin(p)
-                p += phaseInc
-                if (p >= TWO_PI) p -= TWO_PI
+
+            if (phaseMod == null) {
+                for (i in offset until end) {
+                    buffer[i] = gain * sin(p)
+                    p += phaseInc
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
+            } else {
+                for (i in offset until end) {
+                    buffer[i] = gain * sin(p)
+                    p += phaseInc * phaseMod[i]
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
             }
             p
         }
 
-        fun sawtooth(gain: Double = 0.6) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+        fun sawtoothFn(gain: Double = 0.6) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
             var p = startPhase
             val end = offset + length
             val invTwoPi = 1.0 / TWO_PI
 
-            for (i in offset until end) {
-                val x = p * invTwoPi
-                buffer[i] = gain * 2.0 * (x - floor(x + 0.5))
-                p += phaseInc
-                if (p >= TWO_PI) p -= TWO_PI
+            if (phaseMod == null) {
+                for (i in offset until end) {
+                    val x = p * invTwoPi
+                    buffer[i] = gain * 2.0 * (x - floor(x + 0.5))
+                    p += phaseInc
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
+            } else {
+                for (i in offset until end) {
+                    val x = p * invTwoPi
+                    buffer[i] = gain * 2.0 * (x - floor(x + 0.5))
+                    p += phaseInc * phaseMod[i]
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
             }
             p
         }
 
-        fun square(gain: Double = 0.5) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+        fun squareFn(gain: Double = 0.5) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
             var p = startPhase
             val end = offset + length
-            for (i in offset until end) {
-                buffer[i] = gain * if (sin(p) >= 0.0) 1.0 else -1.0
-                p += phaseInc
-                if (p >= TWO_PI) p -= TWO_PI
+
+            if (phaseMod == null) {
+                for (i in offset until end) {
+                    buffer[i] = gain * if (sin(p) >= 0.0) 1.0 else -1.0
+                    p += phaseInc
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
+            } else {
+                for (i in offset until end) {
+                    buffer[i] = gain * if (sin(p) >= 0.0) 1.0 else -1.0
+                    p += phaseInc * phaseMod[i]
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
             }
             p
         }
 
-        fun triangle(gain: Double = 0.7) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+        fun triangleFn(gain: Double = 0.7) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
             var p = startPhase
             val end = offset + length
             val norm = 2.0 / Math.PI
-            for (i in offset until end) {
-                buffer[i] = gain * norm * asin(sin(p))
-                p += phaseInc
-                if (p >= TWO_PI) p -= TWO_PI
+
+            if (phaseMod == null) {
+                for (i in offset until end) {
+                    buffer[i] = gain * norm * asin(sin(p))
+                    p += phaseInc
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
+            } else {
+                for (i in offset until end) {
+                    buffer[i] = gain * norm * asin(sin(p))
+                    p += phaseInc * phaseMod[i]
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
             }
             p
         }
 
-        fun zawtooth(gain: Double = 1.0) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+        fun zawtoothFn(gain: Double = 1.0) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
             var p = startPhase
             val end = offset + length
             val invTwoPi = 1.0 / TWO_PI
-            for (i in offset until end) {
-                val x = p * invTwoPi
-                val frac = x - floor(x)
-                buffer[i] = gain * (frac * 2.0 - 1.0)
-                p += phaseInc
-                if (p >= TWO_PI) p -= TWO_PI
+
+            if (phaseMod == null) {
+                for (i in offset until end) {
+                    val x = p * invTwoPi
+                    val frac = x - floor(x)
+                    buffer[i] = gain * (frac * 2.0 - 1.0)
+                    p += phaseInc
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
+            } else {
+                for (i in offset until end) {
+                    val x = p * invTwoPi
+                    val frac = x - floor(x)
+                    buffer[i] = gain * (frac * 2.0 - 1.0)
+                    p += phaseInc * phaseMod[i]
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
             }
             p
         }
 
-        fun supersaw(
+        fun supersawFn(
             sampleRate: Int,
             baseFreqHz: Double,
             voices: Int = 5,
@@ -148,79 +212,119 @@ class Oscillators private constructor(
                 freqAdjusted / sr // This is the increment
             }
 
-            return OscFn { buffer, offset, length, _, _ ->
+            return OscFn { buffer, offset, length, _, _, phaseMod ->
                 // Supersaw ignores the master phase/phaseInc because it manages its own stack
                 val end = offset + length
 
-                for (i in offset until end) {
-                    var sl = 0.0
-                    var srSum = 0.0
+                if (phaseMod == null) {
+                    for (i in offset until end) {
+                        var sl = 0.0
+                        var srSum = 0.0
 
-                    for (n in 0 until v) {
-                        val dt = detunes[n]
-                        val isOdd = (n and 1) == 1
-                        val gainL = if (isOdd) g2 else g1
-                        val gainR = if (isOdd) g1 else g2
+                        for (n in 0 until v) {
+                            val dt = detunes[n]
+                            val isOdd = (n and 1) == 1
+                            val gainL = if (isOdd) g2 else g1
+                            val gainR = if (isOdd) g1 else g2
 
-                        val p = polyBlep(phases[n], dt)
-                        val s = 2.0 * phases[n] - 1.0 - p
+                            val p = polyBlep(phases[n], dt)
+                            val s = 2.0 * phases[n] - 1.0 - p
 
-                        sl += s * gainL
-                        srSum += s * gainR
+                            sl += s * gainL
+                            srSum += s * gainR
 
-                        phases[n] += dt
-                        if (phases[n] > 1.0) phases[n] -= 1.0
+                            phases[n] += dt
+                            if (phases[n] > 1.0) phases[n] -= 1.0
+                        }
+                        buffer[i] = gain * (sl + srSum) * invV
                     }
-                    buffer[i] = gain * (sl + srSum) * invV
+                } else {
+                    for (i in offset until end) {
+                        var sl = 0.0
+                        var srSum = 0.0
+                        val mod = phaseMod[i]
+
+                        for (n in 0 until v) {
+                            val dt = detunes[n] * mod
+                            val isOdd = (n and 1) == 1
+                            val gainL = if (isOdd) g2 else g1
+                            val gainR = if (isOdd) g1 else g2
+
+                            val p = polyBlep(phases[n], dt)
+                            val s = 2.0 * phases[n] - 1.0 - p
+
+                            sl += s * gainL
+                            srSum += s * gainR
+
+                            phases[n] += dt
+                            if (phases[n] > 1.0) phases[n] -= 1.0
+                        }
+                        buffer[i] = gain * (sl + srSum) * invV
+                    }
                 }
                 0.0 // Dummy return
             }
         }
 
-        fun pulze(
+        fun pulzeFn(
             duty: Double = 0.5,
             gain: Double = 1.0,
-        ) = OscFn { buffer, offset, length, startPhase, phaseInc ->
+        ) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
             var p = startPhase
             val end = offset + length
             val d = duty.coerceIn(0.0, 1.0)
             val invTwoPi = 1.0 / TWO_PI
 
-            for (i in offset until end) {
-                val x = p * invTwoPi
-                val cyclePos = x - floor(x)
-                buffer[i] = gain * if (cyclePos < d) 1.0 else -1.0
-                p += phaseInc
-                if (p >= TWO_PI) p -= TWO_PI
+            if (phaseMod == null) {
+                for (i in offset until end) {
+                    val x = p * invTwoPi
+                    val cyclePos = x - floor(x)
+                    buffer[i] = gain * if (cyclePos < d) 1.0 else -1.0
+                    p += phaseInc
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
+            } else {
+                for (i in offset until end) {
+                    val x = p * invTwoPi
+                    val cyclePos = x - floor(x)
+                    buffer[i] = gain * if (cyclePos < d) 1.0 else -1.0
+                    p += phaseInc * phaseMod[i]
+                    if (p >= TWO_PI) p -= TWO_PI
+                }
             }
             p
         }
 
-        fun impulse(): OscFn {
+        fun impulseFn(): OscFn {
             var lastPhase = Double.POSITIVE_INFINITY
 
-            return OscFn { buffer, offset, length, startPhase, phaseInc ->
+            return OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
                 var p = startPhase
                 val end = offset + length
-                for (i in offset until end) {
-                    buffer[i] = if (p < lastPhase) 1.0 else 0.0
-                    lastPhase = p
-                    p += phaseInc
-                    if (p >= TWO_PI) p -= TWO_PI
+
+                if (phaseMod == null) {
+                    for (i in offset until end) {
+                        buffer[i] = if (p < lastPhase) 1.0 else 0.0
+                        lastPhase = p
+                        p += phaseInc
+                        if (p >= TWO_PI) p -= TWO_PI
+                    }
+                } else {
+                    for (i in offset until end) {
+                        buffer[i] = if (p < lastPhase) 1.0 else 0.0
+                        lastPhase = p
+                        p += phaseInc * phaseMod[i]
+                        if (p >= TWO_PI) p -= TWO_PI
+                    }
                 }
                 p
             }
         }
 
-        val silence =  OscFn { buffer, offset, length, _, _ ->
-            buffer.fill(0.0, offset, offset + length)
-            0.0
-        }
-
         // Noise //////////////////////////////////////////////////////////////////////
         // Note: Noises ignore phase/phaseInc, they just fill random
 
-        fun whiteNoise(rng: Random, gain: Double = 1.0) = OscFn { buffer, offset, length, _, _ ->
+        fun whiteNoiseFn(rng: Random, gain: Double = 1.0) = OscFn { buffer, offset, length, _, _, _ ->
             val end = offset + length
             for (i in offset until end) {
                 buffer[i] = gain * (rng.nextDouble() * 2.0 - 1.0)
@@ -228,9 +332,10 @@ class Oscillators private constructor(
             0.0
         }
 
-        fun brownNoise(rng: Random, gain: Double = 1.0): OscFn {
+        fun brownNoiseFn(rng: Random, gain: Double = 1.0): OscFn {
             var out = 0.0
-            return OscFn { buffer, offset, length, _, _ ->
+
+            return OscFn { buffer, offset, length, _, _, _ ->
                 val end = offset + length
                 for (i in offset until end) {
                     val white = rng.nextDouble() * 2.0 - 1.0
@@ -241,10 +346,16 @@ class Oscillators private constructor(
             }
         }
 
-        fun pinkNoise(rng: Random, gain: Double = 1.0): OscFn {
-            var b0 = 0.0; var b1 = 0.0; var b2 = 0.0; var b3 = 0.0; var b4 = 0.0; var b5 = 0.0; var b6 = 0.0
+        fun pinkNoiseFn(rng: Random, gain: Double = 1.0): OscFn {
+            var b0 = 0.0
+            var b1 = 0.0
+            var b2 = 0.0
+            var b3 = 0.0
+            var b4 = 0.0
+            var b5 = 0.0
+            var b6 = 0.0
 
-            return OscFn { buffer, offset, length, _, _ ->
+            return OscFn { buffer, offset, length, _, _, _ ->
                 val end = offset + length
                 for (i in offset until end) {
                     val white = rng.nextDouble() * 2.0 - 1.0
@@ -262,12 +373,12 @@ class Oscillators private constructor(
             }
         }
 
-        fun dust(
+        fun dustFn(
             sampleRate: Int,
             density: Double,
             maxRateHz: Double,
             rng: Random,
-        ) = OscFn { buffer, offset, length, _, _ ->
+        ) = OscFn { buffer, offset, length, _, _, _ ->
             val d = density.coerceIn(0.0, 1.0)
             val rateHz = d * maxRateHz
             val p = (rateHz / sampleRate.toDouble()).coerceIn(0.0, 1.0)
@@ -325,6 +436,9 @@ class Oscillators private constructor(
 
     @Suppress("EnumEntryName")
     enum class Names {
+        // Silence
+        silence,
+
         // Sine
         sin, sine,
 
@@ -365,17 +479,19 @@ class Oscillators private constructor(
         crackle,
     }
 
+    @Suppress("unused")
     class Builder(val sampleRate: Int) {
         private var rng: Random = Random
 
         // Oscillators
-        private var sine: OscFn = sine()
-        private var sawtooth: OscFn = sawtooth()
-        private var square: OscFn = square()
-        private var triangle: OscFn = triangle()
-        private var zawtooth: OscFn = zawtooth()
+        private var silence: OscFn = silenceFn
+        private var sine: OscFn = sineFn()
+        private var sawtooth: OscFn = sawtoothFn()
+        private var square: OscFn = squareFn()
+        private var triangle: OscFn = triangleFn()
+        private var zawtooth: OscFn = zawtoothFn()
         private var supersaw: SupersawFactory = { sampleRate, baseFreqHz, voices, detuneSemitones, panspread, rng ->
-            supersaw(
+            supersawFn(
                 sampleRate = sampleRate,
                 baseFreqHz = baseFreqHz,
                 voices = voices,
@@ -384,24 +500,25 @@ class Oscillators private constructor(
                 rng = rng,
             )
         }
-        private var pulze: OscFn = pulze()
-        private var impulse: () -> OscFn = { impulse() }
+        private var pulze: OscFn = pulzeFn()
+        private var impulse: () -> OscFn = { impulseFn() }
 
         // Noises
-        private var whiteNoise: NoiseFactory = { rng -> whiteNoise(rng = rng) }
-        private var brownNoise: NoiseFactory = { rng -> brownNoise(rng = rng) }
-        private var pinkNoise: NoiseFactory = { rng -> pinkNoise(rng = rng) }
+        private var whiteNoise: NoiseFactory = { rng -> whiteNoiseFn(rng = rng) }
+        private var brownNoise: NoiseFactory = { rng -> brownNoiseFn(rng = rng) }
+        private var pinkNoise: NoiseFactory = { rng -> pinkNoiseFn(rng = rng) }
         private var dust: DustFactory = { sampleRate, density, rng ->
-            dust(sampleRate, density, 200.0, rng)
+            dustFn(sampleRate, density, 200.0, rng)
         }
         private var crackle: DustFactory = { sampleRate, density, rng ->
-            dust(sampleRate, density, 800.0, rng)
+            dustFn(sampleRate, density, 800.0, rng)
         }
 
         // Random
         fun rng(rng: Random) = apply { this.rng = rng }
 
         // Oscillators
+        fun silence(osc: OscFn) = apply { silence = osc }
         fun sine(osc: OscFn) = apply { sine = osc }
         fun sawtooth(osc: OscFn) = apply { sawtooth = osc }
         fun square(osc: OscFn) = apply { square = osc }
@@ -421,6 +538,7 @@ class Oscillators private constructor(
             sampleRate = sampleRate,
             rng = rng,
             // Oscillators
+            silence = silence,
             sine = sine,
             sawtooth = sawtooth,
             square = square,
@@ -467,6 +585,7 @@ class Oscillators private constructor(
 
             when (baseEnum) {
                 // Oscillators
+                Names.silence -> silence
                 Names.saw, Names.sawtooth -> sawtooth
                 Names.sqr, Names.square, Names.pulse -> square
                 Names.tri, Names.triangle -> triangle

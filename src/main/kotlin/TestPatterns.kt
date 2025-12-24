@@ -216,9 +216,19 @@ object TestPatterns {
         )
     """.trimIndent()
 
+    val vibratoTestOne = """
+        n("1 3 5 7").scale("C4:minor")
+        .sound("sine")
+        .gain(1.0)
+        .slow(4) 
+        .vib(8)
+        .vmod(0.5)
+        
+    """.trimIndent()
+
     //    val active = smallTownBoyBass
 //    val active = smallTownBoyMelody
-    val active = smallTownBoy
+//    val active = smallTownBoy
 //    val active = tetris
 //    val active = c4Minor
 //    val active = numberNotes
@@ -241,4 +251,6 @@ object TestPatterns {
 //    val active = delayDubTripletsDrums
 //    val active = delaySlapBackDrums
 //    val active = twoOrbits
+
+    val active = vibratoTestOne
 }

@@ -7,4 +7,6 @@ import kotlin.math.PI
  */
 object Numbers {
     const val TWO_PI: Double = PI * 2
+
+    const val ONE_OVER_TWELVE: Double = 1.0 / 12.0
 }

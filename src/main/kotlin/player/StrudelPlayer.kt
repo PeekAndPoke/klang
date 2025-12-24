@@ -5,12 +5,14 @@ import io.peekandpoke.samples.Samples
 import io.peekandpoke.tones.StrudelTones
 import io.peekandpoke.utils.MinHeap
 import io.peekandpoke.utils.Numbers
+import io.peekandpoke.utils.Numbers.ONE_OVER_TWELVE
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import kotlin.math.ceil
+import kotlin.math.sin
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -70,7 +72,7 @@ class StrudelPlayer(
                 /** How often we query Strudel (milliseconds). */
                 fetchPeriodMs: Long = 250L,
                 /** Fixed render quantum in frames. */
-                blockFrames: Int = 1024,
+                blockFrames: Int = 512,
                 /** Number of cycles to prefetch before starting playback. Needed to not miss the start. */
                 prefetchCycles: Int = ceil(maxOf(2.0, cps * 2)).toInt(),
                 /** Maximum number of Orbits */
@@ -135,7 +137,10 @@ class StrudelPlayer(
         val osc: OscFn,
         val freqHz: Double,
         val phaseInc: Double,
+        val vibratoRate: Double,
+        val vibratoDepth: Double,
         var phase: Double = 0.0,
+        var lfoPhase: Double = 0.0,
     ) : Voice
 
     private class SampleVoice(
@@ -187,6 +192,9 @@ class StrudelPlayer(
 
     // Reusable scratchpad for single voice rendering
     private val voiceBuffer = DoubleArray(blockFrames)
+
+    // Reusable scratchpad for frequency modulation (LFO)
+    private val freqModBuffer = DoubleArray(blockFrames)
 
     // Final mix buffer to sum all orbits
     private val masterMixBuffer = DoubleArray(blockFrames)
@@ -442,6 +450,9 @@ class StrudelPlayer(
                 // Pre-calculate increment once
                 val phaseInc = Numbers.TWO_PI * freqHz / sampleRate.toDouble()
 
+                val vibratoDepth = (scheduled.e.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
+                val vibratoRate = if (vibratoDepth > 0.0) scheduled.e.vibrato ?: 5.0 else 0.0
+
                 SynthVoice(
                     orbit = orbit,
                     startFrame = scheduled.startFrame,
@@ -455,6 +466,8 @@ class StrudelPlayer(
                     freqHz = freqHz,
                     phaseInc = phaseInc,
                     phase = 0.0,
+                    vibratoDepth = vibratoDepth,
+                    vibratoRate = vibratoRate,
                 )
             }
 
@@ -594,7 +607,6 @@ class StrudelPlayer(
         // Clear orbits
         orbits.clearAll()
 
-
         var v = 0
         while (v < activeVoices.size) {
             val voice = activeVoices[v]
@@ -629,15 +641,38 @@ class StrudelPlayer(
 
             when (voice) {
                 is SynthVoice -> {
-                    // 1. Generate Audio into voiceBuffer
-                    // This call is now a single virtual call per block (fast!)
-                    // The loop inside 'process' is tight and vectorizable
+                    // Do we have vibrato?
+                    val modBuffer: DoubleArray?
+
+                    if (voice.vibratoDepth > 0.0) {
+                        // Use the re-usable buffer
+                        modBuffer = freqModBuffer
+
+                        // Fill the buffer
+                        val lfoInc = Numbers.TWO_PI * voice.vibratoRate / sampleRate.toDouble()
+                        var lfoP = voice.lfoPhase
+
+                        // Fill modulation buffer for the exact range we are about to process
+                        for (i in 0 until length) {
+                            // 1.0 + (sin(lfo) * depth)
+                            modBuffer[bufferOffset + i] = 1.0 + sin(lfoP) * voice.vibratoDepth
+                            lfoP += lfoInc
+                        }
+                        // Update LFO phase for next block
+                        voice.lfoPhase = lfoP
+                    } else {
+                        // Not needed
+                        modBuffer = null
+                    }
+
+                    // Generate Audio into voiceBuffer
                     voice.phase = voice.osc.process(
                         buffer = voiceBuffer,
                         offset = bufferOffset,
                         length = length,
                         phase = voice.phase,
-                        phaseInc = voice.phaseInc
+                        phaseInc = voice.phaseInc,
+                        phaseMod = modBuffer,
                     )
                     // 2. Apply Filters
                     voice.filter.process(voiceBuffer, bufferOffset, length)
@@ -688,8 +723,15 @@ class StrudelPlayer(
 
         // Convert Double Mix to Byte Output
         for (i in 0 until blockFrames) {
-            val sample = masterMixBuffer[i].coerceIn(-1.0, 1.0)
-            val pcm = (sample * Short.MAX_VALUE).toInt()
+            // Apply Soft Clipping (Limiter) to avoid harsh digital distortion
+            // tanh provides a smooth saturation curve
+            val rawSample = masterMixBuffer[i]
+            val sample = kotlin.math.tanh(rawSample)
+
+            // Fallback hard clip just in case tanh edge cases (though tanh is bounded -1..1)
+            val clamped = sample.coerceIn(-1.0, 1.0)
+
+            val pcm = (clamped * Short.MAX_VALUE).toInt()
             out[i * 2] = (pcm and 0xff).toByte()
             out[i * 2 + 1] = ((pcm ushr 8) and 0xff).toByte()
         }

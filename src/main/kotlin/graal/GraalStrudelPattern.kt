@@ -86,6 +86,13 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val release = value.getMember("release").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Vibrato
+        val vibrato = value.getMember("vib").safeNumberOrNull()
+            ?: value.getMember("vibrato").safeNumberOrNull()
+        val vibratoMod = value.getMember("vibmod").safeNumberOrNull()
+            ?: value.getMember("vibratoMod").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Routing
         val orbit = value.getMember("orbit").safeNumberOrNull()?.toInt()
 
@@ -133,8 +140,8 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             sustain = sustain,
             release = release,
             // Vibrato
-            vibrato = null, // TODO ...
-            vibratoMod = null,  // TODO ...
+            vibrato = vibrato,
+            vibratoMod = vibratoMod,
             // HPF / LPF
             cutoff = cutoff,
             hcutoff = hcutoff,

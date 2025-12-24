@@ -55,7 +55,7 @@ class CachingAssetLoader(
 }
 
 class JavaAssetLoader(
-    val agentName: String = "Knödel",
+    val agentName: String = "Klang",
     private val client: HttpClient = HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.NORMAL)
         .build(),
