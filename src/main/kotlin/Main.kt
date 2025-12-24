@@ -70,13 +70,13 @@ private suspend fun helloStrudel() {
                     .gain(0.5),
                     // melody
                     arrange(
-                      [8, silence],
+//                      [8, silence],
                       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
                     )
                     .scale("C5:minor")
-                    .adsr("0.0:0.3:0.5:0.5")
+                    .adsr("0.0:0.5:0.3:0.0")
                     .hpf(1000)
-                    .sound("sin").gain(0.8),
+                    .sound("sine").gain(0.8),
                     // Drums
                     sound("bd hh sd hh").fast(2).gain(0.75),
                 )
@@ -252,7 +252,7 @@ private suspend fun helloStrudel() {
             pattern = compiled,
             options = StrudelPlayer.Options(
                 sampleRate = 48_000,
-                cps = 0.5,
+                cps = 0.55,
                 samples = samples,
             ),
         )
