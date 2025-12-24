@@ -65,15 +65,17 @@ private suspend fun helloStrudel() {
                     // bass
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                     .sound("supersaw").unison(8)
-                    .lpf(400),
+                    .lpf(400)
+                    .gain(0.5),
                     // melody
                     arrange(
-                      [8, silence],
+//                      [8, silence],
                       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
                     )
                     .scale("C4:minor")
-                    .hpf(400)
-                    .sound("triangle").gain(0.8),
+                    .adsr("0.0:0.2:0.3:0.8")
+                    .hpf(200)
+                    .sound("sin").gain(0.8),
                     // Drums
                     sound("bd hh sd hh").fast(2).gain(0.75),
                 )
@@ -212,7 +214,7 @@ private suspend fun helloStrudel() {
 
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
-//            val pat = smallTownBoy
+        val pat = smallTownBoy
 //        val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
@@ -228,7 +230,7 @@ private suspend fun helloStrudel() {
 //            val pat = snareScale
 //            val pat = strangerThings
 //            val pat = piano
-        val pat = asdrTest
+//        val pat = asdrTest
 
         val compiled = strudel.compile(pat).await()
         strudel.dumpPatternArc(compiled)
