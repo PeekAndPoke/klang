@@ -52,6 +52,8 @@ class StrudelPlayer(
         val blockFrames: Int,
         /** Number of cycles to prefetch before starting playback. Needed to not miss the start. */
         val prefetchCycles: Int,
+        /** Maximum number of Orbits */
+        val maxOrbits: Int,
     ) {
         companion object {
             suspend operator fun invoke(
@@ -71,6 +73,8 @@ class StrudelPlayer(
                 blockFrames: Int = 1024,
                 /** Number of cycles to prefetch before starting playback. Needed to not miss the start. */
                 prefetchCycles: Int = ceil(maxOf(2.0, cps * 2)).toInt(),
+                /** Maximum number of Orbits */
+                maxOrbits: Int = 16,
             ): Options {
                 return Options(
                     sampleRate = sampleRate,
@@ -80,7 +84,8 @@ class StrudelPlayer(
                     lookaheadSec = lookaheadSec,
                     fetchPeriodMs = fetchPeriodMs,
                     blockFrames = blockFrames,
-                    prefetchCycles = prefetchCycles
+                    prefetchCycles = prefetchCycles,
+                    maxOrbits = maxOrbits,
                 )
             }
         }
@@ -93,7 +98,7 @@ class StrudelPlayer(
         val e: StrudelPatternEvent,
     )
 
-    private sealed interface Voice {
+    sealed interface Voice {
         class Envelope(
             val attackFrames: Double,
             val decayFrames: Double,
@@ -108,6 +113,7 @@ class StrudelPlayer(
             val feedback: Double,
         )
 
+        val orbit: Int
         val startFrame: Long
         val endFrame: Long
         val gateEndFrame: Long
@@ -118,6 +124,7 @@ class StrudelPlayer(
     }
 
     private class SynthVoice(
+        override val orbit: Int,
         override val startFrame: Long,
         override val endFrame: Long,
         override val gateEndFrame: Long,
@@ -132,6 +139,7 @@ class StrudelPlayer(
     ) : Voice
 
     private class SampleVoice(
+        override val orbit: Int,
         override val startFrame: Long,
         override val endFrame: Long,
         override val gateEndFrame: Long,
@@ -145,6 +153,7 @@ class StrudelPlayer(
         var playhead: Double = 0.0, // in sample frames
     ) : Voice
 
+    // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Convenience accessors for RenderOptions
     private val sampleRate: Int get() = options.sampleRate
     private val oscillators: Oscillators get() = options.oscillators
@@ -154,40 +163,44 @@ class StrudelPlayer(
     private val lookaheadSec: Double get() = options.lookaheadSec
     private val fetchPeriodMs: Long get() = options.fetchPeriodMs
     private val blockFrames: Int get() = options.blockFrames
+    private val maxOrbits: Int get() = options.maxOrbits
 
+    // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // PLayback Rates
+    val secPerCycle get() = 1.0 / cps
+    val framesPerCycle get() = secPerCycle * sampleRate.toDouble()
+
+    // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Playback state
     private val running = atomic(false)
     private val cursorFrame = atomic(0L)
 
-    // rates
-    val secPerCycle get() = 1.0 / cps
-    val framesPerCycle get() = secPerCycle * sampleRate.toDouble()
+    // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Events schedules to be created as Voices
+    private val scheduled = MinHeap<ScheduledEvent> { a, b -> a.startFrame < b.startFrame }
+
+    // Active voices
+    private val activeVoices = ArrayList<Voice>(64)
+
+    // Orbits
+    private val orbits = Orbits(maxOrbits = maxOrbits, blockFrames = blockFrames, sampleRate = sampleRate)
+
+    // Reusable scratchpad for single voice rendering
+    private val voiceBuffer = DoubleArray(blockFrames)
+
+    // Final mix buffer to sum all orbits
+    private val masterMixBuffer = DoubleArray(blockFrames)
+
+    // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Coroutine Jobs
+    private var fetchJob: Job? = null // Job for fetching new events
+    private var audioJob: Job? = null // Job for mixing audio
 
     // Scheduler-owned output channel; audio coroutine drains it.
     // We keep it buffered to absorb bursts from queryArc.
     private var eventChannel: Channel<ScheduledEvent>? = null
 
-    // These are audio-owned (only touched by audio coroutine) => no locks needed.
-    private val scheduled = MinHeap<ScheduledEvent> { a, b -> a.startFrame < b.startFrame }
-    private val activeVoices = ArrayList<Voice>(64)
-
-    // Reusable buffers to avoid allocation in loop
-    private val mixBuffer = DoubleArray(blockFrames)
-    private val voiceBuffer = DoubleArray(blockFrames)
-
-    // ////////////////////////////////////////////////////////////////////////////////////
-    // Global effects V1:
-    // TODO: - delay lines per voice
-    //       - configurable maxDelaySeconds ... or take it from the settings
-    //       -> see orbits: https://strudel.cc/learn/effects/#orbits
-    private val delaySendBuffer = DoubleArray(blockFrames)
-    private val globalDelay = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate)
-    // ////////////////////////////////////////////////////////////////////////////////////
-
-    // Coroutine Jobs
-    private var fetchJob: Job? = null // Job for fetching new events
-    private var audioJob: Job? = null // Job for mixing audio
-
+    // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Some stats
     private val droppedEvents = atomic(0)
 
@@ -401,6 +414,10 @@ class StrudelPlayer(
         )
 
         // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Routing
+        val orbit = scheduled.e.orbit ?: 0
+
+        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Delay
         val delay = Voice.Delay(
             amount = scheduled.e.delay ?: 0.0,
@@ -426,6 +443,7 @@ class StrudelPlayer(
                 val phaseInc = Numbers.TWO_PI * freqHz / sampleRate.toDouble()
 
                 SynthVoice(
+                    orbit = orbit,
                     startFrame = scheduled.startFrame,
                     endFrame = scheduled.endFrame,
                     gateEndFrame = scheduled.gateEndFrame,
@@ -471,6 +489,7 @@ class StrudelPlayer(
                     val endFrame = nowFrame + remainingOutFrames
 
                     SampleVoice(
+                        orbit = orbit,
                         startFrame = nowFrame,
                         endFrame = endFrame,
                         gateEndFrame = scheduled.gateEndFrame,
@@ -497,11 +516,9 @@ class StrudelPlayer(
         val blockEndExclusive = blockStart + blockFrames
 
         // Clear the mix buffer
-        mixBuffer.fill(0.0)
-        // TODO: use "orbits" for multiple global channels
-        //  https://strudel.cc/learn/effects/#orbits
-        delaySendBuffer.fill(0.0)
-        var foundDelayParams = false
+        masterMixBuffer.fill(0.0)
+        // Clear orbits
+        orbits.clearAll()
 
         var v = 0
         while (v < activeVoices.size) {
@@ -532,21 +549,8 @@ class StrudelPlayer(
             val bufferOffset = (vStart - blockStart).toInt()
             val length = (vEnd - vStart).toInt()
 
-
-            // Capture delay params from the first voice that has them active
-            // (Simple "Last one wins" or "First one wins" strategy for global effect)
-            // We check the scheduled event inside the voice?
-            // Ah, we didn't store the raw event or delay params in Voice yet.
-            // We need to add delay params to Voice/Envelope or access them.
-
-            // Let's assume we add `delay`, `delayTime`, `delayFeedback` to Voice interface first.
-            // (See Step 3 below)
-
-            if (!foundDelayParams && voice.delay.amount > 0) {
-                globalDelay.delayTimeSeconds = voice.delay.time
-                globalDelay.feedback = voice.delay.feedback
-                foundDelayParams = true
-            }
+            // Apply routing, get orbit and init orbit if needed
+            val orbit = orbits.getOrInit(voice.orbit, voice)
 
             when (voice) {
                 is SynthVoice -> {
@@ -563,7 +567,7 @@ class StrudelPlayer(
                     // 2. Apply Filters
                     voice.filter.process(voiceBuffer, bufferOffset, length)
                     // 3. Apply env and mix down
-                    applyEnvelopeAndMix(voice, vStart, length, bufferOffset)
+                    applyEnvelopeAndMix(voice, vStart, length, bufferOffset, orbit)
                 }
 
                 is SampleVoice -> {
@@ -596,7 +600,7 @@ class StrudelPlayer(
                     // Process filters
                     voice.filter.process(voiceBuffer, bufferOffset, length)
                     // Apply env and mix down
-                    applyEnvelopeAndMix(voice, vStart, length, bufferOffset)
+                    applyEnvelopeAndMix(voice, vStart, length, bufferOffset, orbit)
                 }
             }
 
@@ -605,11 +609,11 @@ class StrudelPlayer(
         }
 
         // Process Global delay
-        globalDelay.process(input = delaySendBuffer, output = mixBuffer, length = blockFrames)
+        orbits.processAndMix(masterMixBuffer)
 
         // Convert Double Mix to Byte Output
         for (i in 0 until blockFrames) {
-            val sample = mixBuffer[i].coerceIn(-1.0, 1.0)
+            val sample = masterMixBuffer[i].coerceIn(-1.0, 1.0)
             val pcm = (sample * Short.MAX_VALUE).toInt()
             out[i * 2] = (pcm and 0xff).toByte()
             out[i * 2 + 1] = ((pcm ushr 8) and 0xff).toByte()
@@ -623,7 +627,12 @@ class StrudelPlayer(
         vStart: Long,
         length: Int,
         bufferOffset: Int,
+        orbit: Orbit,
     ) {
+        // Orbit buffers ... get them once so we do not need to deref on every int
+        val orbitMixBuffer = orbit.mixBuffer
+        val orbitDelaySendBuffer = orbit.delaySendBuffer
+
         val env = voice.envelope
         val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
         val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
@@ -668,13 +677,14 @@ class StrudelPlayer(
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             // 1. Master Mix (Dry)
             val dryVal = s * voice.gain * currentEnv
-            mixBuffer[idx] += dryVal
+            orbitMixBuffer[idx] += dryVal
 
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             // 2. Delay Send (Wet)
+
             if (sendToDelay) {
                 val wetVal = dryVal * delayAmount
-                delaySendBuffer[idx] += wetVal
+                orbitDelaySendBuffer[idx] += wetVal
             }
 
             // Move ahead ...
@@ -684,7 +694,6 @@ class StrudelPlayer(
         // Save the last level back to the envelope state
         env.level = currentEnv
     }
-
 
     private fun combineFilters(filters: List<AudioFilter>): AudioFilter {
         if (filters.isEmpty()) return NoOpAudioFilter

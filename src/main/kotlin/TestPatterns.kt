@@ -172,7 +172,8 @@ object TestPatterns {
     val delayOffBeatDrums = """
         sound("bd hh sd oh")
          .gain(1.0)
-         .delay("0.0 0.0 0.5 0.0")
+//         .delay("0.0 0.0 0.5 0.0")
+         .delay(0.5)
          .delaytime(0.25)
          .delayfeedback(0.5)
         """.trimIndent()
@@ -202,6 +203,15 @@ object TestPatterns {
           .delayfeedback(0.2) 
      """.trimIndent()
 
+    val twoOrbits = """
+        stack(
+          // Snare only delay on the drums
+          sound("bd hh sd oh").gain(0.7).delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5).orbit(0),
+          // Full delay on the melody
+          note("c ~ d ~ e ~ f ~").delay("0.0").delaytime(0.25).orbit(1),
+        )
+    """.trimIndent()
+
     //    val active = smallTownBoyBass
 //    val active = smallTownBoyMelody
 //    val active = smallTownBoy
@@ -223,7 +233,8 @@ object TestPatterns {
 
 //    val active = asdrTest
 
-    val active = delayOffBeatDrums
+    //    val active = delayOffBeatDrums
 //    val active = delayDubTripletsDrums
 //    val active = delaySlapBackDrums
+    val active = twoOrbits
 }
