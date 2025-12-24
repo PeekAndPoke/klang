@@ -65,16 +65,17 @@ private suspend fun helloStrudel() {
                     // bass
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                     .sound("supersaw").unison(8)
+                    .adsr("0.0:0.5:0.0:0.8")
                     .lpf(400)
                     .gain(0.5),
                     // melody
                     arrange(
-//                      [8, silence],
+                      [8, silence],
                       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
                     )
-                    .scale("C4:minor")
-                    .adsr("0.0:0.2:0.3:0.8")
-                    .hpf(200)
+                    .scale("C5:minor")
+                    .adsr("0.0:0.3:0.5:0.5")
+                    .hpf(1000)
                     .sound("sin").gain(0.8),
                     // Drums
                     sound("bd hh sd hh").fast(2).gain(0.75),
