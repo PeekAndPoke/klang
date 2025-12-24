@@ -228,24 +228,16 @@ class StrudelPlayer(
                         val events = fetchEventsSorted(from, to)
 
                         for (e in events) {
-                            // TODO clean up /////////////////////////////////////////////////////////////////////////
-                            samples?.let { reg ->
-                                // Load sample ... when there is no note we assume we have a sample sound
-                                // TODO: fix this in the StrudelEvent and introduce a sealed class
-                                //    Sound -> Note:Sound | Sample: Sound
-                                if (e.isSampleSound) {
-                                    reg.prefetch(e.sampleRequest)
-                                }
-                            }
-                            // ///////////////////////////////////////////////////////////////////////////////////////
-
-                            val scheduledEvent = e.toScheduled()
-
                             // Drop events that should have already started ...
-                            val res = channel.trySend(scheduledEvent)
+                            val res = channel.trySend(e.toScheduled())
 
                             if (res.isFailure) {
                                 droppedEvents.incrementAndGet()
+                            }
+
+                            // If this is a sample sound make sure we load it
+                            if (e.isSampleSound) {
+                                samples.prefetch(e.sampleRequest)
                             }
                         }
 

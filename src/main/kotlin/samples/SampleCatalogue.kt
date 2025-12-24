@@ -6,6 +6,8 @@ class SampleCatalogue(
     companion object {
         fun of(vararg coordinates: Bundle) = SampleCatalogue(coordinates.toList())
 
+        // DRUMS ///////////////////////////////////////////////////////////////////////////////////////////////////////
+
         val strudelDefaultDrums = Bundle(
             name = "Strudel Default Drums",
             soundsUri = "https://raw.githubusercontent.com/tidalcycles/uzu-drumkit/main/strudel.json"
@@ -34,18 +36,26 @@ class SampleCatalogue(
             soundsUri = "https://raw.githubusercontent.com/felixroos/dough-samples/main/mridangam.json",
         )
 
+        // INSTRUMENTS /////////////////////////////////////////////////////////////////////////////////////////////////
+
         val piano = Bundle(
             name = "Piano",
             soundsUri = "https://raw.githubusercontent.com/felixroos/dough-samples/main/piano.json",
         )
 
+        // MISC  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+
         val default = SampleCatalogue(
             coordinates = listOf(
+                // drums
                 strudelDefaultDrums,
                 tidalDrumMachine,
                 doughSample,
                 vcslSamples,
                 mridangam,
+                // instruments
+                piano,
+                // misc
             ),
         )
     }

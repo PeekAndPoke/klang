@@ -1,58 +1,41 @@
 package io.peekandpoke.samples.decoders
 
-import java.io.ByteArrayInputStream
-import javax.sound.sampled.AudioFormat
-import javax.sound.sampled.AudioSystem
-
 /**
- * WAV-only decoder using JavaSound.
+ * Audio decoder that handles WAV files manually to avoid SPI conflicts,
+ * and uses JavaSound SPI (with JLayer/MP3SPI) for MP3s.
  *
  * Output:
  * - mono FloatArray in [-1, 1]
  * - sampleRate as in file (resample later in renderer/registry if needed)
  */
 class SimpleAudioDecoder {
-    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePCM {
-        val bais = ByteArrayInputStream(audioBytes)
-        // This will automatically detect WAV, MP3, etc. if SPIs are present
-        AudioSystem.getAudioInputStream(bais).use { ais ->
-            val base = ais.format
 
-            // Convert to PCM_SIGNED 16-bit for predictable decoding
-            // Note: MP3SPI returns decoded PCM, but we force a consistent format here
-            val target = AudioFormat(
-                AudioFormat.Encoding.PCM_SIGNED,
-                base.sampleRate,
-                16,
-                base.channels,
-                base.channels * 2,
-                base.sampleRate,
-                false, // little endian
-            )
-
-            AudioSystem.getAudioInputStream(target, ais).use { pcmStream ->
-                val pcmBytes = pcmStream.readAllBytes()
-                val channels = target.channels
-                val frames = pcmBytes.size / (2 * channels)
-
-                val mono = FloatArray(frames)
-
-                var byteIdx = 0
-                for (i in 0 until frames) {
-                    var sum = 0.0f
-
-                    repeat(channels) {
-                        val lo = pcmBytes[byteIdx].toInt() and 0xff
-                        val hi = pcmBytes[byteIdx + 1].toInt()
-                        val s = ((hi shl 8) or lo).toShort().toInt()
-                        sum += (s / 32768.0f)
-                        byteIdx += 2
-                    }
-                    mono[i] = (sum / channels.toFloat())
-                }
-
-                return MonoSamplePCM(sampleRate = target.sampleRate.toInt(), pcm = mono)
+    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePCM? {
+        return try {
+            when {
+                isWav(audioBytes) -> WavFileDecoder.decodeMonoFloatPcm(audioBytes)
+                else -> GenericAudioFileDecoder.decodeMonoFloatPcm(audioBytes)
             }
+        } catch (e: Exception) {
+            System.err.println("Manual WAV decode failed, falling back to AudioSystem:")
+            e.printStackTrace()
+            // return
+            null
         }
+    }
+
+    private fun isWav(bytes: ByteArray): Boolean {
+        if (bytes.size < 12) return false
+        // RIFF
+        if (bytes[0] != 'R'.code.toByte() || bytes[1] != 'I'.code.toByte() ||
+            bytes[2] != 'F'.code.toByte() || bytes[3] != 'F'.code.toByte()
+        ) return false
+
+        // WAVE
+        if (bytes[8] != 'W'.code.toByte() || bytes[9] != 'A'.code.toByte() ||
+            bytes[10] != 'V'.code.toByte() || bytes[11] != 'E'.code.toByte()
+        ) return false
+
+        return true
     }
 }

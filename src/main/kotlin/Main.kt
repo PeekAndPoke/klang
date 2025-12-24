@@ -155,15 +155,11 @@ private suspend fun helloStrudel() {
             """.trimIndent()
 
         val simpleDrums = """
-                stack(
-                  //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
-                  sound("bd hh sd oh")
-                  .lpf("100 200 300 400 500 600 700 800")
-                  .fast(2)
-                  .gain(1.0),
-                  
-                )
-            """.trimIndent()
+            stack(
+              n("0 1 2 3 4 5 6 7").scale("C4:minor").sound("piano"),
+              sound("bd hh sd oh").fast(2).gain(0.8),
+            )
+        """.trimIndent()
 
         /**
          * This produces each drum sound twice.
@@ -173,19 +169,19 @@ private suspend fun helloStrudel() {
          * TODO: fix this in the [io.peekandpoke.player.StrudelPlayer]
          */
         val doubleSampleBug = """
-                stack(
-                  //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
-                  sound("bd hh sd oh")
-                  .lpf("100 200 300 400 500 600 700 800")
-                  .fast(2)
-                  .gain(1.0),
-                  
-                )
-            """.trimIndent()
+            stack(
+              //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
+              sound("bd hh sd oh")
+              .lpf("100 200 300 400 500 600 700 800")
+              .fast(2)
+              .gain(1.0),
+              
+            )
+        """.trimIndent()
 
         val snareScale = """
-                n("0 1 2 3 4 5 6 7").scale("c3:major").sound("sd")
-            """.trimIndent()
+            n("0 1 2 3 4 5 6 7").scale("c3:major").sound("sd")
+        """.trimIndent()
 
         val strangerThings = """
                 stack(
@@ -208,7 +204,7 @@ private suspend fun helloStrudel() {
 //            val pat = smallTownBoyBass
 //            val pat = smallTownBoyMelody
 //            val pat = smallTownBoy
-        val pat = tetris
+//        val pat = tetris
 //            val pat = c4Minor
 //            val pat = numberNotes
 //            val pat = crackle
@@ -219,7 +215,7 @@ private suspend fun helloStrudel() {
 //            val pat = pinkNoise
 //            val pat = supersaw
 //            val pat = polyphone
-//            val pat = simpleDrums
+        val pat = simpleDrums
 //            val pat = snareScale
 //            val pat = strangerThings
 //            val pat = piano
@@ -233,8 +229,9 @@ private suspend fun helloStrudel() {
         }
 
         val samples = Samples.create(
-//            catalogue = SampleCatalogue.default,
-            catalogue = SampleCatalogue.of(SampleCatalogue.piano),
+            catalogue = SampleCatalogue.default,
+//            catalogue = SampleCatalogue.of(SampleCatalogue.piano),
+//            catalogue = SampleCatalogue.of(SampleCatalogue.strudelDefaultDrums),
         )
 
         val audio = StrudelPlayer(
