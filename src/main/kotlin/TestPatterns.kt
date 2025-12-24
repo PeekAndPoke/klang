@@ -16,7 +16,7 @@ object TestPatterns {
                 stack(
                     // bass
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-                    .sound("supersaw").unison(8)
+                    .sound("supersaw").unison(4).detune(0.1)
                     .adsr("0.0:0.5:0.0:0.8")
                     .lpf(400)
                     .gain(0.5),
