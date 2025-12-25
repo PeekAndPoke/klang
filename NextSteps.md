@@ -1,5 +1,3 @@
-# Reverb (room, size)
-
 # Filter Control
 
 You have bakedFilters, but common use cases require dynamic control over the filter parameters per event (Low Pass, High
@@ -35,5 +33,7 @@ Should be possible now that we have LFO / Vibrato.
 (x) (2025-12-25) Modulation: Vibrato
 
 (x) (2025-12-25) Stereo Output & Panning
+
+(x) (2025-12-25) Reverb
 
 
