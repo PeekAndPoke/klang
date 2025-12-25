@@ -14,29 +14,41 @@ object TestPatterns {
 
     val smallTownBoy = """
                 stack(
-                    // bass
-                    note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-                    .sound("supersaw").unison(4).detune(0.1)
-                    .adsr("0.0:0.5:0.0:0.8")
-                    .lpf(400)
-                    .gain(0.5),
                     // melody
                     arrange(
                       [8, silence],
                       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
-                    )
+                    ).orbit(1)
                     .scale("C4:minor")
-                    .adsr("0.05:0.5:0.5:0.5")
-                    .hpf(400)
-                    .sound("triangle").gain(0.5),
+                    .adsr("0.05:0.7:0.0:0.5")
+                    .hpf(800)
+                    .sound("triangle").gain(0.2),
+
+                    // melody 2
+                    arrange(
+                      [8, silence],
+                      [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
+                    ).orbit(2)
+                    .scale("C5:minor")
+                    .adsr("0.05:0.7:0.0:0.5")
+                    .hpf(1600)
+                    .sound("triangle").gain(0.3),
+
+                    // bass
+                    note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
+                    .orbit(3)
+                    .sound("supersaw").unison(4).detune(0.1)
+                    .adsr("0.0:0.3:0.0:0.8")
+                    .lpf(800)
+                    .gain(0.8).pan(-0.5),
+                    
                     // Drums
-                    sound("bd hh sd hh")
-                     .orbit(1)
-                     .pan(sine.slow(8))
-                     .gain(0.5)
-                     .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.66)
-                     .fast(2),
-                )
+                    sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
+                     .orbit(4)
+                     .pan(0.5)
+                     .gain(0.4)
+                     .delay("0.2").delaytime(0.25).delayfeedback(0.3),
+                ).room(0.01).rsize(5.0)
                 
             """.trimIndent()
 
@@ -67,11 +79,11 @@ object TestPatterns {
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
                     >`).sound("supersaw").orbit(1)
-                    .pan(0.6).gain(0.6)
+                    .pan(0.6).gain(0.8)
                     .room(0.01).rsize(3.0),
 
                     sound("bd hh sd hh").orbit(2)
-                    .pan(-0.7).gain(0.8)
+                    .pan(-0.7).gain(0.9)
                     .room(0.01).rsize(3.0)
                     .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
                     .fast(2),
@@ -89,10 +101,12 @@ object TestPatterns {
                         [e5 [~ c5] e5 [d5 c5]]
                         [b4 [b4 c5] d5 e5]
                         [c5 a4 a4 ~]
-                    >`).sound("triangle")
-                    .gain("0.8")
-                    .fast(2)
-                    .delay(0.2).delaytime(0.25).delayfeedback(0.75),
+                    >`).sound("triangle").orbit(0)
+                    .gain("0.3")
+                    .fast(0.5)
+                    .room(0.01).rsize(3.0)
+                    .delay("0.25").delaytime(0.25).delayfeedback(0.75),
+
                     note(`<
                         [[e2 e3]*4]
                         [[a2 a3]*4]
@@ -102,11 +116,15 @@ object TestPatterns {
                         [[c2 c3]*4]
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
-                    >`).sound("supersaw").pan(0.7)
-                    .gain(0.6),
-                    sound("bd hh sd hh").orbit(1)
+                    >`).sound("supersaw").orbit(1)
+                    .pan(0.6).gain(0.6)
+                    .room(0.01).rsize(3.0),
+
+                    sound("bd hh sd hh").orbit(2)
+                    .pan(-0.7).gain(0.8)
+                    .room(0.01).rsize(3.0)
                     .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
-                    .fast(2).gain(0.75).pan(-0.7),
+                    .fast(2),
                 )
             """.trimIndent()
 
@@ -282,33 +300,36 @@ object TestPatterns {
         
     """.trimIndent()
 
-    //    val active = smallTownBoyBass
-//    val active = smallTownBoyMelody
-//    val active = smallTownBoy
-//    val active = tetris
-//    val active = c4Minor
-//    val active = numberNotes
-//    val active = crackle
-//    val active = dust
-//    val active = impulse
-//    val active = whiteNoise
-//    val active = brownNoise
-//    val active = pinkNoise
-//    val active = supersaw
-//    val active = polyphone
-//    val active = simpleDrumsDelay
-//    val active = simpleDrumsReverb
-//    val active = snareScale
-//    val active = strangerThings
-//    val active = piano
-    val active = pianoDistorted
 
-//    val active = asdrTest
+    val all = listOf<String>(
+//        smallTownBoyBass,
+//        smallTownBoyMelody,
+//        smallTownBoy,
+//        tetris,
+        tetrisRemix,
+//        c4Minor,
+//        numberNotes,
+//        crackle,
+//        dust,
+//        impulse,
+//        whiteNoise,
+//        brownNoise,
+//        pinkNoise,
+//        supersaw,
+//        polyphone,
+//        simpleDrumsDelay,
+//        simpleDrumsReverb,
+//        snareScale,
+//        strangerThings,
+//        piano,
+//        pianoDistorted,
+//        asdrTest,
+//        delayOffBeatDrums,
+//        delayDubTripletsDrums,
+//        delaySlapBackDrums,
+//        twoOrbits,
+//        vibratoTestOne,
+    )
 
-    //    val active = delayOffBeatDrums
-//    val active = delayDubTripletsDrums
-//    val active = delaySlapBackDrums
-//    val active = twoOrbits
-
-//    val active = vibratoTestOne
+    val active = all.first()
 }
