@@ -1,26 +1,51 @@
-# Filter Control
+# 1. Filters
 
-You have bakedFilters, but common use cases require dynamic control over the filter parameters per event (Low Pass, High
-Pass, Band Pass).
-Implementation Plan:
+You currently have lpf (Low Pass), hpf (High Pass) and bandf (Band Pass) is partially in the data structure but
+implementation is missing/TODO.
 
-1. Ensure your AudioFilter implementation allows setting parameters at the start of the voice.
-2. Map Strudel properties:
-    - lpf (Low Pass Filter cutoff)
-    - hpf (High Pass Filter cutoff)
-    - bandf (Band Pass Filter cutoff)
-    - resonance (Q factor)
+- bandf (Band Pass Filter): Passes frequencies within a certain range and rejects others. Often used with resonance (q).
+- notchf (Notch Filter): The opposite of a band pass; it rejects a specific frequency band.
+- allpassf (All Pass Filter): Passes all frequencies but alters their phase relationship. Used in phasers.
+- lp / bp / hp / notch / comb / allpass: Strudel has aliases or variations for these standard filters.
+- vowel (Formant Filter): A specific filter that mimics human vowel sounds (a, e, i, o, u).
 
-# Global Effects (Distortion / Compression)
+# Time-Based Effects (Spatial)
 
-Once Stereo and Reverb are done, "coloring" the sound is next.
+You have delay and reverb partially implemented.
 
-- Distortion (shape): Can be applied per voice or per Orbit. A simple tanh (hyperbolic tangent) waveshaper on the output
-  signal works wonders for that gritty sound.
-- Vowel Filter (vowel): A formant filter that mimics human speech (a, e, i, o, u). This is a signature Tidal feature.
+- legato: Controls the length of the note relative to its duration. Important for smooth transitions (slides) or
+  staccato.
+- clip: Hard clipping distortion (distinct from tanh soft clipping/saturation).
+- leslie: Simulation of a rotating speaker cabinet (Doppler effect + amplitude modulation).
+- phaser: Creates sweeping notch filters (uses all-pass filters).
 
--> sine wave osc is "clipping" on note-change with gain > 0.7
--> soft-clipping implemented but not solving it fully
+# Bitcrushing / Lo-Fi
+
+You have placeholders for crush and coarse.
+
+- crush (Bit Reduction): Reduces the bit depth of the signal (e.g., from 16-bit to 8-bit or 4-bit), creating digital
+  noise.
+- coarse (Sample Rate Reduction): Reduces the effective sample rate (e.g., from 48kHz to 2kHz), introducing aliasing
+  artifacts.
+
+# Dynamics
+
+- compressor: Reduces the dynamic range (difference between loud and soft parts). Strudel has a global compressor or
+  per-orbit.
+- gain: You have this, but verify velocity aliases to it correctly if needed.
+
+# Pitch / Modulation (Beyond Vibrato)
+
+You have vib (Vibrato).
+
+- accelerate: Pitch glide over the duration of a note (up or down).
+- glide (Portamento): Smooth pitch transition between notes.
+- Summary Checklist for Implementation
+- Bitcrusher: crush (bits), coarse (sample rate).
+- Vowel Filter: vowel.
+- Pitch Glides: accelerate, glide.
+- Filters: bandf, notchf.
+- Modulation: phaser, leslie.
 
 # Sliding notes (pitch bend)
 
