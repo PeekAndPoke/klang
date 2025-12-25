@@ -46,6 +46,10 @@ sealed interface Voice {
         var phase: Double = 0.0,
     )
 
+    class Effects(
+        val distort: Double,
+    )
+
     // Timing
     val startFrame: Long
     val endFrame: Long
@@ -62,6 +66,9 @@ sealed interface Voice {
     val delay: Delay
     val reverb: Reverb
     val vibrator: Vibrator
+
+    // global effects
+    val effects: Effects
 
     /**
      * Renders the voice into the context's buffers.

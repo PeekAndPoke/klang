@@ -54,6 +54,9 @@ data class StrudelPatternEvent(
     val vibrato: Double?,
     val vibratoMod: Double?,
 
+    // Distort / Shape
+    val distort: Double?,
+
     // HPF / LPF
     val cutoff: Double?,
     val hcutoff: Double?,
@@ -78,7 +81,6 @@ data class StrudelPatternEvent(
     val bandf: Double?,
     val coarse: Double?,
     val crush: Double?,
-    val distort: Double?,
 ) {
     val isOscillator = Oscillators.isOsc(sound)
 

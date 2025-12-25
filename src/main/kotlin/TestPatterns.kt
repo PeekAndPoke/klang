@@ -209,8 +209,12 @@ object TestPatterns {
             """.trimIndent()
 
     val piano = """
-            note("c e g e").sound("piano")
-        """.trimIndent()
+        note("c e g e").sound("piano")
+    """.trimIndent()
+
+    val pianoDistorted = """
+        note("c e g e").sound("piano").distort(2)
+    """.trimIndent()
 
     val asdrTest = """
             note("c3")
@@ -281,7 +285,7 @@ object TestPatterns {
     //    val active = smallTownBoyBass
 //    val active = smallTownBoyMelody
 //    val active = smallTownBoy
-    val active = tetris
+//    val active = tetris
 //    val active = c4Minor
 //    val active = numberNotes
 //    val active = crackle
@@ -297,6 +301,7 @@ object TestPatterns {
 //    val active = snareScale
 //    val active = strangerThings
 //    val active = piano
+    val active = pianoDistorted
 
 //    val active = asdrTest
 

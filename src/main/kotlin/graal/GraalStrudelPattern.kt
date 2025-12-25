@@ -115,6 +115,11 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val roomSize = value.getMember("roomsize").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Distortion
+        val distort = value.getMember("distort").safeNumberOrNull()
+            ?: value.getMember("shape").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Apply low pass filter?
         val cutoff = value.getMember("cutoff").safeNumberOrNull()
         cutoff?.let {
@@ -154,6 +159,8 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             // Vibrato
             vibrato = vibrato,
             vibratoMod = vibratoMod,
+            // Distort / Shape
+            distort = distort,
             // HPF / LPF
             cutoff = cutoff,
             hcutoff = hcutoff,
@@ -173,7 +180,6 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             bandf = null, // TODO ...
             coarse = null, // TODO ...
             crush = null, // TODO ...
-            distort = null, // TODO ...
         )
     }
 }

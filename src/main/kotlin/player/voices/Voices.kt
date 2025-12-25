@@ -124,6 +124,11 @@ class Voices(
             rate = if (vibratoDepth > 0.0) scheduled.evt.vibrato ?: 5.0 else 0.0,
         )
 
+        // Effects
+        val effects = Voice.Effects(
+            distort = scheduled.evt.distort ?: 0.0,
+        )
+
         // Decision
         val note = scheduled.evt.note
         val sound = scheduled.evt.sound
@@ -149,6 +154,7 @@ class Voices(
                     delay = delay,
                     reverb = reverb,
                     vibrator = vibrator,
+                    effects = effects,
                     osc = osc,
                     freqHz = freqHz,
                     phaseInc = phaseInc,
@@ -183,6 +189,7 @@ class Voices(
                     delay = delay,
                     reverb = reverb,
                     vibrator = vibrator,
+                    effects = effects,
                     pcm = decoded.pcm,
                     pcmSampleRate = decoded.sampleRate,
                     rate = rate,

@@ -1,6 +1,7 @@
 package io.peekandpoke.player.voices
 
 import io.peekandpoke.dsp.AudioFilter
+import io.peekandpoke.player.voices.Voice.Effects
 
 class SampleVoice(
     override val orbitId: Int,
@@ -14,6 +15,7 @@ class SampleVoice(
     override val delay: Voice.Delay,
     override val reverb: Voice.Reverb,
     override val vibrator: Voice.Vibrator,
+    override val effects: Effects,
     val pcm: FloatArray,
     val pcmSampleRate: Int,
     val rate: Double,

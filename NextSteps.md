@@ -36,4 +36,6 @@ Should be possible now that we have LFO / Vibrato.
 
 (x) (2025-12-25) Reverb
 
+(x) (2025-12-25) Distortion
+
 

@@ -4,6 +4,7 @@ import io.peekandpoke.utils.Numbers.TWO_PI
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.tanh
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared Logic Extensions
@@ -45,6 +46,10 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     val reverbAmount = reverb.room
     val sendToReverb = reverbAmount > 0.0
 
+    val hasDistortion = effects.distort > 0.0
+    // Drive factor: 1.0 (no distortion) to ~11.0 (heavy distortion)
+    val distortionDrive = 1.0 + (effects.distort * 10.0)
+
     for (i in 0 until length) {
         val idx = offset + i
         val signal = voiceBuffer[idx]
@@ -67,7 +72,11 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
         if (currentEnv < 0.0) currentEnv = 0.0
 
         // Apply Envelope to signal
-        val wetSignal = signal * currentEnv
+        var wetSignal = signal * currentEnv
+
+        if (hasDistortion) {
+            wetSignal = tanh(wetSignal * distortionDrive)
+        }
 
         // 1. Dry Mix (Split to Stereo)
         val left = wetSignal * gainL
