@@ -139,7 +139,7 @@ class StrudelPlayer(
 
     // Scheduler-owned output channel; audio coroutine drains it.
     // We keep it buffered to absorb bursts from queryArc.
-    private var eventChannel: Channel<ScheduledVoice>? = null
+    private var eventChannel: Channel<StrudelScheduledVoice>? = null
 
     // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Some stats
@@ -170,7 +170,7 @@ class StrudelPlayer(
     private fun startInternal() {
         if (!running.compareAndSet(expect = false, update = true)) return
 
-        val channel = Channel<ScheduledVoice>(capacity = 8192)
+        val channel = Channel<StrudelScheduledVoice>(capacity = 8192)
         eventChannel = channel
 
         // CHANGE: 2 channels
@@ -265,7 +265,7 @@ class StrudelPlayer(
             .sortedBy { it.begin }
     }
 
-    private fun StrudelPatternEvent.toScheduled(): ScheduledVoice {
+    private fun StrudelPatternEvent.toScheduled(): StrudelScheduledVoice {
         val startFrame = (begin * framesPerCycle).toLong()
         val durFrames = (dur * framesPerCycle).toLong().coerceAtLeast(1L)
 
@@ -277,7 +277,7 @@ class StrudelPlayer(
         val gateEndFrame = startFrame + durFrames
         val endFrame = gateEndFrame + releaseFrames
 
-        val scheduledEvent = ScheduledVoice(
+        val scheduledEvent = StrudelScheduledVoice(
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,

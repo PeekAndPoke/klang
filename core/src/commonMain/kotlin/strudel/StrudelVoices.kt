@@ -27,7 +27,7 @@ class StrudelVoices(
         val sampleRateDouble = sampleRate.toDouble()
     }
 
-    private val scheduled = MinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
+    private val scheduled = MinHeap<StrudelScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
 
     // Scratch buffers
@@ -48,7 +48,7 @@ class StrudelVoices(
         active.clear()
     }
 
-    fun schedule(voice: ScheduledVoice) {
+    fun schedule(voice: StrudelScheduledVoice) {
         scheduled.push(voice)
 
         // Prefetch sound samples
@@ -106,7 +106,7 @@ class StrudelVoices(
             LowPassHighPassFilters.createHPF(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
     }
 
-    private fun makeVoice(scheduled: ScheduledVoice, nowFrame: Long): Voice? {
+    private fun makeVoice(scheduled: StrudelScheduledVoice, nowFrame: Long): Voice? {
         val sampleRate = options.sampleRate
 
         // Bake Filters

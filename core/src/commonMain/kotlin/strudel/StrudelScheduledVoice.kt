@@ -3,7 +3,7 @@ package io.peekandpoke.klang.strudel
 /**
  * Use to schedule the playback of a voice
  */
-data class ScheduledVoice(
+data class StrudelScheduledVoice(
     /** The event that triggered this voice */
     val evt: StrudelPatternEvent,
     /** Audio frame to start the voice */
