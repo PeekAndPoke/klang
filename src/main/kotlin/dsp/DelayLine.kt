@@ -16,7 +16,7 @@ class DelayLine(
 
     fun process(input: StereoBuffer, output: StereoBuffer, length: Int) {
         processInternal(buffer.left, input.left, output.left, length)
-        processInternal(buffer.left, input.right, output.right, length)
+        processInternal(buffer.right, input.right, output.right, length)
 
         writePos = (writePos + length) % bufferSize
     }

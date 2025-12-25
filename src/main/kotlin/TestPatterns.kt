@@ -115,7 +115,11 @@ object TestPatterns {
             """.trimIndent()
 
     val simpleDrums = """
-        sound("bd hh sd oh").fast(2).gain(0.8).pan(sine.slow(8)),
+        sound("bd hh sd oh")
+        .gain(0.8)
+        .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
+        .pan(sine.slow(8))
+        .fast(2)
     """.trimIndent()
 
     /**
