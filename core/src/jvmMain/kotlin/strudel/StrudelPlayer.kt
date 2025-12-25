@@ -262,7 +262,7 @@ class StrudelPlayer(
     }
 
     private fun fetchEventsSorted(from: Double, to: Double): List<StrudelPatternEvent> {
-        return pattern.queryArc(from, to, sampleRate)
+        return pattern.queryArc(from, to)
             .filter { it.begin >= from && it.begin < to }
             .sortedBy { it.begin }
     }

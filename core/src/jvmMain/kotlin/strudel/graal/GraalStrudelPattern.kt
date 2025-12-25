@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.strudel.graal
 
-import io.peekandpoke.klang.dsp.AudioFilter
-import io.peekandpoke.klang.dsp.LowPassHighPassFilters
+import io.peekandpoke.klang.strudel.StrudelFilterDef
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
@@ -12,7 +11,7 @@ import org.graalvm.polyglot.Value
 
 class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : StrudelPattern {
 
-    override fun queryArc(from: Double, to: Double, sampleRate: Int): List<StrudelPatternEvent> {
+    override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
         val arc = graal.queryPattern(value, from, to)
             ?: return emptyList()
 
@@ -21,7 +20,7 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
 
         for (i in 0 until count) {
             val item = arc.getArrayElement(i)
-            val event = item.toStrudelEvent(sampleRate)
+            val event = item.toStrudelEvent()
             events += event
 
 //            println(graal.prettyFormat(item))
@@ -34,10 +33,10 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
     /**
      * Converts the js-value into a StrudelEvent.
      */
-    fun Value.toStrudelEvent(sampleRate: Int): StrudelPatternEvent {
+    fun Value.toStrudelEvent(): StrudelPatternEvent {
         val event = this
 
-        val filters = mutableListOf<AudioFilter>()
+        val filters = mutableListOf<StrudelFilterDef>()
 
         val part = event.getMember("part")
 
@@ -122,14 +121,10 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         // ///////////////////////////////////////////////////////////////////////////////////
         // Apply low pass filter?
         val cutoff = value.getMember("cutoff").safeNumberOrNull()
-        cutoff?.let {
-            filters.add(LowPassHighPassFilters.createLPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
-        }
+        cutoff?.let { filters.add(StrudelFilterDef.LowPass(cutoffHz = it, q = resonance)) }
         // Apply high pass filter?
         val hcutoff = value.getMember("hcutoff").safeNumberOrNull()
-        hcutoff?.let {
-            filters.add(LowPassHighPassFilters.createHPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
-        }
+        hcutoff?.let { filters.add(StrudelFilterDef.HighPass(cutoffHz = it, q = resonance)) }
 
         // add event
         return StrudelPatternEvent(

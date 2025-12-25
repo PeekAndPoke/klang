@@ -49,17 +49,17 @@ private suspend fun helloStrudel() {
     // https://github.com/eefano/strudel-songs-collection
 
     val strudel = GraalStrudelCompiler(Path.of("./build/strudel-bundle.mjs"))
-    try {
+
+    strudel.use { strudel ->
         val pattern = TestPatterns.active
 
         val compiled = strudel.compile(pattern).await()
         strudel.dumpPatternArc(compiled)
 
-        val events = compiled.queryArc(0.0, 4.0, 44_100)
-        events.forEach {
-            strudel.prettyFormat(it)
+//        compiled.queryArc(0.0, 4.0).forEach {
+//            strudel.prettyFormat(it)
 //            println("${it.begin} ${it.note} ${it.sound}")
-        }
+//        }
 
         val samples = Samples.create(
             catalogue = SampleCatalogue.default,
@@ -81,8 +81,5 @@ private suspend fun helloStrudel() {
         delay(600_000)
         audio.stop()
         println("Done")
-
-    } finally {
-        strudel.close()
     }
 }

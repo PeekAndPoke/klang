@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.dsp.AudioFilter
 import io.peekandpoke.klang.dsp.OscFn
 import io.peekandpoke.klang.dsp.Oscillators
 import io.peekandpoke.klang.samples.SampleRequest
+import kotlinx.serialization.Serializable
 
 /**
  * Strudel sound event.
@@ -11,6 +11,7 @@ import io.peekandpoke.klang.samples.SampleRequest
  * For the moment: ... trying to stay close to the class DoughVoice:
  * https://codeberg.org/uzu/strudel/src/branch/main/packages/supradough/dough.mjs
  */
+@Serializable
 data class StrudelPatternEvent(
     /** The begin of the note */
     val begin: Double,
@@ -43,7 +44,7 @@ data class StrudelPatternEvent(
     val unison: Double?,
 
     // Filters
-    val filters: List<AudioFilter>,
+    val filters: List<StrudelFilterDef>,
 
     // ADSR envelope
     val attack: Double?,
@@ -83,6 +84,7 @@ data class StrudelPatternEvent(
     val coarse: Double?,
     val crush: Double?,
 ) {
+
     val isOscillator = Oscillators.isOsc(sound)
 
     val isSampleSound = !isOscillator

@@ -6,8 +6,10 @@ package io.peekandpoke.klang.strudel
 interface StrudelPattern {
     /**
      * Queries events from [from] and [to] cycles.
-     *
-     * Also [sampleRate] is required for setting up oscillators and filters
      */
-    fun queryArc(from: Double, to: Double, sampleRate: Int): List<StrudelPatternEvent>
+    fun queryArc(from: Double, to: Double): List<StrudelPatternEvent>
 }
+
+fun StrudelPattern.makeStatic(from: Double, to: Double) = StaticStrudelPattern(
+    events = queryArc(from, to)
+)

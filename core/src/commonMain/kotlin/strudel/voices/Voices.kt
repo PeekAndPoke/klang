@@ -1,8 +1,11 @@
 package io.peekandpoke.klang.strudel.voices
 
+import io.peekandpoke.klang.dsp.AudioFilter
 import io.peekandpoke.klang.dsp.AudioFilter.Companion.combine
+import io.peekandpoke.klang.dsp.LowPassHighPassFilters
 import io.peekandpoke.klang.dsp.Oscillators
 import io.peekandpoke.klang.samples.Samples
+import io.peekandpoke.klang.strudel.StrudelFilterDef
 import io.peekandpoke.klang.strudel.orbits.Orbits
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.utils.MinHeap
@@ -18,7 +21,9 @@ class Voices(
         val oscillators: Oscillators,
         val samples: Samples,
         val orbits: Orbits,
-    )
+    ) {
+        val sampleRateDouble = sampleRate.toDouble()
+    }
 
     private val scheduled = MinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
@@ -91,11 +96,19 @@ class Voices(
         }
     }
 
+    private fun StrudelFilterDef.toFilter(): AudioFilter = when (this) {
+        is StrudelFilterDef.LowPass ->
+            LowPassHighPassFilters.createLPF(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
+
+        is StrudelFilterDef.HighPass ->
+            LowPassHighPassFilters.createHPF(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
+    }
+
     private fun makeVoice(scheduled: ScheduledVoice, nowFrame: Long): Voice? {
         val sampleRate = options.sampleRate
 
         // Bake Filters
-        val bakedFilters = scheduled.evt.filters.combine()
+        val bakedFilters = scheduled.evt.filters.map { it.toFilter() }.combine()
 
         // Routing
         val orbit = scheduled.evt.orbit ?: 0
