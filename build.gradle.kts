@@ -1,34 +1,99 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
 plugins {
-    kotlin("jvm") version "2.2.21"
-    id("org.jetbrains.kotlinx.atomicfu") version "0.30.0-beta"
+    idea
+    kotlin("multiplatform")
+    kotlin("plugin.serialization") version Deps.kotlinVersion apply false
+    id("com.google.devtools.ksp") version Deps.Ksp.version apply false
+    id("org.jetbrains.kotlinx.atomicfu") version Deps.KotlinLibs.atomicfu_version apply false
+    id("io.kotest") version Deps.Test.kotest_plugin_version apply false
 }
 
-group = "io.peekandpoke"
-version = "1.0-SNAPSHOT"
+val GROUP: String by project
+val VERSION_NAME: String by project
 
-repositories {
-    mavenCentral()
-}
+group = GROUP
+version = VERSION_NAME
 
-dependencies {
-    // Kotlin
-    implementation(kotlin("reflect"))
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-    // GraalVM
-    implementation("org.graalvm.polyglot:polyglot:24.2.2")
-    implementation("org.graalvm.polyglot:js:24.2.2")
-    // MP3
-    implementation("com.googlecode.soundlibs:mp3spi:1.9.5.4")
-    // tests
-    testImplementation(kotlin("test"))
+allprojects {
+    apply(plugin = "idea")
 
+    idea {
+        module {
+            isDownloadJavadoc = true
+            isDownloadSources = true
+        }
+    }
+
+    repositories {
+        mavenCentral()
+        // KotlinX
+        // maven("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven")
+        // Snapshots
+        // maven("https://oss.sonatype.org/content/repositories/snapshots")
+        // Local
+        // mavenLocal()
+    }
 }
 
 kotlin {
-    jvmToolchain(23)
-}
+    js {
+        browser {
 
-tasks.test {
-    useJUnitPlatform()
+        }
+    }
+
+    jvmToolchain(Deps.jvmTargetVersion)
+
+    jvm {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        binaries {
+            // Configures a JavaExec task named "runJvm" and a Gradle distribution for the "main" compilation in this target
+            executable {
+                mainClass.set("io.peekandpoke.klang.MainKt")
+            }
+        }
+    }
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation(Deps.KotlinX.coroutines_core)
+                implementation(Deps.KotlinX.serialization_core)
+                implementation(Deps.KotlinX.serialization_json)
+
+                implementation(project(":core"))
+            }
+        }
+
+        commonTest {
+            dependencies {
+                Deps.Test {
+                    commonTestDeps()
+                }
+            }
+        }
+
+        jvmMain {
+            dependencies {
+                // GraalVM
+                implementation(Deps.JavaLibs.GraalVM.polyglot)
+                implementation(Deps.JavaLibs.GraalVM.js)
+            }
+        }
+
+        jvmTest {
+            dependencies {
+                Deps.Test {
+                    jvmTestDeps()
+                }
+            }
+        }
+    }
 }

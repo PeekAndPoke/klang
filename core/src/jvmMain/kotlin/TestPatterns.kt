@@ -22,7 +22,7 @@ object TestPatterns {
                     .scale("C4:minor")
                     .adsr("0.05:0.7:0.0:0.5")
                     .hpf(800)
-                    .sound("triangle").gain(0.2),
+                    .sound("triangle").gain(0.3),
 
                     // melody 2
                     arrange(
@@ -32,7 +32,7 @@ object TestPatterns {
                     .scale("C5:minor")
                     .adsr("0.05:0.7:0.0:0.5")
                     .hpf(1600)
-                    .sound("triangle").gain(0.3),
+                    .sound("triangle").gain(0.4),
 
                     // bass
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
@@ -48,7 +48,7 @@ object TestPatterns {
                      .pan(0.5)
                      .gain(0.4)
                      .delay("0.2").delaytime(0.25).delayfeedback(0.3),
-                ).room(0.01).rsize(5.0)
+                ).room(0.025).rsize(5.0)
                 
             """.trimIndent()
 
@@ -79,7 +79,7 @@ object TestPatterns {
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
                     >`).sound("supersaw").orbit(1)
-                    .pan(0.6).gain(0.8)
+                    .pan(0.6).gain(0.6)
                     .room(0.01).rsize(3.0),
 
                     sound("bd hh sd hh").orbit(2)
@@ -304,9 +304,9 @@ object TestPatterns {
     val all = listOf<String>(
 //        smallTownBoyBass,
 //        smallTownBoyMelody,
-//        smallTownBoy,
+        smallTownBoy,
 //        tetris,
-        tetrisRemix,
+//        tetrisRemix,
 //        c4Minor,
 //        numberNotes,
 //        crackle,
