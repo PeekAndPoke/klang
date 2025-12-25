@@ -135,6 +135,7 @@ class Voices(
                     endFrame = scheduled.endFrame,
                     gateEndFrame = scheduled.gateEndFrame,
                     gain = scheduled.evt.gain,
+                    pan = scheduled.evt.pan ?: 0.0,
                     filter = bakedFilters,
                     envelope = envelope,
                     delay = delay,
@@ -164,9 +165,10 @@ class Voices(
                 SampleVoice(
                     orbitId = orbit,
                     startFrame = nowFrame,
-                    endFrame = scheduled.endFrame, // Note: Sample logic might need recalculating endFrame based on PCM size
+                    endFrame = scheduled.endFrame,
                     gateEndFrame = scheduled.gateEndFrame,
                     gain = scheduled.evt.gain,
+                    pan = scheduled.evt.pan ?: 0.0,
                     filter = bakedFilters,
                     envelope = envelope,
                     delay = delay,

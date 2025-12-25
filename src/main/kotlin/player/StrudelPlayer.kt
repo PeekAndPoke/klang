@@ -95,7 +95,6 @@ class StrudelPlayer(
     // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Convenience accessors for RenderOptions
     private val sampleRate: Int get() = options.sampleRate
-    private val samples: Samples get() = options.samples
     private val cps: Double get() = options.cps
     private val prefetchCycles: Int get() = options.prefetchCycles
     private val lookaheadSec: Double get() = options.lookaheadSec
@@ -121,14 +120,8 @@ class StrudelPlayer(
     // Voices Container (Manages lifecycle, scheduling, rendering)
     private val voices = Voices(options, orbits)
 
-    // Reusable scratchpad for single voice rendering
-    private val voiceBuffer = DoubleArray(blockFrames)
-
-    // Reusable scratchpad for frequency modulation (LFO)
-    private val freqModBuffer = DoubleArray(blockFrames)
-
     // Final mix buffer to sum all orbits
-    private val masterMixBuffer = DoubleArray(blockFrames)
+    private val masterMix = StereoBuffer(blockFrames)
 
     // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Coroutine Jobs
@@ -168,16 +161,15 @@ class StrudelPlayer(
     private fun startInternal() {
         if (!running.compareAndSet(expect = false, update = true)) return
 
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Fresh channel per run (makes stop/start robust)
         val channel = Channel<ScheduledVoice>(capacity = 8192)
         eventChannel = channel
 
-        val format = AudioFormat(sampleRate.toFloat(), 16, 1, true, false)
+        // CHANGE: 2 channels
+        val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
         val line = AudioSystem.getSourceDataLine(format)
 
         val bufferMs = 500
-        val bytesPerFrame = 2 // mono, 16-bit
+        val bytesPerFrame = 4 // Stereo (2) * 16-bit (2 bytes) = 4 bytes
         val bufferFrames = (sampleRate * bufferMs / 1000.0).toInt()
         val bufferBytes = bufferFrames * bytesPerFrame
 
@@ -231,7 +223,7 @@ class StrudelPlayer(
         }
 
         audioJob = scope.launch(Dispatchers.IO.limitedParallelism(1)) {
-            val out = ByteArray(blockFrames * 2)
+            val out = ByteArray(blockFrames * 4)
 
             try {
                 while (isActive && running.value) {
@@ -289,27 +281,39 @@ class StrudelPlayer(
     private fun renderBlockInto(out: ByteArray) {
         val blockStart = cursorFrame.value
 
-        // 1. Clear global state
-        masterMixBuffer.fill(0.0)
+        // 1. Clear Global Buffers
+        masterMix.clear()
         orbits.clearAll()
 
-        // 2. Process Voices (Writing to Orbits)
+        // 2. Process Voices
         voices.process(blockStart)
 
         // 3. Process Global Delay & Sum Orbits
-        orbits.processAndMix(masterMixBuffer)
+        orbits.processAndMix(masterMix)
 
-        // 4. Output Stage (Limiter & Convert to Bytes)
+        // 4. Output Stage (Interleave L/R)
+        val masterMixL = masterMix.left
+        val masterMixR = masterMix.right
+
         for (i in 0 until blockFrames) {
-            val rawSample = masterMixBuffer[i]
-            val sample = kotlin.math.tanh(rawSample)
-            val clamped = sample.coerceIn(-1.0, 1.0)
-            val pcm = (clamped * Short.MAX_VALUE).toInt()
-            out[i * 2] = (pcm and 0xff).toByte()
-            out[i * 2 + 1] = ((pcm ushr 8) and 0xff).toByte()
+            // Left
+            val rawL = masterMixL[i]
+            val sampleL = kotlin.math.tanh(rawL).coerceIn(-1.0, 1.0)
+            val pcmL = (sampleL * Short.MAX_VALUE).toInt()
+
+            // Right
+            val rawR = masterMixR[i]
+            val sampleR = kotlin.math.tanh(rawR).coerceIn(-1.0, 1.0)
+            val pcmR = (sampleR * Short.MAX_VALUE).toInt()
+
+            // Interleaved: L, R
+            val baseIdx = i * 4
+            out[baseIdx] = (pcmL and 0xff).toByte()
+            out[baseIdx + 1] = ((pcmL ushr 8) and 0xff).toByte()
+            out[baseIdx + 2] = (pcmR and 0xff).toByte()
+            out[baseIdx + 3] = ((pcmR ushr 8) and 0xff).toByte()
         }
 
-        // 5. Advance current fram
         cursorFrame.value = blockStart + blockFrames
     }
 }

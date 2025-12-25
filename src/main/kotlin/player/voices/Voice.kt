@@ -39,11 +39,17 @@ sealed interface Voice {
         var phase: Double = 0.0,
     )
 
-    val orbitId: Int
+    // Timing
     val startFrame: Long
     val endFrame: Long
     val gateEndFrame: Long
+
+    // Routing
+    val orbitId: Int
     val gain: Double
+    val pan: Double
+
+    // Audio processing
     val filter: AudioFilter
     val envelope: Envelope
     val delay: Delay

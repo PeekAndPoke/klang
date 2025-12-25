@@ -62,6 +62,9 @@ data class StrudelPatternEvent(
     // Routing
     val orbit: Int?,
 
+    // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
+    val pan: Double?,
+
     // Delay
     val delay: Double?, // Mix amount (0.0 to 1.0)
     val delayTime: Double?, // Time in seconds

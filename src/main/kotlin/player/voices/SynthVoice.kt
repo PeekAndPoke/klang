@@ -9,6 +9,7 @@ class SynthVoice(
     override val endFrame: Long,
     override val gateEndFrame: Long,
     override val gain: Double,
+    override val pan: Double,
     override val filter: AudioFilter,
     override val envelope: Voice.Envelope,
     override val delay: Voice.Delay,

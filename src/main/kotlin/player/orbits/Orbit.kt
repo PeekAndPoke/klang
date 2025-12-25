@@ -1,11 +1,17 @@
 package io.peekandpoke.player.orbits
 
 import io.peekandpoke.dsp.DelayLine
+import io.peekandpoke.player.StereoBuffer
 import io.peekandpoke.player.voices.Voice
 
 class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
-    val mixBuffer = DoubleArray(blockFrames)
-    val delaySendBuffer = DoubleArray(blockFrames)
+    // dry mix buffer
+    val mixBuffer = StereoBuffer(blockFrames)
+
+    // wet mix buffer
+    val delaySendBuffer = StereoBuffer(blockFrames)
+
+    // delay line
     val delayLine = DelayLine(maxDelaySeconds = 10.0, sampleRate = sampleRate)
 
     // To track if we need to update parameters this block
@@ -24,8 +30,8 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
     }
 
     fun clear() {
-        mixBuffer.fill(0.0)
-        delaySendBuffer.fill(0.0)
+        mixBuffer.clear()
+        delaySendBuffer.clear()
     }
 
     fun processEffects() {

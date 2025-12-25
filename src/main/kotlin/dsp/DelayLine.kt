@@ -1,18 +1,34 @@
 package io.peekandpoke.dsp
 
+import io.peekandpoke.player.StereoBuffer
+
 class DelayLine(
     maxDelaySeconds: Double,
     val sampleRate: Int,
 ) {
     private val bufferSize = (maxDelaySeconds * sampleRate).toInt()
-    private val buffer = DoubleArray(bufferSize) // Java arrays init to 0.0 by default
+    private val buffer = StereoBuffer(bufferSize) // Java arrays init to 0.0 by default
     private var writePos = 0
 
     // Current parameters
     var delayTimeSeconds: Double = 0.5
     var feedback: Double = 0.0
 
-    fun process(input: DoubleArray, output: DoubleArray, length: Int) {
+    fun process(input: StereoBuffer, output: StereoBuffer, length: Int) {
+        processInternal(buffer.left, input.left, output.left, length)
+        processInternal(buffer.left, input.right, output.right, length)
+
+        writePos = (writePos + length) % bufferSize
+    }
+
+    private fun processInternal(
+        buffer: DoubleArray,
+        input: DoubleArray,
+        output: DoubleArray,
+        length: Int,
+    ) {
+        var pos = writePos
+
         // Enforce a minimum delay of ~10ms (480 samples at 48k) to avoid 1-sample feedback explosions
         val minSamples = (0.01 * sampleRate).toInt()
 
@@ -21,7 +37,7 @@ class DelayLine(
 
         for (i in 0 until length) {
             // 1. Read from the past
-            var readIndex = writePos - delaySamples
+            var readIndex = pos - delaySamples
             // Handle wrap-around
             if (readIndex < 0) readIndex += bufferSize
 
@@ -30,15 +46,13 @@ class DelayLine(
             // 2. Feedback loop: Input + (Delayed * Feedback)
             // Note: We clamp the internal value slightly to prevent potential infinite growth if feedback > 1.0
             val newSample = input[i] + (delayedSignal * feedback)
-            buffer[writePos] = newSample
+            buffer[pos] = newSample
 
             // 3. Output mixing
             output[i] += delayedSignal
 
             // Advance pointer
-            writePos++
-
-            if (writePos >= bufferSize) writePos = 0
+            if (++pos >= bufferSize) pos = 0
         }
     }
 }

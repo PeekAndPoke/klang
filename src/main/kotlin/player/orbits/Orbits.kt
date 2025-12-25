@@ -1,5 +1,6 @@
 package io.peekandpoke.player.orbits
 
+import io.peekandpoke.player.StereoBuffer
 import io.peekandpoke.player.voices.Voice
 
 class Orbits(
@@ -22,13 +23,26 @@ class Orbits(
     /**
      * Processes all orbits and mixes the results into the given buffer.
      */
-    fun processAndMix(masterMixBuffer: DoubleArray) {
+    fun processAndMix(masterMix: StereoBuffer) {
         for (orbit in orbits.values) {
             orbit.processEffects()
 
-            // Sum orbit mix into master mix
-            for (i in 0 until blockFrames) {
-                masterMixBuffer[i] += orbit.mixBuffer[i]
+            run {
+                val masterLeft = masterMix.left
+                val orbitLeft = orbit.mixBuffer.left
+
+                for (i in 0 until blockFrames) {
+                    masterLeft[i] += orbitLeft[i]
+                }
+            }
+
+            run {
+                val masterRight = masterMix.right
+                val orbitRight = orbit.mixBuffer.right
+
+                for (i in 0 until blockFrames) {
+                    masterRight[i] += orbitRight[i]
+                }
             }
         }
     }

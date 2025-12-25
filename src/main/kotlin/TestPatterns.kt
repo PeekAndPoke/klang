@@ -32,6 +32,7 @@ object TestPatterns {
                     // Drums
                     sound("bd hh sd hh")
                      .orbit(1)
+                     .pan(sine.slow(8))
                      .gain(0.5)
                      .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.66)
                      .fast(2),
@@ -114,11 +115,8 @@ object TestPatterns {
             """.trimIndent()
 
     val simpleDrums = """
-            stack(
-              n("0 1 2 3 4 5 6 7").scale("C4:minor").sound("piano"),
-              sound("bd hh sd oh").fast(2).gain(0.8),
-            )
-        """.trimIndent()
+        sound("bd hh sd oh").fast(2).gain(0.8).pan(sine.slow(8)),
+    """.trimIndent()
 
     /**
      * This produces each drum sound twice.
@@ -228,7 +226,7 @@ object TestPatterns {
 
     //    val active = smallTownBoyBass
 //    val active = smallTownBoyMelody
-    val active = smallTownBoy
+//    val active = smallTownBoy
 //    val active = tetris
 //    val active = c4Minor
 //    val active = numberNotes
@@ -240,7 +238,7 @@ object TestPatterns {
 //    val active = pinkNoise
 //    val active = supersaw
 //    val active = polyphone
-//    val active = simpleDrums
+    val active = simpleDrums
 //    val active = snareScale
 //    val active = strangerThings
 //    val active = piano

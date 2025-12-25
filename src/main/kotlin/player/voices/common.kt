@@ -1,6 +1,8 @@
 package io.peekandpoke.player.voices
 
 import io.peekandpoke.utils.Numbers.TWO_PI
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -8,9 +10,22 @@ import kotlin.math.sin
 
 fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     val orbit = ctx.orbits.getOrInit(orbitId, this)
-    val orbitMixBuffer = orbit.mixBuffer
-    val orbitDelaySendBuffer = orbit.delaySendBuffer
+
+    // Equal Power Panning
+    // Input: -1.0 (Left) .. 1.0 (Right)
+    // Map to: 0.0 .. PI/2
+    val panNorm = (pan.coerceIn(-1.0, 1.0) + 1.0) * 0.5
+    val panAngle = panNorm * (PI / 2.0)
+
+    val gainL = cos(panAngle) * gain
+    val gainR = sin(panAngle) * gain
+
+    // Pre-fetch orbit buffers
     val voiceBuffer = ctx.voiceBuffer
+    val outL = orbit.mixBuffer.left
+    val outR = orbit.mixBuffer.right
+    val sendL = orbit.delaySendBuffer.left
+    val sendR = orbit.delaySendBuffer.right
 
     val env = envelope
     val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
@@ -27,7 +42,7 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
 
     for (i in 0 until length) {
         val idx = offset + i
-        val s = voiceBuffer[idx]
+        val signal = voiceBuffer[idx]
 
         // Envelope Logic
         if (absPos >= gateEndPos) {
@@ -46,12 +61,20 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
 
         if (currentEnv < 0.0) currentEnv = 0.0
 
-        // Mix
-        val dryVal = s * gain * currentEnv
-        orbitMixBuffer[idx] += dryVal
+        // Apply Envelope to signal
+        val wetSignal = signal * currentEnv
 
+        // 1. Dry Mix (Split to Stereo)
+        val left = wetSignal * gainL
+        val right = wetSignal * gainR
+
+        outL[idx] += left
+        outR[idx] += right
+
+        // 2. Delay Send (Wet)
         if (sendToDelay) {
-            orbitDelaySendBuffer[idx] += dryVal * delayAmount
+            sendL[idx] += left * delayAmount
+            sendR[idx] += right * delayAmount
         }
 
         absPos++

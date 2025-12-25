@@ -97,6 +97,10 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val orbit = value.getMember("orbit").safeNumberOrNull()?.toInt()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Pan
+        val pan = value.getMember("pan").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Delay
         val delay = value.getMember("delay").safeNumberOrNull()
         val delayTime = value.getMember("delaytime").safeNumberOrNull()
@@ -148,6 +152,8 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             resonance = resonance,
             // Routing
             orbit = orbit,
+            // Pan
+            pan = pan,
             // Delay
             delay = delay,
             delayTime = delayTime,
