@@ -24,8 +24,10 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     val voiceBuffer = ctx.voiceBuffer
     val outL = orbit.mixBuffer.left
     val outR = orbit.mixBuffer.right
-    val sendL = orbit.delaySendBuffer.left
-    val sendR = orbit.delaySendBuffer.right
+    val delaySendL = orbit.delaySendBuffer.left
+    val delaySendR = orbit.delaySendBuffer.right
+    val reverbSendL = orbit.reverbSendBuffer.left
+    val reverbSendR = orbit.reverbSendBuffer.right
 
     val env = envelope
     val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
@@ -39,6 +41,9 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
 
     val delayAmount = delay.amount
     val sendToDelay = delayAmount > 0.0
+
+    val reverbAmount = reverb.room
+    val sendToReverb = reverbAmount > 0.0
 
     for (i in 0 until length) {
         val idx = offset + i
@@ -73,8 +78,14 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
 
         // 2. Delay Send (Wet)
         if (sendToDelay) {
-            sendL[idx] += left * delayAmount
-            sendR[idx] += right * delayAmount
+            delaySendL[idx] += left * delayAmount
+            delaySendR[idx] += right * delayAmount
+        }
+
+        // 3. Reverb Send (Wet)
+        if (sendToReverb) {
+            reverbSendL[idx] += left * reverbAmount
+            reverbSendR[idx] += right * reverbAmount
         }
 
         absPos++
@@ -84,17 +95,17 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
 }
 
 fun Voice.fillVibrato(ctx: Voice.RenderContext, offset: Int, length: Int): DoubleArray? {
-    if (vibrato.depth <= 0.0) return null
+    if (vibrator.depth <= 0.0) return null
 
     val modBuffer = ctx.freqModBuffer
-    val lfoInc = TWO_PI * vibrato.rate / ctx.sampleRate.toDouble()
-    var lfoP = vibrato.phase
+    val lfoInc = TWO_PI * vibrator.rate / ctx.sampleRate.toDouble()
+    var lfoP = vibrator.phase
 
     for (i in 0 until length) {
-        modBuffer[offset + i] = 1.0 + sin(lfoP) * vibrato.depth
+        modBuffer[offset + i] = 1.0 + sin(lfoP) * vibrator.depth
         lfoP += lfoInc
     }
-    vibrato.phase = lfoP
+    vibrator.phase = lfoP
 
     return modBuffer
 }

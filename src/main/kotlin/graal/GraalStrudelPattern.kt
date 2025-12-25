@@ -107,6 +107,14 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val delayFeedback = value.getMember("delayfeedback").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Reverb See https://strudel.cc/learn/effects/#roomsize
+        //
+        // Room is between [0 and 1]
+        // Room size is between [0 and 10]
+        val room = value.getMember("room").safeNumberOrNull()
+        val roomSize = value.getMember("roomsize").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Apply low pass filter?
         val cutoff = value.getMember("cutoff").safeNumberOrNull()
         cutoff?.let {
@@ -158,6 +166,9 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             delay = delay,
             delayTime = delayTime,
             delayFeedback = delayFeedback,
+            // Reverb
+            room = room,
+            roomsize = roomSize,
             // ???
             bandf = null, // TODO ...
             coarse = null, // TODO ...

@@ -51,8 +51,12 @@ object TestPatterns {
                         [e5 [~ c5] e5 [d5 c5]]
                         [b4 [b4 c5] d5 e5]
                         [c5 a4 a4 ~]
-                    >`).sound("piano")
-                    .gain("1.0"),
+                    >`).sound("triangle").orbit(0)
+                    .gain("0.3")
+                    .fast(1)
+                    .room(0.01).rsize(3.0)
+                    .delay("0.25").delaytime(0.25).delayfeedback(0.75),
+
                     note(`<
                         [[e2 e3]*4]
                         [[a2 a3]*4]
@@ -62,9 +66,47 @@ object TestPatterns {
                         [[c2 c3]*4]
                         [[b1 b2]*2 [e2 e3]*2]
                         [[a1 a2]*4]
-                    >`).sound("piano")
+                    >`).sound("supersaw").orbit(1)
+                    .pan(0.6).gain(0.6)
+                    .room(0.01).rsize(3.0),
+
+                    sound("bd hh sd hh").orbit(2)
+                    .pan(-0.7).gain(0.8)
+                    .room(0.01).rsize(3.0)
+                    .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
+                    .fast(2),
+                )
+            """.trimIndent()
+
+    val tetrisRemix = """
+                stack(
+                    note(`<
+                        [e5 [b4 c5] d5 [c5 b4]]
+                        [a4 [a4 c5] e5 [d5 c5]]
+                        [b4 [~ c5] d5 e5]
+                        [c5 a4 a4 ~]
+                        [[~ d5] [~ f5] a5 [g5 f5]]
+                        [e5 [~ c5] e5 [d5 c5]]
+                        [b4 [b4 c5] d5 e5]
+                        [c5 a4 a4 ~]
+                    >`).sound("triangle")
+                    .gain("0.8")
+                    .fast(2)
+                    .delay(0.2).delaytime(0.25).delayfeedback(0.75),
+                    note(`<
+                        [[e2 e3]*4]
+                        [[a2 a3]*4]
+                        [[g#2 g#3]*2 [e2 e3]*2]
+                        [a2 a3 a2 a3 a2 a3 b1 c2]
+                        [[d2 d3]*4]
+                        [[c2 c3]*4]
+                        [[b1 b2]*2 [e2 e3]*2]
+                        [[a1 a2]*4]
+                    >`).sound("supersaw").pan(0.7)
                     .gain(0.6),
-                    sound("bd hh sd hh").fast(wchoose([2, 1.0], [1, 0.1])).gain(0.5),
+                    sound("bd hh sd hh").orbit(1)
+                    .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
+                    .fast(2).gain(0.75).pan(-0.7),
                 )
             """.trimIndent()
 
@@ -114,10 +156,18 @@ object TestPatterns {
                 note("c!2 [eb,<g a bb a>]")
             """.trimIndent()
 
-    val simpleDrums = """
+    val simpleDrumsDelay = """
         sound("bd hh sd oh")
         .gain(0.8)
         .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
+        .pan(sine.slow(8))
+        .fast(2)
+    """.trimIndent()
+
+    val simpleDrumsReverb = """
+        sound("bd hh sd oh")
+        .gain(0.8)
+        .room(0.01).rsize(3.0)
         .pan(sine.slow(8))
         .fast(2)
     """.trimIndent()
@@ -231,7 +281,7 @@ object TestPatterns {
     //    val active = smallTownBoyBass
 //    val active = smallTownBoyMelody
 //    val active = smallTownBoy
-//    val active = tetris
+    val active = tetris
 //    val active = c4Minor
 //    val active = numberNotes
 //    val active = crackle
@@ -242,7 +292,8 @@ object TestPatterns {
 //    val active = pinkNoise
 //    val active = supersaw
 //    val active = polyphone
-    val active = simpleDrums
+//    val active = simpleDrumsDelay
+//    val active = simpleDrumsReverb
 //    val active = snareScale
 //    val active = strangerThings
 //    val active = piano

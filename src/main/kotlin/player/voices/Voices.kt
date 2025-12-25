@@ -109,9 +109,17 @@ class Voices(
             feedback = scheduled.evt.delayFeedback ?: 0.0,
         )
 
+        // Reverb
+        val reverb = Voice.Reverb(
+            room = scheduled.evt.room ?: 0.0,
+            // In Strudel, room size is between [0 and 10], so we need to normalize it
+            // See https://strudel.cc/learn/effects/#roomsize
+            roomSize = (scheduled.evt.roomsize ?: 0.0) / 10.0,
+        )
+
         // Vibrator
         val vibratoDepth = (scheduled.evt.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
-        val vibrato = Voice.Vibrato(
+        val vibrator = Voice.Vibrator(
             depth = vibratoDepth,
             rate = if (vibratoDepth > 0.0) scheduled.evt.vibrato ?: 5.0 else 0.0,
         )
@@ -139,7 +147,8 @@ class Voices(
                     filter = bakedFilters,
                     envelope = envelope,
                     delay = delay,
-                    vibrato = vibrato,
+                    reverb = reverb,
+                    vibrator = vibrator,
                     osc = osc,
                     freqHz = freqHz,
                     phaseInc = phaseInc,
@@ -172,7 +181,8 @@ class Voices(
                     filter = bakedFilters,
                     envelope = envelope,
                     delay = delay,
-                    vibrato = vibrato,
+                    reverb = reverb,
+                    vibrator = vibrator,
                     pcm = decoded.pcm,
                     pcmSampleRate = decoded.sampleRate,
                     rate = rate,

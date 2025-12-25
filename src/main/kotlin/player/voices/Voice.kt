@@ -33,7 +33,14 @@ sealed interface Voice {
         val feedback: Double,
     )
 
-    class Vibrato(
+    class Reverb(
+        /** mix amount 0 .. 1 */
+        val room: Double,
+        /** room size 0 .. 1 */
+        val roomSize: Double,
+    )
+
+    class Vibrator(
         val rate: Double,
         val depth: Double,
         var phase: Double = 0.0,
@@ -53,7 +60,8 @@ sealed interface Voice {
     val filter: AudioFilter
     val envelope: Envelope
     val delay: Delay
-    val vibrato: Vibrato
+    val reverb: Reverb
+    val vibrator: Vibrator
 
     /**
      * Renders the voice into the context's buffers.

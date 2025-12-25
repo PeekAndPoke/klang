@@ -70,6 +70,10 @@ data class StrudelPatternEvent(
     val delayTime: Double?, // Time in seconds
     val delayFeedback: Double?, // Feedback amount (0.0 to <1.0)
 
+    // Reverb
+    val room: Double?,
+    val roomsize: Double?,
+
     // ???
     val bandf: Double?,
     val coarse: Double?,

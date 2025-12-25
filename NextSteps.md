@@ -1,10 +1,3 @@
-# Recommendation for Immediate Action
-
-I suggest tackling Stereo Panning first. It changes the data structures of your mixing loop, so it's better to do it
-before adding more effects like Reverb that would also need to be stereo-aware.
-
-# Stereo Output & Panning
-
 # Reverb (room, size)
 
 # Filter Control
@@ -39,5 +32,8 @@ Should be possible now that we have LFO / Vibrato.
 // DONE   
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-(x) Modulation: Vibrato
+(x) (2025-12-25) Modulation: Vibrato
+
+(x) (2025-12-25) Stereo Output & Panning
+
 
