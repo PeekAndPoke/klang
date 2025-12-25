@@ -1,6 +1,6 @@
-package io.peekandpoke.klang.strudel.voices
+package io.peekandpoke.klang.dsp.voice
 
-import io.peekandpoke.klang.utils.Numbers.TWO_PI
+import io.peekandpoke.klang.dsp.TWO_PI
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin

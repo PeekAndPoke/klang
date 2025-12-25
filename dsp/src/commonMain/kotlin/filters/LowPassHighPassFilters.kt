@@ -1,5 +1,6 @@
-package io.peekandpoke.klang.dsp
+package io.peekandpoke.klang.dsp.filters
 
+import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.tan
 
@@ -26,7 +27,7 @@ object LowPassHighPassFilters {
         init {
             val nyquist = 0.5 * sampleRate
             val cutoff = cutoffHz.coerceIn(5.0, nyquist - 1.0)
-            lowPass = 1.0 - exp(-2.0 * Math.PI * cutoff / sampleRate)
+            lowPass = 1.0 - exp(-2.0 * PI * cutoff / sampleRate)
         }
 
         override fun process(buffer: DoubleArray, offset: Int, length: Int) {
@@ -48,7 +49,7 @@ object LowPassHighPassFilters {
         init {
             val nyquist = 0.5 * sampleRate
             val cutoff = cutoffHz.coerceIn(5.0, nyquist - 1.0)
-            a = exp(-2.0 * Math.PI * cutoff / sampleRate)
+            a = exp(-2.0 * PI * cutoff / sampleRate)
         }
 
         override fun process(buffer: DoubleArray, offset: Int, length: Int) {
@@ -76,26 +77,11 @@ object LowPassHighPassFilters {
             val fc = cutoffHz.coerceIn(5.0, nyquist - 1.0)
             val Q = q.coerceIn(0.1, 50.0)
 
-            val g = tan(Math.PI * fc / sampleRate)
+            val g = tan(PI * fc / sampleRate)
             k = 1.0 / Q
             a1 = 1.0 / (1.0 + g * (g + k))
             a2 = g * a1
             a3 = g * a2
-        }
-
-        protected fun runSvf(buffer: DoubleArray, offset: Int, length: Int, outputSelector: (v0: Double, v1: Double, v2: Double) -> Double) {
-            val end = offset + length
-            for (i in offset until end) {
-                val v0 = buffer[i]
-                val v3 = v0 - ic2eq
-                val v1 = a1 * ic1eq + a2 * v3
-                val v2 = ic2eq + a2 * ic1eq + a3 * v3
-
-                ic1eq = 2.0 * v1 - ic1eq
-                ic2eq = 2.0 * v2 - ic2eq
-
-                buffer[i] = outputSelector(v0, v1, v2)
-            }
         }
     }
 

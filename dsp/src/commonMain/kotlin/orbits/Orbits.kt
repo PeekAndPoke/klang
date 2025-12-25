@@ -1,8 +1,11 @@
-package io.peekandpoke.klang.strudel.orbits
+package io.peekandpoke.klang.dsp.orbits
 
 import io.peekandpoke.klang.dsp.StereoBuffer
-import io.peekandpoke.klang.strudel.voices.Voice
+import io.peekandpoke.klang.dsp.voice.Voice
 
+/**
+ * Mixing Channels / Effect Buses
+ */
 class Orbits(
     maxOrbits: Int = 16,
     private val blockFrames: Int,

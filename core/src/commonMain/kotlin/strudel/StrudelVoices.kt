@@ -1,18 +1,20 @@
-package io.peekandpoke.klang.strudel.voices
+package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.dsp.AudioFilter
-import io.peekandpoke.klang.dsp.AudioFilter.Companion.combine
-import io.peekandpoke.klang.dsp.LowPassHighPassFilters
+import io.peekandpoke.klang.dsp.ONE_OVER_TWELVE
 import io.peekandpoke.klang.dsp.Oscillators
+import io.peekandpoke.klang.dsp.TWO_PI
+import io.peekandpoke.klang.dsp.filters.AudioFilter
+import io.peekandpoke.klang.dsp.filters.AudioFilter.Companion.combine
+import io.peekandpoke.klang.dsp.filters.LowPassHighPassFilters
+import io.peekandpoke.klang.dsp.orbits.Orbits
+import io.peekandpoke.klang.dsp.voice.SampleVoice
+import io.peekandpoke.klang.dsp.voice.SynthVoice
+import io.peekandpoke.klang.dsp.voice.Voice
 import io.peekandpoke.klang.samples.Samples
-import io.peekandpoke.klang.strudel.StrudelFilterDef
-import io.peekandpoke.klang.strudel.orbits.Orbits
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.utils.MinHeap
-import io.peekandpoke.klang.utils.Numbers
-import io.peekandpoke.klang.utils.Numbers.ONE_OVER_TWELVE
 
-class Voices(
+class StrudelVoices(
     val options: Options,
 ) {
     class Options(
@@ -159,7 +161,7 @@ class Voices(
             isOsci -> {
                 val freqHz = Tones.resolveFreq(note, scheduled.evt.scale)
                 val osc = scheduled.evt.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
-                val phaseInc = Numbers.TWO_PI * freqHz / sampleRate.toDouble()
+                val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
 
                 SynthVoice(
                     orbitId = orbit,

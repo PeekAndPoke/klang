@@ -12,18 +12,6 @@ fun String.isUrlWithProtocol(): Boolean {
     return UrlWithProtocolRegex.matches(this)
 }
 
-/**
- * Calc sha256 hash from string
- */
-fun String.sha256Hex(): String {
-    val md = java.security.MessageDigest.getInstance("SHA-256")
-    val hash = md.digest(this.toByteArray(Charsets.UTF_8))
-    val sb = StringBuilder(hash.size * 2)
-    for (b in hash) sb.append("%02x".format(b))
-    return sb.toString()
-}
-
-
 @Suppress("Detekt.TooGenericExceptionCaught")
 inline fun <reified T : Enum<T>> safeEnumOf(input: String?, default: T): T {
     return when (input) {

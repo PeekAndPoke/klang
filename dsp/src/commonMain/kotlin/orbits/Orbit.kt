@@ -1,12 +1,12 @@
-package io.peekandpoke.klang.strudel.orbits
+package io.peekandpoke.klang.dsp.orbits
 
 import io.peekandpoke.klang.dsp.DelayLine
 import io.peekandpoke.klang.dsp.Reverb
 import io.peekandpoke.klang.dsp.StereoBuffer
-import io.peekandpoke.klang.strudel.voices.Voice
+import io.peekandpoke.klang.dsp.voice.Voice
 
 /**
- * Mixing channel ... called Orbit in strudel
+ * Mixing channel / Effect bus ... called Orbit in strudel
  *
  * TODO: keep track of when the orbit was last used.
  * - when the orbit was inactive from say blockFrames * 2, deactivate it

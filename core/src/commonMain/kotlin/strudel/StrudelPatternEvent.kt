@@ -4,6 +4,7 @@ import io.peekandpoke.klang.dsp.OscFn
 import io.peekandpoke.klang.dsp.Oscillators
 import io.peekandpoke.klang.samples.SampleRequest
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * Strudel sound event.
@@ -84,11 +85,13 @@ data class StrudelPatternEvent(
     val coarse: Double?,
     val crush: Double?,
 ) {
-
+    @Transient
     val isOscillator = Oscillators.isOsc(sound)
 
+    @Transient
     val isSampleSound = !isOscillator
 
+    @Transient
     val sampleRequest: SampleRequest =
         SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
 

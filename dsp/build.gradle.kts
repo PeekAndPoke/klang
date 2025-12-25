@@ -5,11 +5,6 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
-    kotlin("plugin.serialization")
-    id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlinx.atomicfu") version Deps.KotlinLibs.atomicfu_version
-    id("io.kotest")
-//    id("com.vanniktech.maven.publish")
 }
 
 val GROUP: String by project
@@ -41,15 +36,6 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("reflect"))
-                implementation(Deps.KotlinX.coroutines_core)
-                implementation(Deps.KotlinX.serialization_core)
-                implementation(Deps.KotlinX.serialization_json)
-
-                implementation(Deps.Ktor.Client.core)
-                implementation(Deps.Ktor.Client.cio)
-
-                implementation(project(":dsp"))
             }
         }
 
@@ -63,9 +49,6 @@ kotlin {
 
         jvmMain {
             dependencies {
-                // GraalVM
-                implementation(Deps.JavaLibs.GraalVM.polyglot)
-                implementation(Deps.JavaLibs.GraalVM.js)
             }
         }
 

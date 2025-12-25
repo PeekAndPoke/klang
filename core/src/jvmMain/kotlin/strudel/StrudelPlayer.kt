@@ -2,12 +2,10 @@ package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.dsp.Oscillators
 import io.peekandpoke.klang.dsp.StereoBuffer
+import io.peekandpoke.klang.dsp.orbits.Orbits
 import io.peekandpoke.klang.dsp.oscillators
 import io.peekandpoke.klang.samples.Samples
 import io.peekandpoke.klang.samples.create
-import io.peekandpoke.klang.strudel.orbits.Orbits
-import io.peekandpoke.klang.strudel.voices.ScheduledVoice
-import io.peekandpoke.klang.strudel.voices.Voices
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -121,8 +119,8 @@ class StrudelPlayer(
     private val orbits = Orbits(maxOrbits = maxOrbits, blockFrames = blockFrames, sampleRate = sampleRate)
 
     // Voices Container (Manages lifecycle, scheduling, rendering)
-    private val voices = Voices(
-        Voices.Options(
+    private val voices = StrudelVoices(
+        StrudelVoices.Options(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             oscillators = options.oscillators,

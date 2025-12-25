@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.cache
 
-import io.peekandpoke.klang.utils.sha256Hex
+import io.ktor.utils.io.charsets.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
@@ -70,5 +70,16 @@ class DiskUrlCache(
         val path = dir.resolve("$key.$safeSuffix")
 
         return path
+    }
+
+    /**
+     * Calc sha256 hash from string
+     */
+    private fun String.sha256Hex(): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val hash = md.digest(this.toByteArray(Charsets.UTF_8))
+        val sb = StringBuilder(hash.size * 2)
+        for (b in hash) sb.append("%02x".format(b))
+        return sb.toString()
     }
 }

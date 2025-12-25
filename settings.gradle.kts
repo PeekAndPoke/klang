@@ -5,4 +5,5 @@ rootProject.name = "klang"
 
 include(
     ":core",
+    ":dsp",
 )

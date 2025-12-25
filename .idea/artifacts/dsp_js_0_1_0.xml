@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="dsp-js-0.1.0">
+    <output-path>$PROJECT_DIR$/dsp/build/libs</output-path>
+    <root id="archive" name="dsp-js-0.1.0.jar">
+      <element id="module-output" name="klang.dsp.jsMain" />
+    </root>
+  </artifact>
+</component>
