@@ -52,17 +52,3 @@ You have vib (Vibrato).
 ## Sliding notes (pitch bend)
 
 Should be possible now that we have LFO / Vibrato.
-
-////////////////////////////////////////////////////////////////////////////////////////////  
-// DONE   
-////////////////////////////////////////////////////////////////////////////////////////////
-
-(x) (2025-12-25) Modulation: Vibrato
-
-(x) (2025-12-25) Stereo Output & Panning
-
-(x) (2025-12-25) Reverb
-
-(x) (2025-12-25) Distortion
-
-

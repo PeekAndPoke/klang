@@ -121,7 +121,15 @@ class StrudelPlayer(
     private val orbits = Orbits(maxOrbits = maxOrbits, blockFrames = blockFrames, sampleRate = sampleRate)
 
     // Voices Container (Manages lifecycle, scheduling, rendering)
-    private val voices = Voices(options, orbits)
+    private val voices = Voices(
+        Voices.Options(
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            oscillators = options.oscillators,
+            samples = options.samples,
+            orbits = orbits,
+        )
+    )
 
     // Final mix buffer to sum all orbits
     private val masterMix = StereoBuffer(blockFrames)

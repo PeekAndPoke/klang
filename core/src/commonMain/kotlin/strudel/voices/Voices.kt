@@ -1,7 +1,8 @@
 package io.peekandpoke.klang.strudel.voices
 
 import io.peekandpoke.klang.dsp.AudioFilter.Companion.combine
-import io.peekandpoke.klang.strudel.StrudelPlayer
+import io.peekandpoke.klang.dsp.Oscillators
+import io.peekandpoke.klang.samples.Samples
 import io.peekandpoke.klang.strudel.orbits.Orbits
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.utils.MinHeap
@@ -9,9 +10,16 @@ import io.peekandpoke.klang.utils.Numbers
 import io.peekandpoke.klang.utils.Numbers.ONE_OVER_TWELVE
 
 class Voices(
-    val options: StrudelPlayer.Options,
-    val orbits: Orbits,
+    val options: Options,
 ) {
+    class Options(
+        val sampleRate: Int,
+        val blockFrames: Int,
+        val oscillators: Oscillators,
+        val samples: Samples,
+        val orbits: Orbits,
+    )
+
     private val scheduled = MinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
 
@@ -21,7 +29,7 @@ class Voices(
 
     // Context reused per block
     private val ctx = Voice.RenderContext(
-        orbits = orbits,
+        orbits = options.orbits,
         sampleRate = options.sampleRate,
         blockFrames = options.blockFrames,
         voiceBuffer = voiceBuffer,

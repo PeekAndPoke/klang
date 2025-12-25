@@ -8,4 +8,3 @@ import kotlinx.coroutines.Deferred
 interface StrudelCompiler {
     fun compile(pattern: String): Deferred<StrudelPattern>
 }
-
