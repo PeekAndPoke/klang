@@ -1,4 +1,6 @@
-# 1. Filters
+## Strudel Engine Next Steps
+
+## Filters
 
 You currently have lpf (Low Pass), hpf (High Pass) and bandf (Band Pass) is partially in the data structure but
 implementation is missing/TODO.
@@ -9,7 +11,7 @@ implementation is missing/TODO.
 - lp / bp / hp / notch / comb / allpass: Strudel has aliases or variations for these standard filters.
 - vowel (Formant Filter): A specific filter that mimics human vowel sounds (a, e, i, o, u).
 
-# Time-Based Effects (Spatial)
+## Time-Based Effects (Spatial)
 
 You have delay and reverb partially implemented.
 
@@ -19,7 +21,7 @@ You have delay and reverb partially implemented.
 - leslie: Simulation of a rotating speaker cabinet (Doppler effect + amplitude modulation).
 - phaser: Creates sweeping notch filters (uses all-pass filters).
 
-# Bitcrushing / Lo-Fi
+## Bitcrushing / Lo-Fi
 
 You have placeholders for crush and coarse.
 
@@ -28,13 +30,13 @@ You have placeholders for crush and coarse.
 - coarse (Sample Rate Reduction): Reduces the effective sample rate (e.g., from 48kHz to 2kHz), introducing aliasing
   artifacts.
 
-# Dynamics
+## Dynamics
 
 - compressor: Reduces the dynamic range (difference between loud and soft parts). Strudel has a global compressor or
   per-orbit.
 - gain: You have this, but verify velocity aliases to it correctly if needed.
 
-# Pitch / Modulation (Beyond Vibrato)
+## Pitch / Modulation (Beyond Vibrato)
 
 You have vib (Vibrato).
 
@@ -47,7 +49,7 @@ You have vib (Vibrato).
 - Filters: bandf, notchf.
 - Modulation: phaser, leslie.
 
-# Sliding notes (pitch bend)
+## Sliding notes (pitch bend)
 
 Should be possible now that we have LFO / Vibrato.
 
