@@ -1,9 +1,9 @@
-package io.peekandpoke.player.orbits
+package io.peekandpoke.klang.strudel.orbits
 
-import io.peekandpoke.dsp.DelayLine
-import io.peekandpoke.dsp.Reverb
-import io.peekandpoke.player.StereoBuffer
-import io.peekandpoke.player.voices.Voice
+import io.peekandpoke.klang.dsp.DelayLine
+import io.peekandpoke.klang.dsp.Reverb
+import io.peekandpoke.klang.dsp.StereoBuffer
+import io.peekandpoke.klang.strudel.voices.Voice
 
 /**
  * Mixing channel ... called Orbit in strudel

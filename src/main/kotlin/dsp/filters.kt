@@ -1,4 +1,4 @@
-package io.peekandpoke.dsp
+package io.peekandpoke.klang.dsp
 
 /**
  * Audio filter interface.

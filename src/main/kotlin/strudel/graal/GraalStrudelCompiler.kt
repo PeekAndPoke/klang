@@ -1,7 +1,7 @@
-package io.peekandpoke.graal
+package io.peekandpoke.klang.strudel.graal
 
-import io.peekandpoke.StrudelCompiler
-import io.peekandpoke.graal.GraalJsHelpers.promiseToDeferred
+import io.peekandpoke.klang.StrudelCompiler
+import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.promiseToDeferred
 import kotlinx.coroutines.Deferred
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Source

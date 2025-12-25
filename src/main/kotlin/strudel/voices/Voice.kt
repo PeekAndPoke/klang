@@ -1,7 +1,7 @@
-package io.peekandpoke.player.voices
+package io.peekandpoke.klang.strudel.voices
 
-import io.peekandpoke.dsp.AudioFilter
-import io.peekandpoke.player.orbits.Orbits
+import io.peekandpoke.klang.dsp.AudioFilter
+import io.peekandpoke.klang.strudel.orbits.Orbits
 
 sealed interface Voice {
     class RenderContext(

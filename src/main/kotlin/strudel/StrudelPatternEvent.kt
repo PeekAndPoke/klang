@@ -1,8 +1,8 @@
-package io.peekandpoke.player
+package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.dsp.AudioFilter
-import io.peekandpoke.dsp.Oscillators
-import io.peekandpoke.samples.SampleRequest
+import io.peekandpoke.klang.dsp.AudioFilter
+import io.peekandpoke.klang.dsp.Oscillators
+import io.peekandpoke.klang.samples.SampleRequest
 
 /**
  * Strudel sound event.

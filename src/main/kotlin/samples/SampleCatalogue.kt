@@ -1,4 +1,4 @@
-package io.peekandpoke.samples
+package io.peekandpoke.klang.samples
 
 class SampleCatalogue(
     val coordinates: List<Bundle> = emptyList(),

@@ -1,4 +1,4 @@
-package io.peekandpoke.utils
+package io.peekandpoke.klang.utils
 
 import kotlin.math.PI
 

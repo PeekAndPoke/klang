@@ -1,8 +1,7 @@
-package io.peekandpoke.player.voices
+package io.peekandpoke.klang.strudel.voices
 
-import io.peekandpoke.dsp.AudioFilter
-import io.peekandpoke.dsp.OscFn
-import io.peekandpoke.player.voices.Voice.Effects
+import io.peekandpoke.klang.dsp.AudioFilter
+import io.peekandpoke.klang.dsp.OscFn
 
 class SynthVoice(
     override val orbitId: Int,
@@ -16,7 +15,7 @@ class SynthVoice(
     override val delay: Voice.Delay,
     override val reverb: Voice.Reverb,
     override val vibrator: Voice.Vibrator,
-    override val effects: Effects,
+    override val effects: Voice.Effects,
     val osc: OscFn,
     val freqHz: Double,
     val phaseInc: Double,

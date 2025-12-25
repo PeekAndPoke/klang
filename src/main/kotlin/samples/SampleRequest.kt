@@ -1,4 +1,4 @@
-package io.peekandpoke.samples
+package io.peekandpoke.klang.samples
 
 /** What the pattern asks for (bank + sound + optional variant index). */
 data class SampleRequest(

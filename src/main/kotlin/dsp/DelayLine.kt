@@ -1,6 +1,4 @@
-package io.peekandpoke.dsp
-
-import io.peekandpoke.player.StereoBuffer
+package io.peekandpoke.klang.dsp
 
 class DelayLine(
     maxDelaySeconds: Double,

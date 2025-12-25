@@ -1,9 +1,9 @@
-package io.peekandpoke
+package io.peekandpoke.klang
 
-import io.peekandpoke.graal.GraalStrudelCompiler
-import io.peekandpoke.player.StrudelPlayer
-import io.peekandpoke.samples.SampleCatalogue
-import io.peekandpoke.samples.Samples
+import io.peekandpoke.klang.samples.SampleCatalogue
+import io.peekandpoke.klang.samples.Samples
+import io.peekandpoke.klang.strudel.StrudelPlayer
+import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
 import java.nio.file.Path

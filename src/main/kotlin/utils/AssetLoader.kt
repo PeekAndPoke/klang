@@ -1,8 +1,8 @@
-package io.peekandpoke.utils
+package io.peekandpoke.klang.utils
 
-import io.peekandpoke.cache.DiskUrlCache
-import io.peekandpoke.cache.InMemoryUrlCache
-import io.peekandpoke.cache.UrlCache
+import io.peekandpoke.klang.cache.DiskUrlCache
+import io.peekandpoke.klang.cache.InMemoryUrlCache
+import io.peekandpoke.klang.cache.UrlCache
 import kotlinx.coroutines.*
 import kotlinx.coroutines.future.await
 import java.net.URI

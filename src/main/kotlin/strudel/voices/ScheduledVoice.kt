@@ -1,6 +1,6 @@
-package io.peekandpoke.player.voices
+package io.peekandpoke.klang.strudel.voices
 
-import io.peekandpoke.player.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 
 /**
  * Use to schedule the playback of a voice

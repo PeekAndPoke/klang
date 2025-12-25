@@ -1,4 +1,4 @@
-package io.peekandpoke.player
+package io.peekandpoke.klang.strudel
 
 /**
  * Strudel pattern.

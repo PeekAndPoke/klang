@@ -1,4 +1,4 @@
-package io.peekandpoke.cache
+package io.peekandpoke.klang.cache
 
 class InMemoryUrlCache(
     private val delegate: UrlCache,

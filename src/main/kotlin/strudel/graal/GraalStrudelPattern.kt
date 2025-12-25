@@ -1,13 +1,13 @@
-package io.peekandpoke.graal
+package io.peekandpoke.klang.strudel.graal
 
-import io.peekandpoke.dsp.AudioFilter
-import io.peekandpoke.dsp.SimpleFilters
-import io.peekandpoke.graal.GraalJsHelpers.safeNumber
-import io.peekandpoke.graal.GraalJsHelpers.safeNumberOrNull
-import io.peekandpoke.graal.GraalJsHelpers.safeStringOrNull
-import io.peekandpoke.graal.GraalJsHelpers.safeToStringOrNull
-import io.peekandpoke.player.StrudelPattern
-import io.peekandpoke.player.StrudelPatternEvent
+import io.peekandpoke.klang.dsp.AudioFilter
+import io.peekandpoke.klang.dsp.LowPassHighPassFilters
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
+import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
+import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeStringOrNull
+import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeToStringOrNull
 import org.graalvm.polyglot.Value
 
 class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : StrudelPattern {
@@ -123,12 +123,12 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         // Apply low pass filter?
         val cutoff = value.getMember("cutoff").safeNumberOrNull()
         cutoff?.let {
-            filters.add(SimpleFilters.createLPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
+            filters.add(LowPassHighPassFilters.createLPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
         }
         // Apply high pass filter?
         val hcutoff = value.getMember("hcutoff").safeNumberOrNull()
         hcutoff?.let {
-            filters.add(SimpleFilters.createHPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
+            filters.add(LowPassHighPassFilters.createHPF(cutoffHz = it, q = resonance, sampleRate.toDouble()))
         }
 
         // add event

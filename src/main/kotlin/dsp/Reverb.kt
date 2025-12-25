@@ -1,6 +1,4 @@
-package io.peekandpoke.dsp
-
-import io.peekandpoke.player.StereoBuffer
+package io.peekandpoke.klang.dsp
 
 // TODO: align with Strudel
 //  - currently the effect of "room" and "size" are waaaay to strong compared to strudel

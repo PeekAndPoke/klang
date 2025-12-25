@@ -1,8 +1,8 @@
-package io.peekandpoke.samples
+package io.peekandpoke.klang.samples
 
-import io.peekandpoke.tones.StrudelTones
-import io.peekandpoke.utils.AssetLoader
-import io.peekandpoke.utils.isUrlWithProtocol
+import io.peekandpoke.klang.tones.Tones
+import io.peekandpoke.klang.utils.AssetLoader
+import io.peekandpoke.klang.utils.isUrlWithProtocol
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.*
 import java.nio.charset.StandardCharsets
@@ -188,7 +188,7 @@ class SampleIndexLoader(
                 is JsonObject -> {
                     val samples = value.mapNotNull {
                         val note = it.key
-                        val pitch = StrudelTones.noteToFreq(note)
+                        val pitch = Tones.noteToFreq(note)
                         val url = it.value.asStringOrNull()?.sanitizeUrl(base) ?: return@mapNotNull null
 
                         Samples.Sample(note = note, pitchHz = pitch, url = url)

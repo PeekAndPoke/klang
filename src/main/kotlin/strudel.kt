@@ -1,6 +1,6 @@
-package io.peekandpoke
+package io.peekandpoke.klang
 
-import io.peekandpoke.player.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern
 import kotlinx.coroutines.Deferred
 
 /**

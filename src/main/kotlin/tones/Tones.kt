@@ -1,9 +1,9 @@
-package io.peekandpoke.tones
+package io.peekandpoke.klang.tones
 
 import kotlin.math.floor
 import kotlin.math.pow
 
-object StrudelTones {
+object Tones {
     val noteIndex = mapOf(
         "c" to 0, "d" to 2, "e" to 4, "f" to 5, "g" to 7, "a" to 9, "b" to 11
     )

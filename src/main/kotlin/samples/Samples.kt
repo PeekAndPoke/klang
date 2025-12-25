@@ -1,10 +1,10 @@
-package io.peekandpoke.samples
+package io.peekandpoke.klang.samples
 
-import io.peekandpoke.samples.decoders.MonoSamplePCM
-import io.peekandpoke.samples.decoders.SimpleAudioDecoder
-import io.peekandpoke.tones.StrudelTones
-import io.peekandpoke.utils.AssetLoader
-import io.peekandpoke.utils.withDiskCache
+import io.peekandpoke.klang.samples.decoders.MonoSamplePCM
+import io.peekandpoke.klang.samples.decoders.SimpleAudioDecoder
+import io.peekandpoke.klang.tones.Tones
+import io.peekandpoke.klang.utils.AssetLoader
+import io.peekandpoke.klang.utils.withDiskCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -125,7 +125,7 @@ class Samples(
         }
 
         fun getSampleByNote(note: String): Sample? {
-            val pitchHz = StrudelTones.noteToFreq(note)
+            val pitchHz = Tones.noteToFreq(note)
 
             return getSampleByPitch(pitchHz)
         }

@@ -1,4 +1,4 @@
-package io.peekandpoke.samples.decoders
+package io.peekandpoke.klang.samples.decoders
 
 /**
  * Audio decoder that handles WAV files manually to avoid SPI conflicts,

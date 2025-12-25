@@ -1,8 +1,8 @@
-package io.peekandpoke.dsp
+package io.peekandpoke.klang.dsp
 
-import io.peekandpoke.player.StrudelPatternEvent
-import io.peekandpoke.utils.Numbers.TWO_PI
-import io.peekandpoke.utils.safeEnumOrNull
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.utils.Numbers.TWO_PI
+import io.peekandpoke.klang.utils.safeEnumOrNull
 import kotlin.math.*
 import kotlin.random.Random
 

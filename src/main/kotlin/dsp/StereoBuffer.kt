@@ -1,4 +1,4 @@
-package io.peekandpoke.player
+package io.peekandpoke.klang.dsp
 
 /**
  * A stereo buffer.

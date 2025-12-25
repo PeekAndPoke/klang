@@ -1,17 +1,19 @@
-package io.peekandpoke.player
+package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.dsp.Oscillators
-import io.peekandpoke.dsp.oscillators
-import io.peekandpoke.player.orbits.Orbits
-import io.peekandpoke.player.voices.ScheduledVoice
-import io.peekandpoke.player.voices.Voices
-import io.peekandpoke.samples.Samples
+import io.peekandpoke.klang.dsp.Oscillators
+import io.peekandpoke.klang.dsp.StereoBuffer
+import io.peekandpoke.klang.dsp.oscillators
+import io.peekandpoke.klang.samples.Samples
+import io.peekandpoke.klang.strudel.orbits.Orbits
+import io.peekandpoke.klang.strudel.voices.ScheduledVoice
+import io.peekandpoke.klang.strudel.voices.Voices
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import kotlin.math.ceil
+import kotlin.math.tanh
 
 /**
  * Real-time-ish audio renderer:
@@ -298,12 +300,12 @@ class StrudelPlayer(
         for (i in 0 until blockFrames) {
             // Left
             val rawL = masterMixL[i]
-            val sampleL = kotlin.math.tanh(rawL).coerceIn(-1.0, 1.0)
+            val sampleL = tanh(rawL).coerceIn(-1.0, 1.0)
             val pcmL = (sampleL * Short.MAX_VALUE).toInt()
 
             // Right
             val rawR = masterMixR[i]
-            val sampleR = kotlin.math.tanh(rawR).coerceIn(-1.0, 1.0)
+            val sampleR = tanh(rawR).coerceIn(-1.0, 1.0)
             val pcmR = (sampleR * Short.MAX_VALUE).toInt()
 
             // Interleaved: L, R

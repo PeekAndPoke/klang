@@ -1,4 +1,4 @@
-package io.peekandpoke
+package io.peekandpoke.klang
 
 object TestPatterns {
     val smallTownBoyBass = """
@@ -195,7 +195,7 @@ object TestPatterns {
      * Why? Because of the lpf() producing twice as many events as the sound()
      * Therefore the drum sounds re schedules twice ...
      *
-     * TODO: fix this in the [io.peekandpoke.player.StrudelPlayer]
+     * TODO: fix this in the [io.peekandpoke.klang.strudel.StrudelPlayer]
      */
     val doubleSampleBug = """
             stack(

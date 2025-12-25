@@ -1,14 +1,14 @@
-package io.peekandpoke.player.voices
+package io.peekandpoke.klang.strudel.voices
 
-import io.peekandpoke.dsp.AudioFilter
-import io.peekandpoke.dsp.ChainAudioFilter
-import io.peekandpoke.dsp.NoOpAudioFilter
-import io.peekandpoke.player.StrudelPlayer
-import io.peekandpoke.player.orbits.Orbits
-import io.peekandpoke.tones.StrudelTones
-import io.peekandpoke.utils.MinHeap
-import io.peekandpoke.utils.Numbers
-import io.peekandpoke.utils.Numbers.ONE_OVER_TWELVE
+import io.peekandpoke.klang.dsp.AudioFilter
+import io.peekandpoke.klang.dsp.ChainAudioFilter
+import io.peekandpoke.klang.dsp.NoOpAudioFilter
+import io.peekandpoke.klang.strudel.StrudelPlayer
+import io.peekandpoke.klang.strudel.orbits.Orbits
+import io.peekandpoke.klang.tones.Tones
+import io.peekandpoke.klang.utils.MinHeap
+import io.peekandpoke.klang.utils.Numbers
+import io.peekandpoke.klang.utils.Numbers.ONE_OVER_TWELVE
 
 class Voices(
     val options: StrudelPlayer.Options,
@@ -138,7 +138,7 @@ class Voices(
         return when {
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             isOsci -> {
-                val freqHz = StrudelTones.resolveFreq(note, scheduled.evt.scale)
+                val freqHz = Tones.resolveFreq(note, scheduled.evt.scale)
                 val osc = options.oscillators.get(e = scheduled.evt, freqHz = freqHz)
                 val phaseInc = Numbers.TWO_PI * freqHz / sampleRate.toDouble()
 
@@ -167,7 +167,7 @@ class Voices(
                 val (sampleId, decoded) = loaded
 
                 val baseSamplePitchHz = sampleId.sample.pitchHz
-                val targetHz = scheduled.evt.note?.let { n -> StrudelTones.resolveFreq(n, scheduled.evt.scale) }
+                val targetHz = scheduled.evt.note?.let { n -> Tones.resolveFreq(n, scheduled.evt.scale) }
                     ?: baseSamplePitchHz
                 val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
                 val rate = (decoded.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio

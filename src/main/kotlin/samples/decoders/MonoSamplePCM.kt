@@ -1,4 +1,4 @@
-package io.peekandpoke.samples.decoders
+package io.peekandpoke.klang.samples.decoders
 
 /**
  * PCM decoded sample ready for mixing.

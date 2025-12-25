@@ -1,9 +1,9 @@
-package io.peekandpoke.dsp
+package io.peekandpoke.klang.dsp
 
 import kotlin.math.exp
 import kotlin.math.tan
 
-object SimpleFilters {
+object LowPassHighPassFilters {
 
     fun createLPF(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
         when (q) {

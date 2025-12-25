@@ -1,4 +1,4 @@
-package io.peekandpoke.samples.decoders
+package io.peekandpoke.klang.samples.decoders
 
 import java.io.ByteArrayInputStream
 import javax.sound.sampled.AudioFormat
