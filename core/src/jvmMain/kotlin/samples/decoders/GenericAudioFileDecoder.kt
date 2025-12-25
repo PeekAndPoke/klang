@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.samples.decoders
 
+import io.peekandpoke.klang.samples.MonoSamplePcm
 import java.io.ByteArrayInputStream
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
@@ -7,11 +8,11 @@ import javax.sound.sampled.AudioSystem
 object GenericAudioFileDecoder {
 
     @Throws(RuntimeException::class)
-    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePCM {
+    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm {
         return decodeInternal(audioBytes)
     }
 
-    private fun decodeInternal(audioBytes: ByteArray): MonoSamplePCM {
+    private fun decodeInternal(audioBytes: ByteArray): MonoSamplePcm {
         val bais = ByteArrayInputStream(audioBytes)
 
         val sourceStream = try {
@@ -45,7 +46,7 @@ object GenericAudioFileDecoder {
                 val channels = target.channels
 
                 if (pcmBytes.isEmpty()) {
-                    return MonoSamplePCM(target.sampleRate.toInt(), FloatArray(0))
+                    return MonoSamplePcm(target.sampleRate.toInt(), FloatArray(0))
                 }
 
                 val frames = pcmBytes.size / (2 * channels)
@@ -66,7 +67,7 @@ object GenericAudioFileDecoder {
                     mono[i] = (sum / channels.toFloat())
                 }
 
-                return MonoSamplePCM(sampleRate = target.sampleRate.toInt(), pcm = mono)
+                return MonoSamplePcm(sampleRate = target.sampleRate.toInt(), pcm = mono)
             }
         }
     }

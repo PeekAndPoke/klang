@@ -4,6 +4,7 @@ import io.peekandpoke.klang.dsp.Oscillators
 import io.peekandpoke.klang.dsp.StereoBuffer
 import io.peekandpoke.klang.dsp.oscillators
 import io.peekandpoke.klang.samples.Samples
+import io.peekandpoke.klang.samples.create
 import io.peekandpoke.klang.strudel.orbits.Orbits
 import io.peekandpoke.klang.strudel.voices.ScheduledVoice
 import io.peekandpoke.klang.strudel.voices.Voices

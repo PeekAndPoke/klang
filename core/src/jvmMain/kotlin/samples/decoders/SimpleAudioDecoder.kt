@@ -1,16 +1,11 @@
 package io.peekandpoke.klang.samples.decoders
 
-/**
- * Audio decoder that handles WAV files manually to avoid SPI conflicts,
- * and uses JavaSound SPI (with JLayer/MP3SPI) for MP3s.
- *
- * Output:
- * - mono FloatArray in [-1, 1]
- * - sampleRate as in file (resample later in renderer/registry if needed)
- */
-class SimpleAudioDecoder {
+import io.peekandpoke.klang.samples.AudioDecoder
+import io.peekandpoke.klang.samples.MonoSamplePcm
 
-    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePCM? {
+class SimpleAudioDecoder : AudioDecoder {
+
+    override fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm? {
         return try {
             when {
                 isWav(audioBytes) -> WavFileDecoder.decodeMonoFloatPcm(audioBytes)

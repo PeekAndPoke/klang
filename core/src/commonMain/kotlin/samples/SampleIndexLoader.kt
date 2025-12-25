@@ -5,7 +5,6 @@ import io.peekandpoke.klang.utils.AssetLoader
 import io.peekandpoke.klang.utils.isUrlWithProtocol
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.*
-import java.nio.charset.StandardCharsets
 
 class SampleIndexLoader(
     private val loader: AssetLoader,
@@ -23,7 +22,7 @@ class SampleIndexLoader(
 
         library.coordinates.forEach { bank ->
             run {
-                val loaded = loader.download(bank.soundsUri)?.toString(StandardCharsets.UTF_8)
+                val loaded = loader.download(bank.soundsUri)?.decodeToString()
                 // Load the banks data
                 loaded?.let { parseSoundsFile(bank.defaultPitchHz, it) }?.let { parsed ->
                     // merge with existing data
@@ -35,7 +34,7 @@ class SampleIndexLoader(
             }
 
             bank.aliasUris.forEach { alias ->
-                val loaded = loader.download(alias)?.toString(StandardCharsets.UTF_8)
+                val loaded = loader.download(alias)?.decodeToString()
 
                 loaded?.let { parseAliasFile(it) }?.let { parsed ->
                     collectedAliases += parsed

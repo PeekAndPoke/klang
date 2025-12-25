@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.samples.decoders
+package io.peekandpoke.klang.samples
 
 /**
  * PCM decoded sample ready for mixing.
@@ -7,7 +7,7 @@ package io.peekandpoke.klang.samples.decoders
  * - mono float PCM
  * - sampleRate matches renderer sampleRate (resampling can be added later)
  */
-class MonoSamplePCM(
+class MonoSamplePcm(
     val sampleRate: Int,
     val pcm: FloatArray,
 )

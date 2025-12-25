@@ -6,10 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.peekandpoke.klang.cache.UrlCache
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -43,7 +40,7 @@ class KtorAssetLoader(
 class CachingAssetLoader(
     private val cache: UrlCache,
     private val delegate: AssetLoader,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob()),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : AssetLoader {
     private val lock = Mutex()
 

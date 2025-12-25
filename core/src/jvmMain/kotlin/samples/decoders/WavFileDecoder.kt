@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.samples.decoders
 
+import io.peekandpoke.klang.samples.MonoSamplePcm
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
@@ -7,11 +8,11 @@ import java.nio.charset.StandardCharsets
 object WavFileDecoder {
 
     @Throws(RuntimeException::class)
-    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePCM {
+    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm {
         return decodeInternal(audioBytes)
     }
 
-    private fun decodeInternal(bytes: ByteArray): MonoSamplePCM {
+    private fun decodeInternal(bytes: ByteArray): MonoSamplePcm {
         // Use wrap() which is safe (backed by array)
         val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
 
@@ -129,7 +130,7 @@ object WavFileDecoder {
                     mono[i] = sum / channels
                 }
 
-                return MonoSamplePCM(sampleRate, mono)
+                return MonoSamplePcm(sampleRate, mono)
             } else {
                 // Unknown chunk, safely skip it
                 val nextPos = buffer.position() + chunkSize

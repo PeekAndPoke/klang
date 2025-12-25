@@ -1,15 +1,11 @@
 package io.peekandpoke.klang.samples
 
-import io.peekandpoke.klang.samples.decoders.MonoSamplePCM
-import io.peekandpoke.klang.samples.decoders.SimpleAudioDecoder
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.utils.AssetLoader
-import io.peekandpoke.klang.utils.withDiskCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.nio.file.Path
 
 /**
  * Registry for resolving and decoding samples.
@@ -20,28 +16,12 @@ import java.nio.file.Path
  */
 class Samples(
     private val index: Index,
-    private val decoder: SimpleAudioDecoder,
+    private val decoder: AudioDecoder,
     private val loader: AssetLoader,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     companion object {
-        suspend fun create(
-            cacheDir: Path = Path.of("./cache"),
-            assetLoader: AssetLoader = AssetLoader.default,
-            catalogue: SampleCatalogue = SampleCatalogue.default,
-        ): Samples {
-            val indexLoader = SampleIndexLoader(
-                loader = assetLoader.withDiskCache(cacheDir.resolve("index")),
-            )
-
-            val index: Index = indexLoader.load(catalogue)
-
-            return Samples(
-                index = index,
-                decoder = SimpleAudioDecoder(),
-                loader = assetLoader.withDiskCache(cacheDir.resolve("samples")),
-            )
-        }
+        // used for platform specific extension functions
     }
 
     /** A fully resolved variant (exact URL choice). */
@@ -140,7 +120,7 @@ class Samples(
         val url: String,
     )
 
-    private val sampleCache = mutableMapOf<SampleId, MonoSamplePCM?>()
+    private val sampleCache = mutableMapOf<SampleId, MonoSamplePcm?>()
 
     /**
      * Looks up the index for a given sample
@@ -157,7 +137,7 @@ class Samples(
     /**
      * Gets a sound if it is already loaded
      */
-    fun getIfLoaded(request: SampleRequest): Pair<SampleId, MonoSamplePCM>? {
+    fun getIfLoaded(request: SampleRequest): Pair<SampleId, MonoSamplePcm>? {
         val sampleId = index.resolve(request) ?: return null
 
         sampleCache[sampleId]?.let { return sampleId to it }
@@ -169,7 +149,7 @@ class Samples(
         return null
     }
 
-    private suspend fun loadAndDecode(id: SampleId): MonoSamplePCM? {
+    private suspend fun loadAndDecode(id: SampleId): MonoSamplePcm? {
         return loader.download(id.sample.url)?.let {
             decoder.decodeMonoFloatPcm(it)
         }

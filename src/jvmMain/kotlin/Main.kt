@@ -2,6 +2,7 @@ package io.peekandpoke.klang
 
 import io.peekandpoke.klang.samples.SampleCatalogue
 import io.peekandpoke.klang.samples.Samples
+import io.peekandpoke.klang.samples.create
 import io.peekandpoke.klang.strudel.StrudelPlayer
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import kotlinx.coroutines.delay
