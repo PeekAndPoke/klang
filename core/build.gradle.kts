@@ -45,6 +45,9 @@ kotlin {
                 implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
+
+                implementation(Deps.Ktor.Client.core)
+                implementation(Deps.Ktor.Client.cio)
             }
         }
 

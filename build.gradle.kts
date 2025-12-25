@@ -68,6 +68,9 @@ kotlin {
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
 
+                implementation(Deps.Ktor.Client.core)
+                implementation(Deps.Ktor.Client.cio)
+
                 implementation(project(":core"))
             }
         }
@@ -85,6 +88,8 @@ kotlin {
                 // GraalVM
                 implementation(Deps.JavaLibs.GraalVM.polyglot)
                 implementation(Deps.JavaLibs.GraalVM.js)
+
+                implementation(Deps.JavaLibs.logback_classic)
             }
         }
 

@@ -1,8 +1,6 @@
 package io.peekandpoke.klang.strudel.voices
 
-import io.peekandpoke.klang.dsp.AudioFilter
-import io.peekandpoke.klang.dsp.ChainAudioFilter
-import io.peekandpoke.klang.dsp.NoOpAudioFilter
+import io.peekandpoke.klang.dsp.AudioFilter.Companion.combine
 import io.peekandpoke.klang.strudel.StrudelPlayer
 import io.peekandpoke.klang.strudel.orbits.Orbits
 import io.peekandpoke.klang.tones.Tones
@@ -89,7 +87,7 @@ class Voices(
         val sampleRate = options.sampleRate
 
         // Bake Filters
-        val bakedFilters = combineFilters(scheduled.evt.filters)
+        val bakedFilters = scheduled.evt.filters.combine()
 
         // Routing
         val orbit = scheduled.evt.orbit ?: 0
@@ -139,7 +137,7 @@ class Voices(
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             isOsci -> {
                 val freqHz = Tones.resolveFreq(note, scheduled.evt.scale)
-                val osc = options.oscillators.get(e = scheduled.evt, freqHz = freqHz)
+                val osc = scheduled.evt.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
                 val phaseInc = Numbers.TWO_PI * freqHz / sampleRate.toDouble()
 
                 SynthVoice(
@@ -199,12 +197,5 @@ class Voices(
 
             else -> null
         }
-    }
-
-    private fun combineFilters(filters: List<AudioFilter>): AudioFilter {
-        if (filters.isEmpty()) return NoOpAudioFilter
-        if (filters.size == 1) return filters[0]
-
-        return ChainAudioFilter(filters)
     }
 }

@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.dsp
 
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.utils.Numbers.TWO_PI
 import io.peekandpoke.klang.utils.safeEnumOrNull
 import kotlin.math.*
@@ -143,7 +142,7 @@ class Oscillators private constructor(
         fun triangleFn(gain: Double = 0.7) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
             var p = startPhase
             val end = offset + length
-            val norm = 2.0 / Math.PI
+            val norm = 2.0 / PI
 
             if (phaseMod == null) {
                 for (i in offset until end) {
@@ -555,15 +554,6 @@ class Oscillators private constructor(
             crackle = crackle,
         )
     }
-
-    fun get(e: StrudelPatternEvent, freqHz: Double?): OscFn = get(
-        name = e.sound,
-        freqHz = freqHz,
-        density = e.density,
-        unison = e.unison,
-        detune = e.detune,
-        spread = e.spread,
-    )
 
     fun get(
         name: String?,

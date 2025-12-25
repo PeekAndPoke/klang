@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.dsp.AudioFilter
+import io.peekandpoke.klang.dsp.OscFn
 import io.peekandpoke.klang.dsp.Oscillators
 import io.peekandpoke.klang.samples.SampleRequest
 
@@ -88,4 +89,19 @@ data class StrudelPatternEvent(
 
     val sampleRequest: SampleRequest =
         SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
+
+    // TODO: do we really need to pass the [freqHz] in here?
+    //  Or cam we calculate this earlier?
+    fun createOscillator(oscillators: Oscillators, freqHz: Double): OscFn {
+        val e = this
+
+        return oscillators.get(
+            name = e.sound,
+            freqHz = freqHz,
+            density = e.density,
+            unison = e.unison,
+            detune = e.detune,
+            spread = e.spread,
+        )
+    }
 }
