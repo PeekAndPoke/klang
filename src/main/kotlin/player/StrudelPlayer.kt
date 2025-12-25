@@ -1,19 +1,17 @@
 package io.peekandpoke.player
 
-import io.peekandpoke.dsp.*
+import io.peekandpoke.dsp.Oscillators
+import io.peekandpoke.dsp.oscillators
+import io.peekandpoke.player.orbits.Orbits
+import io.peekandpoke.player.voices.ScheduledVoice
+import io.peekandpoke.player.voices.Voices
 import io.peekandpoke.samples.Samples
-import io.peekandpoke.tones.StrudelTones
-import io.peekandpoke.utils.MinHeap
-import io.peekandpoke.utils.Numbers
-import io.peekandpoke.utils.Numbers.ONE_OVER_TWELVE
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import kotlin.math.ceil
-import kotlin.math.sin
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Real-time-ish audio renderer:
@@ -93,81 +91,10 @@ class StrudelPlayer(
         }
     }
 
-    private data class ScheduledEvent(
-        val startFrame: Long,
-        val endFrame: Long,
-        val gateEndFrame: Long,  // When the note key is lifted
-        val e: StrudelPatternEvent,
-    )
-
-    sealed interface Voice {
-        class Envelope(
-            val attackFrames: Double,
-            val decayFrames: Double,
-            val sustainLevel: Double,
-            val releaseFrames: Double,
-            var level: Double = 0.0,
-        )
-
-        class Delay(
-            val amount: Double, // mix amount 0 .. 1
-            val time: Double,
-            val feedback: Double,
-        )
-
-        class Vibrato(
-            val rate: Double,
-            val depth: Double,
-            var phase: Double = 0.0,
-        )
-
-        val orbit: Int
-        val startFrame: Long
-        val endFrame: Long
-        val gateEndFrame: Long
-        val gain: Double
-        val filter: AudioFilter
-        val envelope: Envelope
-        val delay: Delay
-        val vibrato: Vibrato
-    }
-
-    private class SynthVoice(
-        override val orbit: Int,
-        override val startFrame: Long,
-        override val endFrame: Long,
-        override val gateEndFrame: Long,
-        override val gain: Double,
-        override val filter: AudioFilter,
-        override val envelope: Voice.Envelope,
-        override val delay: Voice.Delay,
-        override val vibrato: Voice.Vibrato,
-        val osc: OscFn,
-        val freqHz: Double,
-        val phaseInc: Double,
-        var phase: Double = 0.0,
-    ) : Voice
-
-    private class SampleVoice(
-        override val orbit: Int,
-        override val startFrame: Long,
-        override val endFrame: Long,
-        override val gateEndFrame: Long,
-        override val gain: Double,
-        override val filter: AudioFilter,
-        override val envelope: Voice.Envelope,
-        override val delay: Voice.Delay,
-        override val vibrato: Voice.Vibrato,
-        val pcm: FloatArray,
-        val pcmSampleRate: Int,
-        val rate: Double,          // sampleFrames per outputFrame
-        var playhead: Double = 0.0, // in sample frames
-    ) : Voice
 
     // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Convenience accessors for RenderOptions
     private val sampleRate: Int get() = options.sampleRate
-    private val oscillators: Oscillators get() = options.oscillators
     private val samples: Samples get() = options.samples
     private val cps: Double get() = options.cps
     private val prefetchCycles: Int get() = options.prefetchCycles
@@ -187,14 +114,12 @@ class StrudelPlayer(
     private val cursorFrame = atomic(0L)
 
     // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Events schedules to be created as Voices
-    private val scheduled = MinHeap<ScheduledEvent> { a, b -> a.startFrame < b.startFrame }
-
-    // Active voices
-    private val activeVoices = ArrayList<Voice>(64)
 
     // Orbits
     private val orbits = Orbits(maxOrbits = maxOrbits, blockFrames = blockFrames, sampleRate = sampleRate)
+
+    // Voices Container (Manages lifecycle, scheduling, rendering)
+    private val voices = Voices(options, orbits)
 
     // Reusable scratchpad for single voice rendering
     private val voiceBuffer = DoubleArray(blockFrames)
@@ -212,7 +137,7 @@ class StrudelPlayer(
 
     // Scheduler-owned output channel; audio coroutine drains it.
     // We keep it buffered to absorb bursts from queryArc.
-    private var eventChannel: Channel<ScheduledEvent>? = null
+    private var eventChannel: Channel<ScheduledVoice>? = null
 
     // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Some stats
@@ -234,8 +159,7 @@ class StrudelPlayer(
         eventChannel = null
 
         // Audio-owned state; safe to clear here for next start().
-        scheduled.clear()
-        activeVoices.clear()
+        voices.clear()
         cursorFrame.value = 0L
     }
 
@@ -246,7 +170,7 @@ class StrudelPlayer(
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Fresh channel per run (makes stop/start robust)
-        val channel = Channel<ScheduledEvent>(capacity = 8192)
+        val channel = Channel<ScheduledVoice>(capacity = 8192)
         eventChannel = channel
 
         val format = AudioFormat(sampleRate.toFloat(), 16, 1, true, false)
@@ -288,17 +212,9 @@ class StrudelPlayer(
                         val events = fetchEventsSorted(from, to)
 
                         for (e in events) {
-                            // Drop events that should have already started ...
                             val res = channel.trySend(e.toScheduled())
-
-                            if (res.isFailure) {
-                                droppedEvents.incrementAndGet()
-                            }
-
-                            // If this is a sample sound make sure we load it
-                            if (e.isSampleSound) {
-                                samples.prefetch(e.sampleRequest)
-                            }
+                            // Stats ...
+                            if (res.isFailure) droppedEvents.incrementAndGet()
                         }
 
                         // Successfully processed this chunk, advance the cursor strictly
@@ -319,19 +235,13 @@ class StrudelPlayer(
 
             try {
                 while (isActive && running.value) {
+                    // Drain channel to voices
                     while (true) {
-                        val ev: ScheduledEvent = channel.tryReceive().getOrNull() ?: run {
-                            delay(5.milliseconds)
-                            break
-                        }
-                        scheduled.push(ev)
+                        val evt = channel.tryReceive().getOrNull() ?: break
+                        voices.schedule(evt)
                     }
-
-                    // Prepare new voices
-                    createVoices()
                     // Do the mixing
                     renderBlockInto(out)
-
                     // Write to the audio buffer
                     line.write(out, 0, out.size)
                 }
@@ -344,33 +254,17 @@ class StrudelPlayer(
     }
 
     private fun prefetchEventsAndSamples() {
-        val prefetched = fetchEventsSorted(0.0, prefetchCycles.toDouble())
-
-        // Schedule events
-        prefetched.forEach {
-            scheduled.push(it.toScheduled())
-        }
-
-        // Preload samples
-        prefetched.filter { it.isSampleSound }
-            .map { e -> e.sampleRequest }
-            .distinct()
-            .forEach { sampleRequest ->
-                samples.prefetch(sampleRequest)
-            }
+        fetchEventsSorted(0.0, prefetchCycles.toDouble())
+            .forEach { voices.schedule(it.toScheduled()) }
     }
 
     private fun fetchEventsSorted(from: Double, to: Double): List<StrudelPatternEvent> {
-//        println("Fetching events $from -> $to")
-
-        val events = pattern.queryArc(from, to, sampleRate)
-
-        return events
+        return pattern.queryArc(from, to, sampleRate)
             .filter { it.begin >= from && it.begin < to }
             .sortedBy { it.begin }
     }
 
-    private fun StrudelPatternEvent.toScheduled(): ScheduledEvent {
+    private fun StrudelPatternEvent.toScheduled(): ScheduledVoice {
         val startFrame = (begin * framesPerCycle).toLong()
         val durFrames = (dur * framesPerCycle).toLong().coerceAtLeast(1L)
 
@@ -382,459 +276,40 @@ class StrudelPlayer(
         val gateEndFrame = startFrame + durFrames
         val endFrame = gateEndFrame + releaseFrames
 
-        val scheduledEvent = ScheduledEvent(
+        val scheduledEvent = ScheduledVoice(
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,
-            e = this,
+            evt = this,
         )
 
         return scheduledEvent
     }
 
-    private fun createVoices() {
-        val blockStart = cursorFrame.value
-        val blockEndExclusive = blockStart + blockFrames
-
-        // 1) Promote scheduled events due in this block to active voices
-        while (true) {
-            val head = scheduled.peek() ?: break
-            if (head.startFrame >= blockEndExclusive) break
-            scheduled.pop()
-
-            // Has this voice already ended?
-            if (head.endFrame <= blockStart) continue
-
-            makeVoice(scheduled = head, nowFrame = blockStart)?.let { voice ->
-                activeVoices += voice
-            }
-        }
-    }
-
-    private fun makeVoice(scheduled: ScheduledEvent, nowFrame: Long): Voice? {
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Bake the filter for better performance
-        val bakedFilters = combineFilters(scheduled.e.filters)
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Setup Envelope
-        // Defaults: Attack=0.01s, Decay=0.0s, Sustain=1.0, Release=from scheduled logic
-        val envelope = Voice.Envelope(
-            attackFrames = (scheduled.e.attack ?: 0.01) * sampleRate,
-            decayFrames = (scheduled.e.decay ?: 0.0) * sampleRate,
-            sustainLevel = scheduled.e.sustain ?: 1.0,
-            // We calculated total release frames in toScheduled, we can reverse it or just re-calc
-            releaseFrames = (scheduled.endFrame - scheduled.gateEndFrame).toDouble()
-        )
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Routing
-        val orbit = scheduled.e.orbit ?: 0
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Delay
-        val delay = Voice.Delay(
-            amount = scheduled.e.delay ?: 0.0,
-            time = scheduled.e.delayTime ?: 0.0,
-            feedback = scheduled.e.delayFeedback ?: 0.0,
-        )
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Vibrato / LFO
-        val vibratoDepth = (scheduled.e.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
-        val vibratoRate = if (vibratoDepth > 0.0) scheduled.e.vibrato ?: 5.0 else 0.0
-        val vibrato = Voice.Vibrato(
-            depth = vibratoDepth,
-            rate = vibratoRate,
-            phase = 0.0,
-        )
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Tone or sound voice?
-        val note = scheduled.e.note
-        val sound = scheduled.e.sound
-
-        val isOsci = scheduled.e.isOscillator && note != null
-        val isSample = scheduled.e.isSampleSound && sound != null
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Switch
-        val voice: Voice? = when {
-            isOsci -> {
-                val freqHz = StrudelTones.resolveFreq(note, scheduled.e.scale)
-                val osc = oscillators.get(e = scheduled.e, freqHz = freqHz)
-                // Pre-calculate increment once
-                val phaseInc = Numbers.TWO_PI * freqHz / sampleRate.toDouble()
-
-                SynthVoice(
-                    orbit = orbit,
-                    startFrame = scheduled.startFrame,
-                    endFrame = scheduled.endFrame,
-                    gateEndFrame = scheduled.gateEndFrame,
-                    gain = scheduled.e.gain,
-                    osc = osc,
-                    filter = bakedFilters,
-                    envelope = envelope,
-                    delay = delay,
-                    vibrato = vibrato,
-                    freqHz = freqHz,
-                    phaseInc = phaseInc,
-                    phase = 0.0,
-                )
-            }
-
-            isSample -> {
-                samples.getIfLoaded(scheduled.e.sampleRequest)?.let { (sampleId, decoded) ->
-                    // Take the pitch of the sample as the basis
-                    val baseSamplePitchHz = sampleId.sample.pitchHz
-
-                    // Target pitch: if we have a note, use it; otherwise keep original pitch
-                    val targetHz = scheduled.e.note?.let { note ->
-                        StrudelTones.resolveFreq(note, scheduled.e.scale)
-                    } ?: baseSamplePitchHz
-
-                    val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
-
-                    // print(pitchRatio.toString().padEnd(5) + " ") // ... seems to be ok
-
-                    // sampleFrames per outputFrame, including pitch
-                    val rate = (decoded.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
-
-                    // If event is late, start inside the sample
-                    val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)
-                    val playhead0 = lateFrames.toDouble() * rate
-
-                    val pcmSize = decoded.pcm.size
-                    if (pcmSize <= 1) return null
-                    if (playhead0 >= (pcmSize - 1).toDouble()) return null
-
-                    val remainingOutFrames =
-                        ((pcmSize.toDouble() - playhead0) / rate).toLong().coerceAtLeast(1L)
-
-                    val endFrame = nowFrame + remainingOutFrames
-
-                    SampleVoice(
-                        orbit = orbit,
-                        startFrame = nowFrame,
-                        endFrame = endFrame,
-                        gateEndFrame = scheduled.gateEndFrame,
-                        gain = scheduled.e.gain,
-                        filter = bakedFilters,
-                        envelope = envelope,
-                        delay = delay,
-                        vibrato = vibrato,
-                        pcm = decoded.pcm,
-                        pcmSampleRate = decoded.sampleRate,
-                        rate = rate,
-                        playhead = playhead0,
-                    )
-                }
-            }
-
-            else -> null
-        }
-
-        return voice
-    }
-
-    // TODO: possible future performance optimization
-    //  - sort activeVoices by their orbit
-    //  -> why?
-    //
-    // From Gemini 3 Pro:
-    //
-    // Where it might slow down (The Constraints)
-    //
-    // The only real "cache thrashing" risk comes from the
-    // Orbits, and only if you scale up significantly.
-    // - Scenario: You have 16 Orbits active.
-    // - The Issue:
-    //   - Voice 1 writes to Orbit[0].mixBuffer.
-    //   - Voice 2 writes to Orbit[15].mixBuffer.
-    //   - Voice 3 writes to Orbit[3].mixBuffer.
-    //   - Since each orbit's buffers are roughly 16KB (Dry + Send), jumping between
-    //     them randomly could evict lines from L1/L2 cache.
-    //
-    // The Fix (Premature for now): If this ever becomes a problem, you would simply
-    // sort the activeVoices list by orbitIndex before the render loop. That way, you finish
-    // all work on Orbit 0 (keeping it hot in cache) before moving to Orbit 1.
-
-    // TODO: even deeper future performance optimization
-    //  - Question:
-    //    We could take this even further ... currently we do:
-    //    `orbits.clearAll()` ... but in theory we would only be required to clear the orbits that have current active voice, correct?
-    //    The same should be true for  `orbits.processAndMix(masterMixBuffer)`, right?
-    //
-    // Answer:
-    //
-    // Yes, absolutely. You only need to touch the Orbits that actually have audio in them.
-    //
-    // But there is a catch: **Effects Tail**.
-    // If an Orbit has a Delay (or Reverb), it continues to produce sound _even after all voices assigned to it have died_.
-    // So, "active" has two meanings:
-    //  1. **Voice Active:** A voice is currently writing to this Orbit.
-    //  2. **Tail Active:** The effects are still ringing out.
-    //
-    // ### Optimization Strategy
-    // We can optimize `processAndMix` and `clearAll` by tracking which orbits are truly "asleep".
-    // **Rules for Sleep:** An Orbit can only be skipped if:
-    //  1. **Input is silent:** No voices wrote to it this block.
-    //  2. **Buffers are empty:** Its `mixBuffer` and `delaySendBuffer` are all zeros.
-    //  3. **Effects are silent:** The Delay/Reverb internal buffers have decayed to silence (or below a threshold like -60dB).
-    //
-    // Since checking #3 is expensive (analyzing the delay line content), a simpler heuristic works well:
-    // - We can't skip `processAndMix` for an Orbit just because it has no voices. It needs to run to empty out the Delay buffer.
-    // - However, `clearAll` is already optimized by your use of `orbits.values`. If the map only contains active orbits, you're fine.
-    //
-    // **Wait, your `orbits` map logic:** Currently, `getOrInit` creates an Orbit and puts it in the map.
-    // **It never removes it.**. So after 5 minutes of jamming, all 16 orbits will likely be in the map and will
-    // be processed forever.
-    //
-    // ### The Improvement
-    // You should track "active" orbits vs "allocated" orbits. Or simply rely on the fact that processing 16 delay lines
-    // (even silent ones) is negligible for a modern CPU (it's just moving memory).
-    //
-    // **My recommendation:** Keep it simple for now. The overhead of checking "is this delay line silent?" per block
-    // might be more complex code-wise than just running the loop.
-    //
-    // However, your logic is slightly redundant: `clearAll`
-    //
-    // fun clearAll() {
-    //     for (orbit in orbits.values) {
-    //         orbit.clear()
-    //     }
-    // }
-    //
-    // If you wanted to be super optimized, you would only clear the buffers that were _written to_.
-    // But `DoubleArray.fill(0.0)` is extremely fast (memset).
-    //
-    // So, yes, you are right in theory, but in practice, for N <= 16, the current approach is perfectly fine.
-    // Optimization matters more when you have N=100s of tracks.
-
     private fun renderBlockInto(out: ByteArray) {
         val blockStart = cursorFrame.value
-        val blockEndExclusive = blockStart + blockFrames
 
-        // Clear the mix buffer
+        // 1. Clear global state
         masterMixBuffer.fill(0.0)
-        // Clear orbits
         orbits.clearAll()
 
-        var v = 0
-        while (v < activeVoices.size) {
-            val voice = activeVoices[v]
+        // 2. Process Voices (Writing to Orbits)
+        voices.process(blockStart)
 
-            if (blockEndExclusive <= voice.startFrame) {
-                // Voice hasn't started yet (shouldn't happen with current logic but safe to check)
-                v++
-                continue
-            }
-
-            // Voice has already ended, so we remove it
-            if (blockStart >= voice.endFrame) {
-                // Voice finished, Swap and Pop
-                val lastIdx = activeVoices.size - 1
-                if (v < lastIdx) {
-                    activeVoices[v] = activeVoices[lastIdx]
-                }
-                activeVoices.removeAt(lastIdx)
-                continue
-            }
-
-            // Calculate valid range for this voice within the block
-            // e.g., if voice starts at frame 10 of this 512 block, offset is 10
-            val vStart = maxOf(blockStart, voice.startFrame)
-            val vEnd = minOf(blockEndExclusive, voice.endFrame)
-
-            val bufferOffset = (vStart - blockStart).toInt()
-            val length = (vEnd - vStart).toInt()
-
-            // Apply routing, get orbit and init orbit if needed
-            val orbit = orbits.getOrInit(voice.orbit, voice)
-
-            // vibrato / modulation
-            val modulationBuffer: DoubleArray?
-            if (voice.vibrato.depth > 0.0) {
-                // Use the re-usable buffer
-                modulationBuffer = freqModBuffer
-
-                // Fill the buffer
-                val lfoInc = Numbers.TWO_PI * voice.vibrato.rate / sampleRate.toDouble()
-                var lfoP = voice.vibrato.phase
-
-                // Fill modulation buffer for the exact range we are about to process
-                for (i in 0 until length) {
-                    // 1.0 + (sin(lfo) * depth)
-                    modulationBuffer[bufferOffset + i] = 1.0 + sin(lfoP) * voice.vibrato.depth
-                    lfoP += lfoInc
-                }
-                // Update LFO phase for next block
-                voice.vibrato.phase = lfoP
-            } else {
-                // Not needed
-                modulationBuffer = null
-            }
-
-            when (voice) {
-                is SynthVoice -> {
-                    // Generate Audio into voiceBuffer
-                    voice.phase = voice.osc.process(
-                        buffer = voiceBuffer,
-                        offset = bufferOffset,
-                        length = length,
-                        phase = voice.phase,
-                        phaseInc = voice.phaseInc,
-                        phaseMod = modulationBuffer,
-                    )
-                    // 2. Apply Filters
-                    voice.filter.process(voiceBuffer, bufferOffset, length)
-                    // 3. Apply env and mix down
-                    applyEnvelopeAndMix(voice, vStart, length, bufferOffset, orbit)
-                }
-
-                is SampleVoice -> {
-                    // Fill voiceBuffer with sample data (linear interpolation)
-                    val pcm = voice.pcm
-                    val pcmMax = pcm.size - 1
-                    val gain = voice.gain
-
-                    var ph = voice.playhead
-                    val baseRate = voice.rate
-
-                    for (i in 0 until length) {
-                        val idxOut = bufferOffset + i
-                        val base = ph.toInt()
-
-                        if (base >= pcmMax) {
-                            // sample ended
-//                            voice.endFrame = minOf(voice.endFrame, vStart + i.toLong())
-                            voiceBuffer[idxOut] = 0.0
-                        } else {
-                            val frac = ph - base.toDouble()
-                            val a = pcm[base] * gain
-                            val b = pcm[base + 1] * gain
-                            voiceBuffer[idxOut] = a + (b - a) * frac
-                        }
-
-                        // Advance playhead
-                        // If vibrato is active, modulate the rate
-                        ph += if (modulationBuffer != null) {
-                            baseRate * modulationBuffer[idxOut]
-                        } else {
-                            baseRate
-                        }
-                    }
-
-                    // Update playhead!
-                    voice.playhead = ph
-                    // Process filters
-                    voice.filter.process(voiceBuffer, bufferOffset, length)
-                    // Apply env and mix down
-                    applyEnvelopeAndMix(voice, vStart, length, bufferOffset, orbit)
-                }
-            }
-
-            // goto next voice ...
-            v++
-        }
-
-        // Process Global delay
+        // 3. Process Global Delay & Sum Orbits
         orbits.processAndMix(masterMixBuffer)
 
-        // Convert Double Mix to Byte Output
+        // 4. Output Stage (Limiter & Convert to Bytes)
         for (i in 0 until blockFrames) {
-            // Apply Soft Clipping (Limiter) to avoid harsh digital distortion
-            // tanh provides a smooth saturation curve
             val rawSample = masterMixBuffer[i]
             val sample = kotlin.math.tanh(rawSample)
-
-            // Fallback hard clip just in case tanh edge cases (though tanh is bounded -1..1)
             val clamped = sample.coerceIn(-1.0, 1.0)
-
             val pcm = (clamped * Short.MAX_VALUE).toInt()
             out[i * 2] = (pcm and 0xff).toByte()
             out[i * 2 + 1] = ((pcm ushr 8) and 0xff).toByte()
         }
 
-        cursorFrame.value = blockEndExclusive
-    }
-
-    private fun applyEnvelopeAndMix(
-        voice: Voice,
-        vStart: Long,
-        length: Int,
-        bufferOffset: Int,
-        orbit: Orbit,
-    ) {
-        // Orbit buffers ... get them once so we do not need to deref on every int
-        val orbitMixBuffer = orbit.mixBuffer
-        val orbitDelaySendBuffer = orbit.delaySendBuffer
-
-        val env = voice.envelope
-        val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
-        val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
-        val relRate = if (env.releaseFrames > 0) env.sustainLevel / env.releaseFrames else 1.0
-
-        var absPos = vStart - voice.startFrame
-        val gateEndPos = voice.gateEndFrame - voice.startFrame
-        var currentEnv = env.level
-
-        // Optimization: check if we need to write to send buffer
-        val delayAmount = voice.delay.amount
-        val sendToDelay = delayAmount > 0.0
-
-        for (i in 0 until length) {
-            val idx = bufferOffset + i
-            val s = voiceBuffer[idx]
-
-            // /////////////////////////////////////////////////////////////////////////////////////////////////////////
-            // Envelope Logic
-            if (absPos >= gateEndPos) {
-                // Release Phase
-                val relPos = absPos - gateEndPos
-                currentEnv = env.sustainLevel - (relPos * relRate)
-            } else {
-                // Gate Open
-                if (absPos < env.attackFrames) {
-                    // Attack
-                    currentEnv = absPos * attRate
-                } else if (absPos < env.attackFrames + env.decayFrames) {
-                    // Decay
-                    val decPos = absPos - env.attackFrames
-                    currentEnv = 1.0 - (decPos * decRate)
-                } else {
-                    // Sustain
-                    currentEnv = env.sustainLevel
-                }
-            }
-
-            if (currentEnv < 0.0) currentEnv = 0.0
-
-
-            // /////////////////////////////////////////////////////////////////////////////////////////////////////////
-            // 1. Master Mix (Dry)
-            val dryVal = s * voice.gain * currentEnv
-            orbitMixBuffer[idx] += dryVal
-
-            // /////////////////////////////////////////////////////////////////////////////////////////////////////////
-            // 2. Delay Send (Wet)
-
-            if (sendToDelay) {
-                val wetVal = dryVal * delayAmount
-                orbitDelaySendBuffer[idx] += wetVal
-            }
-
-            // Move ahead ...
-            absPos++
-        }
-
-        // Save the last level back to the envelope state
-        env.level = currentEnv
-    }
-
-    private fun combineFilters(filters: List<AudioFilter>): AudioFilter {
-        if (filters.isEmpty()) return NoOpAudioFilter
-        if (filters.size == 1) return filters[0]
-        return ChainAudioFilter(filters)
+        // 5. Advance current fram
+        cursorFrame.value = blockStart + blockFrames
     }
 }

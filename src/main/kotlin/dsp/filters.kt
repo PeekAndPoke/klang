@@ -1,10 +1,15 @@
 package io.peekandpoke.dsp
 
+/**
+ * Audio filter interface.
+ */
 interface AudioFilter {
     fun process(buffer: DoubleArray, offset: Int, length: Int)
 }
 
-// Helper to combine multiple filters
+/**
+ * Performance optimized sequential combination of multiple [filters]
+ */
 class ChainAudioFilter(private val filters: List<AudioFilter>) : AudioFilter {
     override fun process(buffer: DoubleArray, offset: Int, length: Int) {
         // Apply each filter in sequence to the whole buffer
@@ -14,7 +19,9 @@ class ChainAudioFilter(private val filters: List<AudioFilter>) : AudioFilter {
     }
 }
 
-// No-op filter
+/**
+ * No-op filter
+ */
 object NoOpAudioFilter : AudioFilter {
     override fun process(buffer: DoubleArray, offset: Int, length: Int) {}
 }

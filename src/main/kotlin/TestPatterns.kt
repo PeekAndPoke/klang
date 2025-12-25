@@ -228,7 +228,7 @@ object TestPatterns {
 
     //    val active = smallTownBoyBass
 //    val active = smallTownBoyMelody
-//    val active = smallTownBoy
+    val active = smallTownBoy
 //    val active = tetris
 //    val active = c4Minor
 //    val active = numberNotes
@@ -252,5 +252,5 @@ object TestPatterns {
 //    val active = delaySlapBackDrums
 //    val active = twoOrbits
 
-    val active = vibratoTestOne
+//    val active = vibratoTestOne
 }
