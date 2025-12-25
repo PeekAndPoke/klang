@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.dsp.voice
+package io.peekandpoke.klang.dsp.voices
 
 import io.peekandpoke.klang.dsp.OscFn
 import io.peekandpoke.klang.dsp.filters.AudioFilter

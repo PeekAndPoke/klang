@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.dsp.orbits
 
 import io.peekandpoke.klang.dsp.StereoBuffer
-import io.peekandpoke.klang.dsp.voice.Voice
+import io.peekandpoke.klang.dsp.voices.Voice
 
 /**
  * Mixing Channels / Effect Buses

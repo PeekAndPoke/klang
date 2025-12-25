@@ -7,9 +7,9 @@ import io.peekandpoke.klang.dsp.filters.AudioFilter
 import io.peekandpoke.klang.dsp.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.dsp.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.dsp.orbits.Orbits
-import io.peekandpoke.klang.dsp.voice.SampleVoice
-import io.peekandpoke.klang.dsp.voice.SynthVoice
-import io.peekandpoke.klang.dsp.voice.Voice
+import io.peekandpoke.klang.dsp.voices.SampleVoice
+import io.peekandpoke.klang.dsp.voices.SynthVoice
+import io.peekandpoke.klang.dsp.voices.Voice
 import io.peekandpoke.klang.samples.Samples
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.utils.MinHeap

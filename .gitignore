@@ -17,7 +17,7 @@ out/
 !**/src/test/**/out/
 
 ### Kotlin ###
-.kotlin
+/.kotlin
 
 ### Eclipse ###
 .apt_generated
@@ -46,3 +46,4 @@ bin/
 
 /jssrc/node_modules
 /cache
+/tmp

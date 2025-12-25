@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.dsp.voice
+package io.peekandpoke.klang.dsp.voices
 
 import io.peekandpoke.klang.dsp.TWO_PI
 import kotlin.math.PI

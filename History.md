@@ -2,6 +2,13 @@
 
 ## 2025-12
 
+### (2025-12-25) Setting up project for Kotlin Multiplatform
+
+- Created a Kotlin Multiplatform project.
+- separating thing into a :core and a very thing :dsp module
+- Idea arises: Strudel is just one sound event provider
+  - with the correct structure we could build e.g. a midi-player on top of the architecture
+
 ### (2025-12-25) Strudel: Distortion
 
 - Implemented distortion and added it to the Strudel engine.

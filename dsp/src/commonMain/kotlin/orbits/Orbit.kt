@@ -3,7 +3,7 @@ package io.peekandpoke.klang.dsp.orbits
 import io.peekandpoke.klang.dsp.DelayLine
 import io.peekandpoke.klang.dsp.Reverb
 import io.peekandpoke.klang.dsp.StereoBuffer
-import io.peekandpoke.klang.dsp.voice.Voice
+import io.peekandpoke.klang.dsp.voices.Voice
 
 /**
  * Mixing channel / Effect bus ... called Orbit in strudel
