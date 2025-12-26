@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_bridge.KlangPlayerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.isActive
@@ -11,7 +12,7 @@ import kotlin.math.tanh
 
 class StrudelAudioLoop(
     private val options: StrudelPlayer.Options,
-    private val state: StrudelPlayerState,
+    private val state: KlangPlayerState,
     private val eventChannel: ReceiveChannel<StrudelScheduledVoice>,
     private val voices: StrudelVoices,
     private val orbits: Orbits,
@@ -48,7 +49,7 @@ class StrudelAudioLoop(
     }
 
     private fun renderBlockInto(out: ByteArray) {
-        val blockStart = state.cursorFrame.value
+        val blockStart = state.cursorFrame()
         masterMix.clear()
         orbits.clearAll()
 
@@ -69,6 +70,6 @@ class StrudelAudioLoop(
             out[baseIdx + 3] = ((pcmR ushr 8) and 0xff).toByte()
         }
 
-        state.cursorFrame.value = blockStart + options.blockFrames
+        state.cursorFrame(blockStart + options.blockFrames)
     }
 }

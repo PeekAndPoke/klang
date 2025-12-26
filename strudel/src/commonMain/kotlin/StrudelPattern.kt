@@ -26,7 +26,6 @@ interface StrudelPattern {
         }
     }
 
-
     /**
      * Queries events from [from] and [to] cycles.
      */
@@ -34,11 +33,15 @@ interface StrudelPattern {
 }
 
 /**
+ * Converts the pattern into an event source.
+ */
+fun StrudelPattern.asEventSource(): StrudelEventSource = StrudelEventSource(this)
+
+/**
  * Creates a static pattern, that can be stored and used for playback with
  * any life strudel event generator.
  *
  * Acts like recording the arc [from] - [to] for later playback.
  */
-fun StrudelPattern.makeStatic(from: Double, to: Double) = StrudelPattern.Static(
-    events = queryArc(from, to)
-)
+fun StrudelPattern.makeStatic(from: Double, to: Double): StrudelPattern.Static =
+    StrudelPattern.Static(events = queryArc(from, to))

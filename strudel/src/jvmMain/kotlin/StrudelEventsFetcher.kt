@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel
 
+import io.peekandpoke.klang.audio_bridge.KlangPlayerState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
@@ -9,7 +10,7 @@ import kotlinx.coroutines.isActive
 class StrudelEventsFetcher(
     private val pattern: StrudelPattern,
     private val options: StrudelPlayer.Options,
-    private val state: StrudelPlayerState,
+    private val state: KlangPlayerState,
     private val eventChannel: SendChannel<StrudelScheduledVoice>,
 ) {
     private val secPerCycle get() = 1.0 / options.cps
@@ -20,7 +21,7 @@ class StrudelEventsFetcher(
         val fetchChunk = 1.0
 
         while (scope.isActive) {
-            val nowFrame = state.cursorFrame.value
+            val nowFrame = state.cursorFrame()
             val nowSec = nowFrame.toDouble() / options.sampleRate.toDouble()
             val nowCycles = nowSec / secPerCycle
 

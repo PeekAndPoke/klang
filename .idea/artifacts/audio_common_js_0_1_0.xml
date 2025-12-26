@@ -1,6 +1,8 @@
 <component name="ArtifactManager">
   <artifact type="jar" name="audio_common-js-0.1.0">
     <output-path>$PROJECT_DIR$/audio_common/build/libs</output-path>
-    <root id="archive" name="audio_common-js-0.1.0.jar" />
+    <root id="archive" name="audio_common-js-0.1.0.jar">
+      <element id="module-output" name="klang.audio_common.jsMain" />
+    </root>
   </artifact>
 </component>

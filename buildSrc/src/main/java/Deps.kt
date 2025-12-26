@@ -143,9 +143,6 @@ object Deps {
         const val serialization_json =
             "org.jetbrains.kotlinx:kotlinx-serialization-json:$serialization_version"
 
-        const val atomicfu_version = "0.23.2"
-        const val atomicfu = "org.jetbrains.kotlinx:atomicfu:$atomicfu_version"
-
         // https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven/org/jetbrains/kotlinx/kotlinx-html/
         private const val html_version = "0.12.0"
         const val html = "org.jetbrains.kotlinx:kotlinx-html:$html_version"

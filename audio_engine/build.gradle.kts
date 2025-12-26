@@ -5,6 +5,10 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
+    id("com.google.devtools.ksp")
+    id("io.kotest")
+//    id("com.vanniktech.maven.publish")
 }
 
 val GROUP: String by project
@@ -16,6 +20,15 @@ version = VERSION_NAME
 kotlin {
     js {
         browser {
+            testTask {
+//                useKarma {
+//                    useChrome()
+//                    useChromeHeadless()
+//                    useChromiumHeadless()
+//                    useChromeCanaryHeadless()
+//                    useFirefoxHeadless()
+//                }
+            }
         }
     }
 
@@ -27,7 +40,6 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                // TODO: clean up deps
                 implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
@@ -36,8 +48,6 @@ kotlin {
                 implementation(Deps.Ktor.Client.core)
                 implementation(Deps.Ktor.Client.cio)
 
-                implementation(project(":audio_bridge"))
-                implementation(project(":audio_fe"))
                 implementation(project(":audio_be"))
             }
         }
@@ -52,9 +62,6 @@ kotlin {
 
         jvmMain {
             dependencies {
-                // GraalVM
-                implementation(Deps.JavaLibs.GraalVM.polyglot)
-                implementation(Deps.JavaLibs.GraalVM.js)
             }
         }
 
@@ -70,30 +77,4 @@ kotlin {
 
 tasks {
     configureJvmTests()
-
-    val buildStrudelBundle = register<Exec>("buildStrudelBundle") {
-        group = "build"
-        description = "Builds the Strudel ESM Graal-JS bridge using the shell script"
-
-        workingDir = file("jsbridge")
-
-        // Ensure the script is executable (useful for CI/Linux environments)
-        doFirst {
-            val script = file("jsbridge/build.sh")
-            if (script.exists()) {
-                script.setExecutable(true)
-            }
-        }
-
-        commandLine("./build.sh")
-
-        // Optimization: Only run if the JS source files changed
-        inputs.dir("jsbridge")
-        outputs.file("src/jvmMain/resources/strudel-entry.mjs")
-    }
-
-    // Ensure the bundle is built before resources are processed for the JVM
-    named("jvmProcessResources") {
-        dependsOn(buildStrudelBundle)
-    }
 }

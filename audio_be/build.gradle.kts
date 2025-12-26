@@ -5,7 +5,6 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
-    id("org.jetbrains.kotlinx.atomicfu")
 }
 
 val GROUP: String by project

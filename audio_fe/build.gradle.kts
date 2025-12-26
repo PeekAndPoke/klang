@@ -7,7 +7,6 @@ plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlinx.atomicfu")
     id("io.kotest")
 //    id("com.vanniktech.maven.publish")
 }
@@ -49,7 +48,7 @@ kotlin {
                 implementation(Deps.Ktor.Client.core)
                 implementation(Deps.Ktor.Client.cio)
 
-                implementation(project(":audio_be"))
+                implementation(project(":audio_bridge"))
             }
         }
 

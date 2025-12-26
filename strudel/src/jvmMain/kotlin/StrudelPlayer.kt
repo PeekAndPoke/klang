@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel
 import io.peekandpoke.klang.audio_be.Oscillators
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.oscillators
+import io.peekandpoke.klang.audio_bridge.KlangPlayerState
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.audio_fe.samples.create
 import kotlinx.coroutines.*
@@ -101,7 +102,7 @@ class StrudelPlayer(
 
     // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Playback state
-    private val state = StrudelPlayerState()
+    private val state = KlangPlayerState()
 
     // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -124,7 +125,7 @@ class StrudelPlayer(
     private var playerJob: Job? = null
 
     fun start() {
-        if (!state.running.compareAndSet(expect = false, update = true)) return
+        if (!state.running(expect = false, update = true)) return
 
         playerJob = scope.launch {
             val channel = Channel<StrudelScheduledVoice>(capacity = 8192)
@@ -153,11 +154,11 @@ class StrudelPlayer(
     }
 
     fun stop() {
-        if (!state.running.compareAndSet(expect = true, update = false)) return
+        if (!state.running(expect = true, update = false)) return
         playerJob?.cancel()
         playerJob = null
         voices.clear()
-        state.cursorFrame.value = 0L
+        state.cursorFrame(0L)
     }
 
     override fun close() = stop()

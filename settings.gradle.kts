@@ -5,9 +5,10 @@ rootProject.name = "klang"
 
 include(
     // Audio engine
-    ":audio_common",
+    ":audio_engine",
     ":audio_fe",
     ":audio_be",
+    ":audio_bridge",
 
     // Sequencers
     ":strudel",
