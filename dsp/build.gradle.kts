@@ -30,6 +30,11 @@ kotlin {
         }
     }
 
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+
     jvmToolchain(Deps.jvmTargetVersion)
 
     jvm {

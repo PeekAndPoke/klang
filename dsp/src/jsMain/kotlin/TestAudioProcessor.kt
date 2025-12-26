@@ -20,45 +20,35 @@ class TestAudioProcessor : AudioWorkletProcessor {
 
     private var ctx: Ctx? = null
 
-    private fun init(): Ctx {
-        if (ctx != null) return ctx!!
+    private fun init(block: Ctx.() -> Boolean): Boolean {
+        return (ctx ?: Ctx()).let { ctx ->
+            this.ctx = ctx
 
-        ctx = Ctx()
+            // Listening (Receiving from Main Thread)
+            port.onmessage = { e ->
+                console.log("TestAudioProcessor onmessage", e)
 
-        console.log("TestAudioProcessor init2", this)
-
-        // Listening (Receiving from Main Thread)
-        port.onmessage = { e ->
-            console.log("TestAudioProcessor onmessage", e)
-
-            ctx?.let { ctx ->
                 val msg = e.data.toString()
                 if (msg == "play") ctx.isPlaying = true
                 if (msg == "stop") ctx.isPlaying = false
             }
-        }
 
-        return ctx!!
+            block(ctx)
+        }
     }
 
     override fun process(
         inputs: Array<Array<Float32Array>>,
         outputs: Array<Array<Float32Array>>,
         parameters: dynamic,
-    ): Boolean {
-        // Init hack
-        if (ctx == null) init()
-        // We now have the ctx
-        val ctx = ctx!!
-
+    ): Boolean = init {
         // Port 0
         val output = outputs[0]
 
         // Number of channels (could be 1 for Mono, 2 for Stereo)
         val numChannels = output.size
 
-
-        if (numChannels == 0) return true
+        if (numChannels == 0) return@init true
 
         // We assume all channels are the same length (usually 128)
         val bufferSize = output[0].length
@@ -67,10 +57,10 @@ class TestAudioProcessor : AudioWorkletProcessor {
         for (i in 0 until bufferSize) {
             var sample = 0f
 
-            if (ctx.isPlaying) {
-                sample = (sin(ctx.phase) * 0.1).toFloat()
-                ctx.phase += ctx.phaseInc
-                if (ctx.phase >= 2.0 * PI) ctx.phase -= 2.0 * PI
+            if (isPlaying) {
+                sample = (sin(phase) * 0.1).toFloat()
+                phase += phaseInc
+                if (phase >= 2.0 * PI) phase -= 2.0 * PI
             }
 
             // Copy to all output channels (L, R, etc.)
@@ -79,7 +69,8 @@ class TestAudioProcessor : AudioWorkletProcessor {
             }
         }
 
-        return true
+        // Continue to run
+        true
     }
 }
 

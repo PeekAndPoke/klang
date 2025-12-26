@@ -1,0 +1,6 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="dsp-wasm-js-0.1.0">
+    <output-path>$PROJECT_DIR$/dsp/build/libs</output-path>
+    <root id="archive" name="dsp-wasm-js-0.1.0.jar" />
+  </artifact>
+</component>
