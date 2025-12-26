@@ -1,12 +1,10 @@
 package io.peekandpoke.klang.dsp
 
 fun main() {
-    val ctor = { TestAudioProcessor() }
-
     registerProcessor(
-        "test-audio-processor",
-        TestAudioProcessor::class.js,
+        "klang-audio-processor",
+        KlangAudioProcessor::class.js,
     )
 
-    println("TestAudioProcessor registered")
+    println("KlangAudioProcessor registered")
 }

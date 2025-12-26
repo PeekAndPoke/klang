@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AudioWorklet-Test</title>
+</head>
+<body>
+
+<h1>AudioWorklet-Test</h1>
+
+<button id="btn-start">Play</button>
+<button id="btn-stop">Stop</button>
+
+<script>
+    const btnStart = document.getElementById('btn-start');
+    const btnStop = document.getElementById('btn-stop');
+    let context = null;
+    let node = null;
+
+    async function loadWorklet() {
+        if (!context) {
+            context = new AudioContext();
+
+            // 1. Load the Kotlin-compiled Worklet
+            try {
+                await context.audioWorklet.addModule('dsp.js');
+                console.log("Module loaded");
+            } catch (e) {
+                console.error("Could not load dsp.js", e);
+                return;
+            }
+
+            // 2. Create the Node
+            // "test-audio-processor" must match the name in your main() function
+            node = new AudioWorkletNode(context, 'klang-audio-processor');
+
+            // 3. Connect to Speakers
+            node.connect(context.destination);
+
+            console.log("Node connected");
+        }
+
+        // 4. Send Command
+        if (context.state === 'suspended') {
+            await context.resume();
+        }
+    }
+
+    btnStart.addEventListener('click', async () => {
+        await loadWorklet();
+
+        node.port.postMessage("play");
+        console.log("Sent 'play' command");
+    });
+
+    btnStop.addEventListener('click', async () => {
+        await loadWorklet();
+
+        node.port.postMessage("stop");
+        console.log("Sent 'play' command");
+    })
+</script>
+
+
+</body>
+</html>

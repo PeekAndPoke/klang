@@ -5,7 +5,7 @@ import org.khronos.webgl.set
 import kotlin.math.PI
 import kotlin.math.sin
 
-class TestAudioProcessor : AudioWorkletProcessor {
+class KlangAudioProcessor : AudioWorkletProcessor {
 
     class Ctx {
         // State
@@ -26,7 +26,7 @@ class TestAudioProcessor : AudioWorkletProcessor {
 
             // Listening (Receiving from Main Thread)
             port.onmessage = { e ->
-                console.log("TestAudioProcessor onmessage", e)
+                console.log("KlangAudioProcessor onmessage", e)
 
                 val msg = e.data.toString()
                 if (msg == "play") ctx.isPlaying = true
@@ -48,20 +48,16 @@ class TestAudioProcessor : AudioWorkletProcessor {
         // Number of channels (could be 1 for Mono, 2 for Stereo)
         val numChannels = output.size
 
-        if (numChannels == 0) return@init true
+        if (numChannels == 0 || !isPlaying) return@init true
 
         // We assume all channels are the same length (usually 128)
         val bufferSize = output[0].length
 
         // Generate samples once per frame, then write to all channels
         for (i in 0 until bufferSize) {
-            var sample = 0f
-
-            if (isPlaying) {
-                sample = (sin(phase) * 0.1).toFloat()
-                phase += phaseInc
-                if (phase >= 2.0 * PI) phase -= 2.0 * PI
-            }
+            val sample = (sin(phase) * 0.1).toFloat()
+            phase += phaseInc
+            if (phase >= 2.0 * PI) phase -= 2.0 * PI
 
             // Copy to all output channels (L, R, etc.)
             for (channelIdx in 0 until numChannels) {
