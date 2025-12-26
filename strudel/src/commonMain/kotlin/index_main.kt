@@ -15,7 +15,7 @@ fun strudelPlayer(
     samples: Samples,
     options: KlangPlayer.Options,
     scope: CoroutineScope,
-): KlangPlayer<StrudelPatternEvent, StrudelScheduledVoice> {
+): KlangPlayer<StrudelPatternEvent, ScheduledVoice> {
     val cps = options.cps
     val sampleRate = options.sampleRate
 
@@ -31,14 +31,14 @@ fun strudelPlayer(
 
             val startFrame = (event.begin * framesPerCycle).toLong()
             val durFrames = (event.dur * framesPerCycle).toLong().coerceAtLeast(1L)
-            val releaseSec = event.release ?: 0.05
+            val releaseSec = event.data.release ?: 0.05
             val releaseFrames = (releaseSec * sampleRate).toLong()
 
-            StrudelScheduledVoice(
+            ScheduledVoice(
+                data = event.data,
                 startFrame = startFrame,
                 endFrame = startFrame + durFrames + releaseFrames,
                 gateEndFrame = startFrame + durFrames,
-                evt = event,
             )
         },
         audioLoop = { state, receiver ->
@@ -54,7 +54,7 @@ fun strudelPlayer(
             )
 
             val mix = StereoBuffer(blockFrames)
-            val loop = createAudioLoop<StrudelScheduledVoice>(sampleRate, blockFrames)
+            val loop = createAudioLoop<ScheduledVoice>(sampleRate, blockFrames)
 
             loop.runLoop(
                 state = state,

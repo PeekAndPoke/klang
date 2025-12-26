@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_bridge
+package io.peekandpoke.klang.audio_bridge.infra
 
 /** Shared state between fetcher and renderer */
 class KlangPlayerState {

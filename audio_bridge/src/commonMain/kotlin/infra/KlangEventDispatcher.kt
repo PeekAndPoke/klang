@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_bridge
+package io.peekandpoke.klang.audio_bridge.infra
 
 /**
  * Interface for dispatching (sending) events.

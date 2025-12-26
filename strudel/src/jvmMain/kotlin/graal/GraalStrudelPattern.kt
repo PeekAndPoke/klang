@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.graal
 
-import io.peekandpoke.klang.strudel.StrudelFilterDef
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
@@ -36,7 +37,7 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
     fun Value.toStrudelEvent(): StrudelPatternEvent {
         val event = this
 
-        val filters = mutableListOf<StrudelFilterDef>()
+        val filters = mutableListOf<FilterDef>()
 
         val part = event.getMember("part")
 
@@ -121,60 +122,64 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         // ///////////////////////////////////////////////////////////////////////////////////
         // Apply low pass filter?
         val cutoff = value.getMember("cutoff").safeNumberOrNull()
-        cutoff?.let { filters.add(StrudelFilterDef.LowPass(cutoffHz = it, q = resonance)) }
+        cutoff?.let { filters.add(FilterDef.LowPass(cutoffHz = it, q = resonance)) }
         // Apply high pass filter?
         val hcutoff = value.getMember("hcutoff").safeNumberOrNull()
-        hcutoff?.let { filters.add(StrudelFilterDef.HighPass(cutoffHz = it, q = resonance)) }
+        hcutoff?.let { filters.add(FilterDef.HighPass(cutoffHz = it, q = resonance)) }
 
         // add event
         return StrudelPatternEvent(
+            // Strudel Timing
             begin = begin,
             end = end,
             dur = dur,
-            // Frequency and note
-            note = note,
-            scale = scale,
-            gain = gain,
-            // Sound samples
-            sound = sound,
-            bank = bank,
-            soundIndex = soundIndex,
-            // Oscilator
-            density = density,
-            unison = unison,
-            detune = detune,
-            spread = spread,
-            // Filters
-            filters = filters,
-            // ADSR envelope
-            attack = attack,
-            decay = decay,
-            sustain = sustain,
-            release = release,
-            // Vibrato
-            vibrato = vibrato,
-            vibratoMod = vibratoMod,
-            // Distort / Shape
-            distort = distort,
-            // HPF / LPF
-            cutoff = cutoff,
-            hcutoff = hcutoff,
-            resonance = resonance,
-            // Routing
-            orbit = orbit,
-            // Pan
-            pan = pan,
-            // Delay
-            delay = delay,
-            delayTime = delayTime,
-            delayFeedback = delayFeedback,
-            // Reverb
-            room = room,
-            roomsize = roomSize,
-            // ???
-            bandf = null, // TODO ...
-            coarse = null, // TODO ...
-            crush = null, // TODO ...
+            // Voice data
+            data = VoiceData(
+                // Frequency and note
+                note = note,
+                scale = scale,
+                gain = gain,
+                // Sound samples
+                sound = sound,
+                bank = bank,
+                soundIndex = soundIndex,
+                // Oscilator
+                density = density,
+                unison = unison,
+                detune = detune,
+                spread = spread,
+                // Filters
+                filters = filters,
+                // ADSR envelope
+                attack = attack,
+                decay = decay,
+                sustain = sustain,
+                release = release,
+                // Vibrato
+                vibrato = vibrato,
+                vibratoMod = vibratoMod,
+                // Distort / Shape
+                distort = distort,
+                // HPF / LPF
+                cutoff = cutoff,
+                hcutoff = hcutoff,
+                resonance = resonance,
+                // Routing
+                orbit = orbit,
+                // Pan
+                pan = pan,
+                // Delay
+                delay = delay,
+                delayTime = delayTime,
+                delayFeedback = delayFeedback,
+                // Reverb
+                room = room,
+                roomsize = roomSize,
+                // ???
+                bandf = null, // TODO ...
+                coarse = null, // TODO ...
+                crush = null, // TODO ...
+            ),
         )
     }
 }

@@ -6,10 +6,14 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.osci.OscFn
 import io.peekandpoke.klang.audio_be.osci.Oscillators
 import io.peekandpoke.klang.audio_be.voices.SampleVoice
 import io.peekandpoke.klang.audio_be.voices.SynthVoice
 import io.peekandpoke.klang.audio_be.voices.Voice
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_fe.samples.SampleRequest
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.audio_fe.tones.Tones
 import io.peekandpoke.klang.audio_fe.utils.MinHeap
@@ -27,7 +31,7 @@ class StrudelVoices(
         val sampleRateDouble = sampleRate.toDouble()
     }
 
-    private val scheduled = MinHeap<StrudelScheduledVoice> { a, b -> a.startFrame < b.startFrame }
+    private val scheduled = MinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
 
     // Scratch buffers
@@ -43,17 +47,37 @@ class StrudelVoices(
         freqModBuffer = freqModBuffer
     )
 
+    fun VoiceData.isOscillator() = options.oscillators.isOsc(sound)
+
+    fun VoiceData.isSampleSound() = !isOscillator()
+
+    fun VoiceData.asSampleRequest() =
+        SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
+
+    fun VoiceData.createOscillator(oscillators: Oscillators, freqHz: Double): OscFn {
+        val e = this
+
+        return oscillators.get(
+            name = e.sound,
+            freqHz = freqHz,
+            density = e.density,
+            unison = e.unison,
+            detune = e.detune,
+            spread = e.spread,
+        )
+    }
+
     fun clear() {
         scheduled.clear()
         active.clear()
     }
 
-    fun schedule(voice: StrudelScheduledVoice) {
+    fun schedule(voice: ScheduledVoice) {
         scheduled.push(voice)
 
         // Prefetch sound samples
-        if (voice.evt.isSampleSound) {
-            options.samples.prefetch(voice.evt.sampleRequest)
+        if (voice.data.isSampleSound()) {
+            options.samples.prefetch(voice.data.asSampleRequest())
         }
     }
 
@@ -98,69 +122,70 @@ class StrudelVoices(
         }
     }
 
-    private fun StrudelFilterDef.toFilter(): AudioFilter = when (this) {
-        is StrudelFilterDef.LowPass ->
+    private fun FilterDef.toFilter(): AudioFilter = when (this) {
+        is FilterDef.LowPass ->
             LowPassHighPassFilters.createLPF(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
 
-        is StrudelFilterDef.HighPass ->
+        is FilterDef.HighPass ->
             LowPassHighPassFilters.createHPF(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
     }
 
-    private fun makeVoice(scheduled: StrudelScheduledVoice, nowFrame: Long): Voice? {
+    private fun makeVoice(scheduled: ScheduledVoice, nowFrame: Long): Voice? {
         val sampleRate = options.sampleRate
+        val data = scheduled.data
 
         // Bake Filters
-        val bakedFilters = scheduled.evt.filters.map { it.toFilter() }.combine()
+        val bakedFilters = data.filters.map { it.toFilter() }.combine()
 
         // Routing
-        val orbit = scheduled.evt.orbit ?: 0
+        val orbit = data.orbit ?: 0
 
         // Envelope
         val envelope = Voice.Envelope(
-            attackFrames = (scheduled.evt.attack ?: 0.01) * sampleRate,
-            decayFrames = (scheduled.evt.decay ?: 0.0) * sampleRate,
-            sustainLevel = scheduled.evt.sustain ?: 1.0,
+            attackFrames = (data.attack ?: 0.01) * sampleRate,
+            decayFrames = (data.decay ?: 0.0) * sampleRate,
+            sustainLevel = data.sustain ?: 1.0,
             releaseFrames = (scheduled.endFrame - scheduled.gateEndFrame).toDouble()
         )
 
         // Delay
         val delay = Voice.Delay(
-            amount = scheduled.evt.delay ?: 0.0,
-            time = scheduled.evt.delayTime ?: 0.0,
-            feedback = scheduled.evt.delayFeedback ?: 0.0,
+            amount = data.delay ?: 0.0,
+            time = data.delayTime ?: 0.0,
+            feedback = data.delayFeedback ?: 0.0,
         )
 
         // Reverb
         val reverb = Voice.Reverb(
-            room = scheduled.evt.room ?: 0.0,
+            room = data.room ?: 0.0,
             // In Strudel, room size is between [0 and 10], so we need to normalize it
             // See https://strudel.cc/learn/effects/#roomsize
-            roomSize = (scheduled.evt.roomsize ?: 0.0) / 10.0,
+            roomSize = (data.roomsize ?: 0.0) / 10.0,
         )
 
         // Vibrator
-        val vibratoDepth = (scheduled.evt.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
+        val vibratoDepth = (data.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
         val vibrator = Voice.Vibrator(
             depth = vibratoDepth,
-            rate = if (vibratoDepth > 0.0) scheduled.evt.vibrato ?: 5.0 else 0.0,
+            rate = if (vibratoDepth > 0.0) data.vibrato ?: 5.0 else 0.0,
         )
 
         // Effects
         val effects = Voice.Effects(
-            distort = scheduled.evt.distort ?: 0.0,
+            distort = data.distort ?: 0.0,
         )
 
         // Decision
-        val note = scheduled.evt.note
-        val sound = scheduled.evt.sound
-        val isOsci = scheduled.evt.isOscillator && note != null
-        val isSample = scheduled.evt.isSampleSound && sound != null
+        val note = data.note
+        val sound = data.sound
+        val isOsci = data.isOscillator() && note != null
+        val isSample = data.isSampleSound() && sound != null
 
         return when {
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             isOsci -> {
-                val freqHz = Tones.resolveFreq(note, scheduled.evt.scale)
-                val osc = scheduled.evt.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
+                val freqHz = Tones.resolveFreq(note, data.scale)
+                val osc = data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
                 val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
 
                 SynthVoice(
@@ -168,8 +193,8 @@ class StrudelVoices(
                     startFrame = scheduled.startFrame,
                     endFrame = scheduled.endFrame,
                     gateEndFrame = scheduled.gateEndFrame,
-                    gain = scheduled.evt.gain,
-                    pan = scheduled.evt.pan ?: 0.0,
+                    gain = data.gain,
+                    pan = data.pan ?: 0.0,
                     filter = bakedFilters,
                     envelope = envelope,
                     delay = delay,
@@ -184,11 +209,13 @@ class StrudelVoices(
 
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             isSample -> {
-                val loaded = options.samples.getIfLoaded(scheduled.evt.sampleRequest) ?: return null
+                val loaded = options.samples.getIfLoaded(data.asSampleRequest())
+                    ?: return null
+
                 val (sampleId, decoded) = loaded
 
                 val baseSamplePitchHz = sampleId.sample.pitchHz
-                val targetHz = scheduled.evt.note?.let { n -> Tones.resolveFreq(n, scheduled.evt.scale) }
+                val targetHz = data.note?.let { n -> Tones.resolveFreq(n, data.scale) }
                     ?: baseSamplePitchHz
                 val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
                 val rate = (decoded.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
@@ -203,8 +230,8 @@ class StrudelVoices(
                     startFrame = nowFrame,
                     endFrame = scheduled.endFrame,
                     gateEndFrame = scheduled.gateEndFrame,
-                    gain = scheduled.evt.gain,
-                    pan = scheduled.evt.pan ?: 0.0,
+                    gain = data.gain,
+                    pan = data.pan ?: 0.0,
                     filter = bakedFilters,
                     envelope = envelope,
                     delay = delay,

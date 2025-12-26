@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_bridge
+package io.peekandpoke.klang.audio_bridge.infra
 
 /**
  * A simple ring buffer to pass events from the fetcher (Main Thread) to the audio loop (Audio Thread).

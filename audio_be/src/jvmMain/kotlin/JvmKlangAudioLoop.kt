@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.KlangEventReceiver
-import io.peekandpoke.klang.audio_bridge.KlangPlayerState
+import io.peekandpoke.klang.audio_bridge.infra.KlangEventReceiver
+import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext

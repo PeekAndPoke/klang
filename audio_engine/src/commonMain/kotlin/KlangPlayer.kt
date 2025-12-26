@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_bridge.KlangPlayerState
-import io.peekandpoke.klang.audio_bridge.KlangRingBuffer
+import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
+import io.peekandpoke.klang.audio_bridge.infra.KlangRingBuffer
 import io.peekandpoke.klang.audio_fe.KlangEventFetcher
 import io.peekandpoke.klang.audio_fe.KlangEventSource
 import kotlinx.coroutines.CoroutineScope

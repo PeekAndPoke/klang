@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_fe
 
-import io.peekandpoke.klang.audio_bridge.KlangEventDispatcher
-import io.peekandpoke.klang.audio_bridge.KlangPlayerState
+import io.peekandpoke.klang.audio_bridge.infra.KlangEventDispatcher
+import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay

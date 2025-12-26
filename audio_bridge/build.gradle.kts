@@ -5,6 +5,7 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
 }
 
 val GROUP: String by project
@@ -24,11 +25,6 @@ kotlin {
         }
     }
 
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
-
     jvmToolchain(Deps.jvmTargetVersion)
 
     jvm {
@@ -37,6 +33,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                implementation(Deps.KotlinX.serialization_core)
             }
         }
 

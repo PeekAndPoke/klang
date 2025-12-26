@@ -1,11 +1,13 @@
 package io.peekandpoke.klang.strudel
 
+import io.peekandpoke.klang.audio_bridge.VoiceData
+
 /**
  * Use to schedule the playback of a voice
  */
-data class StrudelScheduledVoice(
+data class ScheduledVoice(
     /** The event that triggered this voice */
-    val evt: StrudelPatternEvent,
+    val data: VoiceData,
     /** Audio frame to start the voice */
     val startFrame: Long,
     /** Audio frame to stop the voice */

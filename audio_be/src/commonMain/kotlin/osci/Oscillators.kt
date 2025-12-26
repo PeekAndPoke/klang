@@ -62,15 +62,6 @@ class Oscillators private constructor(
     companion object {
         private val namesSet = Names.entries.map { it.name }.toSet()
 
-        fun isOsc(sound: String?): Boolean {
-            // No sound mean sine wave oscillator
-            if (sound == null) return true
-
-            val s = parseNameMul(sound).first
-
-            return namesSet.contains(s)
-        }
-
         val silenceFn = OscFn { buffer, offset, length, _, _, _ ->
             buffer.fill(0.0, offset, offset + length)
             0.0
@@ -553,6 +544,15 @@ class Oscillators private constructor(
             dust = dust,
             crackle = crackle,
         )
+    }
+
+    fun isOsc(sound: String?): Boolean {
+        // No sound mean sine wave oscillator
+        if (sound == null) return true
+
+        val s = parseNameMul(sound).first
+
+        return namesSet.contains(s)
     }
 
     fun get(
