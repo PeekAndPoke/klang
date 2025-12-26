@@ -71,7 +71,8 @@ kotlin {
                 implementation(Deps.Ktor.Client.core)
                 implementation(Deps.Ktor.Client.cio)
 
-                implementation(project(":core"))
+                implementation(project(":audio_fe"))
+                implementation(project(":strudel"))
             }
         }
 

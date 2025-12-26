@@ -4,6 +4,10 @@ plugins {
 rootProject.name = "klang"
 
 include(
-    ":core",
-    ":dsp",
+    // Audio engine
+    ":audio_fe",
+    ":audio_be",
+
+    // Sequencers
+    ":strudel",
 )

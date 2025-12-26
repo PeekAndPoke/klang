@@ -1,13 +1,12 @@
 package io.peekandpoke.klang
 
-import io.peekandpoke.klang.samples.SampleCatalogue
-import io.peekandpoke.klang.samples.Samples
-import io.peekandpoke.klang.samples.create
+import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
+import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.audio_fe.samples.create
 import io.peekandpoke.klang.strudel.StrudelPlayer
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
-import java.nio.file.Path
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -48,7 +47,9 @@ private suspend fun helloStrudel() {
     // Song collections:
     // https://github.com/eefano/strudel-songs-collection
 
-    val strudel = GraalStrudelCompiler(Path.of("./build/strudel-bundle.mjs"))
+    val strudel = GraalStrudelCompiler(
+//        Path.of("./build/strudel-bundle.mjs").toFile()
+    )
 
     strudel.use { strudel ->
         val pattern = TestPatterns.active

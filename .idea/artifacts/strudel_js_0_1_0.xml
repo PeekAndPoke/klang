@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="strudel-js-0.1.0">
+    <output-path>$PROJECT_DIR$/strudel/build/libs</output-path>
+    <root id="archive" name="strudel-js-0.1.0.jar">
+      <element id="module-output" name="klang.strudel.jsMain" />
+    </root>
+  </artifact>
+</component>

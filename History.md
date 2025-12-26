@@ -1,6 +1,19 @@
 # Project history
 
+## AI cost
+
+- 300 EUR / year for JetBrains AI Ultimate
+- 23-12-2025: bought 10 more AI credits -> 11.90 EUR
+- 26-12-2025: bought 50 more AI credits -> 59.90 EUR
+
 ## 2025-12
+
+### (2025-12-26) Browser backend
+
+- figuring out how to implement the audio-backend in the browser
+- Having trouble with KotlinJS compiler bugs getting the AudioWorkletProcessor
+  - found hacky workarounds
+- Also tried Wasm ... more problems... will try again later, once the JS backend works
 
 ### (2025-12-25) Setting up project for Kotlin Multiplatform
 

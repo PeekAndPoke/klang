@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="audio_fe-jvm-0.1.0">
+    <output-path>$PROJECT_DIR$/audio_fe/build/libs</output-path>
+    <root id="archive" name="audio_fe-jvm-0.1.0.jar">
+      <element id="module-output" name="klang.audio_fe.jvmMain" />
+    </root>
+  </artifact>
+</component>

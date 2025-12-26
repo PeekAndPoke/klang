@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="audio_be-wasm-js-0.1.0">
+    <output-path>$PROJECT_DIR$/audio_be/build/libs</output-path>
+    <root id="archive" name="audio_be-wasm-js-0.1.0.jar">
+      <element id="module-output" name="klang.audio_be.wasmJsMain" />
+    </root>
+  </artifact>
+</component>

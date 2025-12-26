@@ -1,4 +1,9 @@
-## Strudel Engine Next Steps
+# Immediate Todos
+
+- clean up dependencies of "strudel" module once KlangEngine is implemented and Strudel
+  has become a simple KlangEventSource
+
+# Strudel Engine Next Steps
 
 ## Filters
 

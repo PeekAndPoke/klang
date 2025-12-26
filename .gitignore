@@ -44,6 +44,6 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-/jssrc/node_modules
+node_modules
 /cache
 /tmp
