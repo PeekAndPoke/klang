@@ -12,6 +12,7 @@ import io.peekandpoke.klang.audio_be.voices.SampleVoice
 import io.peekandpoke.klang.audio_be.voices.SynthVoice
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_fe.samples.SampleRequest
 import io.peekandpoke.klang.audio_fe.samples.Samples

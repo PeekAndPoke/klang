@@ -1,6 +1,4 @@
-package io.peekandpoke.klang.strudel
-
-import io.peekandpoke.klang.audio_bridge.VoiceData
+package io.peekandpoke.klang.audio_bridge
 
 /**
  * Use to schedule the playback of a voice

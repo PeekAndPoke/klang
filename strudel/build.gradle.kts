@@ -27,19 +27,11 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                // TODO: clean up deps
-                implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
 
-                implementation(Deps.Ktor.Client.core)
-                implementation(Deps.Ktor.Client.cio)
-
-                implementation(project(":audio_engine"))
-                implementation(project(":audio_bridge"))
-                implementation(project(":audio_fe"))
-                implementation(project(":audio_be"))
+                api(project(":audio_engine"))
             }
         }
 
