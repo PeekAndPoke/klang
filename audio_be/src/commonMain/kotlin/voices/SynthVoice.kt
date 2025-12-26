@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.OscFn
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import io.peekandpoke.klang.audio_be.osci.OscFn
 
 class SynthVoice(
     override val orbitId: Int,

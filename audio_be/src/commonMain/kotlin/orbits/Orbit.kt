@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_be.orbits
 
-import io.peekandpoke.klang.audio_be.DelayLine
-import io.peekandpoke.klang.audio_be.Reverb
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**

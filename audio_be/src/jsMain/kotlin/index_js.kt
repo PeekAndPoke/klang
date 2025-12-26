@@ -1,5 +1,8 @@
 package io.peekandpoke.klang.audio_be
 
+/**
+ * Entry point for the AudioWorklet
+ */
 fun main() {
     registerProcessor(
         "klang-audio-processor",
@@ -8,3 +11,6 @@ fun main() {
 
     println("KlangAudioProcessor registered")
 }
+
+actual fun <S> createAudioLoop(sampleRate: Int, blockFrames: Int): KlangAudioLoop<S> =
+    TODO("Not yet implemented")

@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.audio_be.Oscillators
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.oscillators
+import io.peekandpoke.klang.audio_be.osci.Oscillators
+import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_bridge.KlangPlayerState
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.audio_fe.samples.create

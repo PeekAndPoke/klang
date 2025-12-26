@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.audio_be.OscFn
-import io.peekandpoke.klang.audio_be.Oscillators
+import io.peekandpoke.klang.audio_be.osci.OscFn
+import io.peekandpoke.klang.audio_be.osci.Oscillators
 import io.peekandpoke.klang.audio_fe.samples.SampleRequest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient

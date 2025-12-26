@@ -304,8 +304,8 @@ object TestPatterns {
     val all = listOf<String>(
 //        smallTownBoyBass,
 //        smallTownBoyMelody,
-        smallTownBoy,
-//        tetris,
+//        smallTownBoy,
+        tetris,
 //        tetrisRemix,
 //        c4Minor,
 //        numberNotes,

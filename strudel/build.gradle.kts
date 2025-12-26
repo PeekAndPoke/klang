@@ -36,6 +36,7 @@ kotlin {
                 implementation(Deps.Ktor.Client.core)
                 implementation(Deps.Ktor.Client.cio)
 
+                implementation(project(":audio_engine"))
                 implementation(project(":audio_bridge"))
                 implementation(project(":audio_fe"))
                 implementation(project(":audio_be"))

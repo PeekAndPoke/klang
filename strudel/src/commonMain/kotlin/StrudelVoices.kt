@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.audio_be.ONE_OVER_TWELVE
-import io.peekandpoke.klang.audio_be.Oscillators
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.osci.Oscillators
 import io.peekandpoke.klang.audio_be.voices.SampleVoice
 import io.peekandpoke.klang.audio_be.voices.SynthVoice
 import io.peekandpoke.klang.audio_be.voices.Voice

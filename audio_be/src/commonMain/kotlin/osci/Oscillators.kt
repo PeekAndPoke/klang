@@ -1,5 +1,7 @@
-package io.peekandpoke.klang.audio_be
+package io.peekandpoke.klang.audio_be.osci
 
+import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.safeEnumOrNull
 import kotlin.math.*
 import kotlin.random.Random
 

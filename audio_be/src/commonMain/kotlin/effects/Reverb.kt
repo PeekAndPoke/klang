@@ -1,4 +1,6 @@
-package io.peekandpoke.klang.audio_be
+package io.peekandpoke.klang.audio_be.effects
+
+import io.peekandpoke.klang.audio_be.StereoBuffer
 
 // TODO: align with Strudel
 //  - currently the effect of "room" and "size" are waaaay to strong compared to strudel

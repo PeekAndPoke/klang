@@ -1,10 +1,14 @@
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.audio_fe.samples.create
-import io.peekandpoke.klang.strudel.StrudelPlayer
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.strudel.strudelPlayer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
 
@@ -55,7 +59,7 @@ private suspend fun helloStrudel() {
         val pattern = TestPatterns.active
 
         val compiled = strudel.compile(pattern).await()
-        strudel.dumpPatternArc(compiled)
+//        strudel.dumpPatternArc(compiled)
 
 //        compiled.queryArc(0.0, 4.0).forEach {
 //            strudel.prettyFormat(it)
@@ -68,15 +72,27 @@ private suspend fun helloStrudel() {
 //            catalogue = SampleCatalogue.of(SampleCatalogue.strudelDefaultDrums),
         )
 
-        val audio = StrudelPlayer(
+//        val audio = StrudelPlayer(
+//            pattern = compiled,
+//            options = StrudelPlayer.Options(
+//                sampleRate = 48_000,
+//                cps = 0.5,
+//                samples = samples,
+//            ),
+//        )
+
+        val audio = strudelPlayer(
             pattern = compiled,
-            options = StrudelPlayer.Options(
+            samples = samples,
+            options = KlangPlayer.Options(
                 sampleRate = 48_000,
                 cps = 0.5,
-                samples = samples,
+//                samples = samples,
             ),
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
         )
 
+        println("start ...")
         audio.start()
 
         delay(600_000)

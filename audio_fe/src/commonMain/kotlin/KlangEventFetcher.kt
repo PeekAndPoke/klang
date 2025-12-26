@@ -1,16 +1,16 @@
 package io.peekandpoke.klang.audio_fe
 
+import io.peekandpoke.klang.audio_bridge.KlangEventDispatcher
 import io.peekandpoke.klang.audio_bridge.KlangPlayerState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 class KlangEventFetcher<T, S>(
     private val source: KlangEventSource<T>,
     private val state: KlangPlayerState,
-    private val eventChannel: SendChannel<S>,
+    private val eventChannel: KlangEventDispatcher<S>,
     private val config: Config,
     private val transform: (T) -> S,
 ) {
@@ -25,7 +25,7 @@ class KlangEventFetcher<T, S>(
     private val secPerCycle get() = 1.0 / config.cps
 
     suspend fun runFetcher(scope: CoroutineScope) {
-        var queryCursorCycles = config.prefetchCycles
+        var queryCursorCycles = 0.0
         val fetchChunk = 1.0
 
         while (scope.isActive) {
@@ -44,7 +44,7 @@ class KlangEventFetcher<T, S>(
 
                     for (e in events) {
                         // Transform source event T to scheduled event S
-                        eventChannel.send(transform(e))
+                        eventChannel.dispatch(transform(e))
                     }
 
                     queryCursorCycles = to
@@ -54,6 +54,7 @@ class KlangEventFetcher<T, S>(
                     break
                 }
             }
+
             delay(config.fetchPeriodMs)
         }
     }

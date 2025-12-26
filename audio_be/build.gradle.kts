@@ -30,11 +30,6 @@ kotlin {
         }
     }
 
-    wasmJs {
-        browser()
-        binaries.executable()
-    }
-
     jvmToolchain(Deps.jvmTargetVersion)
 
     jvm {
@@ -43,6 +38,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                implementation(project(":audio_bridge"))
             }
         }
 
@@ -56,6 +52,7 @@ kotlin {
 
         jvmMain {
             dependencies {
+                implementation(Deps.KotlinX.coroutines_core)
             }
         }
 
