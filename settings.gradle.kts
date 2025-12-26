@@ -5,6 +5,7 @@ rootProject.name = "klang"
 
 include(
     // Audio engine
+    ":audio_common",
     ":audio_fe",
     ":audio_be",
 

@@ -21,6 +21,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/audio_be" />
+            <option value="$PROJECT_DIR$/audio_common" />
             <option value="$PROJECT_DIR$/audio_fe" />
             <option value="$PROJECT_DIR$/buildSrc" />
             <option value="$PROJECT_DIR$/strudel" />

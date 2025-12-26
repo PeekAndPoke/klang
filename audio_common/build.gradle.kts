@@ -23,12 +23,6 @@ kotlin {
                 cssSupport { enabled.set(false) }
             }
         }
-
-        compilerOptions {
-            // This forces Kotlin to generate "class X extends Y" instead of functions.
-            // This is required for AudioWorklets, WebComponents, etc.
-            target.set("es2015")
-        }
     }
 
     wasmJs {

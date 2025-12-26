@@ -18,7 +18,7 @@ class StrudelAudioLoop(
 ) {
     private val masterMix = StereoBuffer(options.blockFrames)
 
-    suspend fun runLoop(scope: CoroutineScope) {
+    fun runLoop(scope: CoroutineScope) {
         val format = AudioFormat(options.sampleRate.toFloat(), 16, 2, true, false)
         val line = AudioSystem.getSourceDataLine(format)
 

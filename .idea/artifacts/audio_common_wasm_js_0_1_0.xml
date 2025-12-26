@@ -1,0 +1,6 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="audio_common-wasm-js-0.1.0">
+    <output-path>$PROJECT_DIR$/audio_common/build/libs</output-path>
+    <root id="archive" name="audio_common-wasm-js-0.1.0.jar" />
+  </artifact>
+</component>
