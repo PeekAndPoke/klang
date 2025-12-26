@@ -68,8 +68,32 @@ kotlin {
     }
 }
 
-
-
 tasks {
     configureJvmTests()
+
+    val buildStrudelBundle = register<Exec>("buildStrudelBundle") {
+        group = "build"
+        description = "Builds the Strudel ESM Graal-JS bridge using the shell script"
+
+        workingDir = file("jsbridge")
+
+        // Ensure the script is executable (useful for CI/Linux environments)
+        doFirst {
+            val script = file("jsbridge/build.sh")
+            if (script.exists()) {
+                script.setExecutable(true)
+            }
+        }
+
+        commandLine("./build.sh")
+
+        // Optimization: Only run if the JS source files changed
+        inputs.dir("jsbridge")
+        outputs.file("src/jvmMain/resources/strudel-entry.mjs")
+    }
+
+    // Ensure the bundle is built before resources are processed for the JVM
+    named("jvmProcessResources") {
+        dependsOn(buildStrudelBundle)
+    }
 }

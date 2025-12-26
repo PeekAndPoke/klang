@@ -8,6 +8,12 @@
 
 ## 2025-12
 
+### (2025-12-26) Project structure
+
+- Organization into audio-frontend and audio-backend modules
+- Strudel has its own module
+  - leads to better separation in general
+
 ### (2025-12-26) Browser backend
 
 - figuring out how to implement the audio-backend in the browser

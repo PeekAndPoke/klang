@@ -10,6 +10,7 @@ import java.net.URL
 
 class GraalStrudelCompiler(
     bundleUrl: URL = defaultBundle,
+    debug: Boolean = false,
 ) : StrudelCompiler, AutoCloseable {
 
     companion object {
@@ -57,29 +58,31 @@ class GraalStrudelCompiler(
         ?: error("Error loading Strudel bundle: $bundleUrl, missing export 'prettyFormat'")
 
     init {
-        println(
-            """
-            Successfully loaded Strudel esm javascript bundle into Graal: 
-                $bundleUrl
-            
-            Successfully got polyfills:
-             - performance: $performance
-            
-            Successfully got Strudel modules:
-             - core: $core
-             - mini: $mini
-             - tonal: $tonal
-             
-            Successfully got Strudel functions:
-              - compile: $compileFn
-              - queryPattern: $queryPatternFn
-              
-            Successfully got Strudel helpers:
-              - prettyFormat: $prettyFormatFn
-            
-            Let's make some music now ...
-        """.trimIndent()
-        )
+        if (debug) {
+            println(
+                """
+                    Successfully loaded Strudel esm javascript bundle into Graal: 
+                        $bundleUrl
+                    
+                    Successfully got polyfills:
+                     - performance: $performance
+                    
+                    Successfully got Strudel modules:
+                     - core: $core
+                     - mini: $mini
+                     - tonal: $tonal
+                     
+                    Successfully got Strudel functions:
+                      - compile: $compileFn
+                      - queryPattern: $queryPatternFn
+                      
+                    Successfully got Strudel helpers:
+                      - prettyFormat: $prettyFormatFn
+                    
+                    Let's make some music now ...
+                """.trimIndent()
+            )
+        }
     }
 
     /**
