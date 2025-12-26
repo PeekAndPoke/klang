@@ -13,6 +13,11 @@
 - Organization into audio-frontend and audio-backend modules
 - Strudel has its own module
   - leads to better separation in general
+- Splitting StrudelPlayer into separate concerns:
+  - StrudelPlayer
+  - StrudelPlayerState
+  - StrudelEventsFetcher
+  - StrudelAudioLoop
 
 ### (2025-12-26) Browser backend
 
