@@ -6,22 +6,20 @@ import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.audio_fe.samples.Samples
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlin.math.tanh
-
 
 fun strudelPlayer(
     pattern: StrudelPattern,
-    samples: Samples,
     options: KlangPlayer.Options,
-    scope: CoroutineScope,
+    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ): KlangPlayer<StrudelPatternEvent, ScheduledVoice> {
     val cps = options.cps
     val sampleRate = options.sampleRate
-
-    // TODO: add to KlangPlayer.Options
-    val blockFrames = 512
+    val blockFrames = options.blockSize
+    val samples = options.samples
 
     return KlangPlayer(
         source = pattern.asEventSource(),
@@ -43,6 +41,9 @@ fun strudelPlayer(
             )
         },
         audioLoop = { state, receiver ->
+            // TODO: this is wrong here ...
+            //  - The audio loop creates the orbits and everything by itself
+
             val orbits = Orbits(maxOrbits = 16, blockFrames = blockFrames, sampleRate = sampleRate)
             val voices = StrudelVoices(
                 StrudelVoices.Options(
@@ -90,5 +91,4 @@ fun strudelPlayer(
         },
         scope = scope
     )
-
 }

@@ -3,10 +3,12 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_bridge.infra.KlangEventReceiver
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
+import kotlin.time.Duration.Companion.milliseconds
 
 class JvmKlangAudioLoop<S>(
     private val sampleRate: Int,
@@ -20,12 +22,14 @@ class JvmKlangAudioLoop<S>(
         renderBlock: (ByteArray) -> Unit,
     ) {
         // Run on IO dispatcher to avoid blocking the main thread with audio I/O
-        withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO.limitedParallelism(1)) {
+            // Stereo
             val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
+            // Audio line
             val line = AudioSystem.getSourceDataLine(format)
 
             // Buffer size: 500ms should be safe enough for JVM
-            val bufferMs = 500
+            val bufferMs = 250
             val bufferFrames = (sampleRate * bufferMs / 1000.0).toInt()
             // 4 bytes per frame (Stereo 16-bit)
             val bufferBytes = bufferFrames * 4
@@ -51,6 +55,9 @@ class JvmKlangAudioLoop<S>(
                     // 3. Write to Hardware
                     // This call blocks if the hardware buffer is full, pacing the loop
                     line.write(out, 0, out.size)
+
+                    // Wait a bit
+                    delay(10.milliseconds)
                 }
             } finally {
                 // Cleanup

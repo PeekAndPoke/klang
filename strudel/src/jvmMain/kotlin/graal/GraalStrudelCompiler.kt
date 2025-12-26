@@ -7,6 +7,8 @@ import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.Source
 import org.graalvm.polyglot.Value
 import java.net.URL
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 class GraalStrudelCompiler(
     bundleUrl: URL = defaultBundle,
@@ -17,6 +19,8 @@ class GraalStrudelCompiler(
         val defaultBundle = GraalStrudelCompiler::class.java.classLoader.getResource("strudel-bundle.mjs")
             ?: error("Could not find strudel-entry.mjs in resources")
     }
+
+    private val lock = ReentrantLock()
 
     val ctx: Context = Context.newBuilder("js")
         .option("js.esm-eval-returns-exports", "true")
@@ -88,7 +92,7 @@ class GraalStrudelCompiler(
     /**
      * Compiles the given strudel [pattern]
      */
-    override fun compile(pattern: String): Deferred<GraalStrudelPattern> {
+    override fun compile(pattern: String): Deferred<GraalStrudelPattern> = lock.withLock {
         val promise = compileFn.execute(pattern)
 
         return promise.promiseToDeferred {
@@ -99,7 +103,7 @@ class GraalStrudelCompiler(
     /**
      * Queries events from [pattern] between [from] and [to] cycles.
      */
-    fun queryPattern(pattern: Value?, from: Double, to: Double): Value? {
+    fun queryPattern(pattern: Value?, from: Double, to: Double): Value? = lock.withLock {
         return queryPatternFn.execute(pattern, from, to)
     }
 
@@ -107,7 +111,7 @@ class GraalStrudelCompiler(
      * Formats the given [value] as a pretty string.
      */
     @Suppress("unused")
-    fun prettyFormat(value: Any?): Value? {
+    fun prettyFormat(value: Any?): Value? = lock.withLock {
         return prettyFormatFn.execute(value)
     }
 
@@ -115,7 +119,7 @@ class GraalStrudelCompiler(
      * Queries events from the given [pattern] between [from] and [to] cycles and debug dumps them.
      */
     @Suppress("unused")
-    fun dumpPatternArc(pattern: Value?, from: Double = 0.0, to: Double = 2.0) {
+    fun dumpPatternArc(pattern: Value?, from: Double = 0.0, to: Double = 2.0) = lock.withLock {
         pattern?.let {
             println("pattern: $pattern")
 
@@ -134,8 +138,9 @@ class GraalStrudelCompiler(
     /**
      * Queries events from the given [pattern] between [from] and [to] cycles and debug dumps them.
      */
-    fun dumpPatternArc(pattern: GraalStrudelPattern, from: Double = 0.0, to: Double = 2.0) =
+    fun dumpPatternArc(pattern: GraalStrudelPattern, from: Double = 0.0, to: Double = 2.0) = lock.withLock {
         dumpPatternArc(pattern = pattern.value, from = from, to = to)
+    }
 
     override fun close() = ctx.close()
 }

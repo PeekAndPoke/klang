@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.audio_fe.samples
 
-/** What the pattern asks for (bank + sound + optional variant index). */
+/**
+ * Used to request a sample from [Samples]
+ */
 data class SampleRequest(
     /** Name of the requested bank ... null means default sounds */
     val bank: String?,

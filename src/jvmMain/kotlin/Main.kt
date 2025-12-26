@@ -6,9 +6,6 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.audio_fe.samples.create
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.strudelPlayer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
 
@@ -58,7 +55,10 @@ private suspend fun helloStrudel() {
     strudel.use { strudel ->
         val pattern = TestPatterns.active
 
-        val compiled = strudel.compile(pattern).await()
+        val pattern1 = strudel.compile(pattern).await()
+
+        val pattern2 = strudel.compile(TestPatterns.smallTownBoy).await()
+
 //        strudel.dumpPatternArc(compiled)
 
 //        compiled.queryArc(0.0, 4.0).forEach {
@@ -66,37 +66,32 @@ private suspend fun helloStrudel() {
 //            println("${it.begin} ${it.note} ${it.sound}")
 //        }
 
-        val samples = Samples.create(
-            catalogue = SampleCatalogue.default,
-//            catalogue = SampleCatalogue.of(SampleCatalogue.piano),
-//            catalogue = SampleCatalogue.of(SampleCatalogue.strudelDefaultDrums),
-        )
-
-//        val audio = StrudelPlayer(
-//            pattern = compiled,
-//            options = StrudelPlayer.Options(
-//                sampleRate = 48_000,
-//                cps = 0.5,
-//                samples = samples,
-//            ),
-//        )
-
-        val audio = strudelPlayer(
-            pattern = compiled,
+        val samples = Samples.create(catalogue = SampleCatalogue.default)
+        val playerOptions = KlangPlayer.Options(
             samples = samples,
-            options = KlangPlayer.Options(
-                sampleRate = 48_000,
-                cps = 0.5,
-//                samples = samples,
-            ),
-            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+            sampleRate = 48_000,
+            cps = 0.5,
         )
 
-        println("start ...")
-        audio.start()
+        val audio1 = strudelPlayer(
+            pattern = pattern1,
+            options = playerOptions,
+        )
+
+        println("start 1 ...")
+        audio1.start()
+
+//        val audio2 = strudelPlayer(
+//            pattern = pattern2,
+//            options = playerOptions,
+//        )
+//
+//        println("start 2 ...")
+//        audio2.start()
 
         delay(600_000)
-        audio.stop()
+        audio1.stop()
+//        audio2.stop()
         println("Done")
     }
 }

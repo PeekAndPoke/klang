@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import io.peekandpoke.klang.audio_bridge.infra.KlangRingBuffer
 import io.peekandpoke.klang.audio_fe.KlangEventFetcher
 import io.peekandpoke.klang.audio_fe.KlangEventSource
+import io.peekandpoke.klang.audio_fe.samples.Samples
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,10 +22,18 @@ class KlangPlayer<T, S>(
 ) : AutoCloseable {
 
     data class Options(
+        val samples: Samples,
+        /** The sample rate to use for audio playback */
         val sampleRate: Int = 48_000,
-        val cps: Double = 0.5,
+        /** The audio rendering block size */
+        val blockSize: Int = 512,
+        /** Amount of time to look ahead in the [KlangEventSource] */
         val lookaheadSec: Double = 1.0,
+        /** Rate at which to fetch new events from the [KlangEventSource] */
         val fetchPeriodMs: Long = 250L,
+
+        // TODO: All the below is strudel specific -> create StrudelOptions and move it there
+        val cps: Double = 0.5,
         val prefetchCycles: Int = ceil(maxOf(2.0, cps * 2)).toInt(),
     )
 
