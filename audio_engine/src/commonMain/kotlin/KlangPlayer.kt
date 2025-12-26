@@ -1,7 +1,8 @@
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
-import io.peekandpoke.klang.audio_bridge.infra.KlangRingBuffer
 import io.peekandpoke.klang.audio_fe.KlangEventFetcher
 import io.peekandpoke.klang.audio_fe.KlangEventSource
 import io.peekandpoke.klang.audio_fe.samples.Samples
@@ -11,17 +12,18 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
-class KlangPlayer<T, S>(
+class KlangPlayer<T>(
     private val source: KlangEventSource<T>,
     private val options: Options,
-    private val transform: (T) -> S,
+    private val transform: (T) -> ScheduledVoice,
     // The loop function itself. It suspends until playback stops.
-    private val audioLoop: suspend (KlangPlayerState, KlangRingBuffer<S>) -> Unit,
+    private val audioLoop: suspend (KlangPlayerState, KlangCommLink.BackendEndpoint) -> Unit,
     // External scope controls the lifecycle
     private val scope: CoroutineScope,
 ) : AutoCloseable {
 
     data class Options(
+        /** The samples */
         val samples: Samples,
         /** The sample rate to use for audio playback */
         val sampleRate: Int = 48_000,
@@ -43,13 +45,13 @@ class KlangPlayer<T, S>(
     fun start() {
         if (!state.running(expect = false, update = true)) return
 
-        playerJob = scope.launch {
-            val channel = KlangRingBuffer<S>(capacity = 8192)
+        val commLink = KlangCommLink(capacity = 8192)
 
+        playerJob = scope.launch {
             val fetcher = KlangEventFetcher(
                 source = source,
                 state = state,
-                eventChannel = channel,
+                commLink = commLink.frontend,
                 config = KlangEventFetcher.Config(
                     sampleRate = options.sampleRate,
                     cps = options.cps,
@@ -68,7 +70,7 @@ class KlangPlayer<T, S>(
 
             // Launch Audio Loop - it receives the state and channel
             launch {
-                audioLoop(state, channel)
+                audioLoop(state, commLink.backend)
             }
         }
     }

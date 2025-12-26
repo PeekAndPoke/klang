@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.infra.KlangEventReceiver
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -10,15 +11,15 @@ import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import kotlin.time.Duration.Companion.milliseconds
 
-class JvmKlangAudioLoop<S>(
+class JvmKlangAudioLoop(
     private val sampleRate: Int,
     private val blockFrames: Int,
-) : KlangAudioLoop<S> {
+) : KlangAudioLoop {
 
     override suspend fun runLoop(
         state: KlangPlayerState,
-        channel: KlangEventReceiver<S>,
-        onSchedule: (S) -> Unit,
+        commLink: KlangCommLink.BackendEndpoint,
+        onSchedule: (ScheduledVoice) -> Unit,
         renderBlock: (ByteArray) -> Unit,
     ) {
         // Run on IO dispatcher to avoid blocking the main thread with audio I/O
@@ -44,7 +45,7 @@ class JvmKlangAudioLoop<S>(
                 while (isActive && state.running()) {
                     // 1. Drain Events from the Receiver
                     while (true) {
-                        val evt = channel.receive() ?: break
+                        val evt = commLink.control.receive() ?: break
                         onSchedule(evt)
                     }
 

@@ -1,13 +1,14 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.infra.KlangEventReceiver
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 
-interface KlangAudioLoop<S> {
+interface KlangAudioLoop {
     suspend fun runLoop(
         state: KlangPlayerState,
-        channel: KlangEventReceiver<S>,
-        onSchedule: (S) -> Unit,
+        commLink: KlangCommLink.BackendEndpoint,
+        onSchedule: (ScheduledVoice) -> Unit,
         renderBlock: (ByteArray) -> Unit,
     )
 }

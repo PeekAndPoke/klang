@@ -15,7 +15,7 @@ fun strudelPlayer(
     pattern: StrudelPattern,
     options: KlangPlayer.Options,
     scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-): KlangPlayer<StrudelPatternEvent, ScheduledVoice> {
+): KlangPlayer<StrudelPatternEvent> {
     val cps = options.cps
     val sampleRate = options.sampleRate
     val blockFrames = options.blockSize
@@ -40,7 +40,7 @@ fun strudelPlayer(
                 gateEndFrame = startFrame + durFrames,
             )
         },
-        audioLoop = { state, receiver ->
+        audioLoop = { state, commLink ->
             // TODO: this is wrong here ...
             //  - The audio loop creates the orbits and everything by itself
 
@@ -56,11 +56,11 @@ fun strudelPlayer(
             )
 
             val mix = StereoBuffer(blockFrames)
-            val loop = createAudioLoop<ScheduledVoice>(sampleRate, blockFrames)
+            val loop = createAudioLoop(sampleRate, blockFrames)
 
             loop.runLoop(
                 state = state,
-                channel = receiver,
+                commLink = commLink,
                 onSchedule = { evt -> voices.schedule(evt) },
                 renderBlock = { out ->
                     val blockStart = state.cursorFrame()
