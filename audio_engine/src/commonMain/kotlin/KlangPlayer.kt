@@ -33,13 +33,14 @@ class KlangPlayer<T>(
         val lookaheadSec: Double = 1.0,
         /** Rate at which to fetch new events from the [KlangEventSource] */
         val fetchPeriodMs: Long = 250L,
-
-        // TODO: All the below is strudel specific -> create StrudelOptions and move it there
-        val cps: Double = 0.5,
-        val prefetchCycles: Int = ceil(maxOf(2.0, cps * 2)).toInt(),
+        // TODO: use BPM instead and let strudel do the conversion to CPS
+        val cyclesPerSecond: Double = 0.5,
+        /** Initial cycles prefetch, so that the audio starts flawlessly */
+        val prefetchCycles: Int = ceil(maxOf(2.0, cyclesPerSecond * 2)).toInt(),
     )
 
     private val state = KlangPlayerState()
+
     private var playerJob: Job? = null
 
     fun start() {
@@ -49,12 +50,13 @@ class KlangPlayer<T>(
 
         playerJob = scope.launch {
             val fetcher = KlangEventFetcher(
+                samples = options.samples,
                 source = source,
                 state = state,
                 commLink = commLink.frontend,
                 config = KlangEventFetcher.Config(
                     sampleRate = options.sampleRate,
-                    cps = options.cps,
+                    cps = options.cyclesPerSecond,
                     lookaheadSec = options.lookaheadSec,
                     fetchPeriodMs = options.fetchPeriodMs,
                     prefetchCycles = options.prefetchCycles.toDouble()

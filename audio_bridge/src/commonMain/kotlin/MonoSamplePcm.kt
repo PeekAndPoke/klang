@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_fe.samples
+package io.peekandpoke.klang.audio_bridge
 
 /**
  * PCM decoded sample ready for mixing.

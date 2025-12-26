@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_fe.samples.decoders
 
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_fe.samples.AudioDecoder
-import io.peekandpoke.klang.audio_fe.samples.MonoSamplePcm
 
 class SimpleAudioDecoder : AudioDecoder {
 

@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.audio_fe.samples.decoders
 
-import io.peekandpoke.klang.audio_fe.samples.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets

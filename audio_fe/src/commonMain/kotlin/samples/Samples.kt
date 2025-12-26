@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_fe.samples
 
-import io.peekandpoke.klang.audio_fe.tones.Tones
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.tones.Tones
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -147,6 +148,14 @@ class Samples(
         }
 
         return null
+    }
+
+    fun getWithCallback(request: SampleRequest, callback: (MonoSamplePcm?) -> Unit) {
+        val sampleId = index.resolve(request) ?: return callback(null)
+
+        scope.launch {
+            callback(sampleCache.getOrPut(sampleId) { loadAndDecode(sampleId) })
+        }
     }
 
     private suspend fun loadAndDecode(id: SampleId): MonoSamplePcm? {

@@ -1,6 +1,6 @@
-package io.peekandpoke.klang.audio_fe.utils
+package io.peekandpoke.klang.audio_bridge.infra
 
-class MinHeap<T>(private val less: (T, T) -> Boolean) {
+class KlangMinHeap<T>(private val less: (T, T) -> Boolean) {
     private val data = ArrayList<T>()
 
     fun clear() = data.clear()

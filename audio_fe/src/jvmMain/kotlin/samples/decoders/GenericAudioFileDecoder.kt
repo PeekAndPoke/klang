@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.audio_fe.samples.decoders
 
-import io.peekandpoke.klang.audio_fe.samples.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import java.io.ByteArrayInputStream
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem

@@ -1,4 +1,4 @@
 package io.peekandpoke.klang.audio_be
 
-actual fun <S> createAudioLoop(sampleRate: Int, blockFrames: Int): KlangAudioLoop<S> =
+actual fun createAudioLoop(sampleRate: Int, blockFrames: Int): KlangAudioLoop =
     JvmKlangAudioLoop(sampleRate, blockFrames)

@@ -46,7 +46,14 @@ class JvmKlangAudioLoop(
                     // 1. Drain Events from the Receiver
                     while (true) {
                         val evt = commLink.control.receive() ?: break
-                        onSchedule(evt)
+
+                        when (evt) {
+                            is KlangCommLink.Cmd.ScheduleVoice -> onSchedule(evt.voice)
+
+                            is KlangCommLink.Cmd.Sample -> {
+                                println("Received Sample: ${evt.request} | ${evt.sample?.pcm?.size} bytes")
+                            }
+                        }
                     }
 
                     // 2. Render the Audio Block

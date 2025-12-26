@@ -3,6 +3,8 @@ package io.peekandpoke.klang.audio_fe
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
+import io.peekandpoke.klang.audio_fe.samples.SampleRequest
+import io.peekandpoke.klang.audio_fe.samples.Samples
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -11,6 +13,7 @@ import kotlinx.coroutines.isActive
 class KlangEventFetcher<T>(
     private val source: KlangEventSource<T>,
     private val state: KlangPlayerState,
+    private val samples: Samples,
     private val commLink: KlangCommLink.FrontendEndpoint,
     private val config: Config,
     private val transform: (T) -> ScheduledVoice,
@@ -28,6 +31,8 @@ class KlangEventFetcher<T>(
     suspend fun runFetcher(scope: CoroutineScope) {
         var queryCursorCycles = 0.0
         val fetchChunk = 1.0
+
+        // TODO: we also need to prefetch the first few cycles including voices ...
 
         // TODO: we need two jobs
         //   1. (DONE) one that fetches audio events and send scheduled voice to the backend -> see existing code
@@ -48,9 +53,12 @@ class KlangEventFetcher<T>(
                     val events = source.query(from, to)
 
                     for (e in events) {
-                        // Transform source event T to scheduled event S
+                        // 1. Transform source event T to scheduled event S
                         val voice = transform(e)
-                        commLink.control.dispatch(KlangCommLink.Cmd.ScheduleVoice(voice))
+                        // 2. Schedule the voice
+                        commLink.control.dispatch(
+                            KlangCommLink.Cmd.ScheduleVoice(voice)
+                        )
                     }
 
                     queryCursorCycles = to
@@ -61,7 +69,27 @@ class KlangEventFetcher<T>(
                 }
             }
 
+            // Query feedback-events from backend
+            while (true) {
+                val evt = commLink.feedback.receive() ?: break
+
+                when (evt) {
+                    is KlangCommLink.Feedback.RequestSample -> {
+                        println("Backend requested sample: $evt")
+
+                        samples.getWithCallback(evt.toSampleRequest()) { pcm ->
+                            commLink.control.dispatch(
+                                KlangCommLink.Cmd.Sample(request = evt, sample = pcm)
+                            )
+                        }
+                    }
+                }
+            }
+
             delay(config.fetchPeriodMs)
         }
     }
+
+    private fun KlangCommLink.Feedback.RequestSample.toSampleRequest() =
+        SampleRequest(bank = bank, sound = sound, index = index, note = note)
 }

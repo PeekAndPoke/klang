@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_fe.tones
+package io.peekandpoke.klang.audio_bridge.tones
 
 import kotlin.math.floor
 import kotlin.math.pow

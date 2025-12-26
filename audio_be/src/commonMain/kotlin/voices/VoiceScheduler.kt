@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.ONE_OVER_TWELVE
 import io.peekandpoke.klang.audio_be.TWO_PI
@@ -8,31 +8,28 @@ import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.OscFn
 import io.peekandpoke.klang.audio_be.osci.Oscillators
-import io.peekandpoke.klang.audio_be.voices.SampleVoice
-import io.peekandpoke.klang.audio_be.voices.SynthVoice
-import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_fe.samples.SampleRequest
-import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.audio_fe.tones.Tones
-import io.peekandpoke.klang.audio_fe.utils.MinHeap
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
+import io.peekandpoke.klang.audio_bridge.tones.Tones
 
-class StrudelVoices(
+class VoiceScheduler(
     val options: Options,
 ) {
     class Options(
+        val commLink: KlangCommLink.BackendEndpoint,
         val sampleRate: Int,
         val blockFrames: Int,
         val oscillators: Oscillators,
-        val samples: Samples,
+//        val samples: Samples,
         val orbits: Orbits,
     ) {
         val sampleRateDouble = sampleRate.toDouble()
     }
 
-    private val scheduled = MinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
+    private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
 
     // Scratch buffers
@@ -53,7 +50,7 @@ class StrudelVoices(
     fun VoiceData.isSampleSound() = !isOscillator()
 
     fun VoiceData.asSampleRequest() =
-        SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
+        KlangCommLink.Feedback.RequestSample(bank = bank, sound = sound, index = soundIndex, note = note)
 
     fun VoiceData.createOscillator(oscillators: Oscillators, freqHz: Double): OscFn {
         val e = this
@@ -77,9 +74,10 @@ class StrudelVoices(
         scheduled.push(voice)
 
         // Prefetch sound samples
-        if (voice.data.isSampleSound()) {
-            options.samples.prefetch(voice.data.asSampleRequest())
-        }
+        // TODO
+//        if (voice.data.isSampleSound()) {
+//            options.samples.prefetch(voice.data.asSampleRequest())
+//        }
     }
 
     fun process(cursorFrame: Long) {
@@ -210,40 +208,50 @@ class StrudelVoices(
 
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             isSample -> {
-                val loaded = options.samples.getIfLoaded(data.asSampleRequest())
-                    ?: return null
+                // TODO: check if we already have this voice
+                //  If we have it -> fine, create the SampleVoice
+                //  If not, then we request it from the frontend
+                val sampleId = data.asSampleRequest()
 
-                val (sampleId, decoded) = loaded
+                options.commLink.feedback.dispatch(sampleId)
 
-                val baseSamplePitchHz = sampleId.sample.pitchHz
-                val targetHz = data.note?.let { n -> Tones.resolveFreq(n, data.scale) }
-                    ?: baseSamplePitchHz
-                val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
-                val rate = (decoded.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
 
-                val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)
-                val playhead0 = lateFrames.toDouble() * rate
-
-                if (decoded.pcm.size <= 1 || playhead0 >= decoded.pcm.size - 1) return null
-
-                SampleVoice(
-                    orbitId = orbit,
-                    startFrame = nowFrame,
-                    endFrame = scheduled.endFrame,
-                    gateEndFrame = scheduled.gateEndFrame,
-                    gain = data.gain,
-                    pan = data.pan ?: 0.0,
-                    filter = bakedFilters,
-                    envelope = envelope,
-                    delay = delay,
-                    reverb = reverb,
-                    vibrator = vibrator,
-                    effects = effects,
-                    pcm = decoded.pcm,
-                    pcmSampleRate = decoded.sampleRate,
-                    rate = rate,
-                    playhead = playhead0,
-                )
+                null
+                // TODO
+//                val loaded = options.samples.getIfLoaded(data.asSampleRequest())
+//                    ?: return null
+//
+//                val (sampleId, decoded) = loaded
+//
+//                val baseSamplePitchHz = sampleId.sample.pitchHz
+//                val targetHz = data.note?.let { n -> Tones.resolveFreq(n, data.scale) }
+//                    ?: baseSamplePitchHz
+//                val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
+//                val rate = (decoded.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
+//
+//                val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)
+//                val playhead0 = lateFrames.toDouble() * rate
+//
+//                if (decoded.pcm.size <= 1 || playhead0 >= decoded.pcm.size - 1) return null
+//
+//                SampleVoice(
+//                    orbitId = orbit,
+//                    startFrame = nowFrame,
+//                    endFrame = scheduled.endFrame,
+//                    gateEndFrame = scheduled.gateEndFrame,
+//                    gain = data.gain,
+//                    pan = data.pan ?: 0.0,
+//                    filter = bakedFilters,
+//                    envelope = envelope,
+//                    delay = delay,
+//                    reverb = reverb,
+//                    vibrator = vibrator,
+//                    effects = effects,
+//                    pcm = decoded.pcm,
+//                    pcmSampleRate = decoded.sampleRate,
+//                    rate = rate,
+//                    playhead = playhead0,
+//                )
             }
 
             else -> null
