@@ -3,17 +3,17 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendCmd
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.*
 import org.w3c.dom.MessageEvent
 
 class JsKlangPlayerBackend(
     config: KlangPlayerBackend.Config,
 ) : KlangPlayerBackend {
-    private val state: KlangPlayerState = config.state
     private val commLink: KlangCommLink.BackendEndpoint = config.commLink
     private val sampleRate: Int = config.sampleRate
     private val blockSize: Int = config.blockSize
+
+    // TODO: init worklet with sample rate
 
     override suspend fun run(scope: CoroutineScope) {
         val ctx = AudioContext()
@@ -46,10 +46,8 @@ class JsKlangPlayerBackend(
 
                 val decoded = WorkletContract.decodeFeed(message)
 
-                when (decoded) {
-                    is KlangCommLink.Feedback.UpdateCursorFrame -> state.cursorFrame(decoded.frame)
-                    else -> Unit
-                }
+                // We pass all events through to the frontend
+                commLink.feedback.send(decoded)
             }
 
             // 6. Setup Command Loop (Frontend -> Worklet)
