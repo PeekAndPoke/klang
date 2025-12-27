@@ -2,9 +2,30 @@ package io.peekandpoke.klang.audio_be
 
 import org.khronos.webgl.Float32Array
 import org.w3c.dom.MessagePort
+import kotlin.js.Promise
 
 // https://developer.mozilla.org/de/docs/Web/API/AudioWorkletProcessor
 
+external class AudioContext {
+    val audioWorklet: AudioWorklet
+    val destination: AudioNode
+    val state: String
+    fun resume(): Promise<Unit>
+    fun close(): Promise<Unit>
+}
+
+external class AudioWorklet {
+    fun addModule(moduleUrl: String): Promise<Unit>
+}
+
+open external class AudioNode {
+    fun connect(destination: AudioNode)
+    fun disconnect()
+}
+
+external class AudioWorkletNode(context: AudioContext, name: String) : AudioNode {
+    val port: MessagePort
+}
 
 /**
  * The base class for your Kotlin processor

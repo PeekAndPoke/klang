@@ -46,7 +46,7 @@ class JvmKlangPlayerBackend(
 
     override suspend fun run(scope: CoroutineScope) {
 
-        while (scope.isActive) {
+        while (scope.isActive && state.running()) {
             // Stereo
             val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
             // Audio line
