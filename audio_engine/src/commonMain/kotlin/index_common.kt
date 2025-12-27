@@ -11,4 +11,4 @@ expect fun <T> klangPlayer(
     source: KlangEventSource<T>,
     transform: (T) -> ScheduledVoice,
     options: Options,
-): KlangPlayer2<T>
+): KlangPlayer<T>

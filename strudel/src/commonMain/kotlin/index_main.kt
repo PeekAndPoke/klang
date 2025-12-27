@@ -2,7 +2,6 @@ package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.audio_engine.KlangPlayer2
 import io.peekandpoke.klang.audio_engine.klangPlayer
 
 fun StrudelPatternEvent.toScheduledVoice(options: KlangPlayer.Options): ScheduledVoice {
@@ -30,7 +29,7 @@ fun StrudelPatternEvent.toScheduledVoice(options: KlangPlayer.Options): Schedule
 fun strudelPlayer(
     pattern: StrudelPattern,
     options: KlangPlayer.Options,
-): KlangPlayer2<StrudelPatternEvent> {
+): KlangPlayer<StrudelPatternEvent> {
     return klangPlayer(
         source = pattern.asEventSource(),
         options = options,

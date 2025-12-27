@@ -69,13 +69,10 @@ class KlangEventFetcher<T>(
 
                 when (evt) {
                     is KlangCommLink.Feedback.UpdateCursorFrame -> {
-                        println("Backend updated cursor frame: $evt")
                         state.cursorFrame(evt.frame)
                     }
 
                     is KlangCommLink.Feedback.RequestSample -> {
-                        println("Backend requested sample: $evt")
-
                         samples.getWithCallback(evt.toSampleRequest()) { result ->
                             val sample = result?.first
                             val pcm = result?.second

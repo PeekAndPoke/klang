@@ -4,7 +4,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.CoroutineScope
 
-interface KlangPlayerBackend2 {
+interface KlangPlayerBackend {
     class Config(
         val state: KlangPlayerState,
         val commLink: KlangCommLink.BackendEndpoint,

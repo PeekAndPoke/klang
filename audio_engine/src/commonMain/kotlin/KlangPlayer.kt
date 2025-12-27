@@ -1,27 +1,27 @@
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_be.KlangPlayerBackend
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import io.peekandpoke.klang.audio_fe.KlangEventFetcher
 import io.peekandpoke.klang.audio_fe.KlangEventSource
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlin.math.ceil
 
 class KlangPlayer<T>(
     private val source: KlangEventSource<T>,
-    private val options: Options,
     private val transform: (T) -> ScheduledVoice,
+    private val options: Options,
     // The loop function itself. It suspends until playback stops.
-    private val audioLoop: suspend (KlangPlayerState, KlangCommLink.BackendEndpoint) -> Unit,
+    // TODO: combine into one parameter object
+    private val backendFactory: suspend (config: KlangPlayerBackend.Config) -> KlangPlayerBackend,
     // External scope controls the lifecycle
-    private val scope: CoroutineScope,
-) : AutoCloseable {
-
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val fetcherDispatcher: CoroutineDispatcher,
+    private val backendDispatcher: CoroutineDispatcher,
+) {
     data class Options(
         /** The samples */
         val samples: Samples,
@@ -46,9 +46,10 @@ class KlangPlayer<T>(
     fun start() {
         if (!state.running(expect = false, update = true)) return
 
-        val commLink = KlangCommLink(capacity = 8192)
-
         playerJob = scope.launch {
+            val commLink = KlangCommLink(capacity = 8192)
+
+            // TODO: combine all params in Config
             val fetcher = KlangEventFetcher(
                 samples = options.samples,
                 source = source,
@@ -64,15 +65,24 @@ class KlangPlayer<T>(
                 transform = transform
             )
 
+            val backend = backendFactory(
+                KlangPlayerBackend.Config(
+                    state = state,
+                    commLink = commLink.backend,
+                    sampleRate = options.sampleRate,
+                    blockSize = options.blockSize,
+                ),
+            )
+
             // Launch Fetcher - it decides its own dispatching if needed,
             // but usually inheriting the parent (Default) is fine for logic.
-            launch(Dispatchers.Default.limitedParallelism(1)) {
+            launch(fetcherDispatcher.limitedParallelism(1)) {
                 fetcher.run(this)
             }
 
             // Launch Audio Loop - it receives the state and channel
-            launch {
-                audioLoop(state, commLink.backend)
+            launch(backendDispatcher.limitedParallelism(1)) {
+                backend.run(this)
             }
         }
     }
@@ -81,8 +91,5 @@ class KlangPlayer<T>(
         if (!state.running(expect = true, update = false)) return
         playerJob?.cancel()
         playerJob = null
-        state.cursorFrame(0L)
     }
-
-    override fun close() = stop()
 }
