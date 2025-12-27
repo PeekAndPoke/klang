@@ -109,8 +109,15 @@ class VoiceScheduler(
 
         // Prefetch sound samples
         if (voice.data.isSampleSound()) {
-            println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
-            options.commLink.feedback.send(voice.data.asSampleRequest())
+            val req = voice.data.asSampleRequest()
+
+            if (!samples.containsKey(req)) {
+                // make sure we do not request this one again
+                samples[req] = null
+
+                println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
+                options.commLink.feedback.send(voice.data.asSampleRequest())
+            }
         }
     }
 
@@ -244,12 +251,6 @@ class VoiceScheduler(
             isSample -> {
                 // Did we already request this sample?
                 val sampleRequest = data.asSampleRequest()
-
-                if (!samples.containsKey(sampleRequest)) {
-                    // No request it
-                    options.commLink.feedback.send(sampleRequest)
-                    return null
-                }
 
                 // Do we have the data for this sample?
                 val entry = samples[sampleRequest] ?: return null

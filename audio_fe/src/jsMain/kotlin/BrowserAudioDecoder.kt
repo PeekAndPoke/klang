@@ -4,53 +4,44 @@ import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_fe.samples.AudioDecoder
 import kotlinx.coroutines.await
-import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Float32Array
 import org.khronos.webgl.Int8Array
-import org.khronos.webgl.get
 
 class BrowserAudioDecoder : AudioDecoder {
     // We need an AudioContext to decode, even if we don't play anything with it.
     // Ideally reuse the one from the player, but for decoding a transient one is fine/standard.
-    private val ctx by lazy { AudioContext() }
+    private val ctx: AudioContext = AudioContext()
 
     override suspend fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm? {
         return try {
-            // 1. Convert ByteArray (Kotlin) -> ArrayBuffer (JS)
-            val arrayBuffer = audioBytes.toArrayBuffer()
+            // 1. Convert Kotlin ByteArray to JS ArrayBuffer
+            // We need to copy the bytes because Kotlin ByteArray might not align with JS Buffer view expectations directly here
+            val int8Array = Int8Array(audioBytes.toTypedArray())
+            val arrayBuffer = int8Array.buffer
 
             // 2. Decode (Async)
+            // decodeAudioData returns a Promise<AudioBuffer>
             val audioBuffer = ctx.decodeAudioData(arrayBuffer).await()
 
             // 3. Extract Mono Data
-            val pcm = if (audioBuffer.numberOfChannels > 0) {
-                audioBuffer.getChannelData(0)
-            } else {
-                return null
-            }
+            if (audioBuffer.numberOfChannels == 0) return null
+
+            // getChannelData returns a Float32Array
+            val pcmFloat32: Float32Array = audioBuffer.getChannelData(0)
+
+            // console.log("Decoded ${pcmFloat32.length} samples ... use pcmFloat32.unsafeCast<FloatArray>()")
+            // console.log("pcmFloat32", pcmFloat32)
 
             // 4. Return
             MonoSamplePcm(
                 sampleRate = audioBuffer.sampleRate,
-                pcm = pcm.toFloatArray() // Convert Float32Array to FloatArray
-            ).also {
-                console.log("Decoded audio with ${pcm.length} samples")
-            }
+                // OPTIMIZATION: unsafeCast avoids the O(n) loop copy.
+                // In Kotlin/JS, FloatArray is backed by Float32Array.
+                pcm = pcmFloat32.unsafeCast<FloatArray>()
+            )
         } catch (e: Throwable) {
-            console.error("Failed to decode audio", e)
+            console.error("[BrowserAudioDecoder] Failed to decode audio", e)
             null
         }
-    }
-
-    private fun ByteArray.toArrayBuffer(): ArrayBuffer {
-        return Int8Array(this.toTypedArray()).buffer
-    }
-
-    private fun Float32Array.toFloatArray(): FloatArray {
-        val res = FloatArray(this.length)
-        for (i in 0 until this.length) {
-            res[i] = this[i]
-        }
-        return res
     }
 }

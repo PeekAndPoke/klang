@@ -17,16 +17,10 @@ object WorkletContract {
 
     fun MessagePort.sendCmd(cmd: KlangCommLink.Cmd) {
         // console.log("Sending message to worklet:", cmd)
-
         // Json serialize the payload
         val obj = codec.encodeToDynamic(KlangCommLink.Cmd.serializer(), cmd)
 
-        val transfer = when (cmd) {
-            is KlangCommLink.Cmd.Sample -> listOfNotNull(cmd.data?.pcm).toTypedArray()
-            else -> emptyArray()
-        }
-
-        postMessage(obj, transfer)
+        postMessage(obj)
     }
 
     fun decodeCmd(msg: MessageEvent): KlangCommLink.Cmd {

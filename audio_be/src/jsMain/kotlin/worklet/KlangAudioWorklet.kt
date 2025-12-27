@@ -130,7 +130,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
             val feed = commLink.frontend.feedback.receive() ?: break
             port.sendFeed(feed)
 
-            console.log("[WORKLET] Sending feedback to frontend:", feed)
+            // console.log("[WORKLET] Sending feedback to frontend:", feed)
         }
 
         true

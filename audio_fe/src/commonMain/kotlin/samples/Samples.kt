@@ -150,7 +150,7 @@ class Samples(
         return null
     }
 
-    fun getWithCallback(request: SampleRequest, callback: (Pair<Sample, MonoSamplePcm?>?) -> Unit) {
+    suspend fun getWithCallback(request: SampleRequest, callback: suspend (Pair<Sample, MonoSamplePcm?>?) -> Unit) {
         val sampleId = index.resolve(request) ?: return callback(null)
 
         scope.launch {
