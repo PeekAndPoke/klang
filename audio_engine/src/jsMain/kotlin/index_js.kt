@@ -28,7 +28,7 @@ actual fun createDefaultAudioLoop(
     try {
         // 2. Load the compiled DSP module
         // This file "dsp.js" must contain the AudioWorkletProcessor registration
-        ctx.audioWorklet.addModule("dsp.js").await()
+        ctx.audioWorklet.addModule("audio_be.js").await()
 
         // 3. Create the Node (this instantiates the Processor in the Audio Thread)
         node = AudioWorkletNode(ctx, "klang-audio-processor")
@@ -43,6 +43,14 @@ actual fun createDefaultAudioLoop(
                 "blockFrames" to options.blockSize
             )
         )
+
+        console.log("Sending 'play' message to Worklet")
+        node.port.postMessage("play")
+
+        // 4. Send Command
+        if (ctx.state == "suspended") {
+            ctx.resume().await()
+        }
 
         // 5. Setup Feedback Loop (Worklet -> Frontend)
         // We listen for messages from the worklet (e.g. Sample Requests, Position Updates)

@@ -5,6 +5,7 @@ import org.khronos.webgl.set
 import kotlin.math.PI
 import kotlin.math.sin
 
+@JsName("KlangAudioProcessor")
 class KlangAudioProcessor : AudioWorkletProcessor {
 
     class Ctx {
@@ -21,6 +22,8 @@ class KlangAudioProcessor : AudioWorkletProcessor {
     private var ctx: Ctx? = null
 
     private fun init(block: Ctx.() -> Boolean): Boolean {
+        console.log("init")
+
         return (ctx ?: Ctx()).let { ctx ->
             this.ctx = ctx
 

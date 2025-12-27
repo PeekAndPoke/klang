@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.audio_fe.utils
 
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -19,14 +18,13 @@ interface AssetLoader {
 }
 
 class KtorAssetLoader(
-    val agentName: String = "Klang",
-    private val client: HttpClient = HttpClient(CIO) {
+    private val client: HttpClient = HttpClient {
         followRedirects = true
     },
 ) : AssetLoader {
     override suspend fun download(uri: String): ByteArray? {
         val response = client.get(uri) {
-            header(HttpHeaders.UserAgent, agentName)
+//            header(HttpHeaders.UserAgent, agentName)
         }
 
         if (!response.status.isSuccess()) {

@@ -38,6 +38,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                implementation(Deps.KotlinX.coroutines_core)
                 implementation(project(":audio_bridge"))
             }
         }
@@ -52,7 +53,6 @@ kotlin {
 
         jvmMain {
             dependencies {
-                implementation(Deps.KotlinX.coroutines_core)
             }
         }
 
