@@ -46,6 +46,8 @@ class JvmKlangPlayerBackend(
 
     override suspend fun run(scope: CoroutineScope) {
 
+        var currentFrame = 0L
+
         while (scope.isActive && state.running()) {
             // Stereo
             val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
@@ -77,13 +79,13 @@ class JvmKlangPlayerBackend(
                     }
 
                     // rendering ///////////////////////////////////////////////////////////////////////////////////////
-                    val currentFrame = state.cursorFrame()
-
                     // Render into buffer (State Read)
                     renderer.renderBlock(cursorFrame = currentFrame, out = out)
 
                     // Advance Cursor (State Write)
-                    state.cursorFrame(currentFrame + blockSize)
+                    currentFrame += blockSize
+                    // Tell the frontend about the cursor update
+                    commLink.feedback.send(KlangCommLink.Feedback.UpdateCursorFrame(frame = currentFrame))
 
                     // 3. Write to Hardware
                     // This call blocks if the hardware buffer is full, pacing the loop

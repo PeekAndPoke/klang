@@ -49,20 +49,18 @@ class KlangPlayer<T>(
         playerJob = scope.launch {
             val commLink = KlangCommLink(capacity = 8192)
 
-            // TODO: combine all params in Config
             val fetcher = KlangEventFetcher(
-                samples = options.samples,
-                source = source,
-                state = state,
-                commLink = commLink.frontend,
                 config = KlangEventFetcher.Config(
+                    samples = options.samples,
+                    source = source,
+                    commLink = commLink.frontend,
+                    transform = transform,
                     sampleRate = options.sampleRate,
                     cps = options.cyclesPerSecond,
                     lookaheadSec = options.lookaheadSec,
                     fetchPeriodMs = options.fetchPeriodMs,
                     prefetchCycles = options.prefetchCycles.toDouble()
                 ),
-                transform = transform
             )
 
             val backend = backendFactory(

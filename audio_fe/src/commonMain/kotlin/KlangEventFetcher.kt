@@ -2,7 +2,6 @@ package io.peekandpoke.klang.audio_fe
 
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import io.peekandpoke.klang.audio_fe.samples.SampleRequest
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import kotlinx.coroutines.CancellationException
@@ -11,14 +10,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 class KlangEventFetcher<T>(
-    private val source: KlangEventSource<T>,
-    private val state: KlangPlayerState,
-    private val samples: Samples,
-    private val commLink: KlangCommLink.FrontendEndpoint,
-    private val config: Config,
-    private val transform: (T) -> ScheduledVoice,
+    private val config: Config<T>,
 ) {
-    data class Config(
+    data class Config<T>(
+        val source: KlangEventSource<T>,
+        val samples: Samples,
+        val commLink: KlangCommLink.FrontendEndpoint,
+        val transform: (T) -> ScheduledVoice,
         val sampleRate: Int,
         val cps: Double,
         val lookaheadSec: Double,
@@ -26,14 +24,22 @@ class KlangEventFetcher<T>(
         val prefetchCycles: Double,
     )
 
-    private val secPerCycle get() = 1.0 / config.cps
 
     suspend fun run(scope: CoroutineScope) {
+        val secPerCycle = 1.0 / config.cps
         var queryCursorCycles = 0.0
         val fetchChunk = 1.0
+        var currentFrame = 0L
+
+        // samples
+        val samples = config.samples
+        // Control channel
+        val control = config.commLink.control
+        // Feeback channel
+        val feedback = config.commLink.feedback
 
         while (scope.isActive) {
-            val nowFrame = state.cursorFrame()
+            val nowFrame = currentFrame
             val nowSec = nowFrame.toDouble() / config.sampleRate.toDouble()
             val nowCycles = nowSec / secPerCycle
 
@@ -44,15 +50,14 @@ class KlangEventFetcher<T>(
                 val to = from + fetchChunk
 
                 try {
-                    val events = source.query(from, to)
+                    println("Querying from $from to $to")
+                    val events = config.source.query(from, to)
 
                     for (e in events) {
                         // 1. Transform source event T to scheduled event S
-                        val voice = transform(e)
+                        val voice = config.transform(e)
                         // 2. Schedule the voice
-                        commLink.control.send(
-                            KlangCommLink.Cmd.ScheduleVoice(voice)
-                        )
+                        control.send(KlangCommLink.Cmd.ScheduleVoice(voice))
                     }
 
                     queryCursorCycles = to
@@ -65,11 +70,11 @@ class KlangEventFetcher<T>(
 
             // Query feedback-events from backend
             while (true) {
-                val evt = commLink.feedback.receive() ?: break
+                val evt = feedback.receive() ?: break
 
                 when (evt) {
                     is KlangCommLink.Feedback.UpdateCursorFrame -> {
-                        state.cursorFrame(evt.frame)
+                        currentFrame = evt.frame
                     }
 
                     is KlangCommLink.Feedback.RequestSample -> {
@@ -77,7 +82,7 @@ class KlangEventFetcher<T>(
                             val sample = result?.first
                             val pcm = result?.second
 
-                            commLink.control.send(
+                            control.send(
                                 KlangCommLink.Cmd.Sample(
                                     request = evt,
                                     data = sample?.let { sample ->
