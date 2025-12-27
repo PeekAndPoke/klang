@@ -3,14 +3,13 @@ package io.peekandpoke.klang.audio_fe
 import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_fe.samples.AudioDecoder
-import kotlinx.coroutines.await
 import org.khronos.webgl.Float32Array
 import org.khronos.webgl.Int8Array
 
 class BrowserAudioDecoder : AudioDecoder {
     // We need an AudioContext to decode, even if we don't play anything with it.
     // Ideally reuse the one from the player, but for decoding a transient one is fine/standard.
-    private val ctx: AudioContext = AudioContext()
+    private val defaultCtx: AudioContext by lazy { AudioContext() }
 
     override suspend fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm? {
         return try {
@@ -18,6 +17,12 @@ class BrowserAudioDecoder : AudioDecoder {
             // We need to copy the bytes because Kotlin ByteArray might not align with JS Buffer view expectations directly here
             val int8Array = Int8Array(audioBytes.toTypedArray())
             val arrayBuffer = int8Array.buffer
+
+            val ctx = try {
+                js("new OfflineAudioContext(1, 1, 44100)")
+            } catch (e: Throwable) {
+                console.error("[BrowserAudioDecoder] Failed to create OfflineAudioContext", e.printStackTrace())
+            }
 
             // 2. Decode (Async)
             // decodeAudioData returns a Promise<AudioBuffer>
