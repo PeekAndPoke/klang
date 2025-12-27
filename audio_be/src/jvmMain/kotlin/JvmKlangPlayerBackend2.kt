@@ -45,7 +45,6 @@ class JvmKlangPlayerBackend2(
         orbits = orbits
     )
 
-
     override suspend fun run(scope: CoroutineScope) {
 
         while (scope.isActive) {
