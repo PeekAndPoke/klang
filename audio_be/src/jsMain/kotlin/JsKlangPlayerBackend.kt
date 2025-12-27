@@ -3,17 +3,20 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendCmd
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.await
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import org.w3c.dom.MessageEvent
 
 class JsKlangPlayerBackend(
     config: KlangPlayerBackend.Config,
 ) : KlangPlayerBackend {
     private val commLink: KlangCommLink.BackendEndpoint = config.commLink
-    private val sampleRate: Int = config.sampleRate
-    private val blockSize: Int = config.blockSize
 
     // TODO: init worklet with sample rate
+    private val sampleRate: Int = config.sampleRate
+    private val blockSize: Int = config.blockSize
 
     override suspend fun run(scope: CoroutineScope) {
         val ctx = AudioContext()
@@ -42,7 +45,7 @@ class JsKlangPlayerBackend(
             // 5. Setup Feedback Loop (Worklet -> Frontend)
             // We listen for messages from the worklet (e.g. Sample Requests, Position Updates)
             node.port.onmessage = { message: MessageEvent ->
-                console.log("Received message from Worklet:", message.data)
+                // console.log("Received message from Worklet:", message.data)
 
                 val decoded = WorkletContract.decodeFeed(message)
 
@@ -52,13 +55,13 @@ class JsKlangPlayerBackend(
 
             // 6. Setup Command Loop (Frontend -> Worklet)
             // We poll the ring buffer and forward commands to the worklet
-            while (currentCoroutineContext().isActive) {
+            while (scope.isActive) {
                 // Drain the buffer
                 while (true) {
                     // We are the 'BackendEndpoint' here, so we RECEIVE commands
                     val cmd = commLink.control.receive() ?: break
 
-                    console.log("Forwarding command to Worklet:", cmd)
+                    // console.log("Forwarding command to Worklet:", cmd)
 
                     node.port.sendCmd(cmd)
                 }

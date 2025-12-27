@@ -16,7 +16,7 @@ object WorkletContract {
     }
 
     fun MessagePort.sendCmd(cmd: KlangCommLink.Cmd) {
-        console.log("Sending message to worklet:", cmd)
+        // console.log("Sending message to worklet:", cmd)
 
         // Json serialize the payload
         val obj = codec.encodeToDynamic(KlangCommLink.Cmd.serializer(), cmd)
@@ -36,7 +36,7 @@ object WorkletContract {
     }
 
     fun MessagePort.sendFeed(feedback: KlangCommLink.Feedback) {
-        console.log("[WORKLET] Sending feedback to frontend:", feedback)
+        // console.log("[WORKLET] Sending feedback to frontend:", feedback)
 
         val obj = codec.encodeToDynamic(KlangCommLink.Feedback.serializer(), feedback)
 

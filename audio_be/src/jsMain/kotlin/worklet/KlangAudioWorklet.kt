@@ -54,18 +54,12 @@ class KlangAudioWorklet : AudioWorkletProcessor {
             port.onmessage = { message ->
                 val cmd = WorkletContract.decodeCmd(message)
 
-                console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
+                // console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
 
                 when (cmd) {
                     is KlangCommLink.Cmd.ScheduleVoice -> ctx.voices.schedule(cmd.voice)
                     else -> Unit
                 }
-
-//                console.log("KlangAudioProcessor onmessage", e)
-//
-//                val msg = e.data.toString()
-//                if (msg == "play") ctx.isPlaying = true
-//                if (msg == "stop") ctx.isPlaying = false
             }
 
             block(ctx)
