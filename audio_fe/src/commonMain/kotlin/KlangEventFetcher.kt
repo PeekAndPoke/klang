@@ -28,7 +28,7 @@ class KlangEventFetcher<T>(
 
     private val secPerCycle get() = 1.0 / config.cps
 
-    suspend fun runFetcher(scope: CoroutineScope) {
+    suspend fun run(scope: CoroutineScope) {
         var queryCursorCycles = 0.0
         val fetchChunk = 1.0
 

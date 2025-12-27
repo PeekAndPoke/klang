@@ -64,15 +64,6 @@ private suspend fun helloStrudel() {
         )
         println("=======================================================================")
 
-        val pattern2 = strudel.compile(TestPatterns.smallTownBoy).await()
-
-//        strudel.dumpPatternArc(compiled)
-
-//        compiled.queryArc(0.0, 4.0).forEach {
-//            strudel.prettyFormat(it)
-//            println("${it.begin} ${it.note} ${it.sound}")
-//        }
-
         val samples = Samples.create(catalogue = SampleCatalogue.default)
         val playerOptions = KlangPlayer.Options(
             samples = samples,
@@ -88,17 +79,10 @@ private suspend fun helloStrudel() {
         println("start 1 ...")
         audio1.start()
 
-//        val audio2 = strudelPlayer(
-//            pattern = pattern2,
-//            options = playerOptions,
-//        )
-//
-//        println("start 2 ...")
-//        audio2.start()
-
         delay(600_000)
         audio1.stop()
 //        audio2.stop()
         println("Done")
     }
 }
+
