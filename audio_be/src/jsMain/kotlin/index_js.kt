@@ -11,6 +11,3 @@ fun main() {
 
     println("KlangAudioProcessor registered")
 }
-
-actual fun <S> createAudioLoop(sampleRate: Int, blockFrames: Int): KlangAudioLoop<S> =
-    TODO("Not yet implemented")
