@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_be.worklet.WorkletContract
+import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendCmd
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.currentCoroutineContext
@@ -10,7 +12,6 @@ import org.w3c.dom.MessageEvent
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.js.Promise
-import kotlin.js.json
 
 actual fun createDefaultAudioLoop(
     options: KlangPlayer.Options,
@@ -34,19 +35,6 @@ actual fun createDefaultAudioLoop(
         node = AudioWorkletNode(ctx, "klang-audio-processor")
         node.connect(ctx.destination)
 
-        // 4. Initialize the Processor
-        // We send the configuration so the processor knows how to setup the backend
-        node.port.postMessage(
-            json(
-                "type" to "INIT",
-                "sampleRate" to options.sampleRate,
-                "blockFrames" to options.blockSize
-            )
-        )
-
-        console.log("Sending 'play' message to Worklet")
-        node.port.postMessage("play")
-
         // 4. Send Command
         if (ctx.state == "suspended") {
             ctx.resume().await()
@@ -54,23 +42,14 @@ actual fun createDefaultAudioLoop(
 
         // 5. Setup Feedback Loop (Worklet -> Frontend)
         // We listen for messages from the worklet (e.g. Sample Requests, Position Updates)
-        node.port.onmessage = { event: MessageEvent ->
-            val data = event.data
+        node.port.onmessage = { message: MessageEvent ->
+            console.log("Received message from Worklet:", message.data)
 
-            // Check for internal messages like position updates
-            val type = data.asDynamic().type
-            if (type == "POSITION") {
-                val frame = data.asDynamic().frame as Double
-                state.cursorFrame(frame.toLong())
-            } else {
-                // Otherwise, treat it as a Feedback object for the CommLink
-                // Note: In a real app, you might need explicit JSON serialization here
-                // if the objects are not simple JS objects.
-                @Suppress("UNCHECKED_CAST")
-                val feedback = data as? KlangCommLink.Feedback
-                if (feedback != null) {
-                    commLink.feedback.dispatch(feedback)
-                }
+            val decoded = WorkletContract.decodeFeed(message)
+
+            when (decoded) {
+                is KlangCommLink.Feedback.UpdateCursorFrame -> state.cursorFrame(decoded.frame)
+                else -> Unit
             }
         }
 
@@ -82,10 +61,9 @@ actual fun createDefaultAudioLoop(
                 // We are the 'BackendEndpoint' here, so we RECEIVE commands
                 val cmd = commLink.control.receive() ?: break
 
-                // Forward to Worklet
-                // We wrap it to distinguish from INIT/Control messages if needed,
-                // or send directly if the Worklet handles it.
-                node.port.postMessage(cmd)
+                console.log("Forwarding command to Worklet:", cmd)
+
+                node.port.sendCmd(cmd)
             }
 
             // Yield / throttle to ~60fps poll rate

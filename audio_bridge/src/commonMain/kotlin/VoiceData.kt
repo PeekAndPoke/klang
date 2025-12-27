@@ -1,8 +1,11 @@
 package io.peekandpoke.klang.audio_bridge
 
+import kotlinx.serialization.Serializable
+
 /**
  * Defines a voice
  */
+@Serializable
 data class VoiceData(
     // note, scale, gain
     val note: String?,

@@ -118,22 +118,30 @@ tasks {
 
         // TODO: figure out why the productionWebpack files do not work...
 
-        // Depends on the production webpack build of the backend module
-        dependsOn(":audio_be:jsBrowserDevelopmentWebpack")
+        val prod = false
 
-        // Path to the output of the webpack task in audio_be
-        // Note: The path depends on your Kotlin version and project structure.
-        // Usually: audio_be/build/kotlin-webpack/js/productionExecutable/
-        // Or if just using binaries.executable(): audio_be/build/dist/js/productionExecutable/
+        if (prod) {
+            // Depends on the production webpack build of the backend module
+            dependsOn(":audio_be:jsBrowserProductionWebpack")
 
-        // Let's try to resolve it dynamically or point to the standard location
-        from(
-            project(":audio_be").layout.buildDirectory.dir(
-                "kotlin-webpack/js/developmentExecutable/"
-            )
-        ) {
-            include("*.*")
-//            rename { "dsp.js" }
+            val path = project(":audio_be").layout.buildDirectory.dir("kotlin-webpack/js/productionExecutable/")
+
+            println("PROD Path ${path.get().asFile.absolutePath}")
+
+            from(path) {
+                include("*.*")
+            }
+        } else {
+            // Depends on the production webpack build of the backend module
+            dependsOn(":audio_be:jsBrowserDevelopmentWebpack")
+
+            val path = project(":audio_be").layout.buildDirectory.dir("kotlin-webpack/js/developmentExecutable/")
+
+            println("DEV Path ${path.get().asFile.absolutePath}")
+
+            from(path) {
+                include("*.*")
+            }
         }
 
         // Copy mapping file too if needed for debugging

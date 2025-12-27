@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.OscFn
 import io.peekandpoke.klang.audio_be.osci.Oscillators
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -29,7 +30,14 @@ class VoiceScheduler(
         val sampleRateDouble = sampleRate.toDouble()
     }
 
-    private val samples = mutableMapOf<KlangCommLink.Feedback.RequestSample, KlangCommLink.Cmd.Sample>()
+    class SampleEntry(
+        val request: KlangCommLink.Feedback.RequestSample,
+        val note: String?,
+        val pitchHz: Double,
+        val sample: MonoSamplePcm,
+    )
+
+    private val samples = mutableMapOf<KlangCommLink.Feedback.RequestSample, SampleEntry?>()
 
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
@@ -73,10 +81,27 @@ class VoiceScheduler(
     }
 
     fun addSample(
-        request: KlangCommLink.Feedback.RequestSample,
-        sample: KlangCommLink.Cmd.Sample,
+        msg: KlangCommLink.Cmd.Sample,
     ) {
-        samples[request] = sample
+        val request = msg.request
+        val data = msg.data
+
+        val entry = if (data == null) {
+            // We could not get the sample, but we also do not need to request it again
+            null
+        } else {
+            SampleEntry(
+                request = request,
+                note = data.note,
+                pitchHz = data.pitchHz,
+                sample = MonoSamplePcm(
+                    sampleRate = data.sampleRate,
+                    pcm = data.pcm,
+                )
+            )
+        }
+
+        samples[request] = entry
     }
 
     fun schedule(voice: ScheduledVoice) {
@@ -84,7 +109,7 @@ class VoiceScheduler(
 
         // Prefetch sound samples
         if (voice.data.isSampleSound()) {
-            options.commLink.feedback.dispatch(voice.data.asSampleRequest())
+            options.commLink.feedback.send(voice.data.asSampleRequest())
         }
     }
 
@@ -220,29 +245,28 @@ class VoiceScheduler(
                 //  If we have it -> fine, create the SampleVoice
                 //  If not, then we request it from the frontend
                 val sampleRequest = data.asSampleRequest()
-                val sampleEntry = samples[sampleRequest]
 
                 // Did we already request this sample?
-                if (sampleEntry == null) {
-                    options.commLink.feedback.dispatch(sampleRequest)
+                if (!samples.containsKey(sampleRequest)) {
+                    // No request it
+                    options.commLink.feedback.send(sampleRequest)
                     return null
                 }
 
-                // Does the sample exist?
-                val sample = sampleEntry.data ?: return null
-                val pcm = sample.pcm ?: return null
+                // Do we have the data for this sample?
+                val entry = samples[sampleRequest] ?: return null
+                val sample = entry.sample
 
-
-                val baseSamplePitchHz = sample.pitchHz
+                val baseSamplePitchHz = entry.pitchHz
                 val targetHz = data.note?.let { n -> Tones.resolveFreq(n, data.scale) }
                     ?: baseSamplePitchHz
                 val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
-                val rate = (pcm.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
+                val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
 
                 val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)
                 val playhead0 = lateFrames.toDouble() * rate
 
-                if (pcm.pcm.size <= 1 || playhead0 >= pcm.pcm.size - 1) return null
+                if (sample.pcm.size <= 1 || playhead0 >= sample.pcm.size - 1) return null
 
                 SampleVoice(
                     orbitId = orbit,
@@ -257,8 +281,7 @@ class VoiceScheduler(
                     reverb = reverb,
                     vibrator = vibrator,
                     effects = effects,
-                    pcm = pcm.pcm,
-                    pcmSampleRate = pcm.sampleRate,
+                    sample = sample,
                     rate = rate,
                     playhead = playhead0,
                 )

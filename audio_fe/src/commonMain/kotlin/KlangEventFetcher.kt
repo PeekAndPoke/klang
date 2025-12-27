@@ -50,7 +50,7 @@ class KlangEventFetcher<T>(
                         // 1. Transform source event T to scheduled event S
                         val voice = transform(e)
                         // 2. Schedule the voice
-                        commLink.control.dispatch(
+                        commLink.control.send(
                             KlangCommLink.Cmd.ScheduleVoice(voice)
                         )
                     }
@@ -68,6 +68,11 @@ class KlangEventFetcher<T>(
                 val evt = commLink.feedback.receive() ?: break
 
                 when (evt) {
+                    is KlangCommLink.Feedback.UpdateCursorFrame -> {
+                        println("Backend updated cursor frame: $evt")
+                        state.cursorFrame(evt.frame)
+                    }
+
                     is KlangCommLink.Feedback.RequestSample -> {
                         println("Backend requested sample: $evt")
 
@@ -75,17 +80,20 @@ class KlangEventFetcher<T>(
                             val sample = result?.first
                             val pcm = result?.second
 
-                            commLink.control.dispatch(
+                            commLink.control.send(
                                 KlangCommLink.Cmd.Sample(
                                     request = evt,
-                                    data = sample?.let {
-                                        KlangCommLink.Cmd.Sample.Data(
-                                            note = it.note,
-                                            pitchHz = it.pitchHz,
-                                            pcm = pcm
-                                        )
+                                    data = sample?.let { sample ->
+                                        pcm?.let { pcm ->
+                                            KlangCommLink.Cmd.Sample.Data(
+                                                note = sample.note,
+                                                pitchHz = sample.pitchHz,
+                                                sampleRate = pcm.sampleRate,
+                                                pcm = pcm.pcm,
+                                            )
+                                        }
                                     }
-                                )
+                                ),
                             )
                         }
                     }

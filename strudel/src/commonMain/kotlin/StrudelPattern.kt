@@ -1,6 +1,9 @@
 package io.peekandpoke.klang.strudel
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 
 /**
@@ -12,16 +15,46 @@ interface StrudelPattern {
         val events: List<StrudelPatternEvent>,
     ) : StrudelPattern {
 
-        private val maxEnd = max(1.0, events.maxOfOrNull { it.end } ?: 0.0)
+        companion object {
+            private val codec = Json {
+                ignoreUnknownKeys = true
+                explicitNulls = false
+            }
+
+            fun fromJson(json: String): Static = codec.decodeFromString(serializer(), json)
+        }
+
+        private val totalCycles = ceil(max(1.0, events.maxOfOrNull { it.end } ?: 0.0))
 
         override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
             if (events.isEmpty()) return emptyList()
 
-            return events.filter { evt ->
-                val evtBegin = evt.begin % maxEnd
-                val evtEnd = evt.end % maxEnd
+            val fromMod = from % totalCycles
+            val toMod = to % totalCycles
 
-                evtBegin >= from && evtBegin < to || evtEnd > from && evtEnd <= to
+            val offset = floor(from / totalCycles) * totalCycles
+
+            return events
+                .filter { evt ->
+
+                    evt.begin >= fromMod && evt.begin < toMod || evt.end > fromMod && evt.end <= toMod
+                }
+                .map {
+                    it.copy(begin = it.begin + offset, end = it.end + offset)
+                }
+        }
+
+        fun toJson(): String {
+            val lines = events.map { codec.encodeToString(it) }
+
+            return buildString {
+                appendLine("{")
+                appendLine("  \"events\": [")
+                lines.forEachIndexed { idx, line ->
+                    appendLine("    $line${if (idx < lines.lastIndex) "," else ""}")
+                }
+                appendLine("  ]")
+                appendLine("}")
             }
         }
     }

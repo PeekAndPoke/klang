@@ -1,14 +1,16 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.KlangAudioRenderer
-import io.peekandpoke.klang.audio_be.createAudioLoop
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 
-class StrudelAudioBackend(
+/**
+ * A standard backend implementation that wires together the VoiceScheduler, Orbits, and Renderer.
+ * It uses the platform-specific [createAudioLoop] driver to run the audio.
+ */
+class KlangAudioBackend(
     private val sampleRate: Int,
     private val blockFrames: Int,
 ) {
@@ -53,7 +55,7 @@ class StrudelAudioBackend(
                         voices.schedule(cmd.voice)
 
                     is KlangCommLink.Cmd.Sample ->
-                        voices.addSample(request = cmd.request, sample = cmd)
+                        voices.addSample(msg = cmd)
                 }
             },
             renderBlock = { out ->

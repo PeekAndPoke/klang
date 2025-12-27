@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 
 class SampleVoice(
     override val orbitId: Int,
@@ -15,8 +16,7 @@ class SampleVoice(
     override val reverb: Voice.Reverb,
     override val vibrator: Voice.Vibrator,
     override val effects: Voice.Effects,
-    val pcm: FloatArray,
-    val pcmSampleRate: Int,
+    val sample: MonoSamplePcm,
     val rate: Double,
     var playhead: Double = 0.0,
 ) : Voice {
@@ -31,6 +31,7 @@ class SampleVoice(
         val length = (vEnd - vStart).toInt()
 
         val modBuffer = fillVibrato(ctx, offset, length)
+        val pcm = sample.pcm
         val pcmMax = pcm.size - 1
         val out = ctx.voiceBuffer
 

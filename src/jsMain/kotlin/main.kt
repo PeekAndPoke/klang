@@ -57,8 +57,7 @@ suspend fun runStrudelDemo() {
         cyclesPerSecond = 0.5,
     )
 
-    // TODO: create a pattern from an exported json
-    val pattern = StrudelPattern.Static(events = emptyList())
+    val pattern = StrudelPattern.Static.fromJson(tetrisJson)
 
     console.log("Running strudel player")
 

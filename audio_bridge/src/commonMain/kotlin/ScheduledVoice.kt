@@ -1,8 +1,11 @@
 package io.peekandpoke.klang.audio_bridge
 
+import kotlinx.serialization.Serializable
+
 /**
  * Use to schedule the playback of a voice
  */
+@Serializable
 data class ScheduledVoice(
     /** The event that triggered this voice */
     val data: VoiceData,

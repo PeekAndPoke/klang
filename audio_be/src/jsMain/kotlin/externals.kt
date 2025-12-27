@@ -1,26 +1,10 @@
 package io.peekandpoke.klang.audio_be
 
 import org.khronos.webgl.Float32Array
+import org.w3c.dom.MessagePort
 
 // https://developer.mozilla.org/de/docs/Web/API/AudioWorkletProcessor
 
-/**
- * Manually defining MessagePort if not importing from org.w3c.dom
- */
-external class MessagePort {
-    /** The callback when a message is received */
-    var onmessage: ((MessageEvent) -> Unit)?
-
-    /** Sends a message back to the main thread */
-    fun postMessage(message: Any?)
-}
-
-/**
- * The event wrapper
- */
-external class MessageEvent {
-    val data: dynamic
-}
 
 /**
  * The base class for your Kotlin processor

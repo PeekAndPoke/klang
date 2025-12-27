@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
@@ -56,6 +57,12 @@ private suspend fun helloStrudel() {
         val pattern = TestPatterns.active
 
         val pattern1 = strudel.compile(pattern).await()
+
+        println("=======================================================================")
+        println(
+            pattern1.makeStatic(0.0, 8.0).toJson()
+        )
+        println("=======================================================================")
 
         val pattern2 = strudel.compile(TestPatterns.smallTownBoy).await()
 

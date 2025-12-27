@@ -5,6 +5,7 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
 }
 
 val GROUP: String by project

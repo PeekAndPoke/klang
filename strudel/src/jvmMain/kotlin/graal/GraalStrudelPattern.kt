@@ -28,7 +28,7 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
 //            println("${event.note} ${event.scale}")
         }
 
-        return events
+        return events.sortedBy { it.begin }
     }
 
     /**
