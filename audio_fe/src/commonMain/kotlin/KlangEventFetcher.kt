@@ -32,12 +32,6 @@ class KlangEventFetcher<T>(
         var queryCursorCycles = 0.0
         val fetchChunk = 1.0
 
-        // TODO: we also need to prefetch the first few cycles including voices ...
-
-        // TODO: we need two jobs
-        //   1. (DONE) one that fetches audio events and send scheduled voice to the backend -> see existing code
-        //   2. listening for request from the backend -> for example to receive sample pcm data
-
         while (scope.isActive) {
             val nowFrame = state.cursorFrame()
             val nowSec = nowFrame.toDouble() / config.sampleRate.toDouble()
@@ -77,9 +71,21 @@ class KlangEventFetcher<T>(
                     is KlangCommLink.Feedback.RequestSample -> {
                         println("Backend requested sample: $evt")
 
-                        samples.getWithCallback(evt.toSampleRequest()) { pcm ->
+                        samples.getWithCallback(evt.toSampleRequest()) { result ->
+                            val sample = result?.first
+                            val pcm = result?.second
+
                             commLink.control.dispatch(
-                                KlangCommLink.Cmd.Sample(request = evt, sample = pcm)
+                                KlangCommLink.Cmd.Sample(
+                                    request = evt,
+                                    data = sample?.let {
+                                        KlangCommLink.Cmd.Sample.Data(
+                                            note = it.note,
+                                            pitchHz = it.pitchHz,
+                                            pcm = pcm
+                                        )
+                                    }
+                                )
                             )
                         }
                     }

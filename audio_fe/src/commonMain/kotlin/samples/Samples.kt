@@ -150,11 +150,14 @@ class Samples(
         return null
     }
 
-    fun getWithCallback(request: SampleRequest, callback: (MonoSamplePcm?) -> Unit) {
+    fun getWithCallback(request: SampleRequest, callback: (Pair<Sample, MonoSamplePcm?>?) -> Unit) {
         val sampleId = index.resolve(request) ?: return callback(null)
 
         scope.launch {
-            callback(sampleCache.getOrPut(sampleId) { loadAndDecode(sampleId) })
+            val pcm = sampleCache.getOrPut(sampleId) { loadAndDecode(sampleId) }
+            val result = sampleId.sample to pcm
+
+            callback(result)
         }
     }
 

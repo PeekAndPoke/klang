@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +18,7 @@ class JvmKlangAudioLoop(
     override suspend fun runLoop(
         state: KlangPlayerState,
         commLink: KlangCommLink.BackendEndpoint,
-        onSchedule: (ScheduledVoice) -> Unit,
+        onCommand: (KlangCommLink.Cmd) -> Unit,
         renderBlock: (ByteArray) -> Unit,
     ) {
         // Run on IO dispatcher to avoid blocking the main thread with audio I/O
@@ -45,15 +44,9 @@ class JvmKlangAudioLoop(
                 while (isActive && state.running()) {
                     // 1. Drain Events from the Receiver
                     while (true) {
-                        val evt = commLink.control.receive() ?: break
+                        val cmd = commLink.control.receive() ?: break
 
-                        when (evt) {
-                            is KlangCommLink.Cmd.ScheduleVoice -> onSchedule(evt.voice)
-
-                            is KlangCommLink.Cmd.Sample -> {
-                                println("Received Sample: ${evt.request} | ${evt.sample?.pcm?.size} bytes")
-                            }
-                        }
+                        onCommand(cmd)
                     }
 
                     // 2. Render the Audio Block

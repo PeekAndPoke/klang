@@ -10,8 +10,14 @@ class KlangCommLink(capacity: Int = 8192) {
         data class ScheduleVoice(val voice: ScheduledVoice) : Cmd
         data class Sample(
             val request: Feedback.RequestSample,
-            val sample: MonoSamplePcm?,
-        ) : Cmd
+            val data: Data?,
+        ) : Cmd {
+            data class Data(
+                val note: String?,
+                val pitchHz: Double,
+                val pcm: MonoSamplePcm?,
+            )
+        }
     }
 
     /** Send from the backend to the frontend */

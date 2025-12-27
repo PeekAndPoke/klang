@@ -29,6 +29,8 @@ class VoiceScheduler(
         val sampleRateDouble = sampleRate.toDouble()
     }
 
+    private val samples = mutableMapOf<KlangCommLink.Feedback.RequestSample, KlangCommLink.Cmd.Sample>()
+
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
 
@@ -70,14 +72,20 @@ class VoiceScheduler(
         active.clear()
     }
 
+    fun addSample(
+        request: KlangCommLink.Feedback.RequestSample,
+        sample: KlangCommLink.Cmd.Sample,
+    ) {
+        samples[request] = sample
+    }
+
     fun schedule(voice: ScheduledVoice) {
         scheduled.push(voice)
 
         // Prefetch sound samples
-        // TODO
-//        if (voice.data.isSampleSound()) {
-//            options.samples.prefetch(voice.data.asSampleRequest())
-//        }
+        if (voice.data.isSampleSound()) {
+            options.commLink.feedback.dispatch(voice.data.asSampleRequest())
+        }
     }
 
     fun process(cursorFrame: Long) {
@@ -211,47 +219,49 @@ class VoiceScheduler(
                 // TODO: check if we already have this voice
                 //  If we have it -> fine, create the SampleVoice
                 //  If not, then we request it from the frontend
-                val sampleId = data.asSampleRequest()
+                val sampleRequest = data.asSampleRequest()
+                val sampleEntry = samples[sampleRequest]
 
-                options.commLink.feedback.dispatch(sampleId)
+                // Did we already request this sample?
+                if (sampleEntry == null) {
+                    options.commLink.feedback.dispatch(sampleRequest)
+                    return null
+                }
+
+                // Does the sample exist?
+                val sample = sampleEntry.data ?: return null
+                val pcm = sample.pcm ?: return null
 
 
-                null
-                // TODO
-//                val loaded = options.samples.getIfLoaded(data.asSampleRequest())
-//                    ?: return null
-//
-//                val (sampleId, decoded) = loaded
-//
-//                val baseSamplePitchHz = sampleId.sample.pitchHz
-//                val targetHz = data.note?.let { n -> Tones.resolveFreq(n, data.scale) }
-//                    ?: baseSamplePitchHz
-//                val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
-//                val rate = (decoded.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
-//
-//                val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)
-//                val playhead0 = lateFrames.toDouble() * rate
-//
-//                if (decoded.pcm.size <= 1 || playhead0 >= decoded.pcm.size - 1) return null
-//
-//                SampleVoice(
-//                    orbitId = orbit,
-//                    startFrame = nowFrame,
-//                    endFrame = scheduled.endFrame,
-//                    gateEndFrame = scheduled.gateEndFrame,
-//                    gain = data.gain,
-//                    pan = data.pan ?: 0.0,
-//                    filter = bakedFilters,
-//                    envelope = envelope,
-//                    delay = delay,
-//                    reverb = reverb,
-//                    vibrator = vibrator,
-//                    effects = effects,
-//                    pcm = decoded.pcm,
-//                    pcmSampleRate = decoded.sampleRate,
-//                    rate = rate,
-//                    playhead = playhead0,
-//                )
+                val baseSamplePitchHz = sample.pitchHz
+                val targetHz = data.note?.let { n -> Tones.resolveFreq(n, data.scale) }
+                    ?: baseSamplePitchHz
+                val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
+                val rate = (pcm.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
+
+                val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)
+                val playhead0 = lateFrames.toDouble() * rate
+
+                if (pcm.pcm.size <= 1 || playhead0 >= pcm.pcm.size - 1) return null
+
+                SampleVoice(
+                    orbitId = orbit,
+                    startFrame = nowFrame,
+                    endFrame = scheduled.endFrame,
+                    gateEndFrame = scheduled.gateEndFrame,
+                    gain = data.gain,
+                    pan = data.pan ?: 0.0,
+                    filter = bakedFilters,
+                    envelope = envelope,
+                    delay = delay,
+                    reverb = reverb,
+                    vibrator = vibrator,
+                    effects = effects,
+                    pcm = pcm.pcm,
+                    pcmSampleRate = pcm.sampleRate,
+                    rate = rate,
+                    playhead = playhead0,
+                )
             }
 
             else -> null

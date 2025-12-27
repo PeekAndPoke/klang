@@ -1,16 +1,11 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.createAudioLoop
-import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.osci.oscillators
-import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.audio_engine.createDefaultAudioLoop
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlin.math.tanh
 
 fun strudelPlayer(
     pattern: StrudelPattern,
@@ -19,8 +14,6 @@ fun strudelPlayer(
 ): KlangPlayer<StrudelPatternEvent> {
     val cps = options.cyclesPerSecond
     val sampleRate = options.sampleRate
-    val blockFrames = options.blockSize
-    val samples = options.samples
 
     return KlangPlayer(
         source = pattern.asEventSource(),
@@ -41,55 +34,8 @@ fun strudelPlayer(
                 gateEndFrame = startFrame + durFrames,
             )
         },
-        audioLoop = { state, commLink ->
-            // TODO: this is wrong here ...
-            //  - The audio loop creates the orbits and everything by itself
-
-            val orbits = Orbits(maxOrbits = 16, blockFrames = blockFrames, sampleRate = sampleRate)
-            val voices = VoiceScheduler(
-                VoiceScheduler.Options(
-                    commLink = commLink,
-                    sampleRate = sampleRate,
-                    blockFrames = blockFrames,
-                    oscillators = oscillators(sampleRate),
-                    orbits = orbits,
-                )
-            )
-
-            val mix = StereoBuffer(blockFrames)
-            val loop = createAudioLoop(sampleRate, blockFrames)
-
-            loop.runLoop(
-                state = state,
-                commLink = commLink,
-                onSchedule = { evt -> voices.schedule(evt) },
-                renderBlock = { out ->
-                    val blockStart = state.cursorFrame()
-
-                    mix.clear()
-                    orbits.clearAll()
-
-                    voices.process(blockStart)
-                    orbits.processAndMix(mix)
-
-                    val left = mix.left
-                    val right = mix.right
-
-                    for (i in 0 until blockFrames) {
-                        val l = (tanh(left[i]).coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt()
-                        val r = (tanh(right[i]).coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt()
-
-                        val idx = i * 4
-                        out[idx] = (l and 0xff).toByte()
-                        out[idx + 1] = ((l ushr 8) and 0xff).toByte()
-                        out[idx + 2] = (r and 0xff).toByte()
-                        out[idx + 3] = ((r ushr 8) and 0xff).toByte()
-                    }
-
-                    state.cursorFrame(blockStart + blockFrames)
-                }
-            )
-        },
+        // Now using the generic factory from audio_engine
+        audioLoop = createDefaultAudioLoop(options),
         scope = scope
     )
 }
