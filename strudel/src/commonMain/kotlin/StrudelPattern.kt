@@ -34,6 +34,8 @@ interface StrudelPattern {
 
             val offset = floor(from / totalCycles) * totalCycles
 
+            // println("from=$from, to=$to, offset=$offset, fromMod=$fromMod, toMod=$toMod")
+
             return events
                 .filter { evt ->
 

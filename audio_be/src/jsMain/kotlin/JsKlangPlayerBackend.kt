@@ -2,6 +2,8 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendCmd
+import io.peekandpoke.klang.audio_bridge.AudioContext
+import io.peekandpoke.klang.audio_bridge.AudioWorkletNode
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.await
@@ -33,43 +35,41 @@ class JsKlangPlayerBackend(
             // This file "dsp.js" must contain the AudioWorkletProcessor registration
             ctx.audioWorklet.addModule("klang-worklet.js").await()
 
-            // 3. Create the Node (this instantiates the Processor in the Audio Thread)
+            // 2. Create the Node (this instantiates the Processor in the Audio Thread)
             node = AudioWorkletNode(ctx, "klang-audio-processor")
             node.connect(ctx.destination)
 
-            // 4. Send Command
+            // 3. Send Command
             if (ctx.state == "suspended") {
                 ctx.resume().await()
             }
 
-            // 5. Setup Feedback Loop (Worklet -> Frontend)
+            // 4. Setup Feedback Loop (Worklet -> Frontend)
             // We listen for messages from the worklet (e.g. Sample Requests, Position Updates)
             node.port.onmessage = { message: MessageEvent ->
-                // console.log("Received message from Worklet:", message.data)
-
+                // We pass all feedback through to the frontend
                 val decoded = WorkletContract.decodeFeed(message)
-
-                // We pass all events through to the frontend
+                // Forward
                 commLink.feedback.send(decoded)
+
+                // console.log("Forwarded message from Worklet:", message.data)
             }
 
-            // 6. Setup Command Loop (Frontend -> Worklet)
-            // We poll the ring buffer and forward commands to the worklet
+            // 5. Stay in the loop and forward all messages from the worklet to the frontend
             while (scope.isActive) {
                 // Drain the buffer
                 while (true) {
-                    // We are the 'BackendEndpoint' here, so we RECEIVE commands
+                    // We pass all command through to the audio worklet
                     val cmd = commLink.control.receive() ?: break
-
-                    // console.log("Forwarding command to Worklet:", cmd)
-
+                    // Forward
                     node.port.sendCmd(cmd)
+
+                    // console.log("Forwarded command to Worklet:", cmd)
                 }
 
-                // Yield / throttle to ~60fps poll rate
+                // 60 FPS
                 delay(16)
             }
-
         } catch (e: Throwable) {
             console.error("AudioWorklet Error:", e)
             throw e

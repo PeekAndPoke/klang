@@ -1,5 +1,6 @@
-package io.peekandpoke.klang.audio_be
+package io.peekandpoke.klang.audio_bridge
 
+import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Float32Array
 import org.w3c.dom.MessagePort
 import kotlin.js.Promise
@@ -12,6 +13,15 @@ external class AudioContext {
     val state: String
     fun resume(): Promise<Unit>
     fun close(): Promise<Unit>
+    fun decodeAudioData(audioData: ArrayBuffer): Promise<AudioBuffer>
+}
+
+external class AudioBuffer {
+    val duration: Double
+    val length: Int
+    val numberOfChannels: Int
+    val sampleRate: Int
+    fun getChannelData(channel: Int): Float32Array
 }
 
 external class AudioWorklet {

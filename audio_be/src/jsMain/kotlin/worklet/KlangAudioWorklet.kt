@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.audio_be.worklet
 
-import io.peekandpoke.klang.audio_be.AudioWorkletProcessor
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendFeed
+import io.peekandpoke.klang.audio_bridge.AudioWorkletProcessor
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import org.khronos.webgl.Float32Array
 import org.khronos.webgl.set
@@ -13,11 +13,15 @@ import org.khronos.webgl.set
 @JsName("KlangAudioWorklet")
 class KlangAudioWorklet : AudioWorkletProcessor {
 
-    class Ctx {
-        val commLink = KlangCommLink()
+    class Ctx(
+        val sampleRate: Int,
+        val blockFrames: Int,
+    ) {
+        init {
+            console.log("[WORKLET] Initialized. Sample rate: $sampleRate, block frames: $blockFrames")
+        }
 
-        val sampleRate = 44100
-        val blockFrames = 128 // Standard AudioWorklet block size
+        val commLink = KlangCommLink()
 
         // Core DSP components
         val orbits = Orbits(
@@ -46,19 +50,34 @@ class KlangAudioWorklet : AudioWorkletProcessor {
     private var ctx: Ctx? = null
 
     @JsName("init")
-    private fun init(block: Ctx.() -> Boolean): Boolean {
-        return (ctx ?: Ctx()).let { ctx ->
+    private fun init(outputs: Array<Array<Float32Array>>, block: Ctx.() -> Boolean): Boolean {
+
+        fun makeContext(): Ctx {
+            // Dynamic detection of environment parameters
+            val sampleRate = (js("sampleRate") as Number).toInt()
+
+            // Detect block size from the first output channel
+            val output = outputs[0]
+            val numChannels = output.size
+            // Fallback to 128 if no channels (unlikely)
+            val blockFrames = if (numChannels > 0) output[0].length else 128
+
+            return Ctx(sampleRate, blockFrames)
+        }
+
+        return (ctx ?: makeContext()).let { ctx ->
             this.ctx = ctx
 
             // Listening (Receiving from Main Thread)
             port.onmessage = { message ->
-                val cmd = WorkletContract.decodeCmd(message)
+                WorkletContract.decodeCmd(message).also { cmd ->
+                    // console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
 
-                // console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
-
-                when (cmd) {
-                    is KlangCommLink.Cmd.ScheduleVoice -> ctx.voices.schedule(cmd.voice)
-                    else -> Unit
+                    when (cmd) {
+                        is KlangCommLink.Cmd.ScheduleVoice -> ctx.voices.schedule(cmd.voice)
+                        is KlangCommLink.Cmd.Sample -> ctx.voices.addSample(msg = cmd)
+//                        else -> Unit
+                    }
                 }
             }
 
@@ -70,7 +89,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         inputs: Array<Array<Float32Array>>,
         outputs: Array<Array<Float32Array>>,
         parameters: dynamic,
-    ): Boolean = init {
+    ): Boolean = init(outputs) {
         if (!isPlaying) return@init true
 
         // Port 0
@@ -106,8 +125,13 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         // Tell the frontend about the cursor update
         port.sendFeed(KlangCommLink.Feedback.UpdateCursorFrame(frame = cursorFrame))
 
-        // Notify main thread of current position (optional but helpful for UI)
-        // port.postMessage(js("{type: 'POSITION', frame: ctx.cursorFrame}"))
+        // also forward all feedback messages
+        while (true) {
+            val feed = commLink.frontend.feedback.receive() ?: break
+            port.sendFeed(feed)
+
+            console.log("[WORKLET] Sending feedback to frontend:", feed)
+        }
 
         true
     }

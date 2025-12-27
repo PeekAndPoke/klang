@@ -109,6 +109,7 @@ class VoiceScheduler(
 
         // Prefetch sound samples
         if (voice.data.isSampleSound()) {
+            println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
             options.commLink.feedback.send(voice.data.asSampleRequest())
         }
     }

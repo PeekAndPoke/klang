@@ -49,7 +49,6 @@ class KlangEventFetcher<T>(
                 val to = from + fetchChunk
 
                 try {
-                    println("Querying from $from to $to")
                     val events = config.source.query(from, to)
 
                     for (e in events) {

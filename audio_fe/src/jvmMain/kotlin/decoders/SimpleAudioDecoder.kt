@@ -5,7 +5,7 @@ import io.peekandpoke.klang.audio_fe.samples.AudioDecoder
 
 class SimpleAudioDecoder : AudioDecoder {
 
-    override fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm? {
+    override suspend fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm? {
         return try {
             when {
                 isWav(audioBytes) -> WavFileDecoder.decodeMonoFloatPcm(audioBytes)
