@@ -18,7 +18,7 @@ actual fun <T> klangPlayer(
         transform = transform,
         options = options,
         backendFactory = { config -> JvmKlangPlayerBackend(config) },
-        fetcherDispatcher = Dispatchers.IO,
+        fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = Dispatchers.IO,
     )
 }

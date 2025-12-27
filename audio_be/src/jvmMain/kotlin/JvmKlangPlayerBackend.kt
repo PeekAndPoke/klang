@@ -4,7 +4,6 @@ import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangPlayerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -15,7 +14,6 @@ import kotlin.time.Duration.Companion.milliseconds
 class JvmKlangPlayerBackend(
     config: KlangPlayerBackend.Config,
 ) : KlangPlayerBackend {
-    private val state: KlangPlayerState = config.state
     private val commLink: KlangCommLink.BackendEndpoint = config.commLink
     private val sampleRate: Int = config.sampleRate
     private val blockSize: Int = config.blockSize
@@ -45,62 +43,62 @@ class JvmKlangPlayerBackend(
     )
 
     override suspend fun run(scope: CoroutineScope) {
-
         var currentFrame = 0L
 
-        while (scope.isActive && state.running()) {
-            // Stereo
-            val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
-            // Audio line
-            val line = AudioSystem.getSourceDataLine(format)
+        // Stereo
+        val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
+        // Audio line
+        val line = AudioSystem.getSourceDataLine(format)
 
-            // Buffer size: 500ms should be safe enough for JVM
-            val bufferMs = 250
-            val bufferFrames = (sampleRate * bufferMs / 1000.0).toInt()
-            // 4 bytes per frame (Stereo 16-bit)
-            val bufferBytes = bufferFrames * 4
+        // Buffer size: 500ms should be safe enough for JVM
+        val bufferMs = 250
+        val bufferFrames = (sampleRate * bufferMs / 1000.0).toInt()
+        // 4 bytes per frame (Stereo 16-bit)
+        val bufferBytes = bufferFrames * 4
 
-            line.open(format, bufferBytes)
-            line.start()
+        line.open(format, bufferBytes)
+        line.start()
 
-            // Pre-allocate the output buffer for one block
-            val out = ByteArray(blockSize * 4)
+        // Pre-allocate the output buffer for one block
+        val out = ByteArray(blockSize * 4)
 
-            try {
-                while (scope.isActive && state.running()) {
-                    // Get events
-                    while (true) {
-                        val cmd = commLink.control.receive() ?: break
 
-                        when (cmd) {
-                            is KlangCommLink.Cmd.ScheduleVoice -> voices.schedule(cmd.voice)
-                            is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
-                        }
+        try {
+            while (scope.isActive) {
+                // Get events
+                while (true) {
+                    val cmd = commLink.control.receive() ?: break
+
+                    when (cmd) {
+                        is KlangCommLink.Cmd.ScheduleVoice -> voices.schedule(cmd.voice)
+                        is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
                     }
-
-                    // rendering ///////////////////////////////////////////////////////////////////////////////////////
-                    // Render into buffer (State Read)
-                    renderer.renderBlock(cursorFrame = currentFrame, out = out)
-
-                    // Advance Cursor (State Write)
-                    currentFrame += blockSize
-                    // Tell the frontend about the cursor update
-                    commLink.feedback.send(KlangCommLink.Feedback.UpdateCursorFrame(frame = currentFrame))
-
-                    // 3. Write to Hardware
-                    // This call blocks if the hardware buffer is full, pacing the loop
-                    line.write(out, 0, out.size)
-
-                    // Wait a bit
-                    delay(10.milliseconds)
                 }
-            } finally {
-                // Cleanup
-                line.drain()
-                line.stop()
-                line.close()
+
+                // rendering ///////////////////////////////////////////////////////////////////////////////////////
+                // Render into buffer (State Read)
+                renderer.renderBlock(cursorFrame = currentFrame, out = out)
+
+                // Advance Cursor (State Write)
+                currentFrame += blockSize
+                // Tell the frontend about the cursor update
+                commLink.feedback.send(KlangCommLink.Feedback.UpdateCursorFrame(frame = currentFrame))
+
+                // 3. Write to Hardware
+                // This call blocks if the hardware buffer is full, pacing the loop
+                line.write(out, 0, out.size)
+
+                // 60 FPS
+                delay(10.milliseconds)
             }
+        } finally {
+            // Cleanup
+            line.drain()
+            line.stop()
+            line.close()
         }
+
+        println("KlangPlayerBackend stopped")
     }
 }
 

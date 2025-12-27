@@ -20,10 +20,8 @@ class KlangEventFetcher<T>(
         val sampleRate: Int,
         val cps: Double,
         val lookaheadSec: Double,
-        val fetchPeriodMs: Long,
         val prefetchCycles: Double,
     )
-
 
     suspend fun run(scope: CoroutineScope) {
         val secPerCycle = 1.0 / config.cps
@@ -35,7 +33,7 @@ class KlangEventFetcher<T>(
         val samples = config.samples
         // Control channel
         val control = config.commLink.control
-        // Feeback channel
+        // Feedback channel
         val feedback = config.commLink.feedback
 
         while (scope.isActive) {
@@ -45,6 +43,7 @@ class KlangEventFetcher<T>(
 
             val targetCycles = nowCycles + (config.lookaheadSec / secPerCycle)
 
+            // Fetch as many new cycles as needed
             while (queryCursorCycles < targetCycles) {
                 val from = queryCursorCycles
                 val to = from + fetchChunk
@@ -102,8 +101,11 @@ class KlangEventFetcher<T>(
                 }
             }
 
-            delay(config.fetchPeriodMs)
+            // 60 FPS
+            delay(16)
         }
+
+        println("KlangPlayerBackend stopped")
     }
 
     private fun KlangCommLink.Feedback.RequestSample.toSampleRequest() =
