@@ -1,11 +1,13 @@
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
-rootProject.name = "klang"
+rootProject.name = "klang-engine"
 
 include(
-    // Audio engine
-    ":audio_engine",
+    // Public entry point
+    ":klang",
+
+    // Audio engine parts
     ":audio_fe",
     ":audio_be",
     ":audio_bridge",

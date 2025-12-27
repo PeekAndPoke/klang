@@ -241,12 +241,9 @@ class VoiceScheduler(
 
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             isSample -> {
-                // TODO: check if we already have this voice
-                //  If we have it -> fine, create the SampleVoice
-                //  If not, then we request it from the frontend
+                // Did we already request this sample?
                 val sampleRequest = data.asSampleRequest()
 
-                // Did we already request this sample?
                 if (!samples.containsKey(sampleRequest)) {
                     // No request it
                     options.commLink.feedback.send(sampleRequest)

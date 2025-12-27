@@ -28,7 +28,7 @@ class JsKlangPlayerBackend(
         try {
             // 2. Load the compiled DSP module
             // This file "dsp.js" must contain the AudioWorkletProcessor registration
-            ctx.audioWorklet.addModule("audio_be.js").await()
+            ctx.audioWorklet.addModule("klang-worklet.js").await()
 
             // 3. Create the Node (this instantiates the Processor in the Audio Thread)
             node = AudioWorkletNode(ctx, "klang-audio-processor")

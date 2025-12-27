@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class KlangLock() {
     fun lock()
     fun unlock()

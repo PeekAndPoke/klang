@@ -32,7 +32,7 @@ kotlin {
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
 
-                api(project(":audio_engine"))
+                api(project(":klang"))
             }
         }
 

@@ -20,6 +20,7 @@ kotlin {
             binaries.executable()
 
             webpackTask {
+                mainOutputFileName = "klang-worklet.js"
                 cssSupport { enabled.set(false) }
             }
         }

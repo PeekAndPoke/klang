@@ -22,9 +22,9 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/audio_be" />
             <option value="$PROJECT_DIR$/audio_bridge" />
-            <option value="$PROJECT_DIR$/audio_engine" />
             <option value="$PROJECT_DIR$/audio_fe" />
             <option value="$PROJECT_DIR$/buildSrc" />
+            <option value="$PROJECT_DIR$/klang" />
             <option value="$PROJECT_DIR$/strudel" />
           </set>
         </option>
