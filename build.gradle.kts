@@ -116,8 +116,10 @@ tasks {
         group = "build"
         description = "Copies the audio_be JS bundle to jsMain resources as dsp.js"
 
+        // TODO: figure out why the productionWebpack files do not work...
+
         // Depends on the production webpack build of the backend module
-        dependsOn(":audio_be:jsBrowserProductionWebpack")
+        dependsOn(":audio_be:jsBrowserDevelopmentWebpack")
 
         // Path to the output of the webpack task in audio_be
         // Note: The path depends on your Kotlin version and project structure.
@@ -127,7 +129,7 @@ tasks {
         // Let's try to resolve it dynamically or point to the standard location
         from(
             project(":audio_be").layout.buildDirectory.dir(
-                "kotlin-webpack/js/productionExecutable/"
+                "kotlin-webpack/js/developmentExecutable/"
             )
         ) {
             include("*.*")

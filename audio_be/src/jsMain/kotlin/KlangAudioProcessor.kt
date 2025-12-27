@@ -21,6 +21,7 @@ class KlangAudioProcessor : AudioWorkletProcessor {
 
     private var ctx: Ctx? = null
 
+    @JsName("init")
     private fun init(block: Ctx.() -> Boolean): Boolean {
         console.log("init")
 
