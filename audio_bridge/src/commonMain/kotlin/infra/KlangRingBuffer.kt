@@ -4,7 +4,7 @@ package io.peekandpoke.klang.audio_bridge.infra
  * A simple ring buffer to pass events from the fetcher (Main Thread) to the audio loop (Audio Thread).
  * Uses a fixed capacity.
  */
-class KlangMessageBuffer<T>(private val capacity: Int) : KlangMessageSender<T>, KlangMessageReceiver<T> {
+class KlangRingBuffer<T>(private val capacity: Int) : KlangMessageSender<T>, KlangMessageReceiver<T> {
     private val buffer = arrayOfNulls<Any?>(capacity)
     private var head = 0 // Write index
     private var tail = 0 // Read index

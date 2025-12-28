@@ -93,15 +93,16 @@ class VoiceScheduler(
     }
 
     fun addSample(msg: KlangCommLink.Cmd.Sample) {
+        val req = msg.req
 
         when (msg) {
             is KlangCommLink.Cmd.Sample.NotFound -> {
-                samples[msg.req] = SampleEntry.NotFound(msg.req)
+                samples[req] = SampleEntry.NotFound(req)
             }
 
             is KlangCommLink.Cmd.Sample.Complete -> {
-                samples[msg.req] = SampleEntry.Complete(
-                    req = msg.req,
+                samples[req] = SampleEntry.Complete(
+                    req = req,
                     note = msg.note,
                     pitchHz = msg.pitchHz,
                     sample = MonoSamplePcm(
@@ -111,7 +112,37 @@ class VoiceScheduler(
                 )
             }
 
-//            is KlangCommLink.Cmd.Sample.NotFound
+            is KlangCommLink.Cmd.Sample.Chunk -> {
+                // Only update partials ...
+                val existing = samples[req]
+                if (existing != null && existing !is SampleEntry.Partial) return
+
+                // Use existing entry of create it
+                val entry = existing ?: SampleEntry.Partial(
+                    req = req,
+                    note = msg.note,
+                    pitchHz = msg.pitchHz,
+                    sample = MonoSamplePcm(sampleRate = msg.sampleRate, pcm = FloatArray(msg.totalSize))
+                )
+
+                // Write bytes
+                msg.data.copyInto(destination = entry.sample.pcm, destinationOffset = msg.chunkOffset)
+
+                // Update entry
+                samples[req] = if (!msg.isLastChunk) {
+                    entry
+                } else {
+                    // TODO: no sound in JS with chunks .. why?
+                    println("Promoting to Complete: $entry")
+                    // Promote to Complete
+                    SampleEntry.Complete(
+                        req = req,
+                        note = entry.note,
+                        pitchHz = entry.pitchHz,
+                        sample = entry.sample,
+                    )
+                }
+            }
         }
     }
 

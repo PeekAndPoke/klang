@@ -6,7 +6,27 @@
 - 23-12-2025: bought 10 more AI credits -> 11.90 EUR
 - 26-12-2025: bought 50 more AI credits -> 59.90 EUR
 
-## 2025-12
+## Diary
+
+### (2025-12-28) JS Audio Worklet - smoother audio samples upload to the backed
+
+- Working on splitting the audio samples into smaller chunks
+
+### (2025-12-27) JS Audio Worklet - stuttering when uploading samples
+
+- it turns out that sending big chunks to the AudioWorklet leads to stuttering
+- we have to send audio samples in smaller chunks
+- So for JS the flow will be:
+  - event fetcher sends Cmd.Sample.Complete command
+  - JsKlangPlayerBackend splits these into multiple Cmd.Sample.Chunk commands
+  - VoiceScheduler combines these
+
+### (2025-12-27) General Architecture struggle
+
+- after struggling with the general multiplatform architecture -> rewrite of audio backends
+- resulted in much cleaner and easy to read code, fewer indirection
+- we now have a platform specific klangPlayer() function that handles all the wiring
+- strudelPlayer() is now defined in the commonMain and takes advantage of the platform specific klangPlayer()
 
 ### (2025-12-26) Project structure
 
