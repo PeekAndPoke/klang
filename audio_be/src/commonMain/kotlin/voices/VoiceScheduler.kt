@@ -115,7 +115,7 @@ class VoiceScheduler(
                 // make sure we do not request this one again
                 samples[req] = null
 
-                println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
+                // println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
                 options.commLink.feedback.send(voice.data.asSampleRequest())
             }
         }

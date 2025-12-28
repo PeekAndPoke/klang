@@ -7,15 +7,19 @@ import kotlin.js.Promise
 
 // https://developer.mozilla.org/de/docs/Web/API/AudioWorkletProcessor
 
-external class AudioContext {
+external class AudioContext(options: AudioContextOptions = definedExternally) {
     val audioWorklet: AudioWorklet
     val destination: AudioNode
     val state: String
+    val sampleRate: Float
     fun resume(): Promise<Unit>
     fun close(): Promise<Unit>
     fun decodeAudioData(audioData: ArrayBuffer): Promise<AudioBuffer>
 }
 
+external interface AudioContextOptions {
+    var sampleRate: Int?
+}
 external class AudioBuffer {
     val duration: Double
     val length: Int

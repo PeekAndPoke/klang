@@ -1,7 +1,16 @@
 # Immediate Todos
 
-- clean up dependencies of "strudel" module once KlangEngine is implemented and Strudel
-  has become a simple KlangEventSource
+- extract Tones from audio_bridge
+  - create own module for that
+  - fully implement tonaljs und hook it up to strudel
+
+- calculate frequency immediately when creating VoiceData instead of doing it in VoiceScheduler
+  - is this possible?
+
+- change KlangPlayer.play() logic
+  - is must be able to play multiple song / sound etc with the same player instance
+  - play() will return a Klang-Object
+  - this object has a stop() method
 
 # Strudel Engine Next Steps
 

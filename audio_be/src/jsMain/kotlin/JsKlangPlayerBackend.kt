@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendCmd
 import io.peekandpoke.klang.audio_bridge.AudioContext
+import io.peekandpoke.klang.audio_bridge.AudioContextOptions
 import io.peekandpoke.klang.audio_bridge.AudioWorkletNode
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineScope
@@ -10,6 +11,7 @@ import kotlinx.coroutines.await
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.w3c.dom.MessageEvent
+import kotlin.js.json
 
 class JsKlangPlayerBackend(
     config: KlangPlayerBackend.Config,
@@ -21,7 +23,8 @@ class JsKlangPlayerBackend(
     private val blockSize: Int = config.blockSize
 
     override suspend fun run(scope: CoroutineScope) {
-        val ctx = AudioContext()
+        val options = json("sampleRate" to sampleRate).unsafeCast<AudioContextOptions>()
+        val ctx = AudioContext(options)
 
         // 1. Resume Audio Context (Browser policy usually requires this on interaction)
         if (ctx.state == "suspended") {
@@ -64,6 +67,7 @@ class JsKlangPlayerBackend(
                     // Forward
                     node.port.sendCmd(cmd)
 
+                    delay(1)
                     // console.log("Forwarded command to Worklet:", cmd)
                 }
 

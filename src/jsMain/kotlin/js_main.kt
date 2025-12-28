@@ -53,7 +53,7 @@ suspend fun runStrudelDemo() {
     // 2. Setup Player Options
     val playerOptions = KlangPlayer.Options(
         samples = samples,
-        sampleRate = 44100, // Standard for web
+        sampleRate = 48000,
         cyclesPerSecond = 0.5,
     )
 

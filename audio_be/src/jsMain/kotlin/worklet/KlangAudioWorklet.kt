@@ -70,7 +70,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
 
             // Listening (Receiving from Main Thread)
             port.onmessage = { message ->
-                WorkletContract.decodeCmd(message).also { cmd ->
+                WorkletContract.decodeCmd(message)?.also { cmd ->
                     // console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
 
                     when (cmd) {
