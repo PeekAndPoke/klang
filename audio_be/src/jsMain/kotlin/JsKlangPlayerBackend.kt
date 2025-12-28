@@ -7,10 +7,11 @@ import io.peekandpoke.klang.audio_bridge.AudioContextOptions
 import io.peekandpoke.klang.audio_bridge.AudioWorkletNode
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangRingBuffer
+import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.await
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.w3c.dom.MessageEvent
 import kotlin.js.json
 
@@ -19,7 +20,7 @@ class JsKlangPlayerBackend(
 ) : KlangPlayerBackend {
     private val commLink: KlangCommLink.BackendEndpoint = config.commLink
 
-    private val cmdBuffer = KlangRingBuffer<KlangCommLink.Cmd>(8192 * 4)
+    private val sampleUploadBuffer = KlangRingBuffer<KlangCommLink.Cmd.Sample.Chunk>(8192 * 4)
 
     override suspend fun run(scope: CoroutineScope) {
         // Init the audio context with the given sample rate
@@ -58,47 +59,45 @@ class JsKlangPlayerBackend(
                 // console.log("Forwarded message from Worklet:", message.data)
             }
 
-            // 5. Stay in the loop and forward all messages from the worklet to the frontend
-            while (scope.isActive) {
-                // Drain the internal buffer
-                while (true) {
-                    val cmd = cmdBuffer.receive() ?: break
-                    console.log("Forwarded command from internal buffer:", cmd)
+            fun loop() {
+                println("loop with requestAnimationFrame() 2")
+
+                // Upload the next sample chunk ... we send them one at a time
+                sampleUploadBuffer.receive()?.let { cmd ->
                     node.port.sendCmd(cmd)
-                    // TODO: use requestAnimation from this buffer ...
-                    delay(20)
                 }
 
                 // Drain comm link cmd buffer
-                while (true) {
-                    // We pass all command through to the audio worklet
-                    val cmd = commLink.control.receive() ?: break
+                when (val cmd = commLink.control.receive()) {
+                    null -> Unit
+                    // Direct forwarding
+                    is KlangCommLink.Cmd.ScheduleVoice -> node.port.sendCmd(cmd)
 
-                    when (cmd) {
+                    is KlangCommLink.Cmd.Sample -> when (cmd) {
                         // Direct forwarding
-                        is KlangCommLink.Cmd.ScheduleVoice -> node.port.sendCmd(cmd)
+                        is KlangCommLink.Cmd.Sample.NotFound,
+                        is KlangCommLink.Cmd.Sample.Chunk,
+                            -> node.port.sendCmd(cmd)
 
-                        is KlangCommLink.Cmd.Sample -> when (cmd) {
-                            // Direct forwarding
-                            is KlangCommLink.Cmd.Sample.NotFound,
-                            is KlangCommLink.Cmd.Sample.Chunk,
-                                -> node.port.sendCmd(cmd)
+                        is KlangCommLink.Cmd.Sample.Complete -> {
+                            // Complete samples will be split and put into the [cmdBuffer]
+                            val chunks = cmd.toChunks(4 * 1024)
 
-                            is KlangCommLink.Cmd.Sample.Complete -> {
-                                // Complete samples will be split and put into the [cmdBuffer]
-                                cmd.toChunks(4 * 1024).forEach { chunk -> cmdBuffer.send(chunk) }
-                            }
+                            chunks.forEach { chunk -> sampleUploadBuffer.send(chunk) }
                         }
                     }
-
-                    delay(1)
-                    // console.log("Forwarded command to Worklet:", cmd)
                 }
 
-                // TODO: we need to keep track of the initial time ... measure how long it took and wait the rest to get to 16.ms
-                //  -> write a little helper maybe that can be used in other places as well
-                delay(16)
+                if (scope.isActive) {
+                    window.requestAnimationFrame { loop() }
+                }
             }
+
+            // Start the loop
+            loop()
+
+            // Keep the coroutine alive
+            suspendCancellableCoroutine { }
         } catch (e: Throwable) {
             console.error("AudioWorklet Error:", e)
             throw e

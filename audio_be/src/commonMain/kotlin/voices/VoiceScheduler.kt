@@ -115,10 +115,10 @@ class VoiceScheduler(
             is KlangCommLink.Cmd.Sample.Chunk -> {
                 // Only update partials ...
                 val existing = samples[req]
-                if (existing != null && existing !is SampleEntry.Partial) return
-
+                // Already completed?
+                if (existing is SampleEntry.Complete) return
                 // Use existing entry of create it
-                val entry = existing ?: SampleEntry.Partial(
+                val entry = (existing as? SampleEntry.Partial) ?: SampleEntry.Partial(
                     req = req,
                     note = msg.note,
                     pitchHz = msg.pitchHz,
@@ -132,8 +132,6 @@ class VoiceScheduler(
                 samples[req] = if (!msg.isLastChunk) {
                     entry
                 } else {
-                    // TODO: no sound in JS with chunks .. why?
-                    println("Promoting to Complete: $entry")
                     // Promote to Complete
                     SampleEntry.Complete(
                         req = req,
