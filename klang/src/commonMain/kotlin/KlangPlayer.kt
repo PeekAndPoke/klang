@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_be.KlangPlayerBackend
+import io.peekandpoke.klang.audio_be.AudioBackend
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.KlangEventFetcher
@@ -17,7 +17,7 @@ class KlangPlayer<T>(
     /** The player config */
     private val options: Options,
     /** Player Backend factory */
-    private val backendFactory: suspend (config: KlangPlayerBackend.Config) -> KlangPlayerBackend,
+    private val backendFactory: suspend (config: AudioBackend.Config) -> AudioBackend,
     /** The coroutines scope on which the player runs */
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     /** The dispatcher used for the event fetcher */
@@ -67,7 +67,7 @@ class KlangPlayer<T>(
             )
 
             val backend = backendFactory(
-                KlangPlayerBackend.Config(
+                AudioBackend.Config(
                     commLink = commLink.backend,
                     sampleRate = options.sampleRate,
                     blockSize = options.blockSize,

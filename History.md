@@ -11,6 +11,11 @@
 ### (2025-12-28) JS Audio Worklet - smoother audio samples upload to the backed
 
 - Working on splitting the audio samples into smaller chunks
+- ok, not the chunk size was the issue
+- the issue was using kotlinx.serialization for FloatArray transfer between the
+  main JS thread and the AudioWorklet thread
+- wrote custom serialization code in class WorkletContract
+- no more stutter when sending 32 kb blocks!
 
 ### (2025-12-27) JS Audio Worklet - stuttering when uploading samples
 

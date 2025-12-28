@@ -8,24 +8,22 @@ import kotlinx.serialization.Serializable
 class KlangCommLink(capacity: Int = 8192) {
 
     /** Sent from the frontend to the backend */
-    @Serializable
     sealed interface Cmd {
-        @Serializable
-        @SerialName("schedule-voice")
-        data class ScheduleVoice(val voice: ScheduledVoice) : Cmd
+        data class ScheduleVoice(val voice: ScheduledVoice) : Cmd {
+            companion object {
+                const val SERIAL_NAME = "schedule-voice"
+            }
+        }
 
-        @Suppress("ArrayInDataClass")
-        @Serializable
-        @SerialName("sample")
         sealed interface Sample : Cmd {
-            @Serializable
-            @SerialName("sample-not-found")
             data class NotFound(
                 override val req: SampleRequest,
-            ) : Sample
+            ) : Sample {
+                companion object {
+                    const val SERIAL_NAME = "sample-not-found"
+                }
+            }
 
-            @Serializable
-            @SerialName("sample-complete")
             data class Complete(
                 override val req: SampleRequest,
                 val note: String?,
@@ -33,6 +31,10 @@ class KlangCommLink(capacity: Int = 8192) {
                 val sampleRate: Int,
                 val pcm: FloatArray,
             ) : Sample {
+                companion object {
+                    const val SERIAL_NAME = "sample-complete"
+                }
+
                 fun toChunks(chunkSizeBytes: Int = 16 * 1024): List<Chunk> {
                     val numChunks = (pcm.size / chunkSizeBytes) + 1
 
@@ -54,8 +56,6 @@ class KlangCommLink(capacity: Int = 8192) {
                 }
             }
 
-            @Serializable
-            @SerialName("sample-chunk")
             data class Chunk(
                 override val req: SampleRequest,
                 val note: String?,
@@ -65,7 +65,11 @@ class KlangCommLink(capacity: Int = 8192) {
                 val isLastChunk: Boolean,
                 val chunkOffset: Int,
                 val data: FloatArray,
-            ) : Sample
+            ) : Sample {
+                companion object {
+                    const val SERIAL_NAME = "sample-chunk"
+                }
+            }
 
             val req: SampleRequest
         }

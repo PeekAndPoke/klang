@@ -122,6 +122,14 @@ object Deps {
         // https://central.sonatype.com/artifact/com.github.ajalt.colormath/colormath?smo=true
         private const val colormath_version = "3.6.1"
         const val colormath = "com.github.ajalt.colormath:colormath:$colormath_version"
+
+        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-css
+        private const val wrappers_css_version = "2025.12.10"
+        const val wrappers_css = "org.jetbrains.kotlin-wrappers:kotlin-css:$wrappers_css_version"
+
+        // https://central.sonatype.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-js/versions
+        private const val wrappers_js_version = "2025.12.11"
+        const val wrappers_js = "org.jetbrains.kotlin-wrappers:kotlin-js:$wrappers_js_version"
     }
 
     object IDE {
@@ -146,17 +154,6 @@ object Deps {
         // https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven/org/jetbrains/kotlinx/kotlinx-html/
         private const val html_version = "0.12.0"
         const val html = "org.jetbrains.kotlinx:kotlinx-html:$html_version"
-
-        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-css
-        private const val wrappers_version = "2025.3.2"
-        const val wrappers_css =
-            "org.jetbrains.kotlin-wrappers:kotlin-css:$wrappers_version"
-
-        // NOTICE: KEEP the pre.450 as newer versions do NOT support JAVA eight anymore
-        // https://mvnrepository.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-extensions
-        private const val wrappers_extensions_version = "1.0.1-pre.823"
-        const val wrappers_extensions =
-            "org.jetbrains.kotlin-wrappers:kotlin-extensions:$wrappers_extensions_version"
     }
 
     object Ktor {
@@ -450,7 +447,7 @@ object Deps {
         }
 
         fun TaskContainerScope.configureJvmTests(
-            configure: org.gradle.api.tasks.testing.Test.() -> Unit = {}
+            configure: org.gradle.api.tasks.testing.Test.() -> Unit = {},
         ) {
             listOfNotNull(
                 findByName("test") as? org.gradle.api.tasks.testing.Test,

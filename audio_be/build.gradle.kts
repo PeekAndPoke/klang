@@ -62,6 +62,11 @@ kotlin {
             }
         }
 
+        jsMain {
+            dependencies {
+            }
+        }
+
         jvmMain {
             dependencies {
             }

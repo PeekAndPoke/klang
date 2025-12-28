@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_be.JvmKlangPlayerBackend
+import io.peekandpoke.klang.audio_be.JvmAudioBackend
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_fe.KlangEventSource
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +28,7 @@ actual fun <T> klangPlayer(
         source = source,
         transform = transform,
         options = effectiveOptions,
-        backendFactory = { config -> JvmKlangPlayerBackend(config) },
+        backendFactory = { config -> JvmAudioBackend(config) },
         fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = Dispatchers.IO,
     )

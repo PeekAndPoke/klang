@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_be.JsKlangPlayerBackend
+import io.peekandpoke.klang.audio_be.JsAudioBackend
 import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.AudioContextOptions
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -24,7 +24,7 @@ actual fun <T> klangPlayer(
         source = source,
         transform = transform,
         options = effectiveOptions,
-        backendFactory = { config -> JsKlangPlayerBackend(config) },
+        backendFactory = { config -> JsAudioBackend(config) },
         fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = Dispatchers.Default,
     )

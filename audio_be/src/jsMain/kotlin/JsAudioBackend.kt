@@ -15,9 +15,9 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.w3c.dom.MessageEvent
 import kotlin.js.json
 
-class JsKlangPlayerBackend(
-    private val config: KlangPlayerBackend.Config,
-) : KlangPlayerBackend {
+class JsAudioBackend(
+    private val config: AudioBackend.Config,
+) : AudioBackend {
     private val commLink: KlangCommLink.BackendEndpoint = config.commLink
 
     private val sampleUploadBuffer = KlangRingBuffer<KlangCommLink.Cmd.Sample.Chunk>(8192 * 4)
@@ -60,30 +60,31 @@ class JsKlangPlayerBackend(
             }
 
             fun loop() {
-                println("loop with requestAnimationFrame() 2")
-
                 // Upload the next sample chunk ... we send them one at a time
                 sampleUploadBuffer.receive()?.let { cmd ->
                     node.port.sendCmd(cmd)
                 }
 
                 // Drain comm link cmd buffer
-                when (val cmd = commLink.control.receive()) {
-                    null -> Unit
-                    // Direct forwarding
-                    is KlangCommLink.Cmd.ScheduleVoice -> node.port.sendCmd(cmd)
+                while (true) {
+                    val cmd = commLink.control.receive() ?: break
 
-                    is KlangCommLink.Cmd.Sample -> when (cmd) {
+                    when (cmd) {
                         // Direct forwarding
-                        is KlangCommLink.Cmd.Sample.NotFound,
-                        is KlangCommLink.Cmd.Sample.Chunk,
-                            -> node.port.sendCmd(cmd)
+                        is KlangCommLink.Cmd.ScheduleVoice -> node.port.sendCmd(cmd)
 
-                        is KlangCommLink.Cmd.Sample.Complete -> {
-                            // Complete samples will be split and put into the [cmdBuffer]
-                            val chunks = cmd.toChunks(4 * 1024)
+                        is KlangCommLink.Cmd.Sample -> when (cmd) {
+                            // Direct forwarding
+                            is KlangCommLink.Cmd.Sample.NotFound,
+                            is KlangCommLink.Cmd.Sample.Chunk,
+                                -> node.port.sendCmd(cmd)
 
-                            chunks.forEach { chunk -> sampleUploadBuffer.send(chunk) }
+                            is KlangCommLink.Cmd.Sample.Complete -> {
+                                // Complete samples will be split and put into the [cmdBuffer]
+                                val chunks = cmd.toChunks(32 * 1024)
+
+                                chunks.forEach { chunk -> sampleUploadBuffer.send(chunk) }
+                            }
                         }
                     }
                 }

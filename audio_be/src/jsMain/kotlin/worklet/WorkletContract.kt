@@ -1,6 +1,9 @@
 package io.peekandpoke.klang.audio_be.worklet
 
+import io.peekandpoke.klang.audio_bridge.SampleRequest
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink.Cmd
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromDynamic
 import kotlinx.serialization.json.encodeToDynamic
@@ -15,14 +18,14 @@ object WorkletContract {
         explicitNulls = false
     }
 
-    fun MessagePort.sendCmd(cmd: KlangCommLink.Cmd) {
-        val obj = codec.encodeToDynamic(KlangCommLink.Cmd.serializer(), cmd)
+    fun MessagePort.sendCmd(cmd: Cmd) {
+        val obj = cmd.encode()
 
         postMessage(obj)
     }
 
-    fun decodeCmd(msg: MessageEvent): KlangCommLink.Cmd {
-        val decoded = codec.decodeFromDynamic(KlangCommLink.Cmd.serializer(), msg.data)
+    fun decodeCmd(msg: MessageEvent): Cmd {
+        val decoded = decodeCmd(msg.data)
 
         return decoded
     }
@@ -37,5 +40,97 @@ object WorkletContract {
         val decoded = codec.decodeFromDynamic(KlangCommLink.Feedback.serializer(), msg.data)
 
         return decoded
+    }
+
+    private fun Cmd.encode(): dynamic {
+        return when (this) {
+            is Cmd.ScheduleVoice -> jsObject {
+                it.type = Cmd.ScheduleVoice.SERIAL_NAME
+                it[Cmd.ScheduleVoice::voice.name] = voice.encode()
+            }
+
+            is Cmd.Sample.NotFound -> jsObject {
+                it.type = Cmd.Sample.NotFound.SERIAL_NAME
+                it[Cmd.Sample.NotFound::req.name] = req.encode()
+            }
+
+            is Cmd.Sample.Complete -> jsObject {
+                it.type = Cmd.Sample.Complete.SERIAL_NAME
+                it[Cmd.Sample.Complete::req.name] = req.encode()
+                it[Cmd.Sample.Complete::note.name] = note
+                it[Cmd.Sample.Complete::pitchHz.name] = pitchHz
+                it[Cmd.Sample.Complete::sampleRate.name] = sampleRate
+                it[Cmd.Sample.Complete::pcm.name] = pcm
+            }
+
+            is Cmd.Sample.Chunk -> jsObject {
+                it.type = Cmd.Sample.Chunk.SERIAL_NAME
+                it[Cmd.Sample.Chunk::req.name] = req.encode()
+                it[Cmd.Sample.Chunk::note.name] = note
+                it[Cmd.Sample.Chunk::pitchHz.name] = pitchHz
+                it[Cmd.Sample.Chunk::sampleRate.name] = sampleRate
+                it[Cmd.Sample.Chunk::totalSize.name] = totalSize
+                it[Cmd.Sample.Chunk::isLastChunk.name] = isLastChunk
+                it[Cmd.Sample.Chunk::chunkOffset.name] = chunkOffset
+                it[Cmd.Sample.Chunk::data.name] = data
+            }
+        }
+    }
+
+    private fun decodeCmd(msg: dynamic): Cmd {
+        return when (val type = msg.type) {
+            Cmd.ScheduleVoice.SERIAL_NAME -> Cmd.ScheduleVoice(
+                voice = decodeScheduledVoice(msg[Cmd.ScheduleVoice::voice.name])
+            )
+
+            Cmd.Sample.NotFound.SERIAL_NAME -> Cmd.Sample.NotFound(
+                req = decodeSampleRequest(msg[Cmd.Sample.NotFound::req.name])
+            )
+
+            Cmd.Sample.Complete.SERIAL_NAME -> Cmd.Sample.Complete(
+                req = decodeSampleRequest(msg[Cmd.Sample.Complete::req.name]),
+                note = msg[Cmd.Sample.Complete::note.name],
+                pitchHz = msg[Cmd.Sample.Complete::pitchHz.name],
+                sampleRate = msg[Cmd.Sample.Complete::sampleRate.name],
+                pcm = msg[Cmd.Sample.Complete::pcm.name] // .unsafeCast<FloatArray>()
+            )
+
+            Cmd.Sample.Chunk.SERIAL_NAME -> Cmd.Sample.Chunk(
+                req = decodeSampleRequest(msg[Cmd.Sample.Chunk::req.name]),
+                note = msg[Cmd.Sample.Chunk::note.name],
+                pitchHz = msg[Cmd.Sample.Chunk::pitchHz.name],
+                sampleRate = msg[Cmd.Sample.Chunk::sampleRate.name],
+                totalSize = msg[Cmd.Sample.Chunk::totalSize.name],
+                isLastChunk = msg[Cmd.Sample.Chunk::isLastChunk.name],
+                chunkOffset = msg[Cmd.Sample.Chunk::chunkOffset.name],
+                data = msg[Cmd.Sample.Chunk::data.name] // .unsafeCast<FloatArray>()
+            )
+
+            else -> error("Unknown cmd type: $type")
+        }
+    }
+
+    private fun ScheduledVoice.encode(): dynamic {
+        return codec.encodeToDynamic(ScheduledVoice.serializer(), this)
+    }
+
+    private fun decodeScheduledVoice(obj: dynamic): ScheduledVoice {
+        return codec.decodeFromDynamic(ScheduledVoice.serializer(), obj)
+    }
+
+    private fun SampleRequest.encode(): dynamic {
+        return codec.encodeToDynamic(SampleRequest.serializer(), this)
+    }
+
+    private fun decodeSampleRequest(obj: dynamic): SampleRequest {
+        return codec.decodeFromDynamic(SampleRequest.serializer(), obj)
+    }
+
+    fun jsObject(): dynamic = js("({})")
+
+    fun <T> jsObject(block: (T) -> Unit): T {
+        val obj = jsObject() as T
+        block(obj)
+        return obj
     }
 }

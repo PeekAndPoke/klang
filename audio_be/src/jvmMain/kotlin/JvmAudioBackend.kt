@@ -11,9 +11,9 @@ import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import kotlin.time.Duration.Companion.milliseconds
 
-class JvmKlangPlayerBackend(
-    config: KlangPlayerBackend.Config,
-) : KlangPlayerBackend {
+class JvmAudioBackend(
+    config: AudioBackend.Config,
+) : AudioBackend {
     private val commLink: KlangCommLink.BackendEndpoint = config.commLink
     private val sampleRate: Int = config.sampleRate
     private val blockSize: Int = config.blockSize
