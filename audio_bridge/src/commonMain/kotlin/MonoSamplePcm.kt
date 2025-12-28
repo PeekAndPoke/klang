@@ -1,9 +1,5 @@
 package io.peekandpoke.klang.audio_bridge
 
-/** Platform specific float array */
-//@Serializable
-//expect class KlangFloatArray
-
 /**
  * PCM decoded sample ready for mixing.
  *
