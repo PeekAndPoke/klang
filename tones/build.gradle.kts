@@ -6,9 +6,6 @@ plugins {
     idea
     kotlin("multiplatform")
     kotlin("plugin.serialization")
-    id("com.google.devtools.ksp")
-    id("io.kotest")
-//    id("com.vanniktech.maven.publish")
 }
 
 val GROUP: String by project
@@ -20,14 +17,10 @@ version = VERSION_NAME
 kotlin {
     js {
         browser {
-            testTask {
-//                useKarma {
-//                    useChrome()
-//                    useChromeHeadless()
-//                    useChromiumHeadless()
-//                    useChromeCanaryHeadless()
-//                    useFirefoxHeadless()
-//                }
+            binaries.executable()
+
+            webpackTask {
+                cssSupport { enabled.set(false) }
             }
         }
     }
@@ -40,21 +33,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("reflect"))
-                implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
-                implementation(Deps.KotlinX.serialization_json)
-
-                implementation(Deps.Ktor.Client.core)
-                implementation(Deps.Ktor.Client.cio)
-
-                // Audio engine
-                api(project(":audio_fe"))
-                api(project(":audio_be"))
-                api(project(":audio_bridge"))
-
-                // Useful tools
-                api(project(":tones"))
             }
         }
 

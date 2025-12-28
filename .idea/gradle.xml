@@ -26,6 +26,7 @@
             <option value="$PROJECT_DIR$/buildSrc" />
             <option value="$PROJECT_DIR$/klang" />
             <option value="$PROJECT_DIR$/strudel" />
+            <option value="$PROJECT_DIR$/tones" />
           </set>
         </option>
       </GradleProjectSettings>

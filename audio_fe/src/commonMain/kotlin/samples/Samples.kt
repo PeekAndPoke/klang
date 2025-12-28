@@ -2,8 +2,8 @@ package io.peekandpoke.klang.audio_fe.samples
 
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleRequest
-import io.peekandpoke.klang.audio_bridge.tones.Tones
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
+import io.peekandpoke.klang.tones.Tones
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

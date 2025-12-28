@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_fe.samples
 
-import io.peekandpoke.klang.audio_bridge.tones.Tones
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
 import io.peekandpoke.klang.audio_fe.utils.isUrlWithProtocol
+import io.peekandpoke.klang.tones.Tones
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.*
 

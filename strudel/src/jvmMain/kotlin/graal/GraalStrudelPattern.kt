@@ -2,13 +2,13 @@ package io.peekandpoke.klang.strudel.graal
 
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.tones.Tones
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeStringOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeToStringOrNull
+import io.peekandpoke.klang.tones.Tones
 import org.graalvm.polyglot.Value
 
 class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : StrudelPattern {

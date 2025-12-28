@@ -49,6 +49,7 @@ kotlin {
                 implementation(Deps.Ktor.Client.cio)
 
                 implementation(project(":audio_bridge"))
+                implementation(project(":tones"))
             }
         }
 

@@ -12,6 +12,9 @@ include(
     ":audio_be",
     ":audio_bridge",
 
+    // utils
+    ":tones",
+
     // Sequencers
     ":strudel",
 )

@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="tones-jvm-0.1.0">
+    <output-path>$PROJECT_DIR$/tones/build/libs</output-path>
+    <root id="archive" name="tones-jvm-0.1.0.jar">
+      <element id="module-output" name="klang-engine.tones.jvmMain" />
+    </root>
+  </artifact>
+</component>
