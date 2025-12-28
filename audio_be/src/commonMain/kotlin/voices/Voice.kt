@@ -40,14 +40,24 @@ sealed interface Voice {
         val roomSize: Double,
     )
 
-    class Vibrator(
+    class Vibrato(
         val rate: Double,
         val depth: Double,
         var phase: Double = 0.0,
     )
 
-    class Effects(
-        val distort: Double,
+    class Distort(
+        val amount: Double,
+    )
+
+    class Crush(
+        val amount: Double,
+    )
+
+    class Coarse(
+        val amount: Double,
+        var lastCoarseValue: Double = 0.0,
+        var coarseCounter: Double = 0.0,
     )
 
     // Timing
@@ -65,10 +75,12 @@ sealed interface Voice {
     val envelope: Envelope
     val delay: Delay
     val reverb: Reverb
-    val vibrator: Vibrator
+    val vibrato: Vibrato
 
     // global effects
-    val effects: Effects
+    val distort: Distort
+    val crush: Crush
+    val coarse: Coarse
 
     /**
      * Renders the voice into the context's buffers.

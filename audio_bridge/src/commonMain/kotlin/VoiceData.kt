@@ -46,8 +46,10 @@ data class VoiceData(
     val vibrato: Double?,
     val vibratoMod: Double?,
 
-    // Distort / Shape
+    // Effects
     val distort: Double?,
+    val coarse: Double?,
+    val crush: Double?,
 
     // HPF / LPF
     val cutoff: Double?,
@@ -71,8 +73,6 @@ data class VoiceData(
 
     // ???
     val bandf: Double?,
-    val coarse: Double?,
-    val crush: Double?,
 ) {
     fun asSampleRequest(): SampleRequest {
         return SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)

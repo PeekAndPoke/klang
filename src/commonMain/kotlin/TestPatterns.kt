@@ -17,12 +17,13 @@ object TestPatterns {
                     // melody
                     arrange(
                       [8, silence],
-                      [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
+                      [8, n("<~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
                     ).orbit(1)
                     .scale("C4:minor")
                     .adsr("0.05:0.7:0.0:0.5")
                     .hpf(800)
-                    .sound("triangle").gain(0.3),
+                    .sound("triangle")
+                    .gain(0.3),
 
                     // melody 2
                     arrange(
@@ -32,7 +33,8 @@ object TestPatterns {
                     .scale("C5:minor")
                     .adsr("0.05:0.7:0.0:0.5")
                     .hpf(1600)
-                    .sound("triangle").gain(0.4),
+                    .sound("triangle")
+                    .gain(0.4),
 
                     // bass
                     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
@@ -296,16 +298,33 @@ object TestPatterns {
         .gain(1.0)
         .slow(4) 
         .vib(8)
-        .vmod(0.5)
+        .vmod(0.5)        
+    """.trimIndent()
+
+    val crushTest = """
+        n("1 3 5 7").scale("C4:minor")
+        .sound("sine")
+        .gain(1.0)
+        .slow(4) 
+        .crush("4 3 2 1")      
         
     """.trimIndent()
+
+    val coarseTest = """
+         sound("[bd hh sd oh]*4")
+           .delay(0.4)
+           .delaytime(0.05)    
+           .delayfeedback(0.2)
+           .slow(2)
+           .coarse("1 2 4 8")
+     """.trimIndent()
 
 
     val all = listOf<String>(
 //        smallTownBoyBass,
 //        smallTownBoyMelody,
 //        smallTownBoy,
-        tetris,
+//        tetris,
 //        tetrisRemix,
 //        c4Minor,
 //        numberNotes,
@@ -329,6 +348,8 @@ object TestPatterns {
 //        delaySlapBackDrums,
 //        twoOrbits,
 //        vibratoTestOne,
+//        crushTest,
+        coarseTest
     )
 
     val active = all.first()

@@ -1,10 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.TWO_PI
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.tanh
+import kotlin.math.*
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared Logic Extensions
@@ -40,19 +37,47 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     val gateEndPos = gateEndFrame - startFrame
     var currentEnv = env.level
 
+    // Delay
     val delayAmount = delay.amount
     val sendToDelay = delayAmount > 0.0
 
+    // Reverb
     val reverbAmount = reverb.room
     val sendToReverb = reverbAmount > 0.0
 
-    val hasDistortion = effects.distort > 0.0
-    // Drive factor: 1.0 (no distortion) to ~11.0 (heavy distortion)
-    val distortionDrive = 1.0 + (effects.distort * 10.0)
+    // Distortion: Drive factor: 1.0 (no distortion) to ~11.0 (heavy distortion)
+    val hasDistortion = this@mixToOrbit.distort.amount > 0.0
+    val distortionDrive = 1.0 + (this@mixToOrbit.distort.amount * 10.0)
+
+    // Crush
+    val crushBits = crush.amount
+    val hasCrush = crushBits > 0.0
+    val crushLevels = if (hasCrush) 2.0.pow(crushBits).toInt().toDouble() else 0.0
+
+    // Coarse
+    val coarseFactor = coarse.amount
+    val hasCoarse = coarseFactor > 1.0
 
     for (i in 0 until length) {
         val idx = offset + i
-        val signal = voiceBuffer[idx]
+        var signal = voiceBuffer[idx]
+
+        // 1. Bitcrushing (Crush)
+        if (hasCrush) {
+            signal = if (crushLevels > 1) {
+                floor(signal * (crushLevels / 2.0)) / (crushLevels / 2.0)
+            } else signal
+        }
+
+        // 2. Downsampling (Coarse)
+        if (hasCoarse) {
+            if (coarse.coarseCounter >= 1.0 || i == 0 && coarse.coarseCounter == 0.0) {
+                coarse.lastCoarseValue = signal
+                coarse.coarseCounter -= 1.0
+            }
+            signal = coarse.lastCoarseValue
+            coarse.coarseCounter += (1.0 / coarseFactor)
+        }
 
         // Envelope Logic
         if (absPos >= gateEndPos) {
@@ -104,17 +129,17 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
 }
 
 fun Voice.fillVibrato(ctx: Voice.RenderContext, offset: Int, length: Int): DoubleArray? {
-    if (vibrator.depth <= 0.0) return null
+    if (vibrato.depth <= 0.0) return null
 
     val modBuffer = ctx.freqModBuffer
-    val lfoInc = TWO_PI * vibrator.rate / ctx.sampleRate.toDouble()
-    var lfoP = vibrator.phase
+    val lfoInc = TWO_PI * vibrato.rate / ctx.sampleRate.toDouble()
+    var lfoP = vibrato.phase
 
     for (i in 0 until length) {
-        modBuffer[offset + i] = 1.0 + sin(lfoP) * vibrator.depth
+        modBuffer[offset + i] = 1.0 + sin(lfoP) * vibrato.depth
         lfoP += lfoInc
     }
-    vibrator.phase = lfoP
+    vibrato.phase = lfoP
 
     return modBuffer
 }

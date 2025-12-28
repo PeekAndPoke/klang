@@ -254,15 +254,15 @@ class VoiceScheduler(
 
         // Vibrator
         val vibratoDepth = (data.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
-        val vibrator = Voice.Vibrator(
+        val vibrato = Voice.Vibrato(
             depth = vibratoDepth,
             rate = if (vibratoDepth > 0.0) data.vibrato ?: 5.0 else 0.0,
         )
 
         // Effects
-        val effects = Voice.Effects(
-            distort = data.distort ?: 0.0,
-        )
+        val distort = Voice.Distort(amount = data.distort ?: 0.0)
+        val crush = Voice.Crush(amount = data.crush ?: 0.0)
+        val coarse = Voice.Coarse(amount = data.coarse ?: 0.0)
 
         // Decision
         val freqHz = data.freqHz
@@ -287,8 +287,10 @@ class VoiceScheduler(
                     envelope = envelope,
                     delay = delay,
                     reverb = reverb,
-                    vibrator = vibrator,
-                    effects = effects,
+                    vibrato = vibrato,
+                    distort = distort,
+                    crush = crush,
+                    coarse = coarse,
                     osc = osc,
                     freqHz = freqHz,
                     phaseInc = phaseInc,
@@ -326,8 +328,10 @@ class VoiceScheduler(
                     envelope = envelope,
                     delay = delay,
                     reverb = reverb,
-                    vibrator = vibrator,
-                    effects = effects,
+                    vibrato = vibrato,
+                    distort = distort,
+                    crush = crush,
+                    coarse = coarse,
                     sample = sample,
                     rate = rate,
                     playhead = playhead0,

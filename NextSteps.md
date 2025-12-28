@@ -6,9 +6,6 @@
   - create own module for that
   - fully implement tonaljs und hook it up to strudel
 
-- calculate frequency immediately when creating VoiceData instead of doing it in VoiceScheduler
-  - is this possible?
-
 - change KlangPlayer.play() logic
   - is must be able to play multiple song / sound etc with the same player instance
   - play() will return a Klang-Object

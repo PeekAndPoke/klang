@@ -8,6 +8,11 @@
 
 ## Diary
 
+### (2025-12-28) Strudel / Sound engine
+
+- added crush effect
+- added coarse effect
+
 ### (2025-12-28) JS Audio Worklet - smoother audio samples upload to the backed
 
 - Working on splitting the audio samples into smaller chunks
