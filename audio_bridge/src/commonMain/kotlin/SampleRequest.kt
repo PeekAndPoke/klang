@@ -1,8 +1,11 @@
-package io.peekandpoke.klang.audio_fe.samples
+package io.peekandpoke.klang.audio_bridge
+
+import kotlinx.serialization.Serializable
 
 /**
- * Used to request a sample from [Samples]
+ * Used to request a sample from the Sample Index
  */
+@Serializable
 data class SampleRequest(
     /** Name of the requested bank ... null means default sounds */
     val bank: String?,

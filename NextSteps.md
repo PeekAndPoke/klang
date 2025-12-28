@@ -1,5 +1,28 @@
 # Immediate Todos
 
+## Current plan
+
+1. Calculate freq of sample directly
+2. Let the fetcher look ahead for X cycles and figure out which sample will be needed soon
+
+- load sample that are not yet loaded
+- send the smaples to the backend
+- in JS chunk the samples
+  - SampleChunk (totalSize, chunkDataPos, data, done: Boolean)
+  - in the VoiceScheduler assemble the chunks until we receive done=true
+
+## Avoid stutter when uploading samples to JS Worklet
+
+- preload all samples
+  - for drums -> load all variants
+  - for melodic instruments -> load all pitches
+- the backend request all of them  (the ones it does not have yet...)
+- frontend uploads all of them
+- backend acks the upload
+- only then start playback
+
+## More
+
 - extract Tones from audio_bridge
   - create own module for that
   - fully implement tonaljs und hook it up to strudel

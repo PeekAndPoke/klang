@@ -7,16 +7,19 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class VoiceData(
-    // note, scale, gain
+    // note, scale, freq
     val note: String?,
+    val freqHz: Double?,
     val scale: String?,
+
+    // Gain
     val gain: Double,
 
     // Sound, bank, sound index
-    /** Parsed from osc if it looks like "bd:2". sound="bd", soundIndex=2 */
-    val sound: String?,
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
     val bank: String?,
+    /** Parsed from osc if it looks like "bd:2". sound="bd", soundIndex=2 */
+    val sound: String?,
     /** Sound index */
     val soundIndex: Int?,
 
@@ -71,28 +74,7 @@ data class VoiceData(
     val coarse: Double?,
     val crush: Double?,
 ) {
-//    @Transient
-//    val isOscillator = Oscillators.isOsc(sound)
-//
-//    @Transient
-//    val isSampleSound = !isOscillator
-//
-//    @Transient
-//    val sampleRequest: SampleRequest =
-//        SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
-//
-//    // TODO: do we really need to pass the [freqHz] in here?
-//    //  Or cam we calculate this earlier?
-//    fun createOscillator(oscillators: Oscillators, freqHz: Double): OscFn {
-//        val e = this
-//
-//        return oscillators.get(
-//            name = e.sound,
-//            freqHz = freqHz,
-//            density = e.density,
-//            unison = e.unison,
-//            detune = e.detune,
-//            spread = e.spread,
-//        )
-//    }
+    fun asSampleRequest(): SampleRequest {
+        return SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
+    }
 }

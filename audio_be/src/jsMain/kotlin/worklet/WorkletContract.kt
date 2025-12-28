@@ -21,7 +21,7 @@ object WorkletContract {
 
         val obj = codec.encodeToDynamic(KlangCommLink.Cmd.serializer(), cmd)
 
-        if (cmd is KlangCommLink.Cmd.Sample) {
+        if (cmd is KlangCommLink.Cmd.CompleteSample) {
             console.log("Sending sample to worklet with size", cmd.data?.pcm?.size)
         }
 

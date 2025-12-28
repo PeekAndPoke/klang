@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.graal
 
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.tones.Tones
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
@@ -56,6 +57,11 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val note = value.getMember("note").safeToStringOrNull()
         // scale
         val scale = event.getMember("context")?.getMember("scale").safeStringOrNull()
+        // Get or calculate the frequency
+        val freq = value.getMember("freq").safeNumberOrNull()
+            ?: note?.let { Tones.resolveFreq(note, scale) }
+
+        // ////////////////////////////////////////////////////////////////////////////////////////
         // Get gain
         val gain = value.getMember("gain").safeNumberOrNull()
             ?: value.getMember("amp").safeNumberOrNull()
@@ -63,10 +69,10 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Get sound parameters / sample bank and index
+        val bank = value.getMember("bank").safeStringOrNull()
         val sound = value.getMember("s").safeStringOrNull()
             ?: value.getMember("wave").safeStringOrNull()
             ?: value.getMember("sound").safeStringOrNull()
-        val bank = value.getMember("bank").safeStringOrNull()
         val soundIndex = value.getMember("n").safeNumberOrNull()?.toInt()
 
         // ///////////////////////////////////////////////////////////////////////////////////
@@ -137,11 +143,13 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             data = VoiceData(
                 // Frequency and note
                 note = note,
+                freqHz = freq,
                 scale = scale,
+                // Gain
                 gain = gain,
                 // Sound samples
-                sound = sound,
                 bank = bank,
+                sound = sound,
                 soundIndex = soundIndex,
                 // Oscilator
                 density = density,

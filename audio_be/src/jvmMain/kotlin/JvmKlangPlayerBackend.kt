@@ -62,7 +62,6 @@ class JvmKlangPlayerBackend(
         // Pre-allocate the output buffer for one block
         val out = ByteArray(blockSize * 4)
 
-
         try {
             while (scope.isActive) {
                 // Get events
@@ -70,7 +69,7 @@ class JvmKlangPlayerBackend(
                     val cmd = commLink.control.receive() ?: break
 
                     when (cmd) {
-                        is KlangCommLink.Cmd.ScheduleVoice -> voices.schedule(cmd.voice)
+                        is KlangCommLink.Cmd.ScheduleVoice -> voices.scheduleVoice(cmd.voice)
                         is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
                     }
                 }

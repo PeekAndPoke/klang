@@ -8,13 +8,9 @@ import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.OscFn
 import io.peekandpoke.klang.audio_be.osci.Oscillators
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
-import io.peekandpoke.klang.audio_bridge.tones.Tones
 
 class VoiceScheduler(
     val options: Options,
@@ -30,14 +26,33 @@ class VoiceScheduler(
         val sampleRateDouble = sampleRate.toDouble()
     }
 
-    class SampleEntry(
-        val request: KlangCommLink.Feedback.RequestSample,
-        val note: String?,
-        val pitchHz: Double,
-        val sample: MonoSamplePcm,
-    )
+    sealed interface SampleEntry {
+        data class Requested(
+            override val req: SampleRequest,
+        ) : SampleEntry
 
-    private val samples = mutableMapOf<KlangCommLink.Feedback.RequestSample, SampleEntry?>()
+        data class NotFound(
+            override val req: SampleRequest,
+        ) : SampleEntry
+
+        data class Complete(
+            override val req: SampleRequest,
+            val note: String?,
+            val pitchHz: Double,
+            val sample: MonoSamplePcm,
+        ) : SampleEntry
+
+        data class Partial(
+            override val req: SampleRequest,
+            val note: String?,
+            val pitchHz: Double,
+            val sample: MonoSamplePcm,
+        ) : SampleEntry
+
+        val req: SampleRequest
+    }
+
+    private val samples = mutableMapOf<SampleRequest, SampleEntry>()
 
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
@@ -59,9 +74,6 @@ class VoiceScheduler(
 
     fun VoiceData.isSampleSound() = !isOscillator()
 
-    fun VoiceData.asSampleRequest() =
-        KlangCommLink.Feedback.RequestSample(bank = bank, sound = sound, index = soundIndex, note = note)
-
     fun VoiceData.createOscillator(oscillators: Oscillators, freqHz: Double): OscFn {
         val e = this
 
@@ -80,31 +92,37 @@ class VoiceScheduler(
         active.clear()
     }
 
-    fun addSample(
-        msg: KlangCommLink.Cmd.Sample,
-    ) {
-        val request = msg.request
-        val data = msg.data
+    fun addSample(msg: KlangCommLink.Cmd.Sample) {
 
-        val entry = if (data == null) {
-            // We could not get the sample, but we also do not need to request it again
-            null
-        } else {
-            SampleEntry(
-                request = request,
-                note = data.note,
-                pitchHz = data.pitchHz,
-                sample = MonoSamplePcm(
-                    sampleRate = data.sampleRate,
-                    pcm = data.pcm,
+        when (msg) {
+            is KlangCommLink.Cmd.Sample.NotFound -> {
+                samples[msg.req] = SampleEntry.NotFound(msg.req)
+            }
+
+            is KlangCommLink.Cmd.Sample.Complete -> {
+                samples[msg.req] = SampleEntry.Complete(
+                    req = msg.req,
+                    note = msg.note,
+                    pitchHz = msg.pitchHz,
+                    sample = MonoSamplePcm(
+                        sampleRate = msg.sampleRate,
+                        pcm = msg.pcm,
+                    ),
                 )
-            )
-        }
+            }
 
-        samples[request] = entry
+//            is KlangCommLink.Cmd.Sample.NotFound
+        }
     }
 
-    fun schedule(voice: ScheduledVoice) {
+    /**
+     * Get the complete sample for the given [req] when available
+     */
+    fun getCompleteSample(req: SampleRequest): SampleEntry.Complete? {
+        return samples[req] as? SampleEntry.Complete
+    }
+
+    fun scheduleVoice(voice: ScheduledVoice) {
         scheduled.push(voice)
 
         // Prefetch sound samples
@@ -113,10 +131,12 @@ class VoiceScheduler(
 
             if (!samples.containsKey(req)) {
                 // make sure we do not request this one again
-                samples[req] = null
+                samples[req] = SampleEntry.Requested(req)
 
                 // println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
-                options.commLink.feedback.send(voice.data.asSampleRequest())
+                options.commLink.feedback.send(
+                    KlangCommLink.Feedback.RequestSample(voice.data.asSampleRequest())
+                )
             }
         }
     }
@@ -216,15 +236,14 @@ class VoiceScheduler(
         )
 
         // Decision
-        val note = data.note
+        val freqHz = data.freqHz
         val sound = data.sound
-        val isOsci = data.isOscillator() && note != null
+        val isOsci = data.isOscillator() && freqHz != null
         val isSample = data.isSampleSound() && sound != null
 
         return when {
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             isOsci -> {
-                val freqHz = Tones.resolveFreq(note, data.scale)
                 val osc = data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
                 val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
 
@@ -253,13 +272,13 @@ class VoiceScheduler(
                 val sampleRequest = data.asSampleRequest()
 
                 // Do we have the data for this sample?
-                val entry = samples[sampleRequest] ?: return null
+                val entry = getCompleteSample(sampleRequest) ?: return null
                 val sample = entry.sample
 
                 val baseSamplePitchHz = entry.pitchHz
-                val targetHz = data.note?.let { n -> Tones.resolveFreq(n, data.scale) }
-                    ?: baseSamplePitchHz
-                val pitchRatio = (targetHz / baseSamplePitchHz).coerceIn(0.125, 8.0)
+                val targetPitchHz = data.freqHz ?: baseSamplePitchHz
+                // We allow 5 octaves up and down pitch 1/32 .. 32
+                val pitchRatio = (targetPitchHz / baseSamplePitchHz).coerceIn(1.0 / 32.0, 32.0)
                 val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
 
                 val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)

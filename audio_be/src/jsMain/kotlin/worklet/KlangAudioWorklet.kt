@@ -74,8 +74,8 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                     // console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
 
                     when (cmd) {
-                        is KlangCommLink.Cmd.ScheduleVoice -> ctx.voices.schedule(cmd.voice)
-                        is KlangCommLink.Cmd.Sample -> ctx.voices.addSample(msg = cmd)
+                        is KlangCommLink.Cmd.ScheduleVoice -> ctx.voices.scheduleVoice(cmd.voice)
+                        is KlangCommLink.Cmd.CompleteSample -> ctx.voices.addSample(msg = cmd)
 //                        else -> Unit
                     }
                 }

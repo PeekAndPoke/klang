@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
+import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -15,17 +16,31 @@ class KlangCommLink(capacity: Int = 8192) {
 
         @Serializable
         @SerialName("sample")
-        data class Sample(
-            val request: Feedback.RequestSample,
-            val data: Data?,
-        ) : Cmd {
+        sealed interface Sample : Cmd {
             @Serializable
-            data class Data(
+            @SerialName("sample-not-found")
+            data class NotFound(
+                override val req: SampleRequest,
+            ) : Sample
+
+            @Serializable
+            @SerialName("sample-complete")
+            data class Complete(
+                override val req: SampleRequest,
                 val note: String?,
                 val pitchHz: Double,
                 val sampleRate: Int,
                 val pcm: FloatArray,
-            )
+            ) : Sample
+
+//        data class SampleChunk(
+//            val req: SampleRequest,
+//            val data:
+//        ): Cmd {
+//
+//        }
+
+            val req: SampleRequest
         }
     }
 
@@ -39,14 +54,7 @@ class KlangCommLink(capacity: Int = 8192) {
         @Serializable
         @SerialName("request-sample")
         data class RequestSample(
-            /** Name of the requested bank ... null means default sounds */
-            val bank: String?,
-            /** Name of the requested sound */
-            val sound: String?,
-            /** Index of the requested variant (if any) */
-            val index: Int?,
-            /** Note at which the sample would be played. Helps to find the best sample. */
-            val note: String?,
+            val req: SampleRequest,
         ) : Feedback
     }
 
