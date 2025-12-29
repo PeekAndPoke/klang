@@ -8,6 +8,10 @@
 
 ## Diary
 
+### (2025-12-29) Voice / Strudel
+
+- implemented legato / clip
+
 ### (2025-12-28) Idea
 
 When the strudel-parsr is ready build an llm tool that:

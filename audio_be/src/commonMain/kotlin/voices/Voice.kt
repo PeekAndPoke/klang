@@ -72,6 +72,8 @@ sealed interface Voice {
 
     // Routing
     val orbitId: Int
+
+    // Dynamics
     val gain: Double
     val pan: Double
 

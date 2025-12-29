@@ -19,10 +19,22 @@ You currently have lpf (Low Pass), hpf (High Pass) and bandf (Band Pass) is part
 implementation is missing/TODO.
 
 - bandf (Band Pass Filter): Passes frequencies within a certain range and rejects others. Often used with resonance (q).
+  -> DONE, but needs testing
 - notchf (Notch Filter): The opposite of a band pass; it rejects a specific frequency band.
+  -> DONE, but needs testing / Also how to invoke it?
 - allpassf (All Pass Filter): Passes all frequencies but alters their phase relationship. Used in phasers.
 - lp / bp / hp / notch / comb / allpass: Strudel has aliases or variations for these standard filters.
 - vowel (Formant Filter): A specific filter that mimics human vowel sounds (a, e, i, o, u).
+
+- see https://strudel.cc/learn/effects/#continuous-changes
+  - The ADSR curve (governed by attack, sustain, decay, release)
+  - The pitch envelope curve (governed by penv and its associated ADSR)
+  - The FM curve (fmenv)
+  - The filter envelopes (lpenv, hpenv, bpenv)
+  - Tremolo (tremolo)
+  - Phaser (phaser)
+  - Vibrato (vib)
+  - Ducking (duckorbit)
 
 ## Time-Based Effects (Spatial)
 

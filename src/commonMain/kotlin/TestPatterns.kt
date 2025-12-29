@@ -17,7 +17,7 @@ object TestPatterns {
                     // melody
                     arrange(
                       [8, silence],
-                      [8, n("<~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
+                      [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
                     ).orbit(1)
                     .scale("C4:minor")
                     .adsr("0.05:0.7:0.0:0.5")
@@ -140,7 +140,7 @@ object TestPatterns {
               .lpenv(perlin.slow(3).range(1, 4))
               .lpf(perlin.slow(2).range(100, 2000))
               .gain(0.3),
-            note("<a1 e2>/8").clip(0.8).struct("x*8").s("supersaw"),
+            seq("<a1 e2>/8").clip(0.8).struct("x*8").s("supersaw").note(),
         )
     """.trimIndent()
 
@@ -356,13 +356,13 @@ object TestPatterns {
         )
     """.trimIndent()
 
-
     val bandF = """
         n("0 2 4").scale("C4:minor")
          .bandf("500 1000 200").resonance(5)
          .slow(4)         
     """.trimIndent()
 
+    // TODO: does not work, how to invoke it?
     val notchF = """
         // or "noise"
         s("white") 
@@ -370,6 +370,15 @@ object TestPatterns {
             .resonance(20)
             .gain(0.5)
     """.trimIndent()
+
+    val legatoLong = """
+        note("c3 e3 g3 a#3").slow(4).s("sine").clip(3.0)
+    """.trimIndent()
+
+    val legatoShort = """
+        note("c3 e3 g3 a#3").slow(4).s("sine").clip(0.5)
+    """.trimIndent()
+
 
     val all = listOf<String>(
 //        smallTownBoyBass,
@@ -404,7 +413,9 @@ object TestPatterns {
 //        coarseTest
 //        glisandoTest,
 //        glisandoTest2,
-        bandF,
+//        bandF,
+        legatoLong,
+//        legatoShort,
     )
 
     val active = all.first()

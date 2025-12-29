@@ -31,8 +31,8 @@ typealias SupersawFactory = (
     sampleRate: Int,
     baseFreqHz: Double,
     voices: Int,
-    detuneSemitones: Double,
-    panspread: Double,
+    freqSpread: Double,
+    panSpread: Double,
     rng: Random,
 ) -> OscFn
 
@@ -179,9 +179,9 @@ class Oscillators private constructor(
         fun supersawFn(
             sampleRate: Int,
             baseFreqHz: Double,
-            voices: Int = 5,
-            detuneSemitones: Double = 0.2,
-            panspread: Double = 0.4,
+            voices: Int,
+            freqSpread: Double,
+            panSpread: Double,
             rng: Random,
             gain: Double = 0.6,
         ): OscFn {
@@ -191,13 +191,13 @@ class Oscillators private constructor(
             // Internal state for supersaw phases (independent of Voice phase)
             val phases = DoubleArray(v) { rng.nextDouble() }
 
-            val g1 = sqrt(1.0 - panspread.coerceIn(0.0, 1.0))
-            val g2 = sqrt(panspread.coerceIn(0.0, 1.0))
+            val g1 = sqrt(1.0 - panSpread.coerceIn(0.0, 1.0))
+            val g2 = sqrt(panSpread.coerceIn(0.0, 1.0))
             val invV = 1.0 / v.toDouble()
 
             // Pre-calculate detunes to avoid doing it per sample
             val detunes = DoubleArray(v) { n ->
-                val det = getUnisonDetune(v, detuneSemitones, n)
+                val det = getUnisonDetune(v, freqSpread, n)
                 val freqAdjusted = applySemitoneDetuneToFrequency(baseFreqHz, det)
                 freqAdjusted / sr // This is the increment
             }
@@ -485,8 +485,8 @@ class Oscillators private constructor(
                 sampleRate = sampleRate,
                 baseFreqHz = baseFreqHz,
                 voices = voices,
-                detuneSemitones = detuneSemitones,
-                panspread = panspread,
+                freqSpread = detuneSemitones,
+                panSpread = panspread,
                 rng = rng,
             )
         }
@@ -559,16 +559,16 @@ class Oscillators private constructor(
         name: String?,
         freqHz: Double?,
         density: Double?,
-        unison: Double?,
-        detune: Double?,
-        spread: Double?,
+        voices: Double?,
+        panSpread: Double?,
+        freqSpread: Double?,
     ): OscFn {
         if (name == null) return sine
 
-        val density = (density ?: 0.1)
-        val unison = (unison ?: 5.0)
-        val detune = (detune ?: 0.2)
-        val panSpread = (spread ?: 0.4)
+        val density = (density ?: 0.2)
+        val unison = (voices ?: 5.0)
+        val freqSpread = (freqSpread ?: 0.2)
+        val panSpread = (panSpread ?: 0.4)
 
         return parseNameMul(name).let { (base, mul) ->
             val baseEnum = safeEnumOrNull<Names>(base)
@@ -586,7 +586,7 @@ class Oscillators private constructor(
                         /* sampleRate */ sampleRate,
                         /* baseFreqHz */  freqHz,
                         /* voices */  (unison * mul).toInt(),
-                        /* detuneSemitones */  detune,
+                        /* detuneSemitones */  freqSpread,
                         /* panspread */  panSpread,
                         /* rng */  rng,
                     )

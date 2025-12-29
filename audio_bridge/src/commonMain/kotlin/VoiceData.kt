@@ -12,8 +12,9 @@ data class VoiceData(
     val freqHz: Double?,
     val scale: String?,
 
-    // Gain
+    // Gain / Dynamics
     val gain: Double,
+    val legato: Double?,
 
     // Sound, bank, sound index
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
@@ -24,14 +25,14 @@ data class VoiceData(
     val soundIndex: Int?,
 
     // Oscillator parameters
-    /** density for dust, crackle */
+    /** Density */
     val density: Double?,
-    /** Used for: supersaw */
-    val spread: Double?,
-    /** Used for: supersaw */
-    val detune: Double?,
-    /** Used for: supersaw */
-    val unison: Double?,
+    /** Panorama spread */
+    val panSpread: Double?,
+    /** Frequency spread */
+    val freqSpread: Double?,
+    /** Number of voices */
+    val voices: Double?,
 
     // Filters
     val filters: List<FilterDef>,

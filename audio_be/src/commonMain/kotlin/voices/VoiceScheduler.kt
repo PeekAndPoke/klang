@@ -81,9 +81,9 @@ class VoiceScheduler(
             name = e.sound,
             freqHz = freqHz,
             density = e.density,
-            unison = e.unison,
-            detune = e.detune,
-            spread = e.spread,
+            voices = e.voices,
+            freqSpread = e.freqSpread,
+            panSpread = e.panSpread,
         )
     }
 
@@ -229,6 +229,16 @@ class VoiceScheduler(
         val sampleRate = options.sampleRate
         val data = scheduled.data
 
+        // Handle legato (clip) logic, if present, it scales the gate duration (note length)
+        val clip = data.legato
+        val originalGateDuration = scheduled.gateEndFrame - scheduled.startFrame
+        val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toLong() else originalGateDuration
+        // Calculate new end frames based on the effective gate duration
+        val gateEndFrame = scheduled.startFrame + effectiveGateDuration
+        // We maintain the original release tail duration
+        val releaseFrames = (scheduled.endFrame - scheduled.gateEndFrame)
+        val endFrame = gateEndFrame + releaseFrames
+
         // Bake Filters
         val bakedFilters = data.filters.map { it.toFilter() }.combine()
 
@@ -252,7 +262,7 @@ class VoiceScheduler(
             attackFrames = (data.attack ?: 0.01) * sampleRate,
             decayFrames = (data.decay ?: 0.0) * sampleRate,
             sustainLevel = data.sustain ?: 1.0,
-            releaseFrames = (scheduled.endFrame - scheduled.gateEndFrame).toDouble()
+            releaseFrames = releaseFrames.toDouble()
         )
 
         // Delay
@@ -290,8 +300,8 @@ class VoiceScheduler(
                 SynthVoice(
                     orbitId = orbit,
                     startFrame = scheduled.startFrame,
-                    endFrame = scheduled.endFrame,
-                    gateEndFrame = scheduled.gateEndFrame,
+                    endFrame = endFrame,
+                    gateEndFrame = gateEndFrame,
                     gain = data.gain,
                     pan = data.pan ?: 0.0,
                     accelerate = accelerate,
@@ -332,8 +342,8 @@ class VoiceScheduler(
                 SampleVoice(
                     orbitId = orbit,
                     startFrame = nowFrame,
-                    endFrame = scheduled.endFrame,
-                    gateEndFrame = scheduled.gateEndFrame,
+                    endFrame = endFrame,
+                    gateEndFrame = gateEndFrame,
                     gain = data.gain,
                     pan = data.pan ?: 0.0,
                     filter = bakedFilters,

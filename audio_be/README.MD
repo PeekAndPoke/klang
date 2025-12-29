@@ -1,5 +1,5 @@
 # Audio Backend
 
-The goal is to have a zero-deps / low-deps DSP engine.
+The real audio engine.
 
-Pure math, pure speed that can run on any platform.
+Does DPS and connects to the platform-specific audio hardware.

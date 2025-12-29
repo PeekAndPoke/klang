@@ -62,10 +62,13 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             ?: note?.let { Tones.resolveFreq(note, scale) }
 
         // ////////////////////////////////////////////////////////////////////////////////////////
-        // Get gain
+        // Gain / Dynamics
         val gain = value.getMember("gain").safeNumberOrNull()
             ?: value.getMember("amp").safeNumberOrNull()
             ?: 1.0
+
+        val legato = value.getMember("clip").safeNumberOrNull()
+            ?: value.getMember("legator").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Get sound parameters / sample bank and index
@@ -78,9 +81,9 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         // ///////////////////////////////////////////////////////////////////////////////////
         // Get Oscillator parameters
         val density = value.getMember("density").safeNumberOrNull()
-        val spread = value.getMember("spread").safeNumberOrNull()
-        val detune = value.getMember("detune").safeNumberOrNull()
-        val unison = value.getMember("unison").safeNumberOrNull()
+        val voices = value.getMember("unison").safeNumberOrNull()
+        val panSpread = value.getMember("spread").safeNumberOrNull()
+        val freqSpread = value.getMember("detune").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // ADRS
@@ -166,19 +169,20 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
             data = VoiceData(
                 // Frequency and note
                 note = note,
-                freqHz = freq,
                 scale = scale,
-                // Gain
+                freqHz = freq,
+                // Gain / Dynamics
                 gain = gain,
+                legato = legato,
                 // Sound samples
                 bank = bank,
                 sound = sound,
                 soundIndex = soundIndex,
                 // Oscilator
                 density = density,
-                unison = unison,
-                detune = detune,
-                spread = spread,
+                voices = voices,
+                panSpread = panSpread,
+                freqSpread = freqSpread,
                 // Filters
                 filters = filters,
                 // ADSR envelope

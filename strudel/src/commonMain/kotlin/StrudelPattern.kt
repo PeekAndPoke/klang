@@ -30,7 +30,7 @@ interface StrudelPattern {
             if (events.isEmpty()) return emptyList()
 
             val fromMod = from % totalCycles
-            val toMod = to % totalCycles
+            val toMod = fromMod + (to - from)
 
             val offset = floor(from / totalCycles) * totalCycles
 
@@ -39,7 +39,7 @@ interface StrudelPattern {
             return events
                 .filter { evt ->
 
-                    evt.begin >= fromMod && evt.begin < toMod || evt.end > fromMod && evt.end <= toMod
+                    evt.begin >= fromMod && evt.begin < toMod
                 }
                 .map {
                     it.copy(begin = it.begin + offset, end = it.end + offset)
