@@ -10,11 +10,12 @@ class SynthVoice(
     override val gateEndFrame: Long,
     override val gain: Double,
     override val pan: Double,
+    override val accelerate: Voice.Accelerate,
+    override val vibrato: Voice.Vibrato,
     override val filter: AudioFilter,
     override val envelope: Voice.Envelope,
     override val delay: Voice.Delay,
     override val reverb: Voice.Reverb,
-    override val vibrato: Voice.Vibrato,
     override val distort: Voice.Distort,
     override val crush: Voice.Crush,
     override val coarse: Voice.Coarse,
@@ -34,7 +35,7 @@ class SynthVoice(
         val offset = (vStart - ctx.blockStart).toInt()
         val length = (vEnd - vStart).toInt()
 
-        val modBuffer = fillVibrato(ctx, offset, length)
+        val modBuffer = fillPitchModulation(ctx, offset, length)
 
         // Generate
         phase = osc.process(

@@ -128,6 +128,62 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     env.level = currentEnv
 }
 
+/**
+ * Adjust pitch by combining [Voice.Accelerate] and [Voice.Vibrato]
+ * Returns null if no modulation is active.
+ */
+fun Voice.fillPitchModulation(ctx: Voice.RenderContext, offset: Int, length: Int): DoubleArray? {
+    val vib = vibrato
+    val accel = accelerate.amount
+    val hasVibrato = vib.depth > 0.0
+    val hasAccelerate = accel != 0.0
+
+    // CRITICAL FIX: Return null instead of a dirty buffer!
+    // This tells the voice to use standard playback speed/frequency.
+    if (!hasVibrato && !hasAccelerate) return null
+
+    val out = ctx.freqModBuffer
+    val totalFrames = (endFrame - startFrame).toDouble()
+
+    var phase = vib.phase
+    val phaseInc = (TWO_PI * vib.rate) / ctx.sampleRate
+
+    for (i in 0 until length) {
+        val idx = offset + i
+        val absFrame = ctx.blockStart + idx
+
+        // 1. Vibrato component
+        val vibMod = if (hasVibrato) {
+            val mod = 1.0 + (sin(phase) * vib.depth)
+            phase += phaseInc
+            mod
+        } else 1.0
+
+        // 2. Accelerate component (Exponential pitch change)
+        val accelMod = if (hasAccelerate) {
+            val progress = (absFrame - startFrame).toDouble() / totalFrames
+            2.0.pow(accel * progress)
+        } else 1.0
+
+        out[idx] = vibMod * accelMod
+    }
+
+    vib.phase = phase
+    return out
+}
+
+//fun Voice.calculateAccelerateMultiplier(absoluteFrame: Long): Double {
+//    val accel = accelerate.amount
+//    if (accel == 0.0) return 1.0
+//
+//    val totalFrames = endFrame - startFrame
+//    if (totalFrames <= 0) return 1.0
+//
+//    val progress = (absoluteFrame - startFrame).toDouble() / totalFrames
+//    // Strudel style: freq * 2^(accel * progress)
+//    return 2.0.pow(accel * progress)
+//}
+//
 fun Voice.fillVibrato(ctx: Voice.RenderContext, offset: Int, length: Int): DoubleArray? {
     if (vibrato.depth <= 0.0) return null
 

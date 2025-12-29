@@ -229,6 +229,18 @@ class VoiceScheduler(
         // Routing
         val orbit = data.orbit ?: 0
 
+        // Pitch / Glisando
+        val accelerate = Voice.Accelerate(
+            amount = data.accelerate ?: 0.0
+        )
+
+        // Vibrator
+        val vibratoDepth = (data.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
+        val vibrato = Voice.Vibrato(
+            depth = vibratoDepth,
+            rate = if (vibratoDepth > 0.0) data.vibrato ?: 5.0 else 0.0,
+        )
+
         // Envelope
         val envelope = Voice.Envelope(
             attackFrames = (data.attack ?: 0.01) * sampleRate,
@@ -250,13 +262,6 @@ class VoiceScheduler(
             // In Strudel, room size is between [0 and 10], so we need to normalize it
             // See https://strudel.cc/learn/effects/#roomsize
             roomSize = (data.roomsize ?: 0.0) / 10.0,
-        )
-
-        // Vibrator
-        val vibratoDepth = (data.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
-        val vibrato = Voice.Vibrato(
-            depth = vibratoDepth,
-            rate = if (vibratoDepth > 0.0) data.vibrato ?: 5.0 else 0.0,
         )
 
         // Effects
@@ -283,11 +288,12 @@ class VoiceScheduler(
                     gateEndFrame = scheduled.gateEndFrame,
                     gain = data.gain,
                     pan = data.pan ?: 0.0,
+                    accelerate = accelerate,
+                    vibrato = vibrato,
                     filter = bakedFilters,
                     envelope = envelope,
                     delay = delay,
                     reverb = reverb,
-                    vibrato = vibrato,
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
@@ -325,10 +331,11 @@ class VoiceScheduler(
                     gain = data.gain,
                     pan = data.pan ?: 0.0,
                     filter = bakedFilters,
+                    accelerate = accelerate,
+                    vibrato = vibrato,
                     envelope = envelope,
                     delay = delay,
                     reverb = reverb,
-                    vibrato = vibrato,
                     distort = distort,
                     crush = crush,
                     coarse = coarse,

@@ -130,6 +130,20 @@ object TestPatterns {
                 )
             """.trimIndent()
 
+    val strangerThingsNetflix = """
+        stack(        
+            n("0 2 4 6 7 6 4 2")
+              .scale("<c3:major>/2")
+              .s("supersaw")
+              .distort(0.7)
+              .superimpose((x) => x.detune("<0.5>"))
+              .lpenv(perlin.slow(3).range(1, 4))
+              .lpf(perlin.slow(2).range(100, 2000))
+              .gain(0.3),
+            note("<a1 e2>/8").clip(0.8).struct("x*8").s("supersaw"),
+        )
+    """.trimIndent()
+
     val c4Minor = """
                 n("0 1 2 3 4 5 6 7").scale("C4:minor")
             """.trimIndent()
@@ -319,6 +333,29 @@ object TestPatterns {
            .coarse("1 2 4 8")
      """.trimIndent()
 
+    val glisandoTest = """
+        n("1 3 5 7").scale("C4:minor")
+        .sound("sine")
+        .gain(1.0)
+        .slow(4) 
+        .accelerate(1)
+        .vib(8)
+        .vmod(0.5)        
+    """.trimIndent()
+
+    val glisandoTest2 = """
+        stack(        
+          n("1 3 5 7 8 10 12 14").scale("C4:minor")
+           .adsr("0.1:0.5:0.2:0.5").gain(0.5)
+           .orbit(0).room(0.01).rsize(10.0).sound("sine")
+           .slow(8).accelerate(3 / 12),
+         n("8 10 12 14 1 3 5 7").scale("C4:minor")
+           .adsr("0.1:0.5:0.2:0.5").gain(0.5)
+           .orbit(2).room(0.01).rsize(10.0).sound("sine")
+           .slow(8).accelerate(3 / 12),
+        )
+    """.trimIndent()
+
 
     val all = listOf<String>(
 //        smallTownBoyBass,
@@ -326,6 +363,7 @@ object TestPatterns {
 //        smallTownBoy,
 //        tetris,
 //        tetrisRemix,
+//        strangerThingsNetflix,
 //        c4Minor,
 //        numberNotes,
 //        crackle,
@@ -349,7 +387,9 @@ object TestPatterns {
 //        twoOrbits,
 //        vibratoTestOne,
 //        crushTest,
-        coarseTest
+//        coarseTest
+//        glisandoTest,
+        glisandoTest2,
     )
 
     val active = all.first()

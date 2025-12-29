@@ -90,6 +90,10 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val release = value.getMember("release").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Pitch / Glisando
+        val accelerate = value.getMember("accelerate").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Vibrato
         val vibrato = value.getMember("vib").safeNumberOrNull()
             ?: value.getMember("vibrato").safeNumberOrNull()
@@ -172,6 +176,8 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
                 decay = decay,
                 sustain = sustain,
                 release = release,
+                // Pitch / Glisando
+                accelerate = accelerate,
                 // Vibrato
                 vibrato = vibrato,
                 vibratoMod = vibratoMod,

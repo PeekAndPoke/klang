@@ -42,6 +42,9 @@ data class VoiceData(
     val sustain: Double?,
     val release: Double?,
 
+    // Pitch / Glisando
+    val accelerate: Double?,
+
     // Vibrato
     val vibrato: Double?,
     val vibratoMod: Double?,

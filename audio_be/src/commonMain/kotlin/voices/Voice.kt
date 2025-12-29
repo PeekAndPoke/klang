@@ -19,6 +19,17 @@ sealed interface Voice {
         var blockStart: Long = 0
     }
 
+    class Vibrato(
+        val rate: Double,
+        val depth: Double,
+        var phase: Double = 0.0,
+    )
+
+    // Pitch / Glisando
+    class Accelerate(
+        val amount: Double,
+    )
+
     class Envelope(
         val attackFrames: Double,
         val decayFrames: Double,
@@ -38,12 +49,6 @@ sealed interface Voice {
         val room: Double,
         /** room size 0 .. 1 */
         val roomSize: Double,
-    )
-
-    class Vibrato(
-        val rate: Double,
-        val depth: Double,
-        var phase: Double = 0.0,
     )
 
     class Distort(
@@ -70,12 +75,15 @@ sealed interface Voice {
     val gain: Double
     val pan: Double
 
+    // Pitch
+    val accelerate: Accelerate
+    val vibrato: Vibrato
+
     // Audio processing
     val filter: AudioFilter
     val envelope: Envelope
     val delay: Delay
     val reverb: Reverb
-    val vibrato: Vibrato
 
     // global effects
     val distort: Distort

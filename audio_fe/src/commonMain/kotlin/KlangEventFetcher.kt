@@ -91,7 +91,12 @@ class KlangEventFetcher<T>(
             val to = from + fetchChunk
 
             try {
-                val events = config.source.query(from, to)
+                val events = try {
+                    config.source.query(from, to)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    emptyList()
+                }
 
                 for (e in events) {
                     // 1. Transform source event T to scheduled event S

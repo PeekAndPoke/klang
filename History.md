@@ -8,10 +8,20 @@
 
 ## Diary
 
+### (2025-12-28) Idea
+
+When the strudel-parsr is ready build an llm tool that:
+
+- you can talk to, to generate pattern
+- you can saw things like "make it sound more 8-bit"
+- the information is coming from the pattern-function definitions
+- do we need a RAG model?
+
 ### (2025-12-28) Strudel / Sound engine
 
 - added crush effect
 - added coarse effect
+- added accelerate / glisando modulation
 
 ### (2025-12-28) JS Audio Worklet - smoother audio samples upload to the backed
 
