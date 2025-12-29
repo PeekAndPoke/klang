@@ -357,6 +357,20 @@ object TestPatterns {
     """.trimIndent()
 
 
+    val bandF = """
+        n("0 2 4").scale("C4:minor")
+         .bandf("500 1000 200").resonance(5)
+         .slow(4)         
+    """.trimIndent()
+
+    val notchF = """
+        // or "noise"
+        s("white") 
+            .notchf("100 500 2000 5000")
+            .resonance(20)
+            .gain(0.5)
+    """.trimIndent()
+
     val all = listOf<String>(
 //        smallTownBoyBass,
 //        smallTownBoyMelody,
@@ -389,7 +403,8 @@ object TestPatterns {
 //        crushTest,
 //        coarseTest
 //        glisandoTest,
-        glisandoTest2,
+//        glisandoTest2,
+        bandF,
     )
 
     val active = all.first()

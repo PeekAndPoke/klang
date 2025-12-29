@@ -12,4 +12,12 @@ sealed class FilterDef {
     @Serializable
     @SerialName("high-pass")
     data class HighPass(val cutoffHz: Double, val q: Double?) : FilterDef()
+
+    @Serializable
+    @SerialName("band-pass")
+    data class BandPass(val cutoffHz: Double, val q: Double?) : FilterDef()
+
+    @Serializable
+    @SerialName("notch")
+    data class Notch(val cutoffHz: Double, val q: Double?) : FilterDef()
 }

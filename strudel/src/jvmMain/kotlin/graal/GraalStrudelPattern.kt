@@ -146,6 +146,16 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val hcutoff = value.getMember("hcutoff").safeNumberOrNull()
         hcutoff?.let { filters.add(FilterDef.HighPass(cutoffHz = it, q = resonance)) }
 
+        // Apply band pass filter?
+        val bandf = value.getMember("bandf").safeNumberOrNull()
+            ?: value.getMember("bandpass").safeNumberOrNull()
+        bandf?.let { filters.add(FilterDef.BandPass(cutoffHz = it, q = resonance)) }
+
+        // Apply notch filter?
+        val notchf = value.getMember("notchf").safeNumberOrNull()
+            ?: value.getMember("notch").safeNumberOrNull()
+        notchf?.let { filters.add(FilterDef.Notch(cutoffHz = it, q = resonance)) }
+
         // add event
         return StrudelPatternEvent(
             // Strudel Timing

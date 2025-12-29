@@ -18,6 +18,12 @@ object LowPassHighPassFilters {
             else -> SvfHPF(cutoffHz, q, sampleRate)
         }
 
+    fun createBPF(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
+        SvfBPF(cutoffHz, q ?: 1.0, sampleRate)
+
+    fun createNotch(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
+        SvfNotch(cutoffHz, q ?: 1.0, sampleRate)
+
     // --- Implementations ---
 
     class OnePoleLPF(cutoffHz: Double, sampleRate: Double) : AudioFilter {
@@ -62,6 +68,7 @@ object LowPassHighPassFilters {
             }
         }
     }
+
 
     // State Variable Filter (Shared logic)
     abstract class BaseSvf(cutoffHz: Double, q: Double, sampleRate: Double) : AudioFilter {
@@ -117,6 +124,42 @@ object LowPassHighPassFilters {
 
                 // High pass output: v0 - k*v1 - v2
                 buffer[i] = v0 - k * v1 - v2
+            }
+        }
+    }
+
+    class SvfBPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
+        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+            val end = offset + length
+            for (i in offset until end) {
+                val v0 = buffer[i]
+                val v3 = v0 - ic2eq
+                val v1 = a1 * ic1eq + a2 * v3
+                val v2 = ic2eq + a2 * ic1eq + a3 * v3
+
+                ic1eq = 2.0 * v1 - ic1eq
+                ic2eq = 2.0 * v2 - ic2eq
+
+                // Band pass output: v1
+                buffer[i] = v1
+            }
+        }
+    }
+
+    class SvfNotch(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
+        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+            val end = offset + length
+            for (i in offset until end) {
+                val v0 = buffer[i]
+                val v3 = v0 - ic2eq
+                val v1 = a1 * ic1eq + a2 * v3
+                val v2 = ic2eq + a2 * ic1eq + a3 * v3
+
+                ic1eq = 2.0 * v1 - ic1eq
+                ic2eq = 2.0 * v2 - ic2eq
+
+                // Notch output: v0 - k*v1
+                buffer[i] = v0 - k * v1
             }
         }
     }

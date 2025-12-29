@@ -217,6 +217,12 @@ class VoiceScheduler(
 
         is FilterDef.HighPass ->
             LowPassHighPassFilters.createHPF(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
+
+        is FilterDef.BandPass ->
+            LowPassHighPassFilters.createBPF(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
+
+        is FilterDef.Notch ->
+            LowPassHighPassFilters.createNotch(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
     }
 
     private fun makeVoice(scheduled: ScheduledVoice, nowFrame: Long): Voice? {
