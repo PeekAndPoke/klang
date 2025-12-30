@@ -33,12 +33,12 @@ class Samples(
     )
 
     data class Index(
-        val banks: List<Bank>,
+        val banks: List<BankProvider>,
         val aliases: Map<String, String> = emptyMap(),
     ) {
-        val banksByName: Map<String, Bank> = banks.associateBy { it.name }
+        val bankProvidersByName: Map<String, BankProvider> = banks.associateBy { it.key }
 
-        fun resolve(request: SampleRequest): SampleId? {
+        suspend fun resolve(request: SampleRequest): SampleId? {
             // There is a special "no name" bank for all sounds
             val bankName = request.bank ?: ""
             // No sound name ... no music
@@ -66,16 +66,42 @@ class Samples(
             return SampleId(request = request, sample = sample)
         }
 
-        fun getBank(name: String?): Bank? {
-            // Look directly first
-            banksByName[name]?.let { return it }
-            // Try to resolve by alias
-            return aliases[name]?.let { resolved -> banksByName[resolved] }
+        suspend fun getBank(key: String?): Bank? {
+            if (key == null) return null
+
+            return getBank(key, listOf())
+        }
+
+        private suspend fun getBank(key: String, visitedAliases: List<String>): Bank? {
+            if (key in visitedAliases) {
+                println("[Samples] Bank '$key' has an alias loop: ${visitedAliases.joinToString(" -> ")}.")
+                return null
+            }
+
+            // Do we have a bank with this key?
+            return when (val provider = bankProvidersByName[key]) {
+                // No? Check aliases
+                null -> aliases[key]?.let { getBank(it, visitedAliases + key) }
+                // Else try to load
+                else -> provider.provide()
+            }
         }
     }
 
+    sealed interface BankProvider {
+        class Instant(
+            override val key: String,
+            val bank: Bank,
+        ) : BankProvider {
+            override suspend fun provide(): Bank = bank
+        }
+
+        val key: String
+        suspend fun provide(): Bank?
+    }
+
     data class Bank(
-        val name: String,
+        val key: String,
         val sounds: List<Sound> = emptyList(),
     ) {
         val samplesByName: Map<String, Sound> = sounds.associateBy { it.key }
@@ -127,12 +153,12 @@ class Samples(
     /**
      * Looks up the index for a given sample
      */
-    fun hasSample(request: SampleRequest): Boolean = index.resolve(request) != null
+    suspend fun hasSample(request: SampleRequest): Boolean = index.resolve(request) != null
 
     /**
      * Gets a sound if it is already loaded
      */
-    fun getIfLoaded(request: SampleRequest): Pair<SampleId, MonoSamplePcm>? {
+    suspend fun getIfLoaded(request: SampleRequest): Pair<SampleId, MonoSamplePcm>? {
         val sampleId = index.resolve(request) ?: return null
 
         sampleCache[sampleId]?.let { return sampleId to it }
@@ -144,7 +170,7 @@ class Samples(
         return null
     }
 
-    fun getWithCallback(request: SampleRequest, callback: (Pair<Sample, MonoSamplePcm?>?) -> Unit) {
+    suspend fun getWithCallback(request: SampleRequest, callback: (Pair<Sample, MonoSamplePcm?>?) -> Unit) {
         val sampleId = index.resolve(request) ?: return callback(null)
 
         scope.launch {
