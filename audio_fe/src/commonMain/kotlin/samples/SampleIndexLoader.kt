@@ -13,6 +13,11 @@ class SampleIndexLoader(
         isLenient = true
     },
 ) {
+    private data class LoadResult(
+        val banks: Map<String, Samples.Bank>,
+        val aliases: Map<String, String>,
+    )
+
     suspend fun load(
         library: SampleCatalogue,
     ): Samples.Index = coroutineScope {
@@ -20,32 +25,50 @@ class SampleIndexLoader(
         val collectedBanks = mutableMapOf<String, Samples.Bank>()
         val collectedAliases = mutableMapOf<String, String>()
 
-        library.coordinates.forEach { bank ->
-            run {
-                val loaded = loader.download(bank.soundsUri)?.decodeToString()
-                // Load the banks data
-                loaded?.let { parseSoundsFile(bank.defaultPitchHz, it) }?.let { parsed ->
-                    // merge with existing data
-                    parsed.forEach { bank ->
-                        val existingBank = collectedBanks[bank.name] ?: Samples.Bank(bank.name)
-                        collectedBanks[bank.name] = existingBank.plusSounds(sounds = bank.sounds)
-                    }
-                }
+        library.sources.forEach { source ->
+            val result = when (source) {
+                is SampleCatalogue.Bundle -> loadGenericBundle(source)
             }
 
-            bank.aliasUris.forEach { alias ->
-                val loaded = loader.download(alias)?.decodeToString()
-
-                loaded?.let { parseAliasFile(it) }?.let { parsed ->
-                    collectedAliases += parsed
-                }
-            }
+            collectedBanks.putAll(result.banks)
+            collectedAliases.putAll(result.aliases)
         }
 
         // return
         Samples.Index(
             banks = collectedBanks.values.toList(),
             aliases = collectedAliases.toMap(),
+        )
+    }
+
+    private suspend fun loadGenericBundle(bundle: SampleCatalogue.Bundle): LoadResult {
+
+        val collectedBanks = mutableMapOf<String, Samples.Bank>()
+        val collectedAliases = mutableMapOf<String, String>()
+
+        run {
+            val loaded = loader.download(bundle.soundsUri)?.decodeToString()
+            // Load the banks data
+            loaded?.let { parseSoundsFile(bundle.defaultPitchHz, it) }?.let { parsed ->
+                // merge with existing data
+                parsed.forEach { bank ->
+                    val existingBank = collectedBanks[bank.name] ?: Samples.Bank(bank.name)
+                    collectedBanks[bank.name] = existingBank.plusSounds(sounds = bank.sounds)
+                }
+            }
+        }
+
+        bundle.aliasUris.forEach { alias ->
+            val loaded = loader.download(alias)?.decodeToString()
+
+            loaded?.let { parseAliasFile(it) }?.let { parsed ->
+                collectedAliases += parsed
+            }
+        }
+
+        return LoadResult(
+            banks = collectedBanks,
+            aliases = collectedAliases,
         )
     }
 

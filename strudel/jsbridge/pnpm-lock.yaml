@@ -38,6 +38,12 @@ importers:
       pretty-format:
         specifier: 30.2.0
         version: 30.2.0
+      sfumato:
+        specifier: 0.1.2
+        version: 0.1.2
+      soundfont2:
+        specifier: 0.5.0
+        version: 0.5.0
     devDependencies:
       esbuild:
         specifier: ^0.27.2

@@ -356,6 +356,18 @@ object TestPatterns {
         )
     """.trimIndent()
 
+    val glisandoTest3 = """
+        seq("1:3 3:5 5:7 7:1").scale("C4:minor")
+        .n()
+        .sound("sine")
+        .gain(1.0)
+        .slow(4) 
+        .accelerate(1)
+        .vib(8)
+        .vmod(0.5)        
+    """.trimIndent()
+
+
     val bandF = """
         n("0 2 4").scale("C4:minor")
          .bandf("500 1000 200").resonance(5)
@@ -386,7 +398,7 @@ object TestPatterns {
 //        smallTownBoy,
 //        tetris,
 //        tetrisRemix,
-//        strangerThingsNetflix,
+        strangerThingsNetflix,
 //        c4Minor,
 //        numberNotes,
 //        crackle,
@@ -413,8 +425,9 @@ object TestPatterns {
 //        coarseTest
 //        glisandoTest,
 //        glisandoTest2,
+//        glisandoTest3,
 //        bandF,
-        legatoLong,
+//        legatoLong,
 //        legatoShort,
     )
 

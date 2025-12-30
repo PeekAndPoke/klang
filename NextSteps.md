@@ -36,44 +36,45 @@ implementation is missing/TODO.
   - Vibrato (vib)
   - Ducking (duckorbit)
 
-## Time-Based Effects (Spatial)
-
-You have delay and reverb partially implemented.
-
-- legato: Controls the length of the note relative to its duration. Important for smooth transitions (slides) or
-  staccato.
-- clip: Hard clipping distortion (distinct from tanh soft clipping/saturation).
-- leslie: Simulation of a rotating speaker cabinet (Doppler effect + amplitude modulation).
-- phaser: Creates sweeping notch filters (uses all-pass filters).
-
-## Bitcrushing / Lo-Fi
-
-You have placeholders for crush and coarse.
-
-- crush (Bit Reduction): Reduces the bit depth of the signal (e.g., from 16-bit to 8-bit or 4-bit), creating digital
-  noise.
-- coarse (Sample Rate Reduction): Reduces the effective sample rate (e.g., from 48kHz to 2kHz), introducing aliasing
-  artifacts.
-
 ## Dynamics
 
 - compressor: Reduces the dynamic range (difference between loud and soft parts). Strudel has a global compressor or
   per-orbit.
-- gain: You have this, but verify velocity aliases to it correctly if needed.
+- post-gain: You have this, but verify velocity aliases to it correctly if needed.
+
+## Time-Based Effects (Spatial)
+
+You have delay and reverb partially implemented.
+
+- leslie: Simulation of a rotating speaker cabinet (Doppler effect + amplitude modulation).
+- phaser: Creates sweeping notch filters (uses all-pass filters).
+
+## Sound-fonts
+
+- studel has a variety of soundfonts integrated.
+- See https://codeberg.org/uzu/strudel/src/branch/main/packages/soundfonts
+- see https://codeberg.org/uzu/strudel/src/branch/main/packages/soundfonts/gm.mjs
 
 ## Pitch / Modulation (Beyond Vibrato)
 
-You have vib (Vibrato).
-
-- accelerate: Pitch glide over the duration of a note (up or down).
-- glide (Portamento): Smooth pitch transition between notes.
-- Summary Checklist for Implementation
-- Bitcrusher: crush (bits), coarse (sample rate).
 - Vowel Filter: vowel.
-- Pitch Glides: accelerate, glide.
-- Filters: bandf, notchf.
 - Modulation: phaser, leslie.
 
-## Sliding notes (pitch bend)
+- glide (Portamento / pitch bend): Smooth pitch transition between notes.
+  - here we get data formed differently -> check TestPatterns::glisandoTest3 -> produces error
+  - instead of "n" being the sample index we get this:
 
-Should be possible now that we have LFO / Vibrato.
+```
+"value": Object {
+  "accelerate": 1,
+  "gain": 1,
+  "n": Object {
+    "0": 1,
+    "1": 3,
+    "note": "",
+  },
+  "s": "sine",
+  "vib": 8,
+  "vibmod": 0.5,
+},
+```

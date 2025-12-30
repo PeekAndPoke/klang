@@ -22,10 +22,12 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
 
         for (i in 0 until count) {
             val item = arc.getArrayElement(i)
+
+//            println(graal.prettyFormat(item))
+
             val event = item.toStrudelEvent()
             events += event
 
-//            println(graal.prettyFormat(item))
 //            println("${event.note} ${event.scale}")
         }
 

@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.audio_fe.samples
 
 class SampleCatalogue(
-    val coordinates: List<Bundle> = emptyList(),
+    val sources: List<Source> = emptyList(),
 ) {
     companion object {
-        fun of(vararg coordinates: Bundle) = SampleCatalogue(coordinates.toList())
+        fun of(vararg coordinates: Source) = SampleCatalogue(coordinates.toList())
 
         // DRUMS ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -46,7 +46,7 @@ class SampleCatalogue(
         // MISC  ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
         val default = SampleCatalogue(
-            coordinates = listOf(
+            sources = listOf(
                 // drums
                 strudelDefaultDrums,
                 tidalDrumMachine,
@@ -60,12 +60,17 @@ class SampleCatalogue(
         )
     }
 
+    sealed interface Source {
+        /** Name of the bundle ... not used for anything just informal */
+        val name: String
+    }
+
     /**
      * A sound bundle
      */
-    class Bundle(
+    data class Bundle(
         /** Name of this bundle ... not used for anything just informal */
-        val name: String,
+        override val name: String,
         /**
          * When pitching sound from this bundle, use this pitch as a basis
          *
@@ -76,5 +81,5 @@ class SampleCatalogue(
         val soundsUri: String,
         /** Uri where to get the json alias definition from */
         val aliasUris: List<String> = emptyList(),
-    )
+    ) : Source
 }
