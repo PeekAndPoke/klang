@@ -274,12 +274,9 @@ class SampleIndexLoader(
             val obj = root as? JsonObject
                 ?: throw IllegalArgumentException("Sample map JSON must be an object")
 
-            val base = obj["_base"]
-                ?.jsonPrimitive
-                ?.contentOrNull
-                ?.trim()
-                ?.trimEnd('/')
-                ?.let { "$it/" }
+            // Get base url for sound files
+            val base = obj["_base"]?.jsonPrimitive?.contentOrNull
+                ?.trim()?.trimEnd('/')?.let { "$it/" }
                 ?: ""
 
             val banks = mutableMapOf<String, Samples.Bank>()
