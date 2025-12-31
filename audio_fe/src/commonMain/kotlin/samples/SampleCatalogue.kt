@@ -43,7 +43,12 @@ class SampleCatalogue(
             soundsUri = "https://raw.githubusercontent.com/felixroos/dough-samples/main/piano.json",
         )
 
-        // MISC  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+        // SOUNDFONTS //////////////////////////////////////////////////////////////////////////////////////////////////
+
+        val gmSoundFont = Soundfont(
+            name = "GM - Felix Roos",
+            indexUrl = "https://peekandpoke.github.io/klang/felixroos/gm/index.json",
+        )
 
         val default = SampleCatalogue(
             sources = listOf(
@@ -55,7 +60,8 @@ class SampleCatalogue(
                 mridangam,
                 // instruments
                 piano,
-                // misc
+                // soundfonts
+                gmSoundFont,
             ),
         )
     }
@@ -81,5 +87,12 @@ class SampleCatalogue(
         val soundsUri: String,
         /** Uri where to get the json alias definition from */
         val aliasUris: List<String> = emptyList(),
+    ) : Source
+
+    data class Soundfont(
+        /** The name of the soundfont bundle */
+        override val name: String,
+        /** The url to the soundfont index. See [SoundfontIndex] */
+        val indexUrl: String,
     ) : Source
 }

@@ -1,5 +1,8 @@
 package io.peekandpoke.klang.audio_fe.samples
 
+import io.peekandpoke.klang.audio_bridge.SampleRequest
+import io.peekandpoke.klang.audio_fe.samples.Samples.ResolvedSample
+import io.peekandpoke.klang.audio_fe.samples.Samples.Sample
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
 import io.peekandpoke.klang.audio_fe.utils.isUrlWithProtocol
 import io.peekandpoke.klang.tones.Tones
@@ -14,36 +17,135 @@ class SampleIndexLoader(
     },
 ) {
     private val genericBundleLoader = GenericBundleLoader(loader, json)
+    private val soundFontLoader = SoundFontLoader(loader, json)
 
     suspend fun load(
         library: SampleCatalogue,
     ): Samples.Index = coroutineScope {
 
-        val collectedBanks = mutableMapOf<String, Samples.BankProvider>()
-        val collectedAliases = mutableMapOf<String, String>()
+        val banks = mutableMapOf<String, Samples.Bank>()
+        val aliases = mutableMapOf<String, String>()
 
         library.sources.forEach { source ->
-            val result = when (source) {
-                is SampleCatalogue.Bundle -> genericBundleLoader.load(source)
-            }
+            try {
+                println("Loading sample source: ${source.name}")
 
-            collectedBanks.putAll(result.banks)
-            collectedAliases.putAll(result.aliases)
+                val result = when (source) {
+                    is SampleCatalogue.Bundle -> genericBundleLoader.load(source)
+                    is SampleCatalogue.Soundfont -> soundFontLoader.load(source)
+                }
+
+                println(
+                    "Loaded sample source: ${source.name} ... " +
+                            "Found ${result.banks.size} banks and ${result.aliases.size} aliases"
+                )
+
+                // Merge all banks
+                result.banks.values.forEach { bank ->
+                    val existing = banks[bank.key] ?: Samples.Bank(bank.key)
+                    banks[bank.key] = existing.plusSounds(bank.sounds)
+                }
+
+                // Collect aliases
+                aliases.putAll(result.aliases)
+
+            } catch (e: Exception) {
+                println("Could not load sample source: ${source.name}")
+                e.printStackTrace()
+            }
         }
 
         // return
         Samples.Index(
-            banks = collectedBanks.values.toList(),
-            aliases = collectedAliases.toMap(),
+            banks = banks.values.toList(),
+            aliases = aliases.toMap(),
         )
     }
 
     private data class LoadResult(
-        val banks: Map<String, Samples.BankProvider>,
+        val banks: Map<String, Samples.Bank>,
         val aliases: Map<String, String>,
     )
 
+    private class SoundFontLoader(private val loader: AssetLoader, private val json: Json = Json) {
+        suspend fun load(bundle: SampleCatalogue.Soundfont): LoadResult {
+
+//
+//            val content = loader.download(bundle.indexUrl)?.decodeToString()
+//                ?: error("Soundfont index not found: ${bundle.indexUrl}")
+//
+//            val decoded = json.decodeFromString<Map<String, List<SoundfontIndex.Variant>>>(content)
+//
+//            decoded.forEach { (bankName, variants) ->
+//                println("Found bank '$bankName' with ${variants.size} variants")
+//            }
+
+            return LoadResult(emptyMap(), emptyMap())
+        }
+    }
+
     private class GenericBundleLoader(private val loader: AssetLoader, private val json: Json = Json) {
+        class Provider(
+            override val key: String,
+            val sounds: List<Sound> = emptyList(),
+        ) : Samples.SoundProvider {
+            data class Sound(
+                /** The to look up the sound ... case sensitive */
+                val key: String,
+                /** The samples associated with this sound */
+                val samples: List<Sample>,
+            ) {
+                val samplesSortedByPitch: List<Sample> = samples.sortedBy { it.pitchHz }
+
+                fun getSampleByIndex(idx: Int): Sample? {
+                    return samples.getOrNull(idx % samples.size)
+                }
+
+                fun getSampleByPitch(pitch: Double): Sample? {
+                    return samplesSortedByPitch.firstOrNull { pitch <= it.pitchHz }
+                        ?: samplesSortedByPitch.lastOrNull()
+                }
+
+                fun getSampleByNote(note: String): Sample? {
+                    val pitchHz = Tones.noteToFreq(note)
+
+                    return getSampleByPitch(pitchHz)
+                }
+            }
+
+            private val soundsByKey = sounds.associateBy { it.key }
+
+            fun plusSounds(sounds: List<Sound>): Provider = Provider(
+                key = key,
+                sounds = this.sounds.plus(sounds),
+            )
+
+            override suspend fun provide(request: SampleRequest): ResolvedSample? {
+                // no sound ... no music
+                val sound = soundsByKey[request.sound] ?: return null
+
+                if (sound.samples.isEmpty()) return null
+
+                // No sample ... no music
+                val sample = when (val note = request.note) {
+                    null -> {
+                        // No frequency ... pick by given sound index or the first one
+                        sound.getSampleByIndex(request.index ?: 0)
+                    }
+
+                    else -> {
+                        // Note given ... pick the best sample
+                        sound.getSampleByNote(note)
+                    }
+                }
+
+                // no sample ... no music
+                sample ?: return null
+
+                return ResolvedSample(request = request, sample = sample)
+            }
+        }
+
         suspend fun load(bundle: SampleCatalogue.Bundle): LoadResult {
 
             val collectedBanks = mutableMapOf<String, Samples.Bank>()
@@ -52,11 +154,11 @@ class SampleIndexLoader(
             run {
                 val loaded = loader.download(bundle.soundsUri)?.decodeToString()
                 // Load the banks data
-                loaded?.let { parseSoundsFile(bundle.defaultPitchHz, it) }?.let { parsed ->
-                    // merge with existing data
-                    parsed.forEach { bank ->
-                        val existingBank = collectedBanks[bank.key] ?: Samples.Bank(bank.key)
-                        collectedBanks[bank.key] = existingBank.plusSounds(sounds = bank.sounds)
+                loaded?.let { parseSoundsFile(bundle.defaultPitchHz, it) }?.let { banks ->
+                    // Merge all
+                    banks.forEach { bank ->
+                        val exising = collectedBanks[bank.key] ?: Samples.Bank(bank.key)
+                        collectedBanks[bank.key] = exising.plusSounds(bank.sounds)
                     }
                 }
             }
@@ -69,12 +171,7 @@ class SampleIndexLoader(
                 }
             }
 
-            return LoadResult(
-                banks = collectedBanks.mapValues { (key, bank) ->
-                    Samples.BankProvider.Instant(key, bank)
-                },
-                aliases = collectedAliases,
-            )
+            return LoadResult(banks = collectedBanks, aliases = collectedAliases)
         }
 
         /**
@@ -200,15 +297,15 @@ class SampleIndexLoader(
             for ((key, value) in obj) {
                 if (key == "_base") continue
 
-                val (key, soundName) = splitBankAndSound(key)
+                val (bankKey, soundKey) = splitBankAndSound(key)
 
-                val sound: Samples.Sound? = when (value) {
+                val sound: Provider.Sound? = when (value) {
                     // Is this a bank based pattern?
                     is JsonArray -> {
                         val samples = value.mapNotNull { it.asStringOrNull()?.sanitizeUrl(base) }
-                            .map { url -> Samples.Sample(note = null, pitchHz = defaultPitchHz, url = url) }
+                            .map { url -> Sample(note = null, pitchHz = defaultPitchHz, url = url) }
 
-                        Samples.Sound(key = soundName, samples = samples)
+                        Provider.Sound(key = soundKey, samples = samples)
                     }
 
                     // Is this a sound with different pitches?
@@ -218,10 +315,10 @@ class SampleIndexLoader(
                             val pitch = Tones.noteToFreq(note)
                             val url = it.value.asStringOrNull()?.sanitizeUrl(base) ?: return@mapNotNull null
 
-                            Samples.Sample(note = note, pitchHz = pitch, url = url)
+                            Sample(note = note, pitchHz = pitch, url = url)
                         }
 
-                        Samples.Sound(key = soundName, samples = samples)
+                        Provider.Sound(key = soundKey, samples = samples)
                     }
 
                     else -> null
@@ -229,7 +326,9 @@ class SampleIndexLoader(
 
                 // Add the sound to the bank
                 sound?.let {
-                    banks[key] = (banks[key] ?: Samples.Bank(key)).plusSounds(listOf(sound))
+                    banks[bankKey] = (banks[bankKey] ?: Samples.Bank(bankKey)).plusSound(
+                        Provider(key = soundKey, sounds = listOf(sound))
+                    )
                 }
             }
 

@@ -3,7 +3,6 @@ package io.peekandpoke.klang.audio_fe.samples
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
-import io.peekandpoke.klang.tones.Tones
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,117 +25,114 @@ class Samples(
         // used for platform specific extension functions
     }
 
+    interface SoundProvider {
+        val key: String
+
+        suspend fun provide(request: SampleRequest): ResolvedSample?
+    }
+
     /** A fully resolved variant (exact URL choice). */
-    data class SampleId(
+    data class ResolvedSample(
         val request: SampleRequest,
         val sample: Sample,
     )
 
     data class Index(
-        val banks: List<BankProvider>,
+        val banks: List<Bank>,
         val aliases: Map<String, String> = emptyMap(),
     ) {
-        val bankProvidersByName: Map<String, BankProvider> = banks.associateBy { it.key }
+        val banksByKey: Map<String, Bank> = banks.associateBy { it.key }
 
-        suspend fun resolve(request: SampleRequest): SampleId? {
-            // There is a special "no name" bank for all sounds
-            val bankName = request.bank ?: ""
-            // No sound name ... no music
-            val soundName = request.sound ?: return null
-            // No bank ... no music
-            val bank = getBank(bankName) ?: return null
-            // No sound ... no music
-            val sound = bank.getSound(soundName)?.takeIf { it.samples.isNotEmpty() } ?: return null
-
-            val sample = when (val note = request.note) {
-                null -> {
-                    // No frequency ... pick by given sound index or the first one
-                    sound.getSampleByIndex(request.index ?: 0)
-                }
-
-                else -> {
-                    // Note given ... pick the best sample
-                    sound.getSampleByNote(note)
-                }
-            }
-
-            // no sample ... no music
-            sample ?: return null
-
-            return SampleId(request = request, sample = sample)
+        suspend fun resolve(request: SampleRequest): ResolvedSample? {
+            // Resolve the sample provider (taking aliases into account)
+            // Note there is a special bank with an empty name ""
+            val resolvedBank = resolveBank(request.bank ?: "") ?: return null
+            // Get the sound provider
+            val sound = resolvedBank.getSound(request.sound ?: "") ?: return null
+            // Try to provide the sound
+            return sound.provide(request)
         }
 
-        suspend fun getBank(key: String?): Bank? {
-            if (key == null) return null
-
-            return getBank(key, listOf())
-        }
-
-        private suspend fun getBank(key: String, visitedAliases: List<String>): Bank? {
+        private fun resolveBank(key: String, visitedAliases: List<String> = emptyList()): Bank? {
             if (key in visitedAliases) {
                 println("[Samples] Bank '$key' has an alias loop: ${visitedAliases.joinToString(" -> ")}.")
                 return null
             }
 
             // Do we have a bank with this key?
-            return when (val provider = bankProvidersByName[key]) {
+            return when (val bank = banksByKey[key]) {
                 // No? Check aliases
-                null -> aliases[key]?.let { getBank(it, visitedAliases + key) }
+                null -> aliases[key]?.let { resolveBank(it, visitedAliases + key) }
                 // Else try to load
-                else -> provider.provide()
+                else -> bank
             }
         }
     }
 
-    sealed interface BankProvider {
-        class Instant(
-            override val key: String,
-            val bank: Bank,
-        ) : BankProvider {
-            override suspend fun provide(): Bank = bank
-        }
-
-        val key: String
-        suspend fun provide(): Bank?
-    }
+//    sealed interface BankProvider {
+//        class FromGeneric(
+//            override val key: String,
+//            val bank: Bank,
+//        ) : BankProvider {
+//            override suspend fun provide(loader: AssetLoader): Bank = bank
+//        }
+//
+//        class FromSoundfont(
+//            override val key: String,
+//            val index: SoundfontIndex,
+//        ) : BankProvider {
+//            val variants = index.entries[key] ?: emptyList()
+//
+//            val loadedVariants = mutableMapOf<Int, Any?>()
+//
+//            override suspend fun provide(loader: AssetLoader): Bank? {
+//                // TODO: handle different variants
+//                val variantIndex = 0
+//
+//                val variant = variants.getOrNull(variantIndex) ?: return null
+//
+//                val loaded = loadedVariants.getOrPut(variantIndex) {
+//                    val url = index.baseUrl + "/" + variant.file
+//
+//                    try {
+//                        val content = loader.download(url)?.decodeToString()
+//                            ?: return@getOrPut null
+//
+//                        val decoded = Json.decodeFromString<Soundfont>(content)
+//
+//                    } catch (e: Exception) {
+//                        println("[Samples] Failed to load soundfont variant $variantIndex from $url")
+//                        // return
+//                        null
+//                    }
+//                }
+//
+//                return null
+//            }
+//        }
+//
+//        val key: String
+//
+//        suspend fun provide(loader: AssetLoader): Bank?
+//    }
 
     data class Bank(
         val key: String,
-        val sounds: List<Sound> = emptyList(),
+        val sounds: List<SoundProvider> = emptyList(),
     ) {
-        val samplesByName: Map<String, Sound> = sounds.associateBy { it.key }
+        val soundsByKey: Map<String, SoundProvider> = sounds.associateBy { it.key }
 
-        fun getSound(name: String): Sound? {
-            return samplesByName[name]
+        fun getSound(key: String): SoundProvider? {
+            return soundsByKey[key]
         }
 
-        fun plusSounds(sounds: List<Sound>) = copy(
+        fun plusSound(sound: SoundProvider) = copy(
+            sounds = sounds.plus(sound).distinctBy { it.key }
+        )
+
+        fun plusSounds(sounds: List<SoundProvider>) = copy(
             sounds = this.sounds.plus(sounds).distinctBy { it.key }
         )
-    }
-
-    data class Sound(
-        /** The to look up the sound ... case sensitive */
-        val key: String,
-        /** The samples associated with this sound */
-        val samples: List<Sample>,
-    ) {
-        val samplesSortedByPitch: List<Sample> = samples.sortedBy { it.pitchHz }
-
-        fun getSampleByIndex(idx: Int): Sample? {
-            return samples.getOrNull(idx % samples.size)
-        }
-
-        fun getSampleByPitch(pitch: Double): Sample? {
-            return samplesSortedByPitch.firstOrNull { pitch <= it.pitchHz }
-                ?: samplesSortedByPitch.lastOrNull()
-        }
-
-        fun getSampleByNote(note: String): Sample? {
-            val pitchHz = Tones.noteToFreq(note)
-
-            return getSampleByPitch(pitchHz)
-        }
     }
 
     data class Sample(
@@ -148,7 +144,7 @@ class Samples(
         val url: String,
     )
 
-    private val sampleCache = mutableMapOf<SampleId, MonoSamplePcm?>()
+    private val sampleCache = mutableMapOf<ResolvedSample, MonoSamplePcm?>()
 
     /**
      * Looks up the index for a given sample
@@ -158,7 +154,7 @@ class Samples(
     /**
      * Gets a sound if it is already loaded
      */
-    suspend fun getIfLoaded(request: SampleRequest): Pair<SampleId, MonoSamplePcm>? {
+    suspend fun getIfLoaded(request: SampleRequest): Pair<ResolvedSample, MonoSamplePcm>? {
         val sampleId = index.resolve(request) ?: return null
 
         sampleCache[sampleId]?.let { return sampleId to it }
@@ -181,7 +177,7 @@ class Samples(
         }
     }
 
-    private suspend fun loadAndDecode(id: SampleId): MonoSamplePcm? {
+    private suspend fun loadAndDecode(id: ResolvedSample): MonoSamplePcm? {
         return loader.download(id.sample.url)?.let {
             decoder.decodeMonoFloatPcm(it)
         }
