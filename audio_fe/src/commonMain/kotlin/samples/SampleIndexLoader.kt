@@ -87,7 +87,7 @@ class SampleIndexLoader(
     private class GenericBundleLoader(private val loader: AssetLoader, private val json: Json = Json) {
         class Provider(
             override val key: String,
-            val sounds: List<Sound> = emptyList(),
+            val sound: Sound,
         ) : Samples.SoundProvider {
             data class Sound(
                 /** The to look up the sound ... case sensitive */
@@ -113,17 +113,7 @@ class SampleIndexLoader(
                 }
             }
 
-            private val soundsByKey = sounds.associateBy { it.key }
-
-            fun plusSounds(sounds: List<Sound>): Provider = Provider(
-                key = key,
-                sounds = this.sounds.plus(sounds),
-            )
-
             override suspend fun provide(request: SampleRequest): ResolvedSample? {
-                // no sound ... no music
-                val sound = soundsByKey[request.sound] ?: return null
-
                 if (sound.samples.isEmpty()) return null
 
                 // No sample ... no music
@@ -326,9 +316,8 @@ class SampleIndexLoader(
 
                 // Add the sound to the bank
                 sound?.let {
-                    banks[bankKey] = (banks[bankKey] ?: Samples.Bank(bankKey)).plusSound(
-                        Provider(key = soundKey, sounds = listOf(sound))
-                    )
+                    banks[bankKey] = (banks[bankKey] ?: Samples.Bank(bankKey))
+                        .plusSound(Provider(key = soundKey, sound))
                 }
             }
 
