@@ -94,5 +94,7 @@ class SampleCatalogue(
         override val name: String,
         /** The url to the soundfont index. See [SoundfontIndex] */
         val indexUrl: String,
-    ) : Source
+    ) : Source {
+        val baseUrl = indexUrl.substringBeforeLast('/')
+    }
 }

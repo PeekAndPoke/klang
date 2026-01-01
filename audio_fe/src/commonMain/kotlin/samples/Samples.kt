@@ -69,53 +69,6 @@ class Samples(
         }
     }
 
-//    sealed interface BankProvider {
-//        class FromGeneric(
-//            override val key: String,
-//            val bank: Bank,
-//        ) : BankProvider {
-//            override suspend fun provide(loader: AssetLoader): Bank = bank
-//        }
-//
-//        class FromSoundfont(
-//            override val key: String,
-//            val index: SoundfontIndex,
-//        ) : BankProvider {
-//            val variants = index.entries[key] ?: emptyList()
-//
-//            val loadedVariants = mutableMapOf<Int, Any?>()
-//
-//            override suspend fun provide(loader: AssetLoader): Bank? {
-//                // TODO: handle different variants
-//                val variantIndex = 0
-//
-//                val variant = variants.getOrNull(variantIndex) ?: return null
-//
-//                val loaded = loadedVariants.getOrPut(variantIndex) {
-//                    val url = index.baseUrl + "/" + variant.file
-//
-//                    try {
-//                        val content = loader.download(url)?.decodeToString()
-//                            ?: return@getOrPut null
-//
-//                        val decoded = Json.decodeFromString<Soundfont>(content)
-//
-//                    } catch (e: Exception) {
-//                        println("[Samples] Failed to load soundfont variant $variantIndex from $url")
-//                        // return
-//                        null
-//                    }
-//                }
-//
-//                return null
-//            }
-//        }
-//
-//        val key: String
-//
-//        suspend fun provide(loader: AssetLoader): Bank?
-//    }
-
     data class Bank(
         val key: String,
         val sounds: List<SoundProvider> = emptyList(),
@@ -166,20 +119,33 @@ class Samples(
         return null
     }
 
+    /**
+     * Gets a sound and calls the [callback] with the result
+     */
     suspend fun getWithCallback(request: SampleRequest, callback: (Pair<Sample, MonoSamplePcm?>?) -> Unit) {
-        val sampleId = index.resolve(request) ?: return callback(null)
+        val resolved = index.resolve(request) ?: return callback(null)
 
         scope.launch {
-            val pcm = sampleCache.getOrPut(sampleId) { loadAndDecode(sampleId) }
-            val result = sampleId.sample to pcm
+            val pcm = sampleCache.getOrPut(resolved) { loadAndDecode(resolved) }
+            val result = resolved.sample to pcm
 
             callback(result)
         }
     }
 
+    /**
+     * Loads and decodes a sample.
+     *
+     * If the sample cannot be loaded or decoded, null is returned.
+     */
     private suspend fun loadAndDecode(id: ResolvedSample): MonoSamplePcm? {
         return loader.download(id.sample.url)?.let {
-            decoder.decodeMonoFloatPcm(it)
+            try {
+                decoder.decodeMonoFloatPcm(it)
+            } catch (e: Exception) {
+                println("Failed to decode sample ${id.sample.url}: ${e.stackTraceToString()}")
+                null
+            }
         }
     }
 }

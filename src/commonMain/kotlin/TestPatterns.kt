@@ -391,12 +391,16 @@ object TestPatterns {
         note("c3 e3 g3 a#3").slow(4).s("sine").clip(0.5)
     """.trimIndent()
 
+    val soundFont_gm_xylophone = """
+        note("c3 e3 g3 a#3").slow(4).s("gm_xylophone")
+    """.trimIndent()
+
 
     val all = listOf<String>(
 //        smallTownBoyBass,
 //        smallTownBoyMelody,
 //        smallTownBoy,
-        tetris,
+//        tetris,
 //        tetrisRemix,
 //        strangerThingsNetflix,
 //        c4Minor,
@@ -429,6 +433,7 @@ object TestPatterns {
 //        bandF,
 //        legatoLong,
 //        legatoShort,
+        soundFont_gm_xylophone,
     )
 
     val active = all.first()

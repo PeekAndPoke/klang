@@ -68,24 +68,89 @@ class SampleIndexLoader(
     )
 
     private class SoundFontLoader(private val loader: AssetLoader, private val json: Json = Json) {
+        private class Provider(
+            override val key: String,
+            val variants: List<SoundfontIndex.Variant>,
+        ) : Samples.SoundProvider {
+            override suspend fun provide(request: SampleRequest): ResolvedSample? {
+
+                return null
+            }
+        }
+
+        //    sealed interface BankProvider {
+//        class FromGeneric(
+//            override val key: String,
+//            val bank: Bank,
+//        ) : BankProvider {
+//            override suspend fun provide(loader: AssetLoader): Bank = bank
+//        }
+//
+//        class FromSoundfont(
+//            override val key: String,
+//            val index: SoundfontIndex,
+//        ) : BankProvider {
+//            val variants = index.entries[key] ?: emptyList()
+//
+//            val loadedVariants = mutableMapOf<Int, Any?>()
+//
+//            override suspend fun provide(loader: AssetLoader): Bank? {
+//                // TODO: handle different variants
+//                val variantIndex = 0
+//
+//                val variant = variants.getOrNull(variantIndex) ?: return null
+//
+//                val loaded = loadedVariants.getOrPut(variantIndex) {
+//                    val url = index.baseUrl + "/" + variant.file
+//
+//                    try {
+//                        val content = loader.download(url)?.decodeToString()
+//                            ?: return@getOrPut null
+//
+//                        val decoded = Json.decodeFromString<Soundfont>(content)
+//
+//                    } catch (e: Exception) {
+//                        println("[Samples] Failed to load soundfont variant $variantIndex from $url")
+//                        // return
+//                        null
+//                    }
+//                }
+//
+//                return null
+//            }
+//        }
+//
+//        val key: String
+//
+//        suspend fun provide(loader: AssetLoader): Bank?
+//    }
+
         suspend fun load(bundle: SampleCatalogue.Soundfont): LoadResult {
 
-//
-//            val content = loader.download(bundle.indexUrl)?.decodeToString()
-//                ?: error("Soundfont index not found: ${bundle.indexUrl}")
-//
-//            val decoded = json.decodeFromString<Map<String, List<SoundfontIndex.Variant>>>(content)
-//
-//            decoded.forEach { (bankName, variants) ->
-//                println("Found bank '$bankName' with ${variants.size} variants")
-//            }
+            val content = loader.download(bundle.indexUrl)?.decodeToString()
+                ?: error("Soundfont index not found: ${bundle.indexUrl}")
 
-            return LoadResult(emptyMap(), emptyMap())
+            val decoded = json.decodeFromString<Map<String, List<SoundfontIndex.Variant>>>(content)
+
+            val index = SoundfontIndex(
+                name = bundle.name,
+                baseUrl = bundle.baseUrl,
+                entries = decoded,
+            )
+
+            val sounds = index.entries.map { (soundKey, variants) ->
+                Provider(key = soundKey, variants = variants)
+            }
+
+            val bankKey = ""
+            val bank = Samples.Bank(key = bankKey, sounds = sounds)
+
+            return LoadResult(banks = mapOf(bankKey to bank), aliases = emptyMap())
         }
     }
 
     private class GenericBundleLoader(private val loader: AssetLoader, private val json: Json = Json) {
-        class Provider(
+        private class Provider(
             override val key: String,
             val sound: Sound,
         ) : Samples.SoundProvider {

@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 /** Sound font index */
 data class SoundfontIndex(
+    val name: String,
     val baseUrl: String,
     val entries: Map<String, List<Variant>>,
 ) {
