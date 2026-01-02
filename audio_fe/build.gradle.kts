@@ -63,6 +63,7 @@ kotlin {
 
         jvmMain {
             dependencies {
+                implementation(Deps.JavaLibs.Google.jlayer)
             }
         }
 

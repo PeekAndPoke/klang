@@ -5,10 +5,10 @@ import java.io.ByteArrayInputStream
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 
-object GenericAudioFileDecoder {
+object JvmGenericAudioDecoder {
 
     @Throws(RuntimeException::class)
-    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm {
+    fun decodeGeneric(audioBytes: ByteArray): MonoSamplePcm {
         return decodeInternal(audioBytes)
     }
 

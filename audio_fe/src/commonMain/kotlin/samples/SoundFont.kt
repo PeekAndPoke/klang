@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_fe.samples
 
+import io.peekandpoke.klang.audio_bridge.SampleLoopInfo
 import kotlinx.serialization.Serializable
 
 /** Sound font index */
@@ -32,7 +33,7 @@ data class SoundfontIndex(
         @Serializable
         data class Zone(
             val midi: Int, // 21,
-            val originalPitch: Int, // 6000,
+            val originalPitch: Double, // 6000,
             val keyRangeLow: Int, // 0,
             val keyRangeHigh: Int, // 60,
             val loopStart: Int, // 36629,
@@ -43,6 +44,29 @@ data class SoundfontIndex(
             val ahdsr: Boolean, // false,
             val file: String, // "SUQzBAAAAAAAI1RTU...",
             val anchor: Double, // 6.46648502
-        )
+        ) {
+            /**
+             * Get loop info.
+             *
+             * Treat this sample as looped when the defined [loopEnd] - [loopStart] is at least [minLen] seconds
+             */
+            fun getLoopInfo(minLen: Double = 0.1): SampleLoopInfo? {
+                val loopLen = loopEnd - loopStart
+                val loopDuration = loopLen.toDouble() / sampleRate
+
+                // Heuristic: If the loop is tiny, it's likely a "fake" loop for a percussive sound.
+                // 50ms (0.05s) is a safe threshold.
+                val isSustainLoop = loopDuration > minLen
+
+                if (!isSustainLoop) return null
+
+                return SampleLoopInfo(
+                    start = loopStart,
+                    end = loopLen,
+                    anchor = anchor,
+                    adsr = ahdsr,
+                )
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_fe.samples
 
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.SampleLoopInfo
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
 import kotlinx.coroutines.CoroutineScope
@@ -96,9 +97,7 @@ class Samples(
     }
 
     sealed interface Sample {
-        data class FromUrl(
-            override val bankKey: String,
-            override val soundKey: String,
+        class FromUrl(
             override val note: String?,
             override val pitchHz: Double,
             val url: String,
@@ -117,11 +116,23 @@ class Samples(
             }
         }
 
-        /** The key of the resolved bank */
-        val bankKey: String
+        class FromBytes(
+            override val note: String?,
+            override val pitchHz: Double,
+            val sampleRate: Int,
+            val bytes: ByteArray,
+            val loop: SampleLoopInfo?,
+        ) : Sample {
+            private var _pcm: MonoSamplePcm? = null
 
-        /** The key of the resolved sound */
-        val soundKey: String
+            override suspend fun getPcm(loader: AssetLoader, decoder: AudioDecoder): MonoSamplePcm? {
+                return _pcm ?: getPcmInternal(decoder)?.also { _pcm = it }
+            }
+
+            private suspend fun getPcmInternal(decoder: AudioDecoder): MonoSamplePcm? {
+                return decoder.decodeMonoFloatPcm(bytes)?.withLoop(loop)
+            }
+        }
 
         /** Optional informal note name ... not used for anything */
         val note: String?

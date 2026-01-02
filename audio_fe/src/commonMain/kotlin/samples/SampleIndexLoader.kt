@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_fe.samples
 
+import io.ktor.util.*
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_fe.samples.Samples.ResolvedSample
 import io.peekandpoke.klang.audio_fe.samples.Samples.Sample
@@ -86,15 +87,31 @@ class SampleIndexLoader(
                 val variantIndex = ((request.index ?: 0) % variants.size)
                 val variant = variants[variantIndex]
                 val variantData = loadVariantData(variant) ?: return null
+                val zones = variantData.zones
+                    .takeIf { it.isNotEmpty() }
+                    ?.sortedBy { it.originalPitch }
+                    ?: return null
 
-                return null
+                val requestedPitch = Tones.noteToFreq(request.note ?: "")
 
-//                return ResolvedSample(
-//                    request = request,
-//                    sample = Sample(
-//
-//                    )
-//                )
+                val selected = zones
+                    .firstOrNull { Tones.midiToFreq(it.originalPitch / 100.0) >= requestedPitch }
+                    ?: zones.last()
+
+                val bytes = selected.file.decodeBase64Bytes()
+
+                val sample = Sample.FromBytes(
+                    note = request.note,
+                    pitchHz = Tones.midiToFreq(selected.originalPitch / 100.0),
+                    sampleRate = selected.sampleRate,
+                    bytes = bytes,
+                    loop = selected.getLoopInfo()
+                )
+
+                return ResolvedSample(
+                    request = request,
+                    sample = sample,
+                )
             }
 
             private suspend fun loadVariantData(variant: SoundfontIndex.Variant): SoundfontIndex.SoundData? {
@@ -371,7 +388,7 @@ class SampleIndexLoader(
          *
          * TODO: what other kinds of shapes are there?
          */
-        private suspend fun parseSoundsFile(defaultPitchHz: Double, jsonText: String): List<Samples.Bank> {
+        private fun parseSoundsFile(defaultPitchHz: Double, jsonText: String): List<Samples.Bank> {
             val root = json.parseToJsonElement(jsonText)
             val obj = root as? JsonObject
                 ?: throw IllegalArgumentException("Sample map JSON must be an object")
@@ -394,13 +411,7 @@ class SampleIndexLoader(
                         val samples = value
                             .mapNotNull { it.asStringOrNull()?.sanitizeUrl(base) }
                             .map { url ->
-                                Sample.FromUrl(
-                                    bankKey = bankKey,
-                                    soundKey = soundKey,
-                                    note = null,
-                                    pitchHz = defaultPitchHz,
-                                    url = url,
-                                )
+                                Sample.FromUrl(note = null, pitchHz = defaultPitchHz, url = url)
                             }
 
                         Provider.Sound(key = soundKey, samples = samples)
@@ -413,13 +424,7 @@ class SampleIndexLoader(
                             val pitch = Tones.noteToFreq(note)
                             val url = it.value.asStringOrNull()?.sanitizeUrl(base) ?: return@mapNotNull null
 
-                            Sample.FromUrl(
-                                bankKey = bankKey,
-                                soundKey = soundKey,
-                                note = note,
-                                pitchHz = pitch,
-                                url = url,
-                            )
+                            Sample.FromUrl(note = note, pitchHz = pitch, url = url)
                         }
 
                         Provider.Sound(key = soundKey, samples = samples)

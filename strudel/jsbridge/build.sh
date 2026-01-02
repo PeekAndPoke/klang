@@ -3,7 +3,7 @@
 # goto directory of this script
 cd "$(dirname "$0")" || exit
 
-echo "Running jssrc/build.sh in directory:"
+echo "Running strudel jsbridge build.sh in directory:"
 pwd
 
 pnpm install

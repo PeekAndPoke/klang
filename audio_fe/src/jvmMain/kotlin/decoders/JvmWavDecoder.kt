@@ -5,10 +5,10 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 
-object WavFileDecoder {
+object JvmWavDecoder {
 
     @Throws(RuntimeException::class)
-    fun decodeMonoFloatPcm(audioBytes: ByteArray): MonoSamplePcm {
+    fun decodeWav(audioBytes: ByteArray): MonoSamplePcm {
         return decodeInternal(audioBytes)
     }
 

@@ -311,6 +311,10 @@ object Deps {
             // https://mvnrepository.com/artifact/com.google.firebase/firebase-admin
             private const val firebase_admin_version = "9.2.0"
             const val firebase_admin = "com.google.firebase:firebase-admin:$firebase_admin_version"
+
+            // https://mvnrepository.com/artifact/com.googlecode.soundlibs/jlayer/1.0.1.4
+            private const val jlayer_version = "1.0.1.4"
+            const val jlayer = "com.googlecode.soundlibs:jlayer:$jlayer_version"
         }
 
         object Pdf {
