@@ -35,9 +35,13 @@ class SampleIndexLoader(
                     is SampleCatalogue.Soundfont -> soundFontLoader.load(source)
                 }
 
+                val numBanks = result.banks.size
+                val numSounds = result.banks.values.sumOf { it.sounds.size }
+                val numAliases = result.aliases.size
+
                 println(
                     "Loaded sample source: ${source.name} ... " +
-                            "Found ${result.banks.size} banks and ${result.aliases.size} aliases"
+                            "Found $numBanks banks, $numSounds sounds, $numAliases aliases"
                 )
 
                 // Merge all banks
