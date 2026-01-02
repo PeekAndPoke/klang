@@ -10,9 +10,13 @@ package io.peekandpoke.klang.audio_bridge
 class MonoSamplePcm(
     val sampleRate: Int,
     val pcm: FloatArray,
-    val loop: SampleLoopInfo? = null,
+    val meta: SampleMetadata = SampleMetadata.default,
 ) {
-    fun withLoop(value: SampleLoopInfo?): MonoSamplePcm {
-        return MonoSamplePcm(sampleRate = sampleRate, pcm = pcm, loop = value)
+    fun withMetadata(value: SampleMetadata): MonoSamplePcm {
+        return MonoSamplePcm(
+            sampleRate = sampleRate,
+            pcm = pcm,
+            meta = value,
+        )
     }
 }

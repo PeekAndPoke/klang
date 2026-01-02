@@ -105,7 +105,7 @@ class SampleIndexLoader(
                     pitchHz = Tones.midiToFreq(selected.originalPitch / 100.0),
                     sampleRate = selected.sampleRate,
                     bytes = bytes,
-                    loop = selected.getLoopInfo()
+                    meta = selected.getSampleMetadata()
                 )
 
                 return ResolvedSample(

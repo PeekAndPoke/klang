@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_fe.samples
 
-import io.peekandpoke.klang.audio_bridge.SampleLoopInfo
+import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import kotlinx.serialization.Serializable
 
 /** Sound font index */
@@ -50,7 +51,7 @@ data class SoundfontIndex(
              *
              * Treat this sample as looped when the defined [loopEnd] - [loopStart] is at least [minLen] seconds
              */
-            fun getLoopInfo(minLen: Double = 0.1): SampleLoopInfo? {
+            fun getSampleMetadata(minLen: Double = 0.1): SampleMetadata {
                 val loopLen = loopEnd - loopStart
                 val loopDuration = loopLen.toDouble() / sampleRate
 
@@ -58,13 +59,45 @@ data class SoundfontIndex(
                 // 50ms (0.05s) is a safe threshold.
                 val isSustainLoop = loopDuration > minLen
 
-                if (!isSustainLoop) return null
+                val loop = if (isSustainLoop) {
+                    SampleMetadata.LoopRange(start = loopStart, end = loopEnd)
+                } else {
+                    null
+                }
 
-                return SampleLoopInfo(
-                    start = loopStart,
-                    end = loopLen,
+                val envelope = if (ahdsr) {
+                    // Explicit ADSR requested/supported by font
+                    AdsrEnvelope(
+                        attack = 0.01,
+                        decay = 0.1,
+                        sustain = if (isSustainLoop) 1.0 else 0.0,
+                        release = 0.2,
+                    )
+                } else {
+                    // No specific ADSR flag, but we still need sensible behavior.
+                    if (isSustainLoop) {
+                        // Sustained instrument (Organ, Strings): Instant On, Full Hold, Quick Release
+                        AdsrEnvelope(
+                            attack = 0.01,
+                            decay = 0.0, // No decay, straight to sustain
+                            sustain = 1.0,
+                            release = 0.1
+                        )
+                    } else {
+                        // Percussive (Drum, Xylophone): Instant On, Fade Out
+                        AdsrEnvelope(
+                            attack = 0.001,
+                            decay = 0.5, // Longer decay to let the sample ring out a bit
+                            sustain = 0.0,
+                            release = 0.1 // If note is cut short
+                        )
+                    }
+                }
+
+                return SampleMetadata(
                     anchor = anchor,
-                    adsr = ahdsr,
+                    loop = loop,
+                    adsr = envelope,
                 )
             }
         }
