@@ -17,8 +17,8 @@ import kotlinx.coroutines.launch
  */
 class Samples(
     private val index: Index,
-    private val decoder: AudioDecoder,
     private val loader: AssetLoader,
+    private val decoder: AudioDecoder,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     companion object {
@@ -31,10 +31,17 @@ class Samples(
         suspend fun provide(request: SampleRequest): ResolvedSample?
     }
 
-    /** A fully resolved variant (exact URL choice). */
+    /** A [sample] that was resolved from the [request]. */
     data class ResolvedSample(
         val request: SampleRequest,
         val sample: Sample,
+    )
+
+    /** A [sample] that was resolved from the [request] including the [pcm] audio data. */
+    data class LoadedSample(
+        val request: SampleRequest,
+        val sample: Sample,
+        val pcm: MonoSamplePcm?,
     )
 
     data class Index(
@@ -88,64 +95,84 @@ class Samples(
         )
     }
 
-    data class Sample(
-        /** Optional informal note name ... not used for anything */
-        val note: String?,
-        /** The pitch of this sound in Hz. Use for playing this sound at different tones */
-        val pitchHz: Double,
-        /** The url for loading the sound files */
-        val url: String,
-    )
+    sealed interface Sample {
+        data class FromUrl(
+            override val bankKey: String,
+            override val soundKey: String,
+            override val note: String?,
+            override val pitchHz: Double,
+            val url: String,
+        ) : Sample {
+            override suspend fun getPcm(loader: AssetLoader, decoder: AudioDecoder): MonoSamplePcm? {
+                println("Loading sample $url")
 
-    private val sampleCache = mutableMapOf<ResolvedSample, MonoSamplePcm?>()
-
-    /**
-     * Looks up the index for a given sample
-     */
-    suspend fun hasSample(request: SampleRequest): Boolean = index.resolve(request) != null
-
-    /**
-     * Gets a sound if it is already loaded
-     */
-    suspend fun getIfLoaded(request: SampleRequest): Pair<ResolvedSample, MonoSamplePcm>? {
-        val sampleId = index.resolve(request) ?: return null
-
-        sampleCache[sampleId]?.let { return sampleId to it }
-
-        scope.launch {
-            sampleCache[sampleId] = loadAndDecode(sampleId)
+                return loader.download(url)?.let {
+                    try {
+                        decoder.decodeMonoFloatPcm(it)
+                    } catch (e: Exception) {
+                        println("Failed to decode sample ${url}: ${e.stackTraceToString()}")
+                        null
+                    }
+                }
+            }
         }
 
-        return null
+        /** The key of the resolved bank */
+        val bankKey: String
+
+        /** The key of the resolved sound */
+        val soundKey: String
+
+        /** Optional informal note name ... not used for anything */
+        val note: String?
+
+        /** The pitch of this sound in Hz. Use for playing this sound at different tones */
+        val pitchHz: Double
+
+        /** The pcm audio data */
+        suspend fun getPcm(loader: AssetLoader, decoder: AudioDecoder): MonoSamplePcm?
+    }
+
+
+    private val resolveCache = mutableMapOf<SampleRequest, ResolvedSample?>()
+    private val loadCache = mutableMapOf<SampleRequest, LoadedSample?>()
+
+    /**
+     * Resolve a sample by the given [request].
+     */
+    suspend fun resolve(request: SampleRequest): ResolvedSample? {
+        return resolveCache.getOrPut(request) { index.resolve(request) }
+    }
+
+    /**
+     * Resolved a sample by the given [request] and loads it pcm audio data.
+     */
+    suspend fun get(request: SampleRequest): LoadedSample? {
+
+        return loadCache.getOrPut(request) {
+            val resolved = resolveCache.getOrPut(request) {
+                index.resolve(request)
+            }
+
+            resolved?.let {
+                val pcm = resolved.sample.getPcm(loader, decoder)
+
+                LoadedSample(
+                    request = resolved.request,
+                    sample = resolved.sample,
+                    pcm = pcm,
+                )
+            }
+        }
     }
 
     /**
      * Gets a sound and calls the [callback] with the result
      */
-    suspend fun getWithCallback(request: SampleRequest, callback: (Pair<Sample, MonoSamplePcm?>?) -> Unit) {
-        val resolved = index.resolve(request) ?: return callback(null)
-
+    fun getWithCallback(request: SampleRequest, callback: (LoadedSample?) -> Unit) {
         scope.launch {
-            val pcm = sampleCache.getOrPut(resolved) { loadAndDecode(resolved) }
-            val result = resolved.sample to pcm
-
-            callback(result)
-        }
-    }
-
-    /**
-     * Loads and decodes a sample.
-     *
-     * If the sample cannot be loaded or decoded, null is returned.
-     */
-    private suspend fun loadAndDecode(id: ResolvedSample): MonoSamplePcm? {
-        return loader.download(id.sample.url)?.let {
-            try {
-                decoder.decodeMonoFloatPcm(it)
-            } catch (e: Exception) {
-                println("Failed to decode sample ${id.sample.url}: ${e.stackTraceToString()}")
-                null
-            }
+            val resolved = get(request)
+            callback(resolved)
         }
     }
 }

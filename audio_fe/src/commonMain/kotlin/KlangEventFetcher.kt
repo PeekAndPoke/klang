@@ -61,7 +61,7 @@ class KlangEventFetcher<T>(
         println("KlangPlayerBackend stopped")
     }
 
-    private suspend fun lookAheadForSampleSounds() {
+    private fun lookAheadForSampleSounds() {
         val from = queryCursorCycles
         val events = config.source.query(from, from + sampleSoundLookAheadCycles)
 
@@ -114,7 +114,7 @@ class KlangEventFetcher<T>(
         }
     }
 
-    private suspend fun processFeedbackEvents() {
+    private fun processFeedbackEvents() {
         while (true) {
             val evt = feedback.receive() ?: break
 
@@ -130,10 +130,10 @@ class KlangEventFetcher<T>(
         }
     }
 
-    private suspend fun requestSendSampleAndSendCmd(req: SampleRequest) {
+    private fun requestSendSampleAndSendCmd(req: SampleRequest) {
         samples.getWithCallback(req) { result ->
-            val sample = result?.first
-            val pcm = result?.second
+            val sample = result?.sample
+            val pcm = result?.pcm
 
             val cmd = if (sample == null || pcm == null) {
                 KlangCommLink.Cmd.Sample.NotFound(req)

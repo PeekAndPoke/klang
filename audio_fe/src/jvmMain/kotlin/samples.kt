@@ -1,27 +1,34 @@
 package io.peekandpoke.klang.audio_fe
 
 import io.peekandpoke.klang.audio_fe.decoders.SimpleAudioDecoder
+import io.peekandpoke.klang.audio_fe.samples.AudioDecoder
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.SampleIndexLoader
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
 import io.peekandpoke.klang.audio_fe.utils.withDiskCache
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.nio.file.Path
 
 suspend fun Samples.Companion.create(
     cacheDir: Path = Path.of("cache"),
-    assetLoader: AssetLoader = AssetLoader.default,
-    catalogue: SampleCatalogue = SampleCatalogue.Companion.default,
+    loader: AssetLoader = AssetLoader.default,
+    decoder: AudioDecoder = SimpleAudioDecoder(),
+    catalogue: SampleCatalogue = SampleCatalogue.default,
+    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ): Samples {
     val indexLoader = SampleIndexLoader(
-        loader = assetLoader.withDiskCache(cacheDir.resolve("index")),
+        loader = loader.withDiskCache(cacheDir.resolve("index")),
     )
 
     val index: Samples.Index = indexLoader.load(catalogue)
 
     return Samples(
         index = index,
-        decoder = SimpleAudioDecoder(),
-        loader = assetLoader.withDiskCache(cacheDir.resolve("samples")),
+        loader = loader.withDiskCache(cacheDir.resolve("samples")),
+        decoder = decoder,
+        scope = scope,
     )
 }

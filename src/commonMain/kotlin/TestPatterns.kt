@@ -399,7 +399,7 @@ object TestPatterns {
     val all = listOf<String>(
 //        smallTownBoyBass,
 //        smallTownBoyMelody,
-//        smallTownBoy,
+        smallTownBoy,
 //        tetris,
 //        tetrisRemix,
 //        strangerThingsNetflix,
@@ -433,7 +433,7 @@ object TestPatterns {
 //        bandF,
 //        legatoLong,
 //        legatoShort,
-        soundFont_gm_xylophone,
+//        soundFont_gm_xylophone,
     )
 
     val active = all.first()

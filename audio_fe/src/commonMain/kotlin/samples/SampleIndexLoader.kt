@@ -67,14 +67,44 @@ class SampleIndexLoader(
         val aliases: Map<String, String>,
     )
 
-    private class SoundFontLoader(private val loader: AssetLoader, private val json: Json = Json) {
-        private class Provider(
+    private class SoundFontLoader(
+        private val loader: AssetLoader,
+        private val json: Json,
+    ) {
+        private inner class Provider(
             override val key: String,
-            val variants: List<SoundfontIndex.Variant>,
+            private val index: SoundfontIndex,
+            private val variants: List<SoundfontIndex.Variant>,
         ) : Samples.SoundProvider {
             override suspend fun provide(request: SampleRequest): ResolvedSample? {
+                if (variants.isEmpty()) return null
+
+                val variantIndex = ((request.index ?: 0) % variants.size)
+                val variant = variants[variantIndex]
+                val variantData = loadVariantData(variant) ?: return null
 
                 return null
+
+//                return ResolvedSample(
+//                    request = request,
+//                    sample = Sample(
+//
+//                    )
+//                )
+            }
+
+            private suspend fun loadVariantData(variant: SoundfontIndex.Variant): SoundfontIndex.SoundData? {
+
+                val detailsUrl = index.baseUrl.trimEnd('/') + '/' + variant.file.trimStart('/')
+                val loaded = loader.download(detailsUrl)?.decodeToString()
+                    ?: return null
+
+                return try {
+                    json.decodeFromString<SoundfontIndex.SoundData>(loaded)
+                } catch (e: Exception) {
+                    println("Could not load soundfont: $detailsUrl \n${e.stackTraceToString()}")
+                    null
+                }
             }
         }
 
@@ -139,7 +169,7 @@ class SampleIndexLoader(
             )
 
             val sounds = index.entries.map { (soundKey, variants) ->
-                Provider(key = soundKey, variants = variants)
+                Provider(key = soundKey, index = index, variants = variants)
             }
 
             val bankKey = ""
@@ -149,7 +179,10 @@ class SampleIndexLoader(
         }
     }
 
-    private class GenericBundleLoader(private val loader: AssetLoader, private val json: Json = Json) {
+    private class GenericBundleLoader(
+        private val loader: AssetLoader,
+        private val json: Json,
+    ) {
         private class Provider(
             override val key: String,
             val sound: Sound,
@@ -334,7 +367,7 @@ class SampleIndexLoader(
          *
          * TODO: what other kinds of shapes are there?
          */
-        private fun parseSoundsFile(defaultPitchHz: Double, jsonText: String): List<Samples.Bank> {
+        private suspend fun parseSoundsFile(defaultPitchHz: Double, jsonText: String): List<Samples.Bank> {
             val root = json.parseToJsonElement(jsonText)
             val obj = root as? JsonObject
                 ?: throw IllegalArgumentException("Sample map JSON must be an object")
@@ -354,8 +387,17 @@ class SampleIndexLoader(
                 val sound: Provider.Sound? = when (value) {
                     // Is this a bank based pattern?
                     is JsonArray -> {
-                        val samples = value.mapNotNull { it.asStringOrNull()?.sanitizeUrl(base) }
-                            .map { url -> Sample(note = null, pitchHz = defaultPitchHz, url = url) }
+                        val samples = value
+                            .mapNotNull { it.asStringOrNull()?.sanitizeUrl(base) }
+                            .map { url ->
+                                Sample.FromUrl(
+                                    bankKey = bankKey,
+                                    soundKey = soundKey,
+                                    note = null,
+                                    pitchHz = defaultPitchHz,
+                                    url = url,
+                                )
+                            }
 
                         Provider.Sound(key = soundKey, samples = samples)
                     }
@@ -367,7 +409,13 @@ class SampleIndexLoader(
                             val pitch = Tones.noteToFreq(note)
                             val url = it.value.asStringOrNull()?.sanitizeUrl(base) ?: return@mapNotNull null
 
-                            Sample(note = note, pitchHz = pitch, url = url)
+                            Sample.FromUrl(
+                                bankKey = bankKey,
+                                soundKey = soundKey,
+                                note = note,
+                                pitchHz = pitch,
+                                url = url,
+                            )
                         }
 
                         Provider.Sound(key = soundKey, samples = samples)
