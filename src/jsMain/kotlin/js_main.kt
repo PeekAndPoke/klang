@@ -58,8 +58,8 @@ suspend fun runStrudelDemo() {
     )
 
     val pattern = StrudelPattern.Static
-//        .fromJson(tetrisJson)
-        .fromJson(strangerThingsJson)
+        .fromJson(tetrisJson)
+//        .fromJson(strangerThingsJson)
 
     console.log("Running strudel player")
 

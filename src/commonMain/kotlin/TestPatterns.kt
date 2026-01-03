@@ -1,6 +1,10 @@
 package io.peekandpoke.klang
 
 object TestPatterns {
+    val cMajorNotes = """
+        note("c3 d3 e3 f3 g3 a3 b3 c4")
+    """.trimIndent()
+
     val smallTownBoyBass = """
                 note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
                 .sound("supersaw").unison(16).lpf(sine.range(400, 2000).slow(4))
@@ -401,46 +405,5 @@ object TestPatterns {
     """.trimIndent()
 
 
-    val all = listOf<String>(
-//        smallTownBoyBass,
-//        smallTownBoyMelody,
-//        smallTownBoy,
-//        tetris,
-//        tetrisRemix,
-        strangerThingsNetflix,
-//        c4Minor,
-//        numberNotes,
-//        crackle,
-//        dust,
-//        impulse,
-//        whiteNoise,
-//        brownNoise,
-//        pinkNoise,
-//        supersaw,
-//        polyphone,
-//        simpleDrumsMultipleSounds,
-//        simpleDrumsDelay,
-//        simpleDrumsReverb,
-//        snareScale,
-//        strangerThings,
-//        piano,
-//        pianoDistorted,
-//        asdrTest,
-//        delayOffBeatDrums,
-//        delayDubTripletsDrums,
-//        delaySlapBackDrums,
-//        twoOrbits,
-//        vibratoTestOne,
-//        crushTest,
-//        coarseTest
-//        glisandoTest,
-//        glisandoTest2,
-//        glisandoTest3,
-//        bandF,
-//        legatoLong,
-//        legatoShort,
-//        soundFont_gm_xylophone,
-    )
-
-    val active = all.first()
+    val active = cMajorNotes
 }

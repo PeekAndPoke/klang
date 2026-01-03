@@ -8,6 +8,10 @@
 
 ## Diary
 
+### (2026-01-03) Strudel DSL
+
+- started implementing the Strudel DSL
+
 ### (2026-01-03) Soundfonts
 
 - fixed the "start in the middle of the sound" issue by simplifying the adsr logic and ScheduledVoice

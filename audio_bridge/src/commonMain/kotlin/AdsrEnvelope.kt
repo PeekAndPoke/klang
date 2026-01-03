@@ -10,6 +10,14 @@ data class AdsrEnvelope(
     val release: Double? = null,
 ) {
     companion object {
+        /** Empty envelope */
+        val empty = AdsrEnvelope(
+            attack = null,
+            decay = null,
+            sustain = null,
+            release = null,
+        )
+
         /** Standard Synth defaults (Organ-like) */
         val defaultSynth = AdsrEnvelope(
             attack = 0.01,

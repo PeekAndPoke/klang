@@ -90,7 +90,7 @@ class JsAudioBackend(
                 }
 
                 if (scope.isActive) {
-                    window.requestAnimationFrame { loop() }
+                    window.setTimeout({ loop() }, 10)
                 }
             }
 

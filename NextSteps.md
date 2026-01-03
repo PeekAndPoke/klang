@@ -2,10 +2,6 @@
 
 ## More
 
-- extract Tones from audio_bridge
-  - create own module for that
-  - fully implement tonaljs und hook it up to strudel
-
 - change KlangPlayer.play() logic
   - is must be able to play multiple song / sound etc with the same player instance
   - play() will return a Klang-Object

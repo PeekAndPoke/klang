@@ -49,15 +49,15 @@ data class SoundfontIndex(
             /**
              * Get loop info.
              *
-             * Treat this sample as looped when the defined [loopEnd] - [loopStart] is at least [minLen] seconds
+             * Treat this sample as looped when the defined [loopEnd] - [loopStart] is at least [minLoopLen] seconds
              */
-            fun getSampleMetadata(minLen: Double = 0.1): SampleMetadata {
+            fun getSampleMetadata(minLoopLen: Double = 0.05): SampleMetadata {
                 val loopLen = loopEnd - loopStart
                 val loopDuration = loopLen.toDouble() / sampleRate
 
                 // Heuristic: If the loop is tiny, it's likely a "fake" loop for a percussive sound.
                 // 50ms (0.05s) is a safe threshold.
-                val isSustainLoop = loopDuration > minLen
+                val isSustainLoop = loopDuration > minLoopLen
 
                 val loop = if (isSustainLoop) {
                     SampleMetadata.LoopRange(start = loopStart, end = loopEnd)
