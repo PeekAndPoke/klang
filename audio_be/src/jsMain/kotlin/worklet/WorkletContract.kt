@@ -60,7 +60,7 @@ object WorkletContract {
                 it[Cmd.Sample.Complete::note.name] = note
                 it[Cmd.Sample.Complete::pitchHz.name] = pitchHz
                 it[Cmd.Sample.Complete::sampleRate.name] = sampleRate
-                it[Cmd.Sample.Complete::pcm.name] = pcm
+                it[Cmd.Sample.Complete::sample.name] = sample
             }
 
             is Cmd.Sample.Chunk -> jsObject {
@@ -92,7 +92,7 @@ object WorkletContract {
                 note = msg[Cmd.Sample.Complete::note.name],
                 pitchHz = msg[Cmd.Sample.Complete::pitchHz.name],
                 sampleRate = msg[Cmd.Sample.Complete::sampleRate.name],
-                pcm = msg[Cmd.Sample.Complete::pcm.name] // .unsafeCast<FloatArray>()
+                sample = msg[Cmd.Sample.Complete::sample.name] // .unsafeCast<FloatArray>()
             )
 
             Cmd.Sample.Chunk.SERIAL_NAME -> Cmd.Sample.Chunk(

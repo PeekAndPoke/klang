@@ -15,13 +15,10 @@ fun StrudelPatternEvent.toScheduledVoice(options: KlangPlayer.Options): Schedule
 
     val startFrame = (event.begin * framesPerCycle).toLong()
     val durFrames = (event.dur * framesPerCycle).toLong().coerceAtLeast(1L)
-    val releaseSec = event.data.release ?: 0.05
-    val releaseFrames = (releaseSec * sampleRate).toLong()
 
     return ScheduledVoice(
         data = event.data,
         startFrame = startFrame,
-        endFrame = startFrame + durFrames + releaseFrames,
         gateEndFrame = startFrame + durFrames,
     )
 }

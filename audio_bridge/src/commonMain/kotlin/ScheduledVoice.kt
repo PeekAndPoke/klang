@@ -11,8 +11,6 @@ data class ScheduledVoice(
     val data: VoiceData,
     /** Audio frame to start the voice */
     val startFrame: Long,
-    /** Audio frame to stop the voice */
-    val endFrame: Long,
-    /** Frame when the note key is lifted */
+    /** Frame when the note key is lifted (Start + Duration) */
     val gateEndFrame: Long,
 )

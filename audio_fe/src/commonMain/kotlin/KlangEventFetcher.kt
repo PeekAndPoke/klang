@@ -142,8 +142,7 @@ class KlangEventFetcher<T>(
                     req = req,
                     note = sample.note,
                     pitchHz = sample.pitchHz,
-                    sampleRate = pcm.sampleRate,
-                    pcm = pcm.pcm,
+                    sample = pcm,
                 )
             }
 

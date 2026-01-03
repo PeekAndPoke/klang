@@ -105,10 +105,7 @@ class VoiceScheduler(
                     req = req,
                     note = msg.note,
                     pitchHz = msg.pitchHz,
-                    sample = MonoSamplePcm(
-                        sampleRate = msg.sampleRate,
-                        pcm = msg.pcm,
-                    ),
+                    sample = msg.sample,
                 )
             }
 
@@ -201,13 +198,19 @@ class VoiceScheduler(
 
     private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
         while (true) {
+            // Do we have a voice scheduled?
             val head = scheduled.peek() ?: break
+            // Optimization: Early exit if we're past the block end
             if (head.startFrame >= blockEnd) break
+            // Remove the head
             scheduled.pop()
-
-            if (head.endFrame <= nowFrame) continue
-
-            makeVoice(head, nowFrame)?.let { active.add(it) }
+            // 1. Drop if too old (e.g. more than 1 block in the past)
+            // If the system lagged, we don't want to blast 50 old notes at once.
+            if (head.startFrame <= nowFrame - options.blockFrames) continue
+            // Finally, make a voice
+            makeVoice(head, nowFrame)?.let {
+                active.add(it)
+            }
         }
     }
 
@@ -235,9 +238,6 @@ class VoiceScheduler(
         val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toLong() else originalGateDuration
         // Calculate new end frames based on the effective gate duration
         val gateEndFrame = scheduled.startFrame + effectiveGateDuration
-        // We maintain the original release tail duration
-        val releaseFrames = (scheduled.endFrame - scheduled.gateEndFrame)
-        val endFrame = gateEndFrame + releaseFrames
 
         // Bake Filters
         val bakedFilters = data.filters.map { it.toFilter() }.combine()
@@ -257,14 +257,7 @@ class VoiceScheduler(
             rate = if (vibratoDepth > 0.0) data.vibrato ?: 5.0 else 0.0,
         )
 
-        // Envelope
-        val envelope = Voice.Envelope(
-            attackFrames = (data.attack ?: 0.01) * sampleRate,
-            decayFrames = (data.decay ?: 0.0) * sampleRate,
-            sustainLevel = data.sustain ?: 1.0,
-            releaseFrames = releaseFrames.toDouble()
-        )
-
+        // ... (Delay, Reverb, Effects setup is same) ...
         // Delay
         val delay = Voice.Delay(
             amount = data.delay ?: 0.0,
@@ -294,6 +287,16 @@ class VoiceScheduler(
         return when {
             // /////////////////////////////////////////////////////////////////////////////////////////////////////////
             isOsci -> {
+                // For Synths, use Pattern ADSR or Synth Defaults
+                val resolvedAdsr = data.adsr
+                    .resolve(AdsrEnvelope.defaultSynth)
+
+                // Calc envelope
+                val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
+
+                // Update endFrame based on actual release
+                val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toLong()
+
                 val osc = data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
                 val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
 
@@ -328,20 +331,37 @@ class VoiceScheduler(
                 val entry = getCompleteSample(sampleRequest) ?: return null
                 val sample = entry.sample
 
+                // Resolve ADSR: Pattern > Sample Defaults > Synth Defaults
+                val resolvedAdsr = (data.adsr ?: AdsrEnvelope())
+                    .mergeWith(sample.meta.adsr)
+                    .resolve(AdsrEnvelope.defaultSynth)
+
+                val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
+
+                // Update endFrame based on actual release
+                val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toLong()
+
                 val baseSamplePitchHz = entry.pitchHz
                 val targetPitchHz = data.freqHz ?: baseSamplePitchHz
                 // We allow 5 octaves up and down pitch 1/32 .. 32
                 val pitchRatio = (targetPitchHz / baseSamplePitchHz).coerceIn(1.0 / 32.0, 32.0)
                 val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
 
-                val lateFrames = (nowFrame - scheduled.startFrame).coerceAtLeast(0L)
-                val playhead0 = lateFrames.toDouble() * rate
+                // Start Position Logic:
+                // If we have a sustained loop (loop != null), start AT the loop start to skip slow attacks.
+                // If it's percussive (loop == null), start at the anchor (usually near 0) to hear the hit.
+                val startOffsetSamples = sample.meta.loop?.start?.toDouble()
+                    ?: (sample.meta.anchor * sample.sampleRate)
 
-                if (sample.pcm.size <= 1 || playhead0 >= sample.pcm.size - 1) return null
+                // Initial playhead calculation (Simplified: removed lateFrames logic)
+                // We assume playback starts exactly at the intended offset.
+                val playhead0 = startOffsetSamples
+
+                if (sample.pcm.size <= 1) return null
 
                 SampleVoice(
                     orbitId = orbit,
-                    startFrame = nowFrame,
+                    startFrame = nowFrame, // Start immediately since we ignore lateFrames
                     endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
                     gain = data.gain,

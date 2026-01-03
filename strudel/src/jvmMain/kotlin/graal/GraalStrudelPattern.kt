@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.graal
 
+import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -93,6 +94,13 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
         val decay = value.getMember("decay").safeNumberOrNull()
         val sustain = value.getMember("sustain").safeNumberOrNull()
         val release = value.getMember("release").safeNumberOrNull()
+
+        val adsr = AdsrEnvelope(
+            attack = attack,
+            decay = decay,
+            sustain = sustain,
+            release = release,
+        )
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Pitch / Glisando
@@ -188,10 +196,7 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
                 // Filters
                 filters = filters,
                 // ADSR envelope
-                attack = attack,
-                decay = decay,
-                sustain = sustain,
-                release = release,
+                adsr = adsr,
                 // Pitch / Glisando
                 accelerate = accelerate,
                 // Vibrato

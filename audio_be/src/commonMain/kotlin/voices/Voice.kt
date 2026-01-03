@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 
 sealed interface Voice {
     class RenderContext(
@@ -36,7 +37,16 @@ sealed interface Voice {
         val sustainLevel: Double,
         val releaseFrames: Double,
         var level: Double = 0.0,
-    )
+    ) {
+        companion object {
+            fun of(adsr: AdsrEnvelope.Resolved, sampleRate: Int) = Envelope(
+                attackFrames = adsr.attack * sampleRate,
+                decayFrames = adsr.decay * sampleRate,
+                sustainLevel = adsr.sustain,
+                releaseFrames = adsr.release * sampleRate
+            )
+        }
+    }
 
     class Delay(
         val amount: Double, // mix amount 0 .. 1

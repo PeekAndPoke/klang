@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import kotlinx.serialization.SerialName
@@ -28,29 +30,29 @@ class KlangCommLink(capacity: Int = 8192) {
                 override val req: SampleRequest,
                 val note: String?,
                 val pitchHz: Double,
-                val sampleRate: Int,
-                val pcm: FloatArray,
+                val sample: MonoSamplePcm,
             ) : Sample {
                 companion object {
                     const val SERIAL_NAME = "sample-complete"
                 }
 
                 fun toChunks(chunkSizeBytes: Int = 16 * 1024): List<Chunk> {
-                    val numChunks = (pcm.size / chunkSizeBytes) + 1
+                    val numChunks = (sample.pcm.size / chunkSizeBytes) + 1
 
                     return (0 until numChunks).map { i ->
                         val startByte = i * chunkSizeBytes
-                        val endByte = minOf(pcm.size, (i + 1) * chunkSizeBytes)
+                        val endByte = minOf(sample.pcm.size, (i + 1) * chunkSizeBytes)
 
                         Chunk(
                             req = req,
                             note = note,
                             pitchHz = pitchHz,
-                            sampleRate = sampleRate,
-                            totalSize = pcm.size,
+                            sampleRate = sample.sampleRate,
+                            meta = sample.meta,
+                            totalSize = sample.pcm.size,
                             isLastChunk = i == numChunks - 1,
                             chunkOffset = i * chunkSizeBytes,
-                            data = pcm.copyOfRange(startByte, endByte),
+                            data = sample.pcm.copyOfRange(startByte, endByte),
                         )
                     }
                 }
@@ -61,6 +63,7 @@ class KlangCommLink(capacity: Int = 8192) {
                 val note: String?,
                 val pitchHz: Double,
                 val sampleRate: Int,
+                val meta: SampleMetadata,
                 val totalSize: Int,
                 val isLastChunk: Boolean,
                 val chunkOffset: Int,

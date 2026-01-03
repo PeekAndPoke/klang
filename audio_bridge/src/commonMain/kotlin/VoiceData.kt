@@ -37,11 +37,8 @@ data class VoiceData(
     // Filters
     val filters: List<FilterDef>,
 
-    // ADSR envelope
-    val attack: Double?,
-    val decay: Double?,
-    val sustain: Double?,
-    val release: Double?,
+    // ADSR
+    val adsr: AdsrEnvelope,
 
     // Pitch / Glisando
     val accelerate: Double?,
