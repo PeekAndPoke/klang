@@ -63,12 +63,7 @@ class SampleVoice(
 
             if (base >= pcmMax) {
                 // End of sample reached (and not looping, or loop points are broken)
-                // If we are not looping, we just output silence.
-                // Note: The envelope will likely handle the fade out, but we need to ensure we don't read OOB.
-                // Ideally, if non-looping sample ends, we could signal "finished",
-                // but the Voice lifecycle is currently driven by Envelope/Gate.
-                // So we just output 0.0.
-                // out[idxOut] += 0.0 // (No-op)
+                out[idxOut] = 0.0 // Clear output
             } else if (base >= 0) {
                 val frac = ph - base.toDouble()
                 val a = pcm[base]

@@ -8,6 +8,26 @@
 
 ## Diary
 
+### (2026-01-03) Soundfonts
+
+- fixed the "start in the middle of the sound" issue by simplifying the adsr logic and ScheduledVoice
+- rewrite of makeVoice() in the VoiceScheduler, by removing "lateFrames" logic
+  - result: more straight scheduling math
+
+### (2026-01-02) Soundfonts
+
+- done with the rewrite on the SampleIndex and loading sounds on demand
+- TODO: bring back the sound index to generic sounds
+- sound index working for soundfonts
+- working on understanding how loops and adsr work in soundfonts
+- rework of the adsr logic when creating voices
+- issues with playing soundfont voices ... "start in the middle of the sound" issue
+
+### (2026-01-01) Soundfonts
+
+- started to add soundfont support
+- requires a rewrite of the SampleIndex and how the sample are loaded on demand
+
 ### (2025-12-29) Voice / Strudel
 
 - implemented legato / clip

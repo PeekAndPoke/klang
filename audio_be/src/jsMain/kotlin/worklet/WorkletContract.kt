@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.worklet
 
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -59,8 +61,7 @@ object WorkletContract {
                 it[Cmd.Sample.Complete::req.name] = req.encode()
                 it[Cmd.Sample.Complete::note.name] = note
                 it[Cmd.Sample.Complete::pitchHz.name] = pitchHz
-                it[Cmd.Sample.Complete::sampleRate.name] = sampleRate
-                it[Cmd.Sample.Complete::sample.name] = sample
+                it[Cmd.Sample.Complete::sample.name] = sample.encode()
             }
 
             is Cmd.Sample.Chunk -> jsObject {
@@ -69,6 +70,7 @@ object WorkletContract {
                 it[Cmd.Sample.Chunk::note.name] = note
                 it[Cmd.Sample.Chunk::pitchHz.name] = pitchHz
                 it[Cmd.Sample.Chunk::sampleRate.name] = sampleRate
+                it[Cmd.Sample.Chunk::meta.name] = meta.encode()
                 it[Cmd.Sample.Chunk::totalSize.name] = totalSize
                 it[Cmd.Sample.Chunk::isLastChunk.name] = isLastChunk
                 it[Cmd.Sample.Chunk::chunkOffset.name] = chunkOffset
@@ -91,8 +93,7 @@ object WorkletContract {
                 req = decodeSampleRequest(msg[Cmd.Sample.Complete::req.name]),
                 note = msg[Cmd.Sample.Complete::note.name],
                 pitchHz = msg[Cmd.Sample.Complete::pitchHz.name],
-                sampleRate = msg[Cmd.Sample.Complete::sampleRate.name],
-                sample = msg[Cmd.Sample.Complete::sample.name] // .unsafeCast<FloatArray>()
+                sample = decodeMonoSamplePcm(msg[Cmd.Sample.Complete::sample.name])
             )
 
             Cmd.Sample.Chunk.SERIAL_NAME -> Cmd.Sample.Chunk(
@@ -100,14 +101,29 @@ object WorkletContract {
                 note = msg[Cmd.Sample.Chunk::note.name],
                 pitchHz = msg[Cmd.Sample.Chunk::pitchHz.name],
                 sampleRate = msg[Cmd.Sample.Chunk::sampleRate.name],
+                meta = decodeSampleMetadata(msg[Cmd.Sample.Chunk::meta.name]),
                 totalSize = msg[Cmd.Sample.Chunk::totalSize.name],
                 isLastChunk = msg[Cmd.Sample.Chunk::isLastChunk.name],
                 chunkOffset = msg[Cmd.Sample.Chunk::chunkOffset.name],
-                data = msg[Cmd.Sample.Chunk::data.name] // .unsafeCast<FloatArray>()
+                data = msg[Cmd.Sample.Chunk::data.name],
             )
 
             else -> error("Unknown cmd type: $type")
         }
+    }
+
+    private fun MonoSamplePcm.encode(): dynamic = jsObject {
+        it[MonoSamplePcm::sampleRate.name] = sampleRate
+        it[MonoSamplePcm::pcm.name] = pcm
+        it[MonoSamplePcm::meta.name] = meta.encode()
+    }
+
+    private fun decodeMonoSamplePcm(obj: dynamic): MonoSamplePcm {
+        return MonoSamplePcm(
+            sampleRate = obj[MonoSamplePcm::sampleRate.name],
+            pcm = obj[MonoSamplePcm::pcm.name],
+            meta = decodeSampleMetadata(obj[MonoSamplePcm::meta.name])
+        )
     }
 
     private fun ScheduledVoice.encode(): dynamic {
@@ -124,6 +140,14 @@ object WorkletContract {
 
     private fun decodeSampleRequest(obj: dynamic): SampleRequest {
         return codec.decodeFromDynamic(SampleRequest.serializer(), obj)
+    }
+
+    private fun SampleMetadata.encode(): dynamic {
+        return codec.encodeToDynamic(SampleMetadata.serializer(), this)
+    }
+
+    private fun decodeSampleMetadata(obj: dynamic): SampleMetadata {
+        return codec.decodeFromDynamic(SampleMetadata.serializer(), obj)
     }
 
     fun jsObject(): dynamic = js("({})")

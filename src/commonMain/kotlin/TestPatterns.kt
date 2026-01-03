@@ -190,6 +190,11 @@ object TestPatterns {
                 note("c!2 [eb,<g a bb a>]")
             """.trimIndent()
 
+    val simpleDrumsMultipleSounds = """
+        sound("bd hh sd oh bd:1 hh:1 sd:1 oh:1 bd:2 hh:2 sd:2 oh:2 bd:3 hh:3 sd:3 oh:3")
+        .gain(0.8).slow(2)
+    """.trimIndent()
+
     val simpleDrumsDelay = """
         sound("bd hh sd oh")
         .gain(0.8)
@@ -400,9 +405,9 @@ object TestPatterns {
 //        smallTownBoyBass,
 //        smallTownBoyMelody,
 //        smallTownBoy,
-        tetris,
+//        tetris,
 //        tetrisRemix,
-//        strangerThingsNetflix,
+        strangerThingsNetflix,
 //        c4Minor,
 //        numberNotes,
 //        crackle,
@@ -413,6 +418,7 @@ object TestPatterns {
 //        pinkNoise,
 //        supersaw,
 //        polyphone,
+//        simpleDrumsMultipleSounds,
 //        simpleDrumsDelay,
 //        simpleDrumsReverb,
 //        snareScale,

@@ -129,53 +129,6 @@ class SampleIndexLoader(
             }
         }
 
-        //    sealed interface BankProvider {
-//        class FromGeneric(
-//            override val key: String,
-//            val bank: Bank,
-//        ) : BankProvider {
-//            override suspend fun provide(loader: AssetLoader): Bank = bank
-//        }
-//
-//        class FromSoundfont(
-//            override val key: String,
-//            val index: SoundfontIndex,
-//        ) : BankProvider {
-//            val variants = index.entries[key] ?: emptyList()
-//
-//            val loadedVariants = mutableMapOf<Int, Any?>()
-//
-//            override suspend fun provide(loader: AssetLoader): Bank? {
-//                // TODO: handle different variants
-//                val variantIndex = 0
-//
-//                val variant = variants.getOrNull(variantIndex) ?: return null
-//
-//                val loaded = loadedVariants.getOrPut(variantIndex) {
-//                    val url = index.baseUrl + "/" + variant.file
-//
-//                    try {
-//                        val content = loader.download(url)?.decodeToString()
-//                            ?: return@getOrPut null
-//
-//                        val decoded = Json.decodeFromString<Soundfont>(content)
-//
-//                    } catch (e: Exception) {
-//                        println("[Samples] Failed to load soundfont variant $variantIndex from $url")
-//                        // return
-//                        null
-//                    }
-//                }
-//
-//                return null
-//            }
-//        }
-//
-//        val key: String
-//
-//        suspend fun provide(loader: AssetLoader): Bank?
-//    }
-
         suspend fun load(bundle: SampleCatalogue.Soundfont): LoadResult {
 
             val content = loader.download(bundle.indexUrl)?.decodeToString()
@@ -183,11 +136,7 @@ class SampleIndexLoader(
 
             val decoded = json.decodeFromString<Map<String, List<SoundfontIndex.Variant>>>(content)
 
-            val index = SoundfontIndex(
-                name = bundle.name,
-                baseUrl = bundle.baseUrl,
-                entries = decoded,
-            )
+            val index = SoundfontIndex(name = bundle.name, baseUrl = bundle.baseUrl, entries = decoded)
 
             val sounds = index.entries.map { (soundKey, variants) ->
                 Provider(key = soundKey, index = index, variants = variants)
