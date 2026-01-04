@@ -25,18 +25,12 @@ object StrudelCodeGrammar : Grammar<AstNode>() {
     val dot by literalToken(".")
 
     // Literals
-    // Matches integer or float (e.g. 1, 0.5, -10.2)
     val numLiteral by regexToken("-?\\d+(\\.\\d+)?")
-
-    // Matches standard quotes "..."
     val strLiteral by regexToken("\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\"")
 
-    // Matches backticks `...` (useful for multiline mini-notation)
-    // [^`] matches any character that is not a backtick, including newlines
-    val backtickLiteral by regexToken("`[^`]*`")
+    // Backtick fix: use dot-all pattern for multiline support
+    val backtickLiteral by regexToken("`[\\s\\S]*?`")
 
-    // Identifiers (function names)
-    // Must be after literals to avoid consuming parts of them if they overlap (unlikely here)
     val identifier by regexToken("[a-zA-Z_][a-zA-Z0-9_]*")
 
     // --- Parser Rules ---
@@ -48,28 +42,31 @@ object StrudelCodeGrammar : Grammar<AstNode>() {
             (backtickLiteral map { LiteralNode(it.text.trim('`')) })
 
     // 2. Arguments List: "arg1, arg2, arg3"
-    // We use `parser { expression }` to handle forward recursion
+    // separatedTerms doesn't handle trailing commas natively.
+    // We define `argsList` as the terms themselves.
     val argsList by separatedTerms(parser { expression }, comma, acceptZero = true)
 
-    // New: List "[ expr, expr ]"
-    val listParser: Parser<ListNode> by (skip(lBracket) and argsList and skip(rBracket)) map {
+    // 3. List Structure: "[ expr, expr, ]"
+    // We explicitly allow an optional comma after the args list
+    val listParser: Parser<ListNode> by (skip(lBracket) and argsList and skip(optional(comma)) and skip(rBracket)) map {
         ListNode(it)
     }
 
-    // 3. Function Call: "name(args)"
-    val funcCallParser: Parser<FunCallNode> by (identifier and skip(lPar) and argsList and skip(rPar)) map { (name, args) ->
+    // 4. Function Call: "name(args,)"
+    // Allow optional trailing comma here too
+    val funcCallParser: Parser<FunCallNode> by (identifier and skip(lPar) and argsList and skip(optional(comma)) and skip(
+        rPar
+    )) map { (name, args) ->
         FunCallNode(name.text, args)
     }
 
-    // 4. Atomic Term
-    // Can be a literal, a function call, a list, or an expression in parenthesis
+    // 5. Atomic Term
     val term: Parser<AstNode> by literalParser or
             funcCallParser or
             listParser or
             (skip(lPar) and parser { expression } and skip(rPar))
 
-    // 5. Chain: "term.func().func()"
-    // Left-associative logic: `note().fast()` is `(note()).fast()`
+    // 6. Chain
     val chainParser: Parser<AstNode> by (term and zeroOrMore(skip(dot) and funcCallParser)) map { (start, chains) ->
         chains.fold(start) { receiver, method ->
             ChainNode(receiver, method)

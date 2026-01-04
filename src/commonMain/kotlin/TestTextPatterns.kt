@@ -92,7 +92,7 @@ object TestTextPatterns {
                     .pan(-0.7).gain(0.9)
                     .room(0.01).rsize(3.0)
                     .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
-                    .fast(2)
+                    .fast(2),
                 )
             """.trimIndent()
 
