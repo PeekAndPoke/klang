@@ -1,6 +1,6 @@
 package io.peekandpoke.klang
 
-object TestPatterns {
+object TestTextPatterns {
     val cMajorNotes = """
         note("c3 d3 e3 f3 g3 a3 b3 c4")
     """.trimIndent()
@@ -144,7 +144,7 @@ object TestPatterns {
               .lpenv(perlin.slow(3).range(1, 4))
               .lpf(perlin.slow(2).range(100, 2000))
               .gain(0.3),
-            seq("<a1 e2>/8").clip(0.8).struct("x*8").s("supersaw").note(),
+            note("<a1 e2>/8").clip(0.8).struct("x*8").s("supersaw"),
         )
     """.trimIndent()
 
@@ -236,20 +236,6 @@ object TestPatterns {
     val snareScale = """
             n("0 1 2 3 4 5 6 7").scale("c3:major").sound("sd")
         """.trimIndent()
-
-    val strangerThings = """
-                stack(
-                    n("0 2 4 6 7 6 4 2")
-                      .scale("<c3:major>/2")
-                      .s("supersaw")
-                      .distort(0.7)
-                      .superimpose((x) => x.detune("<0.5>"))
-                      .lpenv(perlin.slow(3).range(1, 4))
-                      .lpf(perlin.slow(2).range(100, 2000))
-                      .gain(0.6),
-                    note("<a1 e2>/8").clip(0.8).struct("x*8").s("supersaw").gain(0.5),
-                )
-            """.trimIndent()
 
     val piano = """
         note("c e g e").sound("piano")
@@ -405,5 +391,5 @@ object TestPatterns {
     """.trimIndent()
 
 
-    val active = cMajorNotes
+    val active = strangerThingsNetflix
 }
