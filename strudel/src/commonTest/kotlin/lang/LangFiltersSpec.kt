@@ -45,6 +45,9 @@ class LangFiltersSpec : StringSpec({
         events.size shouldBe 4
 
         val expected = listOf(300.0, 600.0, 300.0, 600.0)
+
+        events.forEach { println(it.data.filters) }
+
         events.map { (it.data.filters[0] as FilterDef.HighPass).cutoffHz } shouldBe expected
     }
 

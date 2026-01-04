@@ -3,7 +3,7 @@ package io.peekandpoke.klang.audio_bridge
 import kotlinx.serialization.Serializable
 
 @Serializable
-class FilterDefs(
+data class FilterDefs(
     val filters: List<FilterDef>,
 ) : List<FilterDef> by filters {
 

@@ -338,7 +338,11 @@ private val lpfModifier = voiceModifier<Number?> {
 val StrudelPattern.lpf: DslPatternModifier<Number>
     get() = dslPatternModifier(
         modify = lpfModifier,
-        combine = { source, control -> source.copy(filters = source.filters.addOrReplace(control.filters)) }
+        combine = { source, control ->
+            source
+                .copy(resonance = control.resonance ?: source.resonance)
+                .lpfModifier(control.filters.getByType<FilterDef.LowPass>()?.cutoffHz)
+        }
     )
 
 /**
@@ -360,7 +364,11 @@ private val hpfModifier = voiceModifier<Number?> {
 val StrudelPattern.hpf: DslPatternModifier<Number>
     get() = dslPatternModifier(
         modify = hpfModifier,
-        combine = { source, control -> source.copy(filters = source.filters.addOrReplace(control.filters)) }
+        combine = { source, control ->
+            source
+                .copy(resonance = control.resonance ?: source.resonance)
+                .hpfModifier(control.filters.getByType<FilterDef.HighPass>()?.cutoffHz)
+        }
     )
 
 /**
@@ -382,7 +390,11 @@ private val bandfModifier = voiceModifier<Number?> {
 val StrudelPattern.bandf: DslPatternModifier<Number>
     get() = dslPatternModifier(
         modify = bandfModifier,
-        combine = { source, control -> source.copy(filters = source.filters.addOrReplace(control.filters)) }
+        combine = { source, control ->
+            source
+                .copy(resonance = control.resonance ?: source.resonance)
+                .bandfModifier(control.filters.getByType<FilterDef.BandPass>()?.cutoffHz)
+        }
     )
 
 /**
@@ -410,7 +422,11 @@ private val notchfModifier = voiceModifier<Number?> {
 val StrudelPattern.notchf: DslPatternModifier<Number>
     get() = dslPatternModifier(
         modify = notchfModifier,
-        combine = { source, control -> source.copy(filters = source.filters.addOrReplace(control.filters)) }
+        combine = { source, control ->
+            source
+                .copy(resonance = control.resonance ?: source.resonance)
+                .notchfModifier(control.filters.getByType<FilterDef.Notch>()?.cutoffHz)
+        }
     )
 
 /**
