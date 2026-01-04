@@ -240,7 +240,7 @@ class VoiceScheduler(
         val gateEndFrame = scheduled.startFrame + effectiveGateDuration
 
         // Bake Filters
-        val bakedFilters = data.filters.map { it.toFilter() }.combine()
+        val bakedFilters = data.filters.filters.map { it.toFilter() }.combine()
 
         // Routing
         val orbit = data.orbit ?: 0

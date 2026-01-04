@@ -4,7 +4,6 @@ import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.lang.VoiceModifierPattern.Companion.modifyVoice
 import io.peekandpoke.klang.tones.Tones
 import kotlin.math.max
 
@@ -325,66 +324,112 @@ val StrudelPattern.adsr: DslPatternModifier<String>
 @StrudelDsl
 val adsr: DslPatternCreator<String> = dslPatternCreator(adsrModifier)
 
-// Filters /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Filters - LowPass - lpf() ///////////////////////////////////////////////////////////////////////////////////////////
+
+private val lpfModifier = voiceModifier<Number?> {
+    val filter = FilterDef.LowPass(cutoffHz = it?.toDouble() ?: 1000.0, q = resonance ?: 1.0)
+
+    copy(filters = filters.addOrReplace(filter))
+}
 
 /**
  * Adds a Low Pass Filter with the given cutoff frequency.
  */
-fun StrudelPattern.lpf(cutoff: Number): StrudelPattern = modifyVoice {
-    val q = it.resonance ?: 1.0
-    it.copy(
-        filters = it.filters + FilterDef.LowPass(cutoffHz = cutoff.toDouble(), q = q),
-        cutoff = cutoff.toDouble() // Also set the legacy/global field if needed by backend
+val StrudelPattern.lpf: DslPatternModifier<Number>
+    get() = dslPatternModifier(
+        modify = lpfModifier,
+        combine = { source, control -> source.copy(filters = source.filters.addOrReplace(control.filters)) }
     )
+
+/**
+ * Adds a Low Pass Filter with the given cutoff frequency.
+ */
+val lpf: DslPatternCreator<Number> = dslPatternCreator(lpfModifier)
+
+// Filters - HighPass - hpf() //////////////////////////////////////////////////////////////////////////////////////////
+
+private val hpfModifier = voiceModifier<Number?> {
+    val filter = FilterDef.HighPass(cutoffHz = it?.toDouble() ?: 1000.0, q = resonance ?: 1.0)
+
+    copy(filters = filters.addOrReplace(filter))
 }
 
 /**
  * Adds a High Pass Filter with the given cutoff frequency.
  */
-fun StrudelPattern.hpf(cutoff: Number): StrudelPattern = modifyVoice {
-    val q = it.resonance ?: 1.0
-    it.copy(
-        filters = it.filters + FilterDef.HighPass(cutoffHz = cutoff.toDouble(), q = q),
-        hcutoff = cutoff.toDouble()
+val StrudelPattern.hpf: DslPatternModifier<Number>
+    get() = dslPatternModifier(
+        modify = hpfModifier,
+        combine = { source, control -> source.copy(filters = source.filters.addOrReplace(control.filters)) }
     )
+
+/**
+ * Adds a High Pass Filter with the given cutoff frequency.
+ */
+val hpf: DslPatternCreator<Number> = dslPatternCreator(hpfModifier)
+
+// Filters - BandPass - bandf() ////////////////////////////////////////////////////////////////////////////////////////
+
+private val bandfModifier = voiceModifier<Number?> {
+    val filter = FilterDef.BandPass(cutoffHz = it?.toDouble() ?: 1000.0, q = resonance ?: 1.0)
+
+    copy(filters = filters.addOrReplace(filter))
 }
 
 /**
- * Adds a Band Pass Filter.
+ * Adds a High Pass Filter with the given cutoff frequency.
  */
-fun StrudelPattern.bandf(cutoff: Number): StrudelPattern = modifyVoice {
-    val q = it.resonance ?: 1.0
-    it.copy(
-        filters = it.filters + FilterDef.BandPass(cutoffHz = cutoff.toDouble(), q = q),
-        bandf = cutoff.toDouble()
+val StrudelPattern.bandf: DslPatternModifier<Number>
+    get() = dslPatternModifier(
+        modify = bandfModifier,
+        combine = { source, control -> source.copy(filters = source.filters.addOrReplace(control.filters)) }
     )
-}
+
+/**
+ * Adds a High Pass Filter with the given cutoff frequency.
+ */
+val bandf: DslPatternCreator<Number> = dslPatternCreator(bandfModifier)
+
 
 /** Alias for [bandf] */
-fun StrudelPattern.bpf(cutoff: Number): StrudelPattern = bandf(cutoff)
+val StrudelPattern.bpf get() = bandf
 
-/**
- * Sets the resonance (Q-factor) for filters.
- * updates the global resonance AND updates all existing filters to use this new Q.
- */
-fun StrudelPattern.resonance(amount: Number): StrudelPattern = modifyVoice { voice ->
-    val newQ = amount.toDouble()
-    voice.copy(
-        resonance = newQ,
-        // Update all existing filters with the new Q
-        filters = voice.filters.map { filter ->
-            when (filter) {
-                is FilterDef.LowPass -> filter.copy(q = newQ)
-                is FilterDef.HighPass -> filter.copy(q = newQ)
-                is FilterDef.BandPass -> filter.copy(q = newQ)
-                is FilterDef.Notch -> filter.copy(q = newQ)
-            }
+/** Alias for [bandf] */
+val bpf = bandf
+
+// Filters - resonance() ///////////////////////////////////////////////////////////////////////////////////////////////
+
+private val resonanceModifier = voiceModifier<Number?> {
+    val newQ = resonance ?: 1.0
+    val newFilters = filters.modifyAll { filter ->
+        when (filter) {
+            is FilterDef.LowPass -> filter.copy(q = newQ)
+            is FilterDef.HighPass -> filter.copy(q = newQ)
+            is FilterDef.BandPass -> filter.copy(q = newQ)
+            is FilterDef.Notch -> filter.copy(q = newQ)
         }
-    )
+    }
+
+    copy(resonance = newQ, filters = newFilters)
 }
 
+/** Sets the note envelope release */
+@StrudelDsl
+val StrudelPattern.resonance: DslPatternModifier<Number>
+    get() = dslPatternModifier(
+        modify = resonanceModifier,
+        combine = { source, control -> source.resonanceModifier(control.resonance) }
+    )
+
+/** Sets the note envelope release */
+@StrudelDsl
+val resonance: DslPatternCreator<Number> = dslPatternCreator(resonanceModifier)
+
 /** Alias for [resonance] */
-fun StrudelPattern.res(amount: Number): StrudelPattern = resonance(amount)
+val StrudelPattern.res get() = resonance
+
+/** Alias for [resonance] */
+val res = resonance
 
 // distort() ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 

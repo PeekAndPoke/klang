@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.graal
 
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
@@ -194,7 +195,7 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
                 panSpread = panSpread,
                 freqSpread = freqSpread,
                 // Filters
-                filters = filters,
+                filters = FilterDefs(filters),
                 // ADSR envelope
                 adsr = adsr,
                 // Pitch / Glisando

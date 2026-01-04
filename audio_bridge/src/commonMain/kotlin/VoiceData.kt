@@ -36,7 +36,7 @@ data class VoiceData(
     val voices: Double?,
 
     // Filters
-    val filters: List<FilterDef>,
+    val filters: FilterDefs = FilterDefs.empty,
 
     // ADSR
     val adsr: AdsrEnvelope,
@@ -90,7 +90,7 @@ data class VoiceData(
             panSpread = null,
             freqSpread = null,
             voices = null,
-            filters = emptyList(),
+            filters = FilterDefs.empty,
             adsr = AdsrEnvelope.empty,
             accelerate = null,
             vibrato = null,
