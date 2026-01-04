@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.lang.VoiceModifierPattern.Companion.modifyVoice
@@ -18,9 +17,10 @@ annotation class StrudelDsl
  * The structure comes from [this] pattern.
  * The values are taken from [control] pattern sampled at each event.
  */
-private fun StrudelPattern.applyControl(
+@StrudelDsl
+fun StrudelPattern.applyControl(
     control: StrudelPattern,
-    combiner: (source: VoiceData, control: VoiceData) -> VoiceData,
+    combiner: VoiceDataMerger,
 ): StrudelPattern = ControlPattern(this, control, combiner)
 
 // Root Pattern generation /////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,30 +52,6 @@ fun seq(vararg patterns: StrudelPattern): StrudelPattern =
 fun stack(vararg patterns: StrudelPattern): StrudelPattern =
     StackPattern(patterns.toList())
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-@StrudelDsl
-val StrudelPattern.note
-    get() = dslPatternModifier<String>(
-        mod = { copy(note = it, freqHz = Tones.noteToFreq(it)) },
-        combine = { source, control -> source.copy(note = control.note, freqHz = control.freqHz) }
-    )
-
-@StrudelDsl
-val note = dslPatternCreator<String> { VoiceData.empty.copy(note = it, freqHz = Tones.noteToFreq(it)) }
-
-// TODO: n()
-
-@StrudelDsl
-val StrudelPattern.sound
-    get() = dslPatternModifier<String>(
-        mod = { copy(sound = it) },
-        combine = { source, control -> source.copy(sound = control.sound) }
-    )
-
-@StrudelDsl
-val sound = dslPatternCreator<String> { VoiceData.empty.copy(sound = it) }
-
 // Tempo modifiers /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Slows down all inner patterns by the given [factor] */
@@ -86,24 +62,81 @@ fun StrudelPattern.slow(factor: Number): StrudelPattern =
 fun StrudelPattern.fast(factor: Number): StrudelPattern =
     TimeModifierPattern(this, 1.0 / max(1 / 128.0, factor.toDouble()))
 
-// Voice modifiers /////////////////////////////////////////////////////////////////////////////////////////////////////
+// note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+private val noteModifier = voiceModifier<String> { copy(note = it, freqHz = Tones.noteToFreq(it)) }
 
-/** Sets the sample bank for all inner patterns */
-fun StrudelPattern.bank(bank: String): StrudelPattern =
-    modifyVoice { it.copy(bank = bank) }
+@StrudelDsl
+val StrudelPattern.note
+    get() = dslPatternModifier(
+        modify = noteModifier,
+        combine = { source, control -> source.copy(note = control.note, freqHz = control.freqHz) }
+    )
 
-/** Sets the gain for all inner patterns */
-fun StrudelPattern.gain(gain: Double): StrudelPattern =
-    modifyVoice { it.copy(gain = gain) }
+@StrudelDsl
+val note = dslPatternCreator(noteModifier)
 
-/** Sets the gain for all inner patterns from a control pattern */
-fun StrudelPattern.gain(pattern: StrudelPattern): StrudelPattern =
-    applyControl(pattern) { s, c -> s.copy(gain = c.freqHz ?: c.gain) }
+// n() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Sets the left-right panorama for all inner patterns */
-fun StrudelPattern.pan(pan: Double): StrudelPattern =
-    modifyVoice { it.copy(pan = pan) }
+// TODO: n()
+
+// sound() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+private val soundModifier = voiceModifier<String> { copy(sound = it) }
+
+@StrudelDsl
+val StrudelPattern.sound: DslPatternModifier<String>
+    get() = dslPatternModifier(
+        modify = soundModifier,
+        combine = { source, control -> source.copy(sound = control.sound) }
+    )
+
+@StrudelDsl
+val sound: DslPatternCreator<String> = dslPatternCreator(soundModifier)
+
+// bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+private val bankModifier = voiceModifier<String> { copy(bank = it) }
+
+@StrudelDsl
+val StrudelPattern.bank: DslPatternModifier<String>
+    get() = dslPatternModifier(
+        modify = bankModifier,
+        combine = { source, control -> source.copy(bank = control.bank) }
+    )
+
+@StrudelDsl
+val bank: DslPatternCreator<String> = dslPatternCreator(bankModifier)
+
+// bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+private val gainModifier = voiceModifier<Number> { copy(gain = it.toDouble()) }
+
+@StrudelDsl
+val StrudelPattern.gain: DslPatternModifier<Number>
+    get() = dslPatternModifier(
+        modify = gainModifier,
+        combine = { source, control -> source.copy(gain = control.gain) }
+    )
+
+@StrudelDsl
+val gain: DslPatternCreator<Number> = dslPatternCreator(gainModifier)
+
+// bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+private val panModifier = voiceModifier<Number> { copy(pan = it.toDouble()) }
+
+@StrudelDsl
+val StrudelPattern.pan: DslPatternModifier<Number>
+    get() = dslPatternModifier(
+        modify = panModifier,
+        combine = { source, control -> source.copy(pan = control.pan) }
+    )
+
+@StrudelDsl
+val pan: DslPatternCreator<Number> = dslPatternCreator(panModifier)
+
+// legato() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Sets the legato (duration relative to step size).

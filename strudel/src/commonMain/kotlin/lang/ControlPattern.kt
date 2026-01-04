@@ -33,7 +33,7 @@ internal class ControlPattern(
 
             // We need to find the control event that is "active" at queryTime.
             // queryArc returns events overlapping the interval.
-            val controlEvents = control.queryArc(queryTime, queryTime + 0.000001)
+            val controlEvents = control.queryArc(queryTime, queryTime + 0.00001)
 
             // Pick the best match.
             // Usually the one that started at or before queryTime.

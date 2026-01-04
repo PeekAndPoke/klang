@@ -23,7 +23,7 @@ internal class AtomicPattern(val data: VoiceData) : StrudelPattern {
         for (i in startCycle until endCycle) {
             val begin = i.toDouble()
             // Strudel events are usually triggered if their start time is within the query arc.
-            if (begin >= from && begin < to) {
+            if (begin >= from || begin < to) {
                 events.add(
                     StrudelPatternEvent(
                         begin = begin,

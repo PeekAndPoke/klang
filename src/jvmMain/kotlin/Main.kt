@@ -6,7 +6,7 @@ import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.slow
+import io.peekandpoke.klang.strudel.lang.seq
 import io.peekandpoke.klang.strudel.lang.sound
 import io.peekandpoke.klang.strudel.lang.stack
 import io.peekandpoke.klang.strudel.makeStatic
@@ -61,11 +61,20 @@ private suspend fun helloStrudel() {
 //        val pattern = TestPatterns.active
 //        val pattern1 = strudel.compile(pattern).await()
 
-        val pattern1 = stack(
-            note("c3", "e3", "g3", "b3").sound("tri", "supersaw").slow(2)
-
+//        val pattern1 = stack(
+//            note("c3", "e3", "g3", "b3").sound("tri", "supersaw").slow(2)
 //            sound("bd", "hh", "sd", "oh").slow(1),
+//        )
+
+        val pattern1 = stack(
+            seq(
+                note("c3 e3 g3 b3"),
+                note("c3 e3 g3 b3"),
+            ).sound("tri saw"),
+            sound("bd hh sd oh"),
         )
+
+//        val pattern1 = sound("bd hh sd oh")
 
         println("=======================================================================")
         println(

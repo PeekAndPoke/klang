@@ -11,6 +11,8 @@
 ### (2026-01-03) Strudel DSL
 
 - started implementing the Strudel DSL
+- figuring out a generic way to "register" all functions
+- first implementation of control patterns
 
 ### (2026-01-03) Soundfonts
 
