@@ -5,9 +5,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 class FilterDefs(
     val filters: List<FilterDef>,
-) {
+) : List<FilterDef> by filters {
+
     companion object {
         val empty = FilterDefs(emptyList())
+    }
+
+    inline fun <reified T : FilterDef> getByType(): T? {
+        return filters.filterIsInstance<T>().firstOrNull()
     }
 
     fun modifyAll(block: (FilterDef) -> FilterDef): FilterDefs {

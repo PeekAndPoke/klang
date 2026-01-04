@@ -421,7 +421,8 @@ val notchf: DslPatternCreator<Number> = dslPatternCreator(notchfModifier)
 // Filters - resonance() ///////////////////////////////////////////////////////////////////////////////////////////////
 
 private val resonanceModifier = voiceModifier<Number?> {
-    val newQ = resonance ?: 1.0
+    val newQ = it?.toDouble() ?: 1.0
+
     val newFilters = filters.modifyAll { filter ->
         when (filter) {
             is FilterDef.LowPass -> filter.copy(q = newQ)
