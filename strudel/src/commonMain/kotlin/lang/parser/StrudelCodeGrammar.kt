@@ -19,6 +19,8 @@ object StrudelCodeGrammar : Grammar<AstNode>() {
     // Punctuation
     val lPar by literalToken("(")
     val rPar by literalToken(")")
+    val lBracket by literalToken("[")
+    val rBracket by literalToken("]")
     val comma by literalToken(",")
     val dot by literalToken(".")
 
@@ -30,15 +32,18 @@ object StrudelCodeGrammar : Grammar<AstNode>() {
     val strLiteral by regexToken("\"[^\"\\\\]*(\\\\.[^\"\\\\]*)*\"")
 
     // Matches backticks `...` (useful for multiline mini-notation)
+    // [^`] matches any character that is not a backtick, including newlines
     val backtickLiteral by regexToken("`[^`]*`")
 
     // Identifiers (function names)
+    // Must be after literals to avoid consuming parts of them if they overlap (unlikely here)
     val identifier by regexToken("[a-zA-Z_][a-zA-Z0-9_]*")
 
     // --- Parser Rules ---
 
     // 1. Literals
-    val literalParser: Parser<LiteralNode> by (numLiteral map { LiteralNode(it.text.toDouble()) }) or
+    val literalParser: Parser<LiteralNode> by
+    (numLiteral map { LiteralNode(it.text.toDouble()) }) or
             (strLiteral map { LiteralNode(it.text.trim('"')) }) or
             (backtickLiteral map { LiteralNode(it.text.trim('`')) })
 
@@ -46,15 +51,21 @@ object StrudelCodeGrammar : Grammar<AstNode>() {
     // We use `parser { expression }` to handle forward recursion
     val argsList by separatedTerms(parser { expression }, comma, acceptZero = true)
 
+    // New: List "[ expr, expr ]"
+    val listParser: Parser<ListNode> by (skip(lBracket) and argsList and skip(rBracket)) map {
+        ListNode(it)
+    }
+
     // 3. Function Call: "name(args)"
     val funcCallParser: Parser<FunCallNode> by (identifier and skip(lPar) and argsList and skip(rPar)) map { (name, args) ->
         FunCallNode(name.text, args)
     }
 
     // 4. Atomic Term
-    // Can be a literal, a function call, or an expression in parenthesis
+    // Can be a literal, a function call, a list, or an expression in parenthesis
     val term: Parser<AstNode> by literalParser or
             funcCallParser or
+            listParser or
             (skip(lPar) and parser { expression } and skip(rPar))
 
     // 5. Chain: "term.func().func()"

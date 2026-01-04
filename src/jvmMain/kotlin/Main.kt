@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.makeStatic
@@ -71,7 +72,7 @@ private suspend fun helloStrudel() {
 //            sound("bd [hh hh hh] sd oh").gain(1),
 //        ).slow(1)
 
-        val pattern1 = stack(
+        val tetrisDslPattern = stack(
             note(
                 """
                 <
@@ -113,18 +114,17 @@ private suspend fun helloStrudel() {
                 .fast(2),
         )
 
+        val tetrisCompiledPattern = StrudelPattern.compile(
+            TestTextPatterns.tetris
+        )
 
-        println("StrudelRegistry.methods.keys")
-        println(StrudelRegistry.methods.keys)
-        println("StrudelRegistry.functions.keys")
-        println(StrudelRegistry.functions.keys)
-
+        val pattern = tetrisCompiledPattern
 
 //        val pattern1 = sound("bd hh sd oh")
 
         println("=======================================================================")
         println(
-            pattern1.makeStatic(0.0, 8.0).toJson()
+            pattern.makeStatic(0.0, 8.0).toJson()
         )
         println("=======================================================================")
 
@@ -136,7 +136,7 @@ private suspend fun helloStrudel() {
         )
 
         val audio1 = strudelPlayer(
-            pattern = pattern1,
+            pattern = pattern,
             options = playerOptions,
         )
 

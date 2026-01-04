@@ -8,7 +8,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class StrudelCodeParseEvaluateSpec : StringSpec({
 
-    val evaluator = StrudelEvaluator()
+    val evaluator = StrudelExpressionEvaluator()
 
     fun eval(code: String): StrudelPattern {
         val ast = StrudelCodeGrammar.parseToEnd(code)

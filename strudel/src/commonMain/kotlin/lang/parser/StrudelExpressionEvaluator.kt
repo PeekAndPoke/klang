@@ -3,7 +3,7 @@ package io.peekandpoke.klang.strudel.lang.parser
 import io.peekandpoke.klang.strudel.lang.StrudelRegistry
 import io.peekandpoke.klang.strudel.lang.registerStandardFunctions
 
-class StrudelEvaluator {
+class StrudelExpressionEvaluator {
 
     init {
         // Crucial: This triggers the static initialization of lang.kt
@@ -32,6 +32,10 @@ class StrudelEvaluator {
                     ?: error("Unknown method: '$methodName'")
 
                 handler(receiver, args)
+            }
+
+            is ListNode -> {
+                node.elements.map { evaluate(it) }
             }
         }
     }

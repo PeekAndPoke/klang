@@ -20,3 +20,8 @@ data class FunCallNode(val name: String, val args: List<AstNode>) : AstNode()
  * [receiver] is `note("c3")`, [methodCall] is `fast(2)`.
  */
 data class ChainNode(val receiver: AstNode, val methodCall: FunCallNode) : AstNode()
+
+/**
+ * A list of values, e.g. `[a, b, c]`.
+ */
+data class ListNode(val elements: List<AstNode>) : AstNode()
