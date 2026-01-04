@@ -113,6 +113,13 @@ private suspend fun helloStrudel() {
                 .fast(2),
         )
 
+
+        println("StrudelRegistry.methods.keys")
+        println(StrudelRegistry.methods.keys)
+        println("StrudelRegistry.functions.keys")
+        println(StrudelRegistry.functions.keys)
+
+
 //        val pattern1 = sound("bd hh sd oh")
 
         println("=======================================================================")

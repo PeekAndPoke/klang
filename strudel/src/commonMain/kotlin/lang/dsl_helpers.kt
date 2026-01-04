@@ -23,43 +23,70 @@ fun <T> voiceModifier(modify: VoiceDataModifier<T>): VoiceDataModifier<T> = modi
 
 // --- Creator Delegate ---
 
+class DslPatternCreatorProvider<T>(
+    private val modify: VoiceDataModifier<T>,
+    private val fromStr: (String) -> T,
+) {
+    operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, DslPatternCreator<T>> {
+        val name = prop.name
+        val creator = DslPatternCreator(modify, fromStr)
+
+        StrudelRegistry.functions[name] = { args ->
+            val arg = args.first().toString()
+            creator(arg)
+        }
+
+        return ReadOnlyProperty { _, _ -> creator }
+    }
+}
+
 @JvmName("dslPatternCreatorGeneric")
 fun <T> dslPatternCreator(
     modify: VoiceDataModifier<T>,
     fromStr: (String) -> T,
-): ReadOnlyProperty<Any?, DslPatternCreator<T>> = object : ReadOnlyProperty<Any?, DslPatternCreator<T>> {
-
-    // Create the instance once
-    val creator = DslPatternCreator(modify, fromStr)
-    var registered = false
-
-    override fun getValue(thisRef: Any?, property: KProperty<*>): DslPatternCreator<T> {
-        if (!registered) {
-            val name = property.name
-            StrudelRegistry.functions[name] = { args ->
-                val arg = args.first().toString()
-                creator(arg)
-            }
-            registered = true
-        }
-        return creator
-    }
-}
-
+) = DslPatternCreatorProvider(modify, fromStr)
 
 @JvmName("dslPatternCreatorString")
 fun dslPatternCreator(
     modify: VoiceDataModifier<String>,
-): ReadOnlyProperty<Any?, DslPatternCreator<String>> =
-    dslPatternCreator(modify) { it }
+) = dslPatternCreator(modify) { it }
 
 @JvmName("dslPatternCreatorNumber")
 fun dslPatternCreator(
     modify: VoiceDataModifier<Number>,
-): ReadOnlyProperty<Any?, DslPatternCreator<Number>> =
-    dslPatternCreator(modify) { (it.toDoubleOrNull() ?: 0.0) as Number }
+) = dslPatternCreator(modify) { (it.toDoubleOrNull() ?: 0.0) as Number }
 
 // --- Modifier Delegate ---
+
+class DslPatternModifierProvider<T>(
+    private val modify: VoiceDataModifier<T>,
+    private val combine: VoiceDataMerger,
+    private val fromStr: (String) -> T,
+    private val toStr: (T) -> String,
+) {
+    operator fun provideDelegate(
+        thisRef: Any?,
+        prop: KProperty<*>,
+    ): ReadOnlyProperty<StrudelPattern, DslPatternModifier<T>> {
+        val name = prop.name
+
+        // Logic for the registered method
+        StrudelRegistry.methods[name] = { receiver, args ->
+            val p = receiver as StrudelPattern
+            val modifier = DslPatternModifier(p, modify, fromStr, toStr, combine)
+            val arg = args.firstOrNull() ?: error("Method $name requires an argument")
+
+            when (arg) {
+                is StrudelPattern -> modifier(arg)
+                else -> modifier(arg.toString())
+            }
+        }
+
+        return ReadOnlyProperty { thisRef, _ ->
+            DslPatternModifier(thisRef, modify, fromStr, toStr, combine)
+        }
+    }
+}
 
 @JvmName("dslPatternModifierGeneric")
 fun <T> dslPatternModifier(
@@ -67,36 +94,7 @@ fun <T> dslPatternModifier(
     combine: VoiceDataMerger,
     fromStr: (String) -> T,
     toStr: (T) -> String,
-): ReadOnlyProperty<Any?, DslPatternModifier<T>> = object : ReadOnlyProperty<Any?, DslPatternModifier<T>> {
-
-    var registered = false
-
-    override fun getValue(thisRef: Any?, property: KProperty<*>): DslPatternModifier<T> {
-        // Ensure thisRef is a Pattern (since this is an extension property on StrudelPattern)
-        val pattern = thisRef as? StrudelPattern ?: error("dslPatternModifier must be used on StrudelPattern")
-
-        if (!registered) {
-            val name = property.name
-            StrudelRegistry.methods[name] = { receiver, args ->
-                val p = receiver as StrudelPattern
-                // Re-create the modifier bound to the receiver
-                val modifier = DslPatternModifier(p, modify, fromStr, toStr, combine)
-
-                val arg = args.firstOrNull() ?: error("Method $name requires an argument")
-
-                when (arg) {
-                    is StrudelPattern -> modifier(arg)
-                    // For literals (Number/String), we use the string representation
-                    // and let DslPatternModifier parse it or use it.
-                    else -> modifier(arg.toString())
-                }
-            }
-            registered = true
-        }
-
-        return DslPatternModifier(pattern, modify, fromStr, toStr, combine)
-    }
-}
+) = DslPatternModifierProvider(modify, combine, fromStr, toStr)
 
 @JvmName("dslPatternModifierString")
 fun dslPatternModifier(modify: VoiceDataModifier<String>, combine: VoiceDataMerger) =

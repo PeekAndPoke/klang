@@ -10,6 +10,31 @@ import kotlin.math.max
 @DslMarker
 annotation class StrudelDsl
 
+/**
+ * Registers standard functions (stack, seq, etc.) and time modifiers (fast, slow)
+ * that are not handled by the DSL delegates.
+ *
+ * Calling this function also ensures that this file is initialized and all
+ * top-level delegates register themselves.
+ */
+fun registerStandardFunctions() {
+    // Clear to avoid duplicates if called multiple times (optional)
+    // StrudelRegistry.functions.clear()
+
+    // Structure
+    StrudelRegistry.functions["stack"] = { args -> stack(*args.filterIsInstance<StrudelPattern>().toTypedArray()) }
+    StrudelRegistry.functions["seq"] = { args -> seq(*args.filterIsInstance<StrudelPattern>().toTypedArray()) }
+    StrudelRegistry.functions["silence"] = { silence }
+    StrudelRegistry.functions["rest"] = { rest }
+
+    // Time Modifiers
+    StrudelRegistry.methods["fast"] = { r, args -> (r as StrudelPattern).fast((args.first() as Number).toDouble()) }
+    StrudelRegistry.methods["slow"] = { r, args -> (r as StrudelPattern).slow((args.first() as Number).toDouble()) }
+
+    // Debug
+    // println("Registered ${StrudelRegistry.functions.size} functions and ${StrudelRegistry.methods.size} methods.")
+}
+
 // Control Pattern Helpers /////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -79,7 +104,24 @@ val note by dslPatternCreator(noteMutation)
 
 // n() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// TODO: n()
+private val nMutation = voiceModifier<Number?> {
+    // n can drive the note (e.g. for scales) or the sample index
+    copy(
+        note = it?.toString(),
+        soundIndex = it?.toInt()
+    )
+}
+
+/** Sets the note number or sample index */
+@StrudelDsl
+val StrudelPattern.n by dslPatternModifier(
+    modify = nMutation,
+    combine = { source, control -> source.nMutation(control.note?.toDoubleOrNull()) }
+)
+
+/** Sets the note number or sample index */
+@StrudelDsl
+val n: DslPatternCreator<Number> by dslPatternCreator(nMutation)
 
 // sound() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -8,6 +8,10 @@
 
 ## Diary
 
+### (2026-01-04) Strudel Code Parser
+
+- starting to build the parser, now that many of the strudel functions are implemented
+
 ### (2026-01-03) Strudel DSL
 
 - started implementing the Strudel DSL
