@@ -390,12 +390,33 @@ val StrudelPattern.bandf: DslPatternModifier<Number>
  */
 val bandf: DslPatternCreator<Number> = dslPatternCreator(bandfModifier)
 
-
 /** Alias for [bandf] */
 val StrudelPattern.bpf get() = bandf
 
 /** Alias for [bandf] */
 val bpf = bandf
+
+// Filters - Notch | inverse BandPass - notchf() ///////////////////////////////////////////////////////////////////////
+
+private val notchfModifier = voiceModifier<Number?> {
+    val filter = FilterDef.Notch(cutoffHz = it?.toDouble() ?: 1000.0, q = resonance ?: 1.0)
+
+    copy(filters = filters.addOrReplace(filter))
+}
+
+/**
+ * Adds a High Pass Filter with the given cutoff frequency.
+ */
+val StrudelPattern.notchf: DslPatternModifier<Number>
+    get() = dslPatternModifier(
+        modify = notchfModifier,
+        combine = { source, control -> source.copy(filters = source.filters.addOrReplace(control.filters)) }
+    )
+
+/**
+ * Adds a High Pass Filter with the given cutoff frequency.
+ */
+val notchf: DslPatternCreator<Number> = dslPatternCreator(notchfModifier)
 
 // Filters - resonance() ///////////////////////////////////////////////////////////////////////////////////////////////
 
