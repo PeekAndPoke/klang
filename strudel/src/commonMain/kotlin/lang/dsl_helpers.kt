@@ -25,23 +25,26 @@ fun <T> dslPatternCreator(modify: VoiceDataModifier<T>, strToT: (String) -> T) =
 @JvmName("dslPatternModifierString")
 fun StrudelPattern.dslPatternModifier(modify: VoiceDataModifier<String>, combine: VoiceDataMerger) = dslPatternModifier(
     modify = modify,
-    strToT = { it },
+    fromStr = { it },
+    toStr = { it },
     combine = combine
 )
 
 @JvmName("dslPatternModifierNumber")
 fun StrudelPattern.dslPatternModifier(modify: VoiceDataModifier<Number>, combine: VoiceDataMerger) = dslPatternModifier(
     modify = modify,
-    strToT = { (it.toDoubleOrNull() ?: 0.0) as Number },
+    fromStr = { (it.toDoubleOrNull() ?: 0.0) as Number },
+    toStr = { it.toString() },
     combine = combine
 )
 
 @JvmName("dslPatternModifierGeneric")
 fun <T> StrudelPattern.dslPatternModifier(
     modify: VoiceDataModifier<T>,
-    strToT: (String) -> T,
+    fromStr: (String) -> T,
+    toStr: (T) -> String,
     combine: VoiceDataMerger,
-) = DslPatternModifier(this, modify, strToT, combine)
+) = DslPatternModifier(pattern = this, modify = modify, fromStr = fromStr, toStr = toStr, combine = combine)
 
 class DslPatternCreator<T>(
     val modify: VoiceDataModifier<T>,
@@ -60,7 +63,8 @@ class DslPatternCreator<T>(
 class DslPatternModifier<T>(
     val pattern: StrudelPattern,
     val modify: VoiceDataModifier<T>,
-    val strToT: (String) -> T,
+    val fromStr: (String) -> T,
+    val toStr: (T) -> String,
     val combine: VoiceDataMerger,
 ) {
     /** Parses mini notation and uses the resulting pattern as a control pattern  */
@@ -69,11 +73,15 @@ class DslPatternModifier<T>(
             control = MiniNotationParser(input = mini) {
                 AtomicPattern(
                     VoiceData.empty.modify(
-                        strToT(it),
+                        fromStr(it),
                     )
                 )
             }.parse()
         )
+    }
+
+    operator fun invoke(vararg values: T): StrudelPattern {
+        return invoke(values.joinToString(" ") { toStr(it) })
     }
 
     /** Uses a control pattern to modify voice events */

@@ -14,7 +14,7 @@ data class VoiceData(
     val scale: String?,
 
     // Gain / Dynamics
-    val gain: Double,
+    val gain: Double?,
     val legato: Double?,
 
     // Sound, bank, sound index
@@ -71,7 +71,7 @@ data class VoiceData(
 
     // Reverb
     val room: Double?,
-    val roomsize: Double?,
+    val roomSize: Double?,
 
     // ???
     val bandf: Double?,
@@ -107,72 +107,12 @@ data class VoiceData(
             delayTime = null,
             delayFeedback = null,
             room = null,
-            roomsize = null,
+            roomSize = null,
             bandf = null
         )
     }
 
     fun asSampleRequest(): SampleRequest {
         return SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
-    }
-
-    /**
-     * Merges this voice data with another.
-     * Values from [other] take precedence if they are not null (or default/empty).
-     *
-     * Note on Gain: Gain is a double with default 1.0.
-     * If 'other' has gain 1.0, is it "unset" or "explicitly 1.0"?
-     * Usually in Strudel, we multiply gains or replace.
-     * Replacing is safer for control patterns unless we define a "GainPattern".
-     * Let's assume replace for now.
-     */
-    fun mergeWith(other: VoiceData): VoiceData {
-        return copy(
-            note = other.note ?: note,
-            freqHz = other.freqHz ?: freqHz,
-            scale = other.scale ?: scale,
-
-            // Gain: If other has non-default gain (we assume default is 1.0), use it?
-            // Or just always use other's gain?
-            // In a control pattern `gain(0.5)`, the event has gain=0.5.
-            // We likely want to use that.
-            gain = if (other.gain != 1.0) other.gain else gain,
-
-            legato = other.legato ?: legato,
-            bank = other.bank ?: bank,
-            sound = other.sound ?: sound,
-            soundIndex = other.soundIndex ?: soundIndex,
-            density = other.density ?: density,
-            panSpread = other.panSpread ?: panSpread,
-            freqSpread = other.freqSpread ?: freqSpread,
-            voices = other.voices ?: voices,
-
-            // TODO: what do we really need to do here?
-            // Filters: Append? Replace?
-            // Usually control patterns adding filters means adding MORE filters.
-            filters = filters + other.filters,
-
-            adsr = adsr.mergeWith(other.adsr),
-            accelerate = other.accelerate ?: accelerate,
-            vibrato = other.vibrato ?: vibrato,
-            vibratoMod = other.vibratoMod ?: vibratoMod,
-            distort = other.distort ?: distort,
-            coarse = other.coarse ?: coarse,
-            crush = other.crush ?: crush,
-
-            // LPF/HPF legacy fields -> assume they are synced with filters list
-            cutoff = other.cutoff ?: cutoff,
-            hcutoff = other.hcutoff ?: hcutoff,
-            resonance = other.resonance ?: resonance,
-
-            orbit = other.orbit ?: orbit,
-            pan = other.pan ?: pan,
-            delay = other.delay ?: delay,
-            delayTime = other.delayTime ?: delayTime,
-            delayFeedback = other.delayFeedback ?: delayFeedback,
-            room = other.room ?: room,
-            roomsize = other.roomsize ?: roomsize,
-            bandf = other.bandf ?: bandf,
-        )
     }
 }

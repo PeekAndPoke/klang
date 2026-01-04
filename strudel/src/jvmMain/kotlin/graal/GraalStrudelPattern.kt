@@ -220,7 +220,7 @@ class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : S
                 delayFeedback = delayFeedback,
                 // Reverb
                 room = room,
-                roomsize = roomSize,
+                roomSize = roomSize,
                 // ???
                 bandf = null, // TODO ...
             ),

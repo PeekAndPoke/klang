@@ -270,7 +270,7 @@ class VoiceScheduler(
             room = data.room ?: 0.0,
             // In Strudel, room size is between [0 and 10], so we need to normalize it
             // See https://strudel.cc/learn/effects/#roomsize
-            roomSize = (data.roomsize ?: 0.0) / 10.0,
+            roomSize = (data.roomSize ?: 0.0) / 10.0,
         )
 
         // Effects
@@ -305,7 +305,7 @@ class VoiceScheduler(
                     startFrame = scheduled.startFrame,
                     endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
-                    gain = data.gain,
+                    gain = data.gain ?: 1.0,
                     pan = data.pan ?: 0.0,
                     accelerate = accelerate,
                     vibrato = vibrato,
@@ -332,7 +332,7 @@ class VoiceScheduler(
                 val sample = entry.sample
 
                 // Resolve ADSR: Pattern > Sample Defaults > Synth Defaults
-                val resolvedAdsr = (data.adsr ?: AdsrEnvelope())
+                val resolvedAdsr = data.adsr
                     .mergeWith(sample.meta.adsr)
                     .resolve(AdsrEnvelope.defaultSynth)
 
@@ -364,7 +364,7 @@ class VoiceScheduler(
                     startFrame = nowFrame, // Start immediately since we ignore lateFrames
                     endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
-                    gain = data.gain,
+                    gain = data.gain ?: 1.0,
                     pan = data.pan ?: 0.0,
                     filter = bakedFilters,
                     accelerate = accelerate,
