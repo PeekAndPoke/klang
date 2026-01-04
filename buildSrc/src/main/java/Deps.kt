@@ -130,6 +130,10 @@ object Deps {
         // https://central.sonatype.com/artifact/org.jetbrains.kotlin-wrappers/kotlin-js/versions
         private const val wrappers_js_version = "2025.12.11"
         const val wrappers_js = "org.jetbrains.kotlin-wrappers:kotlin-js:$wrappers_js_version"
+
+        // https://mvnrepository.com/artifact/com.github.h0tk3y.betterParse/better-parse
+        private const val better_parse_version = "0.4.4"
+        const val better_parse = "com.github.h0tk3y.betterParse:better-parse:$better_parse_version"
     }
 
     object IDE {
