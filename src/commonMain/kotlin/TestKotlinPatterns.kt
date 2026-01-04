@@ -45,4 +45,20 @@ object TestKotlinPatterns {
             .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
             .fast(2),
     )
+
+    val strangerThings = stack(
+        n("0 2 4 6 7 6 4 2")
+            .scale("<c3:major>/2")
+            .s("supersaw")
+            .distort(0.7)
+//            .superimpose((x) => x.detune("<0.5>"))
+//        .lpenv(perlin.slow(3).range(1, 4))
+//        .lpf(perlin.slow(2).range(100, 2000))
+            .gain(0.3),
+        note("<a1 e2>/8")
+            .clip(0.8)
+//            .struct("x*8")
+            .s("supersaw"),
+    )
+
 }

@@ -21,7 +21,79 @@ typealias VoiceDataMerger = (source: VoiceData, control: VoiceData) -> VoiceData
 
 fun <T> voiceModifier(modify: VoiceDataModifier<T>): VoiceDataModifier<T> = modify
 
-// --- Creator Delegate ---
+// --- Generic Function Delegate (stack, arrange, etc.) ---
+
+class DslFunctionProvider<In>(
+    private val handler: (List<Any>) -> StrudelPattern,
+) {
+    operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, DslFunction<In>> {
+        val name = prop.name
+        val func = DslFunction<In>(handler)
+
+        // Register in the evaluator registry
+        StrudelRegistry.functions[name] = { args -> func.invokeUntyped(args) }
+
+        return ReadOnlyProperty { _, _ -> func }
+    }
+}
+
+/**
+ * Creates a DSL function that returns a StrudelPattern.
+ * [In] is the type used for varargs in Kotlin (e.g. StrudelPattern or Any).
+ */
+fun <In> dslFunction(handler: (List<Any>) -> StrudelPattern) = DslFunctionProvider<In>(handler)
+
+class DslFunction<In>(val handler: (List<Any>) -> StrudelPattern) {
+    // Typed for Kotlin usage
+    @Suppress("UNCHECKED_CAST")
+    operator fun invoke(vararg args: In): StrudelPattern = handler(args.toList() as List<Any>)
+
+    // Internal usage
+    fun invokeUntyped(args: List<Any>): StrudelPattern = handler(args)
+}
+
+// --- Generic Method Delegate (fast, slow, etc.) ---
+
+/**
+ * Provider that registers the method name and creates bound delegates.
+ */
+class DslMethodProvider<In>(
+    private val handler: (StrudelPattern, List<Any>) -> StrudelPattern,
+) {
+    operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<StrudelPattern, DslMethod<In>> {
+        val name = prop.name
+
+        // Register in the evaluator registry
+        StrudelRegistry.methods[name] = { recv, args ->
+            handler(recv as StrudelPattern, args)
+        }
+
+        // Return a delegate that creates a BOUND method when accessed
+        return ReadOnlyProperty { pattern, _ ->
+            DslMethod(pattern, handler)
+        }
+    }
+}
+
+fun <In> dslMethod(handler: (StrudelPattern, List<Any>) -> StrudelPattern) = DslMethodProvider<In>(handler)
+
+/**
+ * A method bound to a specific [pattern] instance.
+ * When invoked, it applies the handler to the bound pattern and arguments.
+ */
+class DslMethod<In>(
+    val pattern: StrudelPattern,
+    val handler: (StrudelPattern, List<Any>) -> StrudelPattern,
+) {
+    // Typed invocation for Kotlin usage: p.slow(2)
+    // The pattern is already bound, so we only pass args.
+    operator fun invoke(vararg args: In): StrudelPattern {
+        @Suppress("UNCHECKED_CAST")
+        return handler(pattern, args.toList() as List<Any>)
+    }
+}
+
+// --- Creator Delegate (Specialized for MiniNotation) ---
 
 class DslPatternCreatorProvider<T>(
     private val modify: VoiceDataModifier<T>,
@@ -56,7 +128,7 @@ fun dslPatternCreator(
     modify: VoiceDataModifier<Number>,
 ) = dslPatternCreator(modify) { (it.toDoubleOrNull() ?: 0.0) as Number }
 
-// --- Modifier Delegate ---
+// --- Modifier Delegate (Specialized for VoiceData) ---
 
 class DslPatternModifierProvider<T>(
     private val modify: VoiceDataModifier<T>,
@@ -160,3 +232,13 @@ class DslPatternModifier<T>(
     }
 }
 
+/**
+ * Applies a control pattern to the current pattern.
+ * The structure comes from [this] pattern.
+ * The values are taken from [control] pattern sampled at each event.
+ */
+@StrudelDsl
+private fun StrudelPattern.applyControl(
+    control: StrudelPattern,
+    combiner: VoiceDataMerger,
+): StrudelPattern = ControlPattern(this, control, combiner)

@@ -10,53 +10,32 @@ import kotlin.math.max
 @DslMarker
 annotation class StrudelDsl
 
+// Initialization Helper ///////////////////////////////////////////////////////////////////////////////////////////////
+
 /**
- * Registers standard functions (stack, seq, etc.) and time modifiers (fast, slow)
- * that are not handled by the DSL delegates.
- *
- * Calling this function also ensures that this file is initialized and all
- * top-level delegates register themselves.
+ * Accessing this property forces the initialization of this file's class,
+ * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
  */
-fun registerStandardFunctions() {
-    // Clear to avoid duplicates if called multiple times (optional)
-    // StrudelRegistry.functions.clear()
+var strudelLangInit = false
 
-    // Structure
-    StrudelRegistry.functions["stack"] = { args -> stack(*args.filterIsInstance<StrudelPattern>().toTypedArray()) }
-    StrudelRegistry.functions["seq"] = { args -> seq(*args.filterIsInstance<StrudelPattern>().toTypedArray()) }
-    StrudelRegistry.functions["silence"] = { silence }
-    StrudelRegistry.functions["rest"] = { rest }
-
-    // Time Modifiers
-    StrudelRegistry.methods["fast"] = { r, args -> (r as StrudelPattern).fast((args.first() as Number).toDouble()) }
-    StrudelRegistry.methods["slow"] = { r, args -> (r as StrudelPattern).slow((args.first() as Number).toDouble()) }
-
-    // Debug
-    // println("Registered ${StrudelRegistry.functions.size} functions and ${StrudelRegistry.methods.size} methods.")
+// Helpers
+private fun List<Any>.flattenToPatterns(): Array<StrudelPattern> {
+    return this.flatMap { arg ->
+        when (arg) {
+            is StrudelPattern -> listOf(arg)
+            is List<*> -> arg.filterIsInstance<StrudelPattern>()
+            else -> emptyList()
+        }
+    }.toTypedArray()
 }
 
-// Control Pattern Helpers /////////////////////////////////////////////////////////////////////////////////////////////
+// Structure Functions /////////////////////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Applies a control pattern to the current pattern.
- * The structure comes from [this] pattern.
- * The values are taken from [control] pattern sampled at each event.
- */
 @StrudelDsl
-fun StrudelPattern.applyControl(
-    control: StrudelPattern,
-    combiner: VoiceDataMerger,
-): StrudelPattern = ControlPattern(this, control, combiner)
-
-// Root Pattern generation /////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * A pattern that produces no events.
- * Useful for gaps or placeholders.
- */
-@StrudelDsl
-val silence: StrudelPattern = object : StrudelPattern {
-    override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> = emptyList()
+val silence by dslFunction<Any> {
+    object : StrudelPattern {
+        override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> = emptyList()
+    }
 }
 
 /**
@@ -65,28 +44,75 @@ val silence: StrudelPattern = object : StrudelPattern {
  * For now, simple silence is usually enough.
  */
 @StrudelDsl
-val rest: StrudelPattern = silence
+val rest by dslFunction<Any> { silence() }
 
-/** Creates a sequence pattern, dividing the cycle equally among the [patterns]. */
+/** Creates a sequence pattern. */
 @StrudelDsl
-fun seq(vararg patterns: StrudelPattern): StrudelPattern =
-    SequencePattern(patterns.toList())
+val seq by dslFunction<StrudelPattern> { args ->
+    val patterns = args.flattenToPatterns().toList()
+    if (patterns.isEmpty()) silence() else SequencePattern(patterns)
+}
 
 /** Plays multiple patterns at the same time. */
 @StrudelDsl
-fun stack(vararg patterns: StrudelPattern): StrudelPattern =
-    StackPattern(patterns.toList())
+val stack by dslFunction<StrudelPattern> { args ->
+    val patterns = args.flattenToPatterns().toList()
+    if (patterns.isEmpty()) silence() else StackPattern(patterns)
+}
+
+// arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
+@StrudelDsl
+val arrange by dslFunction<Any> { args ->
+    val segments = args.map { arg ->
+        when (arg) {
+            // Case: pattern (defaults to 1 cycle)
+            is StrudelPattern -> 1.0 to arg
+            // Case: [2, pattern]
+            is List<*> if arg.size == 2 && arg[0] is Number && arg[1] is StrudelPattern -> {
+                val dur = (arg[0] as Number).toDouble()
+                val pat = arg[1] as StrudelPattern
+                dur to pat
+            }
+            // Case: [pattern] (defaults to 1 cycle)
+            is List<*> if arg.size == 1 && arg[0] is StrudelPattern -> 1.0 to (arg[0] as StrudelPattern)
+            else -> 0.0 to silence()
+        }
+    }.filter { it.first > 0.0 }
+
+    if (segments.isEmpty()) silence()
+    else ArrangementPattern(segments)
+}
+
+// pickRestart([a, b, c]) -> picks patterns sequentially per cycle (slowcat)
+@StrudelDsl
+val pickRestart by dslFunction<Any> { args ->
+    val patterns = args.flattenToPatterns()
+    if (patterns.isEmpty()) {
+        silence()
+    } else {
+        // seq plays all in 1 cycle. slow(n) makes each take 1 cycle.
+        val s = seq(*patterns) // using our dslFunction 'seq' via kotlin invoke
+        // We need to call .slow on the result. But 'slow' is a property delegate now!
+        // In Kotlin code: s.slow(n). In internal code, we access the DslMethod 'slow'.
+        s.slow(patterns.size)
+    }
+}
 
 // Tempo modifiers /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Slows down all inner patterns by the given [factor] */
-fun StrudelPattern.slow(factor: Number): StrudelPattern =
-    TimeModifierPattern(this, max(1 / 128.0, factor.toDouble()))
+/** Slows down all inner patterns by the given factor */
+@StrudelDsl
+val StrudelPattern.slow by dslMethod<Number> { p, args ->
+    val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
+    TimeModifierPattern(p, max(1.0 / 128.0, factor))
+}
 
-/** Speeds up all inner patterns by the given [factor] */
-fun StrudelPattern.fast(factor: Number): StrudelPattern =
-    TimeModifierPattern(this, 1.0 / max(1 / 128.0, factor.toDouble()))
-
+/** Speeds up all inner patterns by the given factor */
+@StrudelDsl
+val StrudelPattern.fast by dslMethod<Number> { p, args ->
+    val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
+    TimeModifierPattern(p, 1.0 / max(1.0 / 128.0, factor))
+}
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private val noteMutation = voiceModifier<String?> { copy(note = it, freqHz = Tones.noteToFreq(it ?: "")) }
@@ -127,16 +153,28 @@ val n: DslPatternCreator<Number> by dslPatternCreator(nMutation)
 
 private val soundMutation = voiceModifier<String?> { copy(sound = it) }
 
-/** Modifies the sounds of a pattern */
-@StrudelDsl
-val StrudelPattern.sound by dslPatternModifier(
+private val soundModifier = dslPatternModifier(
     modify = soundMutation,
     combine = { source, control -> source.soundMutation(control.sound) }
 )
 
+private val soundCreator = dslPatternCreator(soundMutation)
+
+/** Modifies the sounds of a pattern */
+@StrudelDsl
+val StrudelPattern.sound by soundModifier
+
 /** Creates a pattern with sounds */
 @StrudelDsl
-val sound: DslPatternCreator<String> by dslPatternCreator(soundMutation)
+val sound by soundCreator
+
+/** Alias for [sound] */
+@StrudelDsl
+val StrudelPattern.s by soundModifier
+
+/** Alias for [sound] */
+@StrudelDsl
+val s by soundCreator
 
 // bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

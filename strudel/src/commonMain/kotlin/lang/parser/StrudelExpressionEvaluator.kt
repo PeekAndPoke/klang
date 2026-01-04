@@ -1,14 +1,14 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
 import io.peekandpoke.klang.strudel.lang.StrudelRegistry
-import io.peekandpoke.klang.strudel.lang.registerStandardFunctions
+import io.peekandpoke.klang.strudel.lang.strudelLangInit
 
 class StrudelExpressionEvaluator {
 
     init {
         // Crucial: This triggers the static initialization of lang.kt
         // and registers the manual functions defined above.
-        registerStandardFunctions()
+        strudelLangInit = true
     }
 
     fun evaluate(node: AstNode): Any {
