@@ -195,7 +195,7 @@ val StrudelPattern.detune: DslPatternModifier<Number>
 
 /** Sets the oscillator frequency spread (for supersaw) */
 @StrudelDsl
-val detune: DslPatternCreator<Number> = dslPatternCreator(unisonModifier)
+val detune: DslPatternCreator<Number> = dslPatternCreator(detuneModifier)
 
 // detune //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
