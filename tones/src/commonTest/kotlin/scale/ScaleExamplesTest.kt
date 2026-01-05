@@ -104,7 +104,7 @@ class ScaleExamplesTest : StringSpec({
         val range = Scale.rangeOfScale("C pentatonic")
         range("C4", "C5") shouldBe listOf("C4", "D4", "E4", "G4", "A4", "C5")
 
-        Scale.rangeOfScale("pentatonic")("C4", "C5") shouldBe emptyList<String>()
+        Scale.rangeOfScale("pentatonic")("C4", "C5") shouldBe emptyList()
 
         val range2 = Scale.rangeOfScale(listOf("C", "Db", "G"))
         range2("C4", "C5") shouldBe listOf("C4", "Db4", "G4", "C5")

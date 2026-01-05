@@ -27,9 +27,9 @@ class ScaleTypeDictionaryTest : StringSpec({
         unknown.empty shouldBe true
         unknown.name shouldBe ""
         unknown.setNum shouldBe 0
-        unknown.aliases shouldBe emptyList<String>()
+        unknown.aliases shouldBe emptyList()
         unknown.chroma shouldBe "000000000000"
-        unknown.intervals shouldBe emptyList<String>()
+        unknown.intervals shouldBe emptyList()
         unknown.normalized shouldBe "000000000000"
     }
 
@@ -74,5 +74,4 @@ class ScaleTypeDictionaryTest : StringSpec({
             "altered",
         )
     }
-
 })

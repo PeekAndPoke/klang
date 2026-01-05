@@ -8,7 +8,7 @@ class ScaleTest : StringSpec({
         val major = Scale.get("major")
         major.empty shouldBe false
         major.tonic shouldBe null
-        major.notes shouldBe emptyList<String>()
+        major.notes shouldBe emptyList()
         major.type shouldBe "major"
         major.name shouldBe "major"
         major.intervals shouldBe listOf("1P", "2M", "3M", "4P", "5P", "6M", "7M")
@@ -57,15 +57,15 @@ class ScaleTest : StringSpec({
     "intervals" {
         Scale.get("major").intervals shouldBe listOf("1P", "2M", "3M", "4P", "5P", "6M", "7M")
         Scale.get("C major").intervals shouldBe listOf("1P", "2M", "3M", "4P", "5P", "6M", "7M")
-        Scale.get("blah").intervals shouldBe emptyList<String>()
+        Scale.get("blah").intervals shouldBe emptyList()
     }
 
     "notes" {
         Scale.get("C major").notes shouldBe listOf("C", "D", "E", "F", "G", "A", "B")
         Scale.get("C lydian #9").notes shouldBe listOf("C", "D#", "E", "F#", "G", "A", "B")
         Scale.get("eb bebop").notes shouldBe listOf("Eb", "F", "G", "Ab", "Bb", "C", "Db", "D")
-        Scale.get("C no-scale").notes shouldBe emptyList<String>()
-        Scale.get("no-note major").notes shouldBe emptyList<String>()
+        Scale.get("C no-scale").notes shouldBe emptyList()
+        Scale.get("no-note major").notes shouldBe emptyList()
     }
 
     "detectScale" {
@@ -75,7 +75,7 @@ class ScaleTest : StringSpec({
             tonic = "B",
             matchExact = true
         ) shouldBe listOf("B minor pentatonic")
-        Scale.detect(listOf("D", "F#", "B", "C", "C#"), matchExact = true) shouldBe emptyList<String>()
+        Scale.detect(listOf("D", "F#", "B", "C", "C#"), matchExact = true) shouldBe emptyList()
         Scale.detect(listOf("c", "d", "e", "f", "g", "a", "b"), matchExact = true) shouldBe listOf("C major")
         Scale.detect(
             listOf("c2", "d6", "e3", "f1", "g7", "a6", "b5"),
@@ -120,7 +120,7 @@ class ScaleTest : StringSpec({
             "ichikosucho",
             "chromatic",
         )
-        Scale.extended("none") shouldBe emptyList<String>()
+        Scale.extended("none") shouldBe emptyList()
     }
 
     "reducedScales" {
@@ -130,7 +130,7 @@ class ScaleTest : StringSpec({
             "ritusen",
         )
         Scale.reduced("D major") shouldBe Scale.reduced("major")
-        Scale.reduced("none") shouldBe emptyList<String>()
+        Scale.reduced("none") shouldBe emptyList()
     }
 
     "specific and problematic scales" {
@@ -181,7 +181,7 @@ class ScaleTest : StringSpec({
         rangeSharp("C#4", "C#5").joinToString(" ") shouldBe "C#4 D#4 E#4 F#4 G#4 A#4 B#4 C#5"
 
         val rangeNoTonic = Scale.rangeOfScale("pentatonic")
-        rangeNoTonic("C4", "C5") shouldBe emptyList<String>()
+        rangeNoTonic("C4", "C5") shouldBe emptyList()
 
         val rangeNotes = Scale.rangeOfScale(listOf("c4", "g4", "db3", "g"))
         rangeNotes("c4", "c5").joinToString(" ") shouldBe "C4 Db4 G4 C5"
@@ -189,31 +189,26 @@ class ScaleTest : StringSpec({
 
     "scaleDegrees" {
         val degreesMajor = Scale.degrees("C major")
-        listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).map { degreesMajor(it) }.joinToString(" ") shouldBe "C D E F G A B C D E"
+        listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).joinToString(" ") { degreesMajor(it) } shouldBe
+                "C D E F G A B C D E"
 
         val degreesC4Major = Scale.degrees("C4 major")
-        listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).map { degreesC4Major(it) }
-            .joinToString(" ") shouldBe "C4 D4 E4 F4 G4 A4 B4 C5 D5 E5"
+        listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).joinToString(" ") { degreesC4Major(it) } shouldBe
+                "C4 D4 E4 F4 G4 A4 B4 C5 D5 E5"
 
         val degreesC4Pentatonic = Scale.degrees("C4 pentatonic")
-        listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11).map { degreesC4Pentatonic(it) }
-            .joinToString(" ") shouldBe "C4 D4 E4 G4 A4 C5 D5 E5 G5 A5 C6"
+        listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11).joinToString(" ") { degreesC4Pentatonic(it) } shouldBe
+                "C4 D4 E4 G4 A4 C5 D5 E5 G5 A5 C6"
 
         degreesMajor(0) shouldBe ""
 
         val degreesNegativeMajor = Scale.degrees("C major")
-        listOf(-1, -2, -3, -4, -5, -6, -7, -8, -9, -10).map { degreesNegativeMajor(it) }
-            .joinToString(" ") shouldBe "B A G F E D C B A G"
+        listOf(-1, -2, -3, -4, -5, -6, -7, -8, -9, -10).joinToString(" ") { degreesNegativeMajor(it) } shouldBe
+                "B A G F E D C B A G"
     }
 
     "scaleSteps" {
-        listOf(-3, -2, -1, 0, 1, 2).map { Scale.steps("C4 major")(it) } shouldBe listOf(
-            "G3",
-            "A3",
-            "B3",
-            "C4",
-            "D4",
-            "E4"
-        )
+        listOf(-3, -2, -1, 0, 1, 2).map { Scale.steps("C4 major")(it) } shouldBe
+                listOf("G3", "A3", "B3", "C4", "D4", "E4")
     }
 })

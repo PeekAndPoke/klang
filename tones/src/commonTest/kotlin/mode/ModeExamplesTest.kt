@@ -33,7 +33,7 @@ class ModeExamplesTest : StringSpec({
 
     "Mode.seventhChords" {
         // Note: TonalJS README says "CMaj7" but it depends on chord alias preferences.
-        // Also it says B7b5 for the 7th degree of major? No, it should be Bm7b5.
+        // Also, it says B7b5 for the 7th degree of major? No, it should be Bm7b5.
         // Wait, major key 7th degree is half-diminished.
         Mode.seventhChords("major", "C") shouldBe listOf("CMaj7", "Dm7", "Em7", "FMaj7", "G7", "Am7", "Bm7b5")
     }

@@ -18,8 +18,11 @@ class ModeTest : StringSpec({
     }
 
     "seventhChords" {
-        Mode.seventhChords("major", "C#").joinToString(" ") shouldBe "C#Maj7 D#m7 E#m7 F#Maj7 G#7 A#m7 B#m7b5"
-        Mode.seventhChords("dorian", "G").joinToString(" ") shouldBe "Gm7 Am7 BbMaj7 C7 Dm7 Em7b5 FMaj7"
+        Mode.seventhChords("major", "C#").joinToString(" ") shouldBe
+                "C#Maj7 D#m7 E#m7 F#Maj7 G#7 A#m7 B#m7b5"
+
+        Mode.seventhChords("dorian", "G").joinToString(" ") shouldBe
+                "Gm7 Am7 BbMaj7 C7 Dm7 Em7b5 FMaj7"
     }
 
     "relativeTonic" {

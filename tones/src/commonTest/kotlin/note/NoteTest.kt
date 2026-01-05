@@ -69,7 +69,7 @@ class NoteTest : StringSpec({
     }
 
     "note properties from pitch properties" {
-        Note.get(object : io.peekandpoke.klang.tones.pitch.Pitch {
+        Note.get(object : Pitch {
             override val step = 1
             override val alt = -1
             override val oct = null

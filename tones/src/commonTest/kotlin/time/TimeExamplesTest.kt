@@ -11,7 +11,7 @@ class TimeExamplesTest : StringSpec({
         ts.upper shouldBe 3
         ts.lower shouldBe 4
         ts.type shouldBe "simple"
-        ts.additive shouldBe emptyList<Int>()
+        ts.additive shouldBe emptyList()
 
         val ts2 = TimeSignature.get("3+2+3/8")
         ts2.empty shouldBe false
@@ -27,7 +27,7 @@ class TimeExamplesTest : StringSpec({
         ts3.type shouldBe "irrational"
         ts3.upper shouldBe 12
         ts3.lower shouldBe 10
-        ts3.additive shouldBe emptyList<Int>()
+        ts3.additive shouldBe emptyList()
     }
 
     "DurationValue.get" {

@@ -31,18 +31,19 @@ class TonesRangeTest : StringSpec({
     }
 
     "chromaticRange" {
-        TonesRange.chromatic(listOf("A3", "A4")) shouldBe "A3 Bb3 B3 C4 Db4 D4 Eb4 E4 F4 Gb4 G4 Ab4 A4".split(" ")
-        TonesRange.chromatic(listOf("A4", "A3")) shouldBe "A4 Ab4 G4 Gb4 F4 E4 Eb4 D4 Db4 C4 B3 Bb3 A3".split(" ")
-        TonesRange.chromatic("C3 Eb3 A2".split(" ")) shouldBe "C3 Db3 D3 Eb3 D3 Db3 C3 B2 Bb2 A2".split(" ")
+        TonesRange.chromatic(listOf("A3", "A4")) shouldBe
+                "A3 Bb3 B3 C4 Db4 D4 Eb4 E4 F4 Gb4 G4 Ab4 A4".split(" ")
 
-        TonesRange.chromatic(
-            listOf("C2", "C3"),
-            sharps = true
-        ) shouldBe "C2 C#2 D2 D#2 E2 F2 F#2 G2 G#2 A2 A#2 B2 C3".split(" ")
-        TonesRange.chromatic(
-            listOf("C2", "C3"),
-            sharps = true,
-            pitchClass = true
-        ) shouldBe "C C# D D# E F F# G G# A A# B C".split(" ")
+        TonesRange.chromatic(listOf("A4", "A3")) shouldBe
+                "A4 Ab4 G4 Gb4 F4 E4 Eb4 D4 Db4 C4 B3 Bb3 A3".split(" ")
+
+        TonesRange.chromatic("C3 Eb3 A2".split(" ")) shouldBe
+                "C3 Db3 D3 Eb3 D3 Db3 C3 B2 Bb2 A2".split(" ")
+
+        TonesRange.chromatic(listOf("C2", "C3"), sharps = true) shouldBe
+                "C2 C#2 D2 D#2 E2 F2 F#2 G2 G#2 A2 A#2 B2 C3".split(" ")
+
+        TonesRange.chromatic(listOf("C2", "C3"), sharps = true, pitchClass = true) shouldBe
+                "C C# D D# E F F# G G# A A# B C".split(" ")
     }
 })

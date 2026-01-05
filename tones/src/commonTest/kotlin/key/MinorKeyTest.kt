@@ -7,7 +7,7 @@ import io.peekandpoke.klang.tones.scale.Scale
 class MinorKeyTest : StringSpec({
     "minor keySignature" {
         val tonics = "C D E F G A B".split(" ")
-        tonics.map { Key.minorKey(it).keySignature }.joinToString(" ") shouldBe "bbb b # bbbb bb  ##"
+        tonics.joinToString(" ") { Key.minorKey(it).keySignature } shouldBe "bbb b # bbbb bb  ##"
     }
 
     "natural scale names" {

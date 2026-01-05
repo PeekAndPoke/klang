@@ -6,7 +6,7 @@ import io.kotest.matchers.shouldBe
 class MajorKeyTest : StringSpec({
     "major keySignature" {
         val tonics = "C D E F G A B".split(" ")
-        tonics.map { Key.majorKey(it).keySignature }.joinToString(" ") shouldBe " ## #### b # ### #####"
+        tonics.joinToString(" ") { Key.majorKey(it).keySignature } shouldBe " ## #### b # ### #####"
     }
 
     "secondary dominants" {
