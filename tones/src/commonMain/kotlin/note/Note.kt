@@ -250,14 +250,21 @@ data class Note(
         /**
          * Converts an accidental string to its alteration number.
          */
-        fun accToAlt(acc: String): Int = if (acc.isEmpty()) 0 else if (acc[0] == 'b') -acc.length else acc.length
+        fun accToAlt(acc: String): Int {
+            if (acc.isEmpty()) return 0
+            return when (acc[0]) {
+                'b', 'f' -> -acc.length
+                '#', 's' -> acc.length
+                'x' -> acc.length * 2
+                else -> 0
+            }
+        }
 
         /**
          * Regular expression for parsing note strings.
          * Groups: 1: letter, 2: accidentals, 3: octave, 4: rest.
          */
-        private val REGEX = Regex("""^([a-gA-G]?)(#{1,}|b{1,}|x{1,}|)(-?\d*)\s*(.*)$""")
-
+        private val REGEX = Regex("""^([a-gA-G]?)(#{1,}|b{1,}|x{1,}|s{1,}|f{1,})?(-?\d*)\s*(.*)$""")
         /**
          * Semitones from C for each step (0-6).
          */

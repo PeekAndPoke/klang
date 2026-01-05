@@ -65,13 +65,10 @@ class TonesTest : StringSpec({
         // Original Tones.kt handles colon split
         Tones.resolveFreq("0", "C3:major") shouldBe Tones.noteToFreq("C3")
 
-        // In the original Tones.kt, " minor" splits to ["", "minor"]
-        // noteNameToMidi("") returns 69.0 (A4), so the root becomes A4.
-        Tones.resolveFreq("0", " minor") shouldBe 440.0
-
-        // However, "minor" (no leading space) splits to ["minor"]
-        // rootNote becomes "minor", noteNameToMidi("minor") fails regex and returns 69.0
-        Tones.resolveFreq("0", "minor") shouldBe 440.0
+        // Improved behavior: Scales without an explicit tonic now default to C3
+        // rather than falling back to A4 (440.0)
+        Tones.resolveFreq("0", " minor") shouldBe Tones.noteToFreq("C3")
+        Tones.resolveFreq("0", "minor") shouldBe Tones.noteToFreq("C3")
     }
 
     "resolveFreq - negative degrees" {
