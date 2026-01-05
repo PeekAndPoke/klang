@@ -127,6 +127,76 @@ fun note(src: Any?): Note {
     }
 }
 
+/**
+ * Returns the enharmonic note of [noteName] that matches the [destination] pitch class.
+ */
+fun enharmonic(noteName: String, destination: String = ""): String {
+    val src = note(noteName)
+    if (src.empty) return ""
+
+    val dest = if (destination.isEmpty()) {
+        val sharps = src.alt < 0
+        note(fromMidi(src.midi ?: src.chroma, sharps = sharps, pitchClass = true))
+    } else {
+        note(destination)
+    }
+
+    if (dest.empty || dest.chroma != src.chroma) {
+        return ""
+    }
+
+    if (src.oct == null) {
+        return dest.pc
+    }
+
+    // detect any octave overflow
+    // In TonalJS: const srcChroma = src.chroma - src.alt;
+    // SEMI[src.step] is essentially src.chroma - src.alt
+    val srcChroma = SEMI[src.step]
+    val destChroma = SEMI[dest.step]
+
+    val destOctOffset = when {
+        srcChroma > 11 || destChroma < 0 -> -1
+        srcChroma < 0 || destChroma > 11 -> 1
+        // NEW: handle B# / Cb octave changes within the 0-11 range
+        srcChroma == 0 && destChroma == 11 -> -1
+        srcChroma == 11 && destChroma == 0 -> 1
+        else -> 0
+    }
+
+    val destOct = src.oct!! + destOctOffset
+    return dest.pc + destOct
+}
+
+/**
+ * Returns the note name of a given midi number.
+ */
+fun fromMidi(midi: Int, sharps: Boolean = false, pitchClass: Boolean = false): String {
+    val chroma = (midi % 12 + 12) % 12
+    val oct = (midi / 12) - 1
+
+    val names = if (sharps) {
+        arrayOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    } else {
+        arrayOf("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
+    }
+
+    val resPc = names[chroma]
+
+    return if (pitchClass) resPc else "$resPc$oct"
+}
+
+/**
+ * Returns a list of sorted unique note names.
+ */
+fun sortedUniqNames(notes: List<String>): List<String> {
+    return notes.map { note(it) }
+        .filter { !it.empty }
+        .distinctBy { it.pc }
+        .sortedBy { it.height }
+        .map { it.pc }
+}
+
 private fun parse(noteName: NoteName): Note {
     val tokens = tokenizeNote(noteName)
     if (tokens[0] == "" || tokens[3] != "") {

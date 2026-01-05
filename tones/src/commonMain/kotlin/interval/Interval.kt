@@ -216,6 +216,122 @@ fun coordToInterval(
     }
 }
 
+/**
+ * Returns true if the object is a valid [Interval].
+ */
 fun isInterval(src: Any?): Boolean {
     return src is Interval && !src.empty
+}
+
+/**
+ * Returns the natural list of interval names.
+ */
+fun names(): List<String> = "1P 2M 3M 4P 5P 6m 7m".split(" ")
+
+/**
+ * Returns the simplified version of an interval.
+ *
+ * @param name The interval name.
+ */
+fun simplify(name: String): String {
+    val i = interval(name)
+    return if (i.empty) "" else "${i.simple}${i.q}"
+}
+
+/**
+ * Returns the inversion of an interval.
+ *
+ * @param name The interval name.
+ */
+fun invert(name: String): String {
+    val i = interval(name)
+    if (i.empty) return ""
+    val step = (7 - i.step) % 7
+    val alt = if (i.type == IntervalType.Perfectable) -i.alt else -(i.alt + 1)
+    return interval(Pitch(step = step, alt = alt, oct = i.oct, dir = i.dir)).name
+}
+
+private val IN = intArrayOf(1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7)
+private val IQ = "P m M m M P d P m M m M".split(" ")
+
+/**
+ * Returns an interval name from a number of semitones.
+ *
+ * @param semitones The number of semitones.
+ */
+fun fromSemitones(semitones: Int): String {
+    val d = if (semitones < 0) -1 else 1
+    val n = kotlin.math.abs(semitones)
+    val c = n % 12
+    val o = n / 12
+    val resNum = d * (IN[c] + 7 * o)
+    return "$resNum${IQ[c]}"
+}
+
+/**
+ * Adds two intervals together and returns the name of the resulting interval.
+ */
+fun add(a: String, b: String): String {
+    val i1 = interval(a)
+    val i2 = interval(b)
+    val c1 = i1.coord
+    val c2 = i2.coord
+    if (c1 == null || c2 == null) return ""
+
+    val f1 = when (c1) {
+        is PitchCoordinates.Interval -> c1.fifths
+        is PitchCoordinates.Note -> c1.fifths
+        is PitchCoordinates.PitchClass -> c1.fifths
+    }
+    val o1 = when (c1) {
+        is PitchCoordinates.Interval -> c1.octaves
+        is PitchCoordinates.Note -> c1.octaves
+        is PitchCoordinates.PitchClass -> 0
+    }
+    val f2 = when (c2) {
+        is PitchCoordinates.Interval -> c2.fifths
+        is PitchCoordinates.Note -> c2.fifths
+        is PitchCoordinates.PitchClass -> c2.fifths
+    }
+    val o2 = when (c2) {
+        is PitchCoordinates.Interval -> c2.octaves
+        is PitchCoordinates.Note -> c2.octaves
+        is PitchCoordinates.PitchClass -> 0
+    }
+
+    return coordToInterval(PitchCoordinates.Note(f1 + f2, o1 + o2)).name
+}
+
+/**
+ * Subtracts the second interval from the first one and returns the name of the resulting interval.
+ */
+fun subtract(a: String, b: String): String {
+    val i1 = interval(a)
+    val i2 = interval(b)
+    val c1 = i1.coord
+    val c2 = i2.coord
+    if (c1 == null || c2 == null) return ""
+
+    val f1 = when (c1) {
+        is PitchCoordinates.Interval -> c1.fifths
+        is PitchCoordinates.Note -> c1.fifths
+        is PitchCoordinates.PitchClass -> c1.fifths
+    }
+    val o1 = when (c1) {
+        is PitchCoordinates.Interval -> c1.octaves
+        is PitchCoordinates.Note -> c1.octaves
+        is PitchCoordinates.PitchClass -> 0
+    }
+    val f2 = when (c2) {
+        is PitchCoordinates.Interval -> c2.fifths
+        is PitchCoordinates.Note -> c2.fifths
+        is PitchCoordinates.PitchClass -> c2.fifths
+    }
+    val o2 = when (c2) {
+        is PitchCoordinates.Interval -> c2.octaves
+        is PitchCoordinates.Note -> c2.octaves
+        is PitchCoordinates.PitchClass -> 0
+    }
+
+    return coordToInterval(PitchCoordinates.Note(f1 - f2, o1 - o2)).name
 }

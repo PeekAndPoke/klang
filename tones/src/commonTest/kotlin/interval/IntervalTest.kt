@@ -87,4 +87,66 @@ class IntervalTest : StringSpec({
         isInterval(null) shouldBe false
         isInterval(Pitch(step = 0, alt = 0)) shouldBe false
     }
+
+    "names" {
+        names() shouldBe listOf("1P", "2M", "3M", "4P", "5P", "6m", "7m")
+    }
+
+    "simplify" {
+        fun simplifyList(src: String) = src.split(" ").map { simplify(it) }
+        simplifyList("1P 2M 3M 4P 5P 6M 7M") shouldBe listOf("1P", "2M", "3M", "4P", "5P", "6M", "7M")
+        simplifyList("8P 9M 10M 11P 12P 13M 14M") shouldBe listOf("8P", "2M", "3M", "4P", "5P", "6M", "7M")
+        simplifyList("1d 1P 1A 8d 8P 8A 15d 15P 15A") shouldBe listOf(
+            "1d",
+            "1P",
+            "1A",
+            "8d",
+            "8P",
+            "8A",
+            "1d",
+            "1P",
+            "1A"
+        )
+        simplifyList("-1P -2M -3M -4P -5P -6M -7M") shouldBe listOf("-1P", "-2M", "-3M", "-4P", "-5P", "-6M", "-7M")
+        simplifyList("-8P -9M -10M -11P -12P -13M -14M") shouldBe listOf(
+            "-8P",
+            "-2M",
+            "-3M",
+            "-4P",
+            "-5P",
+            "-6M",
+            "-7M"
+        )
+    }
+
+    "invert" {
+        fun invertList(src: String) = src.split(" ").map { invert(it) }
+        invertList("1P 2M 3M 4P 5P 6M 7M") shouldBe listOf("1P", "7m", "6m", "5P", "4P", "3m", "2m")
+        invertList("1d 2m 3m 4d 5d 6m 7m") shouldBe listOf("1A", "7M", "6M", "5A", "4A", "3M", "2M")
+        invertList("1A 2A 3A 4A 5A 6A 7A") shouldBe listOf("1d", "7d", "6d", "5d", "4d", "3d", "2d")
+        invertList("-1P -2M -3M -4P -5P -6M -7M") shouldBe listOf("-1P", "-7m", "-6m", "-5P", "-4P", "-3m", "-2m")
+        invertList("8P 9M 10M 11P 12P 13M 14M") shouldBe listOf("8P", "14m", "13m", "12P", "11P", "10m", "9m")
+    }
+
+    "fromSemitones" {
+        listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11).map { fromSemitones(it) } shouldBe
+                listOf("1P", "2m", "2M", "3m", "3M", "4P", "5d", "5P", "6m", "6M", "7m", "7M")
+
+        listOf(12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23).map { fromSemitones(it) } shouldBe
+                listOf("8P", "9m", "9M", "10m", "10M", "11P", "12d", "12P", "13m", "13M", "14m", "14M")
+
+        listOf(0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11).map { fromSemitones(it) } shouldBe
+                listOf("1P", "-2m", "-2M", "-3m", "-3M", "-4P", "-5d", "-5P", "-6m", "-6M", "-7m", "-7M")
+    }
+
+    "add" {
+        add("3m", "5P") shouldBe "7m"
+        names().map { add("5P", it) } shouldBe listOf("5P", "6M", "7M", "8P", "9M", "10m", "11P")
+    }
+
+    "subtract" {
+        subtract("5P", "3M") shouldBe "3m"
+        subtract("3M", "5P") shouldBe "-3m"
+        names().map { subtract("5P", it) } shouldBe listOf("5P", "4P", "3m", "2M", "1P", "-2m", "-3m")
+    }
 })
