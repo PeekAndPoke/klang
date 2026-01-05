@@ -4,8 +4,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
 class PcSetTest : StringSpec({
-    "pcset from note list" {
-        PcSet.get(listOf("c", "d", "e")) shouldBe Pcset(
+    "PcSet from note list" {
+        PcSet.get(listOf("c", "d", "e")) shouldBe PcSet(
             empty = false,
             name = "",
             setNum = 2688,
@@ -18,13 +18,13 @@ class PcSetTest : StringSpec({
         PcSet.get(emptyList<String>()).empty shouldBe true
     }
 
-    "pcset from pcset number" {
+    "PcSet from PcSet number" {
         PcSet.get(2048) shouldBe PcSet.get(listOf("C"))
         val set = PcSet.get(listOf("D"))
         PcSet.get(set.setNum) shouldBe set
     }
 
-    "pcset num" {
+    "PcSet num" {
         PcSet.num("000000000001") shouldBe 1
         PcSet.num(listOf("B")) shouldBe 1
         PcSet.num(listOf("Cb")) shouldBe 1
@@ -34,7 +34,7 @@ class PcSetTest : StringSpec({
         PcSet.num("111111111111") shouldBe 4095
     }
 
-    "pcset normalized" {
+    "PcSet normalized" {
         val likeC = PcSet.get(listOf("C")).chroma // 100000000000
         "cdefgab".forEach { pc ->
             PcSet.get(listOf(pc.toString())).normalized shouldBe likeC

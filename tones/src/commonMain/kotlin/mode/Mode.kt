@@ -2,7 +2,7 @@ package io.peekandpoke.klang.tones.mode
 
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
-import io.peekandpoke.klang.tones.pcset.Pcset
+import io.peekandpoke.klang.tones.pcset.PcSet
 import io.peekandpoke.klang.tones.utils.TonesArray
 
 /**
@@ -10,7 +10,7 @@ import io.peekandpoke.klang.tones.utils.TonesArray
  */
 data class Mode(
     /** The pitch class set of the mode. */
-    val pcset: Pcset,
+    val pcset: PcSet,
     /** The name of the mode. */
     val name: String,
     /** The number of the mode (0-indexed) relative to the parent scale (e.g., Ionian = 0, Dorian = 1, etc.). */
@@ -39,7 +39,7 @@ data class Mode(
     companion object {
         /** An empty mode. */
         val NoMode = Mode(
-            pcset = Pcset.EmptyPcset,
+            pcset = PcSet.EmptyPcSet,
             name = "",
             modeNum = -1,
             alt = 0,

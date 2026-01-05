@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.tones.chord
 
 import io.peekandpoke.klang.tones.pcset.PcSet
-import io.peekandpoke.klang.tones.pcset.Pcset
 
 /**
  * Represents the quality of a chord.
@@ -22,7 +21,7 @@ enum class ChordQuality {
  * @property intervals The list of intervals that define the chord.
  */
 class ChordType(
-    val pcset: Pcset,
+    val pcset: PcSet,
     val name: String,
     val quality: ChordQuality,
     val aliases: List<String>,
@@ -38,7 +37,7 @@ class ChordType(
          * Represents an empty or invalid chord type.
          */
         val NoChordType = ChordType(
-            pcset = Pcset.EmptyPcset,
+            pcset = PcSet.EmptyPcSet,
             name = "",
             quality = ChordQuality.Unknown,
             aliases = emptyList(),

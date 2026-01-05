@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.tones.scale
 
 import io.peekandpoke.klang.tones.pcset.PcSet
-import io.peekandpoke.klang.tones.pcset.Pcset
 
 /**
  * Properties for a scale in the scale dictionary.
@@ -11,7 +10,7 @@ import io.peekandpoke.klang.tones.pcset.Pcset
  * @property intervals An array of interval names.
  */
 class ScaleType(
-    val pcset: Pcset,
+    val pcset: PcSet,
     val name: String,
     val aliases: List<String>,
     val intervals: List<String>,
@@ -44,7 +43,7 @@ class ScaleType(
          * Represents an empty or invalid scale type.
          */
         val NoScaleType = ScaleType(
-            pcset = Pcset.EmptyPcset,
+            pcset = PcSet.EmptyPcSet,
             name = "",
             aliases = emptyList(),
             intervals = emptyList()
