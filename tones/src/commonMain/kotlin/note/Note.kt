@@ -92,7 +92,13 @@ data class Note(
 
         /**
          * Unified getter for generic sources.
+         * @deprecated Use type-specific overloads instead: get(String), get(Note), get(Pitch), get(NamedPitch)
          */
+        @Deprecated(
+            message = "Use type-specific overloads instead",
+            replaceWith = ReplaceWith("get(src as String)"),
+            level = DeprecationLevel.WARNING
+        )
         fun get(src: Any?): Note = when (src) {
             is String -> get(src)
             is Note -> src

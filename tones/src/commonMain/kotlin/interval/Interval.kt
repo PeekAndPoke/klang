@@ -68,17 +68,24 @@ data class Interval(
         )
 
         /**
-         * Returns an [Interval] from a given source.
+         * Returns an [Interval] from a string name.
          */
-        fun get(src: Any?): Interval {
-            return when (src) {
-                is String -> parse(src)
-                is Interval -> src
-                is Pitch -> get(pitchName(src))
-                is NamedPitch -> get(src.name)
-                else -> NoInterval
-            }
-        }
+        fun get(name: String): Interval = parse(name)
+
+        /**
+         * Returns the [Interval] itself.
+         */
+        fun get(interval: Interval): Interval = interval
+
+        /**
+         * Converts a [Pitch] to an [Interval].
+         */
+        fun get(pitch: Pitch): Interval = get(pitchName(pitch))
+
+        /**
+         * Converts a [NamedPitch] to an [Interval].
+         */
+        fun get(named: NamedPitch): Interval = get(named.name)
 
         /**
          * Tokenizes an interval string.

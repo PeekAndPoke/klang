@@ -192,7 +192,9 @@ data class Scale(
             return { noteOrMidi ->
                 val currNote = when (noteOrMidi) {
                     is Int -> Note.get(Note.fromMidi(noteOrMidi))
-                    else -> Note.get(noteOrMidi)
+                    is String -> Note.get(noteOrMidi)
+                    is Note -> noteOrMidi
+                    else -> Note.NoNote
                 }
                 val height = currNote.height
 
@@ -220,7 +222,9 @@ data class Scale(
             return { noteOrMidi ->
                 val currNote = when (noteOrMidi) {
                     is Int -> Note.get(Note.fromMidi(noteOrMidi))
-                    else -> Note.get(noteOrMidi)
+                    is String -> Note.get(noteOrMidi)
+                    is Note -> noteOrMidi
+                    else -> Note.NoNote
                 }
                 val height = currNote.height
 

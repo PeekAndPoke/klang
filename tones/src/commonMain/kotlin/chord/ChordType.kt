@@ -58,10 +58,17 @@ object ChordTypeDictionary {
     }
 
     /**
-     * Given a chord name or chroma or set number, return the chord properties.
+     * Given a chord name, alias, chroma, or set number, return the chord properties.
      */
-    fun get(type: Any?): ChordType {
-        return index[type.toString()] ?: ChordType.NoChordType
+    fun get(type: String): ChordType {
+        return index[type] ?: ChordType.NoChordType
+    }
+
+    /**
+     * Given a set number, return the chord properties.
+     */
+    fun get(setNum: Int): ChordType {
+        return index[setNum.toString()] ?: ChordType.NoChordType
     }
 
     /**

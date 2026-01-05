@@ -92,18 +92,26 @@ sealed class TimeSignature {
         /**
          * Get time signature properties from a pair (numerator, denominator).
          */
-        fun get(literal: Pair<Any, Any>): TimeSignature {
-            val parsed = parseParts(literal.first.toString(), literal.second.toString()) ?: return Invalid
-            return buildTimeSignature(parsed.first, parsed.second)
+        fun get(literal: Pair<Int, Int>): TimeSignature {
+            return buildTimeSignature(listOf(literal.first), literal.second)
+        }
+
+        /**
+         * Get time signature properties from numerator and denominator.
+         */
+        fun get(upper: Int, lower: Int): TimeSignature {
+            return buildTimeSignature(listOf(upper), lower)
         }
 
         /**
          * Get time signature properties from a list [numerator, denominator].
+         * Supports additive numerators like [3, 2, 2] for the numerator list followed by denominator.
          */
-        fun get(literal: List<Any>): TimeSignature {
+        fun get(literal: List<Int>): TimeSignature {
             if (literal.size < 2) return Invalid
-            val parsed = parseParts(literal[0].toString(), literal[1].toString()) ?: return Invalid
-            return buildTimeSignature(parsed.first, parsed.second)
+            val upper = literal.dropLast(1)
+            val lower = literal.last()
+            return buildTimeSignature(upper, lower)
         }
 
         /**

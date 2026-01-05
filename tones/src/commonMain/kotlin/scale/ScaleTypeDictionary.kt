@@ -39,10 +39,17 @@ object ScaleTypeDictionary {
     fun names(): List<String> = dictionary.map { it.name }
 
     /**
-     * Given a scale name or chroma or set number, return the scale properties.
+     * Given a scale name, alias, chroma, or set number, return the scale properties.
      */
-    fun get(type: Any?): ScaleType {
-        return index[type.toString()] ?: ScaleType.NoScaleType
+    fun get(type: String): ScaleType {
+        return index[type] ?: ScaleType.NoScaleType
+    }
+
+    /**
+     * Given a set number, return the scale properties.
+     */
+    fun get(setNum: Int): ScaleType {
+        return index[setNum.toString()] ?: ScaleType.NoScaleType
     }
 
     /**

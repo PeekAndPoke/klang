@@ -37,9 +37,9 @@ class RomanNumeralTest : StringSpec({
     }
 
     "Can convert to intervals" {
-        Interval.get(RomanNumeral.get("I")).name shouldBe "1P"
-        Interval.get(RomanNumeral.get("bIIImaj4")).name shouldBe "3m"
-        Interval.get(RomanNumeral.get("#IV7")).name shouldBe "4A"
+        Interval.get(RomanNumeral.get("I").interval).name shouldBe "1P"
+        Interval.get(RomanNumeral.get("bIIImaj4").interval).name shouldBe "3m"
+        Interval.get(RomanNumeral.get("#IV7").interval).name shouldBe "4A"
     }
 
     "step" {
