@@ -82,6 +82,19 @@ fun transposeFifths(noteName: String, fifths: Int): String {
 }
 
 /**
+ * Transpose a note by a number of octaves.
+ *
+ * @param noteName The note name.
+ * @param octaves The number of octaves.
+ * @return The transposed note name.
+ */
+fun transposeOctaves(noteName: String, octaves: Int): String {
+    val n = note(noteName)
+    if (n.empty || n.oct == null) return n.name
+    return n.pc + (n.oct + octaves)
+}
+
+/**
  * Find the interval distance between two notes or pitch classes.
  *
  * @param fromNote The note or note name to calculate distance from.

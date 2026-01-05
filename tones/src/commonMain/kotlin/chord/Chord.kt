@@ -12,28 +12,27 @@ import io.peekandpoke.klang.tones.distance.transpose as transposeNote
 
 /**
  * Represents a musical chord.
- *
- * @property chordType The [ChordType] properties.
- * @property name The name of the chord (e.g., "C major seventh").
- * @property symbol The symbol of the chord (e.g., "Cmaj7").
- * @property tonic The tonic note of the chord, if applicable.
- * @property type The type of the chord (e.g., "major seventh").
- * @property root The root note of the chord (after inversions).
- * @property bass The bass note of the chord (if different from root).
- * @property rootDegree The degree of the chord that is at the root (1 for root position, 2 for 1st inversion, etc.).
- * @property notes The list of notes in the chord.
- * @property intervals The list of intervals in the chord.
  */
 class Chord(
+    /** The [ChordType] properties. */
     val chordType: ChordType,
+    /** The name of the chord (e.g., "C major seventh"). */
     val name: String,
+    /** The symbol of the chord (e.g., "Cmaj7"). */
     val symbol: String,
+    /** The tonic note of the chord, if applicable. */
     val tonic: String?,
+    /** The type of the chord (e.g., "major seventh"). */
     val type: String,
+    /** The root note of the chord (after inversions). */
     val root: String,
+    /** The bass note of the chord (if different from root). */
     val bass: String,
+    /** The degree of the chord that is at the root (1 for root position, 2 for 1st inversion, etc.). */
     val rootDegree: Int,
+    /** The list of notes in the chord. */
     val notes: List<String>,
+    /** The list of intervals in the chord. */
     val intervals: List<String>,
 ) {
     val empty: Boolean get() = chordType.empty

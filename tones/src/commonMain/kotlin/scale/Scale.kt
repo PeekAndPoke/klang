@@ -13,9 +13,13 @@ import io.peekandpoke.klang.tones.pcset.*
  * Represents a musical scale.
  */
 data class Scale(
+    /** The [ScaleType] properties. */
     val scaleType: ScaleType,
+    /** The tonic note of the scale, if applicable. */
     val tonic: String?,
+    /** The type of the scale (e.g., "major"). */
     val type: String,
+    /** The list of notes in the scale. */
     val notes: List<String>,
 ) {
     val empty: Boolean get() = scaleType.empty

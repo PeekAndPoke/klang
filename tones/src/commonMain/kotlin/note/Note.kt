@@ -193,8 +193,51 @@ fun sortedUniqNames(notes: List<String>): List<String> {
     return notes.map { note(it) }
         .filter { !it.empty }
         .distinctBy { it.pc }
-        .sortedBy { it.height }
+        .sortedWith(Ascending)
         .map { it.pc }
+}
+
+/**
+ * Comparator to sort notes by height in ascending order.
+ */
+val Ascending: Comparator<Note> = compareBy { it.height }
+
+/**
+ * Comparator to sort notes by height in descending order.
+ */
+val Descending: Comparator<Note> = compareBy<Note> { it.height }.reversed()
+
+/**
+ * Sorts a list of notes by height.
+ */
+fun sortedNoteNames(notes: List<String>): List<String> {
+    return notes.map { note(it) }
+        .filter { !it.empty }
+        .sortedWith(Ascending)
+        .map { it.name }
+}
+
+/**
+ * Sorts a list of notes by height and removes duplicates.
+ */
+fun sortedUniqNoteNames(notes: List<String>): List<String> {
+    return sortedNoteNames(notes).distinct()
+}
+
+/**
+ * Simplify a note name.
+ *
+ * @param noteName The note name or [Note] object.
+ * @return The simplified note name.
+ */
+fun simplify(noteName: Any?): String {
+    val n = note(noteName)
+    if (n.empty) return ""
+    return fromMidi(
+        midi = n.midi ?: n.height,
+        sharps = n.alt > 0,
+        pitchClass = n.oct == null
+    )
 }
 
 private fun parse(noteName: NoteName): Note {

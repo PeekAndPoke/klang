@@ -42,4 +42,31 @@ class NoteExtraTest : StringSpec({
         sortedUniqNames(listOf("f", "a", "c", "e", "g", "b", "d")) shouldBe listOf("C", "D", "E", "F", "G", "A", "B")
         sortedUniqNames(listOf("c#", "db", "d")) shouldBe listOf("C#", "Db", "D")
     }
+
+    "sortedNoteNames" {
+        sortedNoteNames(listOf("c2", "c5", "c1", "c0", "c6", "c")) shouldBe listOf("C", "C0", "C1", "C2", "C5", "C6")
+    }
+
+    "sortedUniqNoteNames" {
+        sortedUniqNoteNames(listOf("a", "b", "c2", "1p", "p2", "c2", "b", "c", "c3")) shouldBe listOf(
+            "C",
+            "A",
+            "B",
+            "C2",
+            "C3"
+        )
+    }
+
+    "simplify" {
+        simplify("C##") shouldBe "D"
+        simplify("C###") shouldBe "D#"
+        simplify("B#4") shouldBe "C5"
+        simplify("Cbb") shouldBe "Bb"
+    }
+
+    "transposeOctaves" {
+        io.peekandpoke.klang.tones.distance.transposeOctaves("C4", 1) shouldBe "C5"
+        io.peekandpoke.klang.tones.distance.transposeOctaves("C4", -1) shouldBe "C3"
+        io.peekandpoke.klang.tones.distance.transposeOctaves("C", 1) shouldBe "C"
+    }
 })
