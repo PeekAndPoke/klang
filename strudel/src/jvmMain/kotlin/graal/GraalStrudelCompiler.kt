@@ -43,7 +43,7 @@ class GraalStrudelCompiler(
     val performance: Value = exports.getMember("performance")
         ?: error("Error loading Strudel bundle: $bundleUrl, missing export 'performance' (polyfill)")
 
-    val core: Value = exports.getMember("core")
+    val core: Value = exports.getMember("utils")
         ?: error("Error loading Strudel bundle: $bundleUrl, missing export 'core'")
 
     val mini: Value = exports.getMember("mini")

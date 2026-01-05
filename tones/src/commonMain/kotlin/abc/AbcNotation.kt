@@ -3,9 +3,9 @@ package io.peekandpoke.klang.tones.abc
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.note.Note
 
-private val REGEX = Regex("""^(_{1,}|=|\^{1,}|)([abcdefgABCDEFG])([,']*)$""")
-
 object AbcNotation {
+    private val REGEX = Regex("""^(_{1,}|=|\^{1,}|)([abcdefgABCDEFG])([,']*)$""")
+
     /**
      * Tokenizes an ABC notation string into [accidentals, letter, octaveMarks].
      */

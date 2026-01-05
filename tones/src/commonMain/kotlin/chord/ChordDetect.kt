@@ -20,24 +20,37 @@ data class DetectOptions(
     val assumePerfectFifth: Boolean = false,
 )
 
+/**
+ * Chord detection utilities.
+ */
 object ChordDetect {
     /**
      * Detect a chord from a list of notes.
+     *
+     * @param source A list of note names.
+     * @param options Detection options.
+     * @return A list of possible chord names, sorted by probability.
      */
     fun detect(source: List<String>, options: DetectOptions = DetectOptions()): List<String> {
+        // 1. Get pitch classes of all notes and filter out invalid ones
         val notes = source.map { Note.get(it).pc }.filter { it.isNotEmpty() }
         if (notes.isEmpty()) {
             return emptyList()
         }
 
+        // 2. Find matches for the given notes
         val found = findMatches(notes, 1.0, options)
 
+        // 3. Filter out zero-weight results, sort by weight descending, and return the names
         return found
             .filter { it.weight > 0 }
             .sortedByDescending { it.weight }
             .map { it.name }
     }
 
+    /**
+     * Bitmask values for chord detection.
+     */
     private object Bitmask {
         // 3m 000100000000 -> index 3 (from left? No, Tonal uses binary string "1000..." where index 0 is C)
         // TonalJS chroma: "100010010000" for C major. C is index 0.
@@ -57,6 +70,9 @@ object ChordDetect {
         const val ANY_SEVENTH = 3
     }
 
+    /**
+     * Creates a function that tests if a chroma number contains specific bits.
+     */
     private fun testChromaNumber(bitmask: Int): (Int) -> Boolean = { chromaNumber ->
         (chromaNumber and bitmask) != 0
     }
@@ -66,6 +82,9 @@ object ChordDetect {
     private val hasAnySeventh = testChromaNumber(Bitmask.ANY_SEVENTH)
     private val hasNonPerfectFifth = testChromaNumber(Bitmask.NON_PERFECT_FIFTHS)
 
+    /**
+     * Returns true if the chord type has a third, a perfect fifth, and a seventh.
+     */
     private fun hasAnyThirdAndPerfectFifthAndAnySeventh(chordType: ChordType): Boolean {
         val chromaNumber = chordType.chroma.toInt(2)
         return hasAnyThird(chromaNumber) &&
@@ -73,6 +92,9 @@ object ChordDetect {
                 hasAnySeventh(chromaNumber)
     }
 
+    /**
+     * Adds a perfect fifth to a chroma if it doesn't already have a non-perfect fifth.
+     */
     private fun withPerfectFifth(chroma: String): String {
         val chromaNumber = chroma.toInt(2)
         return if (hasNonPerfectFifth(chromaNumber)) {
@@ -82,14 +104,23 @@ object ChordDetect {
         }
     }
 
+    /**
+     * Internal function to find matching chord types for a set of notes.
+     *
+     * @param notes The list of pitch classes to match.
+     * @param weight The base weight for these matches.
+     * @param options Detection options.
+     */
     private fun findMatches(
         notes: List<String>,
         weight: Double,
         options: DetectOptions,
     ): List<FoundChord> {
+        // The first note is considered the tonic for the purpose of identifying inversions
         val tonic = notes[0]
         val tonicChroma = Note.get(tonic).chroma
 
+        // Map chroma to note names for later use in naming the found chords
         val pcToName = mutableMapOf<Int, String>()
         notes.forEach { n ->
             val chroma = Note.get(n).chroma
@@ -100,18 +131,21 @@ object ChordDetect {
             }
         }
 
-        // we need to test all chromas to get the correct baseNote
+        // Generate all modes (rotations) of the pitch class set to test each note as a potential root
         val allModes = PcSet.modes(notes, false)
 
         val found = mutableListOf<FoundChord>()
         allModes.forEachIndexed { index, mode ->
+            // If optioned, assume a perfect fifth if it's missing (useful for power chords or incomplete voicings)
             val modeWithPerfectFifth = if (options.assumePerfectFifth) withPerfectFifth(mode) else mode
 
-            // some chords could have the same chroma but different interval spelling
+            // Find all chord types that match the current mode's chroma
             val chordTypes = ChordTypeDictionary.all().filter { chordType ->
                 if (options.assumePerfectFifth && hasAnyThirdAndPerfectFifthAndAnySeventh(chordType)) {
+                    // Match against the augmented chroma if it's a "standard" chord type
                     chordType.chroma == modeWithPerfectFifth
                 } else {
+                    // Standard exact match
                     chordType.chroma == mode
                 }
             }
@@ -120,6 +154,7 @@ object ChordDetect {
                 val chordAlias = chordType.aliases.firstOrNull() ?: ""
                 val baseNote = pcToName[index]
                 if (baseNote != null) {
+                    // If the current root (baseNote) is not the original tonic, it's an inversion
                     val isInversion = index != tonicChroma
                     if (isInversion) {
                         found.add(

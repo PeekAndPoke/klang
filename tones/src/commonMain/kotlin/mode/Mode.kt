@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.tones.mode
 
-import io.peekandpoke.klang.tones.collection.TonalArray
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.pcset.Pcset
 import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.scale.ScaleTypeDictionary
+import io.peekandpoke.klang.tones.utils.TonesArray
 
 /**
  * Represents a musical mode.
@@ -69,7 +69,7 @@ data class Mode(
         fun triads(modeName: Any?, tonic: String): List<String> {
             val m = get(modeName)
             if (m.empty) return emptyList()
-            val triadTypes = TonalArray.rotate(m.modeNum, listOf("", "m", "m", "", "", "m", "dim"))
+            val triadTypes = TonesArray.rotate(m.modeNum, listOf("", "m", "m", "", "", "m", "dim"))
             val tonics = m.intervals.map { Distance.transpose(tonic, it) }
             return triadTypes.mapIndexed { i, type -> tonics[i] + type }
         }
@@ -80,7 +80,7 @@ data class Mode(
         fun seventhChords(modeName: Any?, tonic: String): List<String> {
             val m = get(modeName)
             if (m.empty) return emptyList()
-            val seventhTypes = TonalArray.rotate(m.modeNum, listOf("Maj7", "m7", "m7", "Maj7", "7", "m7", "m7b5"))
+            val seventhTypes = TonesArray.rotate(m.modeNum, listOf("Maj7", "m7", "m7", "Maj7", "7", "m7", "m7b5"))
             val tonics = m.intervals.map { Distance.transpose(tonic, it) }
             return seventhTypes.mapIndexed { i, type -> tonics[i] + type }
         }

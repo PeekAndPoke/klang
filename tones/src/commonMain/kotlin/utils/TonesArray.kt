@@ -1,6 +1,14 @@
-package io.peekandpoke.klang.tones.collection
+package io.peekandpoke.klang.tones.utils
 
-object TonalArray {
+import kotlin.math.floor
+import kotlin.random.Random
+
+/**
+ * Utility functions for working with lists and ranges.
+ *
+ * Port of js original from @tonaljs/collection
+ */
+object TonesArray {
     /**
      * Creates a numeric range.
      *
@@ -48,11 +56,11 @@ object TonalArray {
      * @param rnd A random number generator (0.0 to 1.0).
      * @return The shuffled list.
      */
-    fun <T> shuffle(list: List<T>, rnd: () -> Double = { kotlin.random.Random.nextDouble() }): List<T> {
+    fun <T> shuffle(list: List<T>, rnd: () -> Double = { Random.nextDouble() }): List<T> {
         val mutable = list.toMutableList()
         var m = mutable.size
         while (m > 0) {
-            val i = kotlin.math.floor(rnd() * m--).toInt()
+            val i = floor(rnd() * m--).toInt()
             val t = mutable[m]
             mutable[m] = mutable[i]
             mutable[i] = t

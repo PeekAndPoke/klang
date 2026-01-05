@@ -1,6 +1,8 @@
-package io.peekandpoke.klang.tones.core
+package io.peekandpoke.klang.tones.utils
 
-object Core {
+import kotlin.math.abs
+
+object TonesUtils {
     /**
      * Repeats a string n times.
      *
@@ -9,6 +11,6 @@ object Core {
      * @return The repeated string.
      */
     fun fillStr(s: String, n: Int): String {
-        return s.repeat(kotlin.math.abs(n))
+        return s.repeat(abs(n))
     }
 }

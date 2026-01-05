@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.tones.pcset
 
-import io.peekandpoke.klang.tones.collection.TonalArray
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.note.Note
+import io.peekandpoke.klang.tones.utils.TonesArray
 
 /**
  * The properties of a pitch class set.
@@ -98,7 +98,7 @@ object PcSet {
      * Get a list of all possible pitch class sets (all possible chromas) *having C as root*.
      */
     fun chromas(): List<PcsetChroma> {
-        return TonalArray.range(2048, 4095).map { setNumToChroma(it) }
+        return TonesArray.range(2048, 4095).map { setNumToChroma(it) }
     }
 
     /**
@@ -109,9 +109,9 @@ object PcSet {
         val pcs = get(set)
         val binary = pcs.chroma.map { it.toString() }
 
-        return TonalArray.compact(
+        return TonesArray.compact(
             binary.indices.map { i ->
-                val r = TonalArray.rotate(i, binary)
+                val r = TonesArray.rotate(i, binary)
                 if (normalize && r[0] == "0") null else r.joinToString("")
             }
         )
@@ -177,7 +177,7 @@ object PcSet {
 
     private fun chromaRotations(chroma: String): List<String> {
         val binary = chroma.map { it.toString() }
-        return binary.indices.map { i -> TonalArray.rotate(i, binary).joinToString("") }
+        return binary.indices.map { i -> TonesArray.rotate(i, binary).joinToString("") }
     }
 
     private fun chromaToPcset(chroma: PcsetChroma): Pcset {

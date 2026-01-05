@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.tones.scale
 
 import io.peekandpoke.klang.tones.chord.ChordTypeDictionary
-import io.peekandpoke.klang.tones.collection.TonalArray
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.pcset.PcSet
+import io.peekandpoke.klang.tones.utils.TonesArray
 
 /**
  * Represents a musical musical scale.
@@ -96,7 +96,7 @@ data class Scale(
             val pitchClasses = notesChroma.split("").filter { it.isNotEmpty() }.toMutableList()
             pitchClasses[tonicChroma] = "1"
 
-            val scaleChroma = TonalArray.rotate(tonicChroma, pitchClasses).joinToString("")
+            val scaleChroma = TonesArray.rotate(tonicChroma, pitchClasses).joinToString("")
             val match = ScaleTypeDictionary.all().find { it.chroma == scaleChroma }
 
             val results = mutableListOf<String>()
@@ -149,7 +149,7 @@ data class Scale(
             val sortedPcs = pcset.distinct().sortedBy { Note.get(it).chroma }
 
             val tonicIndex = sortedPcs.indexOf(tonic)
-            return TonalArray.rotate(tonicIndex, sortedPcs)
+            return TonesArray.rotate(tonicIndex, sortedPcs)
         }
 
         /**
@@ -233,7 +233,7 @@ data class Scale(
                 val to = Note.get(toNote).height
                 if (from == -1 || to == -1) emptyList()
                 else {
-                    TonalArray.range(from, to)
+                    TonesArray.range(from, to)
                         .map { getName(it) }
                         .filterNotNull()
                 }
@@ -250,7 +250,7 @@ data class Scale(
                 val to = Note.get(toNote).height
                 if (from == -1 || to == -1) emptyList()
                 else {
-                    TonalArray.range(from, to)
+                    TonesArray.range(from, to)
                         .map { getName(it) }
                         .filterNotNull()
                 }

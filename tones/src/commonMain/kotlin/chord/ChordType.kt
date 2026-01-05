@@ -140,7 +140,7 @@ object ChordTypeDictionary {
 
 private object ChordsData {
     val CHORDS = listOf(
-        // ==Major==
+        // == Major ====================================================================================================
         listOf("1P 3M 5P", "major", "M ^  maj"),
         listOf("1P 3M 5P 7M", "major seventh", "maj7 Δ ma7 M7 Maj7 ^7"),
         listOf("1P 3M 5P 7M 9M", "major ninth", "maj9 Δ9 ^9"),
@@ -150,7 +150,7 @@ private object ChordsData {
         listOf("1P 3M 6m 7M", "major seventh flat sixth", "M7b6 ^7b6"),
         listOf("1P 3M 5P 7M 11A", "major seventh sharp eleventh", "maj#4 Δ#4 Δ#11 M7#11 ^7#11 maj7#11"),
 
-        // ==Minor==
+        // == Minor ====================================================================================================
         // '''Normal'''
         listOf("1P 3m 5P", "minor", "m min -"),
         listOf("1P 3m 5P 7m", "minor seventh", "m7 min7 mi7 -7"),
@@ -166,7 +166,7 @@ private object ChordsData {
         listOf("1P 3m 5d 7d", "diminished seventh", "dim7 °7 o7"),
         listOf("1P 3m 5d 7m", "half-diminished", "m7b5 ø -7b5 h7 h"),
 
-        // ==Dominant/Seventh==
+        // == Dominant / Seventh =======================================================================================
         // '''Normal'''
         listOf("1P 3M 5P 7m", "dominant seventh", "7 dom"),
         listOf("1P 3M 5P 7m 9M", "dominant ninth", "9"),
@@ -185,14 +185,14 @@ private object ChordsData {
         listOf("1P 5P 7m 9M 11P", "eleventh", "11"),
         listOf("1P 4P 5P 7m 9m", "suspended fourth flat ninth", "b9sus phryg 7b9sus 7b9sus4"),
 
-        // ==Other==
+        // == Other ===================================================================================================+
         listOf("1P 5P", "fifth", "5"),
         listOf("1P 3M 5A", "augmented", "aug + +5 ^#5"),
         listOf("1P 3m 5A", "minor augmented", "m#5 -#5 m+"),
         listOf("1P 3M 5A 7M", "augmented seventh", "maj7#5 maj7+5 +maj7 ^7#5"),
         listOf("1P 3M 5P 7M 9M 11A", "major sharp eleventh (lydian)", "maj9#11 Δ9#11 ^9#11"),
 
-        // ==Legacy==
+        // == Legacy ===================================================================================================
         listOf("1P 2M 4P 5P", "", "sus24 sus4add9"),
         listOf("1P 3M 5A 7M 9M", "", "maj9#5 Maj9#5"),
         listOf("1P 3M 5A 7m", "", "7#5 +7 7+ 7aug aug7"),

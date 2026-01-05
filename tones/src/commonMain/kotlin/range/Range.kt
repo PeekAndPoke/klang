@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.tones.range
 
-import io.peekandpoke.klang.tones.collection.TonalArray
 import io.peekandpoke.klang.tones.midi.Midi
+import io.peekandpoke.klang.tones.utils.TonesArray
 
 object TonalRange {
     /**
@@ -12,7 +12,7 @@ object TonalRange {
      * @return A list of MIDI numbers.
      */
     fun numeric(notes: List<Any>): List<Int> {
-        val midi: List<Int> = TonalArray.compact(
+        val midi: List<Int> = TonesArray.compact(
             notes.map { note ->
                 when (note) {
                     is Number -> note.toInt()
@@ -31,7 +31,7 @@ object TonalRange {
         for (i in 1 until midi.size) {
             val last = result.last()
             val next = midi[i]
-            result.addAll(TonalArray.range(last, next).drop(1))
+            result.addAll(TonesArray.range(last, next).drop(1))
         }
 
         return result
