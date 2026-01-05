@@ -5,7 +5,7 @@ import io.kotest.matchers.shouldBe
 
 class TonesRangeTest : StringSpec({
     "numericRange" {
-        TonesRange.numeric(emptyList()) shouldBe emptyList()
+        TonesRange.numeric(emptyList<String>()) shouldBe emptyList()
         TonesRange.numeric(listOf("C4")) shouldBe listOf(60)
 
         TonesRange.numeric(listOf(0, 10)) shouldBe listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)

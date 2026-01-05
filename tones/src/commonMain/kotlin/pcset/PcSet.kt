@@ -9,6 +9,14 @@ typealias PcSetChroma = String
 typealias PcSetNum = Int
 
 /**
+ * A checker function that can validate notes or chromas against a set.
+ */
+interface PcSetChecker {
+    operator fun invoke(chroma: String): Boolean
+    operator fun invoke(notes: List<String>): Boolean
+}
+
+/**
  * The properties of a pitch class set.
  */
 data class PcSet(
@@ -42,59 +50,72 @@ data class PcSet(
         /**
          * Returns true if the string is a valid chroma (12-length string with only 1s or 0s).
          */
-        fun isChroma(set: Any?): Boolean {
-            return set is String && REGEX.matches(set)
-        }
+        fun isChroma(set: String): Boolean = REGEX.matches(set)
 
         /**
          * Returns true if the number is a valid pcset number (0-4095).
          */
-        private fun isPcsetNum(set: Any?): Boolean {
-            return set is Int && set in 0..4095
-        }
+        private fun isPcsetNum(num: Int): Boolean = num in 0..4095
 
         /**
-         * Returns true if the object is a [PcSet].
+         * Get the pitch class set from a chroma string.
          */
-        fun isPcset(set: Any?): Boolean {
-            return set is PcSet && isChroma(set.chroma)
-        }
-
-        /**
-         * Get the pitch class set of a collection of notes or set number or chroma.
-         */
-        fun get(src: Any?): PcSet {
-            val chroma: PcSetChroma = when {
-                isChroma(src) -> src as PcSetChroma
-                isPcsetNum(src) -> setNumToChroma(src as PcSetNum)
-                src is List<*> -> listToChroma(src)
-                isPcset(src) -> (src as PcSet).chroma
-                else -> EmptyPcSet.chroma
-            }
-
+        fun get(chroma: String): PcSet {
+            if (!isChroma(chroma)) return EmptyPcSet
             return cache.getOrPut(chroma) { chromaToPcset(chroma) }
         }
 
         /**
+         * Get the pitch class set from a set number.
+         */
+        fun get(setNum: Int): PcSet {
+            if (!isPcsetNum(setNum)) return EmptyPcSet
+            return get(setNumToChroma(setNum))
+        }
+
+        /**
+         * Get the pitch class set from a collection of notes or intervals.
+         */
+        fun get(notes: List<String>): PcSet = get(listToChroma(notes))
+
+        /**
+         * Returns the [PcSet] itself.
+         */
+        fun get(pcset: PcSet): PcSet = pcset
+
+        /**
          * Get pitch class set chroma.
          */
-        fun chroma(set: Any?): PcSetChroma = get(set).chroma
+        fun chroma(set: String): PcSetChroma = if (isChroma(set)) set else get(set).chroma
+        fun chroma(setNum: Int): PcSetChroma = get(setNum).chroma
+        fun chroma(notes: List<String>): PcSetChroma = get(notes).chroma
+        fun chroma(pcset: PcSet): PcSetChroma = pcset.chroma
 
         /**
          * Get intervals (from C) of a set.
          */
-        fun intervals(set: Any?): List<String> = get(set).intervals
+        fun intervals(set: String): List<String> = get(set).intervals
+        fun intervals(setNum: Int): List<String> = get(setNum).intervals
+        fun intervals(notes: List<String>): List<String> = get(notes).intervals
+        fun intervals(pcset: PcSet): List<String> = pcset.intervals
 
         /**
          * Get pitch class set number.
          */
-        fun num(set: Any?): PcSetNum = get(set).setNum
+        fun num(set: String): PcSetNum = if (isChroma(set)) chromaToNumber(set) else get(set).setNum
+        fun num(notes: List<String>): PcSetNum = get(notes).setNum
+        fun num(pcset: PcSet): PcSetNum = pcset.setNum
 
         /**
          * Get the notes of a pcset starting from C.
          */
-        fun notes(set: Any?): List<String> {
-            return get(set).intervals.map { ivl -> Distance.transpose("C", ivl) }
+        fun notes(set: String): List<String> = notesInternal(get(set))
+        fun notes(setNum: Int): List<String> = notesInternal(get(setNum))
+        fun notes(notes: List<String>): List<String> = notesInternal(get(notes))
+        fun notes(pcset: PcSet): List<String> = notesInternal(pcset)
+
+        private fun notesInternal(pcset: PcSet): List<String> {
+            return pcset.intervals.map { ivl -> Distance.transpose("C", ivl) }
         }
 
         /**
@@ -108,9 +129,8 @@ data class PcSet(
          * Given a list of notes or a pcset chroma, produce the rotations
          * of the chroma discarding the ones that starts with "0".
          */
-        fun modes(set: Any?, normalize: Boolean = true): List<PcSetChroma> {
-            val pcs = get(set)
-            val binary = pcs.chroma.map { it.toString() }
+        fun modes(chroma: String, normalize: Boolean = true): List<PcSetChroma> {
+            val binary = chroma.map { it.toString() }
 
             return TonesArray.compact(
                 binary.indices.map { i ->
@@ -120,39 +140,53 @@ data class PcSet(
             )
         }
 
+        fun modes(notes: List<String>, normalize: Boolean = true): List<PcSetChroma> =
+            modes(listToChroma(notes), normalize)
+
         /**
          * Test if two pitch class sets are equal.
          */
-        fun isEqual(s1: Any?, s2: Any?): Boolean {
-            return get(s1).setNum == get(s2).setNum
-        }
+        fun isEqual(s1: String, s2: String): Boolean = num(s1) == num(s2)
+        fun isEqual(s1: List<String>, s2: List<String>): Boolean = num(s1) == num(s2)
 
         /**
          * Test if a collection of notes is a subset of a given set.
          */
-        fun isSubsetOf(set: Any?): (Any?) -> Boolean {
-            val s = get(set).setNum
-            return { notes ->
-                val o = get(notes).setNum
-                s != 0 && s != o && (o and s) == o
+        fun isSubsetOf(set: String): PcSetChecker {
+            val s = num(set)
+            return object : PcSetChecker {
+                override fun invoke(chroma: String): Boolean {
+                    val o = num(chroma)
+                    return s != 0 && s != o && (o and s) == o
+                }
+
+                override fun invoke(notes: List<String>): Boolean = invoke(listToChroma(notes))
             }
         }
+
+        fun isSubsetOf(notes: List<String>): PcSetChecker = isSubsetOf(listToChroma(notes))
 
         /**
          * Test if a collection of notes is a superset of a given set.
          */
-        fun isSupersetOf(set: Any?): (Any?) -> Boolean {
-            val s = get(set).setNum
-            return { notes ->
-                val o = get(notes).setNum
-                s != 0 && s != o && (o or s) == o
+        fun isSupersetOf(set: String): PcSetChecker {
+            val s = num(set)
+            return object : PcSetChecker {
+                override fun invoke(chroma: String): Boolean {
+                    val o = num(chroma)
+                    return s != 0 && s != o && (o or s) == o
+                }
+
+                override fun invoke(notes: List<String>): Boolean = invoke(listToChroma(notes))
             }
         }
+
+        fun isSupersetOf(notes: List<String>): PcSetChecker = isSupersetOf(listToChroma(notes))
 
         /**
          * Test if a given pitch class set includes a note.
          */
-        fun isNoteIncludedIn(set: Any?): (String) -> Boolean {
+        fun isNoteIncludedIn(set: String): (String) -> Boolean {
             val s = get(set)
             return { noteName ->
                 val n = Note.get(noteName)
@@ -160,13 +194,17 @@ data class PcSet(
             }
         }
 
+        fun isNoteIncludedIn(notes: List<String>): (String) -> Boolean = isNoteIncludedIn(listToChroma(notes))
+
         /**
          * Filter a list with a pitch class set.
          */
-        fun filter(set: Any?): (List<String>) -> List<String> {
+        fun filter(set: String): (List<String>) -> List<String> {
             val isIncluded = isNoteIncludedIn(set)
             return { notes -> notes.filter { isIncluded(it) } }
         }
+
+        fun filter(setNotes: List<String>): (List<String>) -> List<String> = filter(listToChroma(setNotes))
 
         /**
          * Converts a pcset number to a 12-digit chroma string.
@@ -196,8 +234,6 @@ data class PcSet(
         private fun chromaToPcset(chroma: PcSetChroma): PcSet {
             val setNum = chromaToNumber(chroma)
 
-            // Find the "normalized" version of the chroma (the smallest set number among all rotations)
-            // Only rotations starting with '1' (binary >= 2048) are considered.
             val normalizedNum = chromaRotations(chroma)
                 .map { chromaToNumber(it) }
                 .filter { it >= 2048 }
@@ -232,7 +268,7 @@ data class PcSet(
         /**
          * Converts a list of notes or intervals to a chroma string.
          */
-        private fun listToChroma(set: List<*>): PcSetChroma {
+        private fun listToChroma(set: List<String>): PcSetChroma {
             if (set.isEmpty()) {
                 return EmptyPcSet.chroma
             }
@@ -242,7 +278,6 @@ data class PcSet(
                 val p = Note.get(item)
 
                 if (p.empty) {
-                    // If not a note, try parsing as an interval
                     val i = Interval.get(item)
                     if (!i.empty) {
                         binary[i.chroma] = 1

@@ -1,3 +1,4 @@
+
 package io.peekandpoke.klang.tones.chord
 
 import io.peekandpoke.klang.tones.distance.Distance
@@ -65,20 +66,10 @@ class Chord(
             val oct = tokens[2]
             val rest = tokens[3]
 
-            return when (letter) {
-                "" -> {
-                    // If it doesn't start with a note, the whole name is treated as the chord type
-                    tokenizeBass("", name)
-                }
-
-                "A" if rest == "ug" -> {
-                    // Special case for "Aug" (Augmented) which starts with 'A' (a note)
-                    tokenizeBass("", "aug")
-                }
-
-                else -> {
-                    tokenizeBass(letter + acc, oct + rest)
-                }
+            return when {
+                letter == "" -> tokenizeBass("", name)
+                letter == "A" && rest == "ug" -> tokenizeBass("", "aug")
+                else -> tokenizeBass(letter + acc, oct + rest)
             }
         }
 
@@ -91,47 +82,43 @@ class Chord(
                 return Triple(note, split[0], "")
             }
 
-            // Try to parse the part after the slash as a note
             val tokens = Note.tokenize(split[1])
             val letter = tokens[0]
-            val acc = tokens[1]
             val oct = tokens[2]
             val rest = tokens[3]
 
-            // Only a pitch class is accepted as bass note (no octave, no rest)
             return if (letter != "" && oct == "" && rest == "") {
-                Triple(note, split[0], letter + acc)
+                Triple(note, split[0], letter + tokens[1])
             } else {
-                // If not a valid note, treat the slash as part of the chord type
                 Triple(note, chord, "")
             }
         }
 
         /**
-         * Get a Chord from a chord name or tokens.
+         * Get a Chord from a chord name string.
          */
-        fun get(src: Any?): Chord {
-            return when (src) {
-                is String -> {
-                    if (src.isEmpty()) return NoChord
-                    val (tonic, type, bass) = tokenize(src)
-                    val chord = getChord(type, tonic, bass)
+        fun get(src: String): Chord {
+            if (src.isEmpty()) return NoChord
+            val (tonic, type, bass) = tokenize(src)
+            val chord = getChord(type, tonic, bass)
 
-                    // If parsing with detected tonic fails, try parsing the whole string as the chord type
-                    if (chord.empty) getChord(src, "", "") else chord
-                }
-
-                is List<*> -> {
-                    val list = src.map { it.toString() }
-                    val tonic = list.getOrNull(0) ?: ""
-                    val type = list.getOrNull(1) ?: ""
-                    val bass = list.getOrNull(2) ?: ""
-                    getChord(type, tonic, bass)
-                }
-
-                else -> NoChord
-            }
+            return if (chord.empty) getChord(src, "", "") else chord
         }
+
+        /**
+         * Get a Chord from a list of tokens [tonic, type, bass].
+         */
+        fun get(src: List<String>): Chord {
+            val tonic = src.getOrNull(0) ?: ""
+            val type = src.getOrNull(1) ?: ""
+            val bass = src.getOrNull(2) ?: ""
+            return getChord(type, tonic, bass)
+        }
+
+        /**
+         * Returns the chord itself.
+         */
+        fun get(chord: Chord): Chord = chord
 
         /**
          * Get chord properties.
@@ -141,7 +128,6 @@ class Chord(
             val tonicNote = Note.get(optionalTonic ?: "")
             val bassNote = Note.get(optionalBass ?: "")
 
-            // Validate inputs
             if (type.empty ||
                 (!optionalTonic.isNullOrEmpty() && tonicNote.empty) ||
                 (!optionalBass.isNullOrEmpty() && bassNote.empty)
@@ -149,23 +135,19 @@ class Chord(
                 return NoChord
             }
 
-            // Detect inversion if bass note is provided
-            val bassInterval =
-                if (tonicNote.empty || bassNote.empty) "" else Distance.distance(tonicNote.pc, bassNote.pc)
+            val bassInterval = if (tonicNote.empty || bassNote.empty) "" else Distance.distance(tonicNote, bassNote)
             val bassIndex = if (bassInterval.isEmpty()) -1 else type.intervals.indexOf(bassInterval)
 
             val hasRoot = bassIndex >= 0
-            val root = if (hasRoot) bassNote else Note.get("")
+            val root = if (hasRoot) bassNote else Note.NoNote
             val rootDegree = if (bassIndex == -1) 0 else bassIndex + 1
             val hasBass = bassNote.pc.isNotEmpty() && bassNote.pc != tonicNote.pc
 
             val intervals = type.intervals.toMutableList()
 
-            // Rearrange intervals based on inversion (rootDegree)
             if (hasRoot) {
                 repeat((1 until rootDegree).count()) {
                     val first = intervals[0]
-                    // Move interval to next octave (e.g. 3rd becomes 10th)
                     val numStr = first.takeWhile { it.isDigit() || it == '-' || it == '+' }
                     val quality = first.drop(numStr.length)
                     val newNum = numStr.toInt() + 7
@@ -173,31 +155,27 @@ class Chord(
                     intervals.removeAt(0)
                 }
             } else if (hasBass) {
-                // If bass is not in the chord, add it as a new interval at the bottom
-                val ivl = Interval.subtract(Distance.distance(tonicNote.pc, bassNote.pc), "8P")
+                val ivl = Interval.subtract(Distance.distance(tonicNote, bassNote), "8P")
                 if (ivl.isNotEmpty()) {
                     intervals.add(0, ivl)
                 }
             }
 
-            // Calculate note names from tonic and intervals
             val notes = if (tonicNote.empty) emptyList() else intervals.map { Distance.transpose(tonicNote.pc, it) }
-
             val actualTypeName = if (typeName in type.aliases) typeName else type.aliases.firstOrNull() ?: ""
 
-            // Construct symbol and name strings
             val symbol = "${if (tonicNote.empty) "" else tonicNote.pc}$actualTypeName${
                 if (hasRoot && rootDegree > 1) "/" + root.pc else if (hasBass) "/" + bassNote.pc else ""
             }"
 
-            val name =
-                "${if (optionalTonic != null && optionalTonic.isNotEmpty()) tonicNote.pc + " " else ""}${type.name}${
-                    if (hasRoot && rootDegree > 1) " over " + root.pc else if (hasBass) " over " + bassNote.pc else ""
-                }"
+            val namePrefix = if (!optionalTonic.isNullOrEmpty()) tonicNote.pc + " " else ""
+            val overPart =
+                if (hasRoot && rootDegree > 1) " over " + root.pc else if (hasBass) " over " + bassNote.pc else ""
+            val fullName = "$namePrefix${type.name}$overPart"
 
             return Chord(
                 chordType = type,
-                name = name,
+                name = fullName,
                 symbol = symbol,
                 tonic = tonicNote.pc,
                 type = type.name,
@@ -214,9 +192,7 @@ class Chord(
          */
         fun transpose(chordName: String, interval: String): String {
             val (tonic, type, bass) = tokenize(chordName)
-            if (tonic.isEmpty()) {
-                return chordName
-            }
+            if (tonic.isEmpty()) return chordName
             val tr = if (bass.isEmpty()) "" else Distance.transpose(bass, interval)
             val slash = if (tr.isEmpty()) "" else "/$tr"
             return Distance.transpose(tonic, interval) + type + slash
@@ -263,7 +239,7 @@ class Chord(
         /**
          * Return the chord notes.
          */
-        fun notes(chordName: Any?, tonic: String? = null): List<String> {
+        fun notes(chordName: String, tonic: String? = null): List<String> {
             val chord = get(chordName)
             val t = if (tonic.isNullOrEmpty()) chord.tonic else tonic
             if (t.isNullOrEmpty() || chord.empty) return emptyList()
@@ -273,7 +249,7 @@ class Chord(
         /**
          * Returns a function to get a note name from the chord degree.
          */
-        fun degrees(chordName: Any?, tonic: String? = null): (Int) -> String {
+        fun degrees(chordName: String, tonic: String? = null): (Int) -> String {
             val chord = get(chordName)
             val t = if (tonic.isNullOrEmpty()) chord.tonic else tonic
             val transposer = Distance.tonicIntervalsTransposer(chord.intervals, t)
@@ -285,7 +261,7 @@ class Chord(
         /**
          * Same as `degrees` but with 0-based index.
          */
-        fun steps(chordName: Any?, tonic: String? = null): (Int) -> String {
+        fun steps(chordName: String, tonic: String? = null): (Int) -> String {
             val chord = get(chordName)
             val t = if (tonic.isNullOrEmpty()) chord.tonic else tonic
             return Distance.tonicIntervalsTransposer(chord.intervals, t)

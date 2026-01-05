@@ -79,36 +79,30 @@ sealed class TimeSignature {
         fun names(): List<String> = NAMES.toList()
 
         /**
-         * Get time signature properties.
-         *
-         * @param literal A string (e.g., "4/4", "3+2/8") or a pair of integers.
+         * Get time signature properties from a string (e.g., "4/4", "3+2/8").
          */
-        fun get(literal: Any?): TimeSignature {
-            val parsed = when (literal) {
-                is String -> {
-                    val match = REGEX.matchEntire(literal)
-                    if (match != null) {
-                        val up = match.groupValues[1]
-                        val low = match.groupValues[2]
-                        parseParts(up, low)
-                    } else {
-                        null
-                    }
-                }
+        fun get(literal: String): TimeSignature {
+            val match = REGEX.matchEntire(literal) ?: return Invalid
+            val up = match.groupValues[1]
+            val low = match.groupValues[2]
+            val parsed = parseParts(up, low) ?: return Invalid
+            return buildTimeSignature(parsed.first, parsed.second)
+        }
 
-                is Pair<*, *> -> {
-                    parseParts(literal.first.toString(), literal.second.toString())
-                }
+        /**
+         * Get time signature properties from a pair (numerator, denominator).
+         */
+        fun get(literal: Pair<Any, Any>): TimeSignature {
+            val parsed = parseParts(literal.first.toString(), literal.second.toString()) ?: return Invalid
+            return buildTimeSignature(parsed.first, parsed.second)
+        }
 
-                is List<*> -> {
-                    if (literal.size >= 2) {
-                        parseParts(literal[0].toString(), literal[1].toString())
-                    } else null
-                }
-
-                else -> null
-            } ?: return Invalid
-
+        /**
+         * Get time signature properties from a list [numerator, denominator].
+         */
+        fun get(literal: List<Any>): TimeSignature {
+            if (literal.size < 2) return Invalid
+            val parsed = parseParts(literal[0].toString(), literal[1].toString()) ?: return Invalid
             return buildTimeSignature(parsed.first, parsed.second)
         }
 

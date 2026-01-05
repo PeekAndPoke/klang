@@ -11,14 +11,27 @@ import kotlin.math.floor
 object Distance {
     /**
      * Transpose a note by an interval.
-     *
-     * @param noteName The note or note name to transposeNote.
-     * @param intervalName The interval or interval name to use for transposition.
-     * @return The transposed note name or empty string if inputs are invalid.
      */
-    fun transpose(noteName: Any?, intervalName: Any?): String {
-        val n = Note.get(noteName)
-        val i = Interval.get(intervalName)
+    fun transpose(note: String, interval: String): String {
+        val n = Note.get(note)
+        val i = Interval.get(interval)
+
+        return transposeInternal(n, i)
+    }
+
+    fun transpose(note: Note, interval: String): String =
+        transposeInternal(note, Interval.get(interval))
+
+    fun transpose(note: String, interval: Interval): String =
+        transposeInternal(Note.get(note), interval)
+
+    fun transpose(note: Note, interval: Interval): String =
+        transposeInternal(note, interval)
+
+    private fun transposeInternal(n: Note, i: Interval): String {
+        if (n.empty || i.empty) {
+            return ""
+        }
 
         if (n.empty || i.empty) {
             return ""
@@ -98,15 +111,21 @@ object Distance {
     }
 
     /**
-     * Find the interval distance between two notes or pitch classes.
-     *
-     * @param fromNote The note or note name to calculate distance from.
-     * @param toNote The note or note name to calculate distance to.
-     * @return The interval name or empty string if inputs are invalid.
+     * Find the interval distance between two notes.
      */
-    fun distance(fromNote: Any?, toNote: Any?): String {
-        val from = Note.get(fromNote)
-        val to = Note.get(toNote)
+    fun distance(from: String, to: String): String =
+        distanceInternal(Note.get(from), Note.get(to))
+
+    fun distance(from: Note, to: String): String =
+        distanceInternal(from, Note.get(to))
+
+    fun distance(from: String, to: Note): String =
+        distanceInternal(Note.get(from), to)
+
+    fun distance(from: Note, to: Note): String =
+        distanceInternal(from, to)
+
+    private fun distanceInternal(from: Note, to: Note): String {
         if (from.empty || to.empty) {
             return ""
         }

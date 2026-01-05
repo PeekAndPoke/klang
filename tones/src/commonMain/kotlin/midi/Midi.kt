@@ -10,30 +10,32 @@ object Midi {
     /**
      * Returns true if the argument is a valid MIDI number (0-127).
      */
-    fun isMidi(arg: Any?): Boolean {
-        val n = when (arg) {
-            is Number -> arg.toDouble()
-            is String -> arg.toDoubleOrNull()
-            else -> return false
-        }
-        return n != null && n >= 0 && n <= 127
+    fun isMidi(n: Number): Boolean {
+        val d = n.toDouble()
+        return d >= 0 && d <= 127
+    }
+
+    fun isMidi(s: String): Boolean {
+        val n = s.toDoubleOrNull() ?: return false
+        return n >= 0 && n <= 127
     }
 
     /**
      * Get the note MIDI number (a number between 0 and 127).
      * Returns null if not a valid note name.
      */
-    fun toMidi(note: Any?): Int? {
-        if (isMidi(note)) {
-            return when (note) {
-                is Number -> note.toInt()
-                is String -> note.toDouble().toInt()
-                else -> null
-            }
-        }
+    fun toMidi(note: String): Int? {
+        if (isMidi(note)) return note.toDouble().toInt()
         val n = Note.get(note)
         return if (n.empty) null else n.midi
     }
+
+    fun toMidi(note: Number): Int? {
+        if (isMidi(note)) return note.toInt()
+        return null
+    }
+
+    fun toMidi(note: Note): Int? = note.midi
 
     /**
      * Get the frequency in hertz from MIDI number.
@@ -85,32 +87,27 @@ object Midi {
     /**
      * Given a list of MIDI numbers or a chroma string, returns the pitch class set (unique chroma numbers).
      */
-    fun pcSet(notes: Any): List<Int> {
-        return when (notes) {
-            is String -> {
-                // If it's a chroma string, return indices of '1's
-                notes.mapIndexedNotNull { index, c ->
-                    if (index < 12 && c == '1') index else null
-                }
-            }
-
-            is List<*> -> {
-                // If it's a list, return unique chromas
-                notes.filterIsInstance<Number>()
-                    .map { chroma(it.toDouble()) }
-                    .distinct()
-                    .sorted()
-            }
-
-            else -> emptyList()
+    fun pcSet(chroma: String): List<Int> {
+        // If it's a chroma string, return indices of '1's
+        return chroma.mapIndexedNotNull { index, c ->
+            if (index < 12 && c == '1') index else null
         }
+    }
+
+    fun pcSet(notes: List<Number>): List<Int> {
+        // If it's a list, return unique chromas
+        return notes.map { chroma(it.toDouble()) }
+            .distinct()
+            .sorted()
     }
 
     /**
      * Returns a function that finds the nearest MIDI note of a pitch class set.
      */
-    fun pcSetNearest(notes: Any): (Double) -> Double? {
-        val set = pcSet(notes)
+    fun pcSetNearest(chroma: String): (Double) -> Double? = createNearest(pcSet(chroma))
+    fun pcSetNearest(notes: List<Number>): (Double) -> Double? = createNearest(pcSet(notes))
+
+    private fun createNearest(set: List<Int>): (Double) -> Double? {
         return { midi ->
             val ch = chroma(midi)
             var found: Double? = null
@@ -135,8 +132,10 @@ object Midi {
      * Returns a function to map a pitch class set over any note.
      * step 0 means the first note, step 1 the second, and so on.
      */
-    fun pcSetSteps(notes: Any, tonic: Double): (Int) -> Double {
-        val set = pcSet(notes)
+    fun pcSetSteps(chroma: String, tonic: Double): (Int) -> Double = createSteps(pcSet(chroma), tonic)
+    fun pcSetSteps(notes: List<Number>, tonic: Double): (Int) -> Double = createSteps(pcSet(notes), tonic)
+
+    private fun createSteps(set: List<Int>, tonic: Double): (Int) -> Double {
         val len = set.size
         return { step ->
             if (len == 0) {
@@ -153,7 +152,14 @@ object Midi {
      * Returns a function to map a pitch class set over any note.
      * Same as pcsetSteps, but returns null for degree 0.
      */
-    fun pcSetDegrees(notes: Any, tonic: Double): (Int) -> Double? {
+    fun pcSetDegrees(chroma: String, tonic: Double): (Int) -> Double? {
+        val steps = pcSetSteps(chroma, tonic)
+        return { degree ->
+            if (degree == 0) null else steps(if (degree > 0) degree - 1 else degree)
+        }
+    }
+
+    fun pcSetDegrees(notes: List<Number>, tonic: Double): (Int) -> Double? {
         val steps = pcSetSteps(notes, tonic)
         return { degree ->
             if (degree == 0) null else steps(if (degree > 0) degree - 1 else degree)

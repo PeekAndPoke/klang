@@ -3,6 +3,7 @@ package io.peekandpoke.klang.tones.note
 import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.pitch.PitchCoordinates
+import kotlin.jvm.JvmName
 import kotlin.math.pow
 
 typealias NoteWithOctave = String
@@ -62,16 +63,42 @@ data class Note(
         )
 
         /**
-         * Returns a [Note] from a given source (string, Note, or Pitch).
+         * Internal cache for parsed notes.
          */
-        fun get(src: Any?): Note {
-            return when (src) {
-                is String -> parse(src)
-                is Note -> src
-                is Pitch -> get(pitchName(src))
-                is NamedPitch -> get(src.name)
-                else -> NoNote
-            }
+        private val cache = mutableMapOf<String, Note>()
+
+        /**
+         * Returns a [Note] from a string name.
+         */
+        fun get(name: String): Note = cache.getOrPut(name) { parse(name) }
+
+        /**
+         * Returns the [Note] itself.
+         */
+        fun get(note: Note): Note = note
+
+        /**
+         * Converts a [Pitch] to a [Note].
+         */
+        fun get(pitch: Pitch): Note {
+            val name = pitchName(pitch)
+            return if (name.isEmpty()) NoNote else get(name)
+        }
+
+        /**
+         * Converts a [NamedPitch] to a [Note].
+         */
+        fun get(named: NamedPitch): Note = get(named.name)
+
+        /**
+         * Unified getter for generic sources.
+         */
+        fun get(src: Any?): Note = when (src) {
+            is String -> get(src)
+            is Note -> src
+            is Pitch -> get(src)
+            is NamedPitch -> get(src)
+            else -> NoNote
         }
 
         /**
@@ -177,14 +204,34 @@ data class Note(
         }
 
         /**
+         * Returns a list of natural note names ["C", "D", "E", "F", "G", "A", "B"].
+         */
+        fun names(): List<String> {
+            return listOf("C", "D", "E", "F", "G", "A", "B")
+        }
+
+        /**
          * Returns a list of note names.
          * If no argument is provided, returns natural note names ["C", "D", "E", "F", "G", "A", "B"].
          */
-        fun names(notes: List<Any?>? = null): List<String> {
-            if (notes == null) {
-                return listOf("C", "D", "E", "F", "G", "A", "B")
-            }
+        fun names(notes: List<String>): List<String> {
             return notes.map { get(it).name }.filter { it.isNotEmpty() }
+        }
+
+        /**
+         * Returns a list of note names from a list of various pitch sources.
+         */
+        @JvmName("namesFromAny")
+        fun names(notes: List<Any>): List<String> {
+            return notes.map { get(it).name }.filter { it.isNotEmpty() }
+        }
+
+        /**
+         * Returns a list of note names from a list that may contain nulls or invalid types.
+         */
+        @JvmName("namesFromNullableAny")
+        fun names(notes: List<Any?>): List<String> {
+            return notes.filterNotNull().map { get(it).name }.filter { it.isNotEmpty() }
         }
 
         /**
@@ -217,16 +264,28 @@ data class Note(
         /**
          * Simplify a note name.
          *
-         * @param noteName The note name or [Note] object.
+         * @param noteName The note name string.
          * @return The simplified note name.
          */
-        fun simplify(noteName: Any?): String {
+        fun simplify(noteName: String): String {
             val n = get(noteName)
             if (n.empty) return ""
             return fromMidi(
                 midi = n.midi ?: n.height,
                 sharps = n.alt > 0,
                 pitchClass = n.oct == null
+            )
+        }
+
+        /**
+         * Simplify a Note object.
+         */
+        fun simplify(note: Note): String {
+            if (note.empty) return ""
+            return fromMidi(
+                midi = note.midi ?: note.height,
+                sharps = note.alt > 0,
+                pitchClass = note.oct == null
             )
         }
 
@@ -265,6 +324,7 @@ data class Note(
          * Groups: 1: letter, 2: accidentals, 3: octave, 4: rest.
          */
         private val REGEX = Regex("""^([a-gA-G]?)(#{1,}|b{1,}|x{1,}|s{1,}|f{1,})?(-?\d*)\s*(.*)$""")
+
         /**
          * Semitones from C for each step (0-6).
          */

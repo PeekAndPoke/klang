@@ -4,7 +4,6 @@ import io.peekandpoke.klang.tones.chord.Chord
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.note.Note
-import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.utils.TonesRange
 
 object Voicing {
@@ -60,7 +59,7 @@ object Voicing {
 
         // Voicing intervals/notes from dictionary
         val voicings = sets.map { it.split(" ") }
-        val notesInRange = TonesRange.chromatic(range.map { it as Any })
+        val notesInRange = TonesRange.chromatic(range)
 
         val result = voicings.flatMap { voicing ->
             if (voicing.isEmpty()) return@flatMap emptyList()
@@ -72,11 +71,11 @@ object Voicing {
 
             // Find all instances of the bottom note within the specified range
             val bottomPitchClass = Distance.transpose(tonic, voicing[0])
-            val bottomChroma = Pitch.chroma(Note.get(bottomPitchClass))
+            val bottomChroma = Note.get(bottomPitchClass).chroma
             val topMidiInRange = Note.get(range.last()).midi ?: 0
 
             val starts = notesInRange
-                .filter { Pitch.chroma(Note.get(it)) == bottomChroma }
+                .filter { Note.get(it).chroma == bottomChroma }
                 .filter { start ->
                     // Check if the top note of the transposed voicing fits in range
                     val topNote = Distance.transpose(start, relativeIntervals.last())
@@ -95,12 +94,6 @@ object Voicing {
 
     /**
      * Get a sequence of voicings for a list of chords.
-     *
-     * @param chords A list of chord symbols.
-     * @param range The pitch range for the voicings.
-     * @param dictionary The voicing dictionary to use.
-     * @param voiceLeading The voice leading strategy to use.
-     * @param lastVoicing The initial previous voicing.
      */
     fun sequence(
         chords: List<String>,
