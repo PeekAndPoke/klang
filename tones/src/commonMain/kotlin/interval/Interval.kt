@@ -335,3 +335,28 @@ fun subtract(a: String, b: String): String {
 
     return coordToInterval(PitchCoordinates.Note(f1 - f2, o1 - o2)).name
 }
+
+/**
+ * Transpose an interval by a number of perfect fifths.
+ *
+ * @param intervalName The interval name.
+ * @param fifths The number of fifths.
+ */
+fun transposeFifths(intervalName: String, fifths: Int): String {
+    val i = interval(intervalName)
+    if (i.empty) return ""
+    val c = i.coord ?: return ""
+
+    val f = when (c) {
+        is PitchCoordinates.Interval -> c.fifths
+        is PitchCoordinates.Note -> c.fifths
+        is PitchCoordinates.PitchClass -> c.fifths
+    }
+    val o = when (c) {
+        is PitchCoordinates.Interval -> c.octaves
+        is PitchCoordinates.Note -> c.octaves
+        is PitchCoordinates.PitchClass -> 0
+    }
+
+    return coordToInterval(PitchCoordinates.Note(f + fifths, o)).name
+}

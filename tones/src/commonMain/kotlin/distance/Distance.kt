@@ -56,6 +56,32 @@ fun transpose(noteName: Any?, intervalName: Any?): String {
 }
 
 /**
+ * Transpose a note by a number of perfect fifths.
+ *
+ * @param noteName The note name.
+ * @param fifths The number of fifths.
+ * @return The transposed note name.
+ */
+fun transposeFifths(noteName: String, fifths: Int): String {
+    val n = note(noteName)
+    if (n.empty) return ""
+    val noteCoord = n.coord ?: return ""
+
+    val tr: PitchCoordinates = when (noteCoord) {
+        is PitchCoordinates.PitchClass -> {
+            PitchCoordinates.PitchClass(noteCoord.fifths + fifths)
+        }
+
+        is PitchCoordinates.Note -> {
+            PitchCoordinates.Note(noteCoord.fifths + fifths, noteCoord.octaves)
+        }
+
+        else -> return ""
+    }
+    return coordToNote(tr).name
+}
+
+/**
  * Find the interval distance between two notes or pitch classes.
  *
  * @param fromNote The note or note name to calculate distance from.
