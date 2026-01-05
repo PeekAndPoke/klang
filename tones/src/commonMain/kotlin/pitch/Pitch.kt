@@ -1,3 +1,5 @@
+@file:Suppress("DuplicatedCode")
+
 package io.peekandpoke.klang.tones.pitch
 
 /**

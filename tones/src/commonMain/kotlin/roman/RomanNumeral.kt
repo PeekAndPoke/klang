@@ -7,30 +7,29 @@ import io.peekandpoke.klang.tones.pitch.Pitch
 
 /**
  * Represents a roman numeral.
- *
- * @property step The step number: 0 = I, 1 = II, ... 6 = VII
- * @property alt Number of alterations: -1 = 'b', 0 = '', 1 = '#'
- * @property oct The octave (always 0 for roman numerals)
- * @property dir The direction (always 1 for roman numerals)
- * @property name The full name of the roman numeral (e.g., "#VIIb5")
- * @property empty Whether the roman numeral is empty
- * @property roman The roman numeral part (e.g., "VII")
- * @property interval The interval name (e.g., "7A")
- * @property acc The accidental string (e.g., "#")
- * @property chordType The chord type (e.g., "b5")
- * @property major Whether the roman numeral is uppercase
  */
 data class RomanNumeral(
+    /** The step number: 0 = I, 1 = II, ... 6 = VII */
     override val step: Int,
+    /** Number of alterations: -1 = 'b', 0 = '', 1 = '#' */
     override val alt: Int,
+    /** The octave (always 0 for roman numerals) */
     override val oct: Int? = 0,
+    /** The direction (always 1 for roman numerals) */
     override val dir: Int? = 1,
+    /** The full name of the roman numeral (e.g., "#VIIb5") */
     override val name: String = "",
+    /** Whether the roman numeral is empty */
     val empty: Boolean = false,
+    /** The roman numeral part (e.g., "VII") */
     val roman: String = "",
+    /** The interval name (e.g., "7A") */
     val interval: String = "",
+    /** The accidental string (e.g., "#") */
     val acc: String = "",
+    /** The chord type (e.g., "b5") */
     val chordType: String = "",
+    /** Whether the roman numeral is uppercase */
     val major: Boolean = true,
 ) : Pitch, NamedPitch {
     companion object {
