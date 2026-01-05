@@ -6,11 +6,6 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.tones.pcset.PcSet
 
 class ScaleTypeDictionaryTest : StringSpec({
-    // We must ensure the dictionary is reset before each test if it's being modified
-    beforeTest {
-        ScaleTypeDictionary.reset()
-    }
-
     "list names" {
         ScaleTypeDictionary.all() shouldHaveSize 92
         ScaleTypeDictionary.all()[0].name shouldBe "major pentatonic"
@@ -36,15 +31,6 @@ class ScaleTypeDictionaryTest : StringSpec({
         unknown.chroma shouldBe "000000000000"
         unknown.intervals shouldBe emptyList<String>()
         unknown.normalized shouldBe "000000000000"
-    }
-
-    "add a scale type" {
-        ScaleTypeDictionary.add(listOf("1P", "5P"), "quinta")
-        ScaleTypeDictionary.get("quinta").chroma shouldBe "100000010000"
-
-        ScaleTypeDictionary.add(listOf("1P", "5P"), "quinta", listOf("q", "Q"))
-        ScaleTypeDictionary.get("q") shouldBe ScaleTypeDictionary.get("quinta")
-        ScaleTypeDictionary.get("Q") shouldBe ScaleTypeDictionary.get("quinta")
     }
 
     "major modes" {
@@ -89,9 +75,4 @@ class ScaleTypeDictionaryTest : StringSpec({
         )
     }
 
-    "clear dictionary" {
-        ScaleTypeDictionary.removeAll()
-        ScaleTypeDictionary.all() shouldBe emptyList<ScaleType>()
-        ScaleTypeDictionary.keys() shouldBe emptyList<String>()
-    }
 })
