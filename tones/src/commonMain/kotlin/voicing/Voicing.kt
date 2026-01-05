@@ -19,6 +19,12 @@ object Voicing {
 
     /**
      * Get a voicing for a chord.
+     *
+     * @param chord The chord symbol (e.g., "Cmaj7").
+     * @param range The pitch range for the voicing (e.g., ["C3", "C5"]).
+     * @param dictionary The voicing dictionary to use.
+     * @param voiceLeading The voice leading strategy to use.
+     * @param lastVoicing The previous voicing, used for voice leading.
      */
     fun get(
         chord: String,
@@ -39,6 +45,10 @@ object Voicing {
 
     /**
      * Search for all possible voicings for a chord in a given range.
+     *
+     * @param chord The chord symbol (e.g., "Cmaj7").
+     * @param range The pitch range to search within.
+     * @param dictionary The voicing dictionary to use.
      */
     fun search(
         chord: String,
@@ -85,6 +95,12 @@ object Voicing {
 
     /**
      * Get a sequence of voicings for a list of chords.
+     *
+     * @param chords A list of chord symbols.
+     * @param range The pitch range for the voicings.
+     * @param dictionary The voicing dictionary to use.
+     * @param voiceLeading The voice leading strategy to use.
+     * @param lastVoicing The initial previous voicing.
      */
     fun sequence(
         chords: List<String>,

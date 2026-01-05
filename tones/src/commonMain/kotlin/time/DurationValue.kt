@@ -6,12 +6,19 @@ import kotlin.math.pow
  * Represents a musical duration value.
  */
 data class DurationValue(
+    /** Whether the duration is empty. */
     val empty: Boolean,
+    /** The decimal value of the duration (e.g., 0.25 for a quarter note). */
     val value: Double,
+    /** The name of the duration (e.g., "quarter", "q.."). */
     val name: String,
+    /** The fractional representation of the duration (numerator, denominator). */
     val fraction: Pair<Int, Int>,
+    /** The shorthand notation of the duration. */
     val shorthand: String,
+    /** The dots for the duration. */
     val dots: String,
+    /** A list of names for the duration. */
     val names: List<String>,
 ) {
     companion object {
@@ -108,7 +115,7 @@ data class DurationValue(
 
             // Scale up numerator and denominator to have a common denominator for dot calculations
             var numerator = fraction.first * p
-            var denominator = fraction.second * p
+            val denominator = fraction.second * p
             val base = numerator
 
             // Add the dot values (1/2, 1/4, 1/8, etc. of the base value)

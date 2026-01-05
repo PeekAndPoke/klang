@@ -6,29 +6,63 @@ import kotlin.math.log2
  * Represents a musical time signature.
  */
 sealed class TimeSignature {
+    /** Whether the time signature is empty/invalid. */
     abstract val empty: Boolean
+
+    /** The string representation of the time signature (e.g., "4/4", "3+2/8"). */
     abstract val name: String
+
+    /** The numerator of the time signature. */
     abstract val upper: Int
+
+    /** The denominator of the time signature. */
     abstract val lower: Int
+
+    /** The type of the time signature (e.g., "simple", "compound", "irregular", "irrational"). */
     abstract val type: String?
+
+    /** The additive parts of the numerator if it's an additive time signature (e.g., [3, 2] for "3+2/8"). */
     abstract val additive: List<Int>
 
+    /**
+     * Represents a valid musical time signature.
+     */
     data class Valid(
+        /** The string representation of the time signature. */
         override val name: String,
+        /** The numerator of the time signature. */
         override val upper: Int,
+        /** The denominator of the time signature. */
         override val lower: Int,
+        /** The type of the time signature. */
         override val type: String,
+        /** The additive parts of the numerator. */
         override val additive: List<Int> = emptyList(),
     ) : TimeSignature() {
+        /** Whether the time signature is empty/invalid. */
         override val empty: Boolean = false
     }
 
+    /**
+     * Represents an invalid or empty time signature.
+     */
     object Invalid : TimeSignature() {
+        /** Whether the time signature is empty/invalid. */
         override val empty: Boolean = true
+
+        /** The string representation of the time signature. */
         override val name: String = ""
+
+        /** The numerator of the time signature. */
         override val upper: Int = 0
+
+        /** The denominator of the time signature. */
         override val lower: Int = 0
+
+        /** The type of the time signature. */
         override val type: String? = null
+
+        /** The additive parts of the numerator. */
         override val additive: List<Int> = emptyList()
     }
 
