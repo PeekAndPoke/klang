@@ -93,11 +93,16 @@ object TonalPitch {
         val oct = pitch.oct
         val dir = pitch.dir ?: 1
 
+        // Calculation of fifths based on step and alterations
         val f = FIFTHS[step] + 7 * alt
+
         if (oct == null) {
             return PitchCoordinates.PitchClass(dir * f)
         }
+
+        // Calculation of octaves based on step and alterations
         val o = oct - STEPS_TO_OCTS[step] - 4 * alt
+
         return if (pitch.dir != null) {
             PitchCoordinates.Interval(dir * f, dir * o, dir)
         } else {
@@ -122,6 +127,7 @@ object TonalPitch {
                 val o = coord.octaves
                 val step = FIFTHS_TO_STEPS[unaltered(f)]
                 val alt = kotlin.math.floor((f + 1).toDouble() / 7).toInt()
+                // Reconstruct octave from coordinates
                 val oct = o + 4 * alt + STEPS_TO_OCTS[step]
                 Pitch(step = step, alt = alt, oct = oct)
             }
@@ -132,6 +138,7 @@ object TonalPitch {
                 val dir = coord.direction
                 val step = FIFTHS_TO_STEPS[unaltered(f)]
                 val alt = kotlin.math.floor((f + 1).toDouble() / 7).toInt()
+                // Reconstruct octave from coordinates
                 val oct = o + 4 * alt + STEPS_TO_OCTS[step]
                 Pitch(step = step, alt = alt, oct = oct, dir = dir)
             }
@@ -152,18 +159,31 @@ object TonalPitch {
         return src is NamedPitch
     }
 
+    /**
+     * Semitones from C for each step (0-6).
+     */
     private val SIZES = intArrayOf(0, 2, 4, 5, 7, 9, 11)
 
-    // The number of fifths of [C, D, E, F, G, A, B]
+    /**
+     * The number of fifths of [C, D, E, F, G, A, B] from C.
+     */
     private val FIFTHS = intArrayOf(0, 2, 4, -1, 1, 3, 5)
 
-    // The number of octaves it span each step
+    /**
+     * The number of octaves it spans for each step.
+     */
     private val STEPS_TO_OCTS = FIFTHS.map { fifths ->
         kotlin.math.floor((fifths * 7).toDouble() / 12).toInt()
     }.toIntArray()
 
+    /**
+     * Reverse mapping from fifths to steps.
+     */
     private val FIFTHS_TO_STEPS = intArrayOf(3, 0, 4, 1, 5, 2, 6)
 
+    /**
+     * Helper to get the unaltered step (0-6) from a number of fifths.
+     */
     private fun unaltered(f: Int): Int {
         val i = (f + 1) % 7
         return if (i < 0) 7 + i else i

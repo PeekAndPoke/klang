@@ -4,10 +4,12 @@ import kotlin.math.floor
 import kotlin.math.pow
 
 object Tones {
+    /** Mapping of note letters to their chroma value in the C major scale. */
     val noteIndex = mapOf(
         "c" to 0, "d" to 2, "e" to 4, "f" to 5, "g" to 7, "a" to 9, "b" to 11
     )
 
+    /** Mapping of accidental characters to semitone offsets. */
     val accIndex = mapOf(
         '#' to 1, 'b' to -1, 's' to 1, 'f' to -1
     )
@@ -18,6 +20,7 @@ object Tones {
     // Group 3: Oct (-?[0-9]*) -> Includes optional minus sign for C-1
     private val NOTE_REGEX = Regex("""^([a-gA-G])([#bsf]*)(-?[0-9]*)$""")
 
+    /** Definitions for common scale intervals (semitones from root). */
     private val SCALES = mapOf(
         "major" to listOf(0, 2, 4, 5, 7, 9, 11),
         "minor" to listOf(0, 2, 3, 5, 7, 8, 10),

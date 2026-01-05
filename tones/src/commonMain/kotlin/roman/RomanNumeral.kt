@@ -45,9 +45,19 @@ data class RomanNumeral(
             chordType = ""
         )
 
+        /** Standard uppercase roman numerals. */
         private val ROMANS = "I II III IV V VI VII"
+
+        /** List of uppercase roman numerals. */
         private val NAMES = ROMANS.split(" ")
+
+        /** List of lowercase roman numerals. */
         private val NAMES_MINOR = ROMANS.lowercase().split(" ")
+
+        /**
+         * Regular expression for parsing roman numeral strings.
+         * Groups: 1: accidentals, 2: roman numeral, 3: chord type/rest.
+         */
         private val REGEX = Regex("""^([#]{1,}|b{1,}|x{1,}|)(IV|I{1,3}|VI{0,2}|iv|i{1,3}|vi{0,2})([^IViv]*)$""")
 
         /**
@@ -85,6 +95,7 @@ data class RomanNumeral(
             return when (src) {
                 is String -> parse(src)
                 is Int -> {
+                    // 0-based index to major roman numeral
                     val name = NAMES.getOrNull(src) ?: ""
                     if (name.isNotEmpty()) parse(name) else NoRomanNumeral
                 }
@@ -96,6 +107,9 @@ data class RomanNumeral(
             }
         }
 
+        /**
+         * Internal parser for roman numeral strings.
+         */
         private fun parse(src: String): RomanNumeral {
             val tokens = tokenize(src)
             val name = tokens[0]
@@ -116,11 +130,13 @@ data class RomanNumeral(
                 empty = false,
                 name = name,
                 roman = roman,
+                // The interval name relative to the tonic
                 interval = Interval.get(io.peekandpoke.klang.tones.pitch.Pitch(step, alt, 0, dir)).name,
                 acc = acc,
                 chordType = chordType,
                 alt = alt,
                 step = step,
+                // If it's uppercase, it's major
                 major = roman == upperRoman,
                 oct = 0,
                 dir = dir

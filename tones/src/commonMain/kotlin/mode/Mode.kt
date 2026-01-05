@@ -3,29 +3,41 @@ package io.peekandpoke.klang.tones.mode
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.pcset.Pcset
-import io.peekandpoke.klang.tones.pitch.NamedPitch
-import io.peekandpoke.klang.tones.scale.ScaleTypeDictionary
 import io.peekandpoke.klang.tones.utils.TonesArray
 
 /**
  * Represents a musical mode.
  */
 data class Mode(
+    /** The pitch class set of the mode. */
     val pcset: Pcset,
+    /** The name of the mode. */
     val name: String,
+    /** The number of the mode (0-indexed) relative to the parent scale (e.g., Ionian = 0, Dorian = 1, etc.). */
     val modeNum: Int,
+    /** The number of fifths from C to the mode root (Ionian = 0, Dorian = 2, Lydian = -1, etc.). */
     val alt: Int,
+    /** The triad chord type of the mode. */
     val triad: String,
+    /** The seventh chord type of the mode. */
     val seventh: String,
+    /** The aliases of the mode. */
     val aliases: List<String>,
+    /** The chroma of the mode. */
     val chroma: String,
+    /** The normalized chroma of the mode. */
     val normalized: String,
+    /** The intervals of the mode. */
     val intervals: List<String>,
 ) {
+    /** Whether the mode is empty. */
     val empty: Boolean get() = pcset.empty
+
+    /** The decimal representation of the chroma bitmask (Bit 11 is the root). */
     val setNum: Int get() = pcset.setNum
 
     companion object {
+        /** An empty mode. */
         val NoMode = Mode(
             pcset = Pcset.EmptyPcset,
             name = "",
@@ -106,65 +118,3 @@ data class Mode(
     }
 }
 
-object ModeDictionary {
-    private val modes: List<Mode> by lazy {
-        listOf(
-            // modeNum, setNum, alt, name, triad, seventh, alias
-            toMode(0, 2773, 0, "ionian", "", "Maj7", "major"),
-            toMode(1, 2902, 2, "dorian", "m", "m7", ""),
-            toMode(2, 3418, 4, "phrygian", "m", "m7", ""),
-            toMode(3, 2741, -1, "lydian", "", "Maj7", ""),
-            toMode(4, 2774, 1, "mixolydian", "", "7", ""),
-            toMode(5, 2906, 3, "aeolian", "m", "m7", "minor"),
-            toMode(6, 3434, 5, "locrian", "dim", "m7b5", "")
-        )
-    }
-
-    private val index: Map<String, Mode> by lazy {
-        val idx = mutableMapOf<String, Mode>()
-        modes.forEach { mode ->
-            idx[mode.name] = mode
-            mode.aliases.forEach { alias -> idx[alias] = mode }
-        }
-        idx
-    }
-
-    fun get(name: Any?): Mode {
-        return when (name) {
-            is String -> index[name.lowercase()] ?: Mode.NoMode
-            is Mode -> name
-            is NamedPitch -> get(name.name)
-            else -> Mode.NoMode
-        }
-    }
-
-    fun all(): List<Mode> = modes.toList()
-
-    fun names(): List<String> = modes.map { it.name }
-
-    private fun toMode(
-        modeNum: Int,
-        setNum: Int,
-        alt: Int,
-        name: String,
-        triad: String,
-        seventh: String,
-        alias: String,
-    ): Mode {
-        val aliases = if (alias.isNotEmpty()) listOf(alias) else emptyList()
-        val st = ScaleTypeDictionary.get(name)
-        val chroma = setNum.toString(2)
-        return Mode(
-            pcset = st.pcset,
-            name = name,
-            modeNum = modeNum,
-            alt = alt,
-            triad = triad,
-            seventh = seventh,
-            aliases = aliases,
-            chroma = chroma,
-            normalized = chroma,
-            intervals = st.intervals
-        )
-    }
-}

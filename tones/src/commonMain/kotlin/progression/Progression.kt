@@ -17,6 +17,7 @@ object Progression {
     fun fromRomanNumerals(tonic: Any?, chords: List<String>): List<String> {
         return chords.map {
             val rn = RomanNumeral.get(it)
+            // Transpose the tonic by the roman numeral's interval and append the chord type
             Distance.transpose(tonic, rn.interval) + rn.chordType
         }
     }
@@ -32,7 +33,9 @@ object Progression {
     fun toRomanNumerals(tonic: Any?, chords: List<String>): List<String> {
         return chords.map { chordName ->
             val (root, chordType, _) = Chord.tokenize(chordName)
+            // Calculate the interval between the tonic and the chord root
             val intervalName = Distance.distance(tonic, root)
+            // Convert that interval to a roman numeral
             val roman = RomanNumeral.get(Interval.get(intervalName))
             roman.name + chordType
         }

@@ -4,6 +4,7 @@ import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.note.Note
 
 object AbcNotation {
+    /** Regular expression to parse ABC notation notes. Groups: 1: accidentals, 2: letter, 3: octave marks. */
     private val REGEX = Regex("""^(_{1,}|=|\^{1,}|)([abcdefgABCDEFG])([,']*)$""")
 
     /**
@@ -33,17 +34,20 @@ object AbcNotation {
 
         if (letter.isEmpty()) return ""
 
+        // Calculate octave from commas (down) and apostrophes (up)
         var o = 4
         for (char in oct) {
             if (char == ',') o-- else if (char == '\'') o++
         }
 
+        // Convert ABC accidentals to scientific notation accidentals
         val a = when {
             acc.startsWith('_') -> acc.replace('_', 'b')
             acc.startsWith('^') -> acc.replace('^', '#')
             else -> ""
         }
 
+        // Lowercase letters are one octave higher (octave 5)
         return if (letter[0].code > 96) {
             letter.uppercase() + a + (o + 1)
         } else {
@@ -63,15 +67,19 @@ object AbcNotation {
 
         val letter = n.letter
         val acc = n.acc
-        val oct = n.oct!!
+        val oct = n.oct
 
+        // Convert scientific notation accidentals to ABC accidentals
         val a = when {
             acc.startsWith('b') -> acc.replace('b', '_')
             acc.startsWith('#') -> acc.replace('#', '^')
             else -> ""
         }
 
+        // Notes from octave 5 onwards are lowercase in ABC
         val l = if (oct > 4) letter.lowercase() else letter
+
+        // Calculate octave marks (commas or apostrophes)
         val o = when {
             oct == 5 -> ""
             oct > 4 -> "'".repeat(oct - 5)

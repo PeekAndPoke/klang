@@ -28,9 +28,11 @@ object TonalRange {
         if (midi.size == 1) return listOf(midi[0])
 
         val result = mutableListOf(midi[0])
+        // Iterate through the provided notes/numbers and fill the gaps between them
         for (i in 1 until midi.size) {
             val last = result.last()
             val next = midi[i]
+            // Add range from last note to next note, skipping the first one (which is the last one added)
             result.addAll(TonesArray.range(last, next).drop(1))
         }
 

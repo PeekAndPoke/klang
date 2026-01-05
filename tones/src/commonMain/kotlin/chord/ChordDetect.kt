@@ -111,6 +111,7 @@ object ChordDetect {
      * @param weight The base weight for these matches.
      * @param options Detection options.
      */
+    @Suppress("SameParameterValue")
     private fun findMatches(
         notes: List<String>,
         weight: Double,

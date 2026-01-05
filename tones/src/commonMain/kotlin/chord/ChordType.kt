@@ -104,6 +104,7 @@ object ChordTypeDictionary {
             val aliases = row[2].split(" ")
             add(ivls, aliases, fullName)
         }
+        // Sort the dictionary by setNum for consistent ordering
         dictionary.sortBy { it.setNum }
     }
 
@@ -116,6 +117,8 @@ object ChordTypeDictionary {
         val chord = ChordType(pcset, fullName, quality, aliases, intervals)
 
         dictionary.add(chord)
+
+        // Index by name, chroma, setNum, and all aliases
         if (chord.name.isNotEmpty()) {
             index[chord.name] = chord
         }
@@ -127,6 +130,9 @@ object ChordTypeDictionary {
         return chord
     }
 
+    /**
+     * Helper to determine the [ChordQuality] from the intervals.
+     */
     private fun getQuality(intervals: List<String>): ChordQuality {
         return when {
             "5A" in intervals -> ChordQuality.Augmented

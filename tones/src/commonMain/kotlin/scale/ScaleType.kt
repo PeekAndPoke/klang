@@ -113,7 +113,10 @@ object ScaleTypeDictionary {
     ): ScaleType {
         val pcset = PcSet.get(intervals)
         val scale = ScaleType(pcset, name, aliases, intervals)
+
         dictionary.add(scale)
+
+        // Index by name, chroma, setNum, and all aliases
         index[scale.name] = scale
         index[scale.setNum.toString()] = scale
         index[scale.chroma] = scale

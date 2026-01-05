@@ -66,29 +66,37 @@ class Chord(
             val rest = tokens[3]
 
             return if (letter == "") {
+                // If it doesn't start with a note, the whole name is treated as the chord type
                 tokenizeBass("", name)
             } else if (letter == "A" && rest == "ug") {
+                // Special case for "Aug" (Augmented) which starts with 'A' (a note)
                 tokenizeBass("", "aug")
             } else {
                 tokenizeBass(letter + acc, oct + rest)
             }
         }
 
+        /**
+         * Splits a chord type string into [type, bass] if a slash is present.
+         */
         private fun tokenizeBass(note: String, chord: String): Triple<String, String, String> {
             val split = chord.split("/")
             if (split.size == 1) {
                 return Triple(note, split[0], "")
             }
+
+            // Try to parse the part after the slash as a note
             val tokens = Note.tokenize(split[1])
             val letter = tokens[0]
             val acc = tokens[1]
             val oct = tokens[2]
             val rest = tokens[3]
 
-            // Only a pitch class is accepted as bass note
+            // Only a pitch class is accepted as bass note (no octave, no rest)
             return if (letter != "" && oct == "" && rest == "") {
                 Triple(note, split[0], letter + acc)
             } else {
+                // If not a valid note, treat the slash as part of the chord type
                 Triple(note, chord, "")
             }
         }
@@ -102,6 +110,8 @@ class Chord(
                     if (src.isEmpty()) return NoChord
                     val (tonic, type, bass) = tokenize(src)
                     val chord = getChord(type, tonic, bass)
+
+                    // If parsing with detected tonic fails, try parsing the whole string as the chord type
                     if (chord.empty) getChord(src, "", "") else chord
                 }
 
@@ -125,13 +135,16 @@ class Chord(
             val tonicNote = Note.get(optionalTonic ?: "")
             val bassNote = Note.get(optionalBass ?: "")
 
+            // Validate inputs
             if (type.empty || (optionalTonic != null && optionalTonic.isNotEmpty() && tonicNote.empty) || (optionalBass != null && optionalBass.isNotEmpty() && bassNote.empty)) {
                 return NoChord
             }
 
+            // Detect inversion if bass note is provided
             val bassInterval =
                 if (tonicNote.empty || bassNote.empty) "" else Distance.distance(tonicNote.pc, bassNote.pc)
             val bassIndex = if (bassInterval.isEmpty()) -1 else type.intervals.indexOf(bassInterval)
+
             val hasRoot = bassIndex >= 0
             val root = if (hasRoot) bassNote else Note.get("")
             val rootDegree = if (bassIndex == -1) 0 else bassIndex + 1
@@ -139,9 +152,11 @@ class Chord(
 
             val intervals = type.intervals.toMutableList()
 
+            // Rearrange intervals based on inversion (rootDegree)
             if (hasRoot) {
                 for (i in 1 until rootDegree) {
                     val first = intervals[0]
+                    // Move interval to next octave (e.g. 3rd becomes 10th)
                     val numStr = first.takeWhile { it.isDigit() || it == '-' || it == '+' }
                     val quality = first.drop(numStr.length)
                     val newNum = numStr.toInt() + 7
@@ -149,16 +164,19 @@ class Chord(
                     intervals.removeAt(0)
                 }
             } else if (hasBass) {
+                // If bass is not in the chord, add it as a new interval at the bottom
                 val ivl = Interval.subtract(Distance.distance(tonicNote.pc, bassNote.pc), "8P")
                 if (ivl.isNotEmpty()) {
                     intervals.add(0, ivl)
                 }
             }
 
+            // Calculate note names from tonic and intervals
             val notes = if (tonicNote.empty) emptyList() else intervals.map { Distance.transpose(tonicNote.pc, it) }
 
             val actualTypeName = if (typeName in type.aliases) typeName else type.aliases.firstOrNull() ?: ""
 
+            // Construct symbol and name strings
             val symbol = "${if (tonicNote.empty) "" else tonicNote.pc}$actualTypeName${
                 if (hasRoot && rootDegree > 1) "/" + root.pc else if (hasBass) "/" + bassNote.pc else ""
             }"

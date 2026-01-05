@@ -8,8 +8,13 @@ import io.peekandpoke.klang.tones.pitch.TonalPitch
 import io.peekandpoke.klang.tones.range.TonalRange
 
 object Voicing {
+    /** Default range for searching voicings. */
     private val defaultRange = listOf("C3", "C5")
+
+    /** Default voicing dictionary (all available). */
     private val defaultDictionary = VoicingDictionaries.all
+
+    /** Default voice leading strategy (smallest top note difference). */
     private val defaultVoiceLeading = VoiceLeading.topNoteDiff
 
     /**
@@ -24,8 +29,10 @@ object Voicing {
     ): List<String> {
         val voicings = search(chord, range, dictionary)
         return if (lastVoicing.isEmpty()) {
+            // If no previous voicing, pick the first one found
             voicings.firstOrNull() ?: emptyList()
         } else {
+            // Apply voice leading strategy to choose the best voicing
             voiceLeading(voicings, lastVoicing)
         }
     }
@@ -41,16 +48,19 @@ object Voicing {
         val (tonic, symbol, _) = Chord.tokenize(chord)
         val sets = VoicingDictionaries.lookup(symbol, dictionary) ?: return emptyList()
 
+        // Voicing intervals/notes from dictionary
         val voicings = sets.map { it.split(" ") }
         val notesInRange = TonalRange.chromatic(range.map { it as Any })
 
         val result = voicings.flatMap { voicing ->
             if (voicing.isEmpty()) return@flatMap emptyList<List<String>>()
 
+            // Calculate intervals relative to the bottom note of the voicing
             val relativeIntervals = voicing.map {
                 Interval.subtract(it, voicing[0])
             }
 
+            // Find all instances of the bottom note within the specified range
             val bottomPitchClass = Distance.transpose(tonic, voicing[0])
             val bottomChroma = TonalPitch.chroma(Note.get(bottomPitchClass))
             val topMidiInRange = Note.get(range.last()).midi ?: 0
@@ -58,11 +68,13 @@ object Voicing {
             val starts = notesInRange
                 .filter { TonalPitch.chroma(Note.get(it)) == bottomChroma }
                 .filter { start ->
+                    // Check if the top note of the transposed voicing fits in range
                     val topNote = Distance.transpose(start, relativeIntervals.last())
                     (Note.get(topNote).midi ?: 0) <= topMidiInRange
                 }
                 .map { Note.enharmonic(it, bottomPitchClass) }
 
+            // Transpose the voicing starting from each valid start note
             starts.map { start ->
                 relativeIntervals.map { interval -> Distance.transpose(start, interval) }
             }

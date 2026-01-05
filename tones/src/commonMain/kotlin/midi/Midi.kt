@@ -54,7 +54,10 @@ object Midi {
         return round(v * 100.0) / 100.0
     }
 
+    /** List of sharp pitch classes. */
     private val SHARPS = "C C# D D# E F F# G G# A A# B".split(" ")
+
+    /** List of flat pitch classes. */
     private val FLATS = "C Db D Eb E F Gb G Ab A Bb B".split(" ")
 
     /**
@@ -85,12 +88,14 @@ object Midi {
     fun pcset(notes: Any): List<Int> {
         return when (notes) {
             is String -> {
+                // If it's a chroma string, return indices of '1's
                 notes.mapIndexedNotNull { index, c ->
                     if (index < 12 && c == '1') index else null
                 }
             }
 
             is List<*> -> {
+                // If it's a list, return unique chromas
                 notes.filterIsInstance<Number>()
                     .map { chroma(it.toDouble()) }
                     .distinct()
@@ -109,6 +114,7 @@ object Midi {
         return { midi ->
             val ch = chroma(midi)
             var found: Double? = null
+            // Look for the closest chroma by searching both directions (up and down)
             for (i in 0 until 12) {
                 val chUp = (ch + i) % 12
                 val chDown = (ch - i + 12) % 12

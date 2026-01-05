@@ -30,8 +30,13 @@ typealias PcsetChroma = String
 typealias PcsetNum = Int
 
 object PcSet {
+    /** Regular expression to validate chroma strings (12 binary digits). */
     private val REGEX = Regex("^[01]{12}$")
+
+    /** Cache for [Pcset] objects to avoid redundant calculations. */
     private val cache = mutableMapOf<PcsetChroma, Pcset>(Pcset.EmptyPcset.chroma to Pcset.EmptyPcset)
+
+    /** Standard intervals from C for each of the 12 semitones. */
     private val IVLS = listOf(
         "1P", "2m", "2M", "3m", "3M", "4P", "5d", "5P", "6m", "6M", "7m", "7M"
     )
@@ -167,21 +172,36 @@ object PcSet {
 
     //// PRIVATE ////
 
+    /**
+     * Converts a pcset number to a 12-digit chroma string.
+     */
     private fun setNumToChroma(num: Int): String {
         return num.toString(2).padStart(12, '0')
     }
 
+    /**
+     * Converts a chroma string to its corresponding decimal number.
+     */
     private fun chromaToNumber(chroma: String): Int {
         return chroma.toInt(2)
     }
 
+    /**
+     * Generates all 12 rotations of a chroma string.
+     */
     private fun chromaRotations(chroma: String): List<String> {
         val binary = chroma.map { it.toString() }
         return binary.indices.map { i -> TonesArray.rotate(i, binary).joinToString("") }
     }
 
+    /**
+     * Internal factory to create a [Pcset] from a chroma string.
+     */
     private fun chromaToPcset(chroma: PcsetChroma): Pcset {
         val setNum = chromaToNumber(chroma)
+
+        // Find the "normalized" version of the chroma (the smallest set number among all rotations)
+        // Only rotations starting with '1' (binary >= 2048) are considered.
         val normalizedNum = chromaRotations(chroma)
             .map { chromaToNumber(it) }
             .filter { it >= 2048 }
@@ -200,6 +220,9 @@ object PcSet {
         )
     }
 
+    /**
+     * Converts a chroma string to a list of interval names (from C).
+     */
     private fun chromaToIntervals(chroma: PcsetChroma): List<String> {
         val intervals = mutableListOf<String>()
         for (i in 0 until 12) {
@@ -210,6 +233,9 @@ object PcSet {
         return intervals
     }
 
+    /**
+     * Converts a list of notes or intervals to a chroma string.
+     */
     private fun listToChroma(set: List<*>): PcsetChroma {
         if (set.isEmpty()) {
             return Pcset.EmptyPcset.chroma
@@ -219,6 +245,7 @@ object PcSet {
         for (item in set) {
             var p = Note.get(item)
             if (p.empty) {
+                // If not a note, try parsing as an interval
                 val i = Interval.get(item)
                 if (!i.empty) {
                     binary[i.chroma] = 1

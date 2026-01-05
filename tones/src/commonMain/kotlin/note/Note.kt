@@ -110,36 +110,40 @@ data class Note(
             if (src.empty) return ""
 
             val dest = if (destination.isEmpty()) {
+                // If no destination is provided, find the simplest enharmonic equivalent (sharp or flat)
                 val sharps = src.alt < 0
                 get(fromMidi(src.midi ?: src.chroma, sharps = sharps, pitchClass = true))
             } else {
                 get(destination)
             }
 
+            // Must have same chroma to be enharmonic
             if (dest.empty || dest.chroma != src.chroma) {
                 return ""
             }
 
+            // Pitch classes don't need octave calculation
             if (src.oct == null) {
                 return dest.pc
             }
 
             // detect any octave overflow
-            // In TonalJS: const srcChroma = src.chroma - src.alt;
             // SEMI[src.step] is essentially src.chroma - src.alt
             val srcChroma = SEMI[src.step]
             val destChroma = SEMI[dest.step]
 
+            // Calculate octave offset based on step change (e.g. B# to C)
             val destOctOffset = when {
                 srcChroma > 11 || destChroma < 0 -> -1
                 srcChroma < 0 || destChroma > 11 -> 1
-                // NEW: handle B# / Cb octave changes within the 0-11 range
+                // handle B# / Cb octave changes within the 0-11 range
                 srcChroma == 0 && destChroma == 11 -> -1
                 srcChroma == 11 && destChroma == 0 -> 1
                 else -> 0
             }
 
-            val destOct = src.oct!! + destOctOffset
+            val destOct = src.oct + destOctOffset
+
             return dest.pc + destOct
         }
 
@@ -248,9 +252,20 @@ data class Note(
          */
         fun accToAlt(acc: String): Int = if (acc.isEmpty()) 0 else if (acc[0] == 'b') -acc.length else acc.length
 
+        /**
+         * Regular expression for parsing note strings.
+         * Groups: 1: letter, 2: accidentals, 3: octave, 4: rest.
+         */
         private val REGEX = Regex("""^([a-gA-G]?)(#{1,}|b{1,}|x{1,}|)(-?\d*)\s*(.*)$""")
+
+        /**
+         * Semitones from C for each step (0-6).
+         */
         private val SEMI = intArrayOf(0, 2, 4, 5, 7, 9, 11)
 
+        /**
+         * Parses a note name string into a [Note] object.
+         */
         private fun parse(noteName: NoteName): Note {
             val tokens = tokenize(noteName)
             if (tokens[0] == "" || tokens[3] != "") {
@@ -261,6 +276,7 @@ data class Note(
             val acc = tokens[1]
             val octStr = tokens[2]
 
+            // Calculate properties
             val step = (letter[0].code + 3) % 7
             val alt = accToAlt(acc)
             val oct = if (octStr.isNotEmpty()) octStr.toInt() else null
@@ -269,12 +285,18 @@ data class Note(
             val name = letter + acc + octStr
             val pc = letter + acc
             val chroma = (SEMI[step] + alt + 120) % 12
+
+            // Height is MIDI-like absolute value.
+            // If octave is missing, we use a very low offset for height comparison.
             val height = if (oct == null) {
                 ((SEMI[step] + alt) % 12 + 12) % 12 - 12 * 99
             } else {
                 SEMI[step] + alt + 12 * (oct + 1)
             }
+
             val midi = if (height in 0..127) height else null
+
+            // Frequency calculation based on A4 = 440Hz (MIDI 69)
             val freq = if (oct == null) null else 2.0.pow((height - 69).toDouble() / 12) * 440
 
             return Note(
@@ -294,6 +316,9 @@ data class Note(
             )
         }
 
+        /**
+         * Returns the note name string from [Pitch] properties.
+         */
         private fun pitchName(props: Pitch): NoteName {
             val step = props.step
             val alt = props.alt
@@ -308,5 +333,3 @@ data class Note(
         }
     }
 }
-
-private typealias mod = Double // Dummy to avoid issues, actually we don't need it if we used manual math

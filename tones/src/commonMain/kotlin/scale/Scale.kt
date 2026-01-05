@@ -43,17 +43,22 @@ data class Scale(
 
             val i = name.indexOf(" ")
             if (i < 0) {
+                // If no space, check if the whole name is a note.
+                // If yes, it's a note (no scale type). If no, it's a scale type (no tonic).
                 val n = Note.get(name)
                 return if (n.empty) Pair("", name.lowercase()) else Pair(n.name, "")
             }
 
+            // If there's a space, try to parse the first part as a tonic
             val tonicPart = name.substring(0, i)
             val tonic = Note.get(tonicPart)
 
             return if (tonic.empty) {
+                // If first part is not a note, try parsing the whole thing as a note (just in case)
                 val n = Note.get(name)
                 if (n.empty) Pair("", name.lowercase()) else Pair(n.name, "")
             } else {
+                // First part is tonic, the rest is the scale type
                 val type = name.substring(tonic.name.length).trim().lowercase()
                 Pair(tonic.name, type)
             }
@@ -67,11 +72,13 @@ data class Scale(
             val tonic = Note.get(tonicName).name
             val st = ScaleTypeDictionary.get(typeName)
 
+            // If scale type is not found, return NoScale
             if (st.empty) {
                 return NoScale
             }
 
             val type = st.name
+            // Calculate notes if tonic is present
             val notes = if (tonic.isNotEmpty()) {
                 st.intervals.map { Distance.transpose(tonic, it) }
             } else {
@@ -93,10 +100,14 @@ data class Scale(
             val tonicNote = Note.get(tonic ?: notes.firstOrNull() ?: "")
             val tonicChroma = if (tonicNote.chroma != -1) tonicNote.chroma else return emptyList()
 
+            // Prepare the chroma relative to the tonic
             val pitchClasses = notesChroma.split("").filter { it.isNotEmpty() }.toMutableList()
             pitchClasses[tonicChroma] = "1"
 
+            // Rotate chroma to start from the tonic
             val scaleChroma = TonesArray.rotate(tonicChroma, pitchClasses).joinToString("")
+
+            // Find exact matches in the dictionary
             val match = ScaleTypeDictionary.all().find { it.chroma == scaleChroma }
 
             val results = mutableListOf<String>()
@@ -108,6 +119,7 @@ data class Scale(
                 return results
             }
 
+            // Find extended matches (scales that contain these notes)
             extended(scaleChroma).forEach { scaleName ->
                 results.add("${tonicNote.name} $scaleName")
             }

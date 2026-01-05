@@ -59,6 +59,7 @@ object TonesArray {
     fun <T> shuffle(list: List<T>, rnd: () -> Double = { Random.nextDouble() }): List<T> {
         val mutable = list.toMutableList()
         var m = mutable.size
+        // Fisher-Yates shuffle algorithm
         while (m > 0) {
             val i = floor(rnd() * m--).toInt()
             val t = mutable[m]
@@ -80,6 +81,8 @@ object TonesArray {
         }
         val head = list[0]
         val tail = list.drop(1)
+
+        // Recursively find permutations of the tail and insert head at every possible position
         return permutations(tail).flatMap { perm ->
             (0..perm.size).map { i ->
                 val newPerm = perm.toMutableList()

@@ -102,6 +102,7 @@ object Rhythm {
         val len = pattern.size
         val rotated = MutableList(len) { 0 }
         for (i in 0 until len) {
+            // Calculate new position after rotation
             val pos = (((i - rotations) % len) + len) % len
             rotated[i] = pattern[pos]
         }
@@ -120,6 +121,7 @@ object Rhythm {
         var d = -1
 
         for (i in 0 until steps) {
+            // Distribute beats as evenly as possible across the steps
             val v = floor(i.toDouble() * (beats.toDouble() / steps.toDouble())).toInt()
             pattern[i] = if (v != d) 1 else 0
             d = v

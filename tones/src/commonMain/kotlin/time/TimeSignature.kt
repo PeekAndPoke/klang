@@ -33,7 +33,10 @@ sealed class TimeSignature {
     }
 
     companion object {
+        /** Common time signature names. */
         private val NAMES = listOf("4/4", "3/4", "2/4", "2/2", "12/8", "9/8", "6/8", "3/8")
+
+        /** Regular expression for time signatures (supports additive numerator like "3+2/8"). */
         private val REGEX = Regex("""^(\d*\d(?:\+\d)*)/(\d+)$""")
 
         /**
@@ -75,6 +78,9 @@ sealed class TimeSignature {
             return buildTimeSignature(parsed.first, parsed.second)
         }
 
+        /**
+         * Splits numerator and denominator and converts them to integers.
+         */
         private fun parseParts(up: String, low: String): Pair<List<Int>, Int>? {
             val upperList = up.split("+").mapNotNull { it.toIntOrNull() }
             val lower = low.toIntOrNull() ?: return null
@@ -82,11 +88,17 @@ sealed class TimeSignature {
             return Pair(upperList, lower)
         }
 
+        /**
+         * Checks if a number is a power of two.
+         */
         private fun isPowerOfTwo(x: Int): Boolean {
             if (x <= 0) return false
             return (log2(x.toDouble()) % 1.0) == 0.0
         }
 
+        /**
+         * Internal builder for [TimeSignature] objects.
+         */
         private fun buildTimeSignature(up: List<Int>, down: Int): TimeSignature {
             val totalUpper = up.sum()
             if (totalUpper == 0 || down == 0) return Invalid
@@ -94,6 +106,7 @@ sealed class TimeSignature {
             val name = if (up.size > 1) "${up.joinToString("+")}/$down" else "$totalUpper/$down"
             val additive = if (up.size > 1) up else emptyList()
 
+            // Determine time signature type
             val type = when {
                 down == 4 || down == 2 -> "simple"
                 down == 8 && totalUpper % 3 == 0 -> "compound"

@@ -27,6 +27,7 @@ object Distance {
         val noteCoord = n.coord ?: return ""
         val intervalCoord = i.coord ?: return ""
 
+        // Transposition is done by adding the fifths and octaves of the note and the interval coordinates.
         val tr: PitchCoordinates = when (noteCoord) {
             is PitchCoordinates.PitchClass -> {
                 val iFifths = when (intervalCoord) {
@@ -93,7 +94,7 @@ object Distance {
     fun transposeOctaves(noteName: String, octaves: Int): String {
         val n = Note.get(noteName)
         if (n.empty || n.oct == null) return n.name
-        return n.pc + (n.oct!! + octaves)
+        return n.pc + (n.oct + octaves)
     }
 
     /**
@@ -113,6 +114,7 @@ object Distance {
         val fcoord = from.coord ?: return ""
         val tcoord = to.coord ?: return ""
 
+        // Calculate the difference in fifths between the two notes.
         val fifths = when (tcoord) {
             is PitchCoordinates.PitchClass -> tcoord.fifths
             is PitchCoordinates.Note -> tcoord.fifths
@@ -123,12 +125,16 @@ object Distance {
             is PitchCoordinates.Interval -> fcoord.fifths
         }
 
+        // Calculate the difference in octaves.
+        // If both are notes, use the octave coordinates directly.
+        // Otherwise, calculate octaves based on the fifths difference.
         val octs = if (fcoord is PitchCoordinates.Note && tcoord is PitchCoordinates.Note) {
             tcoord.octaves - fcoord.octaves
         } else {
             -floor((fifths * 7).toDouble() / 12).toInt()
         }
 
+        // Handle edge case for unison descending intervals (e.g. C4 to C4 descending)
         val forceDescending = to.height == from.height &&
                 to.midi != null &&
                 from.oct == to.oct &&
@@ -152,10 +158,14 @@ object Distance {
         return { normalized ->
             if (tonic == null) ""
             else {
+                // Handle negative degrees and octave wrapping
                 val index = if (normalized < 0) (len - (-normalized % len)) % len else normalized % len
                 val octaves = floor(normalized.toDouble() / len).toInt()
+
+                // Calculate the interval name for the octave shift
                 val intervalName = if (octaves >= 0) "P${octaves * 7 + 1}" else "P${octaves * 7 - 1}"
 
+                // Transpose the tonic by the octave shift, then by the interval at the index
                 val rootTransposed = transpose(tonic, intervalName)
                 transpose(rootTransposed, intervals[index])
             }
