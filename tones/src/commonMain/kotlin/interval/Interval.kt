@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.tones.interval
 
+import io.peekandpoke.klang.tones.interval.Interval.Companion.INTERVAL_SHORTHAND_REGEX
+import io.peekandpoke.klang.tones.interval.Interval.Companion.INTERVAL_TONAL_REGEX
 import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.pitch.PitchCoordinates
@@ -125,7 +127,9 @@ data class Interval(
         fun invert(name: String): String {
             val i = get(name)
             if (i.empty) return ""
+            // Step inversion: 0->0 (unison), 1->6 (second to seventh), etc.
             val step = (7 - i.step) % 7
+            // Quality inversion: Perfect stays Perfect, Major becomes minor (-1 alt shift), etc.
             val alt = if (i.type == IntervalType.Perfectable) -i.alt else -(i.alt + 1)
             return get(Pitch(step = step, alt = alt, oct = i.oct, dir = i.dir)).name
         }
@@ -154,6 +158,7 @@ data class Interval(
             val c2 = i2.coord
             if (c1 == null || c2 == null) return ""
 
+            // We use the coordinate representation (fifths, octaves) to perform interval arithmetic
             val f1 = when (c1) {
                 is PitchCoordinates.Interval -> c1.fifths
                 is PitchCoordinates.Note -> c1.fifths
@@ -188,6 +193,7 @@ data class Interval(
             val c2 = i2.coord
             if (c1 == null || c2 == null) return ""
 
+            // We use the coordinate representation (fifths, octaves) to perform interval arithmetic
             val f1 = when (c1) {
                 is PitchCoordinates.Interval -> c1.fifths
                 is PitchCoordinates.Note -> c1.fifths
@@ -223,6 +229,7 @@ data class Interval(
             if (i.empty) return ""
             val c = i.coord ?: return ""
 
+            // Extract fifths and octaves from current coordinates
             val f = when (c) {
                 is PitchCoordinates.Interval -> c.fifths
                 is PitchCoordinates.Note -> c.fifths
@@ -234,9 +241,16 @@ data class Interval(
                 is PitchCoordinates.PitchClass -> 0
             }
 
+            // Transpose by shifting fifths, then convert back to interval
             return fromCoord(PitchCoordinates.Note(f + fifths, o)).name
         }
 
+        /**
+         * Returns an [Interval] from [PitchCoordinates].
+         *
+         * @param coord The pitch coordinates.
+         * @param forceDescending Whether to force the interval to be descending.
+         */
         fun fromCoord(
             coord: PitchCoordinates,
             forceDescending: Boolean = false,
@@ -244,8 +258,10 @@ data class Interval(
             return when (coord) {
                 is PitchCoordinates.PitchClass -> {
                     val f = coord.fifths
+                    // An interval is descending if it has a negative total semitone count
                     val isDescending = f * 7 < 0
                     val ivl = if (forceDescending || isDescending) {
+                        // For descending intervals, we invert the coordinates and direction
                         PitchCoordinates.Interval(-f, 0, -1)
                     } else {
                         PitchCoordinates.Interval(f, 0, 1)
@@ -256,6 +272,7 @@ data class Interval(
                 is PitchCoordinates.Note -> {
                     val f = coord.fifths
                     val o = coord.octaves
+                    // Total semitones: fifths * 7 + octaves * 12
                     val isDescending = f * 7 + o * 12 < 0
                     val ivl = if (forceDescending || isDescending) {
                         PitchCoordinates.Interval(-f, -o, -1)
@@ -271,6 +288,9 @@ data class Interval(
             }
         }
 
+        /**
+         * Parses an interval string and returns an [Interval].
+         */
         private fun parse(str: String): Interval {
             val tokens = tokenize(str)
             if (tokens[0] == "") {
@@ -278,18 +298,22 @@ data class Interval(
             }
             val num = tokens[0].toInt()
             val q = tokens[1]
+            // Step is 0-indexed: 0=unison, 1=second, ..., 6=seventh
             val step = (kotlin.math.abs(num) - 1) % 7
             val t = TYPES[step]
             if (t == 'M' && q == "P") {
+                // Majorable intervals (2nd, 3rd, 6th, 7th) cannot be Perfect
                 return NoInterval
             }
             val type = if (t == 'M') IntervalType.Majorable else IntervalType.Perfectable
 
             val name = "" + num + q
             val dir = if (num < 0) -1 else 1
+            // Simple number is the interval number within one octave (e.g., 9th becomes 2nd)
             val simple = if (num == 8 || num == -8) num else dir * (step + 1)
             val alt = qToAlt(type, q)
             val oct = (kotlin.math.abs(num) - 1) / 7
+            // Calculate semitones based on natural size of the step, alterations, and octaves
             val semitones = dir * (SIZES[step] + alt + 12 * oct)
             val chroma = (((dir * (SIZES[step] + alt)) % 12) + 12) % 12
             val coord = TonalPitch.coordinates(Pitch(step, alt, oct, dir))
@@ -311,16 +335,26 @@ data class Interval(
             )
         }
 
+        /**
+         * Converts an interval quality string to the number of alterations.
+         */
         private fun qToAlt(type: IntervalType, q: String): Int {
             return when {
+                // Perfect or Major intervals have 0 alterations
                 (q == "M" && type == IntervalType.Majorable) || (q == "P" && type == IntervalType.Perfectable) -> 0
+                // minor intervals have -1 alteration
                 q == "m" && type == IntervalType.Majorable -> -1
+                // Augmented intervals 'A', 'AA', etc.
                 A_REGEX.matches(q) -> q.length
+                // diminished intervals 'd', 'dd', etc.
                 D_REGEX.matches(q) -> -1 * (if (type == IntervalType.Perfectable) q.length else q.length + 1)
                 else -> 0
             }
         }
 
+        /**
+         * Returns the name of an interval from its [Pitch] properties.
+         */
         private fun pitchName(props: Pitch): String {
             val step = props.step
             val alt = props.alt
@@ -338,29 +372,47 @@ data class Interval(
             return d + num + altToQ(type, alt)
         }
 
+        /**
+         * Converts the number of alterations to an interval quality string.
+         */
         private fun altToQ(type: IntervalType, alt: Int): String {
             return when {
                 alt == 0 -> if (type == IntervalType.Majorable) "M" else "P"
                 alt == -1 && type == IntervalType.Majorable -> "m"
                 alt > 0 -> "A".repeat(alt)
+                // for diminished, Majorable needs one more alteration than Perfectable to reach 'd' (minor is -1)
                 else -> "d".repeat(if (type == IntervalType.Perfectable) kotlin.math.abs(alt) else kotlin.math.abs(alt) - 1)
             }
         }
 
+        /** Natural sizes of intervals (number of semitones for major/perfect intervals). */
         private val SIZES = intArrayOf(0, 2, 4, 5, 7, 9, 11)
+
+        /** The quality type of each step (Perfect or Major). */
         private const val TYPES = "PMMPPMM"
+
+        /** Regex for augmented qualities (A, AA, ...). */
         private val A_REGEX = Regex("^A+$")
+
+        /** Regex for diminished qualities (d, dd, ...). */
         private val D_REGEX = Regex("^d+$")
+
+        /** Mapping from chroma to interval number (1-indexed). */
         private val IN = intArrayOf(1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7)
+
+        /** Mapping from chroma to interval quality. */
         private val IQ = "P m M m M P d P m M m M".split(" ")
 
-        // shorthand tonal notation (with quality after number)
+        /** Regular expression for tonal interval notation (e.g., "5P", "-3M"). */
         private const val INTERVAL_TONAL_REGEX = """^([-+]?\d+)(d{1,4}|m|M|P|A{1,4})$"""
 
-        // standard shorthand notation (with quality before number)
+        /** Regular expression for shorthand interval notation (e.g., "P5", "M3"). */
         private const val INTERVAL_SHORTHAND_REGEX = """^(AA|A|P|M|m|d|dd)([-+]?\d+)$"""
 
+        /** Compiled [INTERVAL_TONAL_REGEX]. */
         private val TONAL_REG = Regex(INTERVAL_TONAL_REGEX)
+
+        /** Compiled [INTERVAL_SHORTHAND_REGEX]. */
         private val SHORTHAND_REG = Regex(INTERVAL_SHORTHAND_REGEX)
     }
 }

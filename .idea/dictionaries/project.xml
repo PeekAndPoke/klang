@@ -2,8 +2,12 @@
   <dictionary name="project">
     <words>
       <w>Adsr</w>
+      <w>Majorable</w>
+      <w>Perfectable</w>
       <w>Zawtooth</w>
       <w>adsr</w>
+      <w>majorable</w>
+      <w>perfectable</w>
       <w>playhead</w>
       <w>roomsize</w>
       <w>zawtooth</w>
