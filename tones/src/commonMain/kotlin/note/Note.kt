@@ -272,12 +272,24 @@ data class Note(
                 return NoNote
             }
 
-            val letter = tokens[0]
+            val letter = tokens[0] // Already uppercased by tokenize()
             val acc = tokens[1]
             val octStr = tokens[2]
 
-            // Calculate properties
-            val step = (letter[0].code + 3) % 7
+            // Use an explicit mapping to avoid ASCII calculation errors
+            val step = when (letter) {
+                "C" -> 0
+                "D" -> 1
+                "E" -> 2
+                "F" -> 3
+                "G" -> 4
+                "A" -> 5
+                "B" -> 6
+                else -> -1
+            }
+
+            if (step == -1) return NoNote
+
             val alt = accToAlt(acc)
             val oct = if (octStr.isNotEmpty()) octStr.toInt() else null
             val coord = Pitch.coordinates(Pitch(step, alt, oct))

@@ -1,94 +1,83 @@
 package io.peekandpoke.klang.tones
 
+import io.peekandpoke.klang.tones.midi.Midi
+import io.peekandpoke.klang.tones.note.Note
+import io.peekandpoke.klang.tones.scale.ScaleTypeDictionary
 import kotlin.math.floor
-import kotlin.math.pow
 
 object Tones {
-    /** Mapping of note letters to their chroma value in the C major scale. */
-    val noteIndex = mapOf(
-        "c" to 0, "d" to 2, "e" to 4, "f" to 5, "g" to 7, "a" to 9, "b" to 11
-    )
-
-    /** Mapping of accidental characters to semitone offsets. */
-    val accIndex = mapOf(
-        '#' to 1, 'b' to -1, 's' to 1, 'f' to -1
-    )
-
-    // Exact Regex from JS 'tokenizeNote':
-    // Group 1: PC ([a-gA-G])
-    // Group 2: Acc ([#bsf]*)
-    // Group 3: Oct (-?[0-9]*) -> Includes optional minus sign for C-1
-    private val NOTE_REGEX = Regex("""^([a-gA-G])([#bsf]*)(-?[0-9]*)$""")
-
-    /** Definitions for common scale intervals (semitones from root). */
-    private val SCALES = mapOf(
-        "major" to listOf(0, 2, 4, 5, 7, 9, 11),
-        "minor" to listOf(0, 2, 3, 5, 7, 8, 10),
-        "aeolian" to listOf(0, 2, 3, 5, 7, 8, 10),
-        "dorian" to listOf(0, 2, 3, 5, 7, 9, 10),
-        "phrygian" to listOf(0, 1, 3, 5, 7, 8, 10),
-        "lydian" to listOf(0, 2, 4, 6, 7, 9, 10),
-        "mixolydian" to listOf(0, 2, 4, 5, 7, 9, 10),
-        "locrian" to listOf(0, 1, 3, 5, 6, 8, 10)
-    )
-
-    fun midiToFreq(m: Double): Double = 440.0 * 2.0.pow((m - 69.0) / 12.0)
+    fun midiToFreq(m: Double): Double = Midi.midiToFreq(m)
 
     fun noteToFreq(note: String): Double = midiToFreq(noteNameToMidi(note))
 
     fun noteNameToMidi(noteRaw: String): Double {
-        if (noteRaw.isEmpty()) return 69.0
-        val note = noteRaw.trim()
+        if (noteRaw.isBlank()) return 69.0
+        val s = noteRaw.trim()
 
         // 1. Raw MIDI number (e.g. "60")
-        note.toDoubleOrNull()?.let { return it }
+        s.toDoubleOrNull()?.let { return it }
 
-        // 2. Parse scientific pitch notation
-        val match = NOTE_REGEX.matchEntire(note) ?: return 69.0 // Fallback to A4
+        // 2. Standardize accidentals (support 's'/'f' legacy)
+        // We preserve the first character to avoid changing an 'f' note to a 'b' note.
+        val standard = if (s.length > 1) {
+            s[0] + s.substring(1).replace('s', '#').replace('f', 'b')
+        } else {
+            s
+        }
 
-        val (pc, acc, oct) = match.destructured
+        // 3. Handle default octave
+        // Tones.kt expects "C" to mean "C3" (MIDI 48).
+        val hasDigit = standard.any { it.isDigit() }
+        val finalNote = if (!hasDigit && standard.isNotEmpty() && standard[0].lowercaseChar() in 'a'..'g') {
+            standard + "3"
+        } else {
+            standard
+        }
 
-        val chroma = noteIndex[pc.lowercase()] ?: 9
-        val offset = acc.sumOf { char -> accIndex[char] ?: 0 }
-
-        // JS Logic: if oct is empty string, default to 3. If "-1", parse as -1.
-        val octave = if (oct.isNotEmpty()) oct.toInt() else 3
-
-        return ((octave + 1) * 12 + chroma + offset).toDouble()
+        val n = Note.get(finalNote)
+        return if (!n.empty && n.midi != null) {
+            n.midi!!.toDouble()
+        } else if (!n.empty && n.height != -1) {
+            n.height.toDouble()
+        } else {
+            69.0 // Fallback to A4
+        }
     }
 
     fun resolveFreq(note: String, scale: String?): Double {
         val midi = noteNameToMidi(note)
 
-        // If no scale context, simply return the absolute frequency
-        if (scale.isNullOrBlank()) {
+        // If no scale context, or absolute note (> 30), return absolute frequency
+        if (scale.isNullOrBlank() || midi > 30.0) {
             return midiToFreq(midi)
         }
 
-        // Heuristic: Strudel represents Scale Degrees 0, 1, 2 as MIDI notes C-1, C#-1, D-1 (0, 1, 2).
-        // If the MIDI note is very low (< 30), we treat it as a Scale Degree.
-        // If it's higher (e.g. C2=36, C4=60), we assume it's an absolute note overriding the scale.
-        if (midi > 30.0) {
-            return midiToFreq(midi)
-        }
-
-        // It's a scale degree!
         val degree = midi.toInt()
 
+        // Normalize scale string: handle legacy s/f only when they follow a note letter
+        val normalizedScale = scale.replace(":", " ")
+            .replace(Regex("(?<=[a-gA-G])s"), "#")
+            .replace(Regex("(?<=[a-gA-G])f"), "b")
+
         // Parse Scale Context: "C4 minor" -> Root: "C4", Type: "minor"
-        val parts = scale.split(" ", ":").filter { it.isNotBlank() }
+        val parts = normalizedScale.split(" ").filter { it.isNotBlank() }
         val rootNote = parts.getOrNull(0) ?: "C3"
         val scaleType = parts.getOrNull(1) ?: "major"
 
         val rootMidi = noteNameToMidi(rootNote)
-        val intervals = SCALES[scaleType] ?: SCALES["major"]!!
-        val len = intervals.size
 
-        // Calculate Degree relative to Root
-        // Use floor/modulo to handle negative degrees correctly
+        // Resolve scale type and calculate degree
+        val st = ScaleTypeDictionary.get(scaleType)
+        val chroma = if (!st.empty) st.chroma else "101011010101" // Default to Major
+        val set = Midi.pcSet(chroma)
+        val len = set.size
+
+        if (len == 0) return midiToFreq(rootMidi + degree)
+
+        // Use original degree calculation logic for backward compatibility
         val octaves = floor(degree.toDouble() / len).toInt()
         val index = ((degree % len) + len) % len
-        val semitoneOffset = intervals[index]
+        val semitoneOffset = set[index]
 
         val finalMidi = rootMidi + (octaves * 12) + semitoneOffset
         return midiToFreq(finalMidi)

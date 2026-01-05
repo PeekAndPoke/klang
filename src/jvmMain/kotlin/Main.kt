@@ -76,8 +76,8 @@ private suspend fun helloStrudel() {
             TestTextPatterns.tetris
         )
 
-//        val pattern = tetrisCompiledPattern
-        val pattern = TestKotlinPatterns.smallTownBoy
+        val pattern = tetrisCompiledPattern
+//        val pattern = TestKotlinPatterns.smallTownBoy
 
 //        val pattern1 = sound("bd hh sd oh")
 

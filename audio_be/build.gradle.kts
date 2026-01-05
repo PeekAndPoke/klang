@@ -84,4 +84,12 @@ kotlin {
 
 tasks {
     configureJvmTests()
+
+    named("jsBrowserDevelopmentWebpack") {
+        mustRunAfter("jsProductionExecutableCompileSync")
+    }
+
+    named("jsBrowserProductionWebpack") {
+        mustRunAfter("jsDevelopmentExecutableCompileSync")
+    }
 }
