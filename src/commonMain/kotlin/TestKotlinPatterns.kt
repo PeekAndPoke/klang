@@ -46,6 +46,45 @@ object TestKotlinPatterns {
             .fast(2),
     )
 
+    val smallTownBoy = stack(
+        // melody
+        arrange(
+            listOf(8, silence()),
+            listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
+        ).orbit(1)
+            .scale("C4:minor")
+            .adsr("0.05:0.7:0.0:0.5")
+            .hpf(800)
+            .sound("triangle")
+            .gain(0.3),
+
+        // melody 2
+        arrange(
+            listOf(8, silence()),
+            listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
+        ).orbit(2)
+            .scale("C5:minor")
+            .adsr("0.05:0.7:0.0:0.5")
+            .hpf(1600)
+            .sound("triangle")
+            .gain(0.4),
+
+        // bass
+        note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
+            .orbit(3)
+            .sound("supersaw").unison(4).detune(0.1)
+            .adsr("0.0:0.3:0.0:0.8")
+            .lpf(800)
+            .gain(0.8).pan(-0.5),
+
+        // Drums
+        sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
+            .orbit(4)
+            .pan(0.5)
+            .gain(0.4)
+            .delay("0.2").delaytime(0.25).delayfeedback(0.3),
+    ).room(0.025).rsize(5.0)
+
     val strangerThings = stack(
         n("0 2 4 6 7 6 4 2")
             .scale("<c3:major>/2")
