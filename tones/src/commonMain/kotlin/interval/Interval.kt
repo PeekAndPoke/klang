@@ -67,10 +67,13 @@ data class Interval(
             coord = null
         )
 
+        /** Cache for parsed intervals. */
+        private val cache = mutableMapOf<String, Interval>()
+
         /**
          * Returns an [Interval] from a string name.
          */
-        fun get(name: String): Interval = parse(name)
+        fun get(name: String): Interval = cache.getOrPut(name) { parse(name) }
 
         /**
          * Returns the [Interval] itself.

@@ -51,25 +51,31 @@ data class Scale(
             notes = emptyList()
         )
 
+        /** Cache for tokenized scale names. */
+        private val tokenizeCache = mutableMapOf<String, Pair<String, String>>()
+
+        /** Cache for parsed scales. */
+        private val scaleCache = mutableMapOf<String, Scale>()
+
         /**
          * Tokenizes a scale name into [tonic, type].
          */
-        fun tokenize(name: String): Pair<String, String> {
-            if (name.isEmpty()) return Pair("", "")
+        fun tokenize(name: String): Pair<String, String> = tokenizeCache.getOrPut(name) {
+            if (name.isEmpty()) return@getOrPut Pair("", "")
 
             val i = name.indexOf(" ")
             if (i < 0) {
                 // If no space, check if the whole name is a note.
                 // If yes, it's a note (no scale type). If no, it's a scale type (no tonic).
                 val n = Note.get(name)
-                return if (n.empty) Pair("", name.lowercase()) else Pair(n.name, "")
+                return@getOrPut if (n.empty) Pair("", name.lowercase()) else Pair(n.name, "")
             }
 
             // If there's a space, try to parse the first part as a tonic
             val tonicPart = name.substring(0, i)
             val tonic = Note.get(tonicPart)
 
-            return if (tonic.empty) {
+            if (tonic.empty) {
                 // If first part is not a note, try parsing the whole thing as a note (just in case)
                 val n = Note.get(name)
                 if (n.empty) Pair("", name.lowercase()) else Pair(n.name, "")
@@ -83,14 +89,14 @@ data class Scale(
         /**
          * Get a Scale from a scale name.
          */
-        fun get(src: String): Scale {
+        fun get(src: String): Scale = scaleCache.getOrPut(src) {
             val (tonicName, typeName) = tokenize(src)
             val tonic = Note.get(tonicName).name
             val st = ScaleTypeDictionary.get(typeName)
 
             // If scale type is not found, return NoScale
             if (st.empty) {
-                return NoScale
+                return@getOrPut NoScale
             }
 
             val type = st.name
@@ -101,7 +107,7 @@ data class Scale(
                 emptyList()
             }
 
-            return Scale(st, tonic.ifEmpty { null }, type, notes)
+            Scale(st, tonic.ifEmpty { null }, type, notes)
         }
 
         /**

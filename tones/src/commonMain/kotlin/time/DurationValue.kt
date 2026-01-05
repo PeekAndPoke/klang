@@ -32,6 +32,9 @@ data class DurationValue(
             names = emptyList()
         )
 
+        /** Cache for parsed duration values. */
+        private val cache = mutableMapOf<String, DurationValue>()
+
         /**
          * The data for the duration values.
          *
@@ -91,20 +94,20 @@ data class DurationValue(
          *
          * @param name The duration name or shorthand (e.g., "quarter", "q", "q..").
          */
-        fun get(name: String): DurationValue {
-            val match = REGEX.matchEntire(name) ?: return NoDuration
+        fun get(name: String): DurationValue = cache.getOrPut(name) {
+            val match = REGEX.matchEntire(name) ?: return@getOrPut NoDuration
             val simple = match.groupValues[1]
             val dots = match.groupValues[2]
 
             // Find base duration in the pre-calculated VALUES list
             val base = VALUES.find { it.shorthand == simple || simple in it.names }
-                ?: return NoDuration
+                ?: return@getOrPut NoDuration
 
             // Calculate the fractional value including dots
             val fraction = calcDots(base.fraction, dots.length)
             val value = fraction.first.toDouble() / fraction.second.toDouble()
 
-            return base.copy(name = name, dots = dots, value = value, fraction = fraction)
+            base.copy(name = name, dots = dots, value = value, fraction = fraction)
         }
 
         /**

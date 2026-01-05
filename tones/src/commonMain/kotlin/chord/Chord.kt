@@ -56,17 +56,23 @@ class Chord(
             intervals = emptyList()
         )
 
+        /** Cache for tokenized chord names. */
+        private val tokenizeCache = mutableMapOf<String, Triple<String, String, String>>()
+
+        /** Cache for parsed chords. */
+        private val chordCache = mutableMapOf<String, Chord>()
+
         /**
          * Tokenizes a chord name into [tonic, type, bass].
          */
-        fun tokenize(name: String): Triple<String, String, String> {
+        fun tokenize(name: String): Triple<String, String, String> = tokenizeCache.getOrPut(name) {
             val tokens = Note.tokenize(name)
             val letter = tokens[0]
             val acc = tokens[1]
             val oct = tokens[2]
             val rest = tokens[3]
 
-            return when {
+            when {
                 letter == "" -> tokenizeBass("", name)
                 letter == "A" && rest == "ug" -> tokenizeBass("", "aug")
                 else -> tokenizeBass(letter + acc, oct + rest)
@@ -97,12 +103,12 @@ class Chord(
         /**
          * Get a Chord from a chord name string.
          */
-        fun get(src: String): Chord {
-            if (src.isEmpty()) return NoChord
+        fun get(src: String): Chord = chordCache.getOrPut(src) {
+            if (src.isEmpty()) return@getOrPut NoChord
             val (tonic, type, bass) = tokenize(src)
             val chord = getChord(type, tonic, bass)
 
-            return if (chord.empty) getChord(src, "", "") else chord
+            if (chord.empty) getChord(src, "", "") else chord
         }
 
         /**

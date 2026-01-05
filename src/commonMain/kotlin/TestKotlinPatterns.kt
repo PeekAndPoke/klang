@@ -5,6 +5,7 @@ import io.peekandpoke.klang.strudel.lang.*
 object TestKotlinPatterns {
 
     val tetris = stack(
+        // Melody
         note(
             """
                 <
@@ -18,9 +19,33 @@ object TestKotlinPatterns {
                     [c5 a4 a4 ~]
                 >
                 """.trimIndent()
-        ).sound("triangle").orbit(0)
-            .gain("0.3").room(0.01).rsize(3.0)
-            .delay("0.25").delaytime(0.25).delayfeedback(0.75),
+        ).sound("tri")
+            .orbit(0).pan(0.7)
+            .gain(0.3)
+            .delay(0.5).delaytime(0.5).delayfeedback(0.5)
+            .room(0.05).rsize(1.0)
+            .clip(0.3),
+
+        // Melody percussion
+        note(
+            """
+                <
+                    [e5 [b4 c5] d5 [c5 b4]]
+                    [a4 [a4 c5] e5 [d5 c5]]
+                    [b4 [~ c5] d5 e5]
+                    [c5 a4 a4 ~]
+                    [[~ d5] [~ f5] a5 [g5 f5]]
+                    [e5 [~ c5] e5 [d5 c5]]
+                    [b4 [b4 c5] d5 e5]
+                    [c5 a4 a4 ~]
+                >
+                """.trimIndent()
+        ).sound("marimba")
+            .orbit(1).pan(-0.7)
+            .gain(0.3)
+            .delay("0.25").delaytime(0.25).delayfeedback(0.05)
+            .room(0.05).rsize(1.0)
+            .coarse(1).fast(1),
 
         note(
             """
@@ -28,21 +53,43 @@ object TestKotlinPatterns {
                         [[e2 e3]*4]
                         [[a2 a3]*4]
                         [[g#2 g#3]*2 [e2 e3]*2]
-                        [a2 a3 a2 a3 a2 a3 b1 c2]
+                        [a2 a3 a2 a3 a2 a3 [a2 a3] [c3 d3]]
                         [[d2 d3]*4]
                         [[c2 c3]*4]
-                        [[b1 b2]*2 [e2 e3]*2]
-                        [[a1 a2]*4]
+                        [[b2 b1]*2 [e2 e3]*2]
+                        [a1 a2 a1 a2 a1 a2 [f2 g2] [a2 e3]]
                     >
                 """.trimIndent()
-        ).sound("supersaw").orbit(1)
-            .pan(0.6).gain(0.6)
-            .room(0.01).rsize(3.0),
+        ).sound("supersaw").spread(0.5).unison(8).detune(0.3)
+            .orbit(2).pan(0.0).gain(0.5)
+            .room(0.05).rsize(1.0),
 
-        sound("bd hh sd hh").orbit(2)
-            .pan(-0.7).gain(0.9)
-            .room(0.01).rsize(3.0)
-            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
+        sound(
+            """
+            <
+            [[bd, cr] hh sd hh] 
+            [bd hh sd oh]
+            [bd hh*2 sd hh] 
+            [bd hh sd oh]
+            [[bd, cr] hh sd hh] 
+            [bd hh sd oh]
+            [bd hh*2 sd hh] 
+            [bd hh [bd bd, sd] [bd bd, oh]]
+            [[bd, cr] hh [sd hh] [sd hh]] 
+            [bd hh [sd, cr] oh]
+            [bd hh*2 sd hh] 
+            [bd hh sd oh]
+            [[bd, cr] hh [sd hh] [sd hh]] 
+            [bd hh [sd, cr] oh]
+            [[sd,hh] [bd, hh*2] sd [bd, hh*2]] 
+            [[bd,hh] sd [bd bd, cr] [bd bd, oh]]
+            >            
+        """.trimIndent()
+        )
+            .orbit(3)
+            .pan(-0.3).gain(0.5)
+            .room(0.05).rsize(1.0)
+            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
             .fast(2),
     )
 
