@@ -157,20 +157,20 @@ interface Key {
         }
 
         /**
-         * Given a key signature, returns the tonic of the major key.
+         * Given a key signature as number of fifths, returns the tonic of the major key.
          */
-        fun majorTonicFromKeySignature(sig: Any?): String? {
-            return when (sig) {
-                is Int -> Distance.transposeFifths("C", sig)
-                is String -> {
-                    if (sig.matches(Regex("^[b#]+$"))) {
-                        Distance.transposeFifths("C", Note.accToAlt(sig))
-                    } else {
-                        null
-                    }
-                }
+        fun majorTonicFromKeySignature(fifths: Int): String {
+            return Distance.transposeFifths("C", fifths)
+        }
 
-                else -> null
+        /**
+         * Given a key signature as accidental string (e.g., "###" or "bbb"), returns the tonic of the major key.
+         */
+        fun majorTonicFromKeySignature(signature: String): String? {
+            return if (signature.matches(Regex("^[b#]+$"))) {
+                Distance.transposeFifths("C", Note.accToAlt(signature))
+            } else {
+                null
             }
         }
 

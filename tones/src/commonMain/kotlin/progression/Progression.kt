@@ -4,6 +4,7 @@ import io.peekandpoke.klang.tones.chord.Chord
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.note.Note
+import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.roman.RomanNumeral
 
 object Progression {
@@ -47,7 +48,8 @@ object Progression {
         return chords.map { chordName ->
             val (root, chordType, _) = Chord.tokenize(chordName)
             val intervalName = Distance.distance(tonic, root)
-            val roman = RomanNumeral.get(Interval.get(intervalName))
+            val interval = Interval.get(intervalName) as Pitch
+            val roman = RomanNumeral.get(interval)
             roman.name + chordType
         }
     }

@@ -9,6 +9,20 @@ import io.peekandpoke.klang.tones.pcset.PcSet
 import io.peekandpoke.klang.tones.utils.TonesArray
 
 /**
+ * Represents different types of note input for scale operations.
+ */
+sealed class NoteInput {
+    /** Input by MIDI number */
+    data class Midi(val value: Int) : NoteInput()
+
+    /** Input by note name string */
+    data class Name(val value: String) : NoteInput()
+
+    /** Input by Note object */
+    data class NoteObject(val value: Note) : NoteInput()
+}
+
+/**
  * Represents a musical musical scale.
  */
 data class Scale(
@@ -183,18 +197,17 @@ data class Scale(
         }
 
         /**
-         * Returns a function to get a note name from a scale by a note or midi number.
+         * Returns a function to get a note name from a scale by a note input (MIDI, name, or Note object).
          */
-        fun getNoteNameOf(scale: List<String>): (Any) -> String? {
+        fun getNoteNameOf(scale: List<String>): (NoteInput) -> String? {
             val notes = notes(scale)
             val chromas = notes.map { Note.get(it).chroma }
 
-            return { noteOrMidi ->
-                val currNote = when (noteOrMidi) {
-                    is Int -> Note.get(Note.fromMidi(noteOrMidi))
-                    is String -> Note.get(noteOrMidi)
-                    is Note -> noteOrMidi
-                    else -> Note.NoNote
+            return { input ->
+                val currNote = when (input) {
+                    is NoteInput.Midi -> Note.get(Note.fromMidi(input.value))
+                    is NoteInput.Name -> Note.get(input.value)
+                    is NoteInput.NoteObject -> input.value
                 }
                 val height = currNote.height
 
@@ -212,19 +225,18 @@ data class Scale(
         }
 
         /**
-         * Returns a function to get a note name from a scale name by a note or midi number.
+         * Returns a function to get a note name from a scale name by a note input (MIDI, name, or Note object).
          */
-        fun getNoteNameOf(scaleName: String): (Any) -> String? {
+        fun getNoteNameOf(scaleName: String): (NoteInput) -> String? {
             val s = get(scaleName)
             val notes = s.notes.ifEmpty { emptyList() }
             val chromas = notes.map { Note.get(it).chroma }
 
-            return { noteOrMidi ->
-                val currNote = when (noteOrMidi) {
-                    is Int -> Note.get(Note.fromMidi(noteOrMidi))
-                    is String -> Note.get(noteOrMidi)
-                    is Note -> noteOrMidi
-                    else -> Note.NoNote
+            return { input ->
+                val currNote = when (input) {
+                    is NoteInput.Midi -> Note.get(Note.fromMidi(input.value))
+                    is NoteInput.Name -> Note.get(input.value)
+                    is NoteInput.NoteObject -> input.value
                 }
                 val height = currNote.height
 
@@ -253,7 +265,7 @@ data class Scale(
                 if (from == -1 || to == -1) {
                     emptyList()
                 } else {
-                    TonesArray.range(from, to).mapNotNull { getName(it) }
+                    TonesArray.range(from, to).mapNotNull { getName(NoteInput.Midi(it)) }
                 }
             }
         }
@@ -271,7 +283,7 @@ data class Scale(
                 if (from == -1 || to == -1) {
                     emptyList()
                 } else {
-                    TonesArray.range(from, to).mapNotNull { getName(it) }
+                    TonesArray.range(from, to).mapNotNull { getName(NoteInput.Midi(it)) }
                 }
             }
         }

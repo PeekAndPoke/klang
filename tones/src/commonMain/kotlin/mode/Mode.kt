@@ -3,6 +3,7 @@ package io.peekandpoke.klang.tones.mode
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.pcset.PcSet
+import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.utils.TonesArray
 
 /**
@@ -54,7 +55,17 @@ data class Mode(
         /**
          * Returns a [Mode] by name.
          */
-        fun get(name: Any?): Mode = ModeDictionary.get(name)
+        fun get(name: String): Mode = ModeDictionary.get(name)
+
+        /**
+         * Returns the [Mode] itself.
+         */
+        fun get(mode: Mode): Mode = mode
+
+        /**
+         * Converts a [NamedPitch] to a [Mode].
+         */
+        fun get(named: NamedPitch): Mode = ModeDictionary.get(named)
 
         /**
          * Returns a list of all mode names.
@@ -69,7 +80,7 @@ data class Mode(
         /**
          * Returns the notes of a mode given a tonic.
          */
-        fun notes(modeName: Any?, tonic: String): List<String> {
+        fun notes(modeName: String, tonic: String): List<String> {
             val m = get(modeName)
             if (m.empty) return emptyList()
             return m.intervals.map { Distance.transpose(tonic, it) }
@@ -78,7 +89,7 @@ data class Mode(
         /**
          * Returns the triads of a mode given a tonic.
          */
-        fun triads(modeName: Any?, tonic: String): List<String> {
+        fun triads(modeName: String, tonic: String): List<String> {
             val m = get(modeName)
             if (m.empty) return emptyList()
             val triadTypes = TonesArray.rotate(m.modeNum, listOf("", "m", "m", "", "", "m", "dim"))
@@ -89,7 +100,7 @@ data class Mode(
         /**
          * Returns the seventh chords of a mode given a tonic.
          */
-        fun seventhChords(modeName: Any?, tonic: String): List<String> {
+        fun seventhChords(modeName: String, tonic: String): List<String> {
             val m = get(modeName)
             if (m.empty) return emptyList()
             val seventhTypes = TonesArray.rotate(m.modeNum, listOf("Maj7", "m7", "m7", "Maj7", "7", "m7", "m7b5"))
@@ -100,7 +111,7 @@ data class Mode(
         /**
          * Returns the distance between two modes as an interval name.
          */
-        fun distance(destination: Any?, source: Any?): String {
+        fun distance(destination: String, source: String): String {
             val from = get(source)
             val to = get(destination)
             if (from.empty || to.empty) return ""
@@ -110,7 +121,7 @@ data class Mode(
         /**
          * Returns the relative tonic of a destination mode given a source mode and its tonic.
          */
-        fun relativeTonic(destination: Any?, source: Any?, tonic: String): String {
+        fun relativeTonic(destination: String, source: String, tonic: String): String {
             val dist = distance(destination, source)
             if (dist.isEmpty()) return ""
             return Distance.transpose(tonic, dist)

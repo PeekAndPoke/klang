@@ -37,17 +37,20 @@ object ModeDictionary {
 
     /**
      * Returns a [Mode] by name or alias.
-     *
-     * @param name The name of the mode, or a [Mode] object, or a [NamedPitch] object.
      */
-    fun get(name: Any?): Mode {
-        return when (name) {
-            is String -> index[name.lowercase()] ?: Mode.NoMode
-            is Mode -> name
-            is NamedPitch -> get(name.name)
-            else -> Mode.NoMode
-        }
+    fun get(name: String): Mode {
+        return index[name.lowercase()] ?: Mode.NoMode
     }
+
+    /**
+     * Returns the [Mode] itself.
+     */
+    fun get(mode: Mode): Mode = mode
+
+    /**
+     * Converts a [NamedPitch] to a [Mode].
+     */
+    fun get(named: NamedPitch): Mode = get(named.name)
 
     /**
      * Returns a list of all modes in the dictionary.

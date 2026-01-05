@@ -3,6 +3,7 @@ package io.peekandpoke.klang.tones.roman
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.tones.interval.Interval
+import io.peekandpoke.klang.tones.pitch.Pitch
 
 class RomanNumeralTest : StringSpec({
     "names" {
@@ -27,13 +28,13 @@ class RomanNumeralTest : StringSpec({
 
     "RomanNumeral is compatible with Pitch" {
         val naturals = "1P 2M 3M 4P 5P 6M 7M".split(" ").map { Interval.get(it) }
-        naturals.map { RomanNumeral.get(it).name } shouldBe "I II III IV V VI VII".split(" ")
+        naturals.map { RomanNumeral.get(it as Pitch).name } shouldBe "I II III IV V VI VII".split(" ")
 
         val flats = "1d 2m 3m 4d 5d 6m 7m".split(" ").map { Interval.get(it) }
-        flats.map { RomanNumeral.get(it).name } shouldBe "bI bII bIII bIV bV bVI bVII".split(" ")
+        flats.map { RomanNumeral.get(it as Pitch).name } shouldBe "bI bII bIII bIV bV bVI bVII".split(" ")
 
         val sharps = "1A 2A 3A 4A 5A 6A 7A".split(" ").map { Interval.get(it) }
-        sharps.map { RomanNumeral.get(it).name } shouldBe "#I #II #III #IV #V #VI #VII".split(" ")
+        sharps.map { RomanNumeral.get(it as Pitch).name } shouldBe "#I #II #III #IV #V #VI #VII".split(" ")
     }
 
     "Can convert to intervals" {

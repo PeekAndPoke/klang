@@ -88,23 +88,39 @@ data class RomanNumeral(
         }
 
         /**
-         * Returns a [RomanNumeral] from a given source (string, number, or Pitch).
+         * Returns a [RomanNumeral] from a string.
          */
-        fun get(src: Any?): RomanNumeral {
-            return when (src) {
-                is String -> parse(src)
-                is Int -> {
-                    // 0-based index to major roman numeral
-                    val name = NAMES.getOrNull(src) ?: ""
-                    if (name.isNotEmpty()) parse(name) else NoRomanNumeral
-                }
+        fun get(name: String): RomanNumeral = parse(name)
 
-                is Pitch -> parse(Note.altToAcc(src.alt) + (NAMES.getOrNull(src.step) ?: ""))
-                is NamedPitch -> get(src.name)
-                is RomanNumeral -> src
-                else -> NoRomanNumeral
-            }
+        /**
+         * Returns a [RomanNumeral] from a 0-based step index.
+         */
+        fun get(index: Int): RomanNumeral {
+            val name = NAMES.getOrNull(index) ?: ""
+            return if (name.isNotEmpty()) parse(name) else NoRomanNumeral
         }
+
+        /**
+         * Converts an [Interval] to a [RomanNumeral].
+         */
+        fun get(interval: Interval): RomanNumeral = get(interval as Pitch)
+
+        /**
+         * Converts a [Pitch] to a [RomanNumeral].
+         */
+        fun get(pitch: Pitch): RomanNumeral {
+            return parse(Note.altToAcc(pitch.alt) + (NAMES.getOrNull(pitch.step) ?: ""))
+        }
+
+        /**
+         * Converts a [NamedPitch] to a [RomanNumeral].
+         */
+        fun get(named: NamedPitch): RomanNumeral = get(named.name)
+
+        /**
+         * Returns the [RomanNumeral] itself.
+         */
+        fun get(roman: RomanNumeral): RomanNumeral = roman
 
         /**
          * Internal parser for roman numeral strings.
