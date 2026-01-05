@@ -198,6 +198,17 @@ fun sortedUniqNames(notes: List<String>): List<String> {
 }
 
 /**
+ * Returns a list of note names.
+ * If no argument is provided, returns natural note names ["C", "D", "E", "F", "G", "A", "B"].
+ */
+fun noteNames(notes: List<Any?>? = null): List<String> {
+    if (notes == null) {
+        return listOf("C", "D", "E", "F", "G", "A", "B")
+    }
+    return notes.map { note(it).name }.filter { it.isNotEmpty() }
+}
+
+/**
  * Comparator to sort notes by height in ascending order.
  */
 val Ascending: Comparator<Note> = compareBy { it.height }

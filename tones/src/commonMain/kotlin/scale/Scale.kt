@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.tones.scale
 
+import io.peekandpoke.klang.tones.chord.ChordTypeDictionary
 import io.peekandpoke.klang.tones.collection.range
 import io.peekandpoke.klang.tones.collection.rotate
 import io.peekandpoke.klang.tones.distance.tonicIntervalsTransposer
@@ -284,4 +285,18 @@ fun scaleDegrees(scaleName: String): (Int) -> String {
 fun scaleSteps(scaleName: String): (Int) -> String {
     val s = getScale(scaleName)
     return tonicIntervalsTransposer(s.intervals, s.tonic)
+}
+
+/**
+ * Find all chords that fits a given scale.
+ */
+fun scaleChords(scaleName: String): List<String> {
+    val s = getScale(scaleName)
+    val chroma = if (s.empty) ScaleTypeDictionary.get(scaleName).chroma else s.chroma
+    if (chroma == "000000000000") return emptyList()
+
+    return ChordTypeDictionary.all()
+        .filter { isSubsetOf(chroma)(it.chroma) }
+        .map { it.aliases.firstOrNull() ?: "" }
+        .filter { it.isNotEmpty() }
 }
