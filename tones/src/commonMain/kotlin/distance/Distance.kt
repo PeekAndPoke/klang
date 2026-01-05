@@ -5,6 +5,9 @@ import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.pitch.PitchCoordinates
 import kotlin.math.floor
 
+/**
+ * Musical distance functions.
+ */
 object Distance {
     /**
      * Transpose a note by an interval.

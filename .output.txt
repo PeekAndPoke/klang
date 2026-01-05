@@ -1,25 +1,15 @@
 package io.peekandpoke.klang.tones.key
-
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.roman.RomanNumeral
-
 /**
  * Base interface for Major and Minor keys.
  */
 interface Key {
-    /** The type of the key (major or minor) */
     val type: String
-
-    /** The tonic of the key */
     val tonic: String
-
-    /** The number of sharps or flats */
     val alteration: Int
-
-    /** The key signature */
     val keySignature: String
-
     companion object {
         /**
          * Get major key properties for a given tonic.
@@ -27,10 +17,8 @@ interface Key {
         fun majorKey(tonic: String): MajorKey {
             val pc = Note.get(tonic).pc
             if (pc.isEmpty()) return MajorKey.NoMajorKey
-
             val ks = MajorScale(pc)
             val alteration = distInFifths("C", pc)
-
             return MajorKey(
                 tonic = pc,
                 alteration = alteration,
@@ -49,14 +37,12 @@ interface Key {
                 substituteDominantSupertonics = ks.substituteDominantSupertonics
             )
         }
-
         /**
          * Get minor key properties for a given tonic.
          */
         fun minorKey(tnc: String): MinorKey {
             val pc = Note.get(tnc).pc
             if (pc.isEmpty()) return MinorKey.NoMinorKey
-
             val alteration = distInFifths("C", pc) - 3
             return MinorKey(
                 tonic = pc,
@@ -68,14 +54,12 @@ interface Key {
                 melodic = MelodicScale(pc)
             )
         }
-
         /**
          * Get a list of available chords for a given major key.
          */
         fun majorKeyChords(tonic: String): List<KeyChord> {
             val key = majorKey(tonic)
             val chords = mutableListOf<KeyChord>()
-
             fun updateChord(name: String, newRole: String) {
                 if (name.isEmpty()) return
                 val existingIndex = chords.indexOfFirst { it.name == name }
@@ -88,7 +72,6 @@ interface Key {
                     }
                 }
             }
-
             key.chords.forEachIndexed { index, chordName ->
                 updateChord(chordName, key.chordsHarmonicFunction.getOrElse(index) { "" })
             }
@@ -104,23 +87,19 @@ interface Key {
             key.substituteDominantSupertonics.forEachIndexed { index, chordName ->
                 updateChord(chordName, "subii/${key.grades[index]}")
             }
-
             return chords
         }
-
         /**
          * Get a list of available chords for a given minor key.
          */
         fun minorKeyChords(tonic: String): List<KeyChord> {
             val key = minorKey(tonic)
             val chords = mutableListOf<KeyChord>()
-
             keyChordsOf(key.natural, chords)
             keyChordsOf(key.harmonic, chords)
             keyChordsOf(key.melodic, chords)
             return chords
         }
-
         private fun keyChordsOf(ks: KeyScale, chords: MutableList<KeyChord>) {
             fun updateChord(name: String, newRole: String) {
                 if (name.isEmpty()) return
@@ -134,7 +113,6 @@ interface Key {
                     }
                 }
             }
-
             ks.chords.forEachIndexed { index, chordName ->
                 updateChord(chordName, ks.chordsHarmonicFunction.getOrElse(index) { "" })
             }
@@ -151,7 +129,6 @@ interface Key {
                 updateChord(chordName, "subii/${ks.grades[index]}")
             }
         }
-
         /**
          * Given a key signature, returns the tonic of the major key.
          */
@@ -165,14 +142,11 @@ interface Key {
                         null
                     }
                 }
-
                 else -> null
             }
         }
-
         private fun mapScaleToType(scale: List<String>, list: List<String>, sep: String = ""): List<String> =
             list.mapIndexed { i, type -> if (type.isEmpty()) scale[i] else "${scale[i]}$sep$type" }
-
         private fun supertonics(dominants: List<String>, targetTriads: List<String>): List<String> =
             dominants.mapIndexed { index, chord ->
                 if (chord.isEmpty()) ""
@@ -184,7 +158,6 @@ interface Key {
                     if (isMinor) "${minorRoot}m7" else "${minorRoot}m7b5"
                 }
             }
-
         private fun keyScaleFactory(
             grades: List<String>,
             triads: List<String>,
@@ -204,7 +177,6 @@ interface Key {
                         // 2. it must have a diatonic root.
                         if (scale.contains(note) && !chords.contains(note + "7")) note + "7" else ""
                     }
-
                 val secondaryDominantSupertonics = supertonics(secondaryDominants, triads)
                 val substituteDominants = secondaryDominants.map { chord ->
                     if (chord.isEmpty()) ""
@@ -215,7 +187,6 @@ interface Key {
                     }
                 }
                 val substituteDominantSupertonics = supertonics(substituteDominants, triads)
-
                 KeyScale(
                     tonic = tonic,
                     grades = grades,
@@ -232,7 +203,6 @@ interface Key {
                 )
             }
         }
-
         private val MajorScale = keyScaleFactory(
             "I II III IV V VI VII".split(" "),
             " m m   m dim".split(" "),
@@ -240,7 +210,6 @@ interface Key {
             "T SD T SD D T D".split(" "),
             "major,dorian,phrygian,lydian,mixolydian,minor,locrian".split(",")
         )
-
         private val NaturalScale = keyScaleFactory(
             "I II bIII IV V bVI bVII".split(" "),
             "m dim  m m  ".split(" "),
@@ -248,7 +217,6 @@ interface Key {
             "T SD T SD D SD SD".split(" "),
             "minor,locrian,major,dorian,phrygian,lydian,mixolydian".split(",")
         )
-
         private val HarmonicScale = keyScaleFactory(
             "I II bIII IV V bVI VII".split(" "),
             "m dim aug m   dim".split(" "),
@@ -258,7 +226,6 @@ interface Key {
                 ","
             )
         )
-
         private val MelodicScale = keyScaleFactory(
             "I II bIII IV V VI VII".split(" "),
             "m m aug   dim dim".split(" "),
@@ -266,13 +233,11 @@ interface Key {
             "T SD T SD D  ".split(" "),
             "melodic minor,dorian b2,lydian augmented,lydian dominant,mixolydian b6,locrian #2,altered".split(",")
         )
-
         private fun distInFifths(from: String, to: String): Int {
             val f = Note.get(from)
             val t = Note.get(to)
             val fCoord = f.coord ?: return 0
             val tCoord = t.coord ?: return 0
-
             val fFifths = when (fCoord) {
                 is io.peekandpoke.klang.tones.pitch.PitchCoordinates.PitchClass -> fCoord.fifths
                 is io.peekandpoke.klang.tones.pitch.PitchCoordinates.Note -> fCoord.fifths
@@ -283,8 +248,126 @@ interface Key {
                 is io.peekandpoke.klang.tones.pitch.PitchCoordinates.Note -> tCoord.fifths
                 else -> 0
             }
-
             return tFifths - fFifths
         }
     }
 }
+package io.peekandpoke.klang.tones.key
+/**
+ * Properties of a major key.
+ */
+data class MajorKey(
+    override val type: String = "major",
+    override val tonic: String,
+    override val alteration: Int,
+    override val keySignature: String,
+    val minorRelative: String,
+    val grades: List<String>,
+    val intervals: List<String>,
+    val scale: List<String>,
+    val triads: List<String>,
+    val chords: List<String>,
+    val chordsHarmonicFunction: List<String>,
+    val chordScales: List<String>,
+    val secondaryDominants: List<String>,
+    val secondaryDominantSupertonics: List<String>,
+    val substituteDominants: List<String>,
+    val substituteDominantSupertonics: List<String>,
+) : Key {
+    /** Deprecated: use secondaryDominantSupertonics */
+    val secondaryDominantsMinorRelative: List<String> get() = secondaryDominantSupertonics
+    /** Deprecated: use substituteDominantSupertonics */
+    val substituteDominantsMinorRelative: List<String> get() = substituteDominantSupertonics
+    companion object {
+        val NoMajorKey = MajorKey(
+            tonic = "",
+            alteration = 0,
+            keySignature = "",
+            minorRelative = "",
+            grades = emptyList(),
+            intervals = emptyList(),
+            scale = emptyList(),
+            triads = emptyList(),
+            chords = emptyList(),
+            chordsHarmonicFunction = emptyList(),
+            chordScales = emptyList(),
+            secondaryDominants = emptyList(),
+            secondaryDominantSupertonics = emptyList(),
+            substituteDominants = emptyList(),
+            substituteDominantSupertonics = emptyList()
+        )
+    }
+}
+package io.peekandpoke.klang.tones.key
+/**
+ * Properties of a minor key.
+ */
+data class MinorKey(
+    override val type: String = "minor",
+    override val tonic: String,
+    override val alteration: Int,
+    override val keySignature: String,
+    val relativeMajor: String,
+    val natural: KeyScale,
+    val harmonic: KeyScale,
+    val melodic: KeyScale,
+) : Key {
+    companion object {
+        val NoMinorKey = MinorKey(
+            tonic = "",
+            alteration = 0,
+            keySignature = "",
+            relativeMajor = "",
+            natural = KeyScale.NoKeyScale,
+            harmonic = KeyScale.NoKeyScale,
+            melodic = KeyScale.NoKeyScale
+        )
+    }
+}
+package io.peekandpoke.klang.tones.key
+/**
+ * Properties of a key scale.
+ */
+data class KeyScale(
+    val tonic: String,
+    val grades: List<String>,
+    val intervals: List<String>,
+    val scale: List<String>,
+    val triads: List<String>,
+    val chords: List<String>,
+    val chordsHarmonicFunction: List<String>,
+    val chordScales: List<String>,
+    val secondaryDominants: List<String>,
+    val secondaryDominantSupertonics: List<String>,
+    val substituteDominants: List<String>,
+    val substituteDominantSupertonics: List<String>,
+) {
+    /** Deprecated: use secondaryDominantSupertonics */
+    val secondaryDominantsMinorRelative: List<String> get() = secondaryDominantSupertonics
+    /** Deprecated: use substituteDominantSupertonics */
+    val substituteDominantsMinorRelative: List<String> get() = substituteDominantSupertonics
+    companion object {
+        val NoKeyScale = KeyScale(
+            tonic = "",
+            grades = emptyList(),
+            intervals = emptyList(),
+            scale = emptyList(),
+            triads = emptyList(),
+            chords = emptyList(),
+            chordsHarmonicFunction = emptyList(),
+            chordScales = emptyList(),
+            secondaryDominants = emptyList(),
+            secondaryDominantSupertonics = emptyList(),
+            substituteDominants = emptyList(),
+            substituteDominantSupertonics = emptyList()
+        )
+    }
+}
+package io.peekandpoke.klang.tones.key
+/**
+ * Represents a chord in a key with its roles.
+ */
+data class KeyChord(
+    val name: String,
+    val roles: List<String>,
+)
