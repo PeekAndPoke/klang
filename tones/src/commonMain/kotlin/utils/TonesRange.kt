@@ -1,9 +1,8 @@
-package io.peekandpoke.klang.tones.range
+package io.peekandpoke.klang.tones.utils
 
 import io.peekandpoke.klang.tones.midi.Midi
-import io.peekandpoke.klang.tones.utils.TonesArray
 
-object TonalRange {
+object TonesRange {
     /**
      * Create a numeric range. You supply a list of notes or numbers and it will
      * be connected to create complex ranges.

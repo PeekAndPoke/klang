@@ -130,7 +130,7 @@ data class RomanNumeral(
                 name = name,
                 roman = roman,
                 // The interval name relative to the tonic
-                interval = Interval.get(io.peekandpoke.klang.tones.pitch.Pitch(step, alt, 0, dir)).name,
+                interval = Interval.get(Pitch(step, alt, 0, dir)).name,
                 acc = acc,
                 chordType = chordType,
                 alt = alt,

@@ -85,7 +85,7 @@ object Midi {
     /**
      * Given a list of MIDI numbers or a chroma string, returns the pitch class set (unique chroma numbers).
      */
-    fun pcset(notes: Any): List<Int> {
+    fun pcSet(notes: Any): List<Int> {
         return when (notes) {
             is String -> {
                 // If it's a chroma string, return indices of '1's
@@ -109,8 +109,8 @@ object Midi {
     /**
      * Returns a function that finds the nearest MIDI note of a pitch class set.
      */
-    fun pcsetNearest(notes: Any): (Double) -> Double? {
-        val set = pcset(notes)
+    fun pcSetNearest(notes: Any): (Double) -> Double? {
+        val set = pcSet(notes)
         return { midi ->
             val ch = chroma(midi)
             var found: Double? = null
@@ -135,8 +135,8 @@ object Midi {
      * Returns a function to map a pitch class set over any note.
      * step 0 means the first note, step 1 the second, and so on.
      */
-    fun pcsetSteps(notes: Any, tonic: Double): (Int) -> Double {
-        val set = pcset(notes)
+    fun pcSetSteps(notes: Any, tonic: Double): (Int) -> Double {
+        val set = pcSet(notes)
         val len = set.size
         return { step ->
             if (len == 0) {
@@ -153,8 +153,8 @@ object Midi {
      * Returns a function to map a pitch class set over any note.
      * Same as pcsetSteps, but returns null for degree 0.
      */
-    fun pcsetDegrees(notes: Any, tonic: Double): (Int) -> Double? {
-        val steps = pcsetSteps(notes, tonic)
+    fun pcSetDegrees(notes: Any, tonic: Double): (Int) -> Double? {
+        val steps = pcSetSteps(notes, tonic)
         return { degree ->
             if (degree == 0) null else steps(if (degree > 0) degree - 1 else degree)
         }

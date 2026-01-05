@@ -10,7 +10,7 @@ import io.peekandpoke.klang.tones.utils.TonesArray
  */
 data class Mode(
     /** The pitch class set of the mode. */
-    val pcset: PcSet,
+    val pcSet: PcSet,
     /** The name of the mode. */
     val name: String,
     /** The number of the mode (0-indexed) relative to the parent scale (e.g., Ionian = 0, Dorian = 1, etc.). */
@@ -31,15 +31,15 @@ data class Mode(
     val intervals: List<String>,
 ) {
     /** Whether the mode is empty. */
-    val empty: Boolean get() = pcset.empty
+    val empty: Boolean get() = pcSet.empty
 
     /** The decimal representation of the chroma bitmask (Bit 11 is the root). */
-    val setNum: Int get() = pcset.setNum
+    val setNum: Int get() = pcSet.setNum
 
     companion object {
         /** An empty mode. */
         val NoMode = Mode(
-            pcset = PcSet.EmptyPcSet,
+            pcSet = PcSet.EmptyPcSet,
             name = "",
             modeNum = -1,
             alt = 0,

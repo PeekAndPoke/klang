@@ -85,7 +85,7 @@ object ModeDictionary {
         val st = ScaleTypeDictionary.get(name)
         val chroma = setNum.toString(2)
         return Mode(
-            pcset = st.pcset,
+            pcSet = st.pcset,
             name = name,
             modeNum = modeNum,
             alt = alt,

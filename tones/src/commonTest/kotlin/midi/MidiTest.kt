@@ -51,22 +51,22 @@ class MidiTest : StringSpec({
     }
 
     "pcset from chroma" {
-        Midi.pcset("100100100101") shouldBe listOf(0, 3, 6, 9, 11)
+        Midi.pcSet("100100100101") shouldBe listOf(0, 3, 6, 9, 11)
     }
 
     "pcset from midi" {
-        Midi.pcset(listOf(62, 63, 60, 65, 70, 72)) shouldBe listOf(0, 2, 3, 5, 10)
+        Midi.pcSet(listOf(62, 63, 60, 65, 70, 72)) shouldBe listOf(0, 2, 3, 5, 10)
     }
 
     "pcsetNearest find nearest upwards" {
-        val nearest = Midi.pcsetNearest(listOf(0, 5, 7))
+        val nearest = Midi.pcSetNearest(listOf(0, 5, 7))
         listOf(0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0).map { nearest(it) } shouldBe listOf(
             0.0, 0.0, 0.0, 5.0, 5.0, 5.0, 7.0, 7.0, 7.0, 7.0, 12.0, 12.0, 12.0
         )
     }
 
     "pcsetNearest chromatic to nearest C minor pentatonic" {
-        val nearest = Midi.pcsetNearest("100101010010")
+        val nearest = Midi.pcSetNearest("100101010010")
         listOf(
             36.0,
             37.0,
@@ -86,7 +86,7 @@ class MidiTest : StringSpec({
     }
 
     "pcsetNearest chromatic to nearest half octave" {
-        val nearest = Midi.pcsetNearest("100000100000")
+        val nearest = Midi.pcSetNearest("100000100000")
         listOf(
             36.0,
             37.0,
@@ -106,11 +106,11 @@ class MidiTest : StringSpec({
     }
 
     "pcsetNearest empty pcsets returns null" {
-        listOf(10.0, 30.0, 40.0).map { Midi.pcsetNearest(emptyList<Int>())(it) } shouldBe listOf(null, null, null)
+        listOf(10.0, 30.0, 40.0).map { Midi.pcSetNearest(emptyList<Int>())(it) } shouldBe listOf(null, null, null)
     }
 
     "pcsetSteps" {
-        val scale = Midi.pcsetSteps("101010", 60.0)
+        val scale = Midi.pcSetSteps("101010", 60.0)
         listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9).map { scale(it) } shouldBe listOf(
             60.0, 62.0, 64.0, 72.0, 74.0, 76.0, 84.0, 86.0, 88.0, 96.0
         )
@@ -120,7 +120,7 @@ class MidiTest : StringSpec({
     }
 
     "pcsetDegrees" {
-        val scale = Midi.pcsetDegrees("101010", 60.0)
+        val scale = Midi.pcSetDegrees("101010", 60.0)
         listOf(1, 2, 3, 4, 5).map { scale(it) } shouldBe listOf(60.0, 62.0, 64.0, 72.0, 74.0)
         listOf(-1, -2, -3, 4, 5).map { scale(it) } shouldBe listOf(52.0, 50.0, 48.0, 72.0, 74.0)
         scale(0) shouldBe null

@@ -239,7 +239,8 @@ data class PcSet(
 
             val binary = IntArray(12) { 0 }
             for (item in set) {
-                var p = Note.get(item)
+                val p = Note.get(item)
+
                 if (p.empty) {
                     // If not a note, try parsing as an interval
                     val i = Interval.get(item)
@@ -250,6 +251,7 @@ data class PcSet(
                     binary[p.chroma] = 1
                 }
             }
+
             return binary.joinToString("")
         }
     }

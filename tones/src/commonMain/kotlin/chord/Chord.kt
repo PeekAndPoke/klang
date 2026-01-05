@@ -154,7 +154,7 @@ class Chord(
 
             // Rearrange intervals based on inversion (rootDegree)
             if (hasRoot) {
-                for (i in 1 until rootDegree) {
+                repeat((1 until rootDegree).count()) {
                     val first = intervals[0]
                     // Move interval to next octave (e.g. 3rd becomes 10th)
                     val numStr = first.takeWhile { it.isDigit() || it == '-' || it == '+' }

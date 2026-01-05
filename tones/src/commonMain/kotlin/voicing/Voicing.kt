@@ -5,7 +5,7 @@ import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.pitch.Pitch
-import io.peekandpoke.klang.tones.range.TonalRange
+import io.peekandpoke.klang.tones.utils.TonesRange
 
 object Voicing {
     /** Default range for searching voicings. */
@@ -50,7 +50,7 @@ object Voicing {
 
         // Voicing intervals/notes from dictionary
         val voicings = sets.map { it.split(" ") }
-        val notesInRange = TonalRange.chromatic(range.map { it as Any })
+        val notesInRange = TonesRange.chromatic(range.map { it as Any })
 
         val result = voicings.flatMap { voicing ->
             if (voicing.isEmpty()) return@flatMap emptyList<List<String>>()

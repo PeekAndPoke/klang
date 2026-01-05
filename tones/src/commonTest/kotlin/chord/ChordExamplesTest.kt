@@ -2,7 +2,7 @@ package io.peekandpoke.klang.tones.chord
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.tones.range.TonalRange
+import io.peekandpoke.klang.tones.utils.TonesRange
 
 class ChordExamplesTest : StringSpec({
     "Chord.get" {
@@ -43,7 +43,7 @@ class ChordExamplesTest : StringSpec({
     }
 
     "Chord.steps" {
-        TonalRange.numeric(listOf(-3, 3)).map(Chord.steps("aug", "C4")) shouldBe
+        TonesRange.numeric(listOf(-3, 3)).map(Chord.steps("aug", "C4")) shouldBe
                 listOf("C3", "E3", "G#3", "C4", "E4", "G#4", "C5")
     }
 

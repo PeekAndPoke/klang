@@ -35,19 +35,19 @@ class MidiExamplesTest : StringSpec({
     }
 
     "Midi.pcset" {
-        Midi.pcset(listOf(62, 63, 60, 65, 70, 72)) shouldBe listOf(0, 2, 3, 5, 10)
-        Midi.pcset("100100100101") shouldBe listOf(0, 3, 6, 9, 11)
+        Midi.pcSet(listOf(62, 63, 60, 65, 70, 72)) shouldBe listOf(0, 2, 3, 5, 10)
+        Midi.pcSet("100100100101") shouldBe listOf(0, 3, 6, 9, 11)
     }
 
     "Midi.pcsetNearest" {
-        val nearest = Midi.pcsetNearest("101011010101")
-        val nearestFn = Midi.pcsetNearest("101011010101")
+        val nearest = Midi.pcSetNearest("101011010101")
+        val nearestFn = Midi.pcSetNearest("101011010101")
         listOf(60, 61, 62, 63, 64, 65, 66).map { nearestFn(it.toDouble()) } shouldBe
                 listOf(60.0, 62.0, 62.0, 64.0, 64.0, 65.0, 67.0)
     }
 
     "Midi.pcsetSteps" {
-        val steps = Midi.pcsetSteps("101011010101", 60.0)
+        val steps = Midi.pcSetSteps("101011010101", 60.0)
         listOf(-2, -1, 0, 1, 2, 3).map { steps(it) } shouldBe
                 listOf(57.0, 59.0, 60.0, 62.0, 64.0, 65.0)
     }

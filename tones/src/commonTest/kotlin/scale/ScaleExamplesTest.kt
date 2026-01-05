@@ -2,7 +2,7 @@ package io.peekandpoke.klang.tones.scale
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.tones.range.TonalRange
+import io.peekandpoke.klang.tones.utils.TonesRange
 
 class ScaleExamplesTest : StringSpec({
     "Scale.get" {
@@ -96,7 +96,7 @@ class ScaleExamplesTest : StringSpec({
     }
 
     "Scale.steps" {
-        TonalRange.numeric(listOf(-3, 3)).map(Scale.steps("C4 major")) shouldBe
+        TonesRange.numeric(listOf(-3, 3)).map(Scale.steps("C4 major")) shouldBe
                 listOf("G3", "A3", "B3", "C4", "D4", "E4", "F4")
     }
 

@@ -20,7 +20,7 @@ data class Scale(
     val notes: List<String>,
 ) {
     val empty: Boolean get() = scaleType.empty
-    val name: String = if (tonic != null && tonic.isNotEmpty()) "$tonic $type" else type
+    val name: String = if (!tonic.isNullOrEmpty()) "$tonic $type" else type
     val setNum: Int get() = scaleType.setNum
     val chroma: String get() = scaleType.chroma
     val normalized: String get() = scaleType.normalized
