@@ -4,12 +4,22 @@ interface NamedPitch {
     val name: String
 }
 
-data class Pitch(
-    val step: Int,
-    val alt: Int,
-    val oct: Int? = null,
-    val dir: Int? = null,
-)
+fun Pitch(step: Int, alt: Int, oct: Int? = null, dir: Int? = null): Pitch =
+    PitchImpl(step, alt, oct, dir)
+
+interface Pitch {
+    val step: Int
+    val alt: Int
+    val oct: Int?
+    val dir: Int?
+}
+
+data class PitchImpl(
+    override val step: Int,
+    override val alt: Int,
+    override val oct: Int? = null,
+    override val dir: Int? = null,
+) : Pitch
 
 // Coordinates types as Kotlin lists or specific data classes
 // In JS they are:
@@ -117,4 +127,12 @@ fun pitch(coord: PitchCoordinates): Pitch {
 private fun unaltered(f: Int): Int {
     val i = (f + 1) % 7
     return if (i < 0) 7 + i else i
+}
+
+fun isPitch(src: Any?): Boolean {
+    return src is Pitch
+}
+
+fun isNamedPitch(src: Any?): Boolean {
+    return src is NamedPitch
 }
