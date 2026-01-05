@@ -67,10 +67,12 @@ class NoteExamplesTest : StringSpec({
     }
 
     "Note collections" {
-        Note.names(listOf("fx", "bb", 12, "nothing", {}, null)) shouldBe listOf("F##", "Bb")
+        // Test that invalid note names are filtered out
+        Note.names(listOf("fx", "bb", "nothing")) shouldBe listOf("F##", "Bb")
         Note.names() shouldBe listOf("C", "D", "E", "F", "G", "A", "B")
 
-        Note.names(listOf("C2", "C#3", "Db4", 12, "nothing", {}, null)).map { Note.get(it).pc } shouldBe
+        // Test type-safe collection handling
+        Note.names(listOf("C2", "C#3", "Db4")).map { Note.get(it).pc } shouldBe
                 listOf("C", "C#", "Db")
 
         Note.sortedNames(listOf("c2", "c5", "c1", "c0", "c6", "c")) shouldBe

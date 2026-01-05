@@ -3,7 +3,6 @@ package io.peekandpoke.klang.tones.note
 import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.pitch.PitchCoordinates
-import kotlin.jvm.JvmName
 import kotlin.math.pow
 
 typealias NoteWithOctave = String
@@ -89,23 +88,6 @@ data class Note(
          * Converts a [NamedPitch] to a [Note].
          */
         fun get(named: NamedPitch): Note = get(named.name)
-
-        /**
-         * Unified getter for generic sources.
-         * @deprecated Use type-specific overloads instead: get(String), get(Note), get(Pitch), get(NamedPitch)
-         */
-        @Deprecated(
-            message = "Use type-specific overloads instead",
-            replaceWith = ReplaceWith("get(src as String)"),
-            level = DeprecationLevel.WARNING
-        )
-        fun get(src: Any?): Note = when (src) {
-            is String -> get(src)
-            is Note -> src
-            is Pitch -> get(src)
-            is NamedPitch -> get(src)
-            else -> NoNote
-        }
 
         /**
          * Tokenizes a note string into [letter, accidental, octave, rest].
@@ -222,22 +204,6 @@ data class Note(
          */
         fun names(notes: List<String>): List<String> {
             return notes.map { get(it).name }.filter { it.isNotEmpty() }
-        }
-
-        /**
-         * Returns a list of note names from a list of various pitch sources.
-         */
-        @JvmName("namesFromAny")
-        fun names(notes: List<Any>): List<String> {
-            return notes.map { get(it).name }.filter { it.isNotEmpty() }
-        }
-
-        /**
-         * Returns a list of note names from a list that may contain nulls or invalid types.
-         */
-        @JvmName("namesFromNullableAny")
-        fun names(notes: List<Any?>): List<String> {
-            return notes.filterNotNull().map { get(it).name }.filter { it.isNotEmpty() }
         }
 
         /**
