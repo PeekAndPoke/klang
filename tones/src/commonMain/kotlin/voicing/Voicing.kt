@@ -4,7 +4,7 @@ import io.peekandpoke.klang.tones.chord.Chord
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.note.Note
-import io.peekandpoke.klang.tones.pitch.TonalPitch
+import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.range.TonalRange
 
 object Voicing {
@@ -62,11 +62,11 @@ object Voicing {
 
             // Find all instances of the bottom note within the specified range
             val bottomPitchClass = Distance.transpose(tonic, voicing[0])
-            val bottomChroma = TonalPitch.chroma(Note.get(bottomPitchClass))
+            val bottomChroma = Pitch.chroma(Note.get(bottomPitchClass))
             val topMidiInRange = Note.get(range.last()).midi ?: 0
 
             val starts = notesInRange
-                .filter { TonalPitch.chroma(Note.get(it)) == bottomChroma }
+                .filter { Pitch.chroma(Note.get(it)) == bottomChroma }
                 .filter { start ->
                     // Check if the top note of the transposed voicing fits in range
                     val topNote = Distance.transpose(start, relativeIntervals.last())

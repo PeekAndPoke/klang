@@ -3,7 +3,6 @@ package io.peekandpoke.klang.tones.note
 import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.pitch.PitchCoordinates
-import io.peekandpoke.klang.tones.pitch.TonalPitch
 import kotlin.math.pow
 
 typealias NoteWithOctave = String
@@ -99,7 +98,7 @@ data class Note(
          * @private
          */
         fun fromCoord(noteCoord: PitchCoordinates): Note {
-            return get(TonalPitch.pitch(noteCoord))
+            return get(Pitch.pitch(noteCoord))
         }
 
         /**
@@ -280,7 +279,7 @@ data class Note(
             val step = (letter[0].code + 3) % 7
             val alt = accToAlt(acc)
             val oct = if (octStr.isNotEmpty()) octStr.toInt() else null
-            val coord = TonalPitch.coordinates(Pitch(step, alt, oct))
+            val coord = Pitch.coordinates(Pitch(step, alt, oct))
 
             val name = letter + acc + octStr
             val pc = letter + acc

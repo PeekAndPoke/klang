@@ -5,7 +5,6 @@ import io.peekandpoke.klang.tones.interval.Interval.Companion.INTERVAL_TONAL_REG
 import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.pitch.PitchCoordinates
-import io.peekandpoke.klang.tones.pitch.TonalPitch
 
 typealias IntervalName = String
 
@@ -266,7 +265,7 @@ data class Interval(
                     } else {
                         PitchCoordinates.Interval(f, 0, 1)
                     }
-                    get(TonalPitch.pitch(ivl))
+                    get(Pitch.pitch(ivl))
                 }
 
                 is PitchCoordinates.Note -> {
@@ -279,11 +278,11 @@ data class Interval(
                     } else {
                         PitchCoordinates.Interval(f, o, 1)
                     }
-                    get(TonalPitch.pitch(ivl))
+                    get(Pitch.pitch(ivl))
                 }
 
                 is PitchCoordinates.Interval -> {
-                    get(TonalPitch.pitch(coord))
+                    get(Pitch.pitch(coord))
                 }
             }
         }
@@ -316,7 +315,7 @@ data class Interval(
             // Calculate semitones based on natural size of the step, alterations, and octaves
             val semitones = dir * (SIZES[step] + alt + 12 * oct)
             val chroma = (((dir * (SIZES[step] + alt)) % 12) + 12) % 12
-            val coord = TonalPitch.coordinates(Pitch(step, alt, oct, dir))
+            val coord = Pitch.coordinates(Pitch(step, alt, oct, dir))
 
             return Interval(
                 empty = false,

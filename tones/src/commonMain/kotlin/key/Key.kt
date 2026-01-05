@@ -2,6 +2,7 @@ package io.peekandpoke.klang.tones.key
 
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.note.Note
+import io.peekandpoke.klang.tones.pitch.PitchCoordinates
 import io.peekandpoke.klang.tones.roman.RomanNumeral
 
 /**
@@ -302,13 +303,13 @@ interface Key {
             val tCoord = t.coord ?: return 0
 
             val fFifths = when (fCoord) {
-                is io.peekandpoke.klang.tones.pitch.PitchCoordinates.PitchClass -> fCoord.fifths
-                is io.peekandpoke.klang.tones.pitch.PitchCoordinates.Note -> fCoord.fifths
+                is PitchCoordinates.PitchClass -> fCoord.fifths
+                is PitchCoordinates.Note -> fCoord.fifths
                 else -> 0
             }
             val tFifths = when (tCoord) {
-                is io.peekandpoke.klang.tones.pitch.PitchCoordinates.PitchClass -> tCoord.fifths
-                is io.peekandpoke.klang.tones.pitch.PitchCoordinates.Note -> tCoord.fifths
+                is PitchCoordinates.PitchClass -> tCoord.fifths
+                is PitchCoordinates.Note -> tCoord.fifths
                 else -> 0
             }
 

@@ -1,14 +1,169 @@
 package io.peekandpoke.klang.tones.key
+/**
+ * Properties of a key scale.
+ */
+data class KeyScale(
+    /** The tonic of the key scale */
+    val tonic: String,
+    /** The scale degrees (grades) in Roman Numerals */
+    val grades: List<String>,
+    /** The intervals from the tonic */
+    val intervals: List<String>,
+    /** The notes in the scale */
+    val scale: List<String>,
+    /** The triads for each degree */
+    val triads: List<String>,
+    /** The 7th chords for each degree */
+    val chords: List<String>,
+    /** The harmonic function of each chord (T, SD, D) */
+    val chordsHarmonicFunction: List<String>,
+    /** The default scales for each chord degree */
+    val chordScales: List<String>,
+    /** The secondary dominants for each degree */
+    val secondaryDominants: List<String>,
+    /** The supertonics (ii-V) for the secondary dominants */
+    val secondaryDominantSupertonics: List<String>,
+    /** The substitute dominants for each degree */
+    val substituteDominants: List<String>,
+    /** The supertonics (ii-V) for the substitute dominants */
+    val substituteDominantSupertonics: List<String>,
+) {
+    /** Deprecated: use secondaryDominantSupertonics */
+    val secondaryDominantsMinorRelative: List<String> get() = secondaryDominantSupertonics
+    /** Deprecated: use substituteDominantSupertonics */
+    val substituteDominantsMinorRelative: List<String> get() = substituteDominantSupertonics
+    companion object {
+        /** An empty key scale */
+        val NoKeyScale = KeyScale(
+            tonic = "",
+            grades = emptyList(),
+            intervals = emptyList(),
+            scale = emptyList(),
+            triads = emptyList(),
+            chords = emptyList(),
+            chordsHarmonicFunction = emptyList(),
+            chordScales = emptyList(),
+            secondaryDominants = emptyList(),
+            secondaryDominantSupertonics = emptyList(),
+            substituteDominants = emptyList(),
+            substituteDominantSupertonics = emptyList()
+        )
+    }
+}
+package io.peekandpoke.klang.tones.key
+/**
+ * Properties of a major key.
+ */
+data class MajorKey(
+    /** The type of the key (major) */
+    override val type: String = "major",
+    /** The tonic of the key */
+    override val tonic: String,
+    /** The number of sharps (positive) or flats (negative) */
+    override val alteration: Int,
+    /** The key signature (accidentals) */
+    override val keySignature: String,
+    /** The relative minor key tonic */
+    val minorRelative: String,
+    /** The scale degrees in Roman Numerals */
+    val grades: List<String>,
+    /** The intervals from the tonic */
+    val intervals: List<String>,
+    /** The notes in the major scale */
+    val scale: List<String>,
+    /** The triads of the key */
+    val triads: List<String>,
+    /** The 7th chords of the key */
+    val chords: List<String>,
+    /** The harmonic function of each chord */
+    val chordsHarmonicFunction: List<String>,
+    /** The default scales for each degree */
+    val chordScales: List<String>,
+    /** The secondary dominants for each degree */
+    val secondaryDominants: List<String>,
+    /** The supertonics for the secondary dominants */
+    val secondaryDominantSupertonics: List<String>,
+    /** The substitute dominants for each degree */
+    val substituteDominants: List<String>,
+    /** The supertonics for the substitute dominants */
+    val substituteDominantSupertonics: List<String>,
+) : Key {
+    /** Deprecated: use secondaryDominantSupertonics */
+    val secondaryDominantsMinorRelative: List<String> get() = secondaryDominantSupertonics
+    /** Deprecated: use substituteDominantSupertonics */
+    val substituteDominantsMinorRelative: List<String> get() = substituteDominantSupertonics
+    companion object {
+        /** An empty major key */
+        val NoMajorKey = MajorKey(
+            tonic = "",
+            alteration = 0,
+            keySignature = "",
+            minorRelative = "",
+            grades = emptyList(),
+            intervals = emptyList(),
+            scale = emptyList(),
+            triads = emptyList(),
+            chords = emptyList(),
+            chordsHarmonicFunction = emptyList(),
+            chordScales = emptyList(),
+            secondaryDominants = emptyList(),
+            secondaryDominantSupertonics = emptyList(),
+            substituteDominants = emptyList(),
+            substituteDominantSupertonics = emptyList()
+        )
+    }
+}
+package io.peekandpoke.klang.tones.key
+/**
+ * Properties of a minor key.
+ */
+data class MinorKey(
+    /** The type of the key (minor) */
+    override val type: String = "minor",
+    /** The tonic of the key */
+    override val tonic: String,
+    /** The number of sharps (positive) or flats (negative) */
+    override val alteration: Int,
+    /** The key signature (accidentals) */
+    override val keySignature: String,
+    /** The relative major key tonic */
+    val relativeMajor: String,
+    /** The natural minor scale properties */
+    val natural: KeyScale,
+    /** The harmonic minor scale properties */
+    val harmonic: KeyScale,
+    /** The melodic minor scale properties */
+    val melodic: KeyScale,
+) : Key {
+    companion object {
+        /** An empty minor key */
+        val NoMinorKey = MinorKey(
+            tonic = "",
+            alteration = 0,
+            keySignature = "",
+            relativeMajor = "",
+            natural = KeyScale.NoKeyScale,
+            harmonic = KeyScale.NoKeyScale,
+            melodic = KeyScale.NoKeyScale
+        )
+    }
+}
+package io.peekandpoke.klang.tones.key
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.note.Note
+import io.peekandpoke.klang.tones.pitch.PitchCoordinates
 import io.peekandpoke.klang.tones.roman.RomanNumeral
 /**
  * Base interface for Major and Minor keys.
  */
 interface Key {
+    /** The type of the key (major or minor) */
     val type: String
+    /** The tonic of the key */
     val tonic: String
+    /** The number of sharps or flats */
     val alteration: Int
+    /** The key signature */
     val keySignature: String
     companion object {
         /**
@@ -100,6 +255,9 @@ interface Key {
             keyChordsOf(key.melodic, chords)
             return chords
         }
+        /**
+         * Collects chords and their roles from a given KeyScale.
+         */
         private fun keyChordsOf(ks: KeyScale, chords: MutableList<KeyChord>) {
             fun updateChord(name: String, newRole: String) {
                 if (name.isEmpty()) return
@@ -145,8 +303,14 @@ interface Key {
                 else -> null
             }
         }
+        /**
+         * Maps scale notes to chord types.
+         */
         private fun mapScaleToType(scale: List<String>, list: List<String>, sep: String = ""): List<String> =
             list.mapIndexed { i, type -> if (type.isEmpty()) scale[i] else "${scale[i]}$sep$type" }
+        /**
+         * Calculates secondary and substitute dominant supertonics (ii-V relations).
+         */
         private fun supertonics(dominants: List<String>, targetTriads: List<String>): List<String> =
             dominants.mapIndexed { index, chord ->
                 if (chord.isEmpty()) ""
@@ -158,6 +322,9 @@ interface Key {
                     if (isMinor) "${minorRoot}m7" else "${minorRoot}m7b5"
                 }
             }
+        /**
+         * Factory function to create a KeyScale generator for a given scale definition.
+         */
         private fun keyScaleFactory(
             grades: List<String>,
             triads: List<String>,
@@ -203,6 +370,9 @@ interface Key {
                 )
             }
         }
+        /**
+         * Major scale generator.
+         */
         private val MajorScale = keyScaleFactory(
             "I II III IV V VI VII".split(" "),
             " m m   m dim".split(" "),
@@ -210,6 +380,9 @@ interface Key {
             "T SD T SD D T D".split(" "),
             "major,dorian,phrygian,lydian,mixolydian,minor,locrian".split(",")
         )
+        /**
+         * Natural minor scale generator.
+         */
         private val NaturalScale = keyScaleFactory(
             "I II bIII IV V bVI bVII".split(" "),
             "m dim  m m  ".split(" "),
@@ -217,6 +390,9 @@ interface Key {
             "T SD T SD D SD SD".split(" "),
             "minor,locrian,major,dorian,phrygian,lydian,mixolydian".split(",")
         )
+        /**
+         * Harmonic minor scale generator.
+         */
         private val HarmonicScale = keyScaleFactory(
             "I II bIII IV V bVI VII".split(" "),
             "m dim aug m   dim".split(" "),
@@ -226,6 +402,9 @@ interface Key {
                 ","
             )
         )
+        /**
+         * Melodic minor scale generator.
+         */
         private val MelodicScale = keyScaleFactory(
             "I II bIII IV V VI VII".split(" "),
             "m m aug   dim dim".split(" "),
@@ -233,141 +412,26 @@ interface Key {
             "T SD T SD D  ".split(" "),
             "melodic minor,dorian b2,lydian augmented,lydian dominant,mixolydian b6,locrian #2,altered".split(",")
         )
+        /**
+         * Calculates the distance in fifths between two notes.
+         */
+        @Suppress("SameParameterValue")
         private fun distInFifths(from: String, to: String): Int {
             val f = Note.get(from)
             val t = Note.get(to)
             val fCoord = f.coord ?: return 0
             val tCoord = t.coord ?: return 0
             val fFifths = when (fCoord) {
-                is io.peekandpoke.klang.tones.pitch.PitchCoordinates.PitchClass -> fCoord.fifths
-                is io.peekandpoke.klang.tones.pitch.PitchCoordinates.Note -> fCoord.fifths
+                is PitchCoordinates.PitchClass -> fCoord.fifths
+                is PitchCoordinates.Note -> fCoord.fifths
                 else -> 0
             }
             val tFifths = when (tCoord) {
-                is io.peekandpoke.klang.tones.pitch.PitchCoordinates.PitchClass -> tCoord.fifths
-                is io.peekandpoke.klang.tones.pitch.PitchCoordinates.Note -> tCoord.fifths
+                is PitchCoordinates.PitchClass -> tCoord.fifths
+                is PitchCoordinates.Note -> tCoord.fifths
                 else -> 0
             }
             return tFifths - fFifths
         }
     }
 }
-package io.peekandpoke.klang.tones.key
-/**
- * Properties of a major key.
- */
-data class MajorKey(
-    override val type: String = "major",
-    override val tonic: String,
-    override val alteration: Int,
-    override val keySignature: String,
-    val minorRelative: String,
-    val grades: List<String>,
-    val intervals: List<String>,
-    val scale: List<String>,
-    val triads: List<String>,
-    val chords: List<String>,
-    val chordsHarmonicFunction: List<String>,
-    val chordScales: List<String>,
-    val secondaryDominants: List<String>,
-    val secondaryDominantSupertonics: List<String>,
-    val substituteDominants: List<String>,
-    val substituteDominantSupertonics: List<String>,
-) : Key {
-    /** Deprecated: use secondaryDominantSupertonics */
-    val secondaryDominantsMinorRelative: List<String> get() = secondaryDominantSupertonics
-    /** Deprecated: use substituteDominantSupertonics */
-    val substituteDominantsMinorRelative: List<String> get() = substituteDominantSupertonics
-    companion object {
-        val NoMajorKey = MajorKey(
-            tonic = "",
-            alteration = 0,
-            keySignature = "",
-            minorRelative = "",
-            grades = emptyList(),
-            intervals = emptyList(),
-            scale = emptyList(),
-            triads = emptyList(),
-            chords = emptyList(),
-            chordsHarmonicFunction = emptyList(),
-            chordScales = emptyList(),
-            secondaryDominants = emptyList(),
-            secondaryDominantSupertonics = emptyList(),
-            substituteDominants = emptyList(),
-            substituteDominantSupertonics = emptyList()
-        )
-    }
-}
-package io.peekandpoke.klang.tones.key
-/**
- * Properties of a minor key.
- */
-data class MinorKey(
-    override val type: String = "minor",
-    override val tonic: String,
-    override val alteration: Int,
-    override val keySignature: String,
-    val relativeMajor: String,
-    val natural: KeyScale,
-    val harmonic: KeyScale,
-    val melodic: KeyScale,
-) : Key {
-    companion object {
-        val NoMinorKey = MinorKey(
-            tonic = "",
-            alteration = 0,
-            keySignature = "",
-            relativeMajor = "",
-            natural = KeyScale.NoKeyScale,
-            harmonic = KeyScale.NoKeyScale,
-            melodic = KeyScale.NoKeyScale
-        )
-    }
-}
-package io.peekandpoke.klang.tones.key
-/**
- * Properties of a key scale.
- */
-data class KeyScale(
-    val tonic: String,
-    val grades: List<String>,
-    val intervals: List<String>,
-    val scale: List<String>,
-    val triads: List<String>,
-    val chords: List<String>,
-    val chordsHarmonicFunction: List<String>,
-    val chordScales: List<String>,
-    val secondaryDominants: List<String>,
-    val secondaryDominantSupertonics: List<String>,
-    val substituteDominants: List<String>,
-    val substituteDominantSupertonics: List<String>,
-) {
-    /** Deprecated: use secondaryDominantSupertonics */
-    val secondaryDominantsMinorRelative: List<String> get() = secondaryDominantSupertonics
-    /** Deprecated: use substituteDominantSupertonics */
-    val substituteDominantsMinorRelative: List<String> get() = substituteDominantSupertonics
-    companion object {
-        val NoKeyScale = KeyScale(
-            tonic = "",
-            grades = emptyList(),
-            intervals = emptyList(),
-            scale = emptyList(),
-            triads = emptyList(),
-            chords = emptyList(),
-            chordsHarmonicFunction = emptyList(),
-            chordScales = emptyList(),
-            secondaryDominants = emptyList(),
-            secondaryDominantSupertonics = emptyList(),
-            substituteDominants = emptyList(),
-            substituteDominantSupertonics = emptyList()
-        )
-    }
-}
-package io.peekandpoke.klang.tones.key
-/**
- * Represents a chord in a key with its roles.
- */
-data class KeyChord(
-    val name: String,
-    val roles: List<String>,
-)
