@@ -13,19 +13,35 @@ enum class IntervalType {
     }
 }
 
+/**
+ * Represents a musical interval.
+ */
 data class Interval(
+    /** The step number: 0 = unison, 1 = second, ... 6 = seventh. */
     override val step: Int,
+    /** Number of alterations: -2 = 'dd', -1 = 'd', 0 = 'P'/'M', 1 = 'A', ... */
     override val alt: Int,
+    /** The number of octaves. */
     override val oct: Int = 0,
+    /** Interval direction (1 ascending, -1 descending). */
     override val dir: Int = 1,
+    /** Whether the interval is empty (represents "no interval"). */
     val empty: Boolean = false,
+    /** The full name of the interval (e.g., "P5", "-M3"). */
     override val name: String = "",
+    /** The interval number (e.g., 5 for "P5", -3 for "-M3"). */
     val num: Int = Int.MIN_VALUE,
+    /** The interval quality (e.g., "P", "M", "m", "d", "A"). */
     val q: String = "",
+    /** The interval type (Perfectable or Majorable). */
     val type: IntervalType? = null,
+    /** The simplified interval number (within one octave). */
     val simple: Int = Int.MIN_VALUE,
+    /** The size of the interval in semitones. */
     val semitones: Int = Int.MIN_VALUE,
+    /** The interval chroma (0-11). */
     val chroma: Int = -1,
+    /** The pitch coordinates. */
     val coord: PitchCoordinates? = null,
 ) : NamedPitch, Pitch {
     companion object {

@@ -44,7 +44,7 @@ class StrudelCodeParseEvaluateSpec : StringSpec({
         val p = eval(""" n("0 2").scale("C:major") """)
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.note shouldBe "0.0"
+        events[0].data.note?.toDouble() shouldBe 0.0
         events[0].data.scale shouldBe "C:major"
     }
 

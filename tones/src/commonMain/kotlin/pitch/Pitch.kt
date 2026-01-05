@@ -1,19 +1,38 @@
 package io.peekandpoke.klang.tones.pitch
 
+/**
+ * Represents a pitch that has a name.
+ */
 interface NamedPitch {
     val name: String
 }
 
+/**
+ * Creates a new [Pitch] instance.
+ */
 fun Pitch(step: Int, alt: Int, oct: Int? = null, dir: Int? = null): Pitch =
     PitchImpl(step, alt, oct, dir)
 
+/**
+ * Represents a pitch with step, alteration, octave and direction.
+ */
 interface Pitch {
+    /** The step number: 0 = C, 1 = D, ... 6 = B */
     val step: Int
+
+    /** Number of alterations: -2 = 'bb', -1 = 'b', 0 = '', 1 = '#', ... */
     val alt: Int
+
+    /** The octave (null for pitch classes) */
     val oct: Int?
+
+    /** Interval direction (null for notes) */
     val dir: Int?
 }
 
+/**
+ * Default implementation of [Pitch].
+ */
 data class PitchImpl(
     override val step: Int,
     override val alt: Int,
@@ -21,17 +40,20 @@ data class PitchImpl(
     override val dir: Int? = null,
 ) : Pitch
 
-// Coordinates types as Kotlin lists or specific data classes
-// In JS they are:
-// type PitchClassCoordinates = [Fifths];
-// type NoteCoordinates = [Fifths, Octaves];
-// type IntervalCoordinates = [Fifths, Octaves, Direction];
-
+/**
+ * Represents the coordinates of a pitch.
+ */
 sealed class PitchCoordinates {
+    /** Pitch class coordinates: [fifths] */
     data class PitchClass(val fifths: Int) : PitchCoordinates()
+
+    /** Note coordinates: [fifths, octaves] */
     data class Note(val fifths: Int, val octaves: Int) : PitchCoordinates()
+
+    /** Interval coordinates: [fifths, octaves, direction] */
     data class Interval(val fifths: Int, val octaves: Int, val direction: Int) : PitchCoordinates()
 
+    /** Returns the coordinates as a list of integers. */
     fun toList(): List<Int> = when (this) {
         is PitchClass -> listOf(fifths)
         is Note -> listOf(fifths, octaves)
@@ -41,14 +63,23 @@ sealed class PitchCoordinates {
 
 private val SIZES = intArrayOf(0, 2, 4, 5, 7, 9, 11)
 
+/**
+ * Returns the chroma of a pitch (0-11).
+ */
 fun chroma(pitch: Pitch): Int = (SIZES[pitch.step] + pitch.alt + 120) % 12
 
+/**
+ * Returns the height of a pitch.
+ */
 fun height(pitch: Pitch): Int {
     val dir = pitch.dir ?: 1
     val oct = pitch.oct ?: -100
     return dir * (SIZES[pitch.step] + pitch.alt + 12 * oct)
 }
 
+/**
+ * Returns the midi number of a pitch, or null if it's not a note.
+ */
 fun midi(pitch: Pitch): Int? {
     val h = height(pitch)
     return if (pitch.oct != null && h >= -12 && h <= 115) h + 12 else null
@@ -129,10 +160,16 @@ private fun unaltered(f: Int): Int {
     return if (i < 0) 7 + i else i
 }
 
+/**
+ * Returns true if the object is a [Pitch].
+ */
 fun isPitch(src: Any?): Boolean {
     return src is Pitch
 }
 
+/**
+ * Returns true if the object is a [NamedPitch].
+ */
 fun isNamedPitch(src: Any?): Boolean {
     return src is NamedPitch
 }

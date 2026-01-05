@@ -429,8 +429,8 @@ object Deps {
         const val kotest_runner_junit_jvm = "io.kotest:kotest-runner-junit5-jvm:$kotest_version"
 
         fun KotlinDependencyHandler.commonTestDeps() {
-            kotlin("test-common")
-            kotlin("test-annotations-common")
+            kotlin("test")
+            kotlin("test-annotations")
             implementation(kotest_assertions_core)
             implementation(kotest_framework_engine)
         }

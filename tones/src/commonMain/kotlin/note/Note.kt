@@ -7,23 +7,43 @@ typealias NoteWithOctave = String
 typealias PcName = String
 typealias NoteName = String
 
+/**
+ * Represents a musical note.
+ */
 data class Note(
+    /** The step number (0 = C, 1 = D, ... 6 = B). */
     override val step: Int,
+    /** The number of alterations (-2 = 'bb', -1 = 'b', 0 = '', 1 = '#', ...). */
     override val alt: Int,
+    /** The octave number. */
     override val oct: Int? = null,
+    /** The direction (for intervals, usually null for notes). */
     override val dir: Int? = null,
+    /** Whether the note is empty (represents "no note"). */
     val empty: Boolean = false,
+    /** The full name of the note (e.g., "C#4"). */
     override val name: String = "",
+    /** The letter name of the note (e.g., "C"). */
     val letter: String = "",
+    /** The accidental string (e.g., "#", "bb"). */
     val acc: String = "",
+    /** The pitch class name (e.g., "C#"). */
     val pc: PcName = "",
+    /** The chroma of the note (0-11). */
     val chroma: Int = -1,
+    /** The height of the note (midi-like absolute value). */
     val height: Int = -1,
+    /** The pitch coordinates. */
     val coord: PitchCoordinates? = null,
+    /** The MIDI number of the note, if applicable. */
     val midi: Int? = null,
+    /** The frequency of the note in Hz, if applicable. */
     val freq: Double? = null,
 ) : NamedPitch, Pitch {
     companion object {
+        /**
+         * Represents an empty or invalid note.
+         */
         val NoNote = Note(
             step = -1,
             alt = -1,
@@ -46,15 +66,25 @@ private fun fillStr(s: String, n: Int): String {
     return s.repeat(count)
 }
 
+/**
+ * Converts a step number to its letter representation.
+ */
 fun stepToLetter(step: Int): String = "CDEFGAB".getOrNull(step)?.toString() ?: ""
 
+/**
+ * Converts an alteration number to its accidental string representation.
+ */
 fun altToAcc(alt: Int): String = if (alt < 0) fillStr("b", -alt) else fillStr("#", alt)
 
+/**
+ * Converts an accidental string to its alteration number.
+ */
 fun accToAlt(acc: String): Int = if (acc.isEmpty()) 0 else if (acc[0] == 'b') -acc.length else acc.length
 
 private val REGEX = Regex("""^([a-gA-G]?)(#{1,}|b{1,}|x{1,}|)(-?\d*)\s*(.*)$""")
 
 /**
+ * Tokenizes a note string into [letter, accidental, octave, rest].
  * @private
  */
 fun tokenizeNote(str: String): List<String> {
@@ -73,6 +103,7 @@ fun tokenizeNote(str: String): List<String> {
 }
 
 /**
+ * Converts pitch coordinates to a [Note].
  * @private
  */
 fun coordToNote(noteCoord: PitchCoordinates): Note {
@@ -83,6 +114,9 @@ private fun mod(n: Int, m: Int): Int = ((n % m) + m) % m
 
 private val SEMI = intArrayOf(0, 2, 4, 5, 7, 9, 11)
 
+/**
+ * Returns a [Note] from a given source (string, Note, or Pitch).
+ */
 fun note(src: Any?): Note {
     return when (src) {
         is String -> parse(src)
@@ -149,6 +183,9 @@ private fun pitchName(props: Pitch): NoteName {
     return if (oct != null) pc + oct.toString() else pc
 }
 
+/**
+ * Returns true if the object is a valid [Note].
+ */
 fun isNote(src: Any?): Boolean {
     return src is Note && !src.empty
 }

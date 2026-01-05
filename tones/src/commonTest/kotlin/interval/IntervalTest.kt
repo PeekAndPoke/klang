@@ -79,4 +79,12 @@ class IntervalTest : StringSpec({
         interval(Pitch(step = 1, alt = -1, oct = 1, dir = -1)).name shouldBe "-9m"
         interval(Pitch(step = 0, alt = 0, oct = 0, dir = 1)).name shouldBe "1P"
     }
+
+    "isInterval" {
+        isInterval(interval("P5")) shouldBe true
+        isInterval(interval("M3")) shouldBe true
+        isInterval(interval("10i")) shouldBe false
+        isInterval(null) shouldBe false
+        isInterval(Pitch(step = 0, alt = 0)) shouldBe false
+    }
 })

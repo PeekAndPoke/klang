@@ -6,6 +6,8 @@ plugins {
     idea
     kotlin("multiplatform")
     kotlin("plugin.serialization")
+    id("com.google.devtools.ksp")
+    id("io.kotest")
 }
 
 val GROUP: String by project
@@ -19,8 +21,10 @@ kotlin {
         browser {
             binaries.executable()
 
-            webpackTask {
-                cssSupport { enabled.set(false) }
+            testTask {
+                useKarma {
+                    useChromeHeadless()
+                }
             }
         }
     }
@@ -41,6 +45,14 @@ kotlin {
             dependencies {
                 Deps.Test {
                     commonTestDeps()
+                }
+            }
+        }
+
+        jsTest {
+            dependencies {
+                Deps.Test {
+                    jsTestDeps()
                 }
             }
         }
