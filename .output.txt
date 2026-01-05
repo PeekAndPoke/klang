@@ -1,437 +1,238 @@
-package io.peekandpoke.klang.tones.key
-/**
- * Properties of a key scale.
- */
-data class KeyScale(
-    /** The tonic of the key scale */
-    val tonic: String,
-    /** The scale degrees (grades) in Roman Numerals */
-    val grades: List<String>,
-    /** The intervals from the tonic */
-    val intervals: List<String>,
-    /** The notes in the scale */
-    val scale: List<String>,
-    /** The triads for each degree */
-    val triads: List<String>,
-    /** The 7th chords for each degree */
-    val chords: List<String>,
-    /** The harmonic function of each chord (T, SD, D) */
-    val chordsHarmonicFunction: List<String>,
-    /** The default scales for each chord degree */
-    val chordScales: List<String>,
-    /** The secondary dominants for each degree */
-    val secondaryDominants: List<String>,
-    /** The supertonics (ii-V) for the secondary dominants */
-    val secondaryDominantSupertonics: List<String>,
-    /** The substitute dominants for each degree */
-    val substituteDominants: List<String>,
-    /** The supertonics (ii-V) for the substitute dominants */
-    val substituteDominantSupertonics: List<String>,
-) {
-    /** Deprecated: use secondaryDominantSupertonics */
-    val secondaryDominantsMinorRelative: List<String> get() = secondaryDominantSupertonics
-    /** Deprecated: use substituteDominantSupertonics */
-    val substituteDominantsMinorRelative: List<String> get() = substituteDominantSupertonics
-    companion object {
-        /** An empty key scale */
-        val NoKeyScale = KeyScale(
-            tonic = "",
-            grades = emptyList(),
-            intervals = emptyList(),
-            scale = emptyList(),
-            triads = emptyList(),
-            chords = emptyList(),
-            chordsHarmonicFunction = emptyList(),
-            chordScales = emptyList(),
-            secondaryDominants = emptyList(),
-            secondaryDominantSupertonics = emptyList(),
-            substituteDominants = emptyList(),
-            substituteDominantSupertonics = emptyList()
-        )
-    }
-}
-package io.peekandpoke.klang.tones.key
-/**
- * Properties of a major key.
- */
-data class MajorKey(
-    /** The type of the key (major) */
-    override val type: String = "major",
-    /** The tonic of the key */
-    override val tonic: String,
-    /** The number of sharps (positive) or flats (negative) */
-    override val alteration: Int,
-    /** The key signature (accidentals) */
-    override val keySignature: String,
-    /** The relative minor key tonic */
-    val minorRelative: String,
-    /** The scale degrees in Roman Numerals */
-    val grades: List<String>,
-    /** The intervals from the tonic */
-    val intervals: List<String>,
-    /** The notes in the major scale */
-    val scale: List<String>,
-    /** The triads of the key */
-    val triads: List<String>,
-    /** The 7th chords of the key */
-    val chords: List<String>,
-    /** The harmonic function of each chord */
-    val chordsHarmonicFunction: List<String>,
-    /** The default scales for each degree */
-    val chordScales: List<String>,
-    /** The secondary dominants for each degree */
-    val secondaryDominants: List<String>,
-    /** The supertonics for the secondary dominants */
-    val secondaryDominantSupertonics: List<String>,
-    /** The substitute dominants for each degree */
-    val substituteDominants: List<String>,
-    /** The supertonics for the substitute dominants */
-    val substituteDominantSupertonics: List<String>,
-) : Key {
-    /** Deprecated: use secondaryDominantSupertonics */
-    val secondaryDominantsMinorRelative: List<String> get() = secondaryDominantSupertonics
-    /** Deprecated: use substituteDominantSupertonics */
-    val substituteDominantsMinorRelative: List<String> get() = substituteDominantSupertonics
-    companion object {
-        /** An empty major key */
-        val NoMajorKey = MajorKey(
-            tonic = "",
-            alteration = 0,
-            keySignature = "",
-            minorRelative = "",
-            grades = emptyList(),
-            intervals = emptyList(),
-            scale = emptyList(),
-            triads = emptyList(),
-            chords = emptyList(),
-            chordsHarmonicFunction = emptyList(),
-            chordScales = emptyList(),
-            secondaryDominants = emptyList(),
-            secondaryDominantSupertonics = emptyList(),
-            substituteDominants = emptyList(),
-            substituteDominantSupertonics = emptyList()
-        )
-    }
-}
-package io.peekandpoke.klang.tones.key
-/**
- * Properties of a minor key.
- */
-data class MinorKey(
-    /** The type of the key (minor) */
-    override val type: String = "minor",
-    /** The tonic of the key */
-    override val tonic: String,
-    /** The number of sharps (positive) or flats (negative) */
-    override val alteration: Int,
-    /** The key signature (accidentals) */
-    override val keySignature: String,
-    /** The relative major key tonic */
-    val relativeMajor: String,
-    /** The natural minor scale properties */
-    val natural: KeyScale,
-    /** The harmonic minor scale properties */
-    val harmonic: KeyScale,
-    /** The melodic minor scale properties */
-    val melodic: KeyScale,
-) : Key {
-    companion object {
-        /** An empty minor key */
-        val NoMinorKey = MinorKey(
-            tonic = "",
-            alteration = 0,
-            keySignature = "",
-            relativeMajor = "",
-            natural = KeyScale.NoKeyScale,
-            harmonic = KeyScale.NoKeyScale,
-            melodic = KeyScale.NoKeyScale
-        )
-    }
-}
-package io.peekandpoke.klang.tones.key
-import io.peekandpoke.klang.tones.distance.Distance
-import io.peekandpoke.klang.tones.note.Note
-import io.peekandpoke.klang.tones.pitch.PitchCoordinates
-import io.peekandpoke.klang.tones.roman.RomanNumeral
-/**
- * Base interface for Major and Minor keys.
- */
-interface Key {
-    /** The type of the key (major or minor) */
-    val type: String
-    /** The tonic of the key */
-    val tonic: String
-    /** The number of sharps or flats */
-    val alteration: Int
-    /** The key signature */
-    val keySignature: String
-    companion object {
-        /**
-         * Get major key properties for a given tonic.
-         */
-        fun majorKey(tonic: String): MajorKey {
-            val pc = Note.get(tonic).pc
-            if (pc.isEmpty()) return MajorKey.NoMajorKey
-            val ks = MajorScale(pc)
-            val alteration = distInFifths("C", pc)
-            return MajorKey(
-                tonic = pc,
-                alteration = alteration,
-                keySignature = Note.altToAcc(alteration),
-                minorRelative = Distance.transpose(pc, "-3m"),
-                grades = ks.grades,
-                intervals = ks.intervals,
-                scale = ks.scale,
-                triads = ks.triads,
-                chords = ks.chords,
-                chordsHarmonicFunction = ks.chordsHarmonicFunction,
-                chordScales = ks.chordScales,
-                secondaryDominants = ks.secondaryDominants,
-                secondaryDominantSupertonics = ks.secondaryDominantSupertonics,
-                substituteDominants = ks.substituteDominants,
-                substituteDominantSupertonics = ks.substituteDominantSupertonics
-            )
-        }
-        /**
-         * Get minor key properties for a given tonic.
-         */
-        fun minorKey(tnc: String): MinorKey {
-            val pc = Note.get(tnc).pc
-            if (pc.isEmpty()) return MinorKey.NoMinorKey
-            val alteration = distInFifths("C", pc) - 3
-            return MinorKey(
-                tonic = pc,
-                alteration = alteration,
-                keySignature = Note.altToAcc(alteration),
-                relativeMajor = Distance.transpose(pc, "3m"),
-                natural = NaturalScale(pc),
-                harmonic = HarmonicScale(pc),
-                melodic = MelodicScale(pc)
-            )
-        }
-        /**
-         * Get a list of available chords for a given major key.
-         */
-        fun majorKeyChords(tonic: String): List<KeyChord> {
-            val key = majorKey(tonic)
-            val chords = mutableListOf<KeyChord>()
-            fun updateChord(name: String, newRole: String) {
-                if (name.isEmpty()) return
-                val existingIndex = chords.indexOfFirst { it.name == name }
-                if (existingIndex == -1) {
-                    chords.add(KeyChord(name, if (newRole.isNotEmpty()) listOf(newRole) else emptyList()))
-                } else {
-                    val existing = chords[existingIndex]
-                    if (newRole.isNotEmpty() && !existing.roles.contains(newRole)) {
-                        chords[existingIndex] = existing.copy(roles = existing.roles + newRole)
-                    }
-                }
-            }
-            key.chords.forEachIndexed { index, chordName ->
-                updateChord(chordName, key.chordsHarmonicFunction.getOrElse(index) { "" })
-            }
-            key.secondaryDominants.forEachIndexed { index, chordName ->
-                updateChord(chordName, "V/${key.grades[index]}")
-            }
-            key.secondaryDominantSupertonics.forEachIndexed { index, chordName ->
-                updateChord(chordName, "ii/${key.grades[index]}")
-            }
-            key.substituteDominants.forEachIndexed { index, chordName ->
-                updateChord(chordName, "subV/${key.grades[index]}")
-            }
-            key.substituteDominantSupertonics.forEachIndexed { index, chordName ->
-                updateChord(chordName, "subii/${key.grades[index]}")
-            }
-            return chords
-        }
-        /**
-         * Get a list of available chords for a given minor key.
-         */
-        fun minorKeyChords(tonic: String): List<KeyChord> {
-            val key = minorKey(tonic)
-            val chords = mutableListOf<KeyChord>()
-            keyChordsOf(key.natural, chords)
-            keyChordsOf(key.harmonic, chords)
-            keyChordsOf(key.melodic, chords)
-            return chords
-        }
-        /**
-         * Collects chords and their roles from a given KeyScale.
-         */
-        private fun keyChordsOf(ks: KeyScale, chords: MutableList<KeyChord>) {
-            fun updateChord(name: String, newRole: String) {
-                if (name.isEmpty()) return
-                val existingIndex = chords.indexOfFirst { it.name == name }
-                if (existingIndex == -1) {
-                    chords.add(KeyChord(name, if (newRole.isNotEmpty()) listOf(newRole) else emptyList()))
-                } else {
-                    val existing = chords[existingIndex]
-                    if (newRole.isNotEmpty() && !existing.roles.contains(newRole)) {
-                        chords[existingIndex] = existing.copy(roles = existing.roles + newRole)
-                    }
-                }
-            }
-            ks.chords.forEachIndexed { index, chordName ->
-                updateChord(chordName, ks.chordsHarmonicFunction.getOrElse(index) { "" })
-            }
-            ks.secondaryDominants.forEachIndexed { index, chordName ->
-                updateChord(chordName, "V/${ks.grades[index]}")
-            }
-            ks.secondaryDominantSupertonics.forEachIndexed { index, chordName ->
-                updateChord(chordName, "ii/${ks.grades[index]}")
-            }
-            ks.substituteDominants.forEachIndexed { index, chordName ->
-                updateChord(chordName, "subV/${ks.grades[index]}")
-            }
-            ks.substituteDominantSupertonics.forEachIndexed { index, chordName ->
-                updateChord(chordName, "subii/${ks.grades[index]}")
-            }
-        }
-        /**
-         * Given a key signature, returns the tonic of the major key.
-         */
-        fun majorTonicFromKeySignature(sig: Any?): String? {
-            return when (sig) {
-                is Int -> Distance.transposeFifths("C", sig)
-                is String -> {
-                    if (sig.matches(Regex("^[b#]+$"))) {
-                        Distance.transposeFifths("C", Note.accToAlt(sig))
-                    } else {
-                        null
-                    }
-                }
-                else -> null
-            }
-        }
-        /**
-         * Maps scale notes to chord types.
-         */
-        private fun mapScaleToType(scale: List<String>, list: List<String>, sep: String = ""): List<String> =
-            list.mapIndexed { i, type -> if (type.isEmpty()) scale[i] else "${scale[i]}$sep$type" }
-        /**
-         * Calculates secondary and substitute dominant supertonics (ii-V relations).
-         */
-        private fun supertonics(dominants: List<String>, targetTriads: List<String>): List<String> =
-            dominants.mapIndexed { index, chord ->
-                if (chord.isEmpty()) ""
-                else {
-                    val domRoot = chord.dropLast(1)
-                    val minorRoot = Distance.transpose(domRoot, "5P")
-                    val target = targetTriads[index]
-                    val isMinor = target.endsWith("m")
-                    if (isMinor) "${minorRoot}m7" else "${minorRoot}m7b5"
-                }
-            }
-        /**
-         * Factory function to create a KeyScale generator for a given scale definition.
-         */
-        private fun keyScaleFactory(
-            grades: List<String>,
-            triads: List<String>,
-            chordTypes: List<String>,
-            harmonicFunctions: List<String>,
-            chordScales: List<String>,
-        ): (String) -> KeyScale {
-            return { tonic ->
-                val intervals = grades.map { RomanNumeral.get(it).interval }
-                val scale = intervals.map { Distance.transpose(tonic, it) }
-                val chords = mapScaleToType(scale, chordTypes)
-                val secondaryDominants = scale
-                    .map { Distance.transpose(it, "5P") }
-                    .map { note ->
-                        // A secondary dominant is a V chord which:
-                        // 1. is not diatonic to the key,
-                        // 2. it must have a diatonic root.
-                        if (scale.contains(note) && !chords.contains(note + "7")) note + "7" else ""
-                    }
-                val secondaryDominantSupertonics = supertonics(secondaryDominants, triads)
-                val substituteDominants = secondaryDominants.map { chord ->
-                    if (chord.isEmpty()) ""
-                    else {
-                        val domRoot = chord.dropLast(1)
-                        val subRoot = Distance.transpose(domRoot, "5d")
-                        subRoot + "7"
-                    }
-                }
-                val substituteDominantSupertonics = supertonics(substituteDominants, triads)
-                KeyScale(
-                    tonic = tonic,
-                    grades = grades,
-                    intervals = intervals,
-                    scale = scale,
-                    triads = mapScaleToType(scale, triads),
-                    chords = chords,
-                    chordsHarmonicFunction = harmonicFunctions,
-                    chordScales = mapScaleToType(scale, chordScales, " "),
-                    secondaryDominants = secondaryDominants,
-                    secondaryDominantSupertonics = secondaryDominantSupertonics,
-                    substituteDominants = substituteDominants,
-                    substituteDominantSupertonics = substituteDominantSupertonics
-                )
-            }
-        }
-        /**
-         * Major scale generator.
-         */
-        private val MajorScale = keyScaleFactory(
-            "I II III IV V VI VII".split(" "),
-            " m m   m dim".split(" "),
-            "maj7 m7 m7 maj7 7 m7 m7b5".split(" "),
-            "T SD T SD D T D".split(" "),
-            "major,dorian,phrygian,lydian,mixolydian,minor,locrian".split(",")
-        )
-        /**
-         * Natural minor scale generator.
-         */
-        private val NaturalScale = keyScaleFactory(
-            "I II bIII IV V bVI bVII".split(" "),
-            "m dim  m m  ".split(" "),
-            "m7 m7b5 maj7 m7 m7 maj7 7".split(" "),
-            "T SD T SD D SD SD".split(" "),
-            "minor,locrian,major,dorian,phrygian,lydian,mixolydian".split(",")
-        )
-        /**
-         * Harmonic minor scale generator.
-         */
-        private val HarmonicScale = keyScaleFactory(
-            "I II bIII IV V bVI VII".split(" "),
-            "m dim aug m   dim".split(" "),
-            "mMaj7 m7b5 +maj7 m7 7 maj7 o7".split(" "),
-            "T SD T SD D SD D".split(" "),
-            "harmonic minor,locrian 6,major augmented,lydian diminished,phrygian dominant,lydian #9,ultralocrian".split(
-                ","
-            )
-        )
-        /**
-         * Melodic minor scale generator.
-         */
-        private val MelodicScale = keyScaleFactory(
-            "I II bIII IV V VI VII".split(" "),
-            "m m aug   dim dim".split(" "),
-            "m6 m7 +maj7 7 7 m7b5 m7b5".split(" "),
-            "T SD T SD D  ".split(" "),
-            "melodic minor,dorian b2,lydian augmented,lydian dominant,mixolydian b6,locrian #2,altered".split(",")
-        )
-        /**
-         * Calculates the distance in fifths between two notes.
-         */
-        @Suppress("SameParameterValue")
-        private fun distInFifths(from: String, to: String): Int {
-            val f = Note.get(from)
-            val t = Note.get(to)
-            val fCoord = f.coord ?: return 0
-            val tCoord = t.coord ?: return 0
-            val fFifths = when (fCoord) {
-                is PitchCoordinates.PitchClass -> fCoord.fifths
-                is PitchCoordinates.Note -> fCoord.fifths
-                else -> 0
-            }
-            val tFifths = when (tCoord) {
-                is PitchCoordinates.PitchClass -> tCoord.fifths
-                is PitchCoordinates.Note -> tCoord.fifths
-                else -> 0
-            }
-            return tFifths - fFifths
-        }
-    }
-}
+Initialized native services in: /home/gerk/.gradle/native
+Initialized jansi services in: /home/gerk/.gradle/native
+Found daemon DaemonInfo{pid=4061996, address=[25147a64-f075-499c-b8c1-a17c51a64266 port:36075, addresses:[/127.0.0.1]], state=Idle, lastBusy=1767626339375, context=DefaultDaemonContext[uid=09321ece-d917-4a8b-84d2-602a7c3eebb6,javaHome=/home/gerk/.sdkman/candidates/java/23.0.2-graalce,javaVersion=23,javaVendor=GraalVM Community,daemonRegistryDir=/home/gerk/.gradle/daemon,pid=4061996,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-XX:MaxMetaspaceSize=1g,-Xmx4g,-Dfile.encoding=UTF-8,-Duser.country=US,-Duser.language=en,-Duser.variant]} however its context does not match the desired criteria.
+JVM is incompatible.
+Wanted: DaemonRequestContext{jvmCriteria=/home/gerk/.sdkman/candidates/java/17.0.17-amzn (no JDK specified, using current Java home), daemonOpts=[-XX:MaxMetaspaceSize=1g, -Xmx4g, -Dfile.encoding=UTF-8, -Duser.country=US, -Duser.language=en, -Duser.variant], applyInstrumentationAgent=true, nativeServicesMode=ENABLED, priority=NORMAL}
+Actual: DefaultDaemonContext[uid=09321ece-d917-4a8b-84d2-602a7c3eebb6,javaHome=/home/gerk/.sdkman/candidates/java/23.0.2-graalce,javaVersion=23,javaVendor=GraalVM Community,daemonRegistryDir=/home/gerk/.gradle/daemon,pid=4061996,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-XX:MaxMetaspaceSize=1g,-Xmx4g,-Dfile.encoding=UTF-8,-Duser.country=US,-Duser.language=en,-Duser.variant]
+  Looking for a different daemon...
+The client will now receive all logging from the daemon (pid: 4095718). The daemon log file: /home/gerk/.gradle/daemon/8.14/daemon-4095718.out.log
+Starting 129th build in daemon [uptime: 6 hrs 54 mins 39.577 secs, performance: 100%, GC rate: 0.00/s, heap usage: 2% of 4 GiB, non-heap usage: 22% of 1 GiB]
+Using 16 worker leases.
+Now considering [/opt/dev/peekandpoke/klang, /opt/dev/peekandpoke/klang/buildSrc] as hierarchies to watch
+Now considering [/opt/dev/peekandpoke/klang/buildSrc, /opt/dev/peekandpoke/klang] as hierarchies to watch
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Resolved plugin [id: 'org.gradle.toolchains.foojay-resolver-convention', version: '0.8.0']
+Settings evaluated using settings file '/opt/dev/peekandpoke/klang/settings.gradle.kts'.
+Projects loaded. Root project using build file '/opt/dev/peekandpoke/klang/build.gradle.kts'.
+Included projects: [root project 'klang-engine', project ':audio_be', project ':audio_bridge', project ':audio_fe', project ':klang', project ':strudel', project ':tones']
+> Configure project :buildSrc
+Evaluating project ':buildSrc' using build file '/opt/dev/peekandpoke/klang/buildSrc/build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.kotlin.kotlin-dsl', version: '5.2.0']
+Using Kotlin Gradle Plugin gradle85 variant
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+file or directory '/opt/dev/peekandpoke/klang/buildSrc/src/main/kotlin', not found
+Resolve mutations for :buildSrc:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker,5,main]) started.
+:buildSrc:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker,5,main]) started.
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+Skipping task ':buildSrc:checkKotlinGradlePluginConfigurationErrors' as task onlyIf 'errorDiagnostics are present' is false.
+Resolve mutations for :buildSrc:compileKotlin (Thread[Execution worker,5,main]) started.
+:buildSrc:compileKotlin (Thread[Execution worker,5,main]) started.
+> Task :buildSrc:compileKotlin UP-TO-DATE
+Caching disabled for task ':buildSrc:compileKotlin' because:
+  Build cache is disabled
+Skipping task ':buildSrc:compileKotlin' as it is up-to-date.
+Resolve mutations for :buildSrc:compileJava (Thread[Execution worker,5,main]) started.
+:buildSrc:compileJava (Thread[Execution worker,5,main]) started.
+> Task :buildSrc:compileJava NO-SOURCE
+Skipping task ':buildSrc:compileJava' as it has no source files and no previous output files.
+Resolve mutations for :buildSrc:compileGroovy (Thread[Execution worker,5,main]) started.
+:buildSrc:compileGroovy (Thread[Execution worker,5,main]) started.
+> Task :buildSrc:compileGroovy NO-SOURCE
+Skipping task ':buildSrc:compileGroovy' as it has no source files and no previous output files.
+Resolve mutations for :buildSrc:pluginDescriptors (Thread[Execution worker,5,main]) started.
+:buildSrc:pluginDescriptors (Thread[Execution worker Thread 4,5,main]) started.
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+Caching disabled for task ':buildSrc:pluginDescriptors' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':buildSrc:pluginDescriptors' as it is up-to-date.
+Resolve mutations for :buildSrc:processResources (Thread[Execution worker Thread 4,5,main]) started.
+:buildSrc:processResources (Thread[Execution worker Thread 4,5,main]) started.
+> Task :buildSrc:processResources NO-SOURCE
+Skipping task ':buildSrc:processResources' as it has no source files and no previous output files.
+Resolve mutations for :buildSrc:classes (Thread[Execution worker Thread 4,5,main]) started.
+:buildSrc:classes (Thread[Execution worker Thread 4,5,main]) started.
+> Task :buildSrc:classes UP-TO-DATE
+Skipping task ':buildSrc:classes' as it has no actions.
+Resolve mutations for :buildSrc:jar (Thread[Execution worker Thread 4,5,main]) started.
+:buildSrc:jar (Thread[Execution worker Thread 4,5,main]) started.
+> Task :buildSrc:jar UP-TO-DATE
+Caching disabled for task ':buildSrc:jar' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':buildSrc:jar' as it is up-to-date.
+> Configure project :
+Evaluating root project 'klang-engine' using build file '/opt/dev/peekandpoke/klang/build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.idea']
+Resolved plugin [id: 'org.jetbrains.kotlin.multiplatform']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization', version: '2.2.21', apply: false]
+Resolved plugin [id: 'com.google.devtools.ksp', version: '2.2.21-2.0.4', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlinx.atomicfu', version: '0.30.0-beta', apply: false]
+Resolved plugin [id: 'io.kotest', version: '6.0.7', apply: false]
+Build 300f08a0-ae1e-4795-a5bd-7b1e5b3d1ace is started
+Using Kotlin Gradle Plugin gradle813 variant
+[KOTLIN] Storing cached files in /home/gerk/.gradle
+[KOTLIN] Storing cached files in /home/gerk/.gradle
+[KOTLIN] Storing cached files in /home/gerk/.gradle
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+[:] commonizeCInterop task registration disabled. cInteropCommonizationEnabled == false
+> Configure project :audio_be
+Evaluating project ':audio_be' using build file '/opt/dev/peekandpoke/klang/audio_be/build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.idea']
+Resolved plugin [id: 'org.jetbrains.kotlin.multiplatform']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization']
+Using Kotlin Gradle Plugin gradle813 variant
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+[:audio_be] commonizeCInterop task registration disabled. cInteropCommonizationEnabled == false
+> Configure project :audio_bridge
+Evaluating project ':audio_bridge' using build file '/opt/dev/peekandpoke/klang/audio_bridge/build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.idea']
+Resolved plugin [id: 'org.jetbrains.kotlin.multiplatform']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization']
+Using Kotlin Gradle Plugin gradle813 variant
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+[:audio_bridge] commonizeCInterop task registration disabled. cInteropCommonizationEnabled == false
+> Configure project :audio_fe
+Evaluating project ':audio_fe' using build file '/opt/dev/peekandpoke/klang/audio_fe/build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.idea']
+Resolved plugin [id: 'org.jetbrains.kotlin.multiplatform']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization']
+Resolved plugin [id: 'com.google.devtools.ksp']
+Resolved plugin [id: 'io.kotest']
+Using Kotlin Gradle Plugin gradle813 variant
+> Configuring kotest task for jsTest
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+Configuring kotest task for jvmTest
+[:audio_fe] commonizeCInterop task registration disabled. cInteropCommonizationEnabled == false
+> Configure project :klang
+Evaluating project ':klang' using build file '/opt/dev/peekandpoke/klang/klang/build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.idea']
+Resolved plugin [id: 'org.jetbrains.kotlin.multiplatform']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization']
+Resolved plugin [id: 'com.google.devtools.ksp']
+Resolved plugin [id: 'io.kotest']
+Using Kotlin Gradle Plugin gradle813 variant
+> Configuring kotest task for jsTest
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+Configuring kotest task for jvmTest
+[:klang] commonizeCInterop task registration disabled. cInteropCommonizationEnabled == false
+> Configure project :strudel
+Evaluating project ':strudel' using build file '/opt/dev/peekandpoke/klang/strudel/build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.idea']
+Resolved plugin [id: 'org.jetbrains.kotlin.multiplatform']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization']
+Resolved plugin [id: 'com.google.devtools.ksp']
+Resolved plugin [id: 'io.kotest']
+Using Kotlin Gradle Plugin gradle813 variant
+> Configuring kotest task for jsTest
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+Configuring kotest task for jvmTest
+[:strudel] commonizeCInterop task registration disabled. cInteropCommonizationEnabled == false
+> Configure project :tones
+Evaluating project ':tones' using build file '/opt/dev/peekandpoke/klang/tones/build.gradle.kts'.
+Resolved plugin [id: 'org.gradle.idea']
+Resolved plugin [id: 'org.jetbrains.kotlin.multiplatform']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization']
+Resolved plugin [id: 'com.google.devtools.ksp']
+Resolved plugin [id: 'io.kotest']
+Using Kotlin Gradle Plugin gradle813 variant
+> Configuring kotest task for jsTest
+kotlin scripting plugin: created the scripting discovery configuration: kotlinScriptDef
+kotlin scripting plugin: created the scripting discovery configuration: testKotlinScriptDef
+Configuring kotest task for jvmTest
+[:tones] commonizeCInterop task registration disabled. cInteropCommonizationEnabled == false
+All projects evaluated.
+Task path ':tones:jvmTest' matched project ':tones'
+Task name matched 'jvmTest'
+Selected primary task 'jvmTest' from project :tones
+Tasks to be executed: [task ':tones:kmpPartiallyResolvedDependenciesChecker', task ':tones:checkKotlinGradlePluginConfigurationErrors', task ':tones:kspKotlinJvm', task ':tones:compileKotlinJvm', task ':tones:compileJvmMainJava', task ':tones:jvmProcessResources', task ':tones:processJvmMainResources', task ':tones:jvmMainClasses', task ':tones:jvmJar', task ':tones:kspTestKotlinJvm', task ':tones:compileTestKotlinJvm', task ':tones:compileJvmTestJava', task ':tones:jvmTestProcessResources', task ':tones:processJvmTestResources', task ':tones:jvmTestClasses', task ':tones:jvmTest']
+Tasks that were excluded: []
+Resolve mutations for :tones:kmpPartiallyResolvedDependenciesChecker (Thread[Execution worker Thread 2,5,main]) started.
+:tones:kmpPartiallyResolvedDependenciesChecker (Thread[Execution worker Thread 2,5,main]) started.
+> Task :tones:kmpPartiallyResolvedDependenciesChecker
+Caching disabled for task ':tones:kmpPartiallyResolvedDependenciesChecker' because:
+  Build cache is disabled
+Task ':tones:kmpPartiallyResolvedDependenciesChecker' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Execution stopped by some action with message: null
+Resolve mutations for :tones:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 2,5,main]) started.
+:tones:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 2,5,main]) started.
+> Task :tones:checkKotlinGradlePluginConfigurationErrors SKIPPED
+Skipping task ':tones:checkKotlinGradlePluginConfigurationErrors' as task onlyIf 'errorDiagnostics are present' is false.
+Resolve mutations for :tones:kspKotlinJvm (Thread[Execution worker Thread 10,5,main]) started.
+:tones:kspKotlinJvm (Thread[Execution worker Thread 10,5,main]) started.
+> Task :tones:kspKotlinJvm SKIPPED
+Skipping task ':tones:kspKotlinJvm' as task onlyIf 'Task satisfies onlyIf spec' is false.
+Resolve mutations for :tones:compileKotlinJvm (Thread[Execution worker Thread 10,5,main]) started.
+:tones:compileKotlinJvm (Thread[Execution worker Thread 10,5,main]) started.
+> Task :tones:compileKotlinJvm UP-TO-DATE
+Caching disabled for task ':tones:compileKotlinJvm' because:
+  Build cache is disabled
+Skipping task ':tones:compileKotlinJvm' as it is up-to-date.
+Resolve mutations for :tones:compileJvmMainJava (Thread[Execution worker Thread 10,5,main]) started.
+:tones:compileJvmMainJava (Thread[Execution worker Thread 10,5,main]) started.
+> Task :tones:compileJvmMainJava NO-SOURCE
+Skipping task ':tones:compileJvmMainJava' as it has no source files and no previous output files.
+Resolve mutations for :tones:jvmProcessResources (Thread[Execution worker Thread 10,5,main]) started.
+:tones:jvmProcessResources (Thread[Execution worker Thread 4,5,main]) started.
+> Task :tones:jvmProcessResources NO-SOURCE
+Skipping task ':tones:jvmProcessResources' as it has no source files and no previous output files.
+Resolve mutations for :tones:processJvmMainResources (Thread[Execution worker Thread 4,5,main]) started.
+:tones:processJvmMainResources (Thread[Execution worker Thread 3,5,main]) started.
+> Task :tones:processJvmMainResources SKIPPED
+Skipping task ':tones:processJvmMainResources' as task onlyIf 'Task is enabled' is false.
+Resolve mutations for :tones:jvmMainClasses (Thread[Execution worker,5,main]) started.
+:tones:jvmMainClasses (Thread[Execution worker Thread 8,5,main]) started.
+> Task :tones:jvmMainClasses UP-TO-DATE
+Skipping task ':tones:jvmMainClasses' as it has no actions.
+Resolve mutations for :tones:jvmJar (Thread[Execution worker Thread 8,5,main]) started.
+:tones:jvmJar (Thread[Execution worker Thread 8,5,main]) started.
+> Task :tones:jvmJar UP-TO-DATE
+Caching disabled for task ':tones:jvmJar' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':tones:jvmJar' as it is up-to-date.
+Resolve mutations for :tones:kspTestKotlinJvm (Thread[Execution worker Thread 8,5,main]) started.
+:tones:kspTestKotlinJvm (Thread[Execution worker Thread 8,5,main]) started.
+> Task :tones:kspTestKotlinJvm SKIPPED
+Skipping task ':tones:kspTestKotlinJvm' as task onlyIf 'Task satisfies onlyIf spec' is false.
+Resolve mutations for :tones:compileTestKotlinJvm (Thread[Execution worker Thread 8,5,main]) started.
+:tones:compileTestKotlinJvm (Thread[Execution worker Thread 8,5,main]) started.
+> Task :tones:compileTestKotlinJvm UP-TO-DATE
+Caching disabled for task ':tones:compileTestKotlinJvm' because:
+  Build cache is disabled
+Skipping task ':tones:compileTestKotlinJvm' as it is up-to-date.
+Resolve mutations for :tones:compileJvmTestJava (Thread[Execution worker Thread 8,5,main]) started.
+:tones:compileJvmTestJava (Thread[Execution worker Thread 8,5,main]) started.
+> Task :tones:compileJvmTestJava NO-SOURCE
+Skipping task ':tones:compileJvmTestJava' as it has no source files and no previous output files.
+Resolve mutations for :tones:jvmTestProcessResources (Thread[Execution worker Thread 8,5,main]) started.
+:tones:jvmTestProcessResources (Thread[Execution worker Thread 9,5,main]) started.
+> Task :tones:jvmTestProcessResources NO-SOURCE
+Skipping task ':tones:jvmTestProcessResources' as it has no source files and no previous output files.
+Resolve mutations for :tones:processJvmTestResources (Thread[Execution worker Thread 9,5,main]) started.
+:tones:processJvmTestResources (Thread[Execution worker Thread 9,5,main]) started.
+> Task :tones:processJvmTestResources SKIPPED
+Skipping task ':tones:processJvmTestResources' as task onlyIf 'Task is enabled' is false.
+Resolve mutations for :tones:jvmTestClasses (Thread[Execution worker Thread 12,5,main]) started.
+:tones:jvmTestClasses (Thread[Execution worker Thread 12,5,main]) started.
+> Task :tones:jvmTestClasses UP-TO-DATE
+Skipping task ':tones:jvmTestClasses' as it has no actions.
+Resolve mutations for :tones:jvmTest (Thread[Execution worker Thread 12,5,main]) started.
+:tones:jvmTest (Thread[Execution worker Thread 12,5,main]) started.
+> Task :tones:jvmTest UP-TO-DATE
+Caching disabled for task ':tones:jvmTest' because:
+  Build cache is disabled
+Skipping task ':tones:jvmTest' as it is up-to-date.
+Build 300f08a0-ae1e-4795-a5bd-7b1e5b3d1ace is closed
+BUILD SUCCESSFUL in 660ms
+8 actionable tasks: 1 executed, 7 up-to-date
