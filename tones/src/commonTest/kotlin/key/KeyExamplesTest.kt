@@ -5,7 +5,7 @@ import io.kotest.matchers.shouldBe
 
 class KeyExamplesTest : StringSpec({
     "majorKey" {
-        val cMajor = majorKey("C")
+        val cMajor = Key.majorKey("C")
         cMajor.tonic shouldBe "C"
         cMajor.type shouldBe "major"
         cMajor.minorRelative shouldBe "A"
@@ -33,7 +33,7 @@ class KeyExamplesTest : StringSpec({
     }
 
     "minorKey" {
-        val cMinor = minorKey("C")
+        val cMinor = Key.minorKey("C")
         cMinor.tonic shouldBe "C"
         cMinor.type shouldBe "minor"
         cMinor.relativeMajor shouldBe "Eb"
@@ -54,8 +54,8 @@ class KeyExamplesTest : StringSpec({
     }
 
     "majorTonicFromKeySignature" {
-        majorTonicFromKeySignature("bbb") shouldBe "Eb"
-        majorTonicFromKeySignature("###") shouldBe "A"
-        majorKey(majorTonicFromKeySignature("###")!!).minorRelative shouldBe "F#"
+        Key.majorTonicFromKeySignature("bbb") shouldBe "Eb"
+        Key.majorTonicFromKeySignature("###") shouldBe "A"
+        Key.majorKey(Key.majorTonicFromKeySignature("###")!!).minorRelative shouldBe "F#"
     }
 })

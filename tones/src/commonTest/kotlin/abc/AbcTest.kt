@@ -5,19 +5,19 @@ import io.kotest.matchers.shouldBe
 
 class AbcTest : StringSpec({
     "tokenize" {
-        tokenizeAbc("C,',") shouldBe listOf("", "C", ",',")
-        tokenizeAbc("g,,'") shouldBe listOf("", "g", ",,'")
-        tokenizeAbc("") shouldBe listOf("", "", "")
-        tokenizeAbc("m") shouldBe listOf("", "", "")
-        tokenizeAbc("c#") shouldBe listOf("", "", "")
+        AbcNotation.tokenize("C,',") shouldBe listOf("", "C", ",',")
+        AbcNotation.tokenize("g,,'") shouldBe listOf("", "g", ",,'")
+        AbcNotation.tokenize("") shouldBe listOf("", "", "")
+        AbcNotation.tokenize("m") shouldBe listOf("", "", "")
+        AbcNotation.tokenize("c#") shouldBe listOf("", "", "")
     }
 
-    "transpose" {
-        transposeAbc("=C", "P19") shouldBe "g'"
+    "transposeNote" {
+        AbcNotation.transpose("=C", "P19") shouldBe "g'"
     }
 
     "distance" {
-        distanceAbc("=C", "g") shouldBe "12P"
+        AbcNotation.distance("=C", "g") shouldBe "12P"
     }
 
     "abcToScientificNotation" {
@@ -43,7 +43,7 @@ class AbcTest : StringSpec({
             "G5",
             "",
         )
-        abc.map { abcToScientificNotation(it) } shouldBe scientific
+        abc.map { AbcNotation.toScientificNotation(it) } shouldBe scientific
     }
 
     "scientificToAbcNotation" {
@@ -59,7 +59,7 @@ class AbcTest : StringSpec({
             "",
         )
         val abc = listOf("__A,,", "_B,", "C", "d", "^e'", "^^f''", "^G,,", "_g''", "")
-        scientific.map { scientificToAbcNotation(it) } shouldBe abc
+        scientific.map { AbcNotation.fromScientificNotation(it) } shouldBe abc
     }
 
     "scientificToAbcNotation Octave 0" {
@@ -73,6 +73,6 @@ class AbcTest : StringSpec({
             "^^F,,,,",
             "^G,,,,",
         )
-        scientific.map { scientificToAbcNotation(it) } shouldBe abc
+        scientific.map { AbcNotation.fromScientificNotation(it) } shouldBe abc
     }
 })

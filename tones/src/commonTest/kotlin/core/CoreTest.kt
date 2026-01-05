@@ -5,8 +5,8 @@ import io.kotest.matchers.shouldBe
 
 class CoreTest : StringSpec({
     "fillStr" {
-        fillStr("#", 5) shouldBe "#####"
-        fillStr("b", 0) shouldBe ""
-        fillStr("a", 3) shouldBe "aaa"
+        Core.fillStr("#", 5) shouldBe "#####"
+        Core.fillStr("b", 0) shouldBe ""
+        Core.fillStr("a", 3) shouldBe "aaa"
     }
 })

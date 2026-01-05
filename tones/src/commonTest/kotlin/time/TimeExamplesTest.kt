@@ -5,7 +5,7 @@ import io.kotest.matchers.shouldBe
 
 class TimeExamplesTest : StringSpec({
     "TimeSignature.get" {
-        val ts = getTimeSignature("3/4")
+        val ts = TimeSignature.get("3/4")
         ts.empty shouldBe false
         ts.name shouldBe "3/4"
         ts.upper shouldBe 3
@@ -13,7 +13,7 @@ class TimeExamplesTest : StringSpec({
         ts.type shouldBe "simple"
         ts.additive shouldBe emptyList<Int>()
 
-        val ts2 = getTimeSignature("3+2+3/8")
+        val ts2 = TimeSignature.get("3+2+3/8")
         ts2.empty shouldBe false
         ts2.name shouldBe "3+2+3/8"
         ts2.type shouldBe "irregular"
@@ -21,7 +21,7 @@ class TimeExamplesTest : StringSpec({
         ts2.lower shouldBe 8
         ts2.additive shouldBe listOf(3, 2, 3)
 
-        val ts3 = getTimeSignature("12/10")
+        val ts3 = TimeSignature.get("12/10")
         ts3.empty shouldBe false
         ts3.name shouldBe "12/10"
         ts3.type shouldBe "irrational"
@@ -31,7 +31,7 @@ class TimeExamplesTest : StringSpec({
     }
 
     "DurationValue.get" {
-        val d = getDurationValue("quarter")
+        val d = DurationValue.get("quarter")
         d.empty shouldBe false
         d.name shouldBe "quarter"
         d.value shouldBe 0.25
@@ -40,7 +40,7 @@ class TimeExamplesTest : StringSpec({
         d.dots shouldBe ""
         d.names shouldBe listOf("quarter", "crotchet")
 
-        val d2 = getDurationValue("quarter..")
+        val d2 = DurationValue.get("quarter..")
         d2.empty shouldBe false
         d2.name shouldBe "quarter.."
         d2.value shouldBe 0.4375
@@ -49,25 +49,25 @@ class TimeExamplesTest : StringSpec({
         d2.dots shouldBe ".."
         d2.names shouldBe listOf("quarter", "crotchet")
 
-        getDurationValue("q").value shouldBe getDurationValue("quarter").value
-        getDurationValue("q.").value shouldBe getDurationValue("quarter.").value
-        getDurationValue("q..").value shouldBe getDurationValue("quarter..").value
+        DurationValue.get("q").value shouldBe DurationValue.get("quarter").value
+        DurationValue.get("q.").value shouldBe DurationValue.get("quarter.").value
+        DurationValue.get("q..").value shouldBe DurationValue.get("quarter..").value
     }
 
     "RhythmPattern" {
-        rhythmBinary(13) shouldBe listOf(1, 1, 0, 1)
-        rhythmBinary(12, 13) shouldBe listOf(1, 1, 0, 0, 1, 1, 0, 1)
+        Rhythm.binary(13) shouldBe listOf(1, 1, 0, 1)
+        Rhythm.binary(12, 13) shouldBe listOf(1, 1, 0, 0, 1, 1, 0, 1)
 
-        rhythmHex("8f") shouldBe listOf(1, 0, 0, 0, 1, 1, 1, 1)
+        Rhythm.hex("8f") shouldBe listOf(1, 0, 0, 0, 1, 1, 1, 1)
 
-        rhythmOnsets(1, 2, 2, 1) shouldBe listOf(1, 0, 1, 0, 0, 1, 0, 0, 1, 0)
+        Rhythm.onsets(1, 2, 2, 1) shouldBe listOf(1, 0, 1, 0, 0, 1, 0, 0, 1, 0)
 
         // rhythmRandom(4) is random
 
         // rhythmProbability(listOf(0.6, 0.0, 0.2, 0.5)) is random
 
-        rhythmRotate(listOf(1, 0, 0, 1), 2) shouldBe listOf(0, 1, 1, 0)
+        Rhythm.rotate(listOf(1, 0, 0, 1), 2) shouldBe listOf(0, 1, 1, 0)
 
-        rhythmEuclid(8, 3) shouldBe listOf(1, 0, 0, 1, 0, 0, 1, 0)
+        Rhythm.euclid(8, 3) shouldBe listOf(1, 0, 0, 1, 0, 0, 1, 0)
     }
 })

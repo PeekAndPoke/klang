@@ -1,8 +1,7 @@
 package io.peekandpoke.klang.tones.roman
 
-import io.peekandpoke.klang.tones.interval.interval
-import io.peekandpoke.klang.tones.note.accToAlt
-import io.peekandpoke.klang.tones.note.altToAcc
+import io.peekandpoke.klang.tones.interval.Interval
+import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.pitch.Pitch
 
@@ -45,88 +44,87 @@ data class RomanNumeral(
             name = "",
             chordType = ""
         )
-    }
-}
 
-private val ROMANS = "I II III IV V VI VII"
-private val NAMES = ROMANS.split(" ")
-private val NAMES_MINOR = ROMANS.lowercase().split(" ")
+        private val ROMANS = "I II III IV V VI VII"
+        private val NAMES = ROMANS.split(" ")
+        private val NAMES_MINOR = ROMANS.lowercase().split(" ")
+        private val REGEX = Regex("""^([#]{1,}|b{1,}|x{1,}|)(IV|I{1,3}|VI{0,2}|iv|i{1,3}|vi{0,2})([^IViv]*)$""")
 
-private val REGEX = Regex("""^([#]{1,}|b{1,}|x{1,}|)(IV|I{1,3}|VI{0,2}|iv|i{1,3}|vi{0,2})([^IViv]*)$""")
-
-/**
- * Tokenizes a roman numeral string into [fullMatch, accidentals, romanNumeral, chordType].
- * @private
- */
-fun tokenizeRomanNumeral(str: String): List<String> {
-    val m = REGEX.matchEntire(str)
-    return if (m != null) {
-        val groups = m.groupValues
-        listOf(
-            groups[0],
-            groups[1],
-            groups[2],
-            groups[3]
-        )
-    } else {
-        listOf("", "", "", "")
-    }
-}
-
-/**
- * Get roman numeral names.
- *
- * @param major Whether to return major (uppercase) or minor (lowercase) names.
- */
-fun romanNumeralNames(major: Boolean = true): List<String> {
-    return if (major) NAMES.toList() else NAMES_MINOR.toList()
-}
-
-/**
- * Returns a [RomanNumeral] from a given source (string, number, or Pitch).
- */
-fun romanNumeral(src: Any?): RomanNumeral {
-    return when (src) {
-        is String -> parse(src)
-        is Int -> {
-            val name = NAMES.getOrNull(src) ?: ""
-            if (name.isNotEmpty()) parse(name) else RomanNumeral.NoRomanNumeral
+        /**
+         * Tokenizes a roman numeral string into [fullMatch, accidentals, romanNumeral, chordType].
+         * @private
+         */
+        fun tokenize(str: String): List<String> {
+            val m = REGEX.matchEntire(str)
+            return if (m != null) {
+                val groups = m.groupValues
+                listOf(
+                    groups[0],
+                    groups[1],
+                    groups[2],
+                    groups[3]
+                )
+            } else {
+                listOf("", "", "", "")
+            }
         }
 
-        is Pitch -> parse(altToAcc(src.alt) + (NAMES.getOrNull(src.step) ?: ""))
-        is NamedPitch -> romanNumeral(src.name)
-        is RomanNumeral -> src
-        else -> RomanNumeral.NoRomanNumeral
+        /**
+         * Get roman numeral names.
+         *
+         * @param major Whether to return major (uppercase) or minor (lowercase) names.
+         */
+        fun names(major: Boolean = true): List<String> {
+            return if (major) NAMES.toList() else NAMES_MINOR.toList()
+        }
+
+        /**
+         * Returns a [RomanNumeral] from a given source (string, number, or Pitch).
+         */
+        fun get(src: Any?): RomanNumeral {
+            return when (src) {
+                is String -> parse(src)
+                is Int -> {
+                    val name = NAMES.getOrNull(src) ?: ""
+                    if (name.isNotEmpty()) parse(name) else NoRomanNumeral
+                }
+
+                is Pitch -> parse(Note.altToAcc(src.alt) + (NAMES.getOrNull(src.step) ?: ""))
+                is NamedPitch -> get(src.name)
+                is RomanNumeral -> src
+                else -> NoRomanNumeral
+            }
+        }
+
+        private fun parse(src: String): RomanNumeral {
+            val tokens = tokenize(src)
+            val name = tokens[0]
+            val acc = tokens[1]
+            val roman = tokens[2]
+            val chordType = tokens[3]
+
+            if (roman.isEmpty()) {
+                return NoRomanNumeral
+            }
+
+            val upperRoman = roman.uppercase()
+            val step = NAMES.indexOf(upperRoman)
+            val alt = Note.accToAlt(acc)
+            val dir = 1
+
+            return RomanNumeral(
+                empty = false,
+                name = name,
+                roman = roman,
+                interval = Interval.get(io.peekandpoke.klang.tones.pitch.Pitch(step, alt, 0, dir)).name,
+                acc = acc,
+                chordType = chordType,
+                alt = alt,
+                step = step,
+                major = roman == upperRoman,
+                oct = 0,
+                dir = dir
+            )
+        }
     }
-}
-
-private fun parse(src: String): RomanNumeral {
-    val tokens = tokenizeRomanNumeral(src)
-    val name = tokens[0]
-    val acc = tokens[1]
-    val roman = tokens[2]
-    val chordType = tokens[3]
-
-    if (roman.isEmpty()) {
-        return RomanNumeral.NoRomanNumeral
-    }
-
-    val upperRoman = roman.uppercase()
-    val step = NAMES.indexOf(upperRoman)
-    val alt = accToAlt(acc)
-    val dir = 1
-
-    return RomanNumeral(
-        empty = false,
-        name = name,
-        roman = roman,
-        interval = interval(io.peekandpoke.klang.tones.pitch.Pitch(step, alt, 0, dir)).name,
-        acc = acc,
-        chordType = chordType,
-        alt = alt,
-        step = step,
-        major = roman == upperRoman,
-        oct = 0,
-        dir = dir
-    )
 }

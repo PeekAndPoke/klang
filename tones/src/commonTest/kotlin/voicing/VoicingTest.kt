@@ -5,7 +5,7 @@ import io.kotest.matchers.shouldBe
 
 class VoicingTest : StringSpec({
     "C major triad inversions" {
-        searchVoicings("C", listOf("C3", "C5"), VoicingDictionaries.triads) shouldBe listOf(
+        Voicing.search("C", listOf("C3", "C5"), VoicingDictionaries.triads) shouldBe listOf(
             listOf("C3", "E3", "G3"),
             listOf("C4", "E4", "G4"),
             listOf("E3", "G3", "C4"),
@@ -15,7 +15,7 @@ class VoicingTest : StringSpec({
     }
 
     "C^7 lefthand" {
-        searchVoicings("C^7", listOf("E3", "D5"), VoicingDictionaries.lefthand) shouldBe listOf(
+        Voicing.search("C^7", listOf("E3", "D5"), VoicingDictionaries.lefthand) shouldBe listOf(
             listOf("E3", "G3", "B3", "D4"),
             listOf("E4", "G4", "B4", "D5"),
             listOf("B3", "D4", "E4", "G4")
@@ -23,7 +23,7 @@ class VoicingTest : StringSpec({
     }
 
     "getVoicing Dm7" {
-        getVoicing(
+        Voicing.get(
             "Dm7",
             listOf("F3", "A4"),
             VoicingDictionaries.lefthand,
@@ -32,7 +32,7 @@ class VoicingTest : StringSpec({
     }
 
     "getVoicing Dm7 with lastVoicing" {
-        getVoicing(
+        Voicing.get(
             "Dm7",
             listOf("F3", "A4"),
             VoicingDictionaries.lefthand,
@@ -42,7 +42,7 @@ class VoicingTest : StringSpec({
     }
 
     "sequenceVoicings" {
-        sequenceVoicings(
+        Voicing.sequence(
             listOf("C", "F", "G"),
             listOf("F3", "A4"),
             VoicingDictionaries.triads,

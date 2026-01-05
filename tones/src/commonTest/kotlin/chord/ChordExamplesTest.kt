@@ -2,11 +2,11 @@ package io.peekandpoke.klang.tones.chord
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.tones.range.numericRange
+import io.peekandpoke.klang.tones.range.TonalRange
 
 class ChordExamplesTest : StringSpec({
     "Chord.get" {
-        val c = chord("Cmaj7/B")
+        val c = Chord.get("Cmaj7/B")
         c.empty shouldBe false
         c.symbol shouldBe "Cmaj7/B"
         c.tonic shouldBe "C"
@@ -19,15 +19,15 @@ class ChordExamplesTest : StringSpec({
     }
 
     "Chord.getChord" {
-        getChord("maj7", "C", "B").symbol shouldBe chord("Cmaj7/B").symbol
+        Chord.getChord("maj7", "C", "B").symbol shouldBe Chord.get("Cmaj7/B").symbol
     }
 
     "Chord.notes" {
-        chordNotes("maj7", "C4") shouldBe listOf("C4", "E4", "G4", "B4")
+        Chord.notes("maj7", "C4") shouldBe listOf("C4", "E4", "G4", "B4")
     }
 
     "Chord.degrees" {
-        val c4m7 = chordDegrees("m7", "C4")
+        val c4m7 = Chord.degrees("m7", "C4")
         c4m7(1) shouldBe "C4"
         c4m7(2) shouldBe "Eb4"
         c4m7(3) shouldBe "G4"
@@ -43,32 +43,32 @@ class ChordExamplesTest : StringSpec({
     }
 
     "Chord.steps" {
-        numericRange(listOf(-3, 3)).map(chordSteps("aug", "C4")) shouldBe
+        TonalRange.numeric(listOf(-3, 3)).map(Chord.steps("aug", "C4")) shouldBe
                 listOf("C3", "E3", "G#3", "C4", "E4", "G#4", "C5")
     }
 
     "Chord.detect" {
-        detectChord(listOf("D", "F#", "A", "C")) shouldBe listOf("D7")
-        detectChord(listOf("F#", "A", "C", "D")) shouldBe listOf("D7/F#")
+        ChordDetect.detect(listOf("D", "F#", "A", "C")) shouldBe listOf("D7")
+        ChordDetect.detect(listOf("F#", "A", "C", "D")) shouldBe listOf("D7/F#")
     }
 
-    "Chord.transpose" {
-        transposeChord("Eb7b9", "5P") shouldBe "Bb7b9"
+    "Chord.transposeNote" {
+        Chord.transpose("Eb7b9", "5P") shouldBe "Bb7b9"
     }
 
     "Chord.chordScales" {
-        chordScales("C7b9") shouldBe
+        Chord.chordScales("C7b9") shouldBe
                 listOf("phrygian dominant", "flamenco", "spanish heptatonic", "half-whole diminished", "chromatic")
     }
 
     "Chord.extended" {
-        val extended = extendedChords("Cmaj7")
+        val extended = Chord.extended("Cmaj7")
         // Note: TonalJS README has "Cmaj#4", "Cmaj7#9#11", etc.
         // Our ChordTypeDictionary aliases might be different.
         extended.take(5) shouldBe listOf("Cmaj#4", "Cmaj7#9#11", "Cmaj9", "Cmaj13", "CM7add13")
     }
 
     "Chord.reduced" {
-        reducedChords("Cmaj7") shouldBe listOf("C5", "CM")
+        Chord.reduced("Cmaj7") shouldBe listOf("C5", "CM")
     }
 })

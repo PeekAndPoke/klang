@@ -2,11 +2,11 @@ package io.peekandpoke.klang.tones.scale
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.tones.range.numericRange
+import io.peekandpoke.klang.tones.range.TonalRange
 
 class ScaleExamplesTest : StringSpec({
     "Scale.get" {
-        val s = getScale("c5 pentatonic")
+        val s = Scale.get("c5 pentatonic")
         s.empty shouldBe false
         s.name shouldBe "C5 major pentatonic"
         s.type shouldBe "major pentatonic"
@@ -19,44 +19,44 @@ class ScaleExamplesTest : StringSpec({
     }
 
     "Scale.detect" {
-        val detected = detectScale(listOf("C", "D", "E", "F", "G", "A", "B"))
+        val detected = Scale.detect(listOf("C", "D", "E", "F", "G", "A", "B"))
         detected.take(5) shouldBe
                 listOf("C major", "C bebop", "C bebop major", "C ichikosucho", "C chromatic")
 
-        val detectedA = detectScale(listOf("C", "D", "E", "F", "G", "A", "B"), tonic = "A")
+        val detectedA = Scale.detect(listOf("C", "D", "E", "F", "G", "A", "B"), tonic = "A")
         detectedA shouldBe
                 listOf("A minor", "A minor bebop", "A chromatic")
 
-        val exact = detectScale(listOf("D", "E", "F#", "A", "B"), matchExact = true)
+        val exact = Scale.detect(listOf("D", "E", "F#", "A", "B"), matchExact = true)
         exact shouldBe
                 listOf("D major pentatonic")
 
-        val exactB = detectScale(listOf("D", "E", "F#", "A", "B"), matchExact = true, tonic = "B")
+        val exactB = Scale.detect(listOf("D", "E", "F#", "A", "B"), matchExact = true, tonic = "B")
         exactB shouldBe
                 listOf("B minor pentatonic")
     }
 
     "Scale.scaleChords" {
-        scaleChords("pentatonic") shouldBe listOf("5", "M", "6", "sus2", "Madd9")
+        Scale.chords("pentatonic") shouldBe listOf("5", "M", "6", "sus2", "Madd9")
     }
 
     "Scale.extended" {
-        extendedScales("major") shouldBe
+        Scale.extended("major") shouldBe
                 listOf("bebop", "bebop major", "ichikosucho", "chromatic")
     }
 
     "Scale.reduced" {
-        reducedScales("major") shouldBe
+        Scale.reduced("major") shouldBe
                 listOf("major pentatonic", "ionian pentatonic", "ritusen")
     }
 
     "Scale.scaleNotes" {
-        scaleNotes(listOf("D4", "c#5", "A5", "F#6")) shouldBe listOf("D", "F#", "A", "C#")
-        scaleNotes(listOf("C4", "c3", "C5", "C4", "c4")) shouldBe listOf("C")
+        Scale.notes(listOf("D4", "c#5", "A5", "F#6")) shouldBe listOf("D", "F#", "A", "C#")
+        Scale.notes(listOf("C4", "c3", "C5", "C4", "c4")) shouldBe listOf("C")
     }
 
     "Scale.modeNames" {
-        modeNames("C pentatonic") shouldBe listOf(
+        Scale.modeNames("C pentatonic") shouldBe listOf(
             "C" to "major pentatonic",
             "D" to "egyptian",
             "E" to "malkos raga",
@@ -66,7 +66,7 @@ class ScaleExamplesTest : StringSpec({
     }
 
     "Scale.degrees" {
-        val c4major = scaleDegrees("C4 major")
+        val c4major = Scale.degrees("C4 major")
         c4major(1) shouldBe "C4"
         c4major(2) shouldBe "D4"
         c4major(8) shouldBe "C5"
@@ -90,23 +90,23 @@ class ScaleExamplesTest : StringSpec({
         // 1(C4), -1(B3), -2(A3), -3(G3), -4(F3), -5(E3), -6(D3), -7(C3).
         // Yes, C3 is correct for -7. C2 is two octaves down.
 
-        listOf(1, 2, 3).map(scaleDegrees("C major")) shouldBe listOf("C", "D", "E")
-        listOf(1, 2, 3).map(scaleDegrees("C4 major")) shouldBe listOf("C4", "D4", "E4")
-        listOf(-1, -2, -3).map(scaleDegrees("C major")) shouldBe listOf("B", "A", "G")
+        listOf(1, 2, 3).map(Scale.degrees("C major")) shouldBe listOf("C", "D", "E")
+        listOf(1, 2, 3).map(Scale.degrees("C4 major")) shouldBe listOf("C4", "D4", "E4")
+        listOf(-1, -2, -3).map(Scale.degrees("C major")) shouldBe listOf("B", "A", "G")
     }
 
     "Scale.steps" {
-        numericRange(listOf(-3, 3)).map(scaleSteps("C4 major")) shouldBe
+        TonalRange.numeric(listOf(-3, 3)).map(Scale.steps("C4 major")) shouldBe
                 listOf("G3", "A3", "B3", "C4", "D4", "E4", "F4")
     }
 
     "Scale.rangeOf" {
-        val range = rangeOfScale("C pentatonic")
+        val range = Scale.rangeOfScale("C pentatonic")
         range("C4", "C5") shouldBe listOf("C4", "D4", "E4", "G4", "A4", "C5")
 
-        rangeOfScale("pentatonic")("C4", "C5") shouldBe emptyList<String>()
+        Scale.rangeOfScale("pentatonic")("C4", "C5") shouldBe emptyList<String>()
 
-        val range2 = rangeOfScale(listOf("C", "Db", "G"))
+        val range2 = Scale.rangeOfScale(listOf("C", "Db", "G"))
         range2("C4", "C5") shouldBe listOf("C4", "Db4", "G4", "C5")
     }
 })

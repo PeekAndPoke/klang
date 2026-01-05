@@ -5,31 +5,31 @@ import io.kotest.matchers.shouldBe
 
 class ChordTest : StringSpec({
     "tokenize" {
-        tokenizeChord("Cmaj7") shouldBe Triple("C", "maj7", "")
-        tokenizeChord("c7") shouldBe Triple("C", "7", "")
-        tokenizeChord("maj7") shouldBe Triple("", "maj7", "")
-        tokenizeChord("c#4 m7b5") shouldBe Triple("C#", "4m7b5", "")
-        tokenizeChord("c#4m7b5") shouldBe Triple("C#", "4m7b5", "")
-        tokenizeChord("Cb7b5") shouldBe Triple("Cb", "7b5", "")
-        tokenizeChord("Eb7add6") shouldBe Triple("Eb", "7add6", "")
-        tokenizeChord("Bb6b5") shouldBe Triple("Bb", "6b5", "")
-        tokenizeChord("aug") shouldBe Triple("", "aug", "")
-        tokenizeChord("C11") shouldBe Triple("C", "11", "")
-        tokenizeChord("C13no5") shouldBe Triple("C", "13no5", "")
-        tokenizeChord("C64") shouldBe Triple("C", "64", "")
-        tokenizeChord("C9") shouldBe Triple("C", "9", "")
-        tokenizeChord("C5") shouldBe Triple("C", "5", "")
-        tokenizeChord("C4") shouldBe Triple("C", "4", "")
-        tokenizeChord("C4|\n") shouldBe Triple("", "C4|\n", "")
+        Chord.tokenize("Cmaj7") shouldBe Triple("C", "maj7", "")
+        Chord.tokenize("c7") shouldBe Triple("C", "7", "")
+        Chord.tokenize("maj7") shouldBe Triple("", "maj7", "")
+        Chord.tokenize("c#4 m7b5") shouldBe Triple("C#", "4m7b5", "")
+        Chord.tokenize("c#4m7b5") shouldBe Triple("C#", "4m7b5", "")
+        Chord.tokenize("Cb7b5") shouldBe Triple("Cb", "7b5", "")
+        Chord.tokenize("Eb7add6") shouldBe Triple("Eb", "7add6", "")
+        Chord.tokenize("Bb6b5") shouldBe Triple("Bb", "6b5", "")
+        Chord.tokenize("aug") shouldBe Triple("", "aug", "")
+        Chord.tokenize("C11") shouldBe Triple("C", "11", "")
+        Chord.tokenize("C13no5") shouldBe Triple("C", "13no5", "")
+        Chord.tokenize("C64") shouldBe Triple("C", "64", "")
+        Chord.tokenize("C9") shouldBe Triple("C", "9", "")
+        Chord.tokenize("C5") shouldBe Triple("C", "5", "")
+        Chord.tokenize("C4") shouldBe Triple("C", "4", "")
+        Chord.tokenize("C4|\n") shouldBe Triple("", "C4|\n", "")
 
         // With bass
-        tokenizeChord("Cmaj7/G") shouldBe Triple("C", "maj7", "G")
-        tokenizeChord("bb6/a##") shouldBe Triple("Bb", "6", "A##")
-        tokenizeChord("bb6/a##5") shouldBe Triple("Bb", "6/a##5", "")
+        Chord.tokenize("Cmaj7/G") shouldBe Triple("C", "maj7", "G")
+        Chord.tokenize("bb6/a##") shouldBe Triple("Bb", "6", "A##")
+        Chord.tokenize("bb6/a##5") shouldBe Triple("Bb", "6/a##5", "")
     }
 
     "getChord properties" {
-        val chord = getChord("maj7", "G4", "G4")
+        val chord = Chord.getChord("maj7", "G4", "G4")
         chord.empty shouldBe false
         chord.name shouldBe "G major seventh"
         chord.symbol shouldBe "Gmaj7"
@@ -48,7 +48,7 @@ class ChordTest : StringSpec({
     }
 
     "first inversion" {
-        val chord = getChord("maj7", "G4", "B4")
+        val chord = Chord.getChord("maj7", "G4", "B4")
         chord.empty shouldBe false
         chord.name shouldBe "G major seventh over B"
         chord.symbol shouldBe "Gmaj7/B"
@@ -63,7 +63,7 @@ class ChordTest : StringSpec({
     }
 
     "first inversion without octave" {
-        val chord = getChord("maj7", "G", "B")
+        val chord = Chord.getChord("maj7", "G", "B")
         chord.empty shouldBe false
         chord.name shouldBe "G major seventh over B"
         chord.symbol shouldBe "Gmaj7/B"
@@ -78,7 +78,7 @@ class ChordTest : StringSpec({
     }
 
     "second inversion" {
-        val chord = getChord("maj7", "G4", "D5")
+        val chord = Chord.getChord("maj7", "G4", "D5")
         chord.empty shouldBe false
         chord.name shouldBe "G major seventh over D"
         chord.symbol shouldBe "Gmaj7/D"
@@ -92,12 +92,12 @@ class ChordTest : StringSpec({
     }
 
     "rootDegrees" {
-        getChord("maj7", "C", "C").rootDegree shouldBe 1
-        getChord("maj7", "C", "D").rootDegree shouldBe 0
+        Chord.getChord("maj7", "C", "C").rootDegree shouldBe 1
+        Chord.getChord("maj7", "C", "D").rootDegree shouldBe 0
     }
 
     "without tonic nor root" {
-        val chord = getChord("dim")
+        val chord = Chord.getChord("dim")
         chord.symbol shouldBe "dim"
         chord.name shouldBe "diminished"
         chord.tonic shouldBe ""
@@ -116,7 +116,7 @@ class ChordTest : StringSpec({
     }
 
     "chord get" {
-        val c = chord("Cmaj7")
+        val c = Chord.get("Cmaj7")
         c.empty shouldBe false
         c.symbol shouldBe "Cmaj7"
         c.name shouldBe "C major seventh"
@@ -133,13 +133,13 @@ class ChordTest : StringSpec({
         c.notes shouldBe listOf("C", "E", "G", "B")
         c.quality shouldBe ChordQuality.Major
 
-        chord("hello").empty shouldBe true
-        chord("").empty shouldBe true
-        chord("C").name shouldBe "C major"
+        Chord.get("hello").empty shouldBe true
+        Chord.get("").empty shouldBe true
+        Chord.get("C").name shouldBe "C major"
     }
 
     "chord with bass, without root" {
-        val c = chord("C/Bb")
+        val c = Chord.get("C/Bb")
         c.aliases shouldBe listOf("M", "^", "", "maj")
         c.bass shouldBe "Bb"
         c.chroma shouldBe "100010010000"
@@ -158,16 +158,16 @@ class ChordTest : StringSpec({
     }
 
     "notes property" {
-        chord("Cmaj7").notes shouldBe listOf("C", "E", "G", "B")
-        chord("Eb7add6").notes shouldBe listOf("Eb", "G", "Bb", "Db", "C")
-        chord(listOf("C4", "maj7")).notes shouldBe listOf("C", "E", "G", "B")
-        chord("C7").notes shouldBe listOf("C", "E", "G", "Bb")
-        chord("Cmaj7#5").notes shouldBe listOf("C", "E", "G#", "B")
-        chord("blah").notes shouldBe emptyList()
+        Chord.get("Cmaj7").notes shouldBe listOf("C", "E", "G", "B")
+        Chord.get("Eb7add6").notes shouldBe listOf("Eb", "G", "Bb", "Db", "C")
+        Chord.get(listOf("C4", "maj7")).notes shouldBe listOf("C", "E", "G", "B")
+        Chord.get("C7").notes shouldBe listOf("C", "E", "G", "Bb")
+        Chord.get("Cmaj7#5").notes shouldBe listOf("C", "E", "G#", "B")
+        Chord.get("blah").notes shouldBe emptyList()
     }
 
     "chordScales" {
-        chordScales("C7b9") shouldBe listOf(
+        Chord.chordScales("C7b9") shouldBe listOf(
             "phrygian dominant",
             "flamenco",
             "spanish heptatonic",
@@ -177,41 +177,41 @@ class ChordTest : StringSpec({
     }
 
     "transposeChord" {
-        transposeChord("Eb7b9", "5P") shouldBe "Bb7b9"
-        transposeChord("7b9", "5P") shouldBe "7b9"
-        transposeChord("Cmaj7/B", "P5") shouldBe "Gmaj7/F#"
+        Chord.transpose("Eb7b9", "5P") shouldBe "Bb7b9"
+        Chord.transpose("7b9", "5P") shouldBe "7b9"
+        Chord.transpose("Cmaj7/B", "P5") shouldBe "Gmaj7/F#"
     }
 
     "extendedChords" {
         val expected = "Cmaj#4 Cmaj7#9#11 Cmaj9 CM7add13 Cmaj13 Cmaj9#11 CM13#11 CM7b9".split(" ").sorted()
-        extendedChords("CMaj7").sorted() shouldBe expected
+        Chord.extended("CMaj7").sorted() shouldBe expected
     }
 
     "reducedChords" {
-        reducedChords("CMaj7") shouldBe listOf("C5", "CM")
+        Chord.reduced("CMaj7") shouldBe listOf("C5", "CM")
     }
 
     "chordNotes" {
-        chordNotes("Cmaj7") shouldBe listOf("C", "E", "G", "B")
-        chordNotes("maj7") shouldBe emptyList()
-        chordNotes("maj7", "C4") shouldBe listOf("C4", "E4", "G4", "B4")
-        chordNotes("Cmaj7", "C4") shouldBe listOf("C4", "E4", "G4", "B4")
-        chordNotes("Cmaj7", "D4") shouldBe listOf("D4", "F#4", "A4", "C#5")
-        chordNotes("C/Bb", "D4") shouldBe listOf("C4", "D4", "F#4", "A4")
+        Chord.notes("Cmaj7") shouldBe listOf("C", "E", "G", "B")
+        Chord.notes("maj7") shouldBe emptyList()
+        Chord.notes("maj7", "C4") shouldBe listOf("C4", "E4", "G4", "B4")
+        Chord.notes("Cmaj7", "C4") shouldBe listOf("C4", "E4", "G4", "B4")
+        Chord.notes("Cmaj7", "D4") shouldBe listOf("D4", "F#4", "A4", "C#5")
+        Chord.notes("C/Bb", "D4") shouldBe listOf("C4", "D4", "F#4", "A4")
     }
 
     "chordDegrees" {
-        val degreesC = chordDegrees("C")
+        val degreesC = Chord.degrees("C")
         listOf(1, 2, 3, 4).map { degreesC(it) } shouldBe listOf("C", "E", "G", "C")
 
-        val degreesCM_C4 = chordDegrees("CM", "C4")
+        val degreesCM_C4 = Chord.degrees("CM", "C4")
         listOf(1, 2, 3, 4).map { degreesCM_C4(it) } shouldBe listOf("C4", "E4", "G4", "C5")
 
-        val degreesCm6_C4 = chordDegrees("Cm6", "C4")
+        val degreesCm6_C4 = Chord.degrees("Cm6", "C4")
         listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).map { degreesCm6_C4(it) } shouldBe
                 listOf("C4", "Eb4", "G4", "A4", "C5", "Eb5", "G5", "A5", "C6", "Eb6")
 
-        val degreesC_B = chordDegrees("C/B")
+        val degreesC_B = Chord.degrees("C/B")
         listOf(1, 2, 3, 4).map { degreesC_B(it) } shouldBe listOf("B", "C", "E", "G")
 
         listOf(-1, -2, -3).map { degreesC(it) } shouldBe listOf("G", "E", "C")
@@ -219,7 +219,7 @@ class ChordTest : StringSpec({
     }
 
     "chordSteps" {
-        val steps = chordSteps("aug", "C4")
+        val steps = Chord.steps("aug", "C4")
         listOf(-3, -2, -1, 0, 1, 2, 3).map { steps(it) } shouldBe
                 listOf("C3", "E3", "G#3", "C4", "E4", "G#4", "C5")
     }

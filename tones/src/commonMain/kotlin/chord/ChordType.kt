@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.tones.chord
 
+import io.peekandpoke.klang.tones.pcset.PcSet
 import io.peekandpoke.klang.tones.pcset.Pcset
-import io.peekandpoke.klang.tones.pcset.get as getPcset
 
 /**
  * Represents the quality of a chord.
@@ -112,7 +112,7 @@ object ChordTypeDictionary {
      */
     fun add(intervals: List<String>, aliases: List<String>, fullName: String = ""): ChordType {
         val quality = getQuality(intervals)
-        val pcset = getPcset(intervals)
+        val pcset = PcSet.get(intervals)
         val chord = ChordType(pcset, fullName, quality, aliases, intervals)
 
         dictionary.add(chord)

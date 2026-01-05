@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.tones.scale
 
+import io.peekandpoke.klang.tones.pcset.PcSet
 import io.peekandpoke.klang.tones.pcset.Pcset
-import io.peekandpoke.klang.tones.pcset.get as getPcset
 
 /**
  * Properties for a scale in the scale dictionary.
@@ -111,7 +111,7 @@ object ScaleTypeDictionary {
         name: String,
         aliases: List<String> = emptyList(),
     ): ScaleType {
-        val pcset = getPcset(intervals)
+        val pcset = PcSet.get(intervals)
         val scale = ScaleType(pcset, name, aliases, intervals)
         dictionary.add(scale)
         index[scale.name] = scale

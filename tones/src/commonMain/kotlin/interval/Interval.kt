@@ -1,11 +1,18 @@
 package io.peekandpoke.klang.tones.interval
 
-import io.peekandpoke.klang.tones.pitch.*
+import io.peekandpoke.klang.tones.pitch.NamedPitch
+import io.peekandpoke.klang.tones.pitch.Pitch
+import io.peekandpoke.klang.tones.pitch.PitchCoordinates
+import io.peekandpoke.klang.tones.pitch.TonalPitch
 
 typealias IntervalName = String
 
+/**
+ * Types of intervals.
+ */
 enum class IntervalType {
-    Perfectable, Majorable;
+    Perfectable,
+    Majorable;
 
     override fun toString(): String = when (this) {
         Perfectable -> "perfectable"
@@ -58,305 +65,302 @@ data class Interval(
             chroma = -1,
             coord = null
         )
-    }
-}
 
-private fun fillStr(s: String, n: Int): String {
-    val count = kotlin.math.abs(n)
-    return s.repeat(count)
-}
-
-// shorthand tonal notation (with quality after number)
-private const val INTERVAL_TONAL_REGEX = """^([-+]?\d+)(d{1,4}|m|M|P|A{1,4})$"""
-
-// standard shorthand notation (with quality before number)
-private const val INTERVAL_SHORTHAND_REGEX = """^(AA|A|P|M|m|d|dd)([-+]?\d+)$"""
-
-private val TONAL_REG = Regex(INTERVAL_TONAL_REGEX)
-private val SHORTHAND_REG = Regex(INTERVAL_SHORTHAND_REGEX)
-
-/**
- * @private
- */
-fun tokenizeInterval(str: String?): List<String> {
-    if (str == null) return listOf("", "")
-
-    TONAL_REG.matchEntire(str)?.let { m ->
-        return listOf(m.groupValues[1], m.groupValues[2])
-    }
-    SHORTHAND_REG.matchEntire(str)?.let { m ->
-        return listOf(m.groupValues[2], m.groupValues[1])
-    }
-    return listOf("", "")
-}
-
-private val SIZES = intArrayOf(0, 2, 4, 5, 7, 9, 11)
-private const val TYPES = "PMMPPMM"
-
-fun interval(src: Any?): Interval {
-    return when (src) {
-        is String -> parse(src)
-        is Interval -> src
-        is Pitch -> interval(pitchName(src))
-        is NamedPitch -> interval(src.name)
-        else -> Interval.NoInterval
-    }
-}
-
-private fun parse(str: String): Interval {
-    val tokens = tokenizeInterval(str)
-    if (tokens[0] == "") {
-        return Interval.NoInterval
-    }
-    val num = tokens[0].toInt()
-    val q = tokens[1]
-    val step = (kotlin.math.abs(num) - 1) % 7
-    val t = TYPES[step]
-    if (t == 'M' && q == "P") {
-        return Interval.NoInterval
-    }
-    val type = if (t == 'M') IntervalType.Majorable else IntervalType.Perfectable
-
-    val name = "" + num + q
-    val dir = if (num < 0) -1 else 1
-    val simple = if (num == 8 || num == -8) num else dir * (step + 1)
-    val alt = qToAlt(type, q)
-    val oct = (kotlin.math.abs(num) - 1) / 7
-    val semitones = dir * (SIZES[step] + alt + 12 * oct)
-    val chroma = (((dir * (SIZES[step] + alt)) % 12) + 12) % 12
-    val coord = coordinates(Pitch(step, alt, oct, dir))
-
-    return Interval(
-        empty = false,
-        name = name,
-        num = num,
-        q = q,
-        step = step,
-        alt = alt,
-        dir = dir,
-        type = type,
-        simple = simple,
-        semitones = semitones,
-        chroma = chroma,
-        coord = coord,
-        oct = oct
-    )
-}
-
-private val A_REGEX = Regex("^A+$")
-private val D_REGEX = Regex("^d+$")
-
-private fun qToAlt(type: IntervalType, q: String): Int {
-    return when {
-        (q == "M" && type == IntervalType.Majorable) || (q == "P" && type == IntervalType.Perfectable) -> 0
-        q == "m" && type == IntervalType.Majorable -> -1
-        A_REGEX.matches(q) -> q.length
-        D_REGEX.matches(q) -> -1 * (if (type == IntervalType.Perfectable) q.length else q.length + 1)
-        else -> 0
-    }
-}
-
-private fun pitchName(props: Pitch): String {
-    val step = props.step
-    val alt = props.alt
-    val oct = props.oct ?: 0
-    val dir = props.dir ?: 0
-
-    if (dir == 0) {
-        return ""
-    }
-    val calcNum = step + 1 + 7 * oct
-    // this is an edge case: descending pitch class unison (see #243)
-    val num = if (calcNum == 0) step + 1 else calcNum
-    val d = if (dir < 0) "-" else ""
-    val type = if (TYPES[step] == 'M') IntervalType.Majorable else IntervalType.Perfectable
-    return d + num + altToQ(type, alt)
-}
-
-private fun altToQ(type: IntervalType, alt: Int): String {
-    return when {
-        alt == 0 -> if (type == IntervalType.Majorable) "M" else "P"
-        alt == -1 && type == IntervalType.Majorable -> "m"
-        alt > 0 -> fillStr("A", alt)
-        else -> fillStr("d", if (type == IntervalType.Perfectable) alt else alt + 1)
-    }
-}
-
-fun coordToInterval(
-    coord: PitchCoordinates,
-    forceDescending: Boolean = false,
-): Interval {
-    return when (coord) {
-        is PitchCoordinates.PitchClass -> {
-            val f = coord.fifths
-            val isDescending = f * 7 < 0
-            val ivl = if (forceDescending || isDescending) {
-                PitchCoordinates.Interval(-f, 0, -1)
-            } else {
-                PitchCoordinates.Interval(f, 0, 1)
+        /**
+         * Returns an [Interval] from a given source.
+         */
+        fun get(src: Any?): Interval {
+            return when (src) {
+                is String -> parse(src)
+                is Interval -> src
+                is Pitch -> get(pitchName(src))
+                is NamedPitch -> get(src.name)
+                else -> NoInterval
             }
-            interval(pitch(ivl))
         }
 
-        is PitchCoordinates.Note -> {
-            val f = coord.fifths
-            val o = coord.octaves
-            val isDescending = f * 7 + o * 12 < 0
-            val ivl = if (forceDescending || isDescending) {
-                PitchCoordinates.Interval(-f, -o, -1)
-            } else {
-                PitchCoordinates.Interval(f, o, 1)
+        /**
+         * Tokenizes an interval string.
+         * @private
+         */
+        fun tokenize(str: String?): List<String> {
+            if (str == null) return listOf("", "")
+
+            TONAL_REG.matchEntire(str)?.let { m ->
+                return listOf(m.groupValues[1], m.groupValues[2])
             }
-            interval(pitch(ivl))
+            SHORTHAND_REG.matchEntire(str)?.let { m ->
+                return listOf(m.groupValues[2], m.groupValues[1])
+            }
+            return listOf("", "")
         }
 
-        is PitchCoordinates.Interval -> {
-            interval(pitch(coord))
+        /**
+         * Returns true if the object is a valid [Interval].
+         */
+        fun isInterval(src: Any?): Boolean {
+            return src is Interval && !src.empty
         }
+
+        /**
+         * Returns the natural list of interval names.
+         */
+        fun names(): List<String> = "1P 2M 3M 4P 5P 6m 7m".split(" ")
+
+        /**
+         * Returns the simplified version of an interval.
+         *
+         * @param name The interval name.
+         */
+        fun simplify(name: String): String {
+            val i = get(name)
+            return if (i.empty) "" else "${i.simple}${i.q}"
+        }
+
+        /**
+         * Returns the inversion of an interval.
+         *
+         * @param name The interval name.
+         */
+        fun invert(name: String): String {
+            val i = get(name)
+            if (i.empty) return ""
+            val step = (7 - i.step) % 7
+            val alt = if (i.type == IntervalType.Perfectable) -i.alt else -(i.alt + 1)
+            return get(Pitch(step = step, alt = alt, oct = i.oct, dir = i.dir)).name
+        }
+
+        /**
+         * Returns an interval name from a number of semitones.
+         *
+         * @param semitones The number of semitones.
+         */
+        fun fromSemitones(semitones: Int): String {
+            val d = if (semitones < 0) -1 else 1
+            val n = kotlin.math.abs(semitones)
+            val c = n % 12
+            val o = n / 12
+            val resNum = d * (IN[c] + 7 * o)
+            return "$resNum${IQ[c]}"
+        }
+
+        /**
+         * Adds two intervals together and returns the name of the resulting interval.
+         */
+        fun add(a: String, b: String): String {
+            val i1 = get(a)
+            val i2 = get(b)
+            val c1 = i1.coord
+            val c2 = i2.coord
+            if (c1 == null || c2 == null) return ""
+
+            val f1 = when (c1) {
+                is PitchCoordinates.Interval -> c1.fifths
+                is PitchCoordinates.Note -> c1.fifths
+                is PitchCoordinates.PitchClass -> c1.fifths
+            }
+            val o1 = when (c1) {
+                is PitchCoordinates.Interval -> c1.octaves
+                is PitchCoordinates.Note -> c1.octaves
+                is PitchCoordinates.PitchClass -> 0
+            }
+            val f2 = when (c2) {
+                is PitchCoordinates.Interval -> c2.fifths
+                is PitchCoordinates.Note -> c2.fifths
+                is PitchCoordinates.PitchClass -> c2.fifths
+            }
+            val o2 = when (c2) {
+                is PitchCoordinates.Interval -> c2.octaves
+                is PitchCoordinates.Note -> c2.octaves
+                is PitchCoordinates.PitchClass -> 0
+            }
+
+            return fromCoord(PitchCoordinates.Note(f1 + f2, o1 + o2)).name
+        }
+
+        /**
+         * Subtracts the second interval from the first one and returns the name of the resulting interval.
+         */
+        fun subtract(a: String, b: String): String {
+            val i1 = get(a)
+            val i2 = get(b)
+            val c1 = i1.coord
+            val c2 = i2.coord
+            if (c1 == null || c2 == null) return ""
+
+            val f1 = when (c1) {
+                is PitchCoordinates.Interval -> c1.fifths
+                is PitchCoordinates.Note -> c1.fifths
+                is PitchCoordinates.PitchClass -> c1.fifths
+            }
+            val o1 = when (c1) {
+                is PitchCoordinates.Interval -> c1.octaves
+                is PitchCoordinates.Note -> c1.octaves
+                is PitchCoordinates.PitchClass -> 0
+            }
+            val f2 = when (c2) {
+                is PitchCoordinates.Interval -> c2.fifths
+                is PitchCoordinates.Note -> c2.fifths
+                is PitchCoordinates.PitchClass -> c2.fifths
+            }
+            val o2 = when (c2) {
+                is PitchCoordinates.Interval -> c2.octaves
+                is PitchCoordinates.Note -> c2.octaves
+                is PitchCoordinates.PitchClass -> 0
+            }
+
+            return fromCoord(PitchCoordinates.Note(f1 - f2, o1 - o2)).name
+        }
+
+        /**
+         * Transpose an interval by a number of perfect fifths.
+         *
+         * @param intervalName The interval name.
+         * @param fifths The number of fifths.
+         */
+        fun transposeFifths(intervalName: String, fifths: Int): String {
+            val i = get(intervalName)
+            if (i.empty) return ""
+            val c = i.coord ?: return ""
+
+            val f = when (c) {
+                is PitchCoordinates.Interval -> c.fifths
+                is PitchCoordinates.Note -> c.fifths
+                is PitchCoordinates.PitchClass -> c.fifths
+            }
+            val o = when (c) {
+                is PitchCoordinates.Interval -> c.octaves
+                is PitchCoordinates.Note -> c.octaves
+                is PitchCoordinates.PitchClass -> 0
+            }
+
+            return fromCoord(PitchCoordinates.Note(f + fifths, o)).name
+        }
+
+        fun fromCoord(
+            coord: PitchCoordinates,
+            forceDescending: Boolean = false,
+        ): Interval {
+            return when (coord) {
+                is PitchCoordinates.PitchClass -> {
+                    val f = coord.fifths
+                    val isDescending = f * 7 < 0
+                    val ivl = if (forceDescending || isDescending) {
+                        PitchCoordinates.Interval(-f, 0, -1)
+                    } else {
+                        PitchCoordinates.Interval(f, 0, 1)
+                    }
+                    get(TonalPitch.pitch(ivl))
+                }
+
+                is PitchCoordinates.Note -> {
+                    val f = coord.fifths
+                    val o = coord.octaves
+                    val isDescending = f * 7 + o * 12 < 0
+                    val ivl = if (forceDescending || isDescending) {
+                        PitchCoordinates.Interval(-f, -o, -1)
+                    } else {
+                        PitchCoordinates.Interval(f, o, 1)
+                    }
+                    get(TonalPitch.pitch(ivl))
+                }
+
+                is PitchCoordinates.Interval -> {
+                    get(TonalPitch.pitch(coord))
+                }
+            }
+        }
+
+        private fun parse(str: String): Interval {
+            val tokens = tokenize(str)
+            if (tokens[0] == "") {
+                return NoInterval
+            }
+            val num = tokens[0].toInt()
+            val q = tokens[1]
+            val step = (kotlin.math.abs(num) - 1) % 7
+            val t = TYPES[step]
+            if (t == 'M' && q == "P") {
+                return NoInterval
+            }
+            val type = if (t == 'M') IntervalType.Majorable else IntervalType.Perfectable
+
+            val name = "" + num + q
+            val dir = if (num < 0) -1 else 1
+            val simple = if (num == 8 || num == -8) num else dir * (step + 1)
+            val alt = qToAlt(type, q)
+            val oct = (kotlin.math.abs(num) - 1) / 7
+            val semitones = dir * (SIZES[step] + alt + 12 * oct)
+            val chroma = (((dir * (SIZES[step] + alt)) % 12) + 12) % 12
+            val coord = TonalPitch.coordinates(Pitch(step, alt, oct, dir))
+
+            return Interval(
+                empty = false,
+                name = name,
+                num = num,
+                q = q,
+                step = step,
+                alt = alt,
+                dir = dir,
+                type = type,
+                simple = simple,
+                semitones = semitones,
+                chroma = chroma,
+                coord = coord,
+                oct = oct
+            )
+        }
+
+        private fun qToAlt(type: IntervalType, q: String): Int {
+            return when {
+                (q == "M" && type == IntervalType.Majorable) || (q == "P" && type == IntervalType.Perfectable) -> 0
+                q == "m" && type == IntervalType.Majorable -> -1
+                A_REGEX.matches(q) -> q.length
+                D_REGEX.matches(q) -> -1 * (if (type == IntervalType.Perfectable) q.length else q.length + 1)
+                else -> 0
+            }
+        }
+
+        private fun pitchName(props: Pitch): String {
+            val step = props.step
+            val alt = props.alt
+            val oct = props.oct ?: 0
+            val dir = props.dir ?: 0
+
+            if (dir == 0) {
+                return ""
+            }
+            val calcNum = step + 1 + 7 * oct
+            // this is an edge case: descending pitch class unison (see #243)
+            val num = if (calcNum == 0) step + 1 else calcNum
+            val d = if (dir < 0) "-" else ""
+            val type = if (TYPES[step] == 'M') IntervalType.Majorable else IntervalType.Perfectable
+            return d + num + altToQ(type, alt)
+        }
+
+        private fun altToQ(type: IntervalType, alt: Int): String {
+            return when {
+                alt == 0 -> if (type == IntervalType.Majorable) "M" else "P"
+                alt == -1 && type == IntervalType.Majorable -> "m"
+                alt > 0 -> "A".repeat(alt)
+                else -> "d".repeat(if (type == IntervalType.Perfectable) kotlin.math.abs(alt) else kotlin.math.abs(alt) - 1)
+            }
+        }
+
+        private val SIZES = intArrayOf(0, 2, 4, 5, 7, 9, 11)
+        private const val TYPES = "PMMPPMM"
+        private val A_REGEX = Regex("^A+$")
+        private val D_REGEX = Regex("^d+$")
+        private val IN = intArrayOf(1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7)
+        private val IQ = "P m M m M P d P m M m M".split(" ")
+
+        // shorthand tonal notation (with quality after number)
+        private const val INTERVAL_TONAL_REGEX = """^([-+]?\d+)(d{1,4}|m|M|P|A{1,4})$"""
+
+        // standard shorthand notation (with quality before number)
+        private const val INTERVAL_SHORTHAND_REGEX = """^(AA|A|P|M|m|d|dd)([-+]?\d+)$"""
+
+        private val TONAL_REG = Regex(INTERVAL_TONAL_REGEX)
+        private val SHORTHAND_REG = Regex(INTERVAL_SHORTHAND_REGEX)
     }
-}
-
-/**
- * Returns true if the object is a valid [Interval].
- */
-fun isInterval(src: Any?): Boolean {
-    return src is Interval && !src.empty
-}
-
-/**
- * Returns the natural list of interval names.
- */
-fun names(): List<String> = "1P 2M 3M 4P 5P 6m 7m".split(" ")
-
-/**
- * Returns the simplified version of an interval.
- *
- * @param name The interval name.
- */
-fun simplify(name: String): String {
-    val i = interval(name)
-    return if (i.empty) "" else "${i.simple}${i.q}"
-}
-
-/**
- * Returns the inversion of an interval.
- *
- * @param name The interval name.
- */
-fun invert(name: String): String {
-    val i = interval(name)
-    if (i.empty) return ""
-    val step = (7 - i.step) % 7
-    val alt = if (i.type == IntervalType.Perfectable) -i.alt else -(i.alt + 1)
-    return interval(Pitch(step = step, alt = alt, oct = i.oct, dir = i.dir)).name
-}
-
-private val IN = intArrayOf(1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7)
-private val IQ = "P m M m M P d P m M m M".split(" ")
-
-/**
- * Returns an interval name from a number of semitones.
- *
- * @param semitones The number of semitones.
- */
-fun fromSemitones(semitones: Int): String {
-    val d = if (semitones < 0) -1 else 1
-    val n = kotlin.math.abs(semitones)
-    val c = n % 12
-    val o = n / 12
-    val resNum = d * (IN[c] + 7 * o)
-    return "$resNum${IQ[c]}"
-}
-
-/**
- * Adds two intervals together and returns the name of the resulting interval.
- */
-fun add(a: String, b: String): String {
-    val i1 = interval(a)
-    val i2 = interval(b)
-    val c1 = i1.coord
-    val c2 = i2.coord
-    if (c1 == null || c2 == null) return ""
-
-    val f1 = when (c1) {
-        is PitchCoordinates.Interval -> c1.fifths
-        is PitchCoordinates.Note -> c1.fifths
-        is PitchCoordinates.PitchClass -> c1.fifths
-    }
-    val o1 = when (c1) {
-        is PitchCoordinates.Interval -> c1.octaves
-        is PitchCoordinates.Note -> c1.octaves
-        is PitchCoordinates.PitchClass -> 0
-    }
-    val f2 = when (c2) {
-        is PitchCoordinates.Interval -> c2.fifths
-        is PitchCoordinates.Note -> c2.fifths
-        is PitchCoordinates.PitchClass -> c2.fifths
-    }
-    val o2 = when (c2) {
-        is PitchCoordinates.Interval -> c2.octaves
-        is PitchCoordinates.Note -> c2.octaves
-        is PitchCoordinates.PitchClass -> 0
-    }
-
-    return coordToInterval(PitchCoordinates.Note(f1 + f2, o1 + o2)).name
-}
-
-/**
- * Subtracts the second interval from the first one and returns the name of the resulting interval.
- */
-fun subtract(a: String, b: String): String {
-    val i1 = interval(a)
-    val i2 = interval(b)
-    val c1 = i1.coord
-    val c2 = i2.coord
-    if (c1 == null || c2 == null) return ""
-
-    val f1 = when (c1) {
-        is PitchCoordinates.Interval -> c1.fifths
-        is PitchCoordinates.Note -> c1.fifths
-        is PitchCoordinates.PitchClass -> c1.fifths
-    }
-    val o1 = when (c1) {
-        is PitchCoordinates.Interval -> c1.octaves
-        is PitchCoordinates.Note -> c1.octaves
-        is PitchCoordinates.PitchClass -> 0
-    }
-    val f2 = when (c2) {
-        is PitchCoordinates.Interval -> c2.fifths
-        is PitchCoordinates.Note -> c2.fifths
-        is PitchCoordinates.PitchClass -> c2.fifths
-    }
-    val o2 = when (c2) {
-        is PitchCoordinates.Interval -> c2.octaves
-        is PitchCoordinates.Note -> c2.octaves
-        is PitchCoordinates.PitchClass -> 0
-    }
-
-    return coordToInterval(PitchCoordinates.Note(f1 - f2, o1 - o2)).name
-}
-
-/**
- * Transpose an interval by a number of perfect fifths.
- *
- * @param intervalName The interval name.
- * @param fifths The number of fifths.
- */
-fun transposeFifths(intervalName: String, fifths: Int): String {
-    val i = interval(intervalName)
-    if (i.empty) return ""
-    val c = i.coord ?: return ""
-
-    val f = when (c) {
-        is PitchCoordinates.Interval -> c.fifths
-        is PitchCoordinates.Note -> c.fifths
-        is PitchCoordinates.PitchClass -> c.fifths
-    }
-    val o = when (c) {
-        is PitchCoordinates.Interval -> c.octaves
-        is PitchCoordinates.Note -> c.octaves
-        is PitchCoordinates.PitchClass -> 0
-    }
-
-    return coordToInterval(PitchCoordinates.Note(f + fifths, o)).name
 }

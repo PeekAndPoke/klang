@@ -3,7 +3,7 @@ package io.peekandpoke.klang.tones.scale
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.tones.pcset.modes
+import io.peekandpoke.klang.tones.pcset.PcSet
 
 class ScaleTypeTest : StringSpec({
     "list names" {
@@ -43,7 +43,7 @@ class ScaleTypeTest : StringSpec({
     }
 
     "major modes" {
-        val chromas = modes(ScaleTypeDictionary.get("major").intervals, true)
+        val chromas = PcSet.modes(ScaleTypeDictionary.get("major").intervals, true)
         val names = chromas.map { chroma -> ScaleTypeDictionary.get(chroma).name }
         names shouldBe listOf(
             "major",
@@ -57,7 +57,7 @@ class ScaleTypeTest : StringSpec({
     }
 
     "harmonic minor modes" {
-        val chromas = modes(ScaleTypeDictionary.get("harmonic minor").intervals, true)
+        val chromas = PcSet.modes(ScaleTypeDictionary.get("harmonic minor").intervals, true)
         val names = chromas.map { chroma -> ScaleTypeDictionary.get(chroma).name }
         names shouldBe listOf(
             "harmonic minor",
@@ -71,7 +71,7 @@ class ScaleTypeTest : StringSpec({
     }
 
     "melodic minor modes" {
-        val chromas = modes(ScaleTypeDictionary.get("melodic minor").intervals, true)
+        val chromas = PcSet.modes(ScaleTypeDictionary.get("melodic minor").intervals, true)
         val names = chromas.map { chroma -> ScaleTypeDictionary.get(chroma).name }
         names shouldBe listOf(
             "melodic minor",

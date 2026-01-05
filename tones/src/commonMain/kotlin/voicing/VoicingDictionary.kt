@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.tones.voicing
 
-import io.peekandpoke.klang.tones.chord.chord
+import io.peekandpoke.klang.tones.chord.Chord
 
 typealias VoicingDictionary = Map<String, List<String>>
 
@@ -40,7 +40,7 @@ object VoicingDictionaries {
         }
 
         // Try to match using aliases from chord type
-        val c = chord("C$symbol")
+        val c = Chord.get("C$symbol")
         if (c.empty) return null
 
         val match = dictionary.keys.find { it in c.aliases }

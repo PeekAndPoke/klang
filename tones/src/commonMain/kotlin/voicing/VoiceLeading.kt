@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.tones.voicing
 
-import io.peekandpoke.klang.tones.note.note
+import io.peekandpoke.klang.tones.note.Note
 import kotlin.math.abs
 
 typealias VoiceLeadingFunction = (voicings: List<List<String>>, lastVoicing: List<String>) -> List<String>
@@ -12,7 +12,7 @@ object VoiceLeading {
         } else {
             fun topNoteMidi(voicing: List<String>): Int {
                 if (voicing.isEmpty()) return 0
-                return note(voicing.last()).midi ?: 0
+                return Note.get(voicing.last()).midi ?: 0
             }
 
             val lastTopMidi = topNoteMidi(lastVoicing)

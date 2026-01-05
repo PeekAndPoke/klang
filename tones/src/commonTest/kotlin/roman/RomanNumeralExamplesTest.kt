@@ -2,11 +2,11 @@ package io.peekandpoke.klang.tones.roman
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.tones.interval.interval
+import io.peekandpoke.klang.tones.interval.Interval
 
 class RomanNumeralExamplesTest : StringSpec({
     "RomanNumeral.get" {
-        val r = romanNumeral("bVIIMaj7")
+        val r = RomanNumeral.get("bVIIMaj7")
         r.empty shouldBe false
         r.name shouldBe "bVIIMaj7"
         r.roman shouldBe "VII"
@@ -19,6 +19,6 @@ class RomanNumeralExamplesTest : StringSpec({
     }
 
     "RomanNumeral from interval" {
-        romanNumeral(interval("3m")).name shouldBe "bIII"
+        RomanNumeral.get(Interval.get("3m")).name shouldBe "bIII"
     }
 })

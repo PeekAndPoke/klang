@@ -5,7 +5,7 @@ import io.kotest.matchers.shouldBe
 
 class ProgressionTest : StringSpec({
     "fromRomanNumerals" {
-        fun inC(chords: List<String>) = fromRomanNumerals("C", chords)
+        fun inC(chords: List<String>) = Progression.fromRomanNumerals("C", chords)
 
         inC("I IIm7 V7".split(" ")) shouldBe "C Dm7 G7".split(" ")
         inC("Imaj7 2 IIIm7".split(" ")) shouldBe listOf("Cmaj7", "", "Em7")
@@ -15,6 +15,6 @@ class ProgressionTest : StringSpec({
     }
 
     "toRomanNumerals" {
-        toRomanNumerals("C", listOf("Cmaj7", "Dm7", "G7")) shouldBe listOf("Imaj7", "IIm7", "V7")
+        Progression.toRomanNumerals("C", listOf("Cmaj7", "Dm7", "G7")) shouldBe listOf("Imaj7", "IIm7", "V7")
     }
 })
