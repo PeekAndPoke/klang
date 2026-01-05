@@ -6,13 +6,16 @@ import io.kotest.matchers.shouldBe
 class DistanceTest : StringSpec({
     "transpose" {
         Distance.transpose("d3", "3M") shouldBe "F#3"
+
         Distance.transpose("D", "3M") shouldBe "F#"
-        listOf("C", "D", "E", "F", "G").map { Distance.transpose(it, "M3") } shouldBe listOf("E", "F#", "G#", "A", "B")
+
+        listOf("C", "D", "E", "F", "G").map { Distance.transpose(it, "M3") } shouldBe
+                listOf("E", "F#", "G#", "A", "B")
     }
 
     "distance between notes" {
         fun allIntervalsFrom(from: String) = { str: String ->
-            str.split(" ").map { Distance.distance(from, it) }.joinToString(" ")
+            str.split(" ").joinToString(" ") { Distance.distance(from, it) }
         }
 
         val fromC3 = allIntervalsFrom("C3")
@@ -38,7 +41,7 @@ class DistanceTest : StringSpec({
         Distance.distance("C", "D") shouldBe "2M"
 
         fun allIntervalsFrom(from: String) = { str: String ->
-            str.split(" ").map { Distance.distance(from, it) }.joinToString(" ")
+            str.split(" ").joinToString(" ") { Distance.distance(from, it) }
         }
 
         val fromC = allIntervalsFrom("C")

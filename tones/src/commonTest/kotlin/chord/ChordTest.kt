@@ -1,3 +1,5 @@
+@file:Suppress("LocalVariableName")
+
 package io.peekandpoke.klang.tones.chord
 
 import io.kotest.core.spec.style.StringSpec

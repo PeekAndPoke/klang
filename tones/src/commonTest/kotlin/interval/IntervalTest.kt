@@ -33,7 +33,7 @@ class IntervalTest : StringSpec({
     }
 
     "interval from string name" {
-        fun names(src: String) = src.split(" ").map { Interval.get(it).name }.joinToString(" ")
+        fun names(src: String) = src.split(" ").joinToString(" ") { Interval.get(it).name }
         names("1P 2M 3M 4P 5P 6M 7M") shouldBe "1P 2M 3M 4P 5P 6M 7M"
         names("P1 M2 M3 P4 P5 M6 M7") shouldBe "1P 2M 3M 4P 5P 6M 7M"
         names("-1P -2M -3M -4P -5P -6M -7M") shouldBe "-1P -2M -3M -4P -5P -6M -7M"

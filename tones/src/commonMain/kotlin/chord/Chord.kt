@@ -65,14 +65,20 @@ class Chord(
             val oct = tokens[2]
             val rest = tokens[3]
 
-            return if (letter == "") {
-                // If it doesn't start with a note, the whole name is treated as the chord type
-                tokenizeBass("", name)
-            } else if (letter == "A" && rest == "ug") {
-                // Special case for "Aug" (Augmented) which starts with 'A' (a note)
-                tokenizeBass("", "aug")
-            } else {
-                tokenizeBass(letter + acc, oct + rest)
+            return when (letter) {
+                "" -> {
+                    // If it doesn't start with a note, the whole name is treated as the chord type
+                    tokenizeBass("", name)
+                }
+
+                "A" if rest == "ug" -> {
+                    // Special case for "Aug" (Augmented) which starts with 'A' (a note)
+                    tokenizeBass("", "aug")
+                }
+
+                else -> {
+                    tokenizeBass(letter + acc, oct + rest)
+                }
             }
         }
 
@@ -136,7 +142,10 @@ class Chord(
             val bassNote = Note.get(optionalBass ?: "")
 
             // Validate inputs
-            if (type.empty || (optionalTonic != null && optionalTonic.isNotEmpty() && tonicNote.empty) || (optionalBass != null && optionalBass.isNotEmpty() && bassNote.empty)) {
+            if (type.empty ||
+                (!optionalTonic.isNullOrEmpty() && tonicNote.empty) ||
+                (!optionalBass.isNullOrEmpty() && bassNote.empty)
+            ) {
                 return NoChord
             }
 

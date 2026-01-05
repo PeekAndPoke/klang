@@ -168,6 +168,7 @@ data class Note(
          * Returns a list of sorted unique note names.
          */
         fun sortedUniqNames(notes: List<String>): List<String> {
+            @Suppress("ConvertCallChainIntoSequence")
             return notes.map { get(it) }
                 .filter { !it.empty }
                 .distinctBy { it.pc }

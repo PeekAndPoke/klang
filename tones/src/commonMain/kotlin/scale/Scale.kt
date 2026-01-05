@@ -1,3 +1,5 @@
+@file:Suppress("DuplicatedCode")
+
 package io.peekandpoke.klang.tones.scale
 
 import io.peekandpoke.klang.tones.chord.ChordTypeDictionary
@@ -85,7 +87,7 @@ data class Scale(
                 emptyList()
             }
 
-            return Scale(st, if (tonic.isEmpty()) null else tonic, type, notes)
+            return Scale(st, tonic.ifEmpty { null }, type, notes)
         }
 
         /**
@@ -212,7 +214,7 @@ data class Scale(
          */
         fun getNoteNameOf(scaleName: String): (Any) -> String? {
             val s = get(scaleName)
-            val notes = if (s.notes.isNotEmpty()) s.notes else emptyList()
+            val notes = s.notes.ifEmpty { emptyList() }
             val chromas = notes.map { Note.get(it).chroma }
 
             return { noteOrMidi ->
@@ -243,11 +245,11 @@ data class Scale(
             return { fromNote, toNote ->
                 val from = Note.get(fromNote).height
                 val to = Note.get(toNote).height
-                if (from == -1 || to == -1) emptyList()
-                else {
-                    TonesArray.range(from, to)
-                        .map { getName(it) }
-                        .filterNotNull()
+
+                if (from == -1 || to == -1) {
+                    emptyList()
+                } else {
+                    TonesArray.range(from, to).mapNotNull { getName(it) }
                 }
             }
         }
@@ -257,14 +259,15 @@ data class Scale(
          */
         fun rangeOfScale(scaleName: String): (String, String) -> List<String> {
             val getName = getNoteNameOf(scaleName)
+
             return { fromNote, toNote ->
                 val from = Note.get(fromNote).height
                 val to = Note.get(toNote).height
-                if (from == -1 || to == -1) emptyList()
-                else {
-                    TonesArray.range(from, to)
-                        .map { getName(it) }
-                        .filterNotNull()
+
+                if (from == -1 || to == -1) {
+                    emptyList()
+                } else {
+                    TonesArray.range(from, to).mapNotNull { getName(it) }
                 }
             }
         }
@@ -275,6 +278,7 @@ data class Scale(
         fun degrees(scaleName: String): (Int) -> String {
             val s = get(scaleName)
             val transposer = Distance.tonicIntervalsTransposer(s.intervals, s.tonic)
+
             return { degree ->
                 if (degree != 0) transposer(if (degree > 0) degree - 1 else degree) else ""
             }

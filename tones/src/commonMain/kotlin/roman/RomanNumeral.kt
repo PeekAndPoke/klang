@@ -45,7 +45,7 @@ data class RomanNumeral(
         )
 
         /** Standard uppercase roman numerals. */
-        private val ROMANS = "I II III IV V VI VII"
+        private const val ROMANS = "I II III IV V VI VII"
 
         /** List of uppercase roman numerals. */
         private val NAMES = ROMANS.split(" ")

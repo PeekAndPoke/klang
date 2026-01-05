@@ -63,7 +63,7 @@ object Voicing {
         val notesInRange = TonesRange.chromatic(range.map { it as Any })
 
         val result = voicings.flatMap { voicing ->
-            if (voicing.isEmpty()) return@flatMap emptyList<List<String>>()
+            if (voicing.isEmpty()) return@flatMap emptyList()
 
             // Calculate intervals relative to the bottom note of the voicing
             val relativeIntervals = voicing.map {
