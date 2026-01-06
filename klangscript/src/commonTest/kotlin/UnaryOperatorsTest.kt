@@ -23,7 +23,7 @@ class UnaryOperatorsTest : StringSpec({
     // ============================================================
 
     "should negate positive number" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("-5")
 
@@ -32,7 +32,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate negative number" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("-(-3)")
 
@@ -41,7 +41,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate expression" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("-(2 + 3)")
 
@@ -50,7 +50,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should handle negation in binary expression" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("-5 + 3")
 
@@ -59,7 +59,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should handle double negation 2" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("--10")
 
@@ -68,7 +68,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate variable" {
-        val script = KlangScript()
+        val script = klangScript()
 
         script.execute("let x = 7")
         val result = script.execute("-x")
@@ -82,7 +82,7 @@ class UnaryOperatorsTest : StringSpec({
     // ============================================================
 
     "should apply unary plus to number" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("+42")
 
@@ -91,7 +91,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should handle unary plus in expression" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("+5 + +3")
 
@@ -104,7 +104,7 @@ class UnaryOperatorsTest : StringSpec({
     // ============================================================
 
     "should negate true" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("!true")
 
@@ -113,7 +113,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate false" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("!false")
 
@@ -122,7 +122,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate null as falsy" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("!null")
 
@@ -131,7 +131,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate zero as falsy" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("!0")
 
@@ -140,7 +140,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate non-zero number as truthy" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("!5")
 
@@ -149,7 +149,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate empty string as falsy" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("""!""" + """""""")
 
@@ -158,7 +158,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should negate non-empty string as truthy" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("""!"hello"""")
 
@@ -167,7 +167,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should handle double negation" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("!!true")
 
@@ -180,7 +180,7 @@ class UnaryOperatorsTest : StringSpec({
     // ============================================================
 
     "should handle negation with multiplication" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("-2 * 3")
 
@@ -189,7 +189,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should handle negation with division" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("-10 / 2")
 
@@ -198,7 +198,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should handle complex expression with unary operators" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("-(3 + 2) * 2 + 10")
 
@@ -207,7 +207,7 @@ class UnaryOperatorsTest : StringSpec({
     }
 
     "should use NOT in object literal" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val result = script.execute("{ negated: !true, identity: !false }")
 

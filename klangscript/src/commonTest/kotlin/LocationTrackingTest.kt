@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.runtime.TypeError
 class LocationTrackingTest : StringSpec({
 
     "ReferenceError includes source location from parser" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val script = """
             let x = 5
             undefinedVariable
@@ -36,7 +36,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "TypeError includes source location for binary operations" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val script = """
             let x = 5
             let y = "hello"
@@ -54,7 +54,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "TypeError includes source location for member access" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val script = """
             let num = 42
             num.property
@@ -71,7 +71,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "TypeError includes source location for function calls" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val script = """
             let x = 5
             x()
@@ -88,7 +88,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "ArgumentError includes source location for script functions" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
 
         val script = """
             let add = (a, b) => a + b
@@ -108,8 +108,9 @@ class LocationTrackingTest : StringSpec({
     "ArgumentError for native functions (no location yet)" {
         // Note: Native function argument validation happens in the helper functions
         // which don't have access to source location. This is a known limitation.
-        val engine = KlangScript()
-        engine.registerFunction1("test") { x -> x }
+        val engine = klangScript {
+            registerFunction1("test") { x -> x }
+        }
 
         val error = shouldThrow<ArgumentError> {
             engine.execute("test(1, 2, 3)", sourceName = "native.klang")
@@ -123,7 +124,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "ImportError includes source location" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
 
         val script = """
             import * from "nonexistent"
@@ -140,7 +141,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "Location tracking works across multiple lines" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
 
         val script = """
             let a = 1
@@ -159,7 +160,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "Location tracking works without source name" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
 
         val error = shouldThrow<ReferenceError> {
             engine.execute("missingVar")

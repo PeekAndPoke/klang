@@ -12,11 +12,11 @@ import io.peekandpoke.klang.script.runtime.*
 class ComprehensiveIntegrationTest : StringSpec({
 
     "Complete live coding example with variables, functions, and chaining" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
         val events = mutableListOf<String>()
 
         // Register a note() function that returns a chainable object
-        engine.registerFunction1("note") { value ->
+        builder.registerFunction1("note") { value ->
             val notes = (value as StringValue).value
             ObjectValue(
                 mutableMapOf(
@@ -41,7 +41,7 @@ class ComprehensiveIntegrationTest : StringSpec({
         }
 
         // Register a stack() function that takes multiple arguments
-        engine.registerFunction("stack") { args ->
+        builder.registerFunction("stack") { args ->
             events.add("stack(${args.size} items)")
             NullValue
         }
@@ -58,6 +58,8 @@ class ComprehensiveIntegrationTest : StringSpec({
             )
         """.trimIndent()
 
+        val engine = builder.build()
+
         engine.execute(script, sourceName = "live.klang")
 
         // Expected events:
@@ -72,20 +74,20 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Complex script with library imports, exports, and namespaces" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
         val results = mutableListOf<Double>()
 
         // Register native math operations
-        engine.registerFunction("add") { args ->
+        builder.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
         }
 
-        engine.registerFunction("mul") { args ->
+        builder.registerFunction("mul") { args ->
             NumberValue(args.fold(1.0) { acc, v -> acc * (v as NumberValue).value })
         }
 
         // Register a math library with helper functions
-        engine.registerLibrary(
+        builder.registerLibrary(
             "math",
             """
             let square = (x) => mul(x, x)
@@ -97,7 +99,7 @@ class ComprehensiveIntegrationTest : StringSpec({
         )
 
         // Register a result capture function
-        engine.registerFunction1("capture") { value ->
+        builder.registerFunction1("capture") { value ->
             results.add((value as NumberValue).value)
             value
         }
@@ -122,6 +124,8 @@ class ComprehensiveIntegrationTest : StringSpec({
             capture(triple(7))
         """.trimIndent()
 
+        val engine = builder.build()
+
         engine.execute(script, sourceName = "main.klang")
 
         results shouldBe listOf(
@@ -134,18 +138,18 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Nested closures and higher-order functions" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
         val results = mutableListOf<Double>()
 
-        engine.registerFunction("add") { args ->
+        builder.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
         }
 
-        engine.registerFunction("mul") { args ->
+        builder.registerFunction("mul") { args ->
             NumberValue(args.fold(1.0) { acc, v -> acc * (v as NumberValue).value })
         }
 
-        engine.registerFunction1("capture") { value ->
+        builder.registerFunction1("capture") { value ->
             results.add((value as NumberValue).value)
             value
         }
@@ -175,6 +179,8 @@ class ComprehensiveIntegrationTest : StringSpec({
             capture(addTen(25))
         """.trimIndent()
 
+        val engine = builder.build()
+
         engine.execute(script, sourceName = "closures.klang")
 
         results shouldBe listOf(
@@ -188,15 +194,15 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Object literals, property access, and methods" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
         val results = mutableListOf<String>()
 
-        engine.registerFunction1("capture") { value ->
+        builder.registerFunction1("capture") { value ->
             results.add(value.toDisplayString())
             value
         }
 
-        engine.registerFunction("add") { args ->
+        builder.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
         }
 
@@ -236,6 +242,8 @@ class ComprehensiveIntegrationTest : StringSpec({
             capture(computed.sum)
         """.trimIndent()
 
+        val engine = builder.build()
+
         engine.execute(script, sourceName = "objects.klang")
 
         // Check results - note that JS and JVM format numbers differently
@@ -250,7 +258,7 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Error handling with stack traces" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
 
         engine.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
@@ -280,17 +288,19 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Multiple scripts with shared and isolated environments" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
         val results = mutableListOf<Double>()
 
-        engine.registerFunction("add") { args ->
+        builder.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
         }
 
-        engine.registerFunction1("capture") { value ->
+        builder.registerFunction1("capture") { value ->
             results.add((value as NumberValue).value)
             value
         }
+
+        val engine = builder.build()
 
         // First script defines a variable
         engine.execute(
@@ -311,10 +321,10 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Complex arithmetic and operator precedence" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
         val results = mutableListOf<Double>()
 
-        engine.registerFunction1("capture") { value ->
+        builder.registerFunction1("capture") { value ->
             val numValue = when (value) {
                 is NumberValue -> value.value
                 is BooleanValue -> if (value.value) 1.0 else 0.0
@@ -335,6 +345,8 @@ class ComprehensiveIntegrationTest : StringSpec({
             capture(!!true)
         """.trimIndent()
 
+        val engine = builder.build()
+
         engine.execute(script, sourceName = "arithmetic.klang")
 
         results shouldBe listOf(
@@ -350,11 +362,11 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Live coding pattern: Strudel-style musical sequencing" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
         val sequence = mutableListOf<String>()
 
         // Register a note() function that returns a pattern object
-        engine.registerFunction1("note") { value ->
+        builder.registerFunction1("note") { value ->
             val pattern = (value as StringValue).value
             ObjectValue(
                 mutableMapOf(
@@ -383,13 +395,13 @@ class ComprehensiveIntegrationTest : StringSpec({
             )
         }
 
-        engine.registerFunction1("s") { value ->
+        builder.registerFunction1("s") { value ->
             val sound = (value as StringValue).value
             sequence.add("s($sound)")
             NullValue
         }
 
-        engine.registerLibrary(
+        builder.registerLibrary(
             "patterns",
             """
             let chord = (name) => name
@@ -413,6 +425,8 @@ class ComprehensiveIntegrationTest : StringSpec({
             // Short-hand notation
             s("bd hh sd hh")
         """.trimIndent()
+
+        val engine = builder.build()
 
         engine.execute(script, sourceName = "music.klang")
 

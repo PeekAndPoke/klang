@@ -112,17 +112,17 @@ class ExportImportTest : StringSpec({
     }
 
     "should support selective imports" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let add = (a, b) => a + b
-            let subtract = (a, b) => a - b
-            let multiply = (a, b) => a * b
-            let divide = (a, b) => a / b
-            export { add, subtract, multiply, divide }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "math", """
+                let add = (a, b) => a + b
+                let subtract = (a, b) => a - b
+                let multiply = (a, b) => a * b
+                let divide = (a, b) => a / b
+                export { add, subtract, multiply, divide }
+            """.trimIndent()
+            )
+            .build()
 
         val result = engine.execute(
             """
@@ -135,14 +135,14 @@ class ExportImportTest : StringSpec({
     }
 
     "should allow importing single symbol" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let square = (x) => x * x
-            export { square }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "math", """
+                let square = (x) => x * x
+                export { square }
+            """.trimIndent()
+            )
+            .build()
 
         val result = engine.execute(
             """
@@ -155,20 +155,20 @@ class ExportImportTest : StringSpec({
     }
 
     "should support libraries with mixed exports" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "signals", """
-            let frequency = 440
-            let amplitude = 1.0
-            let sine = {
-                freq: frequency,
-                amp: amplitude
-            }
-            let internal = "private"
-            export { sine, frequency }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "signals", """
+                let frequency = 440
+                let amplitude = 1.0
+                let sine = {
+                    freq: frequency,
+                    amp: amplitude
+                }
+                let internal = "private"
+                export { sine, frequency }
+            """.trimIndent()
+            )
+            .build()
 
         val result = engine.execute(
             """
@@ -181,15 +181,15 @@ class ExportImportTest : StringSpec({
     }
 
     "should backward compatible - libraries without exports export all" {
-        val engine = KlangScript()
-
         // Library without export statement
-        engine.registerLibrary(
-            "old", """
-            let func1 = (x) => x + 1
-            let func2 = (x) => x * 2
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "old", """
+                let func1 = (x) => x + 1
+                let func2 = (x) => x * 2
+            """.trimIndent()
+            )
+            .build()
 
         val result = engine.execute(
             """
@@ -202,14 +202,14 @@ class ExportImportTest : StringSpec({
     }
 
     "should prevent importing from library without matching export" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "lib", """
-            let add = (a, b) => a + b
-            export { add }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "lib", """
+                let add = (a, b) => a + b
+                export { add }
+            """.trimIndent()
+            )
+            .build()
 
         try {
             engine.execute(
@@ -224,16 +224,16 @@ class ExportImportTest : StringSpec({
     }
 
     "should allow multiple selective imports from same library" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "lib", """
-            let a = 1
-            let b = 2
-            let c = 3
-            export { a, b, c }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "lib", """
+                let a = 1
+                let b = 2
+                let c = 3
+                export { a, b, c }
+            """.trimIndent()
+            )
+            .build()
 
         val result = engine.execute(
             """
@@ -248,19 +248,18 @@ class ExportImportTest : StringSpec({
 
 
     "should export functions that use native functions" {
-        val engine = KlangScript()
-
-        engine.registerFunction1("nativeDouble") { value ->
-            NumberValue((value as NumberValue).value * 2)
-        }
-
-        engine.registerLibrary(
-            "lib", """
-            let useNative = (x) => nativeDouble(x)
-            let internal = (x) => x + 1
-            export { useNative }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerFunction1("nativeDouble") { value ->
+                NumberValue((value as NumberValue).value * 2)
+            }
+            .registerLibrary(
+                "lib", """
+                let useNative = (x) => nativeDouble(x)
+                let internal = (x) => x + 1
+                export { useNative }
+            """.trimIndent()
+            )
+            .build()
 
         val result = engine.execute(
             """
@@ -273,25 +272,25 @@ class ExportImportTest : StringSpec({
     }
 
     "should support complex real-world library pattern" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "strudel", """
+                // Internal helpers
+                let createPattern = (str) => { value: str }
+                let addMethod = (obj, name, fn) => {
+                    value: obj.value,
+                    method: fn
+                }
 
-        engine.registerLibrary(
-            "strudel", """
-            // Internal helpers
-            let createPattern = (str) => { value: str }
-            let addMethod = (obj, name, fn) => {
-                value: obj.value,
-                method: fn
-            }
+                // Public API
+                let note = (pattern) => createPattern(pattern)
+                let sound = (pattern) => createPattern(pattern)
+                let sine = { freq: 440 }
 
-            // Public API
-            let note = (pattern) => createPattern(pattern)
-            let sound = (pattern) => createPattern(pattern)
-            let sine = { freq: 440 }
-
-            export { note, sound, sine }
-        """.trimIndent()
-        )
+                export { note, sound, sine }
+            """.trimIndent()
+            )
+            .build()
 
         val result = engine.execute(
             """
@@ -304,14 +303,14 @@ class ExportImportTest : StringSpec({
     }
 
     "should error on importing multiple non-exported symbols" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "lib", """
-            let a = 1
-            export { a }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "lib", """
+                let a = 1
+                export { a }
+            """.trimIndent()
+            )
+            .build()
 
         try {
             engine.execute(

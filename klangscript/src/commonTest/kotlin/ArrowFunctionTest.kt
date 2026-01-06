@@ -13,7 +13,7 @@ import io.peekandpoke.klang.script.runtime.*
 class ArrowFunctionTest : StringSpec({
 
     "should create and call simple arrow function" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // Immediately invoked arrow function: (x => x + 1)(5)
         val result = script.execute("(x => x + 1)(5)")
@@ -22,7 +22,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with multiple parameters" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // (a, b) => a + b applied to (3, 4)
         val result = script.execute("((a, b) => a + b)(3, 4)")
@@ -31,7 +31,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with no parameters" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // () => 42
         val result = script.execute("(() => 42)()")
@@ -40,7 +40,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with multiplication" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // (x, y) => x * y
         val result = script.execute("((x, y) => x * y)(6, 7)")
@@ -49,7 +49,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle nested arrow functions" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // x => y => x + y (currying)
         // Applied as: (x => y => x + y)(10)(5) = 15
@@ -59,7 +59,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should pass arrow function as argument to native function" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // Register a function that accepts a callback and calls it
         script.registerFunction("applyFunc") { args ->
@@ -93,7 +93,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with method chaining in body" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // Register a function that returns an object
         script.registerFunction("createObj") { args ->
@@ -115,7 +115,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with string operations" {
-        val script = KlangScript()
+        val script = klangScript()
 
         script.registerFunction("concat") { args ->
             val a = (args[0] as StringValue).value
@@ -130,7 +130,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle complex expression in arrow function body" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // x => (x + 1) * 2 - 3
         val result = script.execute("(x => (x + 1) * 2 - 3)(5)")
@@ -140,7 +140,7 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function returning another arrow function" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // makeAdder that returns a function
         // x => (y => x + y)

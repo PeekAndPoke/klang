@@ -6,6 +6,12 @@ import io.peekandpoke.klang.script.runtime.*
 import kotlin.reflect.KClass
 
 /**
+ * Shorthand for using the [KlangScript.Builder]
+ */
+fun klangScript(builder: KlangScript.Builder.() -> Unit = {}) =
+    KlangScript.Builder().apply(builder).build()
+
+/**
  * Main facade for the KlangScript engine
  *
  * This is the primary entry point for using KlangScript. It provides a simple
@@ -32,46 +38,35 @@ import kotlin.reflect.KClass
  * - Managing the interpreter and environment
  * - Providing convenient function registration helpers
  */
-class KlangScript : LibraryLoader {
+class KlangScript private constructor(
+    libraries: Map<String, KlangScriptLibrary>,
+    nativeTypes: Map<KClass<*>, NativeTypeInfo>,
+    extensionMethods: Map<KClass<*>, Map<String, ExtensionMethod>>,
+    functionRegistrations: List<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>,
+) : LibraryLoader {
     /** Registry of available libraries (library name -> library object) */
-    private val libraries = mutableMapOf<String, KlangScriptLibrary>()
+    private val libraries = libraries.toMutableMap()
 
     /** Registry of native types (KClass -> type metadata) */
     @PublishedApi
-    internal val nativeTypes = mutableMapOf<KClass<*>, NativeTypeInfo>()
+    internal val nativeTypes = nativeTypes.toMutableMap()
 
     /** Registry of extension methods (KClass -> method name -> ExtensionMethod) */
     @PublishedApi
-    internal val extensionMethods = mutableMapOf<KClass<*>, MutableMap<String, ExtensionMethod>>()
+    internal val extensionMethods = extensionMethods.mapValues { it.value.toMutableMap() }.toMutableMap()
 
     /** The interpreter that executes parsed programs */
     private val interpreter = Interpreter(libraryLoader = this)
 
     /** The global environment where functions and variables are stored */
-    private val environment = interpreter.getEnvironment()
-
-    /**
-     * Register a native function that can be called from scripts
-     *
-     * The function receives a list of runtime values as arguments and
-     * must return a runtime value.
-     *
-     * @param name The function name as it will appear in scripts
-     * @param function The Kotlin function implementation
-     *
-     * Example:
-     * ```kotlin
-     * engine.registerFunction("add") { args ->
-     *     val sum = args.sumOf { (it as NumberValue).value }
-     *     NumberValue(sum)
-     * }
-     * ```
-     *
-     * Then in scripts: `add(1, 2, 3)` returns 6
-     */
-    fun registerFunction(name: String, function: (List<RuntimeValue>) -> RuntimeValue) {
-        environment.define(name, NativeFunctionValue(name, function))
+    @PublishedApi
+    internal val environment = interpreter.getEnvironment().apply {
+        // Apply all function registrations
+        functionRegistrations.forEach { (name, function) ->
+            define(name, NativeFunctionValue(name, function))
+        }
     }
+
 
     /**
      * Execute a KlangScript program
@@ -102,87 +97,15 @@ class KlangScript : LibraryLoader {
     }
 
     /**
-     * Helper to register a function that takes no arguments
-     *
-     * Validates argument count and throws if incorrect.
-     *
-     * @param name The function name
-     * @param function The Kotlin function (no parameters)
-     *
-     * Example:
-     * ```kotlin
-     * engine.registerFunction0("getTime") {
-     *     NumberValue(System.currentTimeMillis().toDouble())
-     * }
-     * ```
+     * Internal method for libraries to register native functions
+     * Used by KlangScriptLibrary when applying native registrations
      */
-    fun registerFunction0(name: String, function: () -> RuntimeValue) {
-        registerFunction(name) { args ->
-            if (args.isNotEmpty()) {
-                throw io.peekandpoke.klang.script.runtime.ArgumentError(
-                    name,
-                    "Expected 0 arguments, got ${args.size}",
-                    expected = 0,
-                    actual = args.size
-                )
-            }
-            function()
-        }
-    }
-
-    /**
-     * Helper to register a function that takes exactly one argument
-     *
-     * Validates argument count and throws if incorrect.
-     *
-     * @param name The function name
-     * @param function The Kotlin function (one parameter)
-     *
-     * Example:
-     * ```kotlin
-     * engine.registerFunction1("print") { value ->
-     *     println(value.toDisplayString())
-     *     NullValue
-     * }
-     * ```
-     */
-    fun registerFunction1(name: String, function: (RuntimeValue) -> RuntimeValue) {
-        registerFunction(name) { args ->
-            if (args.size != 1) {
-                throw io.peekandpoke.klang.script.runtime.ArgumentError(
-                    name,
-                    "Expected 1 argument, got ${args.size}",
-                    expected = 1,
-                    actual = args.size
-                )
-            }
-            function(args[0])
-        }
-    }
-
-    /**
-     * Register a native function that returns a native Kotlin object
-     *
-     * Similar to registerFunction1, but automatically converts Kotlin parameter types
-     * and wraps native return values.
-     *
-     * @param TParam The Kotlin parameter type
-     * @param TReturn The Kotlin return type (will be auto-wrapped)
-     * @param name The function name
-     * @param function The function implementation
-     *
-     * Example:
-     * ```kotlin
-     * engine.registerFunction1<String, StrudelPattern>("note") { pattern ->
-     *     StrudelPattern(pattern)  // Returns native object, auto-wrapped
-     * }
-     * ```
-     */
-    inline fun <reified TParam : Any, reified TReturn : Any> registerNativeFunction(
+    @PublishedApi
+    internal inline fun <reified TParam : Any, reified TReturn : Any> registerNativeFunction(
         name: String,
         noinline function: (TParam) -> TReturn,
     ) {
-        registerFunction(name) { args ->
+        val wrappedFunction: (List<RuntimeValue>) -> RuntimeValue = { args ->
             if (args.size != 1) {
                 throw ArgumentError(
                     name,
@@ -195,71 +118,16 @@ class KlangScript : LibraryLoader {
             val result = function(param)
             wrapAsRuntimeValue(result)
         }
+        environment.define(name, NativeFunctionValue(name, wrappedFunction))
     }
 
     /**
-     * Register a library object that can be imported in scripts
-     *
-     * Libraries can contain both KlangScript code and native Kotlin registrations
-     * (functions, types, extension methods). They provide a clean way to bundle
-     * related functionality into reusable packages.
-     *
-     * @param library The library to register
-     *
-     * Example:
-     * ```kotlin
-     * val strudelLib = KlangScriptLibrary("strudel")
-     *     .source("""
-     *         let sequence = (pattern) => note(pattern)
-     *         export { sequence }
-     *     """)
-     *     .registerNativeFunction<String, StrudelPattern>("note") { pattern ->
-     *         StrudelPattern(pattern)
-     *     }
-     *     .registerExtensionMethod1<StrudelPattern, String, StrudelPattern>("sound") { receiver, soundName ->
-     *         receiver.sound(soundName)
-     *     }
-     *
-     * engine.registerLibrary(strudelLib)
-     * ```
-     *
-     * Then in scripts:
-     * ```javascript
-     * import * from "strudel"
-     * note("a b c").sound("saw")
-     * ```
+     * Internal method for libraries to register functions
+     * Used by KlangScriptLibrary when applying native registrations
      */
-    fun registerLibrary(library: KlangScriptLibrary) {
-        libraries[library.name] = library
-    }
-
-    /**
-     * Register a library from source code only (backward compatibility)
-     *
-     * This is a convenience method for registering libraries that contain only
-     * KlangScript code without native registrations.
-     *
-     * @param name The library name (without .klang extension)
-     * @param sourceCode The KlangScript source code for the library
-     *
-     * Example:
-     * ```kotlin
-     * engine.registerLibrary("math", """
-     *     let sqrt = (x) => {
-     *         // Native implementation would go here
-     *     }
-     *     let pi = 3.14159
-     * """)
-     * ```
-     *
-     * Then in scripts:
-     * ```javascript
-     * import * from "math"
-     * sqrt(16)  // Available after import
-     * ```
-     */
-    fun registerLibrary(name: String, sourceCode: String) {
-        libraries[name] = KlangScriptLibrary.builder(name).source(sourceCode).build()
+    @PublishedApi
+    internal fun registerFunction(name: String, function: (List<RuntimeValue>) -> RuntimeValue) {
+        environment.define(name, NativeFunctionValue(name, function))
     }
 
     /**
@@ -531,7 +399,17 @@ class KlangScript : LibraryLoader {
      * and applies them when build() is called, producing an immutable engine.
      */
     class Builder {
-        val engine = KlangScript()
+        @PublishedApi
+        internal val libraries = mutableMapOf<String, KlangScriptLibrary>()
+
+        @PublishedApi
+        internal val nativeTypes = mutableMapOf<KClass<*>, NativeTypeInfo>()
+
+        @PublishedApi
+        internal val extensionMethods = mutableMapOf<KClass<*>, MutableMap<String, ExtensionMethod>>()
+
+        @PublishedApi
+        internal val functionRegistrations = mutableListOf<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>()
 
         /**
          * Register a library with the engine
@@ -540,7 +418,7 @@ class KlangScript : LibraryLoader {
          * @return This builder for method chaining
          */
         fun registerLibrary(library: KlangScriptLibrary): Builder {
-            engine.registerLibrary(library)
+            libraries[library.name] = library
             return this
         }
 
@@ -552,7 +430,7 @@ class KlangScript : LibraryLoader {
          * @return This builder for method chaining
          */
         fun registerLibrary(name: String, sourceCode: String): Builder {
-            engine.registerLibrary(name, sourceCode)
+            libraries[name] = KlangScriptLibrary.builder(name).source(sourceCode).build()
             return this
         }
 
@@ -564,7 +442,7 @@ class KlangScript : LibraryLoader {
          * @return This builder for method chaining
          */
         fun registerFunction(name: String, function: (List<RuntimeValue>) -> RuntimeValue): Builder {
-            engine.registerFunction(name, function)
+            functionRegistrations.add(name to function)
             return this
         }
 
@@ -576,7 +454,17 @@ class KlangScript : LibraryLoader {
          * @return This builder for method chaining
          */
         fun registerFunction0(name: String, function: () -> RuntimeValue): Builder {
-            engine.registerFunction0(name, function)
+            registerFunction(name) { args ->
+                if (args.isNotEmpty()) {
+                    throw ArgumentError(
+                        name,
+                        "Expected 0 arguments, got ${args.size}",
+                        expected = 0,
+                        actual = args.size
+                    )
+                }
+                function()
+            }
             return this
         }
 
@@ -588,7 +476,17 @@ class KlangScript : LibraryLoader {
          * @return This builder for method chaining
          */
         fun registerFunction1(name: String, function: (RuntimeValue) -> RuntimeValue): Builder {
-            engine.registerFunction1(name, function)
+            registerFunction(name) { args ->
+                if (args.size != 1) {
+                    throw ArgumentError(
+                        name,
+                        "Expected 1 argument, got ${args.size}",
+                        expected = 1,
+                        actual = args.size
+                    )
+                }
+                function(args[0])
+            }
             return this
         }
 
@@ -605,7 +503,19 @@ class KlangScript : LibraryLoader {
             name: String,
             noinline function: (TParam) -> TReturn,
         ): Builder {
-            engine.registerNativeFunction(name, function)
+            registerFunction(name) { args ->
+                if (args.size != 1) {
+                    throw ArgumentError(
+                        name,
+                        "Expected 1 argument, got ${args.size}",
+                        expected = 1,
+                        actual = args.size
+                    )
+                }
+                val param = convertParameter<TParam>(args[0])
+                val result = function(param)
+                wrapAsRuntimeValue(result)
+            }
             return this
         }
 
@@ -616,7 +526,9 @@ class KlangScript : LibraryLoader {
          * @return This builder for method chaining
          */
         inline fun <reified T : Any> registerNativeType(): Builder {
-            engine.registerNativeType<T>()
+            val kClass = T::class
+            val qualifiedName = kClass.simpleName ?: "Unknown"
+            nativeTypes[kClass] = NativeTypeInfo(kClass, qualifiedName)
             return this
         }
 
@@ -633,7 +545,34 @@ class KlangScript : LibraryLoader {
             methodName: String,
             noinline method: (TReceiver) -> TReturn,
         ): Builder {
-            engine.registerExtensionMethod0(methodName, method)
+            val receiverClass = TReceiver::class
+            val qualifiedName = receiverClass.simpleName ?: "Unknown"
+
+            // Auto-register type if not already registered
+            if (receiverClass !in nativeTypes) {
+                nativeTypes[receiverClass] = NativeTypeInfo(receiverClass, qualifiedName)
+            }
+
+            // Create extension method wrapper
+            val extensionMethod = ExtensionMethod(
+                methodName = methodName,
+                receiverClass = receiverClass,
+                invoker = { receiver, args ->
+                    if (args.isNotEmpty()) {
+                        throw TypeError(
+                            "Method '$methodName' expects 0 arguments, got ${args.size}",
+                            operation = "method call"
+                        )
+                    }
+                    @Suppress("UNCHECKED_CAST")
+                    val result = method(receiver as TReceiver)
+                    wrapAsRuntimeValue(result)
+                }
+            )
+
+            // Register extension method
+            extensionMethods
+                .getOrPut(receiverClass) { mutableMapOf() }[methodName] = extensionMethod
             return this
         }
 
@@ -651,7 +590,35 @@ class KlangScript : LibraryLoader {
             methodName: String,
             noinline method: (TReceiver, TParam) -> TReturn,
         ): Builder {
-            engine.registerExtensionMethod1(methodName, method)
+            val receiverClass = TReceiver::class
+            val qualifiedName = receiverClass.simpleName ?: "Unknown"
+
+            // Auto-register type if not already registered
+            if (receiverClass !in nativeTypes) {
+                nativeTypes[receiverClass] = NativeTypeInfo(receiverClass, qualifiedName)
+            }
+
+            // Create extension method wrapper
+            val extensionMethod = ExtensionMethod(
+                methodName = methodName,
+                receiverClass = receiverClass,
+                invoker = { receiver, args ->
+                    if (args.size != 1) {
+                        throw TypeError(
+                            "Method '$methodName' expects 1 argument, got ${args.size}",
+                            operation = "method call"
+                        )
+                    }
+                    @Suppress("UNCHECKED_CAST")
+                    val param = convertParameter<TParam>(args[0])
+                    val result = method(receiver as TReceiver, param)
+                    wrapAsRuntimeValue(result)
+                }
+            )
+
+            // Register extension method
+            extensionMethods
+                .getOrPut(receiverClass) { mutableMapOf() }[methodName] = extensionMethod
             return this
         }
 
@@ -670,7 +637,36 @@ class KlangScript : LibraryLoader {
             methodName: String,
             noinline method: (TReceiver, TParam1, TParam2) -> TReturn,
         ): Builder {
-            engine.registerExtensionMethod2(methodName, method)
+            val receiverClass = TReceiver::class
+            val qualifiedName = receiverClass.simpleName ?: "Unknown"
+
+            // Auto-register type if not already registered
+            if (receiverClass !in nativeTypes) {
+                nativeTypes[receiverClass] = NativeTypeInfo(receiverClass, qualifiedName)
+            }
+
+            // Create extension method wrapper
+            val extensionMethod = ExtensionMethod(
+                methodName = methodName,
+                receiverClass = receiverClass,
+                invoker = { receiver, args ->
+                    if (args.size != 2) {
+                        throw TypeError(
+                            "Method '$methodName' expects 2 arguments, got ${args.size}",
+                            operation = "method call"
+                        )
+                    }
+                    @Suppress("UNCHECKED_CAST")
+                    val param1 = convertParameter<TParam1>(args[0])
+                    val param2 = convertParameter<TParam2>(args[1])
+                    val result = method(receiver as TReceiver, param1, param2)
+                    wrapAsRuntimeValue(result)
+                }
+            )
+
+            // Register extension method
+            extensionMethods
+                .getOrPut(receiverClass) { mutableMapOf() }[methodName] = extensionMethod
             return this
         }
 
@@ -683,7 +679,12 @@ class KlangScript : LibraryLoader {
          * @return The configured KlangScript engine
          */
         fun build(): KlangScript {
-            return engine
+            return KlangScript(
+                libraries = libraries,
+                nativeTypes = nativeTypes,
+                extensionMethods = extensionMethods,
+                functionRegistrations = functionRegistrations
+            )
         }
     }
 }

@@ -39,14 +39,14 @@ class ImportSystemTest : StringSpec({
     }
 
     "should import and use library function" {
-        val engine = KlangScript()
-
-        // Register a library with a simple function
-        engine.registerLibrary(
-            "math", """
-            let square = (x) => x * x
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            // Register a library with a simple function
+            registerLibrary(
+                "math", """
+                    let square = (x) => x * x
+                """.trimIndent()
+            )
+        }
 
         // Import and use the function
         val result = engine.execute(
@@ -60,15 +60,15 @@ class ImportSystemTest : StringSpec({
     }
 
     "should import multiple functions from library" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let add = (a, b) => a + b
-            let multiply = (a, b) => a * b
-            let pi = 3.14159
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "math", """
+                    let add = (a, b) => a + b
+                    let multiply = (a, b) => a * b
+                    let pi = 3.14159
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -81,16 +81,16 @@ class ImportSystemTest : StringSpec({
     }
 
     "should import and use library object with methods" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "signals", """
-            let sine = {
-                frequency: 440,
-                amplitude: 1.0
-            }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "signals", """
+                    let sine = {
+                        frequency: 440,
+                        amplitude: 1.0
+                    }
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -103,19 +103,19 @@ class ImportSystemTest : StringSpec({
     }
 
     "should allow multiple imports in same script" {
-        val engine = KlangScript()
+        val engine = klangScript {
+            registerLibrary(
+                "math", """
+                    let add = (a, b) => a + b
+                """.trimIndent()
+            )
 
-        engine.registerLibrary(
-            "math", """
-            let add = (a, b) => a + b
-        """.trimIndent()
-        )
-
-        engine.registerLibrary(
-            "string", """
-            let concat = (a, b) => "result"
-        """.trimIndent()
-        )
+            registerLibrary(
+                "string", """
+                    let concat = (a, b) => "result"
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -129,14 +129,14 @@ class ImportSystemTest : StringSpec({
     }
 
     "should isolate library internal variables" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "lib", """
-            let internal = "should not be visible"
-            let public = "exported"
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "lib", """
+                    let internal = "should not be visible"
+                    let public = "exported"
+                """.trimIndent()
+            )
+        }
 
         // Both should be imported with wildcard import
         val result = engine.execute(
@@ -150,7 +150,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should throw error when library not found" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
 
         try {
             engine.execute(
@@ -165,14 +165,14 @@ class ImportSystemTest : StringSpec({
     }
 
     "should allow library functions to call each other" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let double = (x) => x * 2
-            let quadruple = (x) => double(double(x))
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "math", """
+                    let double = (x) => x * 2
+                    let quadruple = (x) => double(double(x))
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -185,14 +185,14 @@ class ImportSystemTest : StringSpec({
     }
 
     "should support arrow functions in library that capture library variables" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "counter", """
-            let initialValue = 10
-            let makeCounter = () => initialValue
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "counter", """
+                    let initialValue = 10
+                    let makeCounter = () => initialValue
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -205,19 +205,19 @@ class ImportSystemTest : StringSpec({
     }
 
     "should allow importing library that uses native functions" {
-        val engine = KlangScript()
+        val engine = klangScript {
+            // Register a native function
+            registerFunction1("nativeDouble") { value ->
+                NumberValue((value as NumberValue).value * 2)
+            }
 
-        // Register a native function
-        engine.registerFunction1("nativeDouble") { value ->
-            NumberValue((value as NumberValue).value * 2)
+            // Library uses the native function
+            registerLibrary(
+                "lib", """
+                    let useNative = (x) => nativeDouble(x)
+                """.trimIndent()
+            )
         }
-
-        // Library uses the native function
-        engine.registerLibrary(
-            "lib", """
-            let useNative = (x) => nativeDouble(x)
-        """.trimIndent()
-        )
 
         val result = engine.execute(
             """
@@ -230,19 +230,19 @@ class ImportSystemTest : StringSpec({
     }
 
     "should support complex library with nested function calls" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "strudel", """
-            let note = (pattern) => {
-                value: pattern,
-                gain: (amount) => {
-                    value: pattern,
-                    gainValue: amount
-                }
-            }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "strudel", """
+                    let note = (pattern) => {
+                        value: pattern,
+                        gain: (amount) => {
+                            value: pattern,
+                            gainValue: amount
+                        }
+                    }
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -269,13 +269,14 @@ class ImportSystemTest : StringSpec({
     }
 
     "should handle import at different positions in script" {
-        val engine = KlangScript()
+        val engine = klangScript {
+            registerLibrary(
+                "lib", """
+                    let func = (x) => x + 1
+                """.trimIndent()
+            )
+        }
 
-        engine.registerLibrary(
-            "lib", """
-            let func = (x) => x + 1
-        """.trimIndent()
-        )
 
         // Import after some statements
         val result = engine.execute(
@@ -290,20 +291,21 @@ class ImportSystemTest : StringSpec({
     }
 
     "should allow library to define constants" {
-        val engine = KlangScript()
+        val engine = klangScript {
+            registerLibrary(
+                "constants", """
+                    const PI = 3.14159
+                    const E = 2.71828
+                """.trimIndent()
+            )
+        }
 
-        engine.registerLibrary(
-            "constants", """
-            const PI = 3.14159
-            const E = 2.71828
-        """.trimIndent()
-        )
 
         val result = engine.execute(
             """
-            import * from "constants"
-            PI + E
-        """.trimIndent()
+                import * from "constants"
+                PI + E
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(5.85987)

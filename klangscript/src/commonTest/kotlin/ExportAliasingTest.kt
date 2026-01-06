@@ -66,14 +66,16 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should import using exported alias name" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
 
-        engine.registerLibrary(
+        builder.registerLibrary(
             "math", """
             let add = (a, b) => a + b
             export { add as sum }
         """.trimIndent()
         )
+
+        val engine = builder.build()
 
         val result = engine.execute(
             """
@@ -86,14 +88,16 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should not allow importing using original name when aliased" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
 
-        engine.registerLibrary(
+        builder.registerLibrary(
             "math", """
             let add = (a, b) => a + b
             export { add as sum }
         """.trimIndent()
         )
+
+        val engine = builder.build()
 
         try {
             engine.execute(
@@ -109,15 +113,17 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should support multiple export aliases" {
-        val engine = KlangScript()
+        val builder = KlangScript.builder()
 
-        engine.registerLibrary(
+        builder.registerLibrary(
             "math", """
             let add = (a, b) => a + b
             let multiply = (a, b) => a * b
             export { add as sum, multiply as mul }
         """.trimIndent()
         )
+
+        val engine = builder.build()
 
         val result = engine.execute(
             """
@@ -130,36 +136,37 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should support mixed export with aliases" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let add = (a, b) => a + b
-            let subtract = (a, b) => a - b
-            let multiply = (a, b) => a * b
-            export { add, subtract as sub, multiply }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "math", """
+                    let add = (a, b) => a + b
+                    let subtract = (a, b) => a - b
+                    let multiply = (a, b) => a * b
+                    export { add, subtract as sub, multiply }
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
-            import { add, sub } from "math"
-            add(10, sub(5, 2))
-        """.trimIndent()
+                import { add, sub } from "math"
+                add(10, sub(5, 2))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(13.0)  // 10 + (5 - 2) = 13
     }
 
     "should export alias work with wildcard import" {
-        val engine = KlangScript()
+        val engine = klangScript {
+            registerLibrary(
+                "math", """
+                    let add = (a, b) => a + b
+                    export { add as sum }
+                """.trimIndent()
+            )
+        }
 
-        engine.registerLibrary(
-            "math", """
-            let add = (a, b) => a + b
-            export { add as sum }
-        """.trimIndent()
-        )
 
         val result = engine.execute(
             """
@@ -172,15 +179,15 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should export alias work with namespace import" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let add = (a, b) => a + b
-            let multiply = (a, b) => a * b
-            export { add as sum, multiply as mul }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "math", """
+                    let add = (a, b) => a + b
+                    let multiply = (a, b) => a * b
+                    export { add as sum, multiply as mul }
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -193,14 +200,14 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should not expose original name in wildcard import when aliased" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let add = (a, b) => a + b
-            export { add as sum }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "math", """
+                    let add = (a, b) => a + b
+                    export { add as sum }
+                """.trimIndent()
+            )
+        }
 
         try {
             engine.execute(
@@ -216,14 +223,14 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should allow import aliasing on top of export aliasing" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let add = (a, b) => a + b
-            export { add as addition }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "math", """
+                    let add = (a, b) => a + b
+                    export { add as addition }
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -236,15 +243,15 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should export aliasing preserve function behavior" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "funcs", """
-            let square = (x) => x * x
-            let double = (x) => x * 2
-            export { square as sq, double }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "funcs", """
+                    let square = (x) => x * x
+                    let double = (x) => x * 2
+                    export { square as sq, double }
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -257,14 +264,14 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should export aliasing work with objects" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "config", """
-            let settings = { value: 42 }
-            export { settings as config }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "config", """
+                    let settings = { value: 42 }
+                    export { settings as config }
+                """.trimIndent()
+            )
+        }
 
         val result = engine.execute(
             """
@@ -277,22 +284,22 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should handle complex real-world pattern with export aliases" {
-        val engine = KlangScript()
+        val engine = klangScript {
+            registerFunction1("nativeLog") { value ->
+                NumberValue((value as NumberValue).value * 10)
+            }
 
-        engine.registerFunction1("nativeLog") { value ->
-            NumberValue((value as NumberValue).value * 10)
+            registerLibrary(
+                "api", """
+                    let internalProcess = (x) => nativeLog(x)
+                    let internalTransform = (x) => x * 2
+                    let helperFunc = (x) => x + 1
+        
+                    // Only expose public API with clean names
+                    export { internalProcess as process, internalTransform as transform }
+                """.trimIndent()
+            )
         }
-
-        engine.registerLibrary(
-            "api", """
-            let internalProcess = (x) => nativeLog(x)
-            let internalTransform = (x) => x * 2
-            let helperFunc = (x) => x + 1
-
-            // Only expose public API with clean names
-            export { internalProcess as process, internalTransform as transform }
-        """.trimIndent()
-        )
 
         val result = engine.execute(
             """
@@ -305,15 +312,15 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should error when trying to import non-exported symbol even if it exists" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "lib", """
-            let public = (x) => x + 1
-            let private = (x) => x * 2
-            export { public as pub }
-        """.trimIndent()
-        )
+        val engine = klangScript {
+            registerLibrary(
+                "lib", """
+                    let public = (x) => x + 1
+                    let private = (x) => x * 2
+                    export { public as pub }
+                """.trimIndent()
+            )
+        }
 
         try {
             engine.execute(

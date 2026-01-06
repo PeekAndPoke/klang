@@ -14,7 +14,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
 class MemberAccessTest : StringSpec({
 
     "should access object property" {
-        val script = KlangScript()
+        val script = klangScript()
         val obj = ObjectValue(
             mutableMapOf(
                 "name" to StringValue("Alice")
@@ -28,7 +28,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should access nested properties" {
-        val script = KlangScript()
+        val script = klangScript()
         val innerObj = ObjectValue(
             mutableMapOf(
                 "city" to StringValue("Berlin")
@@ -47,7 +47,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should return NullValue for missing property" {
-        val script = KlangScript()
+        val script = klangScript()
         val obj = ObjectValue()
         script.registerVariable("obj", obj)
 
@@ -56,7 +56,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should call method on object" {
-        val script = KlangScript()
+        val script = klangScript()
         val obj = ObjectValue(
             mutableMapOf(
                 "getValue" to script.createNativeFunction("getValue") {
@@ -72,7 +72,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should support method chaining with two calls" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // Register a function that returns an object with a chainable method
         script.registerFunction("createChain") {
@@ -96,7 +96,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should support complex method chaining" {
-        val script = KlangScript()
+        val script = klangScript()
 
         // Simulate a fluent API like note("c").gain(0.5).pan(0.0)
         script.registerFunction("note") { args ->
@@ -133,7 +133,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should access property after function call" {
-        val script = KlangScript()
+        val script = klangScript()
 
         script.registerFunction("getObject") {
             ObjectValue(
@@ -150,7 +150,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should support multiple chained property accesses" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val level3 = ObjectValue(mutableMapOf("value" to NumberValue(42.0)))
         val level2 = ObjectValue(mutableMapOf("c" to level3))
@@ -163,7 +163,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should support method call in middle of chain" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val innerObj = ObjectValue(
             mutableMapOf(
@@ -185,7 +185,7 @@ class MemberAccessTest : StringSpec({
     }
 
     "should evaluate complex expression with member access and arithmetic" {
-        val script = KlangScript()
+        val script = klangScript()
 
         val obj = ObjectValue(
             mutableMapOf(

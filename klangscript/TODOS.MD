@@ -949,7 +949,7 @@ engine2.registerLibrary(strudelLib)
 - Function name collisions are possible if multiple libraries register same native function names
 - Library authors should use namespacing conventions (e.g., `"math_sqrt"` vs `"string_length"`)
 
-#### Step 3.12: Immutability & Builder Pattern (Planned)
+#### Step 3.12: Immutability & Builder Pattern ✅
 
 **Goal**: Improve stability and thread-safety by making `KlangScriptLibrary` and `KlangScript` immutable after
 construction, using builder pattern for configuration.
