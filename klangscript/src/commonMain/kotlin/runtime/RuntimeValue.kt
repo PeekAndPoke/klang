@@ -81,3 +81,53 @@ data class NativeFunctionValue(
 ) : RuntimeValue() {
     override fun toDisplayString(): String = "[native function $name]"
 }
+
+/**
+ * Object value
+ *
+ * Represents an object with properties that can be accessed via member access (dot notation).
+ * Properties are stored in a mutable map, allowing dynamic property assignment.
+ *
+ * This is essential for method chaining patterns where functions return objects
+ * that have further methods:
+ *
+ * ```
+ * note("c d e f")     // Returns ObjectValue
+ *   .gain(0.5)        // Accesses "gain" property (a function), calls it, returns ObjectValue
+ *   .pan("0 1")       // Accesses "pan" property (a function), calls it, returns ObjectValue
+ * ```
+ *
+ * Key design decisions:
+ * - Properties can be any RuntimeValue (functions, numbers, strings, other objects)
+ * - Mutable map allows runtime property modification
+ * - Property access returns NullValue for missing properties (like JavaScript)
+ *
+ * Example usage:
+ * ```kotlin
+ * val obj = ObjectValue(mutableMapOf(
+ *     "name" to StringValue("Alice"),
+ *     "age" to NumberValue(30.0),
+ *     "greet" to NativeFunctionValue("greet") { ... }
+ * ))
+ * ```
+ */
+data class ObjectValue(
+    val properties: MutableMap<String, RuntimeValue> = mutableMapOf(),
+) : RuntimeValue() {
+    override fun toDisplayString(): String = "[object]"
+
+    /**
+     * Get a property by name
+     * Returns NullValue if the property doesn't exist
+     */
+    fun getProperty(name: String): RuntimeValue {
+        return properties[name] ?: NullValue
+    }
+
+    /**
+     * Set a property by name
+     */
+    fun setProperty(name: String, value: RuntimeValue) {
+        properties[name] = value
+    }
+}

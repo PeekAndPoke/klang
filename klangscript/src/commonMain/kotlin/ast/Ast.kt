@@ -115,3 +115,82 @@ data class CallExpression(
     val callee: Expression,
     val arguments: List<Expression>,
 ) : Expression()
+
+/**
+ * Binary operator types for arithmetic and other operations
+ */
+enum class BinaryOperator {
+    /** Addition: a + b */
+    ADD,
+
+    /** Subtraction: a - b */
+    SUBTRACT,
+
+    /** Multiplication: a * b */
+    MULTIPLY,
+
+    /** Division: a / b */
+    DIVIDE,
+}
+
+/**
+ * A binary operation expression
+ *
+ * Represents an operation between two expressions.
+ * The operator determines what operation is performed.
+ *
+ * Examples:
+ * - 1 + 2 -> left: NumberLiteral(1), operator: ADD, right: NumberLiteral(2)
+ * - x * 3 -> left: Identifier("x"), operator: MULTIPLY, right: NumberLiteral(3)
+ * - (1 + 2) * 3 -> nested: left: BinaryOp(1 + 2), operator: MULTIPLY, right: NumberLiteral(3)
+ *
+ * Operator precedence:
+ * - Multiplication and division have higher precedence than addition and subtraction
+ * - Operations of equal precedence are left-associative: 1 - 2 - 3 = (1 - 2) - 3
+ */
+data class BinaryOperation(
+    val left: Expression,
+    val operator: BinaryOperator,
+    val right: Expression,
+) : Expression()
+
+/**
+ * A member access expression (dot notation)
+ *
+ * Represents accessing a property or method on an object using dot notation.
+ * This is the foundation for method chaining patterns.
+ *
+ * The object can be any expression, and property is always an identifier.
+ * Member access has higher precedence than function calls, allowing patterns like:
+ * - obj.method() - first access method, then call it
+ * - obj.prop.method() - chain multiple accesses
+ *
+ * Examples:
+ * - obj.name -> object: Identifier("obj"), property: "name"
+ * - person.getName -> object: Identifier("person"), property: "getName"
+ * - obj.prop.method -> nested: MemberAccess(MemberAccess(obj, "prop"), "method")
+ * - note("c").gain(0.5) -> MemberAccess applied to CallExpression result
+ *
+ * Method chaining:
+ * ```
+ * note("c d e f")    // CallExpression returns an object
+ *   .gain(0.5)       // MemberAccess to "gain", then CallExpression
+ *   .pan("0 1")      // MemberAccess to "pan", then CallExpression
+ * ```
+ *
+ * This desugars to nested operations:
+ * CallExpression(
+ *   MemberAccess(
+ *     CallExpression(
+ *       MemberAccess(CallExpression(note, ["c d e f"]), "gain"),
+ *       [0.5]
+ *     ),
+ *     "pan"
+ *   ),
+ *   ["0 1"]
+ * )
+ */
+data class MemberAccess(
+    val obj: Expression,
+    val property: String,
+) : Expression()

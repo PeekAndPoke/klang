@@ -90,7 +90,13 @@ class Interpreter(
 
             // Function calls are delegated to evaluateCall
             is CallExpression -> evaluateCall(expression)
-            // Future: binary operations, member access, arrow functions, etc.
+
+            // Binary operations are delegated to evaluateBinaryOp
+            is BinaryOperation -> evaluateBinaryOp(expression)
+
+            // Member access is delegated to evaluateMemberAccess
+            is MemberAccess -> evaluateMemberAccess(expression)
+            // Future: arrow functions, etc.
         }
     }
 
@@ -133,6 +139,106 @@ class Interpreter(
 
         // Call the function and return its result
         return callee.function(args)
+    }
+
+    /**
+     * Evaluate a binary operation expression
+     *
+     * Process:
+     * 1. Evaluate the left operand
+     * 2. Evaluate the right operand
+     * 3. Perform the operation based on the operator
+     * 4. Return the result
+     *
+     * Currently only supports arithmetic on numbers.
+     * Type checking ensures both operands are numbers.
+     *
+     * @param binOp The binary operation AST node
+     * @return The runtime value result of the operation
+     * @throws RuntimeException if operands are not numbers
+     *
+     * Example:
+     * ```
+     * // Script: 10 + 2 * 3
+     * // AST: BinaryOp(10, ADD, BinaryOp(2, MULTIPLY, 3))
+     * // 1. Evaluate left: 10 → NumberValue(10.0)
+     * // 2. Evaluate right: 2 * 3
+     * //    2a. Evaluate 2 → NumberValue(2.0)
+     * //    2b. Evaluate 3 → NumberValue(3.0)
+     * //    2c. Multiply: 2.0 * 3.0 = 6.0
+     * // 3. Add: 10.0 + 6.0 = 16.0
+     * ```
+     */
+    private fun evaluateBinaryOp(binOp: BinaryOperation): RuntimeValue {
+        // Evaluate both operands
+        val leftValue = evaluate(binOp.left)
+        val rightValue = evaluate(binOp.right)
+
+        // Ensure both operands are numbers
+        if (leftValue !is NumberValue || rightValue !is NumberValue) {
+            throw RuntimeException("Binary operations only supported on numbers")
+        }
+
+        // Perform the operation
+        val result = when (binOp.operator) {
+            BinaryOperator.ADD -> leftValue.value + rightValue.value
+            BinaryOperator.SUBTRACT -> leftValue.value - rightValue.value
+            BinaryOperator.MULTIPLY -> leftValue.value * rightValue.value
+            BinaryOperator.DIVIDE -> {
+                // Check for division by zero
+                if (rightValue.value == 0.0) {
+                    throw RuntimeException("Division by zero")
+                }
+                leftValue.value / rightValue.value
+            }
+        }
+
+        return NumberValue(result)
+    }
+
+    /**
+     * Evaluate a member access expression
+     *
+     * Member access (dot notation) allows accessing properties on objects.
+     * This is essential for method chaining and object-oriented patterns.
+     *
+     * Process:
+     * 1. Evaluate the object expression
+     * 2. Verify it's an ObjectValue
+     * 3. Return the property value (or NullValue if missing)
+     *
+     * @param memberAccess The member access AST node
+     * @return The runtime value of the property
+     * @throws RuntimeException if the object is not an ObjectValue
+     *
+     * Example:
+     * ```
+     * // Script: obj.name
+     * // 1. Evaluate obj → ObjectValue with properties
+     * // 2. Access "name" property
+     * // 3. Return the property's value (or NullValue)
+     * ```
+     *
+     * Method chaining example:
+     * ```
+     * // Script: note("c").gain(0.5)
+     * // Parsed as: CallExpression(MemberAccess(CallExpression(note, ["c"]), "gain"), [0.5])
+     * // 1. Evaluate note("c") → ObjectValue with "gain" property
+     * // 2. Access "gain" property → NativeFunctionValue
+     * // 3. Call function evaluates in evaluateCall
+     * ```
+     */
+    private fun evaluateMemberAccess(memberAccess: MemberAccess): RuntimeValue {
+        // Evaluate the object expression
+        val objValue = evaluate(memberAccess.obj)
+
+        // Ensure it's an object
+        if (objValue !is ObjectValue) {
+            throw RuntimeException("Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}")
+        }
+
+        // Return the property value
+        return objValue.getProperty(memberAccess.property)
     }
 
     /**

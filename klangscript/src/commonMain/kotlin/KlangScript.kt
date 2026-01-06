@@ -138,4 +138,14 @@ class KlangScript {
             function(args[0])
         }
     }
+
+    /**
+     * Get access to the underlying interpreter
+     *
+     * This is primarily used for testing to access the environment directly.
+     * In production code, prefer using the public API methods.
+     *
+     * @return The interpreter instance
+     */
+    fun getInterpreter(): Interpreter = interpreter
 }
