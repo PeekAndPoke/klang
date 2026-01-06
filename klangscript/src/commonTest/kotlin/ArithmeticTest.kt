@@ -17,35 +17,35 @@ import io.peekandpoke.klang.script.runtime.NumberValue
 class ArithmeticTest : StringSpec({
 
     "should evaluate simple addition" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("1 + 2")
 
         (result as NumberValue).value shouldBe 3.0
     }
 
     "should evaluate simple subtraction" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("5 - 3")
 
         (result as NumberValue).value shouldBe 2.0
     }
 
     "should evaluate simple multiplication" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("3 * 4")
 
         (result as NumberValue).value shouldBe 12.0
     }
 
     "should evaluate simple division" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("10 / 2")
 
         (result as NumberValue).value shouldBe 5.0
     }
 
     "should respect operator precedence - multiplication before addition" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("1 + 2 * 3")
 
         // Should be 1 + (2 * 3) = 1 + 6 = 7
@@ -53,7 +53,7 @@ class ArithmeticTest : StringSpec({
     }
 
     "should respect operator precedence - division before subtraction" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("10 - 6 / 2")
 
         // Should be 10 - (6 / 2) = 10 - 3 = 7
@@ -61,7 +61,7 @@ class ArithmeticTest : StringSpec({
     }
 
     "should evaluate parenthesized expressions correctly" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("(1 + 2) * 3")
 
         // Should be (1 + 2) * 3 = 3 * 3 = 9
@@ -69,7 +69,7 @@ class ArithmeticTest : StringSpec({
     }
 
     "should handle left associativity for subtraction" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("10 - 3 - 2")
 
         // Should be (10 - 3) - 2 = 7 - 2 = 5
@@ -77,7 +77,7 @@ class ArithmeticTest : StringSpec({
     }
 
     "should handle left associativity for division" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("12 / 3 / 2")
 
         // Should be (12 / 3) / 2 = 4 / 2 = 2
@@ -85,7 +85,7 @@ class ArithmeticTest : StringSpec({
     }
 
     "should handle complex nested expressions" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("(10 + 5) * 2 - 8 / 4")
 
         // Should be (10 + 5) * 2 - 8 / 4
@@ -96,20 +96,21 @@ class ArithmeticTest : StringSpec({
     }
 
     "should handle decimal numbers in arithmetic" {
-        val engine = KlangScript()
+        val engine = KlangScript.builder().build()
         val result = engine.execute("3.14 + 2.86")
 
         (result as NumberValue).value shouldBe 6.0
     }
 
     "should work with arithmetic in function arguments" {
-        val engine = KlangScript()
         var receivedValue: Double? = null
 
-        engine.registerFunction1("check") { value ->
-            receivedValue = (value as NumberValue).value
-            value
-        }
+        val engine = KlangScript.builder()
+            .registerFunction1("check") { value ->
+                receivedValue = (value as NumberValue).value
+                value
+            }
+            .build()
 
         engine.execute("check(10 + 5)")
 
@@ -117,13 +118,14 @@ class ArithmeticTest : StringSpec({
     }
 
     "should handle division in function arguments (like setCps)" {
-        val engine = KlangScript()
         var receivedValue: Double? = null
 
-        engine.registerFunction1("setCps") { value ->
-            receivedValue = (value as NumberValue).value
-            value
-        }
+        val engine = KlangScript.builder()
+            .registerFunction1("setCps") { value ->
+                receivedValue = (value as NumberValue).value
+                value
+            }
+            .build()
 
         engine.execute("setCps(120 / 60)")
 
@@ -131,13 +133,14 @@ class ArithmeticTest : StringSpec({
     }
 
     "should handle multiple arithmetic expressions in nested calls" {
-        val engine = KlangScript()
         val results = mutableListOf<Double>()
 
-        engine.registerFunction1("record") { value ->
-            results.add((value as NumberValue).value)
-            value
-        }
+        val engine = KlangScript.builder()
+            .registerFunction1("record") { value ->
+                results.add((value as NumberValue).value)
+                value
+            }
+            .build()
 
         engine.execute(
             """

@@ -66,7 +66,7 @@ class LibrarySystemTest : StringSpec({
     "Library with script code only (new API)" {
         val engine = KlangScript()
 
-        val mathLib = KlangScriptLibrary("math")
+        val mathLib = KlangScriptLibrary.builder("math")
             .source(
                 """
             let square = (x) => x * x
@@ -74,6 +74,7 @@ class LibrarySystemTest : StringSpec({
             export { square, cube }
         """.trimIndent()
             )
+            .build()
 
         engine.registerLibrary(mathLib)
 
@@ -90,7 +91,7 @@ class LibrarySystemTest : StringSpec({
     "Library with native functions only" {
         val engine = KlangScript()
 
-        val mathLib = KlangScriptLibrary("math")
+        val mathLib = KlangScriptLibrary.builder("math")
             .registerNativeFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
@@ -100,6 +101,7 @@ class LibrarySystemTest : StringSpec({
             .registerExtensionMethod1<MathHelper, Double, MathHelper>("add") { receiver, value ->
                 receiver.add(value)
             }
+            .build()
 
         engine.registerLibrary(mathLib)
 
@@ -116,7 +118,7 @@ class LibrarySystemTest : StringSpec({
     "Library with both script and native code" {
         val engine = KlangScript()
 
-        val mathLib = KlangScriptLibrary("math")
+        val mathLib = KlangScriptLibrary.builder("math")
             .source(
                 """
             // Script helper that uses native function
@@ -130,6 +132,7 @@ class LibrarySystemTest : StringSpec({
             .registerExtensionMethod0<MathHelper, MathHelper>("double") { receiver ->
                 receiver.double()
             }
+            .build()
 
         engine.registerLibrary(mathLib)
 
@@ -146,7 +149,7 @@ class LibrarySystemTest : StringSpec({
     "Library with multiple native types" {
         val engine = KlangScript()
 
-        val lib = KlangScriptLibrary("helpers")
+        val lib = KlangScriptLibrary.builder("helpers")
             .registerNativeFunction<Double, MathHelper>("math") { value ->
                 MathHelper(value)
             }
@@ -159,6 +162,7 @@ class LibrarySystemTest : StringSpec({
             .registerExtensionMethod0<StringHelper, StringHelper>("upper") { receiver ->
                 receiver.upper()
             }
+            .build()
 
         engine.registerLibrary(lib)
 
@@ -177,21 +181,23 @@ class LibrarySystemTest : StringSpec({
     "Multiple libraries with different native types" {
         val engine = KlangScript()
 
-        val mathLib = KlangScriptLibrary("math")
+        val mathLib = KlangScriptLibrary.builder("math")
             .registerNativeFunction<Double, MathHelper>("createMath") { value ->
                 MathHelper(value)
             }
             .registerExtensionMethod1<MathHelper, Double, MathHelper>("add") { receiver, value ->
                 receiver.add(value)
             }
+            .build()
 
-        val stringLib = KlangScriptLibrary("strings")
+        val stringLib = KlangScriptLibrary.builder("strings")
             .registerNativeFunction<String, StringHelper>("createString") { text ->
                 StringHelper(text)
             }
             .registerExtensionMethod1<StringHelper, String, StringHelper>("append") { receiver, suffix ->
                 receiver.append(suffix)
             }
+            .build()
 
         engine.registerLibrary(mathLib)
         engine.registerLibrary(stringLib)
@@ -212,7 +218,7 @@ class LibrarySystemTest : StringSpec({
     "Export control works with script functions (native functions are global)" {
         val engine = KlangScript()
 
-        val lib = KlangScriptLibrary("math")
+        val lib = KlangScriptLibrary.builder("math")
             .source(
                 """
             let helper = (x) => create(x).double()
@@ -226,6 +232,7 @@ class LibrarySystemTest : StringSpec({
             .registerExtensionMethod0<MathHelper, MathHelper>("double") { receiver ->
                 receiver.double()
             }
+            .build()
 
         engine.registerLibrary(lib)
 
@@ -262,13 +269,14 @@ class LibrarySystemTest : StringSpec({
     "Native functions registered in library are globally available" {
         val engine = KlangScript()
 
-        val lib = KlangScriptLibrary("math")
+        val lib = KlangScriptLibrary.builder("math")
             .registerNativeFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
             .registerExtensionMethod0<MathHelper, MathHelper>("double") { receiver ->
                 receiver.double()
             }
+            .build()
 
         engine.registerLibrary(lib)
 
@@ -281,7 +289,7 @@ class LibrarySystemTest : StringSpec({
     }
 
     "Library can be used by multiple engines" {
-        val lib = KlangScriptLibrary("math")
+        val lib = KlangScriptLibrary.builder("math")
             .source(
                 """
             let square = (x) => x * x
@@ -291,6 +299,7 @@ class LibrarySystemTest : StringSpec({
             .registerNativeFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
+            .build()
 
         // Use with first engine
         val engine1 = KlangScript()
@@ -318,7 +327,7 @@ class LibrarySystemTest : StringSpec({
     "Library with no source code (native only)" {
         val engine = KlangScript()
 
-        val lib = KlangScriptLibrary("nativelib")
+        val lib = KlangScriptLibrary.builder("nativelib")
             .registerNativeFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
@@ -326,6 +335,7 @@ class LibrarySystemTest : StringSpec({
                 receiver.double()
             }
         // Note: No .source() call
+            .build()
 
         engine.registerLibrary(lib)
 
@@ -352,7 +362,7 @@ class LibrarySystemTest : StringSpec({
     "Selective imports work with native library functions" {
         val engine = KlangScript()
 
-        val lib = KlangScriptLibrary("math")
+        val lib = KlangScriptLibrary.builder("math")
             .source(
                 """
             let helper1 = (x) => create(x)
@@ -366,6 +376,7 @@ class LibrarySystemTest : StringSpec({
             .registerExtensionMethod0<MathHelper, MathHelper>("double") { receiver ->
                 receiver.double()
             }
+            .build()
 
         engine.registerLibrary(lib)
 
@@ -382,13 +393,14 @@ class LibrarySystemTest : StringSpec({
     "Namespace imports work with native library functions" {
         val engine = KlangScript()
 
-        val lib = KlangScriptLibrary("math")
+        val lib = KlangScriptLibrary.builder("math")
             .source(
                 """
             let square = (x) => x * x
             export { square }
         """.trimIndent()
             )
+            .build()
 
         engine.registerLibrary(lib)
 
@@ -405,7 +417,7 @@ class LibrarySystemTest : StringSpec({
     "Chain multiple extension methods from library" {
         val engine = KlangScript()
 
-        val lib = KlangScriptLibrary("math")
+        val lib = KlangScriptLibrary.builder("math")
             .registerNativeFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
@@ -415,6 +427,7 @@ class LibrarySystemTest : StringSpec({
             .registerExtensionMethod1<MathHelper, Double, MathHelper>("add") { receiver, value ->
                 receiver.add(value)
             }
+            .build()
 
         engine.registerLibrary(lib)
 
@@ -430,7 +443,7 @@ class LibrarySystemTest : StringSpec({
 
     "Library builder is fluent" {
         // Verify that all methods return the library for chaining
-        val lib = KlangScriptLibrary("test")
+        val lib = KlangScriptLibrary.builder("test")
             .source("let x = 1")
             .registerNativeType<MathHelper>()
             .registerNativeFunction<Double, MathHelper>("create") { MathHelper(it) }
@@ -438,6 +451,7 @@ class LibrarySystemTest : StringSpec({
             .registerExtensionMethod0<MathHelper, MathHelper>("double") { it.double() }
             .registerExtensionMethod1<MathHelper, Double, MathHelper>("add") { r, v -> r.add(v) }
             .registerExtensionMethod2<MathHelper, Double, Double, MathHelper>("addTwo") { r, v1, v2 -> r.add(v1 + v2) }
+            .build()
 
         // If this compiles, the fluent API works
         lib.name shouldBe "test"
@@ -446,11 +460,12 @@ class LibrarySystemTest : StringSpec({
     "Library with registerFunction (not registerNativeFunction)" {
         val engine = KlangScript()
 
-        val lib = KlangScriptLibrary("utils")
+        val lib = KlangScriptLibrary.builder("utils")
             .registerFunction("sum") { args ->
                 val sum = args.sumOf { (it as NumberValue).value }
                 NumberValue(sum)
             }
+            .build()
 
         engine.registerLibrary(lib)
 

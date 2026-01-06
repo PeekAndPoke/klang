@@ -8,14 +8,15 @@ import io.peekandpoke.klang.script.runtime.StringValue
 class KlangScriptIntegrationTest : StringSpec({
 
     "should execute a simple print statement" {
-        val engine = KlangScript()
         val output = mutableListOf<String>()
 
         // Register a print function
-        engine.registerFunction1("print") { value ->
-            output.add(value.toDisplayString())
-            value
-        }
+        val engine = KlangScript.builder()
+            .registerFunction1("print") { value ->
+                output.add(value.toDisplayString())
+                value
+            }
+            .build()
 
         // Execute script
         engine.execute("""print("hello")""")
@@ -25,13 +26,14 @@ class KlangScriptIntegrationTest : StringSpec({
     }
 
     "should execute multiple statements" {
-        val engine = KlangScript()
         val output = mutableListOf<String>()
 
-        engine.registerFunction1("print") { value ->
-            output.add(value.toDisplayString())
-            value
-        }
+        val engine = KlangScript.builder()
+            .registerFunction1("print") { value ->
+                output.add(value.toDisplayString())
+                value
+            }
+            .build()
 
         // Execute script with multiple lines
         engine.execute(
@@ -45,13 +47,14 @@ class KlangScriptIntegrationTest : StringSpec({
     }
 
     "should handle numeric values" {
-        val engine = KlangScript()
         var receivedValue: Double? = null
 
-        engine.registerFunction1("check") { value ->
-            receivedValue = (value as NumberValue).value
-            value
-        }
+        val engine = KlangScript.builder()
+            .registerFunction1("check") { value ->
+                receivedValue = (value as NumberValue).value
+                value
+            }
+            .build()
 
         engine.execute("""check(42)""")
 
@@ -59,13 +62,14 @@ class KlangScriptIntegrationTest : StringSpec({
     }
 
     "should call functions with multiple arguments" {
-        val engine = KlangScript()
         var sum = 0.0
 
-        engine.registerFunction("add") { args ->
-            sum = args.sumOf { (it as NumberValue).value }
-            NumberValue(sum)
-        }
+        val engine = KlangScript.builder()
+            .registerFunction("add") { args ->
+                sum = args.sumOf { (it as NumberValue).value }
+                NumberValue(sum)
+            }
+            .build()
 
         engine.execute("""add(1, 2, 3)""")
 
@@ -73,17 +77,17 @@ class KlangScriptIntegrationTest : StringSpec({
     }
 
     "should handle nested function calls" {
-        val engine = KlangScript()
         val output = mutableListOf<String>()
 
-        engine.registerFunction1("print") { value ->
-            output.add(value.toDisplayString())
-            value
-        }
-
-        engine.registerFunction1("upper") { value ->
-            StringValue((value as StringValue).value.uppercase())
-        }
+        val engine = KlangScript.builder()
+            .registerFunction1("print") { value ->
+                output.add(value.toDisplayString())
+                value
+            }
+            .registerFunction1("upper") { value ->
+                StringValue((value as StringValue).value.uppercase())
+            }
+            .build()
 
         engine.execute("""print(upper("hello"))""")
 

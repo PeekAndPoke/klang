@@ -259,7 +259,7 @@ class KlangScript : LibraryLoader {
      * ```
      */
     fun registerLibrary(name: String, sourceCode: String) {
-        libraries[name] = KlangScriptLibrary(name).source(sourceCode)
+        libraries[name] = KlangScriptLibrary.builder(name).source(sourceCode).build()
     }
 
     /**
@@ -502,5 +502,188 @@ class KlangScript : LibraryLoader {
      */
     fun getExtensionMethodNames(kClass: KClass<*>): List<String> {
         return extensionMethods[kClass]?.keys?.toList() ?: emptyList()
+    }
+
+    companion object {
+        /**
+         * Create a new KlangScript builder
+         *
+         * The builder pattern provides a clean API for configuring the engine
+         * before it becomes immutable.
+         *
+         * @return A new builder for configuring KlangScript
+         *
+         * Example:
+         * ```kotlin
+         * val engine = KlangScript.builder()
+         *     .registerLibrary(strudelLib)
+         *     .registerFunction("print") { ... }
+         *     .build()
+         * ```
+         */
+        fun builder(): Builder = Builder()
+    }
+
+    /**
+     * Builder for creating KlangScript engine instances
+     *
+     * The builder collects all registrations (libraries, functions, types, methods)
+     * and applies them when build() is called, producing an immutable engine.
+     */
+    class Builder {
+        val engine = KlangScript()
+
+        /**
+         * Register a library with the engine
+         *
+         * @param library The library to register
+         * @return This builder for method chaining
+         */
+        fun registerLibrary(library: KlangScriptLibrary): Builder {
+            engine.registerLibrary(library)
+            return this
+        }
+
+        /**
+         * Register a library from source code (backward compatibility)
+         *
+         * @param name The library name
+         * @param sourceCode The KlangScript source code
+         * @return This builder for method chaining
+         */
+        fun registerLibrary(name: String, sourceCode: String): Builder {
+            engine.registerLibrary(name, sourceCode)
+            return this
+        }
+
+        /**
+         * Register a native function
+         *
+         * @param name The function name
+         * @param function The function implementation
+         * @return This builder for method chaining
+         */
+        fun registerFunction(name: String, function: (List<RuntimeValue>) -> RuntimeValue): Builder {
+            engine.registerFunction(name, function)
+            return this
+        }
+
+        /**
+         * Register a function with no parameters
+         *
+         * @param name The function name
+         * @param function The function implementation
+         * @return This builder for method chaining
+         */
+        fun registerFunction0(name: String, function: () -> RuntimeValue): Builder {
+            engine.registerFunction0(name, function)
+            return this
+        }
+
+        /**
+         * Register a function with one parameter
+         *
+         * @param name The function name
+         * @param function The function implementation
+         * @return This builder for method chaining
+         */
+        fun registerFunction1(name: String, function: (RuntimeValue) -> RuntimeValue): Builder {
+            engine.registerFunction1(name, function)
+            return this
+        }
+
+        /**
+         * Register a native function that returns a native Kotlin object
+         *
+         * @param TParam The parameter type
+         * @param TReturn The return type
+         * @param name The function name
+         * @param function The function implementation
+         * @return This builder for method chaining
+         */
+        inline fun <reified TParam : Any, reified TReturn : Any> registerNativeFunction(
+            name: String,
+            noinline function: (TParam) -> TReturn,
+        ): Builder {
+            engine.registerNativeFunction(name, function)
+            return this
+        }
+
+        /**
+         * Register a native Kotlin type
+         *
+         * @param T The type to register
+         * @return This builder for method chaining
+         */
+        inline fun <reified T : Any> registerNativeType(): Builder {
+            engine.registerNativeType<T>()
+            return this
+        }
+
+        /**
+         * Register an extension method with no parameters
+         *
+         * @param TReceiver The receiver type
+         * @param TReturn The return type
+         * @param methodName The method name
+         * @param method The method implementation
+         * @return This builder for method chaining
+         */
+        inline fun <reified TReceiver : Any, reified TReturn : Any> registerExtensionMethod0(
+            methodName: String,
+            noinline method: (TReceiver) -> TReturn,
+        ): Builder {
+            engine.registerExtensionMethod0(methodName, method)
+            return this
+        }
+
+        /**
+         * Register an extension method with one parameter
+         *
+         * @param TReceiver The receiver type
+         * @param TParam The parameter type
+         * @param TReturn The return type
+         * @param methodName The method name
+         * @param method The method implementation
+         * @return This builder for method chaining
+         */
+        inline fun <reified TReceiver : Any, reified TParam : Any, reified TReturn : Any> registerExtensionMethod1(
+            methodName: String,
+            noinline method: (TReceiver, TParam) -> TReturn,
+        ): Builder {
+            engine.registerExtensionMethod1(methodName, method)
+            return this
+        }
+
+        /**
+         * Register an extension method with two parameters
+         *
+         * @param TReceiver The receiver type
+         * @param TParam1 The first parameter type
+         * @param TParam2 The second parameter type
+         * @param TReturn The return type
+         * @param methodName The method name
+         * @param method The method implementation
+         * @return This builder for method chaining
+         */
+        inline fun <reified TReceiver : Any, reified TParam1 : Any, reified TParam2 : Any, reified TReturn : Any> registerExtensionMethod2(
+            methodName: String,
+            noinline method: (TReceiver, TParam1, TParam2) -> TReturn,
+        ): Builder {
+            engine.registerExtensionMethod2(methodName, method)
+            return this
+        }
+
+        /**
+         * Build the configured KlangScript engine
+         *
+         * After build(), the engine is ready to execute scripts.
+         * All registrations have been applied.
+         *
+         * @return The configured KlangScript engine
+         */
+        fun build(): KlangScript {
+            return engine
+        }
     }
 }

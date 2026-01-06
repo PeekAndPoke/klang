@@ -51,16 +51,16 @@ class ExportImportTest : StringSpec({
     }
 
     "should prevent scope pollution with explicit exports" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let internalHelper = (x) => x * 2
-            let add = (a, b) => a + b
-            let multiply = (a, b) => a * b
-            export { add, multiply }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "math", """
+                let internalHelper = (x) => x * 2
+                let add = (a, b) => a + b
+                let multiply = (a, b) => a * b
+                export { add, multiply }
+            """.trimIndent()
+            )
+            .build()
 
         // Try to import non-exported symbol
         try {
@@ -77,16 +77,16 @@ class ExportImportTest : StringSpec({
     }
 
     "should import only exported symbols with wildcard" {
-        val engine = KlangScript()
-
-        engine.registerLibrary(
-            "math", """
-            let internalHelper = (x) => x * 2
-            let add = (a, b) => a + b
-            let multiply = (a, b) => a * b
-            export { add, multiply }
-        """.trimIndent()
-        )
+        val engine = KlangScript.builder()
+            .registerLibrary(
+                "math", """
+                let internalHelper = (x) => x * 2
+                let add = (a, b) => a + b
+                let multiply = (a, b) => a * b
+                export { add, multiply }
+            """.trimIndent()
+            )
+            .build()
 
         val result = engine.execute(
             """
