@@ -8,6 +8,11 @@
 
 ## Diary
 
+### (2026-01-05) Tones
+
+- ported @tonaljs to kotlin into package "tones"
+- heavy use of "Junie" for the port and gemini for cleanup and refactorings
+
 ### (2026-01-04) Strudel Code Parser
 
 - starting to build the parser, now that many of the strudel functions are implemented
