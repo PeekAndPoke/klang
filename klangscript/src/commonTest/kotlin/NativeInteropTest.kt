@@ -65,9 +65,9 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            let pattern = note("a b c d")
-            pattern.sound("saw")
-        """.trimIndent()
+                let pattern = note("a b c d")
+                pattern.sound("saw")
+            """.trimIndent()
 
             val result = engine.execute(script)
             result.toDisplayString() shouldContain "a b c d|sound:saw"
@@ -84,9 +84,9 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            let pattern = note("a b c d")
-            pattern.reverse()
-        """.trimIndent()
+                let pattern = note("a b c d")
+                pattern.reverse()
+            """.trimIndent()
 
             val result = engine.execute(script)
             result.toDisplayString() shouldContain "reversed"
@@ -103,9 +103,9 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            let pattern = note("a b c d")
-            pattern.pan(-1.0, 1.0)
-        """.trimIndent()
+                let pattern = note("a b c d")
+                pattern.pan(-1.0, 1.0)
+            """.trimIndent()
 
             val result = engine.execute(script)
             result.toDisplayString() shouldContain "pan:-1"
@@ -149,11 +149,11 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            note("a b c d")
-                .sound("saw")
-                .gain(0.8)
-                .reverse()
-        """.trimIndent()
+                note("a b c d")
+                    .sound("saw")
+                    .gain(0.8)
+                    .reverse()
+            """.trimIndent()
 
             val result = engine.execute(script)
             result.toDisplayString() shouldContain "reversed"
@@ -171,9 +171,9 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            let pattern = note("a b c d")
-            pattern.nonExistent("test")
-        """.trimIndent()
+                let pattern = note("a b c d")
+                pattern.nonExistent("test")
+            """.trimIndent()
 
             val error = shouldThrow<TypeError> {
                 engine.execute(script)
@@ -196,9 +196,9 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            let pattern = note("a b c d")
-            pattern.sound("saw", "extra")
-        """.trimIndent()
+                let pattern = note("a b c d")
+                pattern.sound("saw", "extra")
+            """.trimIndent()
 
             shouldThrow<TypeError> {
                 engine.execute(script)
@@ -216,10 +216,10 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            let melody = note("a b c d")
-            let withSound = melody.sound("saw")
-            withSound
-        """.trimIndent()
+                let melody = note("a b c d")
+                let withSound = melody.sound("saw")
+                withSound
+            """.trimIndent()
 
             val result = engine.execute(script)
             result.toDisplayString() shouldContain "sound:saw"
@@ -242,9 +242,9 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            let pattern = note("a b c d").sound("saw")
-            capture(pattern)
-        """.trimIndent()
+                let pattern = note("a b c d").sound("saw")
+                capture(pattern)
+            """.trimIndent()
 
             engine.execute(script)
             captured.size shouldBe 1
@@ -270,10 +270,10 @@ class NativeInteropTest : StringSpec() {
                 .build()
 
             val script = """
-            let melody = note("a b c d").sound("saw")
-            let beat = rhythm("x x x x").speed(2.0)
-            melody
-        """.trimIndent()
+                let melody = note("a b c d").sound("saw")
+                let beat = rhythm("x x x x").speed(2.0)
+                melody
+            """.trimIndent()
 
             val result = engine.execute(script)
             result.toDisplayString() shouldContain "sound:saw"
@@ -294,20 +294,20 @@ class NativeInteropTest : StringSpec() {
                 .registerLibrary(
                     "patterns",
                     """
-                let makePattern = (notes) => note(notes).sound("saw")
-                let withGain = (pattern, amount) => pattern.gain(amount)
-
-                export { makePattern, withGain }
-                """.trimIndent()
+                        let makePattern = (notes) => note(notes).sound("saw")
+                        let withGain = (pattern, amount) => pattern.gain(amount)
+        
+                        export { makePattern, withGain }
+                    """.trimIndent()
                 )
                 .build()
 
             val script = """
-            import { makePattern, withGain } from "patterns"
-
-            let pattern = makePattern("a b c d")
-            withGain(pattern, 0.8)
-        """.trimIndent()
+                import { makePattern, withGain } from "patterns"
+    
+                let pattern = makePattern("a b c d")
+                withGain(pattern, 0.8)
+            """.trimIndent()
 
             val result = engine.execute(script)
             result.toDisplayString() shouldContain "gain:0.8"

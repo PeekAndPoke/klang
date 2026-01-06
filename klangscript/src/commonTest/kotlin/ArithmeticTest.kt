@@ -144,10 +144,10 @@ class ArithmeticTest : StringSpec({
 
         engine.execute(
             """
-            record(1 + 1)
-            record(2 * 3)
-            record(10 / 2)
-        """.trimIndent()
+                record(1 + 1)
+                record(2 * 3)
+                record(10 / 2)
+            """.trimIndent()
         )
 
         results shouldBe listOf(2.0, 6.0, 5.0)

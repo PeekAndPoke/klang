@@ -70,18 +70,18 @@ class ExportAliasingTest : StringSpec({
 
         builder.registerLibrary(
             "math", """
-            let add = (a, b) => a + b
-            export { add as sum }
-        """.trimIndent()
+                let add = (a, b) => a + b
+                export { add as sum }
+            """.trimIndent()
         )
 
         val engine = builder.build()
 
         val result = engine.execute(
             """
-            import { sum } from "math"
-            sum(1, 2)
-        """.trimIndent()
+                import { sum } from "math"
+                sum(1, 2)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(3.0)
@@ -92,9 +92,9 @@ class ExportAliasingTest : StringSpec({
 
         builder.registerLibrary(
             "math", """
-            let add = (a, b) => a + b
-            export { add as sum }
-        """.trimIndent()
+                let add = (a, b) => a + b
+                export { add as sum }
+            """.trimIndent()
         )
 
         val engine = builder.build()
@@ -102,9 +102,9 @@ class ExportAliasingTest : StringSpec({
         try {
             engine.execute(
                 """
-                import { add } from "math"
-                add(1, 2)
-            """.trimIndent()
+                    import { add } from "math"
+                    add(1, 2)
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
@@ -117,19 +117,19 @@ class ExportAliasingTest : StringSpec({
 
         builder.registerLibrary(
             "math", """
-            let add = (a, b) => a + b
-            let multiply = (a, b) => a * b
-            export { add as sum, multiply as mul }
-        """.trimIndent()
+                let add = (a, b) => a + b
+                let multiply = (a, b) => a * b
+                export { add as sum, multiply as mul }
+            """.trimIndent()
         )
 
         val engine = builder.build()
 
         val result = engine.execute(
             """
-            import { sum, mul } from "math"
-            sum(2, mul(3, 4))
-        """.trimIndent()
+                import { sum, mul } from "math"
+                sum(2, mul(3, 4))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(14.0)
@@ -170,9 +170,9 @@ class ExportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "math"
-            sum(5, 3)
-        """.trimIndent()
+                import * from "math"
+                sum(5, 3)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(8.0)
@@ -191,9 +191,9 @@ class ExportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * as math from "math"
-            math.sum(2, math.mul(3, 4))
-        """.trimIndent()
+                import * as math from "math"
+                math.sum(2, math.mul(3, 4))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(14.0)
@@ -212,9 +212,9 @@ class ExportAliasingTest : StringSpec({
         try {
             engine.execute(
                 """
-                import * from "math"
-                add(1, 2)  // Should fail - only 'sum' is exported
-            """.trimIndent()
+                    import * from "math"
+                    add(1, 2)  // Should fail - only 'sum' is exported
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
@@ -234,9 +234,9 @@ class ExportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import { addition as myAdd } from "math"
-            myAdd(7, 3)
-        """.trimIndent()
+                import { addition as myAdd } from "math"
+                myAdd(7, 3)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(10.0)
@@ -255,9 +255,9 @@ class ExportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import { sq, double } from "funcs"
-            sq(double(3))
-        """.trimIndent()
+                import { sq, double } from "funcs"
+                sq(double(3))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(36.0)  // double(3) = 6, sq(6) = 36
@@ -275,9 +275,9 @@ class ExportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import { config } from "config"
-            config.value
-        """.trimIndent()
+                import { config } from "config"
+                config.value
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(42.0)
@@ -303,9 +303,9 @@ class ExportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import { process, transform } from "api"
-            process(transform(3))
-        """.trimIndent()
+                import { process, transform } from "api"
+                process(transform(3))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(60.0)  // transform(3) = 6, process(6) = 60
@@ -325,8 +325,8 @@ class ExportAliasingTest : StringSpec({
         try {
             engine.execute(
                 """
-                import { private } from "lib"
-            """.trimIndent()
+                    import { private } from "lib"
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {

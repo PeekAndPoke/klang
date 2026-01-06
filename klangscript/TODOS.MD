@@ -113,6 +113,7 @@
   - [x] Trailing commas
   - [x] Nested calls
   - [x] Expressions as arguments
+  - [ ] Trailing commas in argument lists
 
 #### Step 1.7: Parser - Method Chaining ✅
 
@@ -157,16 +158,27 @@
 - [x] Parse objects with properties: `{ a: 1, b: 2 }`
 - [x] Parse nested objects: `{ a: { b: 1 } }`
 - [x] Parse string keys: `{ 'a': 1, "b": 2 }`
-- [x] Support trailing commas
+- [ ] Support trailing commas
 - [x] Write unit tests for:
   - [x] Empty objects
   - [x] Simple properties
   - [x] String keys
   - [x] Nested objects
-  - [x] Trailing commas
   - [x] Complex values (function calls, expressions)
+  - [ ] Trailing commas
 
-#### Step 1.11: Parser - Complete Program ✅
+#### Step 1.11: Parser - Array / List literal
+
+- [ ] Parse empty arrays: `[]`
+- [ ] Parse arrays with elements: `[1, "2", obj, func]`
+- todo: complete the todos
+- [ ] Write unit tests for:
+  - [ ] Empty arrays
+  - [ ] Simple elements
+  - [ ] Complex elements (function calls,
+  - todo: complete the task list
+
+#### Step 1.12: Parser - Complete Program ✅
 
 - [x] Parse top-level function calls
 - [x] Parse top-level expressions as statements (ExpressionStatement)
@@ -180,7 +192,7 @@
   - [x] Mixed declarations and calls
   - [x] Real-world examples from Strudel
 
-#### Step 1.12: Parser - Error Handling
+#### Step 1.13: Parser - Error Handling
 
 - [ ] Implement error recovery strategies
 - [ ] Provide meaningful error messages

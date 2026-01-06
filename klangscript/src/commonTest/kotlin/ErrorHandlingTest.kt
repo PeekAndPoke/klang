@@ -143,9 +143,9 @@ class ErrorHandlingTest : StringSpec({
         val error = shouldThrow<ArgumentError> {
             engine.execute(
                 """
-                let add = (a, b) => a + b
-                add(1)
-            """.trimIndent()
+                    let add = (a, b) => a + b
+                    add(1)
+                """.trimIndent()
             )
         }
 
@@ -192,10 +192,10 @@ class ErrorHandlingTest : StringSpec({
         val builder = KlangScript.builder()
         builder.registerLibrary(
             "math", """
-            let internal = 42
-            let add = (a, b) => a + b
-            export { add }
-        """.trimIndent()
+                let internal = 42
+                let add = (a, b) => a + b
+                export { add }
+            """.trimIndent()
         )
 
         val engine = builder.build()
@@ -285,10 +285,10 @@ class ErrorHandlingTest : StringSpec({
         val builder = KlangScript.builder()
         builder.registerLibrary(
             "broken", """
-            let divide = (a, b) => a / b
-            let willFail = () => undefinedVar
-            export { divide, willFail }
-        """.trimIndent()
+                let divide = (a, b) => a / b
+                let willFail = () => undefinedVar
+                export { divide, willFail }
+            """.trimIndent()
         )
 
         val engine = builder.build()
@@ -296,9 +296,9 @@ class ErrorHandlingTest : StringSpec({
         val error = shouldThrow<ReferenceError> {
             engine.execute(
                 """
-                import { willFail } from "broken"
-                willFail()
-            """.trimIndent()
+                    import { willFail } from "broken"
+                    willFail()
+                """.trimIndent()
             )
         }
 
@@ -309,9 +309,9 @@ class ErrorHandlingTest : StringSpec({
         val builder = KlangScript.builder()
         builder.registerLibrary(
             "math", """
-            let badAdd = (a, b) => a + b
-            export { badAdd }
-        """.trimIndent()
+                let badAdd = (a, b) => a + b
+                export { badAdd }
+            """.trimIndent()
         )
 
         val engine = builder.build()
@@ -319,9 +319,9 @@ class ErrorHandlingTest : StringSpec({
         val error = shouldThrow<TypeError> {
             engine.execute(
                 """
-                import { badAdd } from "math"
-                badAdd("hello", null)
-            """.trimIndent()
+                    import { badAdd } from "math"
+                    badAdd("hello", null)
+                """.trimIndent()
             )
         }
 
@@ -343,9 +343,9 @@ class ErrorHandlingTest : StringSpec({
         val error = shouldThrow<ReferenceError> {
             engine.execute(
                 """
-                let calculate = () => process(missingVar)
-                calculate()
-            """.trimIndent()
+                    let calculate = () => process(missingVar)
+                    calculate()
+                """.trimIndent()
             )
         }
 
@@ -358,10 +358,10 @@ class ErrorHandlingTest : StringSpec({
         val error = shouldThrow<TypeError> {
             engine.execute(
                 """
-                let outer = (x) => x * 2
-                let inner = () => "string" + null
-                outer(inner())
-            """.trimIndent()
+                    let outer = (x) => x * 2
+                    let inner = () => "string" + null
+                    outer(inner())
+                """.trimIndent()
             )
         }
 
@@ -522,9 +522,9 @@ class ErrorHandlingTest : StringSpec({
         val error = shouldThrow<TypeError> {
             engine.execute(
                 """
-                let obj = { a: 5 }
-                obj.a.b
-            """.trimIndent()
+                    let obj = { a: 5 }
+                    obj.a.b
+                """.trimIndent()
             )
         }
 
@@ -613,9 +613,9 @@ class ErrorHandlingTest : StringSpec({
         val error = shouldThrow<ReferenceError> {
             engine.execute(
                 """
-                let obj = { method: (x) => x }
-                obj.method(missingVar)
-            """.trimIndent()
+                    let obj = { method: (x) => x }
+                    obj.method(missingVar)
+                """.trimIndent()
             )
         }
 

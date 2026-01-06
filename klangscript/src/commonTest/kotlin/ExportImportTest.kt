@@ -54,11 +54,11 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "math", """
-                let internalHelper = (x) => x * 2
-                let add = (a, b) => a + b
-                let multiply = (a, b) => a * b
-                export { add, multiply }
-            """.trimIndent()
+                    let internalHelper = (x) => x * 2
+                    let add = (a, b) => a + b
+                    let multiply = (a, b) => a * b
+                    export { add, multiply }
+                """.trimIndent()
             )
             .build()
 
@@ -66,9 +66,9 @@ class ExportImportTest : StringSpec({
         try {
             engine.execute(
                 """
-                import { add, internalHelper } from "math"
-                add(1, 2)
-            """.trimIndent()
+                    import { add, internalHelper } from "math"
+                    add(1, 2)
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
@@ -80,19 +80,19 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "math", """
-                let internalHelper = (x) => x * 2
-                let add = (a, b) => a + b
-                let multiply = (a, b) => a * b
-                export { add, multiply }
-            """.trimIndent()
+                    let internalHelper = (x) => x * 2
+                    let add = (a, b) => a + b
+                    let multiply = (a, b) => a * b
+                    export { add, multiply }
+                """.trimIndent()
             )
             .build()
 
         val result = engine.execute(
             """
-            import * from "math"
-            add(5, 3)
-        """.trimIndent()
+                import * from "math"
+                add(5, 3)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(8.0)
@@ -101,9 +101,9 @@ class ExportImportTest : StringSpec({
         try {
             engine.execute(
                 """
-                import * from "math"
-                internalHelper(5)
-            """.trimIndent()
+                    import * from "math"
+                    internalHelper(5)
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
@@ -115,20 +115,20 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "math", """
-                let add = (a, b) => a + b
-                let subtract = (a, b) => a - b
-                let multiply = (a, b) => a * b
-                let divide = (a, b) => a / b
-                export { add, subtract, multiply, divide }
-            """.trimIndent()
+                    let add = (a, b) => a + b
+                    let subtract = (a, b) => a - b
+                    let multiply = (a, b) => a * b
+                    let divide = (a, b) => a / b
+                    export { add, subtract, multiply, divide }
+                """.trimIndent()
             )
             .build()
 
         val result = engine.execute(
             """
-            import { add, multiply } from "math"
-            add(2, multiply(3, 4))
-        """.trimIndent()
+                import { add, multiply } from "math"
+                add(2, multiply(3, 4))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(14.0)
@@ -138,17 +138,17 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "math", """
-                let square = (x) => x * x
-                export { square }
-            """.trimIndent()
+                    let square = (x) => x * x
+                    export { square }
+                """.trimIndent()
             )
             .build()
 
         val result = engine.execute(
             """
-            import { square } from "math"
-            square(5)
-        """.trimIndent()
+                import { square } from "math"
+                square(5)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(25.0)
@@ -158,23 +158,23 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "signals", """
-                let frequency = 440
-                let amplitude = 1.0
-                let sine = {
-                    freq: frequency,
-                    amp: amplitude
-                }
-                let internal = "private"
-                export { sine, frequency }
-            """.trimIndent()
+                    let frequency = 440
+                    let amplitude = 1.0
+                    let sine = {
+                        freq: frequency,
+                        amp: amplitude
+                    }
+                    let internal = "private"
+                    export { sine, frequency }
+                """.trimIndent()
             )
             .build()
 
         val result = engine.execute(
             """
-            import { sine } from "signals"
-            sine.freq
-        """.trimIndent()
+                import { sine } from "signals"
+                sine.freq
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(440.0)
@@ -185,17 +185,17 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "old", """
-                let func1 = (x) => x + 1
-                let func2 = (x) => x * 2
-            """.trimIndent()
+                    let func1 = (x) => x + 1
+                    let func2 = (x) => x * 2
+                """.trimIndent()
             )
             .build()
 
         val result = engine.execute(
             """
-            import * from "old"
-            func1(func2(5))
-        """.trimIndent()
+                import * from "old"
+                func1(func2(5))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(11.0)
@@ -205,9 +205,9 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "lib", """
-                let add = (a, b) => a + b
-                export { add }
-            """.trimIndent()
+                    let add = (a, b) => a + b
+                    export { add }
+                """.trimIndent()
             )
             .build()
 
@@ -227,20 +227,20 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "lib", """
-                let a = 1
-                let b = 2
-                let c = 3
-                export { a, b, c }
-            """.trimIndent()
+                    let a = 1
+                    let b = 2
+                    let c = 3
+                    export { a, b, c }
+                """.trimIndent()
             )
             .build()
 
         val result = engine.execute(
             """
-            import { a } from "lib"
-            import { b, c } from "lib"
-            a + b + c
-        """.trimIndent()
+                import { a } from "lib"
+                import { b, c } from "lib"
+                a + b + c
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(6.0)
@@ -254,18 +254,18 @@ class ExportImportTest : StringSpec({
             }
             .registerLibrary(
                 "lib", """
-                let useNative = (x) => nativeDouble(x)
-                let internal = (x) => x + 1
-                export { useNative }
-            """.trimIndent()
+                    let useNative = (x) => nativeDouble(x)
+                    let internal = (x) => x + 1
+                    export { useNative }
+                """.trimIndent()
             )
             .build()
 
         val result = engine.execute(
             """
-            import { useNative } from "lib"
-            useNative(7)
-        """.trimIndent()
+                import { useNative } from "lib"
+                useNative(7)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(14.0)
@@ -275,28 +275,28 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "strudel", """
-                // Internal helpers
-                let createPattern = (str) => { value: str }
-                let addMethod = (obj, name, fn) => {
-                    value: obj.value,
-                    method: fn
-                }
-
-                // Public API
-                let note = (pattern) => createPattern(pattern)
-                let sound = (pattern) => createPattern(pattern)
-                let sine = { freq: 440 }
-
-                export { note, sound, sine }
-            """.trimIndent()
+                    // Internal helpers
+                    let createPattern = (str) => { value: str }
+                    let addMethod = (obj, name, fn) => {
+                        value: obj.value,
+                        method: fn
+                    }
+    
+                    // Public API
+                    let note = (pattern) => createPattern(pattern)
+                    let sound = (pattern) => createPattern(pattern)
+                    let sine = { freq: 440 }
+    
+                    export { note, sound, sine }
+                """.trimIndent()
             )
             .build()
 
         val result = engine.execute(
             """
-            import { note, sine } from "strudel"
-            note("a b c").value
-        """.trimIndent()
+                import { note, sine } from "strudel"
+                note("a b c").value
+            """.trimIndent()
         )
 
         result shouldBe StringValue("a b c")
@@ -306,17 +306,17 @@ class ExportImportTest : StringSpec({
         val engine = KlangScript.builder()
             .registerLibrary(
                 "lib", """
-                let a = 1
-                export { a }
-            """.trimIndent()
+                    let a = 1
+                    export { a }
+                """.trimIndent()
             )
             .build()
 
         try {
             engine.execute(
                 """
-                import { a, b, c } from "lib"
-            """.trimIndent()
+                    import { a, b, c } from "lib"
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {

@@ -117,9 +117,9 @@ class ImportAliasingTest : StringSpec({
         try {
             engine.execute(
                 """
-                import { add as sum } from "math"
-                add(1, 2)  // Should fail - only 'sum' is defined
-            """.trimIndent()
+                    import { add as sum } from "math"
+                    add(1, 2)  // Should fail - only 'sum' is defined
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
@@ -140,9 +140,9 @@ class ImportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import { square as sq } from "math"
-            sq(5)
-        """.trimIndent()
+                import { square as sq } from "math"
+                sq(5)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(25.0)
@@ -162,10 +162,10 @@ class ImportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import { a as x } from "lib"
-            import { b as y, c as z } from "lib"
-            x + y + z
-        """.trimIndent()
+                import { a as x } from "lib"
+                import { b as y, c as z } from "lib"
+                x + y + z
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(6.0)
@@ -188,9 +188,9 @@ class ImportAliasingTest : StringSpec({
 
         val result = engine.execute(
             """
-            import { processValue as process, transformValue as transform } from "helpers"
-            process(transform(3))
-        """.trimIndent()
+                import { processValue as process, transformValue as transform } from "helpers"
+                process(transform(3))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(60.0)  // 3 * 2 * 10
@@ -210,8 +210,8 @@ class ImportAliasingTest : StringSpec({
         try {
             engine.execute(
                 """
-                import { private as priv } from "lib"
-            """.trimIndent()
+                    import { private as priv } from "lib"
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {

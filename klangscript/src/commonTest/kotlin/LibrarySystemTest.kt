@@ -55,9 +55,9 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "math"
-            square(5) + cube(2)
-        """.trimIndent()
+                import * from "math"
+                square(5) + cube(2)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(33.0) // 25 + 8
@@ -109,9 +109,9 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "math"
-            create(10).double().add(5)
-        """.trimIndent()
+                import * from "math"
+                create(10).double().add(5)
+            """.trimIndent()
         )
 
         result.toDisplayString() shouldContain "25" // (10 * 2) + 5
@@ -171,11 +171,11 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "helpers"
-            let doubled = math(5).double()
-            let uppercased = str("hello").upper()
-            doubled
-        """.trimIndent()
+                import * from "helpers"
+                let doubled = math(5).double()
+                let uppercased = str("hello").upper()
+                doubled
+            """.trimIndent()
         )
 
         result.toDisplayString() shouldContain "10"
@@ -207,12 +207,12 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "math"
-            import * from "strings"
-            let num = createMath(10).add(5)
-            let text = createString("hello").append(" world")
-            text
-        """.trimIndent()
+                import * from "math"
+                import * from "strings"
+                let num = createMath(10).add(5)
+                let text = createString("hello").append(" world")
+                text
+            """.trimIndent()
         )
 
         result.toDisplayString() shouldContain "hello world"
@@ -222,10 +222,10 @@ class LibrarySystemTest : StringSpec({
         val lib = KlangScriptLibrary.builder("math")
             .source(
                 """
-            let helper = (x) => create(x).double()
-            let publicFunc = (x) => helper(x)
-            export { publicFunc }
-        """.trimIndent()
+                    let helper = (x) => create(x).double()
+                    let publicFunc = (x) => helper(x)
+                    export { publicFunc }
+                """.trimIndent()
             )
             .registerNativeFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
@@ -242,9 +242,9 @@ class LibrarySystemTest : StringSpec({
         // Can use exported function
         val result = engine.execute(
             """
-            import * from "math"
-            publicFunc(5)
-        """.trimIndent()
+                import * from "math"
+                publicFunc(5)
+            """.trimIndent()
         )
         result.toDisplayString() shouldContain "10"
 
@@ -252,9 +252,9 @@ class LibrarySystemTest : StringSpec({
         shouldThrow<io.peekandpoke.klang.script.runtime.ReferenceError> {
             engine.execute(
                 """
-            import * from "math"
-            helper(5)
-        """.trimIndent()
+                    import * from "math"
+                    helper(5)
+                """.trimIndent()
             )
         }
 
@@ -262,9 +262,9 @@ class LibrarySystemTest : StringSpec({
         // This is by design - native registrations are global
         val nativeResult = engine.execute(
             """
-            import * from "math"
-            create(3).double()
-        """.trimIndent()
+                import * from "math"
+                create(3).double()
+            """.trimIndent()
         )
         nativeResult.toDisplayString() shouldContain "6"
     }
@@ -295,9 +295,9 @@ class LibrarySystemTest : StringSpec({
         val lib = KlangScriptLibrary.builder("math")
             .source(
                 """
-            let square = (x) => x * x
-            export { square }
-        """.trimIndent()
+                    let square = (x) => x * x
+                    export { square }
+                """.trimIndent()
             )
             .registerNativeFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
@@ -350,9 +350,9 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "nativelib"
-            create(7).double()
-        """.trimIndent()
+                import * from "nativelib"
+                create(7).double()
+            """.trimIndent()
         )
 
         result.toDisplayString() shouldContain "14"
@@ -372,10 +372,10 @@ class LibrarySystemTest : StringSpec({
         val lib = KlangScriptLibrary.builder("math")
             .source(
                 """
-            let helper1 = (x) => create(x)
-            let helper2 = (x) => create(x).double()
-            export { helper1, helper2 }
-        """.trimIndent()
+                    let helper1 = (x) => create(x)
+                    let helper2 = (x) => create(x).double()
+                    export { helper1, helper2 }
+                """.trimIndent()
             )
             .registerNativeFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
@@ -391,9 +391,9 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import { helper2 } from "math"
-            helper2(4)
-        """.trimIndent()
+                import { helper2 } from "math"
+                helper2(4)
+            """.trimIndent()
         )
 
         result.toDisplayString() shouldContain "8"
@@ -403,9 +403,9 @@ class LibrarySystemTest : StringSpec({
         val lib = KlangScriptLibrary.builder("math")
             .source(
                 """
-            let square = (x) => x * x
-            export { square }
-        """.trimIndent()
+                    let square = (x) => x * x
+                    export { square }
+                """.trimIndent()
             )
             .build()
 
@@ -415,9 +415,9 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * as M from "math"
-            M.square(6)
-        """.trimIndent()
+                import * as M from "math"
+                M.square(6)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(36.0)
@@ -442,9 +442,9 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "math"
-            create(5).double().add(3).double()
-        """.trimIndent()
+                import * from "math"
+                create(5).double().add(3).double()
+            """.trimIndent()
         )
 
         result.toDisplayString() shouldContain "26" // ((5 * 2) + 3) * 2 = 26
@@ -481,9 +481,9 @@ class LibrarySystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "utils"
-            sum(1, 2, 3, 4)
-        """.trimIndent()
+                import * from "utils"
+                sum(1, 2, 3, 4)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(10.0)

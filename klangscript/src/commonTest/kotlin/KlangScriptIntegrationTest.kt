@@ -38,9 +38,9 @@ class KlangScriptIntegrationTest : StringSpec({
         // Execute script with multiple lines
         engine.execute(
             """
-            print("first")
-            print("second")
-        """.trimIndent()
+                print("first")
+                print("second")
+            """.trimIndent()
         )
 
         output shouldBe listOf("first", "second")

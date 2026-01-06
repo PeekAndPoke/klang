@@ -90,9 +90,9 @@ class NamespaceImportTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * as math from "math"
-            math.add(2, math.multiply(3, 4))
-        """.trimIndent()
+                import * as math from "math"
+                math.add(2, math.multiply(3, 4))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(14.0)
@@ -111,9 +111,9 @@ class NamespaceImportTest : StringSpec({
         try {
             engine.execute(
                 """
-                import * as math from "math"
-                add(1, 2)  // Should fail - 'add' is not in current scope
-            """.trimIndent()
+                    import * as math from "math"
+                    add(1, 2)  // Should fail - 'add' is not in current scope
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
@@ -140,9 +140,9 @@ class NamespaceImportTest : StringSpec({
 
         engine.execute(
             """
-            import * as math from "math"
-            import * as str from "strings"
-        """.trimIndent()
+                import * as math from "math"
+                import * as str from "strings"
+            """.trimIndent()
         )
 
         val result1 = engine.execute("math.add(1, 2)")
@@ -167,9 +167,9 @@ class NamespaceImportTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * as ops from "ops"
-            ops.double(ops.square(3))
-        """.trimIndent()
+                import * as ops from "ops"
+                ops.double(ops.square(3))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(18.0)  // square(3) = 9, double(9) = 18
@@ -187,9 +187,9 @@ class NamespaceImportTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * as cfg from "config"
-            cfg.settings.value
-        """.trimIndent()
+                import * as cfg from "config"
+                cfg.settings.value
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(42.0)
@@ -207,9 +207,9 @@ class NamespaceImportTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * as m from "mathematics"
-            m.pi
-        """.trimIndent()
+                import * as m from "mathematics"
+                m.pi
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(3.14159)
@@ -228,8 +228,8 @@ class NamespaceImportTest : StringSpec({
 
         engine.execute(
             """
-            import * as lib from "lib"
-        """.trimIndent()
+                import * as lib from "lib"
+            """.trimIndent()
         )
 
         val namespace = engine.getVariable("lib") as ObjectValue
@@ -311,9 +311,9 @@ class NamespaceImportTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * as h from "helpers"
-            h.doubleSquare(4)
-        """.trimIndent()
+                import * as h from "helpers"
+                h.doubleSquare(4)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(32.0)  // square(4) = 16, * 2 = 32

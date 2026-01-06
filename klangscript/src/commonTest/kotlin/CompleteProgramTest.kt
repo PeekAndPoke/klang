@@ -52,10 +52,10 @@ class CompleteProgramTest : StringSpec({
     "should parse multiple statements separated by newlines" {
         val result = KlangScriptParser.parse(
             """
-            print("first")
-            print("second")
-            print("third")
-        """.trimIndent()
+                print("first")
+                print("second")
+                print("third")
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 3
@@ -71,11 +71,11 @@ class CompleteProgramTest : StringSpec({
     "should parse statements with multiple newlines between them" {
         val result = KlangScriptParser.parse(
             """
-            print("first")
-
-
-            print("second")
-        """.trimIndent()
+                print("first")
+    
+    
+                print("second")
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 2
@@ -84,11 +84,11 @@ class CompleteProgramTest : StringSpec({
     "should parse mixed declarations and expressions" {
         val result = KlangScriptParser.parse(
             """
-            let x = 5
-            print(x)
-            const y = 10
-            x + y
-        """.trimIndent()
+                let x = 5
+                print(x)
+                const y = 10
+                x + y
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 4
@@ -102,8 +102,8 @@ class CompleteProgramTest : StringSpec({
     "should parse method chaining as statement" {
         val result = KlangScriptParser.parse(
             """
-            note("c d e f").gain(0.5).pan("0 1")
-        """.trimIndent()
+                note("c d e f").gain(0.5).pan("0 1")
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 1
@@ -161,16 +161,16 @@ class CompleteProgramTest : StringSpec({
     "should parse complex multi-statement program" {
         val result = KlangScriptParser.parse(
             """
-            // Setup
-            let tempo = 120
-            const scale = "minor"
-
-            // Pattern 1
-            note("c d e f").gain(0.5)
-
-            // Pattern 2
-            sound("bd hh sd hh").gain(0.8)
-        """.trimIndent()
+                // Setup
+                let tempo = 120
+                const scale = "minor"
+    
+                // Pattern 1
+                note("c d e f").gain(0.5)
+    
+                // Pattern 2
+                sound("bd hh sd hh").gain(0.8)
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 4
@@ -183,9 +183,9 @@ class CompleteProgramTest : StringSpec({
     "should parse statements with trailing whitespace" {
         val result = KlangScriptParser.parse(
             """
-            print("hello")
-            print("world")
-        """.trimIndent()
+                print("hello")
+                print("world")
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 2
@@ -196,7 +196,7 @@ class CompleteProgramTest : StringSpec({
             """
                 print("indented")
                 print("also indented")
-        """.trimIndent()
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 2
@@ -205,9 +205,9 @@ class CompleteProgramTest : StringSpec({
     "should parse program with only comments" {
         val result = KlangScriptParser.parse(
             """
-            // Just a comment
-            /* And a block comment */
-        """.trimIndent()
+                // Just a comment
+                /* And a block comment */
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 0
@@ -216,8 +216,8 @@ class CompleteProgramTest : StringSpec({
     "should parse real-world Strudel-like example 1" {
         val result = KlangScriptParser.parse(
             """
-            note("a b c d").gain(0.5).pan("0 0 1 -1")
-        """.trimIndent()
+                note("a b c d").gain(0.5).pan("0 0 1 -1")
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 1
@@ -227,9 +227,9 @@ class CompleteProgramTest : StringSpec({
     "should parse real-world Strudel-like example 2" {
         val result = KlangScriptParser.parse(
             """
-            let chords = chord("Cm")
-            stack(note("a"), sound("bd"))
-        """.trimIndent()
+                let chords = chord("Cm")
+                stack(note("a"), sound("bd"))
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 2
@@ -240,8 +240,8 @@ class CompleteProgramTest : StringSpec({
     "should parse real-world Strudel-like example 3" {
         val result = KlangScriptParser.parse(
             """
-            note("a b c d").superImpose(x => x.detune(0.5))
-        """.trimIndent()
+                note("a b c d").superImpose(x => x.detune(0.5))
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 1
@@ -255,8 +255,8 @@ class CompleteProgramTest : StringSpec({
     "should parse real-world Strudel-like example 4 with arithmetic in arguments" {
         val result = KlangScriptParser.parse(
             """
-            note("c").off(1/3, add(2))
-        """.trimIndent()
+                note("c").off(1/3, add(2))
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 1
@@ -275,30 +275,30 @@ class CompleteProgramTest : StringSpec({
     "should parse program with all features combined" {
         val result = KlangScriptParser.parse(
             """
-            // Variables
-            let x = 10
-            const y = 20
-
-            // Arithmetic
-            x + y * 2
-            -x + 5
-
-            // Functions
-            print(x)
-            add(1, 2, 3)
-
-            // Method chaining
-            note("c").gain(0.5)
-
-            // Arrow functions
-            let double = x => x * 2
-
-            // Objects
-            let config = { tempo: 120, scale: "minor" }
-
-            // Complex expression
-            note("a b").superImpose(n => n.add(7))
-        """.trimIndent()
+                // Variables
+                let x = 10
+                const y = 20
+    
+                // Arithmetic
+                x + y * 2
+                -x + 5
+    
+                // Functions
+                print(x)
+                add(1, 2, 3)
+    
+                // Method chaining
+                note("c").gain(0.5)
+    
+                // Arrow functions
+                let double = x => x * 2
+    
+                // Objects
+                let config = { tempo: 120, scale: "minor" }
+    
+                // Complex expression
+                note("a b").superImpose(n => n.add(7))
+            """.trimIndent()
         )
 
         // Should parse all statements successfully
@@ -312,7 +312,7 @@ class CompleteProgramTest : StringSpec({
 
 
 
-        """.trimIndent()
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 0

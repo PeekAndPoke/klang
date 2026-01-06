@@ -51,9 +51,9 @@ class ImportSystemTest : StringSpec({
         // Import and use the function
         val result = engine.execute(
             """
-            import * from "math"
-            square(5)
-        """.trimIndent()
+                import * from "math"
+                square(5)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(25.0)
@@ -72,9 +72,9 @@ class ImportSystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "math"
-            add(pi, multiply(2, 3))
-        """.trimIndent()
+                import * from "math"
+                add(pi, multiply(2, 3))
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(9.14159)
@@ -94,9 +94,9 @@ class ImportSystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "signals"
-            sine.frequency
-        """.trimIndent()
+                import * from "signals"
+                sine.frequency
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(440.0)
@@ -119,10 +119,10 @@ class ImportSystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "math"
-            import * from "string"
-            add(1, 2)
-        """.trimIndent()
+                import * from "math"
+                import * from "string"
+                add(1, 2)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(3.0)
@@ -141,9 +141,9 @@ class ImportSystemTest : StringSpec({
         // Both should be imported with wildcard import
         val result = engine.execute(
             """
-            import * from "lib"
-            public
-        """.trimIndent()
+                import * from "lib"
+                public
+            """.trimIndent()
         )
 
         result shouldBe StringValue("exported")
@@ -155,8 +155,8 @@ class ImportSystemTest : StringSpec({
         try {
             engine.execute(
                 """
-                import * from "nonexistent"
-            """.trimIndent()
+                    import * from "nonexistent"
+                """.trimIndent()
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
@@ -176,9 +176,9 @@ class ImportSystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "math"
-            quadruple(3)
-        """.trimIndent()
+                import * from "math"
+                quadruple(3)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(12.0)
@@ -196,9 +196,9 @@ class ImportSystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "counter"
-            makeCounter()
-        """.trimIndent()
+                import * from "counter"
+                makeCounter()
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(10.0)
@@ -221,9 +221,9 @@ class ImportSystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "lib"
-            useNative(5)
-        """.trimIndent()
+                import * from "lib"
+                useNative(5)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(10.0)
@@ -246,9 +246,9 @@ class ImportSystemTest : StringSpec({
 
         val result = engine.execute(
             """
-            import * from "strudel"
-            note("a b c").gain(0.5).gainValue
-        """.trimIndent()
+                import * from "strudel"
+                note("a b c").gain(0.5).gainValue
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(0.5)
@@ -257,10 +257,10 @@ class ImportSystemTest : StringSpec({
     "should parse import statement with comments" {
         val result = KlangScriptParser.parse(
             """
-            // Import math library
-            import * from "math"
-            /* Now we can use math functions */
-        """.trimIndent()
+                // Import math library
+                import * from "math"
+                /* Now we can use math functions */
+            """.trimIndent()
         )
 
         result.statements.size shouldBe 1
@@ -281,10 +281,10 @@ class ImportSystemTest : StringSpec({
         // Import after some statements
         val result = engine.execute(
             """
-            let x = 5
-            import * from "lib"
-            func(x)
-        """.trimIndent()
+                let x = 5
+                import * from "lib"
+                func(x)
+            """.trimIndent()
         )
 
         result shouldBe NumberValue(6.0)

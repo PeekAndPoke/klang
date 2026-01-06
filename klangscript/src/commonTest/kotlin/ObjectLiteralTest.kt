@@ -96,9 +96,9 @@ class ObjectLiteralTest : StringSpec({
 
         script.execute(
             """
-            let x = 100
-            let y = 200
-        """
+                let x = 100
+                let y = 200
+            """
         )
 
         val result = script.execute("{ a: x, b: y }")

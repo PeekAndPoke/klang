@@ -17,8 +17,8 @@ class VariableTest : StringSpec({
 
         script.execute(
             """
-            let x = 42
-        """
+                let x = 42
+            """
         )
 
         val result = script.execute("x")
@@ -50,9 +50,9 @@ class VariableTest : StringSpec({
 
         script.execute(
             """
-            let x = 10
-            let y = 20
-        """
+                let x = 10
+                let y = 20
+            """
         )
 
         val result = script.execute("x + y")
@@ -65,9 +65,9 @@ class VariableTest : StringSpec({
 
         script.execute(
             """
-            const PI = 3.14159
-            const radius = 5
-        """
+                const PI = 3.14159
+                const radius = 5
+            """
         )
 
         val result = script.execute("PI * radius * radius")
@@ -112,11 +112,11 @@ class VariableTest : StringSpec({
 
         script.execute(
             """
-            let a = 1
-            let b = 2
-            let c = 3
-            const d = 4
-        """
+                let a = 1
+                let b = 2
+                let c = 3
+                const d = 4
+            """
         )
 
         val resultA = script.execute("a")
@@ -145,9 +145,9 @@ class VariableTest : StringSpec({
 
         script.execute(
             """
-            let x = 100
-            const makeAdder = y => x + y
-        """
+                let x = 100
+                const makeAdder = y => x + y
+            """
         )
 
         val result = script.execute("makeAdder(23)")

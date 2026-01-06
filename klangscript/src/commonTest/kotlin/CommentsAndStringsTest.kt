@@ -31,9 +31,9 @@ class CommentsAndStringsTest : StringSpec({
 
         val result = script.execute(
             """
-            // This is a comment
-            42
-        """.trimIndent()
+                // This is a comment
+                42
+            """.trimIndent()
         )
 
         result.shouldBeInstanceOf<NumberValue>()
@@ -54,11 +54,11 @@ class CommentsAndStringsTest : StringSpec({
 
         val result = script.execute(
             """
-            // First comment
-            // Second comment
-            // Third comment
-            123
-        """.trimIndent()
+                // First comment
+                // Second comment
+                // Third comment
+                123
+            """.trimIndent()
         )
 
         result.shouldBeInstanceOf<NumberValue>()
@@ -74,11 +74,11 @@ class CommentsAndStringsTest : StringSpec({
 
         val result = script.execute(
             """
-            /* This is a
-               multi-line
-               comment */
-            99
-        """.trimIndent()
+                /* This is a
+                   multi-line
+                   comment */
+                99
+            """.trimIndent()
         )
 
         result.shouldBeInstanceOf<NumberValue>()
@@ -99,9 +99,9 @@ class CommentsAndStringsTest : StringSpec({
 
         val result = script.execute(
             """
-            /* Comment with symbols: !@#$%^&*()_+-=[]|:";'<>?,./~ */
-            55
-        """.trimIndent()
+                /* Comment with symbols: !@#$%^&*()_+-=[]|:";'<>?,./~ */
+                55
+            """.trimIndent()
         )
 
         result.shouldBeInstanceOf<NumberValue>()
@@ -171,8 +171,7 @@ line three`
         val result = script.execute("{ `multi-line-key`: 100 }")
 
         result.shouldBeInstanceOf<ObjectValue>()
-        val obj = result
-        (obj.getProperty("multi-line-key") as NumberValue).value shouldBe 100.0
+        (result.getProperty("multi-line-key") as NumberValue).value shouldBe 100.0
     }
 
     // ============================================================

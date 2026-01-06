@@ -90,11 +90,11 @@ class ComprehensiveIntegrationTest : StringSpec({
         builder.registerLibrary(
             "math",
             """
-            let square = (x) => mul(x, x)
-            let cube = (x) => mul(x, x, x)
-            let addSquares = (a, b) => add(square(a), square(b))
-
-            export { square, cube as cubed, addSquares }
+                let square = (x) => mul(x, x)
+                let cube = (x) => mul(x, x, x)
+                let addSquares = (a, b) => add(square(a), square(b))
+    
+                export { square, cube as cubed, addSquares }
             """.trimIndent()
         )
 
@@ -305,16 +305,16 @@ class ComprehensiveIntegrationTest : StringSpec({
         // First script defines a variable
         engine.execute(
             """
-            let shared = 100
-            capture(shared)
-        """.trimIndent()
+                let shared = 100
+                capture(shared)
+            """.trimIndent()
         )
 
         // Second script can access it (same environment)
         engine.execute(
             """
-            capture(add(shared, 50))
-        """.trimIndent()
+                capture(add(shared, 50))
+            """.trimIndent()
         )
 
         results shouldBe listOf(100.0, 150.0)
@@ -404,8 +404,8 @@ class ComprehensiveIntegrationTest : StringSpec({
         builder.registerLibrary(
             "patterns",
             """
-            let chord = (name) => name
-            export { chord }
+                let chord = (name) => name
+                export { chord }
             """.trimIndent()
         )
 

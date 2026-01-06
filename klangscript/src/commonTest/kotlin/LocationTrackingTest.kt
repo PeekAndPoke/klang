@@ -3,6 +3,7 @@ package io.peekandpoke.klang.script
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.runtime.ArgumentError
 import io.peekandpoke.klang.script.runtime.ImportError
@@ -173,8 +174,8 @@ class LocationTrackingTest : StringSpec({
     }
 })
 
-private infix fun <T> T.shouldNotBe(expected: T) {
-    if (this == expected) {
-        throw AssertionError("Expected value not to be $expected but it was")
-    }
-}
+//private infix fun <T> T.shouldNotBe(expected: T) {
+//    if (this == expected) {
+//        throw AssertionError("Expected value not to be $expected but it was")
+//    }
+//}
