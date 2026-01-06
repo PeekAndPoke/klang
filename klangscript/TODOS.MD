@@ -290,13 +290,14 @@
 
 #### Step 2.8: Interpreter - Named Objects & Built-ins
 
-- [ ] Design API for registering named objects (singletons)
-- [ ] Register built-in objects (e.g., `sine`, `saw`)
-- [ ] Support methods on named objects
-- [ ] Write unit tests for:
-  - [ ] Accessing named objects: `sine`
-  - [ ] Calling methods on named objects: `sine.range(0, 1)`
-  - [ ] Named objects as arguments
+**NOTE:** This step is superseded by Step 3.7 (Import System). Named objects and built-in functions will be defined in
+KlangScript library files and imported, not hard-coded in Kotlin.
+
+- [x] Support methods on named objects (already works via object literals)
+- [x] Write unit tests for:
+  - [x] Accessing named objects: `sine` (covered by ObjectLiteralTest.kt)
+  - [x] Calling methods on named objects: `sine.range(0, 1)` (covered by existing tests)
+  - [x] Named objects as arguments (covered by existing tests)
 
 #### Step 2.9: Interpreter - Function References
 
@@ -408,17 +409,39 @@
   - [ ] State preservation
   - [ ] Error recovery
 
-#### Step 3.7: Import System
+#### Step 3.7: Import System ⭐ **PRIORITIZED**
 
-- [ ] Implement `import()` as a built-in function (no special parsing)
-- [ ] Implement library registry in engine
-- [ ] Support registering libraries from Kotlin
-- [ ] Import returns library object with functions/values
+**New Design:** Import statement with wildcard support for importing library symbols into current scope.
+
+Syntax:
+
+```javascript
+import * from "strudel.klang"  // Import all symbols from library
+// Now can use: note(), sound(), sine, etc.
+```
+
+Implementation approach:
+
+- **Parser**: Add `import` statement parsing (ImportStatement AST node)
+- **Interpreter**: Execute import by loading library, evaluating it, and importing symbols
+- **Library System**: Registry mapping library names to KlangScript source code
+- **Libraries**: Built-in functions (note, sound, etc.) and objects (sine, saw) defined in .klang files
+
+Tasks:
+
+- [ ] Add ImportStatement AST node (similar to LetDeclaration)
+- [ ] Add `import` keyword and `from` keyword to parser lexer
+- [ ] Parse `import * from "libraryName"` syntax
+- [ ] Implement library registry in KlangScript engine (map of name -> source code)
+- [ ] Execute import: load library, evaluate in isolated environment, copy symbols to current scope
+- [ ] Support registering library source from Kotlin (registerLibrary method)
 - [ ] Write unit tests for:
-  - [ ] Importing libraries: `let math = import("math")`
-  - [ ] Using imported functions: `math.sqrt(16)`
+  - [ ] Parsing import statements
+  - [ ] Importing libraries: `import * from "math"`
+  - [ ] Using imported functions after import
   - [ ] Error handling (library not found)
-  - [ ] Multiple imports
+  - [ ] Multiple imports in same script
+  - [ ] Symbol isolation (library internal variables not leaked)
 
 #### Step 3.8: REPL Implementation
 
