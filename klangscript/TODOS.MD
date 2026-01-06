@@ -949,6 +949,213 @@ engine2.registerLibrary(strudelLib)
 - Function name collisions are possible if multiple libraries register same native function names
 - Library authors should use namespacing conventions (e.g., `"math_sqrt"` vs `"string_length"`)
 
+#### Step 3.12: Immutability & Builder Pattern (Planned)
+
+**Goal**: Improve stability and thread-safety by making `KlangScriptLibrary` and `KlangScript` immutable after
+construction, using builder pattern for configuration.
+
+**Motivation**:
+
+Current issues with mutable APIs:
+
+- `KlangScriptLibrary` can be modified after creation (calling `.source()`, `.registerXXX()` multiple times)
+- `KlangScript` can be mutated at any time via `registerFunction()`, `registerLibrary()`, etc.
+- No clear separation between configuration phase and execution phase
+- Potential race conditions in multi-threaded environments
+- Hard-to-detect bugs from mutations during script execution
+
+**Target Architecture**:
+
+```kotlin
+// Library: Immutable after construction
+val strudelLib = KlangScriptLibrary.builder("strudel")
+  .source(
+    """
+        let sequence = (pattern) => note(pattern)
+        export { sequence }
+    """
+  )
+  .registerNativeFunction<String, StrudelPattern>("note") { pattern ->
+    StrudelPattern(pattern)
+  }
+  .registerExtensionMethod1<StrudelPattern, String, StrudelPattern>("sound") { receiver, soundName ->
+    receiver.sound(soundName)
+  }
+  .build()  // Returns immutable KlangScriptLibrary
+
+// Engine: Immutable after construction
+val engine = KlangScript.builder()
+  .registerLibrary(strudelLib)
+  .registerLibrary(mathLib)
+  .registerFunction("print") { args ->
+    println(args[0].toDisplayString())
+    NullValue
+  }
+  .build()  // Returns immutable KlangScript
+
+// Execution phase - engine is immutable, can only execute scripts
+val result = engine.execute("note('a b c').sound('saw')")
+```
+
+**Design Decision: Strict Immutability (Option A)**
+
+After construction, neither `KlangScriptLibrary` nor `KlangScript` can be modified:
+
+- ✅ Clear separation: configuration phase (builder) vs execution phase (immutable engine)
+- ✅ Thread-safe after construction (no mutations during script execution)
+- ✅ Easier to reason about - all dependencies declared upfront
+- ✅ Prevents bugs from registering functions mid-execution
+- ✅ Forces good organization - everything in libraries, not ad-hoc registrations
+- ✅ Matches live coding use case - libraries defined once, scripts executed repeatedly
+
+**Alternative Considered (Option B - Hybrid):**
+Keep registration methods on `KlangScript` for REPL scenarios. **Rejected** because:
+
+- Live coding is not REPL - configuration is known upfront
+- Immutability is the primary goal for stability
+- If dynamic behavior needed later, can create new engine with additional libraries
+
+**Implementation Plan**:
+
+**Phase 1: KlangScriptLibrary Immutability**
+
+- [ ] Create `KlangScriptLibrary.Builder` class
+  - [ ] Move all registration methods to builder: `source()`, `registerNativeType()`, `registerNativeFunction()`,
+    `registerFunction()`, `registerExtensionMethod0/1/2()`
+  - [ ] Builder methods return `this` for fluent chaining
+  - [ ] Add `build()` method that returns immutable `KlangScriptLibrary`
+- [ ] Refactor `KlangScriptLibrary` to be immutable
+  - [ ] Make constructor `internal` (only builder can create instances)
+  - [ ] Remove all mutation methods (previously were builder methods)
+  - [ ] Store registration lambdas as immutable `List` (not `MutableList`)
+  - [ ] Keep `applyNativeRegistrations()` internal method (called by engine)
+  - [ ] Make `applied` flag thread-safe (use `@Volatile` or atomic)
+- [ ] Add companion object with `builder(name: String)` factory
+  - [ ] `KlangScriptLibrary.builder("strudel")` returns new builder
+- [ ] Update all tests in `LibrarySystemTest.kt` to use builder pattern
+- [ ] Verify all 620 tests still pass
+
+**Phase 2: KlangScript Immutability**
+
+- [ ] Create `KlangScript.Builder` class
+  - [ ] Move registration methods to builder: `registerLibrary()`, `registerFunction()`, `registerFunction0/1/2()`,
+    `registerNativeType()`, `registerNativeFunction()`, `registerExtensionMethod0/1/2()`
+  - [ ] Builder methods return `this` for fluent chaining
+  - [ ] Add `build()` method that creates immutable `KlangScript` instance
+  - [ ] Builder applies all registrations during `build()` (not lazily)
+- [ ] Refactor `KlangScript` to be immutable
+  - [ ] Make constructor `internal` (only builder can create instances)
+  - [ ] Remove all public `register*` methods
+  - [ ] Make registries `private val` (no external modification)
+  - [ ] Keep `execute()` method public (main API surface)
+  - [ ] Keep `loadLibrary()` internal (called by interpreter)
+  - [ ] Keep `getInterpreter()`, `getVariable()` for testing (mark as testing API)
+- [ ] Add companion object with `builder()` factory
+  - [ ] `KlangScript.builder()` returns new builder
+  - [ ] Optional: `KlangScript.create()` returns builder (alias for discoverability)
+- [ ] Update all tests to use builder pattern
+  - [ ] `KlangScriptIntegrationTest.kt`
+  - [ ] `ArithmeticTest.kt`
+  - [ ] `ArrowFunctionTest.kt`
+  - [ ] `ExportImportTest.kt`
+  - [ ] `ImportSystemTest.kt`
+  - [ ] `NativeInteropTest.kt`
+  - [ ] `LibrarySystemTest.kt`
+  - [ ] All other test files that create `KlangScript` instances
+- [ ] Verify all tests still pass
+
+**Phase 3: Documentation & Migration**
+
+- [ ] Update KDoc comments on all public APIs
+  - [ ] `KlangScriptLibrary.builder()` - entry point for library creation
+  - [ ] `KlangScriptLibrary.Builder` - all builder methods
+  - [ ] `KlangScript.builder()` - entry point for engine creation
+  - [ ] `KlangScript.Builder` - all builder methods
+  - [ ] Mark old constructors as deprecated (if any were public)
+- [ ] Add migration guide to TODOS.MD
+  - [ ] Before/after examples for library creation
+  - [ ] Before/after examples for engine creation
+  - [ ] Breaking changes list
+  - [ ] Benefits explanation
+- [ ] Update README or API docs (if they exist)
+- [ ] Add "Immutability" section to architecture documentation
+
+**Breaking Changes**:
+
+This is a **breaking change** for existing code:
+
+**Before (Step 3.11)**:
+
+```kotlin
+// Library creation - mutable
+val lib = KlangScriptLibrary("strudel")
+  .source("...")
+  .registerNativeFunction(...) { ... }
+
+// Engine - mutable
+val engine = KlangScript()
+engine.registerLibrary(lib)
+engine.registerFunction("print") { ... }
+```
+
+**After (Step 3.12)**:
+
+```kotlin
+// Library creation - immutable after build
+val lib = KlangScriptLibrary.builder("strudel")
+  .source("...")
+  .registerNativeFunction(...) { ... }
+  .build()
+
+// Engine - immutable after build
+val engine = KlangScript.builder()
+  .registerLibrary(lib)
+  .registerFunction("print") { ... }
+  .build()
+```
+
+**Migration Path**:
+
+1. Both old and new APIs can coexist temporarily:
+  - Add builders alongside existing constructors
+  - Mark old constructors as `@Deprecated`
+  - Allow one release cycle for migration
+2. Then remove old APIs in next major version
+
+**Benefits**:
+
+- ✅ **Thread-safe**: No mutations after construction
+- ✅ **Predictable**: All configuration declared upfront
+- ✅ **Testable**: Engine state is immutable, easier to test
+- ✅ **Composable**: Libraries are immutable values, can be shared safely
+- ✅ **Clear lifecycle**: Setup (builder) → Execution (immutable engine)
+- ✅ **Prevents bugs**: No accidental mutations during script execution
+
+**Estimated Effort**:
+
+- Phase 1 (KlangScriptLibrary): ~2-3 hours (straightforward refactor)
+- Phase 2 (KlangScript): ~4-5 hours (more complex, many tests to update)
+- Phase 3 (Documentation): ~1-2 hours
+- **Total**: ~7-10 hours of focused work
+
+**Dependencies**:
+
+- Requires Step 3.11 (Library System Enhancement) to be complete ✅
+- Should be done before any multi-threading features
+- Should be done before public API stabilization
+
+**Test Coverage**:
+
+- All existing 620 tests must pass after refactoring
+- Add new tests for builder immutability:
+  - [ ] Verify builders are mutable during construction
+  - [ ] Verify built objects are immutable (cannot add registrations)
+  - [ ] Verify thread-safety of `applyNativeRegistrations()` with concurrent imports
+  - [ ] Verify library reuse across multiple engines still works
+- Target: ~630+ tests after completion
+
+**Status**: 📝 Planned (not started)
+
 ### Phase 4: Documentation & Examples
 
 #### Step 4.1: API Documentation
