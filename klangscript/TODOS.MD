@@ -833,6 +833,122 @@ note("a b c d").sound("saw").gain(0.8)
 - **Modified**: `runtime/Interpreter.kt` - Extend member access and call evaluation
 - **Modified**: `TODOS.MD` - Track progress
 
+#### Step 3.11: Library System Enhancement (KlangScriptLibrary) ✅
+
+**Goal**: Enable users to create reusable library packages that bundle KlangScript source code with native Kotlin
+registrations (functions, types, extension methods).
+
+**Motivation**: Currently, native registrations are global on the engine, while library scripts are registered
+separately. Library authors should be able to create self-contained packages that include both script code and native
+bindings.
+
+**Use Case**:
+
+```kotlin
+// Library author creates a reusable library
+val strudelLib = KlangScriptLibrary("strudel")
+  .source(
+    """
+        let sequence = (pattern) => note(pattern)
+        export { sequence }
+    """
+  )
+  .registerNativeFunction<String, StrudelPattern>("note") { pattern ->
+    StrudelPattern(pattern)
+  }
+  .registerExtensionMethod1<StrudelPattern, String, StrudelPattern>("sound") { receiver, soundName ->
+    receiver.sound(soundName)
+  }
+
+// User registers the library with their engine
+engine.registerLibrary(strudelLib)
+
+// Script can now import and use the library
+engine.execute(
+  """
+    import * from "strudel"
+    note("a b c d").sound("saw")
+"""
+)
+
+// Library can be reused across multiple engines
+val engine2 = KlangScript()
+engine2.registerLibrary(strudelLib)
+```
+
+**Architecture**:
+
+- **Builder Pattern**: Fluent API for library definition
+- **Registration Deferred**: Native registrations applied when library is first imported
+- **Global Native Registries**: Matches current engine architecture (simpler, already established)
+- **Export Control**: Script-level exports still control what's accessible (native functions are global but can be
+  wrapped)
+- **Backward Compatibility**: Old `registerLibrary(name, sourceCode)` still works
+
+**Implementation Completed**:
+
+- [x] Create `KlangScriptLibrary` class with builder API
+  - [x] Fluent methods: `source()`, `registerNativeType()`, `registerNativeFunction()`, `registerFunction()`,
+    `registerExtensionMethod0/1/2()`
+  - [x] Store registrations as lambdas for lazy application
+  - [x] Track if native registrations already applied (prevent duplicates)
+  - [x] Support libraries with only scripts, only natives, or both
+- [x] Modify `KlangScript` to support library objects
+  - [x] Change `libraries` map from `Map<String, String>` to `Map<String, KlangScriptLibrary>`
+  - [x] New method: `registerLibrary(library: KlangScriptLibrary)`
+  - [x] Keep old method: `registerLibrary(name: String, sourceCode: String)` (backward compat)
+  - [x] Modify `loadLibrary()` to apply native registrations before returning source
+- [x] Interpreter changes
+  - [x] No changes needed - native registrations applied in `loadLibrary()` before parse
+  - [x] Library environment inherits global natives automatically
+- [x] Comprehensive testing (`LibrarySystemTest.kt`)
+  - [x] Script-only libraries (old and new API)
+  - [x] Native-only libraries (no source code)
+  - [x] Mixed script + native libraries
+  - [x] Multiple libraries with different native types
+  - [x] Library reusability across multiple engines
+  - [x] Export control (script functions respect exports, natives are global)
+  - [x] Selective imports with native functions
+  - [x] Namespace imports with native functions
+  - [x] Method chaining from library extension methods
+  - [x] Backward compatibility verification
+  - [x] 16 comprehensive tests, all passing
+
+**Design Decisions**:
+
+1. **Global Native Registries**: Native types and extension methods are registered globally on the engine (not
+   per-environment). This is simpler and matches the established architecture. Script-level exports control what script
+   code is accessible.
+
+2. **Builder Pattern**: Chose builder over callback for better type safety, IDE autocomplete, and explicit API surface.
+
+3. **Lazy Application**: Native registrations stored as lambdas and applied when library is first imported, not when
+   library object is created. This allows library objects to be reused across engines.
+
+4. **No Unregistration**: Once applied, native registrations stay global. This matches function registration behavior
+   and keeps design simple.
+
+**Test Results**:
+
+- ✅ All 620 tests passing (310 JVM + 310 JS)
+- ✅ 16 new library system tests
+- ✅ Backward compatibility maintained
+- ✅ Full multiplatform support (JVM + JS)
+
+**Files Created/Modified**:
+
+- **New**: `KlangScriptLibrary.kt` - Builder class for library definition
+- **New**: `LibrarySystemTest.kt` - 16 comprehensive tests
+- **Modified**: `KlangScript.kt` - Support library objects, apply native registrations
+- **Modified**: `TODOS.MD` - Document Step 3.11
+
+**Known Behaviors**:
+
+- Native functions registered in libraries are globally accessible after import (by design)
+- Script functions in libraries respect export control
+- Function name collisions are possible if multiple libraries register same native function names
+- Library authors should use namespacing conventions (e.g., `"math_sqrt"` vs `"string_length"`)
+
 ### Phase 4: Documentation & Examples
 
 #### Step 4.1: API Documentation

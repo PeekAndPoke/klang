@@ -33,8 +33,8 @@ import kotlin.reflect.KClass
  * - Providing convenient function registration helpers
  */
 class KlangScript : LibraryLoader {
-    /** Registry of available libraries (library name -> source code) */
-    private val libraries = mutableMapOf<String, String>()
+    /** Registry of available libraries (library name -> library object) */
+    private val libraries = mutableMapOf<String, KlangScriptLibrary>()
 
     /** Registry of native types (KClass -> type metadata) */
     @PublishedApi
@@ -198,15 +198,46 @@ class KlangScript : LibraryLoader {
     }
 
     /**
-     * Register a library that can be imported in scripts
+     * Register a library object that can be imported in scripts
      *
-     * Libraries are KlangScript source code that define functions, objects,
-     * and values. They can be imported using: `import * from "libraryName"`
+     * Libraries can contain both KlangScript code and native Kotlin registrations
+     * (functions, types, extension methods). They provide a clean way to bundle
+     * related functionality into reusable packages.
      *
-     * **Design philosophy:**
-     * Libraries are not hard-coded - they are KlangScript files registered
-     * by the host application. This keeps the language core minimal and allows
-     * complete flexibility in what libraries provide.
+     * @param library The library to register
+     *
+     * Example:
+     * ```kotlin
+     * val strudelLib = KlangScriptLibrary("strudel")
+     *     .source("""
+     *         let sequence = (pattern) => note(pattern)
+     *         export { sequence }
+     *     """)
+     *     .registerNativeFunction<String, StrudelPattern>("note") { pattern ->
+     *         StrudelPattern(pattern)
+     *     }
+     *     .registerExtensionMethod1<StrudelPattern, String, StrudelPattern>("sound") { receiver, soundName ->
+     *         receiver.sound(soundName)
+     *     }
+     *
+     * engine.registerLibrary(strudelLib)
+     * ```
+     *
+     * Then in scripts:
+     * ```javascript
+     * import * from "strudel"
+     * note("a b c").sound("saw")
+     * ```
+     */
+    fun registerLibrary(library: KlangScriptLibrary) {
+        libraries[library.name] = library
+    }
+
+    /**
+     * Register a library from source code only (backward compatibility)
+     *
+     * This is a convenience method for registering libraries that contain only
+     * KlangScript code without native registrations.
      *
      * @param name The library name (without .klang extension)
      * @param sourceCode The KlangScript source code for the library
@@ -216,7 +247,6 @@ class KlangScript : LibraryLoader {
      * engine.registerLibrary("math", """
      *     let sqrt = (x) => {
      *         // Native implementation would go here
-     *         // For now, just a placeholder
      *     }
      *     let pi = 3.14159
      * """)
@@ -229,20 +259,28 @@ class KlangScript : LibraryLoader {
      * ```
      */
     fun registerLibrary(name: String, sourceCode: String) {
-        libraries[name] = sourceCode
+        libraries[name] = KlangScriptLibrary(name).source(sourceCode)
     }
 
     /**
      * Load library source code by name (LibraryLoader interface implementation)
      *
      * This is called by the interpreter when executing import statements.
+     * It applies any native registrations and returns the library source code.
      *
      * @param name The library name
      * @return The library source code
      * @throws RuntimeException if the library is not found
      */
     override fun loadLibrary(name: String): String {
-        return libraries[name] ?: throw io.peekandpoke.klang.script.runtime.ImportError(name, "Library not found")
+        val library =
+            libraries[name] ?: throw io.peekandpoke.klang.script.runtime.ImportError(name, "Library not found")
+
+        // Apply native registrations before returning source code
+        library.applyNativeRegistrations(this)
+
+        // Return source code (or empty string if library has no source)
+        return library.getSourceCode() ?: ""
     }
 
     /**
