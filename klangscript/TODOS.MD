@@ -632,12 +632,91 @@ with methods exposed via extension method registration.
 - [x] Methods on objects (via `registerExtensionMethod*`)
 - See Step 3.10 for implementation details
 
-#### Step 3.5: Sample Built-in Functions (for testing)
+#### Step 3.5: Sample Built-in Functions ✅
 
-- [ ] Implement `print()` / `console.log()`
-- [ ] Implement basic math functions
-- [ ] Implement string utilities
-- [ ] Write unit tests for each built-in
+**Goal**: Provide commonly-used built-in functions to make KlangScript immediately practical for real-world use.
+
+**Status**: ✅ **COMPLETE** - KlangStdLib created with 30 comprehensive tests
+
+**Implementation Approach**:
+Created `KlangStdLib` as a proper KlangScriptLibrary to battle-test the library system and demonstrate best practices.
+
+**Functions Implemented**:
+
+**I/O Functions**:
+
+- [x] `print(...)` - Print arguments separated by spaces
+- [x] `console_log(...)` - Alias for print()
+
+**Math Functions (Single Parameter)**:
+
+- [x] `sqrt(x)` - Square root
+- [x] `abs(x)` - Absolute value
+- [x] `floor(x)` - Round down
+- [x] `ceil(x)` - Round up
+- [x] `round(x)` - Round to nearest integer
+- [x] `sin(x)` - Sine (radians)
+- [x] `cos(x)` - Cosine (radians)
+- [x] `tan(x)` - Tangent (radians)
+
+**Math Functions (Two Parameters)**:
+
+- [x] `min(a, b)` - Minimum of two numbers
+- [x] `max(a, b)` - Maximum of two numbers
+- [x] `pow(base, exp)` - Power (base^exponent)
+
+**String Functions**:
+
+- [x] `length(str)` - String length
+- [x] `toUpperCase(str)` - Convert to uppercase
+- [x] `toLowerCase(str)` - Convert to lowercase
+
+**Testing**:
+
+- [x] 30 comprehensive tests covering all functions
+- [x] Error handling tests (wrong types, wrong argument counts)
+- [x] Combined usage tests
+- [x] Import behavior tests
+
+**Usage Example**:
+
+```kotlin
+val engine = klangScript {
+  registerLibrary(KlangStdLib.create())
+}
+
+engine.execute(
+  """
+    import * from "stdlib"
+
+    print("Hello, World!")
+    let x = sqrt(16)
+    print("Square root of 16 is:", x)
+    print("Max of 5 and 10:", max(5, 10))
+    print("Uppercase:", toUpperCase("hello"))
+"""
+)
+```
+
+**Design Notes**:
+
+- All functions implemented as native Kotlin functions (no script wrappers)
+- Type-safe parameter conversion with helpful error messages
+- Customizable output handler for `print()` (useful for testing)
+- Native functions are globally available after library import (by design)
+- Demonstrates proper use of KlangScriptLibrary system
+
+**Files Created**:
+
+- **New**: `stdlib/KlangStdLib.kt` - Standard library implementation (200+ lines)
+- **New**: `stdlib/KlangStdLibTest.kt` - 30 comprehensive tests
+
+**Test Results**:
+
+- ✅ 359 tests passing on JVM (up from 329)
+- ✅ 359 tests passing on JS (up from 329)
+- ✅ 100% success rate on both platforms
+- ✅ 30 new stdlib tests
 
 #### Step 3.6: Live Coding Features
 

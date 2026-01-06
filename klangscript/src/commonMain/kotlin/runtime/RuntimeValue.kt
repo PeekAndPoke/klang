@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.script.getUniqueClassName
+
 /**
  * Runtime value types for KlangScript
  *
@@ -206,9 +208,14 @@ data class ObjectValue(
  */
 data class NativeObjectValue<T : Any>(
     val kClass: kotlin.reflect.KClass<out T>,
-    val qualifiedName: String,
+    val qualifiedName: String = kClass.getUniqueClassName(),
     val value: T,
 ) : RuntimeValue() {
+    companion object {
+        inline operator fun <reified T : Any> invoke(value: T): NativeObjectValue<T> =
+            NativeObjectValue(T::class, value = value)
+    }
+
     override fun toDisplayString(): String = value.toString()
 }
 
