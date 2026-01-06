@@ -37,6 +37,9 @@ class Environment(
     /** Map tracking which variables are mutable (true for let, false for const) */
     private val mutable = mutableMapOf<String, Boolean>()
 
+    /** Set of exported symbol names (for libraries) */
+    private val exports = mutableSetOf<String>()
+
     /**
      * Define a new variable in this environment
      *
@@ -84,5 +87,51 @@ class Environment(
      */
     fun has(name: String): Boolean {
         return values.containsKey(name) || (parent?.has(name) == true)
+    }
+
+    /**
+     * Mark symbols as exported
+     *
+     * This is used by export statements to declare which symbols
+     * should be accessible when importing this library.
+     *
+     * @param names List of symbol names to export
+     */
+    fun markExports(names: List<String>) {
+        exports.addAll(names)
+    }
+
+    /**
+     * Get all exported symbols from this environment
+     *
+     * This is used for importing library symbols. It returns only the
+     * symbols that have been explicitly marked for export.
+     *
+     * If no exports are marked, all symbols are considered exported
+     * (backward compatibility for libraries without export statements).
+     *
+     * @return Map of exported variable names to their runtime values
+     */
+    fun getExportedSymbols(): Map<String, RuntimeValue> {
+        return if (exports.isEmpty()) {
+            // No exports marked - export all symbols (backward compatibility)
+            values.toMap()
+        } else {
+            // Only export explicitly marked symbols
+            values.filterKeys { it in exports }
+        }
+    }
+
+    /**
+     * Get all symbols defined in this environment (not including parent)
+     *
+     * This is used for importing library symbols. It returns a map of
+     * all variables defined in this environment scope only.
+     *
+     * @return Map of variable names to their runtime values
+     * @deprecated Use getExportedSymbols() for library imports
+     */
+    fun getAllSymbols(): Map<String, RuntimeValue> {
+        return values.toMap()
     }
 }

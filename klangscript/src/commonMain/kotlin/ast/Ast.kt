@@ -117,6 +117,83 @@ data class ConstDeclaration(
     val initializer: Expression,
 ) : Statement()
 
+/**
+ * An export statement for marking symbols to be exported from a library
+ *
+ * Export statements declare which symbols should be available when the library
+ * is imported. Only exported symbols are visible to importing code.
+ *
+ * **Syntax:**
+ * - `export { functionName, objectName, ... }`
+ *
+ * **Design philosophy:**
+ * Explicit exports prevent accidental scope pollution and name conflicts.
+ * Library internal helpers remain private unless explicitly exported.
+ *
+ * Examples:
+ * ```javascript
+ * // Library code:
+ * let internalHelper = (x) => x * 2  // Not exported, stays private
+ * let add = (a, b) => a + b
+ * let multiply = (a, b) => a * b
+ * export { add, multiply }  // Only these are accessible
+ *
+ * // User code:
+ * import { add } from "math"
+ * add(1, 2)  // Works
+ * internalHelper(5)  // Error: undefined
+ * ```
+ *
+ * @param names List of symbol names to export
+ */
+data class ExportStatement(
+    val names: List<String>,
+) : Statement()
+
+/**
+ * An import statement for loading library code
+ *
+ * Imports symbols from a library into the current scope.
+ * Libraries are KlangScript files that export functions, objects, and values.
+ *
+ * **Syntax:**
+ * - `import * from "libraryName"` - Import all exports
+ * - `import { name1, name2 } from "libraryName"` - Import specific exports
+ *
+ * **Semantics:**
+ * 1. Load the library source code by name
+ * 2. Parse and evaluate the library in an isolated environment
+ * 3. Import specified symbols (or all exports for wildcard) into current scope
+ *
+ * **Design philosophy:**
+ * Libraries are not hard-coded in Kotlin. Instead, they are KlangScript files
+ * registered with the engine. This keeps the language core minimal and flexible.
+ *
+ * Examples:
+ * ```javascript
+ * // Import all exported functions and objects
+ * import * from "strudel.klang"
+ * note("a b c d").gain(0.5)  // note() is now available
+ *
+ * // Import only specific functions
+ * import { add, multiply } from "math"
+ * add(1, 2)  // Works
+ * subtract(5, 3)  // Error if not imported
+ * ```
+ *
+ * **Implementation notes:**
+ * - Both wildcard (`*`) and selective imports are supported
+ * - Library evaluation is isolated (library internals don't leak)
+ * - Only explicitly exported symbols can be imported
+ *
+ * @param libraryName The name of the library to import (without .klang extension)
+ * @param names List of specific names to import (null for wildcard import)
+ */
+data class ImportStatement(
+    val libraryName: String,
+    val names: List<String>? = null,  // null = import *, non-null = import { ... }
+) : Statement()
+
 // ============================================================
 // Expressions
 // ============================================================

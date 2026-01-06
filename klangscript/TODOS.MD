@@ -409,41 +409,141 @@ KlangScript library files and imported, not hard-coded in Kotlin.
   - [ ] State preservation
   - [ ] Error recovery
 
-#### Step 3.7: Import System ⭐ **PRIORITIZED**
+#### Step 3.7: Import System ✅
 
-**New Design:** Import statement with wildcard support for importing library symbols into current scope.
+**Design:** JavaScript ES6-style import/export system with wildcard and selective imports.
 
 Syntax:
-
 ```javascript
-import * from "strudel.klang"  // Import all symbols from library
-// Now can use: note(), sound(), sine, etc.
+// Library defines exports
+let add = (a, b) => a + b
+let multiply = (a, b) => a * b
+export {add, multiply}
+
+// Import all exports (wildcard)
+import * from "math"  // Imports add, multiply
+
+// Import specific exports (selective)
+import {add} from "math"  // Imports only add
 ```
 
-Implementation approach:
+Implementation:
 
-- **Parser**: Add `import` statement parsing (ImportStatement AST node)
-- **Interpreter**: Execute import by loading library, evaluating it, and importing symbols
+- **Parser**: ImportStatement (with optional names), ExportStatement AST nodes, import/from/export keywords
+- **Interpreter**: Executes import by loading library, evaluating in child environment, copying exports
 - **Library System**: Registry mapping library names to KlangScript source code
-- **Libraries**: Built-in functions (note, sound, etc.) and objects (sine, saw) defined in .klang files
+- **Libraries**: Built-in functions and objects defined in KlangScript .klang files
+- **Export Control**: Libraries explicitly mark exported symbols; prevents scope pollution
+- **Backward Compatibility**: Libraries without exports export all symbols
 
-Tasks:
+Completed:
 
-- [ ] Add ImportStatement AST node (similar to LetDeclaration)
-- [ ] Add `import` keyword and `from` keyword to parser lexer
-- [ ] Parse `import * from "libraryName"` syntax
-- [ ] Implement library registry in KlangScript engine (map of name -> source code)
-- [ ] Execute import: load library, evaluate in isolated environment, copy symbols to current scope
-- [ ] Support registering library source from Kotlin (registerLibrary method)
-- [ ] Write unit tests for:
-  - [ ] Parsing import statements
-  - [ ] Importing libraries: `import * from "math"`
-  - [ ] Using imported functions after import
-  - [ ] Error handling (library not found)
-  - [ ] Multiple imports in same script
-  - [ ] Symbol isolation (library internal variables not leaked)
+- [x] Add ImportStatement AST node with optional selective names (Ast.kt)
+- [x] Add ExportStatement AST node (Ast.kt)
+- [x] Add `import`, `from`, `export` keywords to parser lexer
+- [x] Parse `import * from "libraryName"` syntax (wildcard)
+- [x] Parse `import { name1, name2 } from "libraryName"` syntax (selective)
+- [x] Parse `export { name1, name2 }` syntax
+- [x] Implement library registry in KlangScript engine (map of name -> source code)
+- [x] Execute import: load library, evaluate in child environment, copy exports to current scope
+- [x] Execute export: mark symbols as exported in environment
+- [x] Support registering library source from Kotlin (registerLibrary method)
+- [x] Environment tracks exports and filters imports
+- [x] Validate selective imports against exports
+- [x] Write unit tests for:
+  - [x] Parsing export and import statements
+  - [x] Wildcard imports: `import * from "math"`
+  - [x] Selective imports: `import { add, mul } from "math"`
+  - [x] Export statements preventing scope pollution
+  - [x] Error handling (library not found, non-exported symbols)
+  - [x] Multiple imports from same library
+  - [x] Libraries accessing native functions
+  - [x] Libraries with closures and nested functions
+  - [x] Complex library patterns
+  - [x] Backward compatibility (libraries without exports)
 
-#### Step 3.8: REPL Implementation
+#### Step 3.8: Import/Export Enhancements (Aliasing & Namespaces)
+
+**Current Status**: Basic import/export working, but missing JavaScript ES6 aliasing features
+
+**JavaScript ES6 Feature Comparison**:
+
+What we have ✅:
+
+- Named exports: `export { add, multiply }`
+- Selective imports: `import { add, multiply } from "math"`
+- Wildcard imports: `import * from "math"` (imports into current scope)
+- Export validation and scope pollution prevention
+- Backward compatibility
+
+What's missing ❌:
+
+1. **Import aliasing**: `import { add as sum } from "math"` - prevents name conflicts
+2. **Export aliasing**: `export { add as addition }` - API flexibility
+3. **Namespace imports**: `import * as math from "math"` - cleaner, no scope pollution
+4. **Default exports**: `export default value` - common for single exports
+5. **Default imports**: `import myFunc from "lib"` - cleaner syntax
+6. **Inline exports**: `export let x = 5`, `export function foo() {}` - convenience
+7. **Re-exports**: `export { add } from "math"` - library composition
+
+**Priority for Live Coding**:
+
+- HIGH: Import aliasing (resolve naming conflicts)
+- HIGH: Namespace imports (prevent scope pollution, clearer origin)
+- MEDIUM: Export aliasing (API design flexibility)
+- LOW: Default exports/imports (nice-to-have, less critical)
+- LOW: Inline exports (syntactic sugar)
+- LOW: Re-exports (advanced library patterns)
+
+**Implementation Plan**:
+
+Step 3.8.1: Import Aliasing
+
+- [ ] Update ImportStatement AST to support alias map: `Map<String, String>` (importName -> localName)
+- [ ] Parse `import { add as sum, mul } from "lib"` syntax
+- [ ] Update interpreter to bind imported symbols with local aliases
+- [ ] Write tests for:
+  - [ ] Single alias: `import { add as sum } from "math"`
+  - [ ] Multiple aliases: `import { add as sum, mul as multiply } from "math"`
+  - [ ] Mixed: `import { add, mul as multiply } from "math"`
+  - [ ] Name conflict resolution
+
+Step 3.8.2: Namespace Imports
+
+- [ ] Update ImportStatement to support namespace binding: `namespaceAlias: String?`
+- [ ] Parse `import * as math from "lib"` syntax
+- [ ] Create runtime namespace object containing all exports
+- [ ] Update interpreter to bind namespace as single object
+- [ ] Write tests for:
+  - [ ] Basic namespace: `import * as math from "lib"` then `math.add(1,2)`
+  - [ ] Multiple namespaces from different libraries
+  - [ ] Namespace with selective imports not allowed (error)
+  - [ ] Cleaner scope (namespace doesn't pollute current scope)
+
+Step 3.8.3: Export Aliasing
+
+- [ ] Update ExportStatement to support alias map: `Map<String, String>` (localName -> exportName)
+- [ ] Parse `export { add as sum, multiply }` syntax
+- [ ] Update Environment to track export aliases
+- [ ] Update import resolution to use export aliases
+- [ ] Write tests for:
+  - [ ] Single alias: `export { add as sum }`
+  - [ ] Multiple aliases: `export { add as sum, mul as multiply }`
+  - [ ] Mixed: `export { add, mul as multiply }`
+  - [ ] Import using exported name: `import { sum } from "math"`
+
+Step 3.8.4: Default Exports (Optional - Lower Priority)
+
+- [ ] Add `default` keyword to lexer
+- [ ] Support `export default expression` syntax
+- [ ] Support `import name from "lib"` syntax (no braces)
+- [ ] Support mixed: `import defaultName, { named } from "lib"`
+- [ ] Write tests for default export patterns
+
+**Decision**: Start with Steps 3.8.1-3.8.3 (aliasing and namespaces) as these provide the most value for live coding
+scenarios. Default exports (3.8.4) can be deferred.
+
+#### Step 3.9: REPL Implementation
 
 - [ ] Create interactive REPL
 - [ ] Support multi-line input

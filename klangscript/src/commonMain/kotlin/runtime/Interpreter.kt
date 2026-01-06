@@ -3,6 +3,23 @@ package io.peekandpoke.klang.script.runtime
 import io.peekandpoke.klang.script.ast.*
 
 /**
+ * Interface for loading library source code
+ *
+ * This allows the interpreter to load libraries without directly depending
+ * on the KlangScript engine class.
+ */
+interface LibraryLoader {
+    /**
+     * Load library source code by name
+     *
+     * @param name The library name
+     * @return The KlangScript source code for the library
+     * @throws RuntimeException if the library is not found
+     */
+    fun loadLibrary(name: String): String
+}
+
+/**
  * Tree-walking interpreter for KlangScript
  *
  * This interpreter executes KlangScript programs by walking the AST and
@@ -27,6 +44,8 @@ import io.peekandpoke.klang.script.ast.*
 class Interpreter(
     /** The environment for variable and function storage */
     private val environment: Environment = Environment(),
+    /** Optional library loader for import statements */
+    private val libraryLoader: LibraryLoader? = null,
 ) {
     /**
      * Execute a complete program
@@ -83,7 +102,124 @@ class Interpreter(
                 environment.define(statement.name, value, mutable = false)
                 NullValue  // Declarations don't produce values
             }
+
+            // Import statement: load and evaluate library, import symbols
+            is ImportStatement -> executeImport(statement)
+
+            // Export statement: mark symbols for export
+            is ExportStatement -> executeExport(statement)
         }
+    }
+
+    /**
+     * Execute an import statement
+     *
+     * Process:
+     * 1. Load the library source code from the library loader
+     * 2. Parse the library source code
+     * 3. Create an isolated environment for library evaluation
+     * 4. Execute the library in the isolated environment
+     * 5. Import all top-level symbols from the library environment into current scope
+     *
+     * @param importStmt The import statement AST node
+     * @return NullValue (imports don't produce values)
+     * @throws RuntimeException if library loader is not available or library not found
+     *
+     * Example:
+     * ```javascript
+     * // strudel.klang library:
+     * let note = (pattern) => { /* ... */ }
+     * let sound = (pattern) => { /* ... */ }
+     *
+     * // User script:
+     * import * from "strudel"
+     * note("a b c")  // note() is now available
+     * ```
+     */
+    private fun executeImport(importStmt: ImportStatement): RuntimeValue {
+        // Check if library loader is available
+        if (libraryLoader == null) {
+            throw RuntimeException("Cannot import libraries: no library loader configured")
+        }
+
+        // Load library source code
+        val librarySource = try {
+            libraryLoader.loadLibrary(importStmt.libraryName)
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to load library '${importStmt.libraryName}': ${e.message}")
+        }
+
+        // Parse library source code
+        val libraryProgram = io.peekandpoke.klang.script.parser.KlangScriptParser.parse(librarySource)
+
+        // Create isolated environment for library evaluation
+        // The library environment has the current environment as parent, so it can access
+        // native functions and global variables, but its own definitions are isolated
+        val libraryEnv = Environment(parent = environment)
+
+        // Execute library in isolated environment
+        val libraryInterpreter = Interpreter(libraryEnv, libraryLoader)
+        libraryInterpreter.execute(libraryProgram)
+
+        // Import symbols from library environment into current environment
+        importSymbolsFromEnvironment(libraryEnv, importStmt.names)
+
+        return NullValue  // Imports don't produce values
+    }
+
+    /**
+     * Import symbols from a library environment into the current environment
+     *
+     * This copies exported symbols from the library into the current scope.
+     * Supports both wildcard and selective imports.
+     *
+     * @param libraryEnv The library environment containing symbols to import
+     * @param selectiveNames List of specific names to import (null for wildcard)
+     */
+    private fun importSymbolsFromEnvironment(libraryEnv: Environment, selectiveNames: List<String>?) {
+        // Get exported symbols from library
+        val exports = libraryEnv.getExportedSymbols()
+
+        // Determine which symbols to import
+        val symbolsToImport = if (selectiveNames == null) {
+            // Wildcard import - import all exports
+            exports
+        } else {
+            // Selective import - import only specified names
+            val missingExports = selectiveNames.filter { it !in exports }
+            if (missingExports.isNotEmpty()) {
+                throw RuntimeException("Cannot import non-exported symbols: ${missingExports.joinToString()}")
+            }
+            exports.filterKeys { it in selectiveNames }
+        }
+
+        // Import symbols into current environment
+        for ((name, value) in symbolsToImport) {
+            environment.define(name, value, mutable = true)
+        }
+    }
+
+    /**
+     * Execute an export statement
+     *
+     * Marks the specified symbols as exported from the current environment.
+     * Only exported symbols will be accessible when this code is loaded as a library.
+     *
+     * @param exportStmt The export statement AST node
+     * @return NullValue (exports don't produce values)
+     *
+     * Example:
+     * ```javascript
+     * let add = (a, b) => a + b
+     * let subtract = (a, b) => a - b
+     * let internal = (x) => x * 2  // Not exported
+     * export { add, subtract }
+     * ```
+     */
+    private fun executeExport(exportStmt: ExportStatement): RuntimeValue {
+        // Mark the symbols as exported in the environment
+        environment.markExports(exportStmt.names)
+        return NullValue  // Exports don't produce values
     }
 
     /**

@@ -36,12 +36,15 @@ object KlangScriptParser : Grammar<Program>() {
     // ============================================================
 
     /** Whitespace (ignored but acts as token separator) */
+    @Suppress("unused")
     private val ws by regexToken("\\s+", ignore = true)
 
     /** Single-line comments starting with // */
+    @Suppress("unused")
     private val lineComment by regexToken("//[^\\n]*", ignore = true)
 
     /** Multi-line comments: /* comment */ */
+    @Suppress("unused")
     private val blockComment by regexToken("/\\*[\\s\\S]*?\\*/", ignore = true)
 
     /** Numeric literals: 42, 3.14, 0.5 */
@@ -59,6 +62,9 @@ object KlangScriptParser : Grammar<Program>() {
     private val nullKeyword by literalToken("null")
     private val letKeyword by literalToken("let")
     private val constKeyword by literalToken("const")
+    private val importKeyword by literalToken("import")
+    private val exportKeyword by literalToken("export")
+    private val fromKeyword by literalToken("from")
 
     /** Identifiers: foo, myVar, _private */
     private val identifier by regexToken("[a-zA-Z_][a-zA-Z0-9_]*")
@@ -326,6 +332,63 @@ object KlangScriptParser : Grammar<Program>() {
     }
 
     /**
+     * Export statement
+     * Syntax: export { name1, name2, ... }
+     *
+     * Marks symbols for export from a library. Only exported symbols
+     * are accessible when the library is imported.
+     *
+     * Examples:
+     * - export { add, multiply }
+     * - export { note, sound, sine }
+     */
+    private val exportStatement: Parser<Statement> by
+    (-exportKeyword and -leftBrace and separatedTerms(
+        identifier,
+        comma,
+        acceptZero = false
+    ) and -rightBrace).map { identifiers ->
+        ExportStatement(identifiers.map { it.text })
+    }
+
+    /**
+     * Wildcard import: import * from "lib"
+     */
+    private val wildcardImport: Parser<Statement> by
+    (-importKeyword and -times and -fromKeyword and string).map { libraryNameToken ->
+        val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
+        ImportStatement(libraryName, null)  // null means wildcard
+    }
+
+    /**
+     * Selective import: import { name1, name2 } from "lib"
+     */
+    private val selectiveImport: Parser<Statement> by
+    (-importKeyword and -leftBrace and separatedTerms(
+        identifier,
+        comma,
+        acceptZero = false
+    ) and -rightBrace and -fromKeyword and string).map { (identifiers, libraryNameToken) ->
+        val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
+        val names = identifiers.map { it.text }
+        ImportStatement(libraryName, names)
+    }
+
+    /**
+     * Import statement - wildcard or selective
+     *
+     * Syntax:
+     * - import * from "libraryName" - Import all exports
+     * - import { name1, name2 } from "libraryName" - Import specific exports
+     *
+     * Examples:
+     * - import * from "strudel.klang"
+     * - import { add, multiply } from "math"
+     */
+    private val importStatement: Parser<Statement> by
+    wildcardImport or selectiveImport
+
+    /**
      * Expression statements
      * Expressions used as statements: print("hello")
      */
@@ -335,11 +398,13 @@ object KlangScriptParser : Grammar<Program>() {
     /**
      * Statements
      * Supports:
+     * - Import statements
+     * - Export statements
      * - Variable declarations (let, const)
      * - Expression statements
      */
     private val statement: Parser<Statement> by
-    letDeclaration or constDeclaration or expressionStatement
+    importStatement or exportStatement or letDeclaration or constDeclaration or expressionStatement
 
     /**
      * Program root

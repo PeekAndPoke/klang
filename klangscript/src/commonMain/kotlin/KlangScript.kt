@@ -3,6 +3,7 @@ package io.peekandpoke.klang.script
 import com.github.h0tk3y.betterParse.parser.ParseException
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.Interpreter
+import io.peekandpoke.klang.script.runtime.LibraryLoader
 import io.peekandpoke.klang.script.runtime.NativeFunctionValue
 import io.peekandpoke.klang.script.runtime.RuntimeValue
 
@@ -33,9 +34,12 @@ import io.peekandpoke.klang.script.runtime.RuntimeValue
  * - Managing the interpreter and environment
  * - Providing convenient function registration helpers
  */
-class KlangScript {
+class KlangScript : LibraryLoader {
+    /** Registry of available libraries (library name -> source code) */
+    private val libraries = mutableMapOf<String, String>()
+
     /** The interpreter that executes parsed programs */
-    private val interpreter = Interpreter()
+    private val interpreter = Interpreter(libraryLoader = this)
 
     /** The global environment where functions and variables are stored */
     private val environment = interpreter.getEnvironment()
@@ -138,6 +142,54 @@ class KlangScript {
             }
             function(args[0])
         }
+    }
+
+    /**
+     * Register a library that can be imported in scripts
+     *
+     * Libraries are KlangScript source code that define functions, objects,
+     * and values. They can be imported using: `import * from "libraryName"`
+     *
+     * **Design philosophy:**
+     * Libraries are not hard-coded - they are KlangScript files registered
+     * by the host application. This keeps the language core minimal and allows
+     * complete flexibility in what libraries provide.
+     *
+     * @param name The library name (without .klang extension)
+     * @param sourceCode The KlangScript source code for the library
+     *
+     * Example:
+     * ```kotlin
+     * engine.registerLibrary("math", """
+     *     let sqrt = (x) => {
+     *         // Native implementation would go here
+     *         // For now, just a placeholder
+     *     }
+     *     let pi = 3.14159
+     * """)
+     * ```
+     *
+     * Then in scripts:
+     * ```javascript
+     * import * from "math"
+     * sqrt(16)  // Available after import
+     * ```
+     */
+    fun registerLibrary(name: String, sourceCode: String) {
+        libraries[name] = sourceCode
+    }
+
+    /**
+     * Load library source code by name (LibraryLoader interface implementation)
+     *
+     * This is called by the interpreter when executing import statements.
+     *
+     * @param name The library name
+     * @return The library source code
+     * @throws RuntimeException if the library is not found
+     */
+    override fun loadLibrary(name: String): String {
+        return libraries[name] ?: throw RuntimeException("Library not found: $name")
     }
 
     /**
