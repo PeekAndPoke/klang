@@ -162,7 +162,7 @@ class Interpreter(
         libraryInterpreter.execute(libraryProgram)
 
         // Import symbols from library environment into current environment
-        importSymbolsFromEnvironment(libraryEnv, importStmt.imports, importStmt.namespaceAlias)
+        importSymbolsFromEnvironment(libraryEnv, importStmt.imports, importStmt.namespaceAlias, importStmt.libraryName)
 
         return NullValue  // Imports don't produce values
     }
@@ -176,11 +176,13 @@ class Interpreter(
      * @param libraryEnv The library environment containing symbols to import
      * @param imports List of (exportName, localAlias) pairs for selective imports (null for wildcard)
      * @param namespaceAlias If set, creates a namespace object instead of importing into current scope
+     * @param libraryName The name of the library being imported (for error messages)
      */
     private fun importSymbolsFromEnvironment(
         libraryEnv: Environment,
         imports: List<Pair<String, String>>?,
         namespaceAlias: String?,
+        libraryName: String,
     ) {
         // Get exported symbols from library
         val exports = libraryEnv.getExportedSymbols()
@@ -202,7 +204,7 @@ class Interpreter(
             val exportNames = imports.map { it.first }
             val missingExports = exportNames.filter { it !in exports }
             if (missingExports.isNotEmpty()) {
-                throw ImportError(null, "Cannot import non-exported symbols: ${missingExports.joinToString()}")
+                throw ImportError(libraryName, "Cannot import non-exported symbols: ${missingExports.joinToString()}")
             }
 
             // Import each symbol with its alias

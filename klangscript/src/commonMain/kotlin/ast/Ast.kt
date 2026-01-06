@@ -13,14 +13,22 @@ package io.peekandpoke.klang.script.ast
  *
  * Tracks the position of a code element in the source file.
  *
+ * @param source Source file or library name (e.g., "main.klang", "math.klang", or null for main script)
  * @param line Line number (1-based)
  * @param column Column number (1-based)
  */
 data class SourceLocation(
+    val source: String?,
     val line: Int,
     val column: Int,
 ) {
-    override fun toString(): String = "line $line, column $column"
+    override fun toString(): String {
+        return if (source != null) {
+            "$source:$line:$column"
+        } else {
+            "line $line, column $column"
+        }
+    }
 }
 
 /**

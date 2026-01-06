@@ -371,24 +371,56 @@ KlangScript library files and imported, not hard-coded in Kotlin.
 - Updated error `format()` methods to include "at line X, column Y" when location is available
 - Added import of SourceLocation in Errors.kt
 
+**Additional completed work:**
+
+- [x] Add file/source information to SourceLocation
+  - [x] Updated SourceLocation to include optional source file/library name
+  - [x] Format shows "libraryName:line:column" when source is present
+  - [x] Format shows "line X, column Y" when source is null
+  - [x] Fixed ImportError to include library name for non-exported symbol errors
+- [x] Write comprehensive error handling tests (34 tests)
+  - [x] Test each error type individually (ReferenceError, TypeError, ArgumentError, ImportError, AssignmentError)
+  - [x] Test error formatting with and without locations
+  - [x] Test error formatting with and without source names
+  - [x] Test error messages in various scenarios (library errors, nested calls, etc.)
+  - [x] All 236 tests passing (202 original + 34 new error handling tests)
+
 **Still TODO (deferred):**
 
 - [ ] Update parser to capture position information from better-parse tokens
   - [ ] Research better-parse TokenMatch API for position tracking
   - [ ] Modify parser rules to extract and pass location to AST nodes
+  - [ ] Pass source file/library name through parser
   - [ ] Test that positions are captured correctly
 - [ ] Update interpreter to pass AST node locations to error constructors
   - [ ] Pass node.location when throwing errors
   - [ ] Ensure location propagates through all error paths
-- [ ] Provide stack traces (call stack tracking)
-- [ ] Write dedicated error handling tests
-  - [ ] Test each error type individually
-  - [ ] Test error message quality
-  - [ ] Test error formatting with locations
-  - [ ] Test location accuracy
+- [ ] Implement full stack trace tracking
+  - [ ] Create CallStackFrame class to track function calls
+  - [ ] Store: function name, source location, arguments (optional)
+  - [ ] Interpreter maintains call stack (push on function entry, pop on exit)
+  - [ ] Include both native Kotlin functions and script functions in stack
+  - [ ] Add stack trace to KlangScriptError base class
+  - [ ] Format stack trace similar to JavaScript/Java (most recent call first)
+  - [ ] Example format:
+    ```
+    TypeError at math.klang:5:12: Cannot add string and number
+      at add (math.klang:5:12)
+      at calculate (main.klang:10:5)
+      at <top-level> (main.klang:15:1)
+    ```
+  - [ ] Handle stack overflow gracefully (limit stack depth)
+  - [ ] Consider performance impact (stack tracking in hot paths)
+- [ ] Test location tracking end-to-end once parser integration is complete
+  - [ ] Test location accuracy in error messages
+  - [ ] Test stack traces for nested function calls
+  - [ ] Test stack traces for imported library errors
+  - [ ] Test stack traces show correct file names at each level
 
-**Note:** Source location infrastructure is complete and backward-compatible (all locations default to null).
-Parser integration needed to populate location data. All 202 tests passing.
+**Note:** Source location infrastructure with file/source tracking is complete and backward-compatible (all locations
+default to null). Comprehensive error handling tests written and passing. Parser integration needed to populate location
+data. Stack trace tracking is next priority.
+All 236 tests passing.
 
 ### Phase 3: API & Integration
 
