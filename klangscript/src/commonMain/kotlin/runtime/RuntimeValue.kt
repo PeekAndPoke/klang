@@ -50,6 +50,18 @@ data class StringValue(val value: String) : RuntimeValue() {
 }
 
 /**
+ * Boolean value
+ *
+ * Represents true or false values.
+ * Used for logical operations and conditionals.
+ *
+ * Examples: true, false
+ */
+data class BooleanValue(val value: Boolean) : RuntimeValue() {
+    override fun toDisplayString(): String = value.toString()
+}
+
+/**
  * Null value
  *
  * Represents the absence of a value.

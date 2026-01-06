@@ -78,10 +78,10 @@
 
 - [x] Parse numeric literals (integers and decimals)
 - [x] Parse string literals (all three types)
-- [ ] Parse boolean literals (`true`, `false`) - deferred
-- [ ] Parse `null` - deferred
+- [x] Parse boolean literals (`true`, `false`)
+- [x] Parse `null`
 - [x] Parse identifiers
-- [x] Write unit tests for all literal types (covered by integration tests)
+- [x] Write unit tests for all literal types
 - [x] Test invalid syntax handling
 
 #### Step 1.5: Parser - Arithmetic Expressions ✅

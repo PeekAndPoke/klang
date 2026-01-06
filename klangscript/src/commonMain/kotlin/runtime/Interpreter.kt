@@ -100,6 +100,8 @@ class Interpreter(
             // Literals evaluate to themselves
             is NumberLiteral -> NumberValue(expression.value)
             is StringLiteral -> StringValue(expression.value)
+            is BooleanLiteral -> BooleanValue(expression.value)
+            is NullLiteral -> NullValue
 
             // Identifiers look up variables in the environment
             is Identifier -> environment.get(expression.name)

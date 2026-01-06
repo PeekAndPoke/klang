@@ -143,14 +143,35 @@ data class NumberLiteral(
 /**
  * A string literal
  *
- * Strings can be enclosed in single or double quotes.
+ * Strings can be enclosed in single or double quotes, or backticks for multi-line.
  * The value stored here has quotes stripped and escape sequences processed.
  *
- * Examples: "hello", 'world'
+ * Examples: "hello", 'world', `multi-line`
  */
 data class StringLiteral(
     val value: String,
 ) : Expression()
+
+/**
+ * A boolean literal
+ *
+ * Represents true or false values.
+ *
+ * Examples: true, false
+ */
+data class BooleanLiteral(
+    val value: Boolean,
+) : Expression()
+
+/**
+ * A null literal
+ *
+ * Represents the absence of a value.
+ * KlangScript has no 'undefined' - only 'null'.
+ *
+ * Example: null
+ */
+data object NullLiteral : Expression()
 
 /**
  * An identifier (variable or function name)

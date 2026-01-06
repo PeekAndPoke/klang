@@ -53,7 +53,10 @@ object KlangScriptParser : Grammar<Program>() {
     /** String literals: "hello", 'world' */
     private val string by regexToken("\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'")
 
-    /** Keywords */
+    /** Keywords - must be defined before identifier */
+    private val trueKeyword by literalToken("true")
+    private val falseKeyword by literalToken("false")
+    private val nullKeyword by literalToken("null")
     private val letKeyword by literalToken("let")
     private val constKeyword by literalToken("const")
 
@@ -127,10 +130,13 @@ object KlangScriptParser : Grammar<Program>() {
 
     /**
      * Primary expressions - atomic building blocks
-     * Numbers, strings, identifiers, object literals, or parenthesized expressions
+     * Numbers, strings, booleans, null, identifiers, object literals, or parenthesized expressions
      */
     private val primaryExpr: Parser<Expression> by
     (number use { NumberLiteral(text.toDouble()) }) or
+            (trueKeyword use { BooleanLiteral(true) }) or
+            (falseKeyword use { BooleanLiteral(false) }) or
+            (nullKeyword use { NullLiteral }) or
             (backtickString use { StringLiteral(text.substring(1, text.length - 1)) }) or  // Strip backticks
             (string use { StringLiteral(text.substring(1, text.length - 1)) }) or  // Strip quotes
             objectLiteral or
