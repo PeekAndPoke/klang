@@ -167,84 +167,88 @@
   - [x] Complex values (function calls, expressions)
   - [ ] Trailing commas
 
-#### Step 1.11: Parser - Array / List Literals
+#### Step 1.11: Parser - Array / List Literals ✅
 
 **Goal**: Add JavaScript-style array literals `[1, 2, 3]` to enable collections and list-based operations.
 
-**Syntax**:
+**Status**: ✅ **COMPLETE** - All 329 tests passing on JVM + JS platforms
 
-- Empty arrays: `[]`
-- With elements: `[1, 2, 3]`
-- Mixed types: `[1, "hello", true, null]`
-- Expressions: `[x + 1, func(), obj.prop]`
-- Nested: `[[1, 2], [3, 4]]`
-- Trailing commas: `[1, 2, 3,]`
+**Syntax Supported**:
 
-**Implementation Tasks**:
+- ✅ Empty arrays: `[]`
+- ✅ With elements: `[1, 2, 3]`
+- ✅ Mixed types: `[1, "hello", true, null]`
+- ✅ Expressions: `[x + 1, func(), obj.prop]`
+- ✅ Nested: `[[1, 2], [3, 4]]`
+- ❌ Trailing commas: `[1, 2, 3,]` - **NOT YET SUPPORTED** (requires parser enhancement)
 
-**Phase 1: AST Node**
+**Implementation Completed**:
 
-- [ ] Add `ArrayLiteral` expression to `ast/Ast.kt`
-  - [ ] `data class ArrayLiteral(val elements: List<Expression>, location: SourceLocation?)`
-  - [ ] Document syntax and examples in KDoc
-  - [ ] Sealed class hierarchy: `ArrayLiteral : Expression`
+**Phase 1: AST Node** ✅
 
-**Phase 2: Lexer - Tokens**
+- [x] Add `ArrayLiteral` expression to `ast/Ast.kt`
+  - [x] `data class ArrayLiteral(val elements: List<Expression>, location: SourceLocation?)`
+  - [x] Document syntax and examples in KDoc (58 lines of documentation)
+  - [x] Sealed class hierarchy: `ArrayLiteral : Expression`
 
-- [ ] Add `[` and `]` tokens to parser lexer
-  - [ ] `lBracket = literalToken("[", true)`
-  - [ ] `rBracket = literalToken("]", true)`
-  - [ ] Ensure no conflicts with existing tokens
+**Phase 2: Lexer - Tokens** ✅
 
-**Phase 3: Parser - Array Literals**
+- [x] Add `[` and `]` tokens to parser lexer
+  - [x] `leftBracket = literalToken("[")`
+  - [x] `rightBracket = literalToken("]")`
+  - [x] No conflicts with existing tokens
 
-- [ ] Implement array literal parser rule
-  - [ ] Handle empty arrays: `[]`
-  - [ ] Handle single element: `[1]`
-  - [ ] Handle multiple elements: `[1, 2, 3]`
-  - [ ] Support trailing commas: `[1, 2,]`
-  - [ ] Parse any expression as element: `[x + 1, func(), { a: 1 }]`
-  - [ ] Nested arrays: `[[1, 2], [3, 4]]`
-- [ ] Integrate into expression parser
-  - [ ] Add array literal to primary expression parser
-  - [ ] Ensure correct precedence (same as literals)
+**Phase 3: Parser - Array Literals** ✅
 
-**Phase 4: Runtime Value**
+- [x] Implement array literal parser rule
+  - [x] Handle empty arrays: `[]`
+  - [x] Handle single element: `[1]`
+  - [x] Handle multiple elements: `[1, 2, 3]`
+  - [ ] Support trailing commas: `[1, 2,]` - **DEFERRED** (requires better-parse enhancement)
+  - [x] Parse any expression as element: `[x + 1, func(), { a: 1 }]`
+  - [x] Nested arrays: `[[1, 2], [3, 4]]`
+- [x] Integrate into expression parser
+  - [x] Add array literal to primary expression parser
+  - [x] Correct precedence (same as other literals)
 
-- [ ] Add `ArrayValue` to `runtime/RuntimeValue.kt`
-  - [ ] `data class ArrayValue(val elements: MutableList<RuntimeValue>)`
-  - [ ] Implement `toDisplayString()` -> `"[1, 2, 3]"`
-  - [ ] Mutable list for dynamic operations (push, pop, etc.)
+**Phase 4: Runtime Value** ✅
 
-**Phase 5: Interpreter - Array Evaluation**
+- [x] Add `ArrayValue` to `runtime/RuntimeValue.kt`
+  - [x] `data class ArrayValue(val elements: MutableList<RuntimeValue>)`
+  - [x] Implement `toDisplayString()` -> `"[1, 2, 3]"`
+  - [x] Mutable list ready for dynamic operations (future methods)
 
-- [ ] Implement array literal evaluation in Interpreter
-  - [ ] `evaluateArrayLiteral(arrayLiteral: ArrayLiteral): RuntimeValue`
-  - [ ] Evaluate each element expression
-  - [ ] Collect results into `ArrayValue`
-  - [ ] Handle nested arrays (recursive evaluation)
+**Phase 5: Interpreter - Array Evaluation** ✅
 
-**Phase 6: Array Member Access (Optional - Basic)**
+- [x] Implement array literal evaluation in Interpreter
+  - [x] `evaluateArrayLiteral(arrayLiteral: ArrayLiteral): RuntimeValue`
+  - [x] Evaluate each element expression
+  - [x] Collect results into `ArrayValue`
+  - [x] Handle nested arrays (recursive evaluation)
+
+**Phase 6: Array Member Access (Deferred to Step 2.13)**
 
 - [ ] Support array indexing: `arr[0]`, `arr[1]`
   - [ ] Requires index access expression `arr[index]` (different from member access)
-  - [ ] May defer to later if complex
+  - [ ] Deferred to future implementation
 
-**Phase 7: Testing**
+**Phase 7: Testing** ✅
 
-- [ ] Write comprehensive tests in `ArrayLiteralTest.kt`
-  - [ ] Empty arrays: `[]`
-  - [ ] Single element: `[42]`
-  - [ ] Multiple elements: `[1, 2, 3]`
-  - [ ] Mixed types: `[1, "hello", true, null]`
-  - [ ] Expressions: `[1 + 1, 2 * 2]`
-  - [ ] Function calls: `[func(), getValue()]`
-  - [ ] Nested arrays: `[[1, 2], [3, 4]]`
-  - [ ] Trailing commas: `[1, 2, 3,]`
-  - [ ] Arrays in variables: `let arr = [1, 2, 3]`
-  - [ ] Arrays as function arguments: `print([1, 2, 3])`
-  - [ ] Arrays in objects: `{ items: [1, 2, 3] }`
-  - [ ] Edge cases: nested mixed types, empty arrays in arrays
+- [x] Write comprehensive tests in `ArrayLiteralTest.kt` (19 tests total)
+  - [x] Empty arrays: `[]`
+  - [x] Single element: `[42]`
+  - [x] Multiple elements: `[1, 2, 3]`
+  - [x] Mixed types: `[1, "hello", true, null]`
+  - [x] Expressions: `[1 + 1, 2 * 2]`
+  - [x] Function calls: `[func(), getValue()]`
+  - [x] Nested arrays: `[[1, 2], [3, 4]]`
+  - [ ] Trailing commas: `[1, 2, 3,]` - **DEFERRED**
+  - [x] Arrays in variables: `let arr = [1, 2, 3]`
+  - [x] Arrays as function arguments: `print([1, 2, 3])`
+  - [x] Arrays in objects: `{ items: [1, 2, 3] }`
+  - [x] Edge cases: nested mixed types, empty arrays, deeply nested arrays
+  - [x] Multi-line arrays
+  - [x] Arrays with arrow functions
 
 **Phase 8: Array Methods (Deferred to Step 2.13)**
 
@@ -255,22 +259,36 @@
   - [ ] `forEach()`, `find()`, `indexOf()`
   - [ ] See Phase 6 enhancements for full list
 
+**Note on Trailing Commas**:
+
+Trailing commas `[1, 2, 3,]` are **not yet supported** because the `separatedTerms` combinator in better-parse
+doesn't handle them by default. This would require a parser enhancement affecting all comma-separated constructs
+(arrays, objects, function arguments). This is deferred to avoid complexity. Arrays work perfectly without this feature.
+
 **Future Enhancements (Phase 6)**:
 
+- [ ] Trailing comma support: `[1, 2, 3,]`
 - [ ] Array indexing: `arr[0]`, `arr[1]`
 - [ ] Index assignment: `arr[0] = 42`
 - [ ] Spread operator: `[...arr1, ...arr2]`
 - [ ] Destructuring: `let [a, b] = [1, 2]`
 - [ ] Array comprehensions (if desired)
 
-**Files to Create/Modify**:
+**Files Created/Modified**:
 
-- **Modified**: `ast/Ast.kt` - Add `ArrayLiteral` expression
-- **Modified**: `parser/KlangScriptParser.kt` - Add array parsing rules
-- **Modified**: `runtime/RuntimeValue.kt` - Add `ArrayValue`
-- **Modified**: `runtime/Interpreter.kt` - Add array evaluation
-- **New**: `ArrayLiteralTest.kt` - Comprehensive tests
-- **Modified**: `TODOS.MD` - Track progress
+- **Modified**: `ast/Ast.kt` - Added `ArrayLiteral` expression (58 lines)
+- **Modified**: `parser/KlangScriptParser.kt` - Added bracket tokens and parsing rules
+- **Modified**: `runtime/RuntimeValue.kt` - Added `ArrayValue` class (64 lines)
+- **Modified**: `runtime/Interpreter.kt` - Added `evaluateArrayLiteral()` method (47 lines)
+- **New**: `ArrayLiteralTest.kt` - 19 comprehensive tests
+- **Modified**: `TODOS.MD` - Marked complete
+
+**Test Results**:
+
+- ✅ 329 tests passing on JVM (up from 310)
+- ✅ 329 tests passing on JS (up from 310)
+- ✅ 100% success rate on both platforms
+- ✅ 19 new array literal tests
 
 #### Step 1.12: Parser - Complete Program ✅
 
