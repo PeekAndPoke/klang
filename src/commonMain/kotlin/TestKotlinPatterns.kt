@@ -53,41 +53,41 @@ object TestKotlinPatterns {
                         [[e2 e3]*4]
                         [[a2 a3]*4]
                         [[g#2 g#3]*2 [e2 e3]*2]
-                        [a2 a3 a2 a3 a2 a3 [a2 a3] [c3 d3]]
+                        [a3 a2 a2 a1 a1 a0 [a1 a2] [a3 a4]]
                         [[d2 d3]*4]
                         [[c2 c3]*4]
-                        [[b2 b1]*2 [e2 e3]*2]
-                        [a1 a2 a1 a2 a1 a2 [f2 g2] [a2 e3]]
+                        [[b1 b2]*2 [e3 e2]*2]
+                        [a3 a2 a2 a1 e1 c1 [c2 c3] [c4 c5]]
                     >
                 """.trimIndent()
-        ).sound("supersaw").spread(0.5).unison(8).detune(0.3)
-            .orbit(2).pan(0.0).gain(0.5)
+        ).sound("supersaw").spread(0.5).unison(16).detune(0.1)
+            .orbit(2).pan(0.0).gain(0.4)
             .room(0.05).rsize(1.0),
 
         sound(
             """
             <
-            [[bd, cr] hh sd hh] 
+            [[bd, bd cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh*2 sd hh] 
             [bd hh sd oh]
             [[bd, cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh*2 sd hh] 
-            [bd hh [bd bd, sd] [bd bd, oh]]
+            [bd hh [lt lt, sd] [lt lt, oh]]
             [[bd, cr] hh [sd hh] [sd hh]] 
             [bd hh [sd, cr] oh]
             [bd hh*2 sd hh] 
             [bd hh sd oh]
             [[bd, cr] hh [sd hh] [sd hh]] 
             [bd hh [sd, cr] oh]
-            [[sd,hh] [bd, hh*2] sd [bd, hh*2]] 
+            [[sd,hh] [lt, hh*2] sd [lt, hh]] 
             [[bd,hh] sd [bd bd, cr] [bd bd, oh]]
             >            
         """.trimIndent()
         )
             .orbit(3)
-            .pan(-0.3).gain(0.5)
+            .pan(-0.3).gain(0.4)
             .room(0.05).rsize(1.0)
             .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
             .fast(2),
