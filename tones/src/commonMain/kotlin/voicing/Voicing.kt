@@ -75,13 +75,16 @@ object Voicing {
             val topMidiInRange = Note.get(range.last()).midi ?: 0
 
             val starts = notesInRange
-                .filter { Note.get(it).chroma == bottomChroma }
-                .filter { start ->
+                .mapNotNull { noteName ->
+                    val note = Note.get(noteName)
+                    if (note.chroma == bottomChroma) noteName to note else null
+                }
+                .filter { (start, _) ->
                     // Check if the top note of the transposed voicing fits in range
                     val topNote = Distance.transpose(start, relativeIntervals.last())
                     (Note.get(topNote).midi ?: 0) <= topMidiInRange
                 }
-                .map { Note.enharmonic(it, bottomPitchClass) }
+                .map { (noteName, _) -> Note.enharmonic(noteName, bottomPitchClass) }
 
             // Transpose the voicing starting from each valid start note
             starts.map { start ->
