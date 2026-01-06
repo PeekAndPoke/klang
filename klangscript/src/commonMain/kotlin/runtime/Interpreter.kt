@@ -216,7 +216,8 @@ class Interpreter(
     /**
      * Execute an export statement
      *
-     * Marks the specified symbols as exported from the current environment.
+     * Marks the specified symbols as exported from the current environment,
+     * optionally with different names (aliasing).
      * Only exported symbols will be accessible when this code is loaded as a library.
      *
      * @param exportStmt The export statement AST node
@@ -227,12 +228,15 @@ class Interpreter(
      * let add = (a, b) => a + b
      * let subtract = (a, b) => a - b
      * let internal = (x) => x * 2  // Not exported
-     * export { add, subtract }
+     * export { add, subtract }  // Export with original names
+     *
+     * // Or with aliases:
+     * export { add as sum }  // Export 'add' as 'sum'
      * ```
      */
     private fun executeExport(exportStmt: ExportStatement): RuntimeValue {
-        // Mark the symbols as exported in the environment
-        environment.markExports(exportStmt.names)
+        // Mark the symbols as exported in the environment with their aliases
+        environment.markExports(exportStmt.exports)
         return NullValue  // Exports don't produce values
     }
 

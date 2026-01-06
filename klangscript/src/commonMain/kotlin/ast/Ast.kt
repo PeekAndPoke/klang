@@ -124,30 +124,38 @@ data class ConstDeclaration(
  * is imported. Only exported symbols are visible to importing code.
  *
  * **Syntax:**
- * - `export { functionName, objectName, ... }`
+ * - `export { functionName, objectName, ... }` - Export with original names
+ * - `export { add as sum, multiply }` - Export with aliases
  *
  * **Design philosophy:**
  * Explicit exports prevent accidental scope pollution and name conflicts.
  * Library internal helpers remain private unless explicitly exported.
+ * Aliases allow libraries to expose different API names than internal names.
  *
  * Examples:
  * ```javascript
- * // Library code:
+ * // Library code without aliases:
  * let internalHelper = (x) => x * 2  // Not exported, stays private
  * let add = (a, b) => a + b
  * let multiply = (a, b) => a * b
  * export { add, multiply }  // Only these are accessible
  *
+ * // Library code with aliases:
+ * let add = (a, b) => a + b
+ * export { add as sum }  // Exported as 'sum', not 'add'
+ *
  * // User code:
- * import { add } from "math"
- * add(1, 2)  // Works
- * internalHelper(5)  // Error: undefined
+ * import { sum } from "math"  // Import by exported name
+ * sum(1, 2)  // Works
+ * add(1, 2)  // Error: undefined (not exported with this name)
  * ```
  *
- * @param names List of symbol names to export
+ * @param exports List of (localName, exportedName) pairs
+ *                The localName is the variable in the library scope
+ *                The exportedName is the name visible to importers
  */
 data class ExportStatement(
-    val names: List<String>,
+    val exports: List<Pair<String, String>>,  // Pair: (localName, exportedName)
 ) : Statement()
 
 /**

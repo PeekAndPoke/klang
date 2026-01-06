@@ -37,8 +37,8 @@ class Environment(
     /** Map tracking which variables are mutable (true for let, false for const) */
     private val mutable = mutableMapOf<String, Boolean>()
 
-    /** Set of exported symbol names (for libraries) */
-    private val exports = mutableSetOf<String>()
+    /** Map of local names to exported names (for libraries with export aliasing) */
+    private val exportAliases = mutableMapOf<String, String>()
 
     /**
      * Define a new variable in this environment
@@ -90,35 +90,44 @@ class Environment(
     }
 
     /**
-     * Mark symbols as exported
+     * Mark symbols as exported with optional aliasing
      *
      * This is used by export statements to declare which symbols
-     * should be accessible when importing this library.
+     * should be accessible when importing this library, and under what names.
      *
-     * @param names List of symbol names to export
+     * @param exports List of (localName, exportedName) pairs
+     *                localName is the variable name in the library
+     *                exportedName is the name visible to importers
      */
-    fun markExports(names: List<String>) {
-        exports.addAll(names)
+    fun markExports(exports: List<Pair<String, String>>) {
+        for ((localName, exportedName) in exports) {
+            exportAliases[localName] = exportedName
+        }
     }
 
     /**
      * Get all exported symbols from this environment
      *
      * This is used for importing library symbols. It returns only the
-     * symbols that have been explicitly marked for export.
+     * symbols that have been explicitly marked for export, using their
+     * exported names (which may differ from local names due to aliasing).
      *
      * If no exports are marked, all symbols are considered exported
      * (backward compatibility for libraries without export statements).
      *
-     * @return Map of exported variable names to their runtime values
+     * @return Map of exported names to their runtime values
      */
     fun getExportedSymbols(): Map<String, RuntimeValue> {
-        return if (exports.isEmpty()) {
-            // No exports marked - export all symbols (backward compatibility)
+        return if (exportAliases.isEmpty()) {
+            // No exports marked - export all symbols with their local names (backward compatibility)
             values.toMap()
         } else {
-            // Only export explicitly marked symbols
-            values.filterKeys { it in exports }
+            // Export only explicitly marked symbols, using their exported names
+            exportAliases.mapNotNull { (localName, exportedName) ->
+                values[localName]?.let { value ->
+                    exportedName to value
+                }
+            }.toMap()
         }
     }
 

@@ -27,7 +27,7 @@ class ExportImportTest : StringSpec({
         result.statements.size shouldBe 1
         val stmt = result.statements[0]
         stmt.shouldBeInstanceOf<ExportStatement>()
-        stmt.names shouldBe listOf("add", "multiply")
+        stmt.exports shouldBe listOf(Pair("add", "add"), Pair("multiply", "multiply"))
     }
 
     "should parse selective import statement" {

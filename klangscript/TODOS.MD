@@ -546,17 +546,32 @@ Step 3.8.2: Namespace Imports ✅
 - Added `getVariable()` helper to `KlangScript` for testing
 - All 186 tests passing (172 previous + 14 new)
 
-Step 3.8.3: Export Aliasing
+Step 3.8.3: Export Aliasing ✅
 
-- [ ] Update ExportStatement to support alias map: `Map<String, String>` (localName -> exportName)
-- [ ] Parse `export { add as sum, multiply }` syntax
-- [ ] Update Environment to track export aliases
-- [ ] Update import resolution to use export aliases
-- [ ] Write tests for:
-  - [ ] Single alias: `export { add as sum }`
-  - [ ] Multiple aliases: `export { add as sum, mul as multiply }`
-  - [ ] Mixed: `export { add, mul as multiply }`
-  - [ ] Import using exported name: `import { sum } from "math"`
+- [x] Update ExportStatement to support alias pairs: `List<Pair<String, String>>` (localName, exportedName)
+- [x] Parse `export { add as sum, multiply }` syntax
+- [x] Update Environment to track export aliases (exportAliases map)
+- [x] Update import resolution to use export aliases
+- [x] Write tests for:
+  - [x] Single alias: `export { add as sum }`
+  - [x] Multiple aliases: `export { add as sum, mul as multiply }`
+  - [x] Mixed: `export { add, mul as multiply }`
+  - [x] Import using exported name: `import { sum } from "math"`
+  - [x] Original name not accessible when aliased
+  - [x] Export aliases with wildcard imports
+  - [x] Export aliases with namespace imports
+  - [x] Combining import and export aliasing
+  - [x] Error handling for non-exported symbols
+
+**Changes made:**
+
+- Modified `ExportStatement.exports` from `List<String>` to `List<Pair<String, String>>`
+- Each pair is `(localName, exportedName)` where exportedName is visible to importers
+- Created `exportSpecifier` parser: `identifier and optional(-asKeyword and identifier)`
+- Changed Environment to use `exportAliases` map instead of `exports` set
+- Updated `getExportedSymbols()` to return map with exported names as keys
+- Created `ExportAliasingTest.kt` with 15 comprehensive tests
+- All 201 tests passing (186 previous + 15 new)
 
 Step 3.8.4: Default Exports (Optional - Lower Priority)
 

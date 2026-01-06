@@ -343,13 +343,24 @@ object KlangScriptParser : Grammar<Program>() {
      * - export { add, multiply }
      * - export { note, sound, sine }
      */
+    /**
+     * Export specifier: either "name" or "name as alias"
+     * Returns Pair(localName, exportedName)
+     */
+    private val exportSpecifier: Parser<Pair<String, String>> by
+    (identifier and optional(-asKeyword and identifier)).map { (name, aliasOpt) ->
+        val localName = name.text
+        val exportedName = aliasOpt?.text ?: localName
+        Pair(localName, exportedName)
+    }
+
     private val exportStatement: Parser<Statement> by
     (-exportKeyword and -leftBrace and separatedTerms(
-        identifier,
+        exportSpecifier,
         comma,
         acceptZero = false
-    ) and -rightBrace).map { identifiers ->
-        ExportStatement(identifiers.map { it.text })
+    ) and -rightBrace).map { specifiers ->
+        ExportStatement(specifiers)
     }
 
     /**
