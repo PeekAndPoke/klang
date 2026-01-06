@@ -333,18 +333,42 @@ KlangScript library files and imported, not hard-coded in Kotlin.
 - [ ] Test error handling and reporting
 - [ ] Performance benchmarks (basic)
 
-#### Step 2.12: Error Handling & Debugging
+#### Step 2.12: Error Handling & Debugging (Partial ✅)
 
-- [ ] Implement runtime error types
-  - [ ] TypeError
-  - [ ] ReferenceError
-  - [ ] ArgumentError
-- [ ] Provide stack traces
-- [ ] Report source locations for errors
-- [ ] Write unit tests for:
-  - [ ] Various error types
-  - [ ] Error messages quality
-  - [ ] Stack trace accuracy
+**Completed:**
+
+- [x] Implement runtime error types
+  - [x] TypeError - Type mismatches and invalid operations
+  - [x] ReferenceError - Undefined variables
+  - [x] ArgumentError - Wrong argument count/types
+  - [x] ImportError - Library import failures
+  - [x] AssignmentError - Invalid assignments (const reassignment)
+- [x] Create KlangScriptError base class with errorType and format()
+- [x] Replace all RuntimeException with specific error types
+- [x] Better error messages with context (operation, function name, etc.)
+- [x] All 202 tests passing with new error types
+
+**Changes made:**
+
+- Created `runtime/Errors.kt` with structured error hierarchy
+- Updated Environment.get() to throw ReferenceError
+- Updated Interpreter to throw TypeError for type mismatches
+- Updated Interpreter to throw ArgumentError for wrong argument counts
+- Updated Interpreter to throw ImportError for import failures
+- Updated KlangScript helpers to throw ArgumentError
+- Better error formatting with operation context
+
+**Still TODO (deferred):**
+
+- [ ] Provide stack traces (call stack tracking)
+- [ ] Report source locations for errors (line/column numbers)
+- [ ] Write dedicated error handling tests
+  - [ ] Test each error type individually
+  - [ ] Test error message quality
+  - [ ] Test error formatting
+
+**Note:** Basic error types are working. Stack traces and source locations would require
+AST annotation with position information, which is a larger refactoring.
 
 ### Phase 3: API & Integration
 

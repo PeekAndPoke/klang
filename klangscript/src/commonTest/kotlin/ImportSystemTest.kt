@@ -160,7 +160,7 @@ class ImportSystemTest : StringSpec({
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
-            e.message shouldBe "Failed to load library 'nonexistent': Library not found: nonexistent"
+            e.message shouldBe "Failed to load library: Library not found"
         }
     }
 

@@ -113,7 +113,12 @@ class KlangScript : LibraryLoader {
     fun registerFunction0(name: String, function: () -> RuntimeValue) {
         registerFunction(name) { args ->
             if (args.isNotEmpty()) {
-                throw RuntimeException("Function $name expects 0 arguments, got ${args.size}")
+                throw io.peekandpoke.klang.script.runtime.ArgumentError(
+                    name,
+                    "Expected 0 arguments, got ${args.size}",
+                    expected = 0,
+                    actual = args.size
+                )
             }
             function()
         }
@@ -138,7 +143,12 @@ class KlangScript : LibraryLoader {
     fun registerFunction1(name: String, function: (RuntimeValue) -> RuntimeValue) {
         registerFunction(name) { args ->
             if (args.size != 1) {
-                throw RuntimeException("Function $name expects 1 argument, got ${args.size}")
+                throw io.peekandpoke.klang.script.runtime.ArgumentError(
+                    name,
+                    "Expected 1 argument, got ${args.size}",
+                    expected = 1,
+                    actual = args.size
+                )
             }
             function(args[0])
         }
@@ -189,7 +199,7 @@ class KlangScript : LibraryLoader {
      * @throws RuntimeException if the library is not found
      */
     override fun loadLibrary(name: String): String {
-        return libraries[name] ?: throw RuntimeException("Library not found: $name")
+        return libraries[name] ?: throw io.peekandpoke.klang.script.runtime.ImportError(name, "Library not found")
     }
 
     /**

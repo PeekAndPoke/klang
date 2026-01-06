@@ -139,14 +139,14 @@ class Interpreter(
     private fun executeImport(importStmt: ImportStatement): RuntimeValue {
         // Check if library loader is available
         if (libraryLoader == null) {
-            throw RuntimeException("Cannot import libraries: no library loader configured")
+            throw ImportError(null, "Cannot import libraries: no library loader configured")
         }
 
         // Load library source code
         val librarySource = try {
             libraryLoader.loadLibrary(importStmt.libraryName)
         } catch (e: Exception) {
-            throw RuntimeException("Failed to load library '${importStmt.libraryName}': ${e.message}")
+            throw ImportError(importStmt.libraryName, "Failed to load library: ${e.message}")
         }
 
         // Parse library source code
@@ -188,7 +188,7 @@ class Interpreter(
         if (namespaceAlias != null) {
             // Namespace import - create an object containing all exports
             if (imports != null) {
-                throw RuntimeException("Cannot use namespace import with selective imports")
+                throw ImportError(null, "Cannot use namespace import with selective imports")
             }
             val namespaceObject = ObjectValue(exports.toMutableMap())
             environment.define(namespaceAlias, namespaceObject, mutable = true)
@@ -202,7 +202,7 @@ class Interpreter(
             val exportNames = imports.map { it.first }
             val missingExports = exportNames.filter { it !in exports }
             if (missingExports.isNotEmpty()) {
-                throw RuntimeException("Cannot import non-exported symbols: ${missingExports.joinToString()}")
+                throw ImportError(null, "Cannot import non-exported symbols: ${missingExports.joinToString()}")
             }
 
             // Import each symbol with its alias
@@ -338,8 +338,11 @@ class Interpreter(
 
                 // Verify argument count matches parameter count
                 if (args.size != callee.parameters.size) {
-                    throw RuntimeException(
-                        "Function expects ${callee.parameters.size} arguments, got ${args.size}"
+                    throw ArgumentError(
+                        functionName = "<anonymous function>",
+                        message = "Function expects ${callee.parameters.size} arguments, got ${args.size}",
+                        expected = callee.parameters.size,
+                        actual = args.size
                     )
                 }
 
@@ -359,7 +362,10 @@ class Interpreter(
             }
 
             else -> {
-                throw RuntimeException("Cannot call non-function value: ${callee.toDisplayString()}")
+                throw TypeError(
+                    "Cannot call non-function value: ${callee.toDisplayString()}",
+                    operation = "function call"
+                )
             }
         }
     }
@@ -423,14 +429,20 @@ class Interpreter(
         return when (unaryOp.operator) {
             UnaryOperator.NEGATE -> {
                 if (operandValue !is NumberValue) {
-                    throw RuntimeException("Negation operator requires a number")
+                    throw TypeError(
+                        "Negation operator requires a number, got ${operandValue.toDisplayString()}",
+                        operation = "unary -"
+                    )
                 }
                 NumberValue(-operandValue.value)
             }
 
             UnaryOperator.PLUS -> {
                 if (operandValue !is NumberValue) {
-                    throw RuntimeException("Unary plus operator requires a number")
+                    throw TypeError(
+                        "Unary plus operator requires a number, got ${operandValue.toDisplayString()}",
+                        operation = "unary +"
+                    )
                 }
                 NumberValue(operandValue.value)
             }
@@ -456,7 +468,10 @@ class Interpreter(
 
         // Ensure both operands are numbers
         if (leftValue !is NumberValue || rightValue !is NumberValue) {
-            throw RuntimeException("Binary operations only supported on numbers")
+            throw TypeError(
+                "Binary ${binOp.operator} operation requires numbers, got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
+                operation = binOp.operator.toString()
+            )
         }
 
         // Perform the operation
@@ -467,7 +482,7 @@ class Interpreter(
             BinaryOperator.DIVIDE -> {
                 // Check for division by zero
                 if (rightValue.value == 0.0) {
-                    throw RuntimeException("Division by zero")
+                    throw TypeError("Division by zero", operation = "division")
                 }
                 leftValue.value / rightValue.value
             }
@@ -514,7 +529,10 @@ class Interpreter(
 
         // Ensure it's an object
         if (objValue !is ObjectValue) {
-            throw RuntimeException("Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}")
+            throw TypeError(
+                "Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}",
+                operation = "member access"
+            )
         }
 
         // Return the property value

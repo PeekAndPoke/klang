@@ -76,7 +76,7 @@ class Environment(
      */
     fun get(name: String): RuntimeValue {
         return values[name] ?: parent?.get(name)
-        ?: throw RuntimeException("Undefined variable: $name")
+        ?: throw ReferenceError(name)
     }
 
     /**
