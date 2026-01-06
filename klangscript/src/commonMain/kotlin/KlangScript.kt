@@ -90,8 +90,8 @@ class KlangScript : LibraryLoader {
      * // result is NumberValue(42.0)
      * ```
      */
-    fun execute(source: String): RuntimeValue {
-        val program = KlangScriptParser.parse(source)
+    fun execute(source: String, sourceName: String? = null): RuntimeValue {
+        val program = KlangScriptParser.parse(source, sourceName)
         return interpreter.execute(program)
     }
 

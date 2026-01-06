@@ -139,14 +139,22 @@ class Interpreter(
     private fun executeImport(importStmt: ImportStatement): RuntimeValue {
         // Check if library loader is available
         if (libraryLoader == null) {
-            throw ImportError(null, "Cannot import libraries: no library loader configured")
+            throw ImportError(
+                null,
+                "Cannot import libraries: no library loader configured",
+                location = importStmt.location
+            )
         }
 
         // Load library source code
         val librarySource = try {
             libraryLoader.loadLibrary(importStmt.libraryName)
         } catch (e: Exception) {
-            throw ImportError(importStmt.libraryName, "Failed to load library: ${e.message}")
+            throw ImportError(
+                importStmt.libraryName,
+                "Failed to load library: ${e.message}",
+                location = importStmt.location
+            )
         }
 
         // Parse library source code
@@ -190,7 +198,7 @@ class Interpreter(
         if (namespaceAlias != null) {
             // Namespace import - create an object containing all exports
             if (imports != null) {
-                throw ImportError(null, "Cannot use namespace import with selective imports")
+                throw ImportError(null, "Cannot use namespace import with selective imports", location = null)
             }
             val namespaceObject = ObjectValue(exports.toMutableMap())
             environment.define(namespaceAlias, namespaceObject, mutable = true)
@@ -204,7 +212,11 @@ class Interpreter(
             val exportNames = imports.map { it.first }
             val missingExports = exportNames.filter { it !in exports }
             if (missingExports.isNotEmpty()) {
-                throw ImportError(libraryName, "Cannot import non-exported symbols: ${missingExports.joinToString()}")
+                throw ImportError(
+                    libraryName,
+                    "Cannot import non-exported symbols: ${missingExports.joinToString()}",
+                    location = null
+                )
             }
 
             // Import each symbol with its alias
@@ -260,7 +272,7 @@ class Interpreter(
             is NullLiteral -> NullValue
 
             // Identifiers look up variables in the environment
-            is Identifier -> environment.get(expression.name)
+            is Identifier -> environment.get(expression.name, expression.location)
 
             // Function calls are delegated to evaluateCall
             is CallExpression -> evaluateCall(expression)
@@ -344,7 +356,8 @@ class Interpreter(
                         functionName = "<anonymous function>",
                         message = "Function expects ${callee.parameters.size} arguments, got ${args.size}",
                         expected = callee.parameters.size,
-                        actual = args.size
+                        actual = args.size,
+                        location = call.location
                     )
                 }
 
@@ -366,7 +379,8 @@ class Interpreter(
             else -> {
                 throw TypeError(
                     "Cannot call non-function value: ${callee.toDisplayString()}",
-                    operation = "function call"
+                    operation = "function call",
+                    location = call.location
                 )
             }
         }
@@ -433,7 +447,8 @@ class Interpreter(
                 if (operandValue !is NumberValue) {
                     throw TypeError(
                         "Negation operator requires a number, got ${operandValue.toDisplayString()}",
-                        operation = "unary -"
+                        operation = "unary -",
+                        location = unaryOp.location
                     )
                 }
                 NumberValue(-operandValue.value)
@@ -443,7 +458,8 @@ class Interpreter(
                 if (operandValue !is NumberValue) {
                     throw TypeError(
                         "Unary plus operator requires a number, got ${operandValue.toDisplayString()}",
-                        operation = "unary +"
+                        operation = "unary +",
+                        location = unaryOp.location
                     )
                 }
                 NumberValue(operandValue.value)
@@ -472,7 +488,8 @@ class Interpreter(
         if (leftValue !is NumberValue || rightValue !is NumberValue) {
             throw TypeError(
                 "Binary ${binOp.operator} operation requires numbers, got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
-                operation = binOp.operator.toString()
+                operation = binOp.operator.toString(),
+                location = binOp.location
             )
         }
 
@@ -484,7 +501,7 @@ class Interpreter(
             BinaryOperator.DIVIDE -> {
                 // Check for division by zero
                 if (rightValue.value == 0.0) {
-                    throw TypeError("Division by zero", operation = "division")
+                    throw TypeError("Division by zero", operation = "division", location = binOp.location)
                 }
                 leftValue.value / rightValue.value
             }
@@ -533,7 +550,8 @@ class Interpreter(
         if (objValue !is ObjectValue) {
             throw TypeError(
                 "Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}",
-                operation = "member access"
+                operation = "member access",
+                location = memberAccess.location
             )
         }
 

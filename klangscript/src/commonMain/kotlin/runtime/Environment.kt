@@ -74,9 +74,9 @@ class Environment(
      * local.get("x")  // Returns NumberValue(10.0) from parent
      * ```
      */
-    fun get(name: String): RuntimeValue {
-        return values[name] ?: parent?.get(name)
-        ?: throw ReferenceError(name)
+    fun get(name: String, location: io.peekandpoke.klang.script.ast.SourceLocation? = null): RuntimeValue {
+        return values[name] ?: parent?.get(name, location)
+        ?: throw ReferenceError(name, location = location)
     }
 
     /**

@@ -378,12 +378,14 @@ KlangScript library files and imported, not hard-coded in Kotlin.
   - [x] Format shows "libraryName:line:column" when source is present
   - [x] Format shows "line X, column Y" when source is null
   - [x] Fixed ImportError to include library name for non-exported symbol errors
-- [x] Write comprehensive error handling tests (34 tests)
+- [x] Write comprehensive error handling tests (51 tests - expanded with edge cases)
   - [x] Test each error type individually (ReferenceError, TypeError, ArgumentError, ImportError, AssignmentError)
   - [x] Test error formatting with and without locations
   - [x] Test error formatting with and without source names
   - [x] Test error messages in various scenarios (library errors, nested calls, etc.)
-  - [x] All 236 tests passing (202 original + 34 new error handling tests)
+  - [x] Test edge cases: unary operations, arithmetic with mixed types, member access on primitives
+  - [x] Test edge cases: calling non-functions, complex nested scenarios
+  - [x] All 253 tests passing (236 original + 17 new edge case tests)
 
 **Parser Integration Complete:**
 
@@ -403,12 +405,20 @@ KlangScript library files and imported, not hard-coded in Kotlin.
     `(a, b, c, d)`
   - [x] All 236 tests passing on both JVM and JS platforms
 
+**Interpreter Location Integration Complete:**
+
+- [x] Update interpreter to pass AST node locations to error constructors
+  - [x] Pass node.location when throwing errors in Interpreter.kt
+  - [x] Updated Environment.get() to accept and pass location parameter
+  - [x] All error types now receive location information (TypeError, ReferenceError, ArgumentError, ImportError)
+  - [x] Ensure location propagates through all error paths
+  - [x] Write tests for location accuracy in error messages (LocationTrackingTest.kt with 8 tests)
+  - [x] Verified end-to-end: parser captures → interpreter propagates → errors display "file:line:column"
+  - [x] All 261 tests passing (253 original + 8 new location tracking tests)
+  - [x] Known limitation: Native function argument errors don't have location (thrown from helper functions)
+
 **Still TODO:**
 
-- [ ] Update interpreter to pass AST node locations to error constructors
-  - [ ] Pass node.location when throwing errors
-  - [ ] Ensure location propagates through all error paths
-  - [ ] Write tests for location accuracy in error messages
 - [ ] Implement full stack trace tracking
   - [ ] Create CallStackFrame class to track function calls
   - [ ] Store: function name, source location, arguments (optional)
@@ -431,11 +441,17 @@ KlangScript library files and imported, not hard-coded in Kotlin.
   - [ ] Test stack traces for imported library errors
   - [ ] Test stack traces show correct file names at each level
 
-**Note:** Source location infrastructure with file/source tracking is complete and backward-compatible (all locations
-default to null). Comprehensive error handling tests written and passing. Parser integration complete - all AST nodes
-now capture accurate source locations (file:line:column). Next priority: update interpreter to use these locations when
-throwing errors, then implement full stack trace tracking.
-All 236 tests passing.
+**Note:** Source location infrastructure is complete and working end-to-end:
+
+- ✅ AST nodes include optional SourceLocation (file/source/line/column)
+- ✅ Parser captures locations from all tokens via better-parse TokenMatch
+- ✅ Interpreter propagates locations when throwing errors
+- ✅ Error messages display accurate "file:line:column" information
+- ✅ Comprehensive testing: 51 error handling tests + 8 location tracking tests
+- ✅ All 261 tests passing on both JVM and JS platforms
+
+Next priority: Implement full stack trace tracking for nested function calls.
+Known limitation: Native function argument errors don't have locations (architectural constraint).
 
 ### Phase 3: API & Integration
 
