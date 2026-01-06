@@ -347,6 +347,13 @@ KlangScript library files and imported, not hard-coded in Kotlin.
 - [x] Replace all RuntimeException with specific error types
 - [x] Better error messages with context (operation, function name, etc.)
 - [x] All 202 tests passing with new error types
+- [x] Add source location infrastructure to AST
+  - [x] Create SourceLocation data class (line, column)
+  - [x] Add optional location parameter to all AstNode base classes
+  - [x] Update all Statement and Expression subclasses with location parameter
+  - [x] Add location parameter to all error classes
+  - [x] Update error format() methods to display location when available
+- [x] All 202 tests still passing after location infrastructure added
 
 **Changes made:**
 
@@ -357,18 +364,31 @@ KlangScript library files and imported, not hard-coded in Kotlin.
 - Updated Interpreter to throw ImportError for import failures
 - Updated KlangScript helpers to throw ArgumentError
 - Better error formatting with operation context
+- Added `SourceLocation` class to `ast/Ast.kt`
+- Added optional `location` parameter to `AstNode`, `Statement`, `Expression` base classes
+- Updated all AST data classes (Program, all Statements, all Expressions) with location parameter
+- Added `location` parameter to all error classes (KlangScriptError, TypeError, ReferenceError, etc.)
+- Updated error `format()` methods to include "at line X, column Y" when location is available
+- Added import of SourceLocation in Errors.kt
 
 **Still TODO (deferred):**
 
+- [ ] Update parser to capture position information from better-parse tokens
+  - [ ] Research better-parse TokenMatch API for position tracking
+  - [ ] Modify parser rules to extract and pass location to AST nodes
+  - [ ] Test that positions are captured correctly
+- [ ] Update interpreter to pass AST node locations to error constructors
+  - [ ] Pass node.location when throwing errors
+  - [ ] Ensure location propagates through all error paths
 - [ ] Provide stack traces (call stack tracking)
-- [ ] Report source locations for errors (line/column numbers)
 - [ ] Write dedicated error handling tests
   - [ ] Test each error type individually
   - [ ] Test error message quality
-  - [ ] Test error formatting
+  - [ ] Test error formatting with locations
+  - [ ] Test location accuracy
 
-**Note:** Basic error types are working. Stack traces and source locations would require
-AST annotation with position information, which is a larger refactoring.
+**Note:** Source location infrastructure is complete and backward-compatible (all locations default to null).
+Parser integration needed to populate location data. All 202 tests passing.
 
 ### Phase 3: API & Integration
 

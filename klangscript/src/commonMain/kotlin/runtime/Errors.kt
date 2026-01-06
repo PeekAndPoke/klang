@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.script.ast.SourceLocation
+
 /**
  * Base class for all KlangScript runtime errors
  *
@@ -9,6 +11,7 @@ package io.peekandpoke.klang.script.runtime
 sealed class KlangScriptError(
     message: String,
     val errorType: String,
+    val location: SourceLocation? = null,
 ) : RuntimeException(message) {
 
     /**
@@ -17,7 +20,13 @@ sealed class KlangScriptError(
      * Returns a formatted error message including the error type and message.
      * Subclasses can override to add additional context.
      */
-    open fun format(): String = "$errorType: $message"
+    open fun format(): String {
+        return if (location != null) {
+            "$errorType at $location: $message"
+        } else {
+            "$errorType: $message"
+        }
+    }
 }
 
 /**
@@ -33,7 +42,8 @@ sealed class KlangScriptError(
 class ReferenceError(
     val symbolName: String,
     message: String = "Undefined variable: $symbolName",
-) : KlangScriptError(message, "ReferenceError")
+    location: SourceLocation? = null,
+) : KlangScriptError(message, "ReferenceError", location)
 
 /**
  * TypeError - Type mismatch or invalid operation
@@ -49,11 +59,15 @@ class ReferenceError(
 class TypeError(
     message: String,
     val operation: String? = null,
-) : KlangScriptError(message, "TypeError") {
+    location: SourceLocation? = null,
+) : KlangScriptError(message, "TypeError", location) {
 
     override fun format(): String {
+        val prefix = if (location != null) "$errorType at $location" else errorType
         return if (operation != null) {
-            "$errorType in $operation: $message"
+            "$prefix in $operation: $message"
+        } else if (location != null) {
+            "$prefix: $message"
         } else {
             super.format()
         }
@@ -74,13 +88,15 @@ class ArgumentError(
     message: String,
     val expected: Int? = null,
     val actual: Int? = null,
-) : KlangScriptError(message, "ArgumentError") {
+    location: SourceLocation? = null,
+) : KlangScriptError(message, "ArgumentError", location) {
 
     override fun format(): String {
+        val prefix = if (location != null) "$errorType at $location" else errorType
         return if (expected != null && actual != null) {
-            "$errorType in $functionName: Expected $expected arguments, got $actual"
+            "$prefix in $functionName: Expected $expected arguments, got $actual"
         } else {
-            "$errorType in $functionName: $message"
+            "$prefix in $functionName: $message"
         }
     }
 }
@@ -98,11 +114,15 @@ class ArgumentError(
 class ImportError(
     val libraryName: String?,
     message: String,
-) : KlangScriptError(message, "ImportError") {
+    location: SourceLocation? = null,
+) : KlangScriptError(message, "ImportError", location) {
 
     override fun format(): String {
+        val prefix = if (location != null) "$errorType at $location" else errorType
         return if (libraryName != null) {
-            "$errorType in library '$libraryName': $message"
+            "$prefix in library '$libraryName': $message"
+        } else if (location != null) {
+            "$prefix: $message"
         } else {
             super.format()
         }
@@ -120,11 +140,15 @@ class ImportError(
 class AssignmentError(
     val variableName: String?,
     message: String,
-) : KlangScriptError(message, "AssignmentError") {
+    location: SourceLocation? = null,
+) : KlangScriptError(message, "AssignmentError", location) {
 
     override fun format(): String {
+        val prefix = if (location != null) "$errorType at $location" else errorType
         return if (variableName != null) {
-            "$errorType for variable '$variableName': $message"
+            "$prefix for variable '$variableName': $message"
+        } else if (location != null) {
+            "$prefix: $message"
         } else {
             super.format()
         }

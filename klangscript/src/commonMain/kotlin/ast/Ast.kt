@@ -9,12 +9,31 @@ package io.peekandpoke.klang.script.ast
  */
 
 /**
+ * Source location information for error reporting
+ *
+ * Tracks the position of a code element in the source file.
+ *
+ * @param line Line number (1-based)
+ * @param column Column number (1-based)
+ */
+data class SourceLocation(
+    val line: Int,
+    val column: Int,
+) {
+    override fun toString(): String = "line $line, column $column"
+}
+
+/**
  * Base class for all AST nodes
  *
  * All nodes in the syntax tree inherit from this sealed class,
  * allowing exhaustive when expressions and type-safe pattern matching.
+ *
+ * @param location Optional source location for debugging and error messages
  */
-sealed class AstNode
+sealed class AstNode(
+    open val location: SourceLocation? = null,
+)
 
 // ============================================================
 // Programs and Statements
@@ -31,7 +50,8 @@ sealed class AstNode
  */
 data class Program(
     val statements: List<Statement>,
-) : AstNode()
+    override val location: SourceLocation? = null,
+) : AstNode(location)
 
 /**
  * Base class for all statements
@@ -39,7 +59,7 @@ data class Program(
  * Statements represent actions or declarations in the program.
  * They don't produce values directly but can have side effects.
  */
-sealed class Statement : AstNode()
+sealed class Statement(location: SourceLocation? = null) : AstNode(location)
 
 /**
  * An expression used as a statement
@@ -51,7 +71,8 @@ sealed class Statement : AstNode()
  */
 data class ExpressionStatement(
     val expression: Expression,
-) : Statement()
+    override val location: SourceLocation? = null,
+) : Statement(location)
 
 /**
  * A variable declaration statement using `let`
@@ -81,7 +102,8 @@ data class ExpressionStatement(
 data class LetDeclaration(
     val name: String,
     val initializer: Expression?,
-) : Statement()
+    override val location: SourceLocation? = null,
+) : Statement(location)
 
 /**
  * A constant declaration statement using `const`
@@ -115,7 +137,8 @@ data class LetDeclaration(
 data class ConstDeclaration(
     val name: String,
     val initializer: Expression,
-) : Statement()
+    override val location: SourceLocation? = null,
+) : Statement(location)
 
 /**
  * An export statement for marking symbols to be exported from a library
@@ -156,7 +179,8 @@ data class ConstDeclaration(
  */
 data class ExportStatement(
     val exports: List<Pair<String, String>>,  // Pair: (localName, exportedName)
-) : Statement()
+    override val location: SourceLocation? = null,
+) : Statement(location)
 
 /**
  * An import statement for loading library code
@@ -220,7 +244,8 @@ data class ImportStatement(
     val imports: List<Pair<String, String>>? = null,  // null = import *, non-null = import { ... }
     // Pair: (exportName, localAlias)
     val namespaceAlias: String? = null,  // If set, import * as namespaceAlias
-) : Statement()
+    override val location: SourceLocation? = null,
+) : Statement(location)
 
 // ============================================================
 // Expressions
@@ -232,7 +257,7 @@ data class ImportStatement(
  * Expressions are nodes that evaluate to values.
  * They can be combined and nested to form complex computations.
  */
-sealed class Expression : AstNode()
+sealed class Expression(location: SourceLocation? = null) : AstNode(location)
 
 /**
  * A numeric literal (integers and decimals)
@@ -243,7 +268,8 @@ sealed class Expression : AstNode()
  */
 data class NumberLiteral(
     val value: Double,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * A string literal
@@ -255,7 +281,8 @@ data class NumberLiteral(
  */
 data class StringLiteral(
     val value: String,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * A boolean literal
@@ -266,7 +293,8 @@ data class StringLiteral(
  */
 data class BooleanLiteral(
     val value: Boolean,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * A null literal
@@ -276,7 +304,7 @@ data class BooleanLiteral(
  *
  * Example: null
  */
-data object NullLiteral : Expression()
+data object NullLiteral : Expression(null)
 
 /**
  * An identifier (variable or function name)
@@ -288,7 +316,8 @@ data object NullLiteral : Expression()
  */
 data class Identifier(
     val name: String,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * A function call expression
@@ -304,7 +333,8 @@ data class Identifier(
 data class CallExpression(
     val callee: Expression,
     val arguments: List<Expression>,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * Binary operator types for arithmetic and other operations
@@ -342,7 +372,8 @@ data class BinaryOperation(
     val left: Expression,
     val operator: BinaryOperator,
     val right: Expression,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * Unary operator types for prefix operations
@@ -378,7 +409,8 @@ enum class UnaryOperator {
 data class UnaryOperation(
     val operator: UnaryOperator,
     val operand: Expression,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * A member access expression (dot notation)
@@ -419,7 +451,8 @@ data class UnaryOperation(
 data class MemberAccess(
     val obj: Expression,
     val property: String,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * An arrow function expression (lambda/anonymous function)
@@ -476,7 +509,8 @@ data class MemberAccess(
 data class ArrowFunction(
     val parameters: List<String>,
     val body: Expression,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
 
 /**
  * An object literal expression
@@ -536,4 +570,5 @@ data class ArrowFunction(
  */
 data class ObjectLiteral(
     val properties: List<Pair<String, Expression>>,
-) : Expression()
+    override val location: SourceLocation? = null,
+) : Expression(location)
