@@ -112,6 +112,9 @@ class Interpreter(
             // Binary operations are delegated to evaluateBinaryOp
             is BinaryOperation -> evaluateBinaryOp(expression)
 
+            // Unary operations are delegated to evaluateUnaryOp
+            is UnaryOperation -> evaluateUnaryOp(expression)
+
             // Member access is delegated to evaluateMemberAccess
             is MemberAccess -> evaluateMemberAccess(expression)
 
@@ -235,6 +238,63 @@ class Interpreter(
      * // 3. Add: 10.0 + 6.0 = 16.0
      * ```
      */
+    /**
+     * Evaluate a unary operation expression
+     *
+     * Handles prefix operators: -, +, !
+     *
+     * Process:
+     * 1. Evaluate the operand expression
+     * 2. Apply the operator based on its type
+     * 3. Return the result
+     *
+     * Operator semantics:
+     * - NEGATE: Flips the sign of a number (requires NumberValue)
+     * - PLUS: Identity operation, returns the number unchanged (requires NumberValue)
+     * - NOT: Logical negation (converts to boolean, then negates)
+     *
+     * @param unaryOp The unary operation AST node
+     * @return The runtime value after applying the operator
+     * @throws RuntimeException if type mismatch occurs
+     *
+     * Examples:
+     * - -5 → NumberValue(-5.0)
+     * - +42 → NumberValue(42.0)
+     * - !true → BooleanValue(false)
+     * - !null → BooleanValue(true)
+     */
+    private fun evaluateUnaryOp(unaryOp: UnaryOperation): RuntimeValue {
+        val operandValue = evaluate(unaryOp.operand)
+
+        return when (unaryOp.operator) {
+            UnaryOperator.NEGATE -> {
+                if (operandValue !is NumberValue) {
+                    throw RuntimeException("Negation operator requires a number")
+                }
+                NumberValue(-operandValue.value)
+            }
+
+            UnaryOperator.PLUS -> {
+                if (operandValue !is NumberValue) {
+                    throw RuntimeException("Unary plus operator requires a number")
+                }
+                NumberValue(operandValue.value)
+            }
+
+            UnaryOperator.NOT -> {
+                // Convert value to boolean using JavaScript-like truthiness rules
+                val boolValue = when (operandValue) {
+                    is BooleanValue -> operandValue.value
+                    is NullValue -> false
+                    is NumberValue -> operandValue.value != 0.0 && !operandValue.value.isNaN()
+                    is StringValue -> operandValue.value.isNotEmpty()
+                    else -> true // Objects and functions are truthy
+                }
+                BooleanValue(!boolValue)
+            }
+        }
+    }
+
     private fun evaluateBinaryOp(binOp: BinaryOperation): RuntimeValue {
         // Evaluate both operands
         val leftValue = evaluate(binOp.left)

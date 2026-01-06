@@ -89,13 +89,16 @@
 - [x] Parse binary operators (`+`, `-`, `*`, `/`)
 - [x] Implement operator precedence
 - [x] Parse parenthesized expressions
-- [ ] Parse unary operators (`-`, `+`, `!`) - deferred
+- [x] Parse unary operators (`-`, `+`, `!`)
 - [x] Write unit tests for:
   - [x] Simple arithmetic: `1 + 2`, `3 * 4`
   - [x] Precedence: `1 + 2 * 3` should be `1 + (2 * 3)`
   - [x] Parentheses: `(1 + 2) * 3`
   - [x] Nested expressions
   - [x] Division in arguments: `1/3`, `2/8`
+  - [x] Unary operators: `-5`, `+42`, `!true`
+  - [x] Unary operator precedence: `-5 + 3` = `-2`
+  - [x] JavaScript-like truthiness for NOT operator
 
 #### Step 1.6: Parser - Function Calls ✅
 

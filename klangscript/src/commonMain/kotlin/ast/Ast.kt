@@ -240,6 +240,42 @@ data class BinaryOperation(
 ) : Expression()
 
 /**
+ * Unary operator types for prefix operations
+ */
+enum class UnaryOperator {
+    /** Negation: -x (arithmetic negation) */
+    NEGATE,
+
+    /** Plus: +x (arithmetic identity, converts to number) */
+    PLUS,
+
+    /** Logical NOT: !x (boolean negation) */
+    NOT,
+}
+
+/**
+ * A unary operation expression
+ *
+ * Represents a prefix operation on a single expression.
+ * The operator determines what operation is performed.
+ *
+ * Examples:
+ * - -5 -> operator: NEGATE, operand: NumberLiteral(5)
+ * - !true -> operator: NOT, operand: BooleanLiteral(true)
+ * - -x -> operator: NEGATE, operand: Identifier("x")
+ * - -(1 + 2) -> operator: NEGATE, operand: BinaryOperation(1 + 2)
+ *
+ * Operator semantics:
+ * - NEGATE: Arithmetic negation (flips sign of number)
+ * - PLUS: Arithmetic identity (no-op for numbers, can be used for clarity)
+ * - NOT: Logical negation (converts truthy/falsy to opposite boolean)
+ */
+data class UnaryOperation(
+    val operator: UnaryOperator,
+    val operand: Expression,
+) : Expression()
+
+/**
  * A member access expression (dot notation)
  *
  * Represents accessing a property or method on an object using dot notation.

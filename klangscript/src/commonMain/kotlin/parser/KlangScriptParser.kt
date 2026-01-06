@@ -78,6 +78,7 @@ object KlangScriptParser : Grammar<Program>() {
     private val minus by literalToken("-")
     private val times by literalToken("*")
     private val divide by literalToken("/")
+    private val exclamation by literalToken("!")
 
     /** Member access operator */
     private val dot by literalToken(".")
@@ -144,6 +145,28 @@ object KlangScriptParser : Grammar<Program>() {
             (-leftParen * parser(this::expression) * -rightParen)  // Parenthesized expressions
 
     /**
+     * Unary expressions - prefix operators
+     * Syntax: -expr, +expr, !expr
+     *
+     * Unary operators have higher precedence than binary operators but lower than primary.
+     * They bind tightly to their operand:
+     * - -5 + 3 parses as (-5) + 3, not -(5 + 3)
+     * - !flag parses as a single unary operation
+     *
+     * Supported operators:
+     * - `-` : Arithmetic negation (flip sign)
+     * - `+` : Arithmetic identity (no-op, for clarity)
+     * - `!` : Logical NOT (boolean negation)
+     */
+    private val unaryExpr: Parser<Expression> by
+    ((minus use { UnaryOperator.NEGATE }) or
+            (plus use { UnaryOperator.PLUS }) or
+            (exclamation use { UnaryOperator.NOT }) and
+            parser(this::unaryExpr)).map { (op, operand) ->
+        UnaryOperation(op, operand)
+    } or primaryExpr
+
+    /**
      * Member access expressions - dot notation for properties and methods
      * Syntax: object.property.nestedProperty
      *
@@ -154,11 +177,11 @@ object KlangScriptParser : Grammar<Program>() {
      * This is implemented as left-associative to handle chains:
      * a.b.c parses as (a.b).c
      *
-     * Implementation: start with primary expression, then parse zero or more
+     * Implementation: start with unary expression, then parse zero or more
      * ".property" sequences, building nested MemberAccess nodes.
      */
     private val memberExpr: Parser<Expression> by
-    (primaryExpr and zeroOrMore(-dot and identifier)).map { (base, properties) ->
+    (unaryExpr and zeroOrMore(-dot and identifier)).map { (base, properties) ->
         // Fold the property list into nested MemberAccess nodes
         properties.fold(base) { obj, property ->
             MemberAccess(obj, property.text)
