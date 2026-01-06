@@ -142,7 +142,7 @@ class KlangScript private constructor(
      */
     override fun loadLibrary(name: String): String {
         val library =
-            libraries[name] ?: throw io.peekandpoke.klang.script.runtime.ImportError(name, "Library not found")
+            libraries[name] ?: throw ImportError(name, "Library not found")
 
         // Apply native registrations before returning source code
         library.applyNativeRegistrations(this)
@@ -190,7 +190,7 @@ class KlangScript private constructor(
      */
     inline fun <reified T : Any> registerNativeType() {
         val kClass = T::class
-        val qualifiedName = kClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+        val qualifiedName = kClass.getUniqueClassName()
         nativeTypes[kClass] = NativeTypeInfo(kClass, qualifiedName)
     }
 
@@ -214,7 +214,7 @@ class KlangScript private constructor(
         noinline method: (TReceiver) -> TReturn,
     ) {
         val receiverClass = TReceiver::class
-        val qualifiedName = receiverClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+        val qualifiedName = receiverClass.getUniqueClassName()
 
         // Auto-register type if not already registered
         if (receiverClass !in nativeTypes) {
@@ -264,7 +264,7 @@ class KlangScript private constructor(
         noinline method: (TReceiver, TParam) -> TReturn,
     ) {
         val receiverClass = TReceiver::class
-        val qualifiedName = receiverClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+        val qualifiedName = receiverClass.getUniqueClassName()
 
         // Auto-register type if not already registered
         if (receiverClass !in nativeTypes) {
@@ -316,7 +316,7 @@ class KlangScript private constructor(
         noinline method: (TReceiver, TParam1, TParam2) -> TReturn,
     ) {
         val receiverClass = TReceiver::class
-        val qualifiedName = receiverClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+        val qualifiedName = receiverClass.getUniqueClassName()
 
         // Auto-register type if not already registered
         if (receiverClass !in nativeTypes) {
@@ -527,7 +527,7 @@ class KlangScript private constructor(
          */
         inline fun <reified T : Any> registerNativeType(): Builder {
             val kClass = T::class
-            val qualifiedName = kClass.simpleName ?: "Unknown"
+            val qualifiedName = kClass.getUniqueClassName()
             nativeTypes[kClass] = NativeTypeInfo(kClass, qualifiedName)
             return this
         }
@@ -546,7 +546,7 @@ class KlangScript private constructor(
             noinline method: (TReceiver) -> TReturn,
         ): Builder {
             val receiverClass = TReceiver::class
-            val qualifiedName = receiverClass.simpleName ?: "Unknown"
+            val qualifiedName = receiverClass.getUniqueClassName()
 
             // Auto-register type if not already registered
             if (receiverClass !in nativeTypes) {
@@ -591,7 +591,7 @@ class KlangScript private constructor(
             noinline method: (TReceiver, TParam) -> TReturn,
         ): Builder {
             val receiverClass = TReceiver::class
-            val qualifiedName = receiverClass.simpleName ?: "Unknown"
+            val qualifiedName = receiverClass.getUniqueClassName()
 
             // Auto-register type if not already registered
             if (receiverClass !in nativeTypes) {
@@ -638,7 +638,7 @@ class KlangScript private constructor(
             noinline method: (TReceiver, TParam1, TParam2) -> TReturn,
         ): Builder {
             val receiverClass = TReceiver::class
-            val qualifiedName = receiverClass.simpleName ?: "Unknown"
+            val qualifiedName = receiverClass.getUniqueClassName()
 
             // Auto-register type if not already registered
             if (receiverClass !in nativeTypes) {
