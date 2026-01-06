@@ -178,3 +178,66 @@ data class ObjectValue(
         properties[name] = value
     }
 }
+
+/**
+ * Native Kotlin object value
+ *
+ * Wraps a native Kotlin object to make it accessible from KlangScript.
+ * The object's methods are registered separately as extension methods in the interpreter.
+ *
+ * @property kClass The Kotlin class of the wrapped object (used for registry lookup)
+ * @property qualifiedName The fully qualified class name (for display and debugging)
+ * @property value The actual Kotlin object instance
+ *
+ * Example:
+ * ```kotlin
+ * // Kotlin side:
+ * class StrudelPattern(val pattern: String) {
+ *     fun sound(name: String): StrudelPattern = ...
+ * }
+ *
+ * // Wrapped as:
+ * NativeObjectValue(
+ *     kClass = StrudelPattern::class,
+ *     qualifiedName = "com.example.StrudelPattern",
+ *     value = StrudelPattern("a b c d")
+ * )
+ * ```
+ */
+data class NativeObjectValue<T : Any>(
+    val kClass: kotlin.reflect.KClass<out T>,
+    val qualifiedName: String,
+    val value: T,
+) : RuntimeValue() {
+    override fun toDisplayString(): String = value.toString()
+}
+
+/**
+ * Bound native method
+ *
+ * Represents an extension method bound to a specific native object receiver.
+ * Created when accessing a method on a NativeObjectValue (e.g., `pattern.sound`).
+ * Can be called like a function, which invokes the method with the bound receiver.
+ *
+ * @property methodName The name of the method
+ * @property receiver The native object this method is bound to
+ * @property invoker Function that invokes the extension method with arguments
+ *
+ * Example:
+ * ```kotlin
+ * // When evaluating: pattern.sound
+ * // Returns:
+ * BoundNativeMethod(
+ *     methodName = "sound",
+ *     receiver = NativeObjectValue(...),
+ *     invoker = { args -> /* calls sound method */ }
+ * )
+ * ```
+ */
+data class BoundNativeMethod(
+    val methodName: String,
+    val receiver: NativeObjectValue<*>,
+    val invoker: (List<RuntimeValue>) -> RuntimeValue,
+) : RuntimeValue() {
+    override fun toDisplayString(): String = "[bound method $methodName on ${receiver.qualifiedName}]"
+}

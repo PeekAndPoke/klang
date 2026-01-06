@@ -404,6 +404,16 @@ class Interpreter(
                 }
             }
 
+            is BoundNativeMethod -> {
+                // Call the bound native method
+                callStack.push("${callee.receiver.qualifiedName}.${callee.methodName}", call.location)
+                try {
+                    callee.invoker(args)
+                } finally {
+                    callStack.pop()
+                }
+            }
+
             else -> {
                 throw TypeError(
                     "Cannot call non-function value: ${callee.toDisplayString()}",
@@ -415,34 +425,6 @@ class Interpreter(
         }
     }
 
-    /**
-     * Evaluate a binary operation expression
-     *
-     * Process:
-     * 1. Evaluate the left operand
-     * 2. Evaluate the right operand
-     * 3. Perform the operation based on the operator
-     * 4. Return the result
-     *
-     * Currently only supports arithmetic on numbers.
-     * Type checking ensures both operands are numbers.
-     *
-     * @param binOp The binary operation AST node
-     * @return The runtime value result of the operation
-     * @throws RuntimeException if operands are not numbers
-     *
-     * Example:
-     * ```
-     * // Script: 10 + 2 * 3
-     * // AST: BinaryOp(10, ADD, BinaryOp(2, MULTIPLY, 3))
-     * // 1. Evaluate left: 10 → NumberValue(10.0)
-     * // 2. Evaluate right: 2 * 3
-     * //    2a. Evaluate 2 → NumberValue(2.0)
-     * //    2b. Evaluate 3 → NumberValue(3.0)
-     * //    2c. Multiply: 2.0 * 3.0 = 6.0
-     * // 3. Add: 10.0 + 6.0 = 16.0
-     * ```
-     */
     /**
      * Evaluate a unary operation expression
      *
@@ -510,6 +492,37 @@ class Interpreter(
         }
     }
 
+    /**
+     * Evaluate a binary operation expression
+     *
+     * Binary operations perform arithmetic on two number operands.
+     * Both operands must be numbers; otherwise a TypeError is thrown.
+     *
+     * Process:
+     * 1. Evaluate the left operand
+     * 2. Evaluate the right operand
+     * 3. Verify both are NumberValues
+     * 4. Apply the operator
+     * 5. Return the result as NumberValue
+     *
+     * Supported operators:
+     * - ADD (+): Addition
+     * - SUBTRACT (-): Subtraction
+     * - MULTIPLY (*): Multiplication
+     * - DIVIDE (/): Division (throws TypeError on division by zero)
+     *
+     * @param binOp The binary operation AST node
+     * @return The runtime value after applying the operation
+     * @throws TypeError if operands are not numbers or division by zero
+     *
+     * Examples:
+     * - 5 + 3 → NumberValue(8.0)
+     * - 10 - 4 → NumberValue(6.0)
+     * - 3 * 7 → NumberValue(21.0)
+     * - 20 / 4 → NumberValue(5.0)
+     * - 1 / 0 → TypeError: "Division by zero"
+     * - "a" + 1 → TypeError: "Binary ADD operation requires numbers"
+     */
     private fun evaluateBinaryOp(binOp: BinaryOperation): RuntimeValue {
         // Evaluate both operands
         val leftValue = evaluate(binOp.left)
@@ -550,40 +563,71 @@ class Interpreter(
     /**
      * Evaluate a member access expression
      *
-     * Member access (dot notation) allows accessing properties on objects.
-     * This is essential for method chaining and object-oriented patterns.
+     * Member access (dot notation) allows accessing properties on both
+     * script objects and native Kotlin objects. This enables method chaining
+     * and object-oriented patterns.
      *
      * Process:
      * 1. Evaluate the object expression
-     * 2. Verify it's an ObjectValue
-     * 3. Return the property value (or NullValue if missing)
+     * 2. If native object: Look up extension method, return BoundNativeMethod
+     * 3. If script object: Return the property value (or NullValue if missing)
+     * 4. Otherwise: Throw TypeError
      *
      * @param memberAccess The member access AST node
-     * @return The runtime value of the property
-     * @throws RuntimeException if the object is not an ObjectValue
+     * @return The runtime value of the property or bound method
+     * @throws TypeError if the object doesn't support member access or property not found
      *
-     * Example:
+     * Examples:
      * ```
-     * // Script: obj.name
-     * // 1. Evaluate obj → ObjectValue with properties
-     * // 2. Access "name" property
-     * // 3. Return the property's value (or NullValue)
-     * ```
+     * // Script object:
+     * let obj = { name: "test", value: 42 }
+     * obj.name  // Returns StringValue("test")
      *
-     * Method chaining example:
-     * ```
-     * // Script: note("c").gain(0.5)
-     * // Parsed as: CallExpression(MemberAccess(CallExpression(note, ["c"]), "gain"), [0.5])
-     * // 1. Evaluate note("c") → ObjectValue with "gain" property
-     * // 2. Access "gain" property → NativeFunctionValue
-     * // 3. Call function evaluates in evaluateCall
+     * // Native object:
+     * let pattern = note("a b c")  // Returns NativeObjectValue<StrudelPattern>
+     * pattern.sound  // Returns BoundNativeMethod for sound() extension
+     *
+     * // Method chaining:
+     * note("c d e").sound("saw").gain(0.5)
+     * // Each dot returns next method in chain
      * ```
      */
     private fun evaluateMemberAccess(memberAccess: MemberAccess): RuntimeValue {
         // Evaluate the object expression
         val objValue = evaluate(memberAccess.obj)
 
-        // Ensure it's an object
+        // Handle native objects - lookup extension methods
+        if (objValue is NativeObjectValue<*>) {
+            val engine = libraryLoader as? io.peekandpoke.klang.script.KlangScript
+            if (engine != null) {
+                val extensionMethod = engine.getExtensionMethod(objValue.kClass, memberAccess.property)
+                if (extensionMethod != null) {
+                    // Return bound method
+                    return BoundNativeMethod(
+                        methodName = memberAccess.property,
+                        receiver = objValue,
+                        invoker = { args -> extensionMethod.invoker(objValue.value, args) }
+                    )
+                }
+            }
+
+            // Method not found - throw error with helpful message
+            val availableMethods = engine?.getExtensionMethodNames(objValue.kClass) ?: emptyList()
+            val suggestion = if (availableMethods.isNotEmpty()) {
+                " Available methods: ${availableMethods.joinToString(", ")}"
+            } else {
+                ""
+            }
+
+            throw TypeError(
+                "Native type '${objValue.qualifiedName}' has no method '${memberAccess.property}'.$suggestion",
+                operation = "member access",
+                location = memberAccess.location,
+                stackTrace = getStackTrace()
+            )
+        }
+
+        // Handle script objects
         if (objValue !is ObjectValue) {
             throw TypeError(
                 "Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}",

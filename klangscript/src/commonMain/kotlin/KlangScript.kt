@@ -2,10 +2,8 @@ package io.peekandpoke.klang.script
 
 import com.github.h0tk3y.betterParse.parser.ParseException
 import io.peekandpoke.klang.script.parser.KlangScriptParser
-import io.peekandpoke.klang.script.runtime.Interpreter
-import io.peekandpoke.klang.script.runtime.LibraryLoader
-import io.peekandpoke.klang.script.runtime.NativeFunctionValue
-import io.peekandpoke.klang.script.runtime.RuntimeValue
+import io.peekandpoke.klang.script.runtime.*
+import kotlin.reflect.KClass
 
 /**
  * Main facade for the KlangScript engine
@@ -37,6 +35,14 @@ import io.peekandpoke.klang.script.runtime.RuntimeValue
 class KlangScript : LibraryLoader {
     /** Registry of available libraries (library name -> source code) */
     private val libraries = mutableMapOf<String, String>()
+
+    /** Registry of native types (KClass -> type metadata) */
+    @PublishedApi
+    internal val nativeTypes = mutableMapOf<KClass<*>, NativeTypeInfo>()
+
+    /** Registry of extension methods (KClass -> method name -> ExtensionMethod) */
+    @PublishedApi
+    internal val extensionMethods = mutableMapOf<KClass<*>, MutableMap<String, ExtensionMethod>>()
 
     /** The interpreter that executes parsed programs */
     private val interpreter = Interpreter(libraryLoader = this)
@@ -155,6 +161,43 @@ class KlangScript : LibraryLoader {
     }
 
     /**
+     * Register a native function that returns a native Kotlin object
+     *
+     * Similar to registerFunction1, but automatically converts Kotlin parameter types
+     * and wraps native return values.
+     *
+     * @param TParam The Kotlin parameter type
+     * @param TReturn The Kotlin return type (will be auto-wrapped)
+     * @param name The function name
+     * @param function The function implementation
+     *
+     * Example:
+     * ```kotlin
+     * engine.registerFunction1<String, StrudelPattern>("note") { pattern ->
+     *     StrudelPattern(pattern)  // Returns native object, auto-wrapped
+     * }
+     * ```
+     */
+    inline fun <reified TParam : Any, reified TReturn : Any> registerNativeFunction(
+        name: String,
+        noinline function: (TParam) -> TReturn,
+    ) {
+        registerFunction(name) { args ->
+            if (args.size != 1) {
+                throw ArgumentError(
+                    name,
+                    "Expected 1 argument, got ${args.size}",
+                    expected = 1,
+                    actual = args.size
+                )
+            }
+            val param = convertParameter<TParam>(args[0])
+            val result = function(param)
+            wrapAsRuntimeValue(result)
+        }
+    }
+
+    /**
      * Register a library that can be imported in scripts
      *
      * Libraries are KlangScript source code that define functions, objects,
@@ -223,4 +266,203 @@ class KlangScript : LibraryLoader {
      * @throws RuntimeException if the variable is not defined
      */
     fun getVariable(name: String): RuntimeValue = environment.get(name)
+
+    // ===== Native Kotlin Interop =====
+
+    /**
+     * Register a native Kotlin type
+     *
+     * Optional - types are auto-registered on first extension method registration.
+     * Useful for explicit type registration and documentation.
+     *
+     * @param T The Kotlin type to register
+     *
+     * Example:
+     * ```kotlin
+     * engine.registerNativeType<StrudelPattern>()
+     * ```
+     */
+    inline fun <reified T : Any> registerNativeType() {
+        val kClass = T::class
+        val qualifiedName = kClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+        nativeTypes[kClass] = NativeTypeInfo(kClass, qualifiedName)
+    }
+
+    /**
+     * Register an extension method with no parameters (just receiver)
+     *
+     * @param TReceiver The receiver type (the object the method is called on)
+     * @param TReturn The return type
+     * @param methodName The name of the method
+     * @param method The method implementation
+     *
+     * Example:
+     * ```kotlin
+     * engine.registerExtensionMethod0<StrudelPattern, StrudelPattern>("reverse") { receiver ->
+     *     receiver.reverse()
+     * }
+     * ```
+     */
+    inline fun <reified TReceiver : Any, reified TReturn : Any> registerExtensionMethod0(
+        methodName: String,
+        noinline method: (TReceiver) -> TReturn,
+    ) {
+        val receiverClass = TReceiver::class
+        val qualifiedName = receiverClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+
+        // Auto-register type if not already registered
+        if (receiverClass !in nativeTypes) {
+            nativeTypes[receiverClass] = NativeTypeInfo(receiverClass, qualifiedName)
+        }
+
+        // Create extension method wrapper
+        val extensionMethod = ExtensionMethod(
+            methodName = methodName,
+            receiverClass = receiverClass,
+            invoker = { receiver, args ->
+                if (args.isNotEmpty()) {
+                    throw TypeError(
+                        "Method '$methodName' expects 0 arguments, got ${args.size}",
+                        operation = "method call"
+                    )
+                }
+                @Suppress("UNCHECKED_CAST")
+                val result = method(receiver as TReceiver)
+                wrapAsRuntimeValue(result)
+            }
+        )
+
+        // Register extension method
+        extensionMethods
+            .getOrPut(receiverClass) { mutableMapOf() }[methodName] = extensionMethod
+    }
+
+    /**
+     * Register an extension method with one parameter
+     *
+     * @param TReceiver The receiver type (the object the method is called on)
+     * @param TParam The parameter type
+     * @param TReturn The return type
+     * @param methodName The name of the method
+     * @param method The method implementation
+     *
+     * Example:
+     * ```kotlin
+     * engine.registerExtensionMethod1<StrudelPattern, String, StrudelPattern>("sound") { receiver, soundName ->
+     *     receiver.sound(soundName)
+     * }
+     * ```
+     */
+    inline fun <reified TReceiver : Any, reified TParam : Any, reified TReturn : Any> registerExtensionMethod1(
+        methodName: String,
+        noinline method: (TReceiver, TParam) -> TReturn,
+    ) {
+        val receiverClass = TReceiver::class
+        val qualifiedName = receiverClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+
+        // Auto-register type if not already registered
+        if (receiverClass !in nativeTypes) {
+            nativeTypes[receiverClass] = NativeTypeInfo(receiverClass, qualifiedName)
+        }
+
+        // Create extension method wrapper
+        val extensionMethod = ExtensionMethod(
+            methodName = methodName,
+            receiverClass = receiverClass,
+            invoker = { receiver, args ->
+                if (args.size != 1) {
+                    throw TypeError(
+                        "Method '$methodName' expects 1 argument, got ${args.size}",
+                        operation = "method call"
+                    )
+                }
+                @Suppress("UNCHECKED_CAST")
+                val param = convertParameter<TParam>(args[0])
+                val result = method(receiver as TReceiver, param)
+                wrapAsRuntimeValue(result)
+            }
+        )
+
+        // Register extension method
+        extensionMethods
+            .getOrPut(receiverClass) { mutableMapOf() }[methodName] = extensionMethod
+    }
+
+    /**
+     * Register an extension method with two parameters
+     *
+     * @param TReceiver The receiver type (the object the method is called on)
+     * @param TParam1 The first parameter type
+     * @param TParam2 The second parameter type
+     * @param TReturn The return type
+     * @param methodName The name of the method
+     * @param method The method implementation
+     *
+     * Example:
+     * ```kotlin
+     * engine.registerExtensionMethod2<StrudelPattern, String, Double, StrudelPattern>("soundWithGain") { receiver, sound, gain ->
+     *     receiver.soundWithGain(sound, gain)
+     * }
+     * ```
+     */
+    inline fun <reified TReceiver : Any, reified TParam1 : Any, reified TParam2 : Any, reified TReturn : Any> registerExtensionMethod2(
+        methodName: String,
+        noinline method: (TReceiver, TParam1, TParam2) -> TReturn,
+    ) {
+        val receiverClass = TReceiver::class
+        val qualifiedName = receiverClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+
+        // Auto-register type if not already registered
+        if (receiverClass !in nativeTypes) {
+            nativeTypes[receiverClass] = NativeTypeInfo(receiverClass, qualifiedName)
+        }
+
+        // Create extension method wrapper
+        val extensionMethod = ExtensionMethod(
+            methodName = methodName,
+            receiverClass = receiverClass,
+            invoker = { receiver, args ->
+                if (args.size != 2) {
+                    throw TypeError(
+                        "Method '$methodName' expects 2 arguments, got ${args.size}",
+                        operation = "method call"
+                    )
+                }
+                @Suppress("UNCHECKED_CAST")
+                val param1 = convertParameter<TParam1>(args[0])
+                val param2 = convertParameter<TParam2>(args[1])
+                val result = method(receiver as TReceiver, param1, param2)
+                wrapAsRuntimeValue(result)
+            }
+        )
+
+        // Register extension method
+        extensionMethods
+            .getOrPut(receiverClass) { mutableMapOf() }[methodName] = extensionMethod
+    }
+
+    /**
+     * Get an extension method for a native type
+     *
+     * Used by the interpreter to lookup methods during member access evaluation.
+     *
+     * @param kClass The Kotlin class to lookup methods for
+     * @param methodName The method name
+     * @return The extension method, or null if not found
+     */
+    fun getExtensionMethod(kClass: KClass<*>, methodName: String): ExtensionMethod? {
+        return extensionMethods[kClass]?.get(methodName)
+    }
+
+    /**
+     * Get all registered extension method names for a native type
+     *
+     * Used for error messages to suggest available methods.
+     *
+     * @param kClass The Kotlin class to get methods for
+     * @return List of method names
+     */
+    fun getExtensionMethodNames(kClass: KClass<*>): List<String> {
+        return extensionMethods[kClass]?.keys?.toList() ?: emptyList()
+    }
 }
