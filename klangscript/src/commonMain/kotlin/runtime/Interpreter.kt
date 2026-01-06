@@ -162,7 +162,7 @@ class Interpreter(
         libraryInterpreter.execute(libraryProgram)
 
         // Import symbols from library environment into current environment
-        importSymbolsFromEnvironment(libraryEnv, importStmt.names)
+        importSymbolsFromEnvironment(libraryEnv, importStmt.imports)
 
         return NullValue  // Imports don't produce values
     }
@@ -171,31 +171,33 @@ class Interpreter(
      * Import symbols from a library environment into the current environment
      *
      * This copies exported symbols from the library into the current scope.
-     * Supports both wildcard and selective imports.
+     * Supports both wildcard and selective imports, with optional aliasing.
      *
      * @param libraryEnv The library environment containing symbols to import
-     * @param selectiveNames List of specific names to import (null for wildcard)
+     * @param imports List of (exportName, localAlias) pairs for selective imports (null for wildcard)
      */
-    private fun importSymbolsFromEnvironment(libraryEnv: Environment, selectiveNames: List<String>?) {
+    private fun importSymbolsFromEnvironment(libraryEnv: Environment, imports: List<Pair<String, String>>?) {
         // Get exported symbols from library
         val exports = libraryEnv.getExportedSymbols()
 
-        // Determine which symbols to import
-        val symbolsToImport = if (selectiveNames == null) {
-            // Wildcard import - import all exports
-            exports
+        if (imports == null) {
+            // Wildcard import - import all exports with their original names
+            for ((name, value) in exports) {
+                environment.define(name, value, mutable = true)
+            }
         } else {
-            // Selective import - import only specified names
-            val missingExports = selectiveNames.filter { it !in exports }
+            // Selective import - import only specified names, applying aliases
+            val exportNames = imports.map { it.first }
+            val missingExports = exportNames.filter { it !in exports }
             if (missingExports.isNotEmpty()) {
                 throw RuntimeException("Cannot import non-exported symbols: ${missingExports.joinToString()}")
             }
-            exports.filterKeys { it in selectiveNames }
-        }
 
-        // Import symbols into current environment
-        for ((name, value) in symbolsToImport) {
-            environment.define(name, value, mutable = true)
+            // Import each symbol with its alias
+            for ((exportName, localAlias) in imports) {
+                val value = exports[exportName]!!  // Safe because we validated above
+                environment.define(localAlias, value, mutable = true)
+            }
         }
     }
 

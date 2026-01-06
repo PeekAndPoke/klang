@@ -65,6 +65,7 @@ object KlangScriptParser : Grammar<Program>() {
     private val importKeyword by literalToken("import")
     private val exportKeyword by literalToken("export")
     private val fromKeyword by literalToken("from")
+    private val asKeyword by literalToken("as")
 
     /** Identifiers: foo, myVar, _private */
     private val identifier by regexToken("[a-zA-Z_][a-zA-Z0-9_]*")
@@ -361,17 +362,27 @@ object KlangScriptParser : Grammar<Program>() {
     }
 
     /**
-     * Selective import: import { name1, name2 } from "lib"
+     * Import specifier: either "name" or "name as alias"
+     * Returns Pair(exportName, localAlias)
+     */
+    private val importSpecifier: Parser<Pair<String, String>> by
+    (identifier and optional(-asKeyword and identifier)).map { (name, aliasOpt) ->
+        val exportName = name.text
+        val localAlias = aliasOpt?.text ?: exportName
+        Pair(exportName, localAlias)
+    }
+
+    /**
+     * Selective import: import { name1, name2 as alias2 } from "lib"
      */
     private val selectiveImport: Parser<Statement> by
     (-importKeyword and -leftBrace and separatedTerms(
-        identifier,
+        importSpecifier,
         comma,
         acceptZero = false
-    ) and -rightBrace and -fromKeyword and string).map { (identifiers, libraryNameToken) ->
+    ) and -rightBrace and -fromKeyword and string).map { (specifiers, libraryNameToken) ->
         val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
-        val names = identifiers.map { it.text }
-        ImportStatement(libraryName, names)
+        ImportStatement(libraryName, specifiers)
     }
 
     /**

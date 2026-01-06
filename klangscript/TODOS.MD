@@ -497,16 +497,29 @@ What's missing ❌:
 
 **Implementation Plan**:
 
-Step 3.8.1: Import Aliasing
+Step 3.8.1: Import Aliasing ✅
 
-- [ ] Update ImportStatement AST to support alias map: `Map<String, String>` (importName -> localName)
-- [ ] Parse `import { add as sum, mul } from "lib"` syntax
-- [ ] Update interpreter to bind imported symbols with local aliases
-- [ ] Write tests for:
-  - [ ] Single alias: `import { add as sum } from "math"`
-  - [ ] Multiple aliases: `import { add as sum, mul as multiply } from "math"`
-  - [ ] Mixed: `import { add, mul as multiply } from "math"`
-  - [ ] Name conflict resolution
+- [x] Update ImportStatement AST to support alias pairs: `List<Pair<String, String>>` (exportName, localAlias)
+- [x] Add `as` keyword to lexer
+- [x] Parse `import { add as sum, mul } from "lib"` syntax
+- [x] Update interpreter to bind imported symbols with local aliases
+- [x] Write tests for:
+  - [x] Single alias: `import { add as sum } from "math"`
+  - [x] Multiple aliases: `import { add as sum, mul as multiply } from "math"`
+  - [x] Mixed: `import { add, mul as multiply } from "math"`
+  - [x] Name conflict resolution
+  - [x] Original name not exposed when aliased
+  - [x] Aliasing with object properties
+  - [x] Error handling for non-exported symbols with aliases
+
+**Changes made:**
+
+- Modified `ImportStatement.imports` from `List<String>?` to `List<Pair<String, String>>?`
+- Each pair is `(exportName, localAlias)` where localAlias is the name bound in current scope
+- Created `importSpecifier` parser: `identifier and optional(-asKeyword and identifier)`
+- Updated `importSymbolsFromEnvironment()` to apply aliases when importing
+- Created `ImportAliasingTest.kt` with 12 comprehensive tests
+- All 172 tests passing
 
 Step 3.8.2: Namespace Imports
 

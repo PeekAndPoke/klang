@@ -159,11 +159,13 @@ data class ExportStatement(
  * **Syntax:**
  * - `import * from "libraryName"` - Import all exports
  * - `import { name1, name2 } from "libraryName"` - Import specific exports
+ * - `import { name1 as alias1, name2 } from "libraryName"` - Import with aliasing
  *
  * **Semantics:**
  * 1. Load the library source code by name
  * 2. Parse and evaluate the library in an isolated environment
  * 3. Import specified symbols (or all exports for wildcard) into current scope
+ * 4. Apply aliases if specified (bind to local name instead of export name)
  *
  * **Design philosophy:**
  * Libraries are not hard-coded in Kotlin. Instead, they are KlangScript files
@@ -179,19 +181,31 @@ data class ExportStatement(
  * import { add, multiply } from "math"
  * add(1, 2)  // Works
  * subtract(5, 3)  // Error if not imported
+ *
+ * // Import with aliases to avoid name conflicts
+ * import { add as sum, multiply as mul } from "math"
+ * sum(1, 2)  // Uses 'sum' instead of 'add'
+ *
+ * // Mixed: some aliased, some not
+ * import { add, multiply as mul } from "math"
+ * add(1, 2)
+ * mul(3, 4)
  * ```
  *
  * **Implementation notes:**
  * - Both wildcard (`*`) and selective imports are supported
  * - Library evaluation is isolated (library internals don't leak)
  * - Only explicitly exported symbols can be imported
+ * - Aliases allow importing conflicting names from different libraries
  *
  * @param libraryName The name of the library to import (without .klang extension)
- * @param names List of specific names to import (null for wildcard import)
+ * @param imports List of (exportName, localAlias) pairs for selective imports (null for wildcard)
+ *                The localAlias is the name to bind in current scope; exportName is from library
  */
 data class ImportStatement(
     val libraryName: String,
-    val names: List<String>? = null,  // null = import *, non-null = import { ... }
+    val imports: List<Pair<String, String>>? = null,  // null = import *, non-null = import { ... }
+    // Pair: (exportName, localAlias)
 ) : Statement()
 
 // ============================================================

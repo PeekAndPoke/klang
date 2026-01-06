@@ -37,7 +37,7 @@ class ExportImportTest : StringSpec({
         val stmt = result.statements[0]
         stmt.shouldBeInstanceOf<ImportStatement>()
         stmt.libraryName shouldBe "math"
-        stmt.names shouldBe listOf("add", "multiply")
+        stmt.imports shouldBe listOf(Pair("add", "add"), Pair("multiply", "multiply"))
     }
 
     "should parse wildcard import statement" {
@@ -47,7 +47,7 @@ class ExportImportTest : StringSpec({
         val stmt = result.statements[0]
         stmt.shouldBeInstanceOf<ImportStatement>()
         stmt.libraryName shouldBe "math"
-        stmt.names shouldBe null  // Wildcard
+        stmt.imports shouldBe null  // Wildcard
     }
 
     "should prevent scope pollution with explicit exports" {
