@@ -201,4 +201,16 @@ class KlangScript : LibraryLoader {
      * @return The interpreter instance
      */
     fun getInterpreter(): Interpreter = interpreter
+
+    /**
+     * Get a variable from the global environment
+     *
+     * This is primarily used for testing to inspect variables.
+     * In production code, prefer using the execute() method.
+     *
+     * @param name The variable name
+     * @return The runtime value
+     * @throws RuntimeException if the variable is not defined
+     */
+    fun getVariable(name: String): RuntimeValue = environment.get(name)
 }

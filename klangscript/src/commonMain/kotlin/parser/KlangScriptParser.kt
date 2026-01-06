@@ -354,11 +354,13 @@ object KlangScriptParser : Grammar<Program>() {
 
     /**
      * Wildcard import: import * from "lib"
+     * Namespace import: import * as name from "lib"
      */
     private val wildcardImport: Parser<Statement> by
-    (-importKeyword and -times and -fromKeyword and string).map { libraryNameToken ->
+    (-importKeyword and -times and optional(-asKeyword and identifier) and -fromKeyword and string).map { (namespaceOpt, libraryNameToken) ->
         val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
-        ImportStatement(libraryName, null)  // null means wildcard
+        val namespaceAlias = namespaceOpt?.text
+        ImportStatement(libraryName, imports = null, namespaceAlias = namespaceAlias)
     }
 
     /**
@@ -386,11 +388,13 @@ object KlangScriptParser : Grammar<Program>() {
     }
 
     /**
-     * Import statement - wildcard or selective
+     * Import statement - wildcard, namespace, or selective
      *
      * Syntax:
-     * - import * from "libraryName" - Import all exports
+     * - import * from "libraryName" - Import all exports into current scope
+     * - import * as name from "libraryName" - Import as namespace object
      * - import { name1, name2 } from "libraryName" - Import specific exports
+     * - import { name1 as alias1 } from "libraryName" - Import with aliasing
      *
      * Examples:
      * - import * from "strudel.klang"

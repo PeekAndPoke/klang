@@ -162,7 +162,7 @@ class Interpreter(
         libraryInterpreter.execute(libraryProgram)
 
         // Import symbols from library environment into current environment
-        importSymbolsFromEnvironment(libraryEnv, importStmt.imports)
+        importSymbolsFromEnvironment(libraryEnv, importStmt.imports, importStmt.namespaceAlias)
 
         return NullValue  // Imports don't produce values
     }
@@ -171,16 +171,28 @@ class Interpreter(
      * Import symbols from a library environment into the current environment
      *
      * This copies exported symbols from the library into the current scope.
-     * Supports both wildcard and selective imports, with optional aliasing.
+     * Supports wildcard, namespace, and selective imports with optional aliasing.
      *
      * @param libraryEnv The library environment containing symbols to import
      * @param imports List of (exportName, localAlias) pairs for selective imports (null for wildcard)
+     * @param namespaceAlias If set, creates a namespace object instead of importing into current scope
      */
-    private fun importSymbolsFromEnvironment(libraryEnv: Environment, imports: List<Pair<String, String>>?) {
+    private fun importSymbolsFromEnvironment(
+        libraryEnv: Environment,
+        imports: List<Pair<String, String>>?,
+        namespaceAlias: String?,
+    ) {
         // Get exported symbols from library
         val exports = libraryEnv.getExportedSymbols()
 
-        if (imports == null) {
+        if (namespaceAlias != null) {
+            // Namespace import - create an object containing all exports
+            if (imports != null) {
+                throw RuntimeException("Cannot use namespace import with selective imports")
+            }
+            val namespaceObject = ObjectValue(exports.toMutableMap())
+            environment.define(namespaceAlias, namespaceObject, mutable = true)
+        } else if (imports == null) {
             // Wildcard import - import all exports with their original names
             for ((name, value) in exports) {
                 environment.define(name, value, mutable = true)

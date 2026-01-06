@@ -157,7 +157,8 @@ data class ExportStatement(
  * Libraries are KlangScript files that export functions, objects, and values.
  *
  * **Syntax:**
- * - `import * from "libraryName"` - Import all exports
+ * - `import * from "libraryName"` - Import all exports into current scope
+ * - `import * as name from "libraryName"` - Import as namespace object
  * - `import { name1, name2 } from "libraryName"` - Import specific exports
  * - `import { name1 as alias1, name2 } from "libraryName"` - Import with aliasing
  *
@@ -173,9 +174,13 @@ data class ExportStatement(
  *
  * Examples:
  * ```javascript
- * // Import all exported functions and objects
+ * // Import all exported functions into current scope
  * import * from "strudel.klang"
  * note("a b c d").gain(0.5)  // note() is now available
+ *
+ * // Import as namespace (no scope pollution)
+ * import * as math from "math"
+ * math.add(1, 2)  // Clear that 'add' comes from math
  *
  * // Import only specific functions
  * import { add, multiply } from "math"
@@ -206,6 +211,7 @@ data class ImportStatement(
     val libraryName: String,
     val imports: List<Pair<String, String>>? = null,  // null = import *, non-null = import { ... }
     // Pair: (exportName, localAlias)
+    val namespaceAlias: String? = null,  // If set, import * as namespaceAlias
 ) : Statement()
 
 // ============================================================

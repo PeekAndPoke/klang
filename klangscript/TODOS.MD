@@ -521,17 +521,30 @@ Step 3.8.1: Import Aliasing ✅
 - Created `ImportAliasingTest.kt` with 12 comprehensive tests
 - All 172 tests passing
 
-Step 3.8.2: Namespace Imports
+Step 3.8.2: Namespace Imports ✅
 
-- [ ] Update ImportStatement to support namespace binding: `namespaceAlias: String?`
-- [ ] Parse `import * as math from "lib"` syntax
-- [ ] Create runtime namespace object containing all exports
-- [ ] Update interpreter to bind namespace as single object
-- [ ] Write tests for:
-  - [ ] Basic namespace: `import * as math from "lib"` then `math.add(1,2)`
-  - [ ] Multiple namespaces from different libraries
-  - [ ] Namespace with selective imports not allowed (error)
-  - [ ] Cleaner scope (namespace doesn't pollute current scope)
+- [x] Update ImportStatement to support namespace binding: `namespaceAlias: String?`
+- [x] Parse `import * as math from "lib"` syntax
+- [x] Create runtime namespace object containing all exports
+- [x] Update interpreter to bind namespace as single object
+- [x] Write tests for:
+  - [x] Basic namespace: `import * as math from "lib"` then `math.add(1,2)`
+  - [x] Multiple namespaces from different libraries
+  - [x] Namespace with selective imports not allowed (error)
+  - [x] Cleaner scope (namespace doesn't pollute current scope)
+  - [x] Namespace only includes exported symbols
+  - [x] Backward compatibility with libraries without exports
+  - [x] Nested function calls via namespace
+  - [x] Object properties via namespace
+
+**Changes made:**
+
+- Added `namespaceAlias: String?` field to `ImportStatement`
+- Updated `wildcardImport` parser to handle `optional(-asKeyword and identifier)`
+- Modified `importSymbolsFromEnvironment()` to create `ObjectValue` for namespace imports
+- Created `NamespaceImportTest.kt` with 14 comprehensive tests
+- Added `getVariable()` helper to `KlangScript` for testing
+- All 186 tests passing (172 previous + 14 new)
 
 Step 3.8.3: Export Aliasing
 
