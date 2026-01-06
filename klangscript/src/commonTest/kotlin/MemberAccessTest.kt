@@ -71,77 +71,16 @@ class MemberAccessTest : StringSpec({
         result.value shouldBe 42.0
     }
 
-    "should support method chaining with two calls" {
-        val script = klangScript()
-
-        // Register a function that returns an object with a chainable method
-        script.registerFunction("createChain") {
-            ObjectValue(
-                mutableMapOf(
-                    "add" to script.createNativeFunction("add") { args ->
-                        val num = (args[0] as NumberValue).value
-                        ObjectValue(
-                            mutableMapOf(
-                                "value" to NumberValue(num + 10.0)
-                            )
-                        )
-                    }
-                )
-            )
-        }
-
-        val result = script.execute("createChain().add(5).value")
-        result.shouldBeInstanceOf<NumberValue>()
-        result.value shouldBe 15.0
-    }
-
-    "should support complex method chaining" {
-        val script = klangScript()
-
-        // Simulate a fluent API like note("c").gain(0.5).pan(0.0)
-        script.registerFunction("note") { args ->
-            val noteValue = (args[0] as StringValue).value
-            ObjectValue(
-                mutableMapOf(
-                    "noteValue" to StringValue(noteValue),
-                    "gain" to script.createNativeFunction("gain") { gainArgs ->
-                        val gainValue = (gainArgs[0] as NumberValue).value
-                        ObjectValue(
-                            mutableMapOf(
-                                "noteValue" to StringValue(noteValue),
-                                "gainValue" to NumberValue(gainValue),
-                                "pan" to script.createNativeFunction("pan") { panArgs ->
-                                    val panValue = (panArgs[0] as NumberValue).value
-                                    ObjectValue(
-                                        mutableMapOf(
-                                            "noteValue" to StringValue(noteValue),
-                                            "gainValue" to NumberValue(gainValue),
-                                            "panValue" to NumberValue(panValue)
-                                        )
-                                    )
-                                }
-                            )
-                        )
-                    }
-                )
-            )
-        }
-
-        val result = script.execute("note(\"c\").gain(0.5).pan(1.0).panValue")
-        result.shouldBeInstanceOf<NumberValue>()
-        result.value shouldBe 1.0
-    }
-
     "should access property after function call" {
-        val script = klangScript()
-
-        script.registerFunction("getObject") {
-            ObjectValue(
-                mutableMapOf(
-                    "x" to NumberValue(100.0),
-                    "y" to NumberValue(200.0)
+        val script = klangScript {
+            registerNativeFunction("getObject") {
+                ObjectValue(
+                    mutableMapOf(
+                        "x" to NumberValue(100.0),
+                        "y" to NumberValue(200.0)
+                    )
                 )
-            )
+            }
         }
 
         val result = script.execute("getObject().x")

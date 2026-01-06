@@ -5,6 +5,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ExportStatement
 import io.peekandpoke.klang.script.ast.ImportStatement
+import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.StringValue
@@ -51,8 +52,8 @@ class ExportImportTest : StringSpec({
     }
 
     "should prevent scope pollution with explicit exports" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "math", """
                     let internalHelper = (x) => x * 2
                     let add = (a, b) => a + b
@@ -60,7 +61,7 @@ class ExportImportTest : StringSpec({
                     export { add, multiply }
                 """.trimIndent()
             )
-            .build()
+        }
 
         // Try to import non-exported symbol
         try {
@@ -77,8 +78,8 @@ class ExportImportTest : StringSpec({
     }
 
     "should import only exported symbols with wildcard" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "math", """
                     let internalHelper = (x) => x * 2
                     let add = (a, b) => a + b
@@ -86,7 +87,7 @@ class ExportImportTest : StringSpec({
                     export { add, multiply }
                 """.trimIndent()
             )
-            .build()
+        }
 
         val result = engine.execute(
             """
@@ -106,14 +107,14 @@ class ExportImportTest : StringSpec({
                 """.trimIndent()
             )
             error("Should have thrown exception")
-        } catch (e: RuntimeException) {
+        } catch (_: RuntimeException) {
             // Expected - internalHelper is not exported
         }
     }
 
     "should support selective imports" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "math", """
                     let add = (a, b) => a + b
                     let subtract = (a, b) => a - b
@@ -122,7 +123,7 @@ class ExportImportTest : StringSpec({
                     export { add, subtract, multiply, divide }
                 """.trimIndent()
             )
-            .build()
+        }
 
         val result = engine.execute(
             """
@@ -135,14 +136,14 @@ class ExportImportTest : StringSpec({
     }
 
     "should allow importing single symbol" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "math", """
                     let square = (x) => x * x
                     export { square }
                 """.trimIndent()
             )
-            .build()
+        }
 
         val result = engine.execute(
             """
@@ -155,8 +156,8 @@ class ExportImportTest : StringSpec({
     }
 
     "should support libraries with mixed exports" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "signals", """
                     let frequency = 440
                     let amplitude = 1.0
@@ -168,7 +169,7 @@ class ExportImportTest : StringSpec({
                     export { sine, frequency }
                 """.trimIndent()
             )
-            .build()
+        }
 
         val result = engine.execute(
             """
@@ -182,14 +183,14 @@ class ExportImportTest : StringSpec({
 
     "should backward compatible - libraries without exports export all" {
         // Library without export statement
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "old", """
                     let func1 = (x) => x + 1
                     let func2 = (x) => x * 2
                 """.trimIndent()
             )
-            .build()
+        }
 
         val result = engine.execute(
             """
@@ -202,14 +203,14 @@ class ExportImportTest : StringSpec({
     }
 
     "should prevent importing from library without matching export" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "lib", """
                     let add = (a, b) => a + b
                     export { add }
                 """.trimIndent()
             )
-            .build()
+        }
 
         try {
             engine.execute(
@@ -224,8 +225,8 @@ class ExportImportTest : StringSpec({
     }
 
     "should allow multiple selective imports from same library" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "lib", """
                     let a = 1
                     let b = 2
@@ -233,7 +234,7 @@ class ExportImportTest : StringSpec({
                     export { a, b, c }
                 """.trimIndent()
             )
-            .build()
+        }
 
         val result = engine.execute(
             """
@@ -248,18 +249,20 @@ class ExportImportTest : StringSpec({
 
 
     "should export functions that use native functions" {
-        val engine = KlangScript.builder()
-            .registerFunction1("nativeDouble") { value ->
+        val engine = klangScript {
+            registerNativeFunction("nativeDouble") { values ->
+                val value = values[0]
                 NumberValue((value as NumberValue).value * 2)
             }
-            .registerLibrary(
+
+            registerLibrary(
                 "lib", """
                     let useNative = (x) => nativeDouble(x)
                     let internal = (x) => x + 1
                     export { useNative }
                 """.trimIndent()
             )
-            .build()
+        }
 
         val result = engine.execute(
             """
@@ -272,8 +275,8 @@ class ExportImportTest : StringSpec({
     }
 
     "should support complex real-world library pattern" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "strudel", """
                     // Internal helpers
                     let createPattern = (str) => { value: str }
@@ -290,7 +293,7 @@ class ExportImportTest : StringSpec({
                     export { note, sound, sine }
                 """.trimIndent()
             )
-            .build()
+        }
 
         val result = engine.execute(
             """
@@ -303,14 +306,14 @@ class ExportImportTest : StringSpec({
     }
 
     "should error on importing multiple non-exported symbols" {
-        val engine = KlangScript.builder()
-            .registerLibrary(
+        val engine = klangScript {
+            registerLibrary(
                 "lib", """
                     let a = 1
                     export { a }
                 """.trimIndent()
             )
-            .build()
+        }
 
         try {
             engine.execute(

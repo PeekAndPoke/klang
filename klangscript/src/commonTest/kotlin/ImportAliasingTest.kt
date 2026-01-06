@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ImportStatement
+import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.NumberValue
 
@@ -173,7 +174,8 @@ class ImportAliasingTest : StringSpec({
 
     "should support aliasing for complex library patterns" {
         val engine = klangScript {
-            registerFunction1("nativeLog") { value ->
+            registerNativeFunction("nativeLog") { values ->
+                val value = values[0]
                 NumberValue((value as NumberValue).value * 10)
             }
 

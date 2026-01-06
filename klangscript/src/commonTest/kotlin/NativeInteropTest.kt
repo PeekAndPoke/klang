@@ -4,6 +4,9 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.peekandpoke.klang.script.builder.registerLibrary
+import io.peekandpoke.klang.script.builder.registerNativeExtensionMethod
+import io.peekandpoke.klang.script.builder.registerNativeFunction
 import io.peekandpoke.klang.script.runtime.TypeError
 
 
@@ -42,11 +45,11 @@ class NativeInteropTest : StringSpec() {
 
         "Native object creation via registered function" {
             // Register factory function that returns native object
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .build()
+            }
 
             val script = "note(\"a b c d\")"
             val result = engine.execute(script)
@@ -55,14 +58,14 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Extension method with one parameter" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
-                .build()
+            }
 
             val script = """
                 let pattern = note("a b c d")
@@ -74,14 +77,14 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Extension method with no parameters" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod0<NativeObject, NativeObject>("reverse") { receiver ->
-                    receiver.reverse()
+                registerNativeExtensionMethod<NativeObject, NativeObject>("reverse") {
+                    reverse()
                 }
-                .build()
+            }
 
             val script = """
                 let pattern = note("a b c d")
@@ -93,14 +96,14 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Extension method with two parameters" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod2<NativeObject, Double, Double, NativeObject>("pan") { receiver, left, right ->
-                    receiver.pan(left, right)
+                registerNativeExtensionMethod<NativeObject, Double, Double, NativeObject>("pan") { left, right ->
+                    pan(left, right)
                 }
-                .build()
+            }
 
             val script = """
                 let pattern = note("a b c d")
@@ -113,17 +116,17 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Method chaining - multiple calls" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
-                .registerExtensionMethod1<NativeObject, Double, NativeObject>("gain") { receiver, amount ->
-                    receiver.gain(amount)
+                registerNativeExtensionMethod<NativeObject, Double, NativeObject>("gain") { amount ->
+                    gain(amount)
                 }
-                .build()
+            }
 
             // The exact use case from the design discussion!
             val script = """note("a b c d").sound("saw").gain(0.8)"""
@@ -133,20 +136,20 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Method chaining - long chain" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
-                .registerExtensionMethod1<NativeObject, Double, NativeObject>("gain") { receiver, amount ->
-                    receiver.gain(amount)
+                registerNativeExtensionMethod<NativeObject, Double, NativeObject>("gain") { amount ->
+                    gain(amount)
                 }
-                .registerExtensionMethod0<NativeObject, NativeObject>("reverse") { receiver ->
-                    receiver.reverse()
+                registerNativeExtensionMethod<NativeObject, NativeObject>("reverse") {
+                    reverse()
                 }
-                .build()
+            }
 
             val script = """
                 note("a b c d")
@@ -161,14 +164,14 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Error - method not found on native type" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
-                .build()
+            }
 
             val script = """
                 let pattern = note("a b c d")
@@ -186,14 +189,14 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Error - wrong argument count" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
-                .build()
+            }
 
             val script = """
                 let pattern = note("a b c d")
@@ -206,14 +209,14 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Native objects in variables" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
-                .build()
+            }
 
             val script = """
                 let melody = note("a b c d")
@@ -228,18 +231,18 @@ class NativeInteropTest : StringSpec() {
         "Native objects passed as function arguments" {
             val captured = mutableListOf<String>()
 
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerFunction("capture") { args ->
+                registerNativeFunction("capture") { args ->
                     captured.add(args[0].toDisplayString())
                     args[0]
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
-                .build()
+            }
 
             val script = """
                 let pattern = note("a b c d").sound("saw")
@@ -253,21 +256,21 @@ class NativeInteropTest : StringSpec() {
 
         "Multiple native types registered" {
             // Register first type
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
                 // Register second type (simulate another native class)
-                .registerNativeFunction<String, NativeObject>("rhythm") { pattern ->
+                registerNativeFunction<String, NativeObject>("rhythm") { pattern ->
                     NativeObject("rhythm:$pattern")
                 }
-                .registerExtensionMethod1<NativeObject, Double, NativeObject>("speed") { receiver, factor ->
-                    NativeObject("${receiver.pattern}|speed:$factor")
+                registerNativeExtensionMethod<NativeObject, Double, NativeObject>("speed") { factor ->
+                    NativeObject("${pattern}|speed:$factor")
                 }
-                .build()
+            }
 
             val script = """
                 let melody = note("a b c d").sound("saw")
@@ -280,18 +283,18 @@ class NativeInteropTest : StringSpec() {
         }
 
         "Native objects work with libraries and imports" {
-            val engine = KlangScript.builder()
-                .registerNativeFunction<String, NativeObject>("note") { pattern ->
+            val engine = klangScript {
+                registerNativeFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                .registerExtensionMethod1<NativeObject, String, NativeObject>("sound") { receiver, soundName ->
-                    receiver.sound(soundName)
+                registerNativeExtensionMethod<NativeObject, String, NativeObject>("sound") { soundName ->
+                    sound(soundName)
                 }
-                .registerExtensionMethod1<NativeObject, Double, NativeObject>("gain") { receiver, amount ->
-                    receiver.gain(amount)
+                registerNativeExtensionMethod<NativeObject, Double, NativeObject>("gain") { amount ->
+                    gain(amount)
                 }
                 // Register library that uses native objects
-                .registerLibrary(
+                registerLibrary(
                     "patterns",
                     """
                         let makePattern = (notes) => note(notes).sound("saw")
@@ -300,7 +303,7 @@ class NativeInteropTest : StringSpec() {
                         export { makePattern, withGain }
                     """.trimIndent()
                 )
-                .build()
+            }
 
             val script = """
                 import { makePattern, withGain } from "patterns"

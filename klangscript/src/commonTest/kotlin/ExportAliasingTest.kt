@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ExportStatement
+import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.NumberValue
 
@@ -285,7 +286,8 @@ class ExportAliasingTest : StringSpec({
 
     "should handle complex real-world pattern with export aliases" {
         val engine = klangScript {
-            registerFunction1("nativeLog") { value ->
+            registerNativeFunction("nativeLog") { values ->
+                val value = values[0]
                 NumberValue((value as NumberValue).value * 10)
             }
 

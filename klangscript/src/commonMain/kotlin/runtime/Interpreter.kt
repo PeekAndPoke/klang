@@ -603,7 +603,7 @@ class Interpreter(
         if (objValue is NativeObjectValue<*>) {
             val engine = libraryLoader as? io.peekandpoke.klang.script.KlangScript
             if (engine != null) {
-                val extensionMethod = engine.getExtensionMethod(objValue.kClass, memberAccess.property)
+                val extensionMethod = engine.getNativeExtensionMethod(objValue.kClass, memberAccess.property)
                 if (extensionMethod != null) {
                     // Return bound method
                     return BoundNativeMethod(

@@ -18,7 +18,7 @@ import io.peekandpoke.klang.script.runtime.TypeError
 class StackTraceTest : StringSpec({
 
     "Stack trace for simple function call error" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let broken = () => undefinedVar
@@ -35,7 +35,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack trace for nested function calls" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let innerFunc = () => missingVariable
@@ -56,7 +56,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack trace includes source locations" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let func1 = () => undefinedVar
@@ -75,7 +75,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack trace for TypeError in nested calls" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let add = (a, b) => a + b
@@ -92,7 +92,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack trace for deeply nested calls" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let level4 = () => nonExistent
@@ -113,7 +113,7 @@ class StackTraceTest : StringSpec({
 
     "Stack trace with native function calls" {
         val engine = klangScript {
-            registerFunction1("process") { x ->
+            registerNativeFunction1("process") { x ->
                 // This will cause the script function to throw
                 x
             }
@@ -134,7 +134,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack trace with argument count error" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let add = (a, b) => a + b
@@ -151,7 +151,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack trace empty for top-level errors" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val error = shouldThrow<ReferenceError> {
             engine.execute("undefinedVariable", sourceName = "top.klang")
@@ -186,7 +186,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack trace with recursive calls" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let countdown = (n) => n + countdown(n - 1)
@@ -210,7 +210,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack trace format matches JavaScript style" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let inner = () => undefined
@@ -235,7 +235,7 @@ class StackTraceTest : StringSpec({
     }
 
     "Stack overflow protection activates at depth limit" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScript.builder().buildNativeRegistry()
 
         val script = """
             let infinite = () => infinite()

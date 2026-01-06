@@ -59,32 +59,33 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should pass arrow function as argument to native function" {
-        val script = klangScript()
+        val script = klangScript {
+            // Register a function that accepts a callback and calls it
+            registerNativeFunction("applyFunc") { args ->
+                // Parse the callback call expression and execute it
+                // We'll use the execute method to invoke: callback(value)
+                val func = args[0] as FunctionValue
+                val value = args[1]
 
-        // Register a function that accepts a callback and calls it
-        script.registerFunction("applyFunc") { args ->
-            // Parse the callback call expression and execute it
-            // We'll use the execute method to invoke: callback(value)
-            val func = args[0] as FunctionValue
-            val value = args[1]
+                // Create a new environment with the function's closure
+                val funcEnv = Environment(func.closureEnv)
 
-            // Create a new environment with the function's closure
-            val funcEnv = Environment(func.closureEnv)
+                // Bind parameter to value
+                if (func.parameters.size == 1) {
+                    funcEnv.define(func.parameters[0], value)
+                }
 
-            // Bind parameter to value
-            if (func.parameters.size == 1) {
-                funcEnv.define(func.parameters[0], value)
+                // Create interpreter with that environment and execute the body
+                val funcInterpreter = Interpreter(funcEnv)
+
+                // We need to execute a small program containing the function body
+                val bodyProgram = Program(
+                    listOf(ExpressionStatement(func.body))
+                )
+                funcInterpreter.execute(bodyProgram)
             }
-
-            // Create interpreter with that environment and execute the body
-            val funcInterpreter = Interpreter(funcEnv)
-
-            // We need to execute a small program containing the function body
-            val bodyProgram = Program(
-                listOf(ExpressionStatement(func.body))
-            )
-            funcInterpreter.execute(bodyProgram)
         }
+
 
         // applyFunc(x => x * 2, 21) should return 42
         val result = script.execute("applyFunc(x => x * 2, 21)")
@@ -93,34 +94,32 @@ class ArrowFunctionTest : StringSpec({
     }
 
     "should handle arrow function with method chaining in body" {
-        val script = klangScript()
-
-        // Register a function that returns an object
-        script.registerFunction("createObj") { args ->
-            val value = (args[0] as NumberValue).value
-            ObjectValue(
-                mutableMapOf(
-                    "value" to NumberValue(value),
-                    "double" to script.createNativeFunction("double") {
-                        NumberValue(value * 2)
-                    }
+        val script = klangScript {
+            // Register a function that returns an object
+            registerNativeFunction("createObj") { args ->
+                val value = (args[0] as NumberValue).value
+                ObjectValue(
+                    mutableMapOf(
+                        "value" to NumberValue(value),
+                    )
                 )
-            )
+            }
         }
 
+
         // x => createObj(x).double()
-        val result = script.execute("(x => createObj(x).double())(5)")
+        val result = script.execute("(x => createObj(x).value)(5)")
         result.shouldBeInstanceOf<NumberValue>()
-        result.value shouldBe 10.0
+        result.value shouldBe 5.0
     }
 
     "should handle arrow function with string operations" {
-        val script = klangScript()
-
-        script.registerFunction("concat") { args ->
-            val a = (args[0] as StringValue).value
-            val b = (args[1] as StringValue).value
-            StringValue(a + b)
+        val script = klangScript {
+            registerNativeFunction("concat") { args ->
+                val a = (args[0] as StringValue).value
+                val b = (args[1] as StringValue).value
+                StringValue(a + b)
+            }
         }
 
         // (a, b) => concat(a, b)

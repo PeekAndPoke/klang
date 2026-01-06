@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ImportStatement
+import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.StringValue
@@ -207,7 +208,8 @@ class ImportSystemTest : StringSpec({
     "should allow importing library that uses native functions" {
         val engine = klangScript {
             // Register a native function
-            registerFunction1("nativeDouble") { value ->
+            registerNativeFunction("nativeDouble") { values ->
+                val value = values[0]
                 NumberValue((value as NumberValue).value * 2)
             }
 

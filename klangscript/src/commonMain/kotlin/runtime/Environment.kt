@@ -1,5 +1,10 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.script.KlangScriptLibrary
+import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.builder.NativeRegistry
+import kotlin.reflect.KClass
+
 /**
  * Environment for storing variables and managing lexical scope
  *
@@ -31,6 +36,15 @@ class Environment(
     /** Parent environment for scope chaining (null for global scope) */
     private val parent: Environment? = null,
 ) {
+    /** Registry of all known libraries */
+    private val libraries = mutableMapOf<String, KlangScriptLibrary>()
+
+    /** Registry with all known native types */
+    private val nativeTypes = mutableMapOf<KClass<*>, NativeTypeInfo>()
+
+    /** Registry with all known native extension methods */
+    private val nativeExtensionMethods = mutableMapOf<KClass<*>, MutableMap<String, NativeExtensionMethod>>()
+
     /** Map of variable names to their runtime values in this scope */
     private val values = mutableMapOf<String, RuntimeValue>()
 
@@ -39,6 +53,22 @@ class Environment(
 
     /** Map of local names to exported names (for libraries with export aliasing) */
     private val exportAliases = mutableMapOf<String, String>()
+
+    fun register(native: NativeRegistry) {
+        // Register all libraries
+        libraries.putAll(native.libraries)
+
+        // Register native functions
+        nativeTypes.putAll(native.nativeTypes)
+
+        // Register all native extension methods
+        nativeExtensionMethods.putAll(native.nativeExtensionMethods)
+
+        // Define all native functions as values
+        native.nativeFunctions.forEach { (name, function) ->
+            define(name, NativeFunctionValue(name, function))
+        }
+    }
 
     /**
      * Define a new variable in this environment
@@ -76,7 +106,7 @@ class Environment(
      */
     fun get(
         name: String,
-        location: io.peekandpoke.klang.script.ast.SourceLocation? = null,
+        location: SourceLocation? = null,
         stackTrace: List<CallStackFrame> = emptyList(),
     ): RuntimeValue {
         return values[name] ?: parent?.get(name, location, stackTrace)
@@ -146,5 +176,50 @@ class Environment(
      */
     fun getAllSymbols(): Map<String, RuntimeValue> {
         return values.toMap()
+    }
+
+    /**
+     * Load library source code by name (LibraryLoader interface implementation)
+     *
+     * This is called by the interpreter when executing import statements.
+     * It applies any native registrations and returns the library source code.
+     *
+     * @param name The library name
+     * @return The library source code
+     * @throws RuntimeException if the library is not found
+     */
+    fun loadLibrary(name: String): String {
+        val library = libraries[name]
+            ?: throw ImportError(name, "Library not found")
+
+        register(library.native)
+
+        // Return source code (or empty string if library has no source)
+        return library.sourceCode
+    }
+
+    /**
+     * Get an extension method for a native type
+     *
+     * Used by the interpreter to lookup methods during member access evaluation.
+     *
+     * @param kClass The Kotlin class to lookup methods for
+     * @param methodName The method name
+     * @return The extension method, or null if not found
+     */
+    fun getExtensionMethod(kClass: KClass<*>, methodName: String): NativeExtensionMethod? {
+        return nativeExtensionMethods[kClass]?.get(methodName)
+    }
+
+    /**
+     * Get all registered extension method names for a native type
+     *
+     * Used for error messages to suggest available methods.
+     *
+     * @param kClass The Kotlin class to get methods for
+     * @return List of method names
+     */
+    fun getExtensionMethodNames(kClass: KClass<*>): List<String> {
+        return nativeExtensionMethods[kClass]?.keys?.toList() ?: emptyList()
     }
 }

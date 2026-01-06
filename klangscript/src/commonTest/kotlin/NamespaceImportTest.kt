@@ -6,6 +6,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ImportStatement
+import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.ObjectValue
@@ -295,7 +296,8 @@ class NamespaceImportTest : StringSpec({
 
     "should support namespace with native functions in library" {
         val engine = klangScript {
-            registerFunction1("nativeSquare") { value ->
+            registerNativeFunction("nativeSquare") { values ->
+                val value = values.first()
                 val num = (value as NumberValue).value
                 NumberValue(num * num)
             }

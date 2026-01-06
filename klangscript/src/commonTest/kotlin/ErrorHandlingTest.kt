@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.runtime.*
 
 /**
@@ -20,7 +21,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "ReferenceError - undefined variable should throw ReferenceError" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<ReferenceError> {
             engine.execute("undefinedVariable")
@@ -56,7 +57,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - calling non-function should throw TypeError" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("let x = 5\nx()")
@@ -67,7 +68,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - binary operation on incompatible types" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("\"hello\" + null")
@@ -78,7 +79,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - member access on non-object" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("let x = 5\nx.foo")
@@ -121,7 +122,8 @@ class ErrorHandlingTest : StringSpec({
 
     "ArgumentError - wrong number of arguments to native function" {
         val builder = KlangScript.builder()
-        builder.registerFunction1("double") { x ->
+        builder.registerNativeFunction("double") { values ->
+            val x = values[0]
             NumberValue((x as NumberValue).value * 2)
         }
 
@@ -138,7 +140,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "ArgumentError - wrong number of arguments to script function" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<ArgumentError> {
             engine.execute(
@@ -178,7 +180,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "ImportError - library not found" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<ImportError> {
             engine.execute("import * from \"nonexistent\"")
@@ -334,7 +336,8 @@ class ErrorHandlingTest : StringSpec({
 
     "Error in nested function call" {
         val builder = KlangScript.builder()
-        builder.registerFunction1("process") { x ->
+        builder.registerNativeFunction("process") { values ->
+            val x = values[0]
             NumberValue((x as NumberValue).value * 2)
         }
 
@@ -353,7 +356,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError in nested arithmetic" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute(
@@ -373,7 +376,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "Error messages should be descriptive - undefined variable" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<ReferenceError> {
             engine.execute("myVariable")
@@ -385,7 +388,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "Error messages should be descriptive - type error" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("5()")
@@ -397,7 +400,7 @@ class ErrorHandlingTest : StringSpec({
 
     "Error messages should be descriptive - argument count" {
         val builder = KlangScript.builder()
-        builder.registerFunction1("test") { x -> x }
+        builder.registerNativeFunction("test") { x -> x.first() }
 
         val engine = builder.build()
 
@@ -413,7 +416,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - unary NOT on string should work (JavaScript truthiness)" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         // JavaScript-like truthiness: !"string" should work and return false
         val result = engine.execute("!\"hello\"")
@@ -421,7 +424,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - unary PLUS on string" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("+\"hello\"")
@@ -432,7 +435,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - unary NEGATE on string" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("-\"hello\"")
@@ -443,7 +446,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - unary NEGATE on null" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("-null")
@@ -458,7 +461,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - multiplication with string" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("5 * \"hello\"")
@@ -469,7 +472,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - division with string" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("10 / \"hello\"")
@@ -480,7 +483,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - subtraction with null" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("5 - null")
@@ -491,7 +494,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - boolean in arithmetic" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("true + 5")
@@ -506,7 +509,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - member access on null" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("null.property")
@@ -517,7 +520,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - chained member access on non-object" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute(
@@ -533,7 +536,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - member access on string" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("\"hello\".length")
@@ -548,7 +551,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "TypeError - calling null" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("null()")
@@ -559,7 +562,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - calling boolean" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("true()")
@@ -570,7 +573,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - calling object" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("let obj = { a: 1 }\nobj()")
@@ -585,7 +588,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "ReferenceError - undefined variable in object literal" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<ReferenceError> {
             engine.execute("{ a: undefinedVar }")
@@ -595,7 +598,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - nested operations with mixed types" {
-        val engine = KlangScript.builder().build()
+        val engine = klangScript()
 
         val error = shouldThrow<TypeError> {
             engine.execute("(5 + 3) * \"hello\"")
@@ -606,7 +609,7 @@ class ErrorHandlingTest : StringSpec({
 
     "ReferenceError - undefined in chained calls" {
         val builder = KlangScript.builder()
-        builder.registerFunction1("process") { x -> x }
+        builder.registerNativeFunction("process") { x -> x.first() }
 
         val engine = builder.build()
 

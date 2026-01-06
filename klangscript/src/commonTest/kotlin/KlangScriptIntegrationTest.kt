@@ -11,12 +11,13 @@ class KlangScriptIntegrationTest : StringSpec({
         val output = mutableListOf<String>()
 
         // Register a print function
-        val engine = KlangScript.builder()
-            .registerFunction1("print") { value ->
+        val engine = klangScript {
+            registerNativeFunction("print") { values ->
+                val value = values.first()
                 output.add(value.toDisplayString())
                 value
             }
-            .build()
+        }
 
         // Execute script
         engine.execute("""print("hello")""")
@@ -28,12 +29,13 @@ class KlangScriptIntegrationTest : StringSpec({
     "should execute multiple statements" {
         val output = mutableListOf<String>()
 
-        val engine = KlangScript.builder()
-            .registerFunction1("print") { value ->
+        val engine = klangScript {
+            registerNativeFunction("print") { values ->
+                val value = values.first()
                 output.add(value.toDisplayString())
                 value
             }
-            .build()
+        }
 
         // Execute script with multiple lines
         engine.execute(
@@ -49,12 +51,13 @@ class KlangScriptIntegrationTest : StringSpec({
     "should handle numeric values" {
         var receivedValue: Double? = null
 
-        val engine = KlangScript.builder()
-            .registerFunction1("check") { value ->
+        val engine = klangScript {
+            registerNativeFunction("check") { values ->
+                val value = values.first()
                 receivedValue = (value as NumberValue).value
                 value
             }
-            .build()
+        }
 
         engine.execute("""check(42)""")
 
@@ -64,12 +67,12 @@ class KlangScriptIntegrationTest : StringSpec({
     "should call functions with multiple arguments" {
         var sum = 0.0
 
-        val engine = KlangScript.builder()
-            .registerFunction("add") { args ->
+        val engine = klangScript {
+            registerNativeFunction("add") { args ->
                 sum = args.sumOf { (it as NumberValue).value }
                 NumberValue(sum)
             }
-            .build()
+        }
 
         engine.execute("""add(1, 2, 3)""")
 
@@ -79,15 +82,18 @@ class KlangScriptIntegrationTest : StringSpec({
     "should handle nested function calls" {
         val output = mutableListOf<String>()
 
-        val engine = KlangScript.builder()
-            .registerFunction1("print") { value ->
+        val engine = klangScript {
+            registerNativeFunction("print") { values ->
+                val value = values.first()
                 output.add(value.toDisplayString())
                 value
             }
-            .registerFunction1("upper") { value ->
+
+            registerNativeFunction("upper") { values ->
+                val value = values.first()
                 StringValue((value as StringValue).value.uppercase())
             }
-            .build()
+        }
 
         engine.execute("""print(upper("hello"))""")
 

@@ -20,7 +20,7 @@ data class NativeTypeInfo(
  * @property receiverClass The Kotlin class this method is registered on
  * @property invoker Function that invokes the extension method with receiver and arguments
  */
-data class ExtensionMethod(
+data class NativeExtensionMethod(
     val methodName: String,
     val receiverClass: KClass<*>,
     val invoker: (receiver: Any, args: List<RuntimeValue>) -> RuntimeValue,
@@ -37,17 +37,37 @@ data class ExtensionMethod(
  * @throws TypeError if conversion fails
  */
 inline fun <reified T : Any> RuntimeValue.convertToKotlin(): T {
+    return convertToKotlin(T::class)
+}
 
-    val isValid = T::class.isInstance(value)
+/**
+ * Convert a RuntimeValue to a Kotlin type
+ */
+fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
 
+    val isValid = cls.isInstance(value)
+
+    @Suppress("UNCHECKED_CAST")
     when (isValid) {
         true -> return value as T
         else -> throw TypeError(
-            "Cannot convert ${this::class.simpleName} to ${T::class.simpleName}",
+            "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
             operation = "parameter conversion"
         )
     }
 }
+
+fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: Int, cls: KClass<T>): T {
+    val arg = args.getOrNull(index) ?: throw ArgumentError(
+        fn,
+        "Expected argument at index $index",
+        expected = null,
+        actual = null
+    )
+
+    return arg.convertToKotlin(cls)
+}
+
 
 /**
  * Wrap a value as a RuntimeValue
