@@ -122,19 +122,19 @@
   - [x] Long chains with mixed calls and properties
   - [x] Chains with complex arguments (including arithmetic)
 
-#### Step 1.8: Parser - Arrow Functions
+#### Step 1.8: Parser - Arrow Functions ✅
 
-- [ ] Parse single parameter arrow functions: `x => expr`
-- [ ] Parse multiple parameter arrow functions: `(a, b) => expr`
-- [ ] Parse arrow functions without parentheses (single param)
-- [ ] Support object literals with parentheses: `x => ({ a: 1 })`
-- [ ] Write unit tests for:
-  - [ ] Single parameter, single expression
-  - [ ] Multiple parameters
-  - [ ] Nested arrow functions
-  - [ ] Arrow functions as arguments
-  - [ ] Object literals in arrow functions with parentheses
-- [ ] NOTE: Block bodies `x => { return x; }` are deferred to Phase 6
+- [x] Parse single parameter arrow functions: `x => expr`
+- [x] Parse multiple parameter arrow functions: `(a, b) => expr`
+- [x] Parse arrow functions without parentheses (single param)
+- [ ] Support object literals with parentheses: `x => ({ a: 1 })` - deferred to Step 1.10
+- [x] Write unit tests for:
+  - [x] Single parameter, single expression
+  - [x] Multiple parameters
+  - [x] Nested arrow functions
+  - [x] Arrow functions as arguments
+  - [ ] Object literals in arrow functions with parentheses - deferred to Step 1.10
+- [x] NOTE: Block bodies `x => { return x; }` are deferred to Phase 6
 
 #### Step 1.9: Parser - Variables
 

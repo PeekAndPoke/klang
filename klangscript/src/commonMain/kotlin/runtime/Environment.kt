@@ -6,6 +6,7 @@ package io.peekandpoke.klang.script.runtime
  * The environment implements lexical scoping through a parent-chain pattern.
  * Each environment has:
  * - A map of variable names to their values
+ * - A map tracking which variables are mutable (let) vs immutable (const)
  * - An optional parent environment
  *
  * Variable lookup traverses the scope chain from inner to outer scopes.
@@ -21,6 +22,10 @@ package io.peekandpoke.klang.script.runtime
  * 1. Check the current environment
  * 2. If not found, check the parent
  * 3. Continue up the chain until found or we reach the top
+ *
+ * Const protection:
+ * Variables declared with `const` cannot be reassigned after initialization.
+ * Attempting to reassign a const variable throws a RuntimeException.
  */
 class Environment(
     /** Parent environment for scope chaining (null for global scope) */
@@ -28,6 +33,9 @@ class Environment(
 ) {
     /** Map of variable names to their runtime values in this scope */
     private val values = mutableMapOf<String, RuntimeValue>()
+
+    /** Map tracking which variables are mutable (true for let, false for const) */
+    private val mutable = mutableMapOf<String, Boolean>()
 
     /**
      * Define a new variable in this environment
@@ -37,9 +45,11 @@ class Environment(
      *
      * @param name The variable name
      * @param value The runtime value to store
+     * @param mutable Whether the variable can be reassigned (true for let, false for const)
      */
-    fun define(name: String, value: RuntimeValue) {
+    fun define(name: String, value: RuntimeValue, mutable: Boolean = true) {
         values[name] = value
+        this.mutable[name] = mutable
     }
 
     /**

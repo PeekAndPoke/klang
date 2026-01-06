@@ -57,7 +57,6 @@ class Interpreter(
      * Execute a single statement
      *
      * Statements represent actions in the program but may also produce values.
-     * Currently only expression statements are supported.
      *
      * @param statement The statement to execute
      * @return The runtime value produced by the statement
@@ -66,7 +65,24 @@ class Interpreter(
         return when (statement) {
             // Expression statement: evaluate the expression
             is ExpressionStatement -> evaluate(statement.expression)
-            // Future: let declarations, return statements, etc.
+
+            // Let declaration: create mutable variable
+            is LetDeclaration -> {
+                val value = if (statement.initializer != null) {
+                    evaluate(statement.initializer)
+                } else {
+                    NullValue
+                }
+                environment.define(statement.name, value, mutable = true)
+                NullValue  // Declarations don't produce values
+            }
+
+            // Const declaration: create immutable variable
+            is ConstDeclaration -> {
+                val value = evaluate(statement.initializer)
+                environment.define(statement.name, value, mutable = false)
+                NullValue  // Declarations don't produce values
+            }
         }
     }
 

@@ -47,6 +47,10 @@ object KlangScriptParser : Grammar<Program>() {
     /** String literals: "hello", 'world' */
     private val string by regexToken("\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'")
 
+    /** Keywords */
+    private val letKeyword by literalToken("let")
+    private val constKeyword by literalToken("const")
+
     /** Identifiers: foo, myVar, _private */
     private val identifier by regexToken("[a-zA-Z_][a-zA-Z0-9_]*")
 
@@ -66,6 +70,9 @@ object KlangScriptParser : Grammar<Program>() {
 
     /** Arrow function operator */
     private val arrow by literalToken("=>")
+
+    /** Assignment operator */
+    private val equals by literalToken("=")
 
     // ============================================================
     // Grammar Rules
@@ -218,6 +225,35 @@ object KlangScriptParser : Grammar<Program>() {
         } or additionExpr  // Fall back to addition expression if not an arrow function
 
     /**
+     * Let declaration statement
+     * Syntax: let x = expr OR let x
+     *
+     * Examples:
+     * - let count = 0
+     * - let name = "Alice"
+     * - let uninitialized
+     */
+    private val letDeclaration: Parser<Statement> by
+    (-letKeyword and identifier and optional(-equals and expression)).map { (name, initOpt) ->
+        LetDeclaration(name.text, initOpt)
+    }
+
+    /**
+     * Const declaration statement
+     * Syntax: const x = expr
+     *
+     * Note: Const requires an initializer
+     *
+     * Examples:
+     * - const MAX_SIZE = 100
+     * - const PI = 3.14159
+     */
+    private val constDeclaration: Parser<Statement> by
+    (-constKeyword and identifier and -equals and expression).map { (name, init) ->
+        ConstDeclaration(name.text, init)
+    }
+
+    /**
      * Expression statements
      * Expressions used as statements: print("hello")
      */
@@ -226,9 +262,12 @@ object KlangScriptParser : Grammar<Program>() {
 
     /**
      * Statements
-     * Currently only expression statements supported
+     * Supports:
+     * - Variable declarations (let, const)
+     * - Expression statements
      */
-    private val statement: Parser<Statement> by expressionStatement
+    private val statement: Parser<Statement> by
+    letDeclaration or constDeclaration or expressionStatement
 
     /**
      * Program root

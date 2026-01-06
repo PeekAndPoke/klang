@@ -53,6 +53,70 @@ data class ExpressionStatement(
     val expression: Expression,
 ) : Statement()
 
+/**
+ * A variable declaration statement using `let`
+ *
+ * Declares a mutable variable in the current scope. The variable can be
+ * reassigned after declaration.
+ *
+ * **Syntax:**
+ * - With initializer: `let x = 10`
+ * - Without initializer: `let x` (value is `null`)
+ *
+ * **Scope rules:**
+ * - Block-scoped (lexical scoping)
+ * - Can be shadowed in inner scopes
+ * - Cannot be redeclared in the same scope
+ *
+ * Examples:
+ * ```
+ * let count = 0
+ * let name = "Alice"
+ * let uninitialized  // null by default
+ * ```
+ *
+ * @param name The variable identifier
+ * @param initializer Optional expression to initialize the variable (null if omitted)
+ */
+data class LetDeclaration(
+    val name: String,
+    val initializer: Expression?,
+) : Statement()
+
+/**
+ * A constant declaration statement using `const`
+ *
+ * Declares an immutable variable in the current scope. The variable cannot
+ * be reassigned after declaration.
+ *
+ * **Syntax:**
+ * - `const PI = 3.14159`
+ * - Must have an initializer (no uninitialized const)
+ *
+ * **Scope rules:**
+ * - Block-scoped (lexical scoping)
+ * - Cannot be reassigned (runtime error if attempted)
+ * - Can be shadowed in inner scopes (new binding)
+ * - Cannot be redeclared in the same scope
+ *
+ * Examples:
+ * ```
+ * const MAX_SIZE = 100
+ * const message = "Hello"
+ * const result = calculateValue()
+ * ```
+ *
+ * **Note:** Currently, KlangScript requires const to have an initializer.
+ * `const x` without initialization is a syntax error.
+ *
+ * @param name The constant identifier
+ * @param initializer Expression to initialize the constant (required)
+ */
+data class ConstDeclaration(
+    val name: String,
+    val initializer: Expression,
+) : Statement()
+
 // ============================================================
 // Expressions
 // ============================================================

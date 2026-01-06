@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.script
 
+import com.github.h0tk3y.betterParse.parser.ParseException
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.Interpreter
 import io.peekandpoke.klang.script.runtime.NativeFunctionValue
