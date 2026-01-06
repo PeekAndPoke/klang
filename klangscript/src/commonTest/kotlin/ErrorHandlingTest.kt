@@ -395,4 +395,216 @@ class ErrorHandlingTest : StringSpec({
 
         error.format() shouldContain "Expected 1 arguments, got 2"
     }
+
+    // ============================================================
+    // Edge Cases - Unary Operations
+    // ============================================================
+
+    "TypeError - unary NOT on string should work (JavaScript truthiness)" {
+        val engine = KlangScript()
+
+        // JavaScript-like truthiness: !"string" should work and return false
+        val result = engine.execute("!\"hello\"")
+        result.toDisplayString() shouldBe "false"
+    }
+
+    "TypeError - unary PLUS on string" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("+\"hello\"")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "unary +"
+    }
+
+    "TypeError - unary NEGATE on string" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("-\"hello\"")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "unary -"
+    }
+
+    "TypeError - unary NEGATE on null" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("-null")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "unary -"
+    }
+
+    // ============================================================
+    // Edge Cases - Arithmetic Operations
+    // ============================================================
+
+    "TypeError - multiplication with string" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("5 * \"hello\"")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "MULTIPLY"
+    }
+
+    "TypeError - division with string" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("10 / \"hello\"")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "DIVIDE"
+    }
+
+    "TypeError - subtraction with null" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("5 - null")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "SUBTRACT"
+    }
+
+    "TypeError - boolean in arithmetic" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("true + 5")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "ADD"
+    }
+
+    // ============================================================
+    // Edge Cases - Member Access
+    // ============================================================
+
+    "TypeError - member access on null" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("null.property")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.message shouldContain "Cannot access property"
+    }
+
+    "TypeError - chained member access on non-object" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute(
+                """
+                let obj = { a: 5 }
+                obj.a.b
+            """.trimIndent()
+            )
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.message shouldContain "Cannot access property"
+    }
+
+    "TypeError - member access on string" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("\"hello\".length")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.message shouldContain "Cannot access property"
+    }
+
+    // ============================================================
+    // Edge Cases - Function Calls
+    // ============================================================
+
+    "TypeError - calling null" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("null()")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.message shouldContain "Cannot call non-function"
+    }
+
+    "TypeError - calling boolean" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("true()")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.message shouldContain "Cannot call non-function"
+    }
+
+    "TypeError - calling object" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("let obj = { a: 1 }\nobj()")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.message shouldContain "Cannot call non-function"
+    }
+
+    // ============================================================
+    // Edge Cases - Complex Scenarios
+    // ============================================================
+
+    "ReferenceError - undefined variable in object literal" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<ReferenceError> {
+            engine.execute("{ a: undefinedVar }")
+        }
+
+        error.symbolName shouldBe "undefinedVar"
+    }
+
+    "TypeError - nested operations with mixed types" {
+        val engine = KlangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("(5 + 3) * \"hello\"")
+        }
+
+        error.operation shouldBe "MULTIPLY"
+    }
+
+    "ReferenceError - undefined in chained calls" {
+        val engine = KlangScript()
+        engine.registerFunction1("process") { x -> x }
+
+        val error = shouldThrow<ReferenceError> {
+            engine.execute(
+                """
+                let obj = { method: (x) => x }
+                obj.method(missingVar)
+            """.trimIndent()
+            )
+        }
+
+        error.symbolName shouldBe "missingVar"
+    }
 })

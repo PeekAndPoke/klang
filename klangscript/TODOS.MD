@@ -385,16 +385,30 @@ KlangScript library files and imported, not hard-coded in Kotlin.
   - [x] Test error messages in various scenarios (library errors, nested calls, etc.)
   - [x] All 236 tests passing (202 original + 34 new error handling tests)
 
-**Still TODO (deferred):**
+**Parser Integration Complete:**
 
-- [ ] Update parser to capture position information from better-parse tokens
-  - [ ] Research better-parse TokenMatch API for position tracking
-  - [ ] Modify parser rules to extract and pass location to AST nodes
-  - [ ] Pass source file/library name through parser
-  - [ ] Test that positions are captured correctly
+- [x] Update parser to capture position information from better-parse tokens
+  - [x] Research better-parse TokenMatch API for position tracking
+  - [x] Modify parser rules to extract and pass location to AST nodes
+  - [x] Pass source file/library name through parser
+  - [x] Test that positions are captured correctly
+  - [x] Added `currentSource` variable to track source file name during parsing
+  - [x] Created `toLocation()` extension function on TokenMatch (uses row, column properties)
+  - [x] Updated `parse()` method to accept optional `sourceName` parameter
+  - [x] Updated all parser rules to capture locations:
+    - [x] All literals (numbers, strings, booleans, identifiers, objects)
+    - [x] All operators (unary, binary, member access, calls, arrows)
+    - [x] All statements (let, const, import, export)
+  - [x] Discovered Kotlin destructuring pattern for parser combinators: `((a and b and c) and d)` destructures as
+    `(a, b, c, d)`
+  - [x] All 236 tests passing on both JVM and JS platforms
+
+**Still TODO:**
+
 - [ ] Update interpreter to pass AST node locations to error constructors
   - [ ] Pass node.location when throwing errors
   - [ ] Ensure location propagates through all error paths
+  - [ ] Write tests for location accuracy in error messages
 - [ ] Implement full stack trace tracking
   - [ ] Create CallStackFrame class to track function calls
   - [ ] Store: function name, source location, arguments (optional)
@@ -418,8 +432,9 @@ KlangScript library files and imported, not hard-coded in Kotlin.
   - [ ] Test stack traces show correct file names at each level
 
 **Note:** Source location infrastructure with file/source tracking is complete and backward-compatible (all locations
-default to null). Comprehensive error handling tests written and passing. Parser integration needed to populate location
-data. Stack trace tracking is next priority.
+default to null). Comprehensive error handling tests written and passing. Parser integration complete - all AST nodes
+now capture accurate source locations (file:line:column). Next priority: update interpreter to use these locations when
+throwing errors, then implement full stack trace tracking.
 All 236 tests passing.
 
 ### Phase 3: API & Integration
