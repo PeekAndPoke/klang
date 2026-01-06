@@ -41,8 +41,14 @@ object KlangScriptParser : Grammar<Program>() {
     /** Single-line comments starting with // */
     private val lineComment by regexToken("//[^\\n]*", ignore = true)
 
+    /** Multi-line comments: /* comment */ */
+    private val blockComment by regexToken("/\\*[\\s\\S]*?\\*/", ignore = true)
+
     /** Numeric literals: 42, 3.14, 0.5 */
     private val number by regexToken("\\d+(\\.\\d+)?")
+
+    /** Backtick string literals (multi-line): `hello world` */
+    private val backtickString by regexToken("`([^`\\\\]|\\\\.)*`")
 
     /** String literals: "hello", 'world' */
     private val string by regexToken("\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'")
@@ -107,8 +113,10 @@ object KlangScriptParser : Grammar<Program>() {
      */
     private val objectLiteral: Parser<Expression> by
     (-leftBrace and separatedTerms(
-        // Parse key-value pair: identifier or string, then colon, then expression
-        ((identifier map { it.text }) or (string use { text.substring(1, text.length - 1) })) and
+        // Parse key-value pair: identifier or string (including backtick), then colon, then expression
+        ((identifier map { it.text }) or
+                (backtickString use { text.substring(1, text.length - 1) }) or
+                (string use { text.substring(1, text.length - 1) })) and
                 -colon and
                 parser(this::expression),
         comma,
@@ -123,6 +131,7 @@ object KlangScriptParser : Grammar<Program>() {
      */
     private val primaryExpr: Parser<Expression> by
     (number use { NumberLiteral(text.toDouble()) }) or
+            (backtickString use { StringLiteral(text.substring(1, text.length - 1)) }) or  // Strip backticks
             (string use { StringLiteral(text.substring(1, text.length - 1)) }) or  // Strip quotes
             objectLiteral or
             (identifier use { Identifier(text) }) or

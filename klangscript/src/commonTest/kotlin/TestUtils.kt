@@ -41,6 +41,7 @@ fun KlangScript.registerVariable(name: String, value: RuntimeValue) {
  * }
  * ```
  */
+@Suppress("UnusedReceiverParameter")
 fun KlangScript.createNativeFunction(
     name: String,
     function: (List<RuntimeValue>) -> RuntimeValue,

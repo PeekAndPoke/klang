@@ -65,14 +65,14 @@
 #### Step 1.3: Lexer - Comments & Strings ✅
 
 - [x] Implement single-line comment handling (`//`)
-- [ ] Implement multi-line comment handling (`/* */`) - deferred
+- [x] Implement multi-line comment handling (`/* */`)
 - [x] Implement string parsing:
   - [x] Single-quoted strings
   - [x] Double-quoted strings
-  - [ ] Backtick strings (multi-line) - deferred
-  - [x] Escape sequences
-- [x] Write comprehensive unit tests for comments and strings (covered by integration tests)
-- [x] Test edge cases (nested comments, unclosed strings, etc.)
+  - [x] Backtick strings (multi-line)
+  - [x] Escape sequences (handled at token level)
+- [x] Write comprehensive unit tests for comments and strings
+- [x] Test edge cases (multi-line strings, special characters, mixed content)
 
 #### Step 1.4: Parser - Literals & Identifiers ✅
 
