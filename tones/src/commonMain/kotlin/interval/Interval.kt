@@ -6,6 +6,7 @@ import io.peekandpoke.klang.tones.pitch.NamedPitch
 import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.pitch.PitchCoordinates
 
+/** A string representing an interval name (e.g., "P5", "M3", "-2m"). */
 typealias IntervalName = String
 
 /**
@@ -90,10 +91,7 @@ data class Interval(
          */
         fun get(named: NamedPitch): Interval = get(named.name)
 
-        /**
-         * Tokenizes an interval string.
-         * @private
-         */
+        // Tokenizes an interval string into [number, quality]
         fun tokenize(str: String?): List<String> {
             if (str == null) return listOf("", "")
 
@@ -160,9 +158,12 @@ data class Interval(
         /**
          * Adds two intervals together and returns the name of the resulting interval.
          */
-        fun add(a: String, b: String): String {
-            val i1 = get(a)
-            val i2 = get(b)
+        fun add(a: String, b: String): String = add(get(a), get(b))
+
+        /**
+         * Adds two intervals together and returns the name of the resulting interval.
+         */
+        fun add(i1: Interval, i2: Interval): String {
             val c1 = i1.coord
             val c2 = i2.coord
             if (c1 == null || c2 == null) return ""
@@ -195,9 +196,12 @@ data class Interval(
         /**
          * Subtracts the second interval from the first one and returns the name of the resulting interval.
          */
-        fun subtract(a: String, b: String): String {
-            val i1 = get(a)
-            val i2 = get(b)
+        fun subtract(a: String, b: String): String = subtract(get(a), get(b))
+
+        /**
+         * Subtracts the second interval from the first one and returns the name of the resulting interval.
+         */
+        fun subtract(i1: Interval, i2: Interval): String {
             val c1 = i1.coord
             val c2 = i2.coord
             if (c1 == null || c2 == null) return ""
@@ -297,9 +301,7 @@ data class Interval(
             }
         }
 
-        /**
-         * Parses an interval string and returns an [Interval].
-         */
+        // Parses an interval string and returns an Interval
         private fun parse(str: String): Interval {
             val tokens = tokenize(str)
             if (tokens[0] == "") {
@@ -344,9 +346,7 @@ data class Interval(
             )
         }
 
-        /**
-         * Converts an interval quality string to the number of alterations.
-         */
+        // Converts an interval quality string to the number of alterations
         private fun qToAlt(type: IntervalType, q: String): Int {
             return when {
                 // Perfect or Major intervals have 0 alterations
@@ -361,9 +361,7 @@ data class Interval(
             }
         }
 
-        /**
-         * Returns the name of an interval from its [Pitch] properties.
-         */
+        // Returns the name of an interval from its Pitch properties
         private fun pitchName(props: Pitch): String {
             val step = props.step
             val alt = props.alt
@@ -381,9 +379,7 @@ data class Interval(
             return d + num + altToQ(type, alt)
         }
 
-        /**
-         * Converts the number of alterations to an interval quality string.
-         */
+        // Converts the number of alterations to an interval quality string
         private fun altToQ(type: IntervalType, alt: Int): String {
             return when {
                 alt == 0 -> if (type == IntervalType.Majorable) "M" else "P"

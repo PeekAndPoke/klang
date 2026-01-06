@@ -6,14 +6,17 @@ import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.utils.TonesRange
 
+/**
+ * Functions for generating and selecting chord voicings within a given range.
+ */
 object Voicing {
-    /** Default range for searching voicings. */
+    // Default range for searching voicings
     private val defaultRange = listOf("C3", "C5")
 
-    /** Default voicing dictionary (all available). */
+    // Default voicing dictionary (all available)
     private val defaultDictionary = VoicingDictionaries.all
 
-    /** Default voice leading strategy (smallest top note difference). */
+    // Default voice leading strategy (smallest top note difference)
     private val defaultVoiceLeading = VoiceLeading.topNoteDiff
 
     /**

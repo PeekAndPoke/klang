@@ -7,6 +7,9 @@ import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.roman.RomanNumeral
 
+/**
+ * Utilities for working with chord progressions and converting between roman numeral and leadsheet notations.
+ */
 object Progression {
     /**
      * Given a tonic and a chord list expressed with roman numeral notation,
@@ -17,10 +20,15 @@ object Progression {
         return fromRomanNumeralsInternal(t, chords)
     }
 
+    /**
+     * Given a tonic and a chord list expressed with roman numeral notation,
+     * returns the progression expressed with leadsheet chords symbols notation.
+     */
     fun fromRomanNumerals(tonic: Note, chords: List<String>): List<String> {
         return fromRomanNumeralsInternal(tonic, chords)
     }
 
+    // Converts roman numerals to leadsheet notation for given tonic
     private fun fromRomanNumeralsInternal(tonic: Note, chords: List<String>): List<String> {
         if (tonic.empty) return chords.map { "" }
         return chords.map {
@@ -39,10 +47,15 @@ object Progression {
         return toRomanNumeralsInternal(t, chords)
     }
 
+    /**
+     * Given a tonic and a chord list with leadsheet symbols notation,
+     * return the chord list with roman numeral notation.
+     */
     fun toRomanNumerals(tonic: Note, chords: List<String>): List<String> {
         return toRomanNumeralsInternal(tonic, chords)
     }
 
+    // Converts leadsheet notation to roman numerals for given tonic
     private fun toRomanNumeralsInternal(tonic: Note, chords: List<String>): List<String> {
         if (tonic.empty) return chords.map { "" }
         return chords.map { chordName ->

@@ -6,6 +6,9 @@ import kotlin.math.log2
 import kotlin.math.pow
 import kotlin.math.round
 
+/**
+ * Functions for working with MIDI numbers, frequencies, and pitch class sets.
+ */
 object Midi {
     /**
      * Returns true if the argument is a valid MIDI number (0-127).
@@ -107,6 +110,7 @@ object Midi {
     fun pcSetNearest(chroma: String): (Double) -> Double? = createNearest(pcSet(chroma))
     fun pcSetNearest(notes: List<Number>): (Double) -> Double? = createNearest(pcSet(notes))
 
+    // Creates a function that finds the nearest MIDI note in a pitch class set
     private fun createNearest(set: List<Int>): (Double) -> Double? {
         return { midi ->
             val ch = chroma(midi)
@@ -135,6 +139,7 @@ object Midi {
     fun pcSetSteps(chroma: String, tonic: Double): (Int) -> Double = createSteps(pcSet(chroma), tonic)
     fun pcSetSteps(notes: List<Number>, tonic: Double): (Int) -> Double = createSteps(pcSet(notes), tonic)
 
+    // Creates a function that maps step indices to MIDI notes within a pitch class set
     private fun createSteps(set: List<Int>, tonic: Double): (Int) -> Double {
         val len = set.size
         return { step ->

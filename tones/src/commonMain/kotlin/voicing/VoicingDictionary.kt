@@ -2,8 +2,12 @@ package io.peekandpoke.klang.tones.voicing
 
 import io.peekandpoke.klang.tones.chord.Chord
 
+/** A dictionary mapping chord symbols to lists of voicing interval patterns. */
 typealias VoicingDictionary = Map<String, List<String>>
 
+/**
+ * Collection of predefined voicing dictionaries for various musical contexts.
+ */
 object VoicingDictionaries {
     /** Standard triad voicings (root, first and second inversions). */
     val triads: VoicingDictionary = mapOf(

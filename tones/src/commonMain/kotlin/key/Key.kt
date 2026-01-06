@@ -122,9 +122,7 @@ interface Key {
             return chords
         }
 
-        /**
-         * Collects chords and their roles from a given KeyScale.
-         */
+        // Collects chords and their roles from a given KeyScale
         private fun keyChordsOf(ks: KeyScale, chords: MutableList<KeyChord>) {
             fun updateChord(name: String, newRole: String) {
                 if (name.isEmpty()) return
@@ -174,15 +172,11 @@ interface Key {
             }
         }
 
-        /**
-         * Maps scale notes to chord types.
-         */
+        // Maps scale notes to chord types
         private fun mapScaleToType(scale: List<String>, list: List<String>, sep: String = ""): List<String> =
             list.mapIndexed { i, type -> if (type.isEmpty()) scale[i] else "${scale[i]}$sep$type" }
 
-        /**
-         * Calculates secondary and substitute dominant supertonics (ii-V relations).
-         */
+        // Calculates secondary and substitute dominant supertonics (ii-V relations)
         private fun supertonics(dominants: List<String>, targetTriads: List<String>): List<String> =
             dominants.mapIndexed { index, chord ->
                 if (chord.isEmpty()) ""
@@ -195,9 +189,7 @@ interface Key {
                 }
             }
 
-        /**
-         * Factory function to create a KeyScale generator for a given scale definition.
-         */
+        // Factory function to create a KeyScale generator for a given scale definition
         private fun keyScaleFactory(
             grades: List<String>,
             triads: List<String>,
@@ -246,9 +238,7 @@ interface Key {
             }
         }
 
-        /**
-         * Major scale generator.
-         */
+        // Major scale generator
         private val MajorScale = keyScaleFactory(
             "I II III IV V VI VII".split(" "),
             " m m   m dim".split(" "),
@@ -257,9 +247,7 @@ interface Key {
             "major,dorian,phrygian,lydian,mixolydian,minor,locrian".split(",")
         )
 
-        /**
-         * Natural minor scale generator.
-         */
+        // Natural minor scale generator
         private val NaturalScale = keyScaleFactory(
             "I II bIII IV V bVI bVII".split(" "),
             "m dim  m m  ".split(" "),
@@ -268,9 +256,7 @@ interface Key {
             "minor,locrian,major,dorian,phrygian,lydian,mixolydian".split(",")
         )
 
-        /**
-         * Harmonic minor scale generator.
-         */
+        // Harmonic minor scale generator
         private val HarmonicScale = keyScaleFactory(
             "I II bIII IV V bVI VII".split(" "),
             "m dim aug m   dim".split(" "),
@@ -281,9 +267,7 @@ interface Key {
             )
         )
 
-        /**
-         * Melodic minor scale generator.
-         */
+        // Melodic minor scale generator
         private val MelodicScale = keyScaleFactory(
             "I II bIII IV V VI VII".split(" "),
             "m m aug   dim dim".split(" "),
@@ -292,9 +276,7 @@ interface Key {
             "melodic minor,dorian b2,lydian augmented,lydian dominant,mixolydian b6,locrian #2,altered".split(",")
         )
 
-        /**
-         * Calculates the distance in fifths between two notes.
-         */
+        // Calculates the distance in fifths between two notes
         @Suppress("SameParameterValue")
         private fun distInFifths(from: String, to: String): Int {
             val f = Note.get(from)

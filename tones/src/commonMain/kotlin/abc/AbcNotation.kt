@@ -3,6 +3,9 @@ package io.peekandpoke.klang.tones.abc
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.note.Note
 
+/**
+ * Functions for converting between ABC notation and scientific notation.
+ */
 object AbcNotation {
     /** Regular expression to parse ABC notation notes. Groups: 1: accidentals, 2: letter, 3: octave marks. */
     private val REGEX = Regex("""^(_{1,}|=|\^{1,}|)([abcdefgABCDEFG])([,']*)$""")

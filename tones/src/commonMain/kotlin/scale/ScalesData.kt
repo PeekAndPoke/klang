@@ -1,6 +1,10 @@
 package io.peekandpoke.klang.tones.scale
 
+/**
+ * Raw data for scale definitions used by the scale type dictionary.
+ */
 object ScalesData {
+    /** List of scale definitions: intervals, primary name, and aliases. */
     val SCALES = listOf(
         // Basic scales
         listOf("1P 2M 3M 5P 6M", "major pentatonic", "pentatonic"),

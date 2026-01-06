@@ -3,6 +3,9 @@ package io.peekandpoke.klang.tones.utils
 import io.peekandpoke.klang.tones.midi.Midi
 import kotlin.jvm.JvmName
 
+/**
+ * Functions for creating ranges of notes and MIDI numbers.
+ */
 object TonesRange {
     /**
      * Create a numeric range from a list of note names.
@@ -49,6 +52,7 @@ object TonesRange {
         }
     }
 
+    // Builds a numeric range by filling in all MIDI numbers between the given notes
     private fun buildNumeric(midi: List<Int>, originalSize: Int): List<Int> {
         if (midi.isEmpty() || midi.size != originalSize) {
             return emptyList()

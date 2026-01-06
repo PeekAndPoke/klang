@@ -59,10 +59,7 @@ data class RomanNumeral(
          */
         private val REGEX = Regex("""^([#]{1,}|b{1,}|x{1,}|)(IV|I{1,3}|VI{0,2}|iv|i{1,3}|vi{0,2})([^IViv]*)$""")
 
-        /**
-         * Tokenizes a roman numeral string into [fullMatch, accidentals, romanNumeral, chordType].
-         * @private
-         */
+        // Tokenizes a roman numeral string into [fullMatch, accidentals, romanNumeral, chordType]
         fun tokenize(str: String): List<String> {
             val (fullMatch, acc, roman, chordType) = REGEX.matchEntire(str)?.groupValues
                 ?: return listOf("", "", "", "")
@@ -113,9 +110,7 @@ data class RomanNumeral(
          */
         fun get(roman: RomanNumeral): RomanNumeral = roman
 
-        /**
-         * Internal parser for roman numeral strings.
-         */
+        // Internal parser for roman numeral strings
         private fun parse(src: String): RomanNumeral {
             val tokens = tokenize(src)
             val name = tokens[0]

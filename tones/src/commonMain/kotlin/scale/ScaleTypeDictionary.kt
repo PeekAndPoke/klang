@@ -2,6 +2,9 @@ package io.peekandpoke.klang.tones.scale
 
 import io.peekandpoke.klang.tones.pcset.PcSet
 
+/**
+ * Dictionary for looking up scale types by name, alias, chroma, or set number.
+ */
 object ScaleTypeDictionary {
     private val dictionary: List<ScaleType>
     private val index: Map<String, ScaleType>

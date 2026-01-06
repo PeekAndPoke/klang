@@ -5,7 +5,10 @@ import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.utils.TonesArray
 
+/** A chroma string representing a pitch class set as 12 binary digits (e.g., "101011010101"). */
 typealias PcSetChroma = String
+
+/** A decimal number representing a pitch class set (0-4095). */
 typealias PcSetNum = Int
 
 /**
@@ -206,31 +209,23 @@ data class PcSet(
 
         fun filter(setNotes: List<String>): (List<String>) -> List<String> = filter(listToChroma(setNotes))
 
-        /**
-         * Converts a pcset number to a 12-digit chroma string.
-         */
+        // Converts a pcset number to a 12-digit chroma string
         private fun setNumToChroma(num: PcSetNum): PcSetChroma {
             return num.toString(2).padStart(12, '0')
         }
 
-        /**
-         * Converts a chroma string to its corresponding decimal number.
-         */
+        // Converts a chroma string to its corresponding decimal number
         private fun chromaToNumber(chroma: PcSetChroma): PcSetNum {
             return chroma.toInt(2)
         }
 
-        /**
-         * Generates all 12 rotations of a chroma string.
-         */
+        // Generates all 12 rotations of a chroma string
         private fun chromaRotations(chroma: PcSetChroma): List<PcSetChroma> {
             val binary = chroma.map { it.toString() }
             return binary.indices.map { i -> TonesArray.rotate(i, binary).joinToString("") }
         }
 
-        /**
-         * Internal factory to create a [PcSet] from a chroma string.
-         */
+        // Internal factory to create a PcSet from a chroma string
         private fun chromaToPcset(chroma: PcSetChroma): PcSet {
             val setNum = chromaToNumber(chroma)
 
@@ -252,9 +247,7 @@ data class PcSet(
             )
         }
 
-        /**
-         * Converts a chroma string to a list of interval names (from C).
-         */
+        // Converts a chroma string to a list of interval names (from C)
         private fun chromaToIntervals(chroma: PcSetChroma): List<String> {
             val intervals = mutableListOf<String>()
             for (i in 0 until 12) {
@@ -265,9 +258,7 @@ data class PcSet(
             return intervals
         }
 
-        /**
-         * Converts a list of notes or intervals to a chroma string.
-         */
+        // Converts a list of notes or intervals to a chroma string
         private fun listToChroma(set: List<String>): PcSetChroma {
             if (set.isEmpty()) {
                 return EmptyPcSet.chroma

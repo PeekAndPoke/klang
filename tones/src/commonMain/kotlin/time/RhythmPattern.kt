@@ -2,8 +2,12 @@ package io.peekandpoke.klang.tones.time
 
 import kotlin.math.floor
 
+/** A rhythm pattern represented as a list of 0s (rest) and 1s (beat). */
 typealias RhythmPattern = List<Int>
 
+/**
+ * Functions for creating and manipulating rhythm patterns.
+ */
 object Rhythm {
     /**
      * Create a rhythm pattern from a number or concatenation of numbers in binary form.

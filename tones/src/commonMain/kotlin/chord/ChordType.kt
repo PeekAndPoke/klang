@@ -136,9 +136,7 @@ object ChordTypeDictionary {
         return chord
     }
 
-    /**
-     * Helper to determine the [ChordQuality] from the intervals.
-     */
+    // Helper to determine the ChordQuality from the intervals
     private fun getQuality(intervals: List<String>): ChordQuality {
         return when {
             "5A" in intervals -> ChordQuality.Augmented
@@ -150,6 +148,7 @@ object ChordTypeDictionary {
     }
 }
 
+// Raw data for chord definitions used by the chord type dictionary
 private object ChordsData {
     val CHORDS = listOf(
         // == Major ====================================================================================================

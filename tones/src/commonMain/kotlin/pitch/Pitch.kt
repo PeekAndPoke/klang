@@ -3,7 +3,7 @@
 package io.peekandpoke.klang.tones.pitch
 
 /**
- * Creates a new [Pitch] instance.
+ * Creates a new [Pitch] instance from step, alteration, octave, and direction.
  */
 fun Pitch(step: Int, alt: Int, oct: Int? = null, dir: Int? = null): Pitch =
     PitchImpl(step, alt, oct, dir)
@@ -144,9 +144,7 @@ interface Pitch {
          */
         private val FIFTHS_TO_STEPS = intArrayOf(3, 0, 4, 1, 5, 2, 6)
 
-        /**
-         * Helper to get the unaltered step (0-6) from a number of fifths.
-         */
+        // Helper to get the unaltered step (0-6) from a number of fifths
         private fun unaltered(f: Int): Int {
             val i = (f + 1) % 7
             return if (i < 0) 7 + i else i
@@ -154,9 +152,7 @@ interface Pitch {
     }
 }
 
-/**
- * Default implementation of [Pitch].
- */
+// Default implementation of Pitch interface
 private data class PitchImpl(
     override val step: Int,
     override val alt: Int,

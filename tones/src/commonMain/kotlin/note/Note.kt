@@ -5,8 +5,13 @@ import io.peekandpoke.klang.tones.pitch.Pitch
 import io.peekandpoke.klang.tones.pitch.PitchCoordinates
 import kotlin.math.pow
 
+/** A note name with octave (e.g., "C4", "Bb5"). */
 typealias NoteWithOctave = String
+
+/** A pitch class name without octave (e.g., "C", "Bb"). */
 typealias PcName = String
+
+/** A note name, may or may not include octave. */
 typealias NoteName = String
 
 /**
@@ -89,10 +94,7 @@ data class Note(
          */
         fun get(named: NamedPitch): Note = get(named.name)
 
-        /**
-         * Tokenizes a note string into [letter, accidental, octave, rest].
-         * @private
-         */
+        // Tokenizes a note string into [letter, accidental, octave, rest]
         fun tokenize(str: String): List<String> {
             val (_, letter, acc, oct, rest) = REGEX.matchEntire(str)?.groupValues
                 ?: return listOf("", "", "", "")
@@ -298,9 +300,7 @@ data class Note(
          */
         private val SEMI = intArrayOf(0, 2, 4, 5, 7, 9, 11)
 
-        /**
-         * Parses a note name string into a [Note] object.
-         */
+        // Parses a note name string into a Note object
         private fun parse(noteName: NoteName): Note {
             val tokens = tokenize(noteName)
             if (tokens[0] == "" || tokens[3] != "") {
@@ -363,9 +363,7 @@ data class Note(
             )
         }
 
-        /**
-         * Returns the note name string from [Pitch] properties.
-         */
+        // Returns the note name string from Pitch properties
         private fun pitchName(props: Pitch): NoteName {
             val step = props.step
             val alt = props.alt

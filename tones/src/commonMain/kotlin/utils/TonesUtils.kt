@@ -2,6 +2,9 @@ package io.peekandpoke.klang.tones.utils
 
 import kotlin.math.abs
 
+/**
+ * General utility functions for the tones library.
+ */
 object TonesUtils {
     /**
      * Repeats a string n times.

@@ -79,9 +79,7 @@ class Chord(
             }
         }
 
-        /**
-         * Splits a chord type string into [type, bass] if a slash is present.
-         */
+        // Splits a chord type string into [type, bass] if a slash is present
         private fun tokenizeBass(note: String, chord: String): Triple<String, String, String> {
             val split = chord.split("/")
             if (split.size == 1) {

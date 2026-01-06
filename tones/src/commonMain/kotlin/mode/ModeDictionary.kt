@@ -62,19 +62,14 @@ object ModeDictionary {
      */
     fun names(): List<String> = modes.map { it.name }
 
-    /**
-     * Internal helper to create a [Mode] from raw data.
-     *
-     * @param modeNum The mode number (0-indexed) relative to the parent scale (e.g., Ionian = 0, Dorian = 1, etc.).
-     * @param setNum  The decimal representation of the chroma bitmask.
-     *                When converted to binary, it represents the 12 semitones of the octave,
-     *                with the most significant bit (bit 11) being the root.
-     * @param alt     The number of fifths from C to the mode root (Ionian = 0, Dorian = 2, Lydian = -1, etc.).
-     * @param name    The name of the mode.
-     * @param triad   The triad chord type of the mode.
-     * @param seventh The seventh chord type of the mode.
-     * @param alias   The alias of the mode (e.g., "major" for "ionian").
-     */
+    // Internal helper to create a Mode from raw data.
+    // modeNum: The mode number (0-indexed) relative to the parent scale (e.g., Ionian = 0, Dorian = 1, etc.).
+    // setNum: The decimal representation of the chroma bitmask.
+    // alt: The number of fifths from C to the mode root (Ionian = 0, Dorian = 2, Lydian = -1, etc.).
+    // name: The name of the mode.
+    // triad: The triad chord type of the mode.
+    // seventh: The seventh chord type of the mode.
+    // alias: The alias of the mode (e.g., "major" for "ionian").
     private fun toMode(
         modeNum: Int,
         setNum: Int,

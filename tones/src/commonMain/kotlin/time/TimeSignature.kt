@@ -112,9 +112,7 @@ sealed class TimeSignature {
             return buildTimeSignature(upper, lower)
         }
 
-        /**
-         * Splits numerator and denominator and converts them to integers.
-         */
+        // Splits numerator and denominator and converts them to integers
         private fun parseParts(up: String, low: String): Pair<List<Int>, Int>? {
             val upperList = up.split("+").mapNotNull { it.toIntOrNull() }
             val lower = low.toIntOrNull() ?: return null
@@ -122,17 +120,13 @@ sealed class TimeSignature {
             return Pair(upperList, lower)
         }
 
-        /**
-         * Checks if a number is a power of two.
-         */
+        // Checks if a number is a power of two
         private fun isPowerOfTwo(x: Int): Boolean {
             if (x <= 0) return false
             return (log2(x.toDouble()) % 1.0) == 0.0
         }
 
-        /**
-         * Internal builder for [TimeSignature] objects.
-         */
+        // Internal builder for TimeSignature objects
         private fun buildTimeSignature(up: List<Int>, down: Int): TimeSignature {
             val totalUpper = up.sum()
             if (totalUpper == 0 || down == 0) return Invalid

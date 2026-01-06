@@ -108,9 +108,7 @@ data class DurationValue(
             base.copy(name = name, dots = dots, value = value, fraction = fraction)
         }
 
-        /**
-         * Calculates the fraction for a base duration with a given number of dots.
-         */
+        // Calculates the fraction for a base duration with a given number of dots
         private fun calcDots(fraction: Pair<Int, Int>, dots: Int): Pair<Int, Int> {
             val p = 2.0.pow(dots).toInt()
 
