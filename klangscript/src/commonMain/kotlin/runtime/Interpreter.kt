@@ -115,6 +115,9 @@ class Interpreter(
 
             // Arrow functions create function values with closure
             is ArrowFunction -> FunctionValue(expression.parameters, expression.body, environment)
+
+            // Object literals create object values
+            is ObjectLiteral -> evaluateObjectLiteral(expression)
         }
     }
 
@@ -300,6 +303,45 @@ class Interpreter(
 
         // Return the property value
         return objValue.getProperty(memberAccess.property)
+    }
+
+    /**
+     * Evaluate an object literal expression
+     *
+     * Object literals create new ObjectValue instances with properties
+     * evaluated in the current environment.
+     *
+     * Process:
+     * 1. Create empty ObjectValue
+     * 2. For each property: evaluate the value expression
+     * 3. Store the property in the object
+     * 4. Return the object
+     *
+     * @param objectLiteral The object literal AST node
+     * @return An ObjectValue with all properties evaluated
+     *
+     * Examples:
+     * ```
+     * // Script: { x: 10, y: 20 }
+     * // Creates ObjectValue with x=10, y=20
+     *
+     * // Script: { name: getName(), age: 30 }
+     * // Evaluates getName() first, then creates object
+     *
+     * // Script: { nested: { inner: 42 } }
+     * // Recursively evaluates nested object literal
+     * ```
+     */
+    private fun evaluateObjectLiteral(objectLiteral: ObjectLiteral): RuntimeValue {
+        val properties = mutableMapOf<String, RuntimeValue>()
+
+        // Evaluate each property value
+        for ((key, valueExpr) in objectLiteral.properties) {
+            val value = evaluate(valueExpr)
+            properties[key] = value
+        }
+
+        return ObjectValue(properties)
     }
 
     /**

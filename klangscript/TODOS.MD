@@ -136,32 +136,32 @@
   - [ ] Object literals in arrow functions with parentheses - deferred to Step 1.10
 - [x] NOTE: Block bodies `x => { return x; }` are deferred to Phase 6
 
-#### Step 1.9: Parser - Variables
+#### Step 1.9: Parser - Variables ✅
 
-- [ ] Parse `let` declarations: `let x = 1`
-- [ ] Parse `const` declarations: `const x = 1`
-- [ ] Parse `var` declarations: `var x = 1`
-- [ ] Parse declarations without initialization: `let x`
-- [ ] Write unit tests for:
-  - [ ] All declaration types
-  - [ ] With and without initialization
-  - [ ] Complex initializer expressions
-  - [ ] Multiple declarations in sequence
+- [x] Parse `let` declarations: `let x = 1`
+- [x] Parse `const` declarations: `const x = 1`
+- [ ] Parse `var` declarations: `var x = 1` - deferred
+- [x] Parse declarations without initialization: `let x`
+- [x] Write unit tests for:
+  - [x] All declaration types (let and const)
+  - [x] With and without initialization
+  - [x] Complex initializer expressions
+  - [x] Multiple declarations in sequence
 
-#### Step 1.10: Parser - Object Literals
+#### Step 1.10: Parser - Object Literals ✅
 
-- [ ] Parse empty objects: `{}`
-- [ ] Parse objects with properties: `{ a: 1, b: 2 }`
-- [ ] Parse nested objects: `{ a: { b: 1 } }`
-- [ ] Parse string keys: `{ 'a': 1, "b": 2 }`
-- [ ] Support trailing commas
-- [ ] Write unit tests for:
-  - [ ] Empty objects
-  - [ ] Simple properties
-  - [ ] String keys
-  - [ ] Nested objects
-  - [ ] Trailing commas
-  - [ ] Complex values (function calls, expressions)
+- [x] Parse empty objects: `{}`
+- [x] Parse objects with properties: `{ a: 1, b: 2 }`
+- [x] Parse nested objects: `{ a: { b: 1 } }`
+- [x] Parse string keys: `{ 'a': 1, "b": 2 }`
+- [x] Support trailing commas
+- [x] Write unit tests for:
+  - [x] Empty objects
+  - [x] Simple properties
+  - [x] String keys
+  - [x] Nested objects
+  - [x] Trailing commas
+  - [x] Complex values (function calls, expressions)
 
 #### Step 1.11: Parser - Complete Program
 

@@ -59,6 +59,11 @@ object KlangScriptParser : Grammar<Program>() {
     private val rightParen by literalToken(")")
     private val comma by literalToken(",")
 
+    /** Punctuation for object literals */
+    private val leftBrace by literalToken("{")
+    private val rightBrace by literalToken("}")
+    private val colon by literalToken(":")
+
     /** Arithmetic operators */
     private val plus by literalToken("+")
     private val minus by literalToken("-")
@@ -85,12 +90,41 @@ object KlangScriptParser : Grammar<Program>() {
     private val expression: Parser<Expression> by parser(this::arrowExpr)
 
     /**
+     * Object literal expression
+     * Syntax: { key: value, key2: value2 }
+     *
+     * Supports:
+     * - Empty objects: {}
+     * - Identifier keys: { x: 10, y: 20 }
+     * - String keys: { "name": "Alice" }
+     * - Trailing commas: { a: 1, b: 2, }
+     *
+     * Examples:
+     * - {}
+     * - { x: 10 }
+     * - { a: 1, b: 2 }
+     * - { "first-name": "John" }
+     */
+    private val objectLiteral: Parser<Expression> by
+    (-leftBrace and separatedTerms(
+        // Parse key-value pair: identifier or string, then colon, then expression
+        ((identifier map { it.text }) or (string use { text.substring(1, text.length - 1) })) and
+                -colon and
+                parser(this::expression),
+        comma,
+        acceptZero = true
+    ) and -rightBrace).map { properties ->
+        ObjectLiteral(properties.map { (key, value) -> key to value })
+    }
+
+    /**
      * Primary expressions - atomic building blocks
-     * Numbers, strings, identifiers, or parenthesized expressions
+     * Numbers, strings, identifiers, object literals, or parenthesized expressions
      */
     private val primaryExpr: Parser<Expression> by
     (number use { NumberLiteral(text.toDouble()) }) or
             (string use { StringLiteral(text.substring(1, text.length - 1)) }) or  // Strip quotes
+            objectLiteral or
             (identifier use { Identifier(text) }) or
             (-leftParen * parser(this::expression) * -rightParen)  // Parenthesized expressions
 

@@ -315,3 +315,63 @@ data class ArrowFunction(
     val parameters: List<String>,
     val body: Expression,
 ) : Expression()
+
+/**
+ * An object literal expression
+ *
+ * Represents JavaScript-style object literals with key-value pairs.
+ * Object literals create new ObjectValue instances at runtime with the
+ * specified properties.
+ *
+ * **Syntax:**
+ * - Empty object: `{}`
+ * - With properties: `{ a: 1, b: 2 }`
+ * - String keys: `{ "name": "Alice", "age": 30 }`
+ * - Nested objects: `{ outer: { inner: 42 } }`
+ * - Trailing commas allowed: `{ a: 1, b: 2, }`
+ *
+ * **Key types:**
+ * Currently only identifier and string literal keys are supported.
+ * Computed property names are not supported yet.
+ *
+ * **Property values:**
+ * Any expression can be used as a property value:
+ * - Literals: `{ x: 42, y: "hello" }`
+ * - Variables: `{ count: myVar }`
+ * - Function calls: `{ result: calculate() }`
+ * - Arrow functions: `{ callback: x => x * 2 }`
+ * - Nested objects: `{ config: { debug: true } }`
+ *
+ * Examples:
+ * ```
+ * // Simple object
+ * { x: 10, y: 20 }
+ *
+ * // With string keys
+ * { "first-name": "John", "last-name": "Doe" }
+ *
+ * // Nested structure
+ * {
+ *   position: { x: 0, y: 0 },
+ *   velocity: { x: 1, y: -1 }
+ * }
+ *
+ * // With functions
+ * {
+ *   name: "Counter",
+ *   increment: () => count + 1
+ * }
+ *
+ * // In arrow function (requires parens to disambiguate from block)
+ * x => ({ value: x, doubled: x * 2 })
+ * ```
+ *
+ * AST structure:
+ * - `{ a: 1, b: 2 }` becomes ObjectLiteral([("a", NumberLiteral(1)), ("b", NumberLiteral(2))])
+ * - Empty object `{}` becomes ObjectLiteral([])
+ *
+ * @param properties List of key-value pairs (property name, property value expression)
+ */
+data class ObjectLiteral(
+    val properties: List<Pair<String, Expression>>,
+) : Expression()
