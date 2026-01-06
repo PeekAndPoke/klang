@@ -13,6 +13,7 @@ include(
     ":audio_bridge",
 
     // utils
+    ":klangscript",
     ":tones",
 
     // Sequencers
