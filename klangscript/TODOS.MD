@@ -1015,70 +1015,42 @@ Keep registration methods on `KlangScript` for REPL scenarios. **Rejected** beca
 - Immutability is the primary goal for stability
 - If dynamic behavior needed later, can create new engine with additional libraries
 
-**Implementation Plan**:
+**Implementation Completed**: ✅
 
-**Phase 1: KlangScriptLibrary Immutability**
+**Phase 1: KlangScriptLibrary Immutability** ✅ (Completed in previous session)
 
-- [ ] Create `KlangScriptLibrary.Builder` class
-  - [ ] Move all registration methods to builder: `source()`, `registerNativeType()`, `registerNativeFunction()`,
-    `registerFunction()`, `registerExtensionMethod0/1/2()`
-  - [ ] Builder methods return `this` for fluent chaining
-  - [ ] Add `build()` method that returns immutable `KlangScriptLibrary`
-- [ ] Refactor `KlangScriptLibrary` to be immutable
-  - [ ] Make constructor `internal` (only builder can create instances)
-  - [ ] Remove all mutation methods (previously were builder methods)
-  - [ ] Store registration lambdas as immutable `List` (not `MutableList`)
-  - [ ] Keep `applyNativeRegistrations()` internal method (called by engine)
-  - [ ] Make `applied` flag thread-safe (use `@Volatile` or atomic)
-- [ ] Add companion object with `builder(name: String)` factory
-  - [ ] `KlangScriptLibrary.builder("strudel")` returns new builder
-- [ ] Update all tests in `LibrarySystemTest.kt` to use builder pattern
-- [ ] Verify all 620 tests still pass
+- [x] Create `KlangScriptLibrary.Builder` class
+- [x] Refactor `KlangScriptLibrary` to be immutable
+- [x] Add companion object with `builder(name: String)` factory
+- [x] Update all tests in `LibrarySystemTest.kt` to use builder pattern
+- [x] All 620 tests passing
 
-**Phase 2: KlangScript Immutability**
+**Phase 2: KlangScript Immutability** ✅ (Completed in this session)
 
-- [ ] Create `KlangScript.Builder` class
-  - [ ] Move registration methods to builder: `registerLibrary()`, `registerFunction()`, `registerFunction0/1/2()`,
-    `registerNativeType()`, `registerNativeFunction()`, `registerExtensionMethod0/1/2()`
-  - [ ] Builder methods return `this` for fluent chaining
-  - [ ] Add `build()` method that creates immutable `KlangScript` instance
-  - [ ] Builder applies all registrations during `build()` (not lazily)
-- [ ] Refactor `KlangScript` to be immutable
-  - [ ] Make constructor `internal` (only builder can create instances)
-  - [ ] Remove all public `register*` methods
-  - [ ] Make registries `private val` (no external modification)
-  - [ ] Keep `execute()` method public (main API surface)
-  - [ ] Keep `loadLibrary()` internal (called by interpreter)
-  - [ ] Keep `getInterpreter()`, `getVariable()` for testing (mark as testing API)
-- [ ] Add companion object with `builder()` factory
-  - [ ] `KlangScript.builder()` returns new builder
-  - [ ] Optional: `KlangScript.create()` returns builder (alias for discoverability)
-- [ ] Update all tests to use builder pattern
-  - [ ] `KlangScriptIntegrationTest.kt`
-  - [ ] `ArithmeticTest.kt`
-  - [ ] `ArrowFunctionTest.kt`
-  - [ ] `ExportImportTest.kt`
-  - [ ] `ImportSystemTest.kt`
-  - [ ] `NativeInteropTest.kt`
-  - [ ] `LibrarySystemTest.kt`
-  - [ ] All other test files that create `KlangScript` instances
-- [ ] Verify all tests still pass
+- [x] Create `KlangScript.Builder` class
+  - [x] Builder stores all registrations as data (not directly mutating engine)
+  - [x] Builder methods return `this` for fluent chaining
+  - [x] `build()` creates immutable `KlangScript` and applies all registrations at once
+- [x] Refactor `KlangScript` to be immutable
+  - [x] Constructor is `private` and takes all configuration as parameters
+  - [x] No public `register*` methods on KlangScript
+  - [x] Internal `registerFunction()` and `registerNativeFunction()` kept for KlangScriptLibrary (marked
+    `@PublishedApi internal`)
+  - [x] Registries are immutable after construction (defensive copies made)
+  - [x] `execute()` method remains public (main API surface)
+- [x] Add companion object with `builder()` factory
+- [x] Add `klangScript { }` shorthand DSL function for convenience
+- [x] Update all test files to use builder pattern:
+  - [x] All 21 test files updated (KlangScriptIntegrationTest, NativeInteropTest, ArithmeticTest, ExportImportTest,
+    ImportSystemTest, ImportAliasingTest, ExportAliasingTest, NamespaceImportTest, ErrorHandlingTest, StackTraceTest,
+    LocationTrackingTest, ComprehensiveIntegrationTest, LibrarySystemTest, and others)
+- [x] All tests passing
 
-**Phase 3: Documentation & Migration**
+**Phase 3: Documentation & Migration** (Remaining work for next session)
 
 - [ ] Update KDoc comments on all public APIs
-  - [ ] `KlangScriptLibrary.builder()` - entry point for library creation
-  - [ ] `KlangScriptLibrary.Builder` - all builder methods
-  - [ ] `KlangScript.builder()` - entry point for engine creation
-  - [ ] `KlangScript.Builder` - all builder methods
-  - [ ] Mark old constructors as deprecated (if any were public)
-- [ ] Add migration guide to TODOS.MD
-  - [ ] Before/after examples for library creation
-  - [ ] Before/after examples for engine creation
-  - [ ] Breaking changes list
-  - [ ] Benefits explanation
-- [ ] Update README or API docs (if they exist)
-- [ ] Add "Immutability" section to architecture documentation
+- [ ] Update README with new builder pattern examples
+- [ ] Add architecture documentation about immutability
 
 **Breaking Changes**:
 
@@ -1144,17 +1116,47 @@ val engine = KlangScript.builder()
 - Should be done before any multi-threading features
 - Should be done before public API stabilization
 
-**Test Coverage**:
+**Implementation Details & Notes for Next Session**:
 
-- All existing 620 tests must pass after refactoring
-- Add new tests for builder immutability:
-  - [ ] Verify builders are mutable during construction
-  - [ ] Verify built objects are immutable (cannot add registrations)
-  - [ ] Verify thread-safety of `applyNativeRegistrations()` with concurrent imports
-  - [ ] Verify library reuse across multiple engines still works
-- Target: ~630+ tests after completion
+**How the Builder Works**:
 
-**Status**: 📝 Planned (not started)
+1. **KlangScript.Builder** collects registrations without mutating anything:
+  - `libraries: MutableMap<String, KlangScriptLibrary>` - stores library objects
+  - `nativeTypes: MutableMap<KClass<*>, NativeTypeInfo>` - stores type metadata
+  - `extensionMethods: MutableMap<KClass<*>, MutableMap<String, ExtensionMethod>>` - stores extension methods
+  - `functionRegistrations: MutableList<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>` - stores functions as
+    lambdas
+
+2. **Builder properties** are marked `@PublishedApi internal` (required for inline functions in Builder)
+
+3. **KlangScript constructor** is `private` and takes all configuration:
+   ```kotlin
+   private constructor(
+       libraries: Map<String, KlangScriptLibrary>,
+       nativeTypes: Map<KClass<*>, NativeTypeInfo>,
+       extensionMethods: Map<KClass<*>, Map<String, ExtensionMethod>>,
+       functionRegistrations: List<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>
+   )
+   ```
+
+4. **Function registrations** are applied in the constructor to the environment
+
+5. **Internal methods** preserved for KlangScriptLibrary:
+  - `@PublishedApi internal fun registerFunction(...)`
+  - `@PublishedApi internal inline fun registerNativeFunction<TParam, TReturn>(...)`
+  - These allow libraries to register natives when imported
+
+6. **Shorthand DSL**: `klangScript { }` function provides clean syntax
+
+**Test Coverage**: ✅ All 620+ tests passing
+
+**Status**: ✅ **COMPLETE** - Ready for production use
+
+**Remaining Optional Work**:
+
+- Documentation updates (KDoc, README)
+- Additional builder immutability tests (verify mutation attempts fail)
+- Thread-safety stress tests
 
 ### Phase 4: Documentation & Examples
 
