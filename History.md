@@ -5,8 +5,16 @@
 - 300 EUR / year for JetBrains AI Ultimate
 - 23-12-2025: bought 10 more AI credits -> 11.90 EUR
 - 26-12-2025: bought 50 more AI credits -> 59.90 EUR
+- 05-01-2026: bought 50 more AI credits -> 59.90 EUR
+- 06-01-2026: bought 50 more AI credits -> 59.90 EUR
 
 ## Diary
+
+### (2026-01-06) KlangScript
+
+- creating a Javascript-ish interpreter language called KlangScript
+- making heavy use of Claude-Agent
+- parser based on better-parse
 
 ### (2026-01-05) Tones
 

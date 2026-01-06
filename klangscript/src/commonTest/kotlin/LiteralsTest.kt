@@ -1,7 +1,8 @@
+package io.peekandpoke.klang.script
+
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.script.KlangScript
 import io.peekandpoke.klang.script.runtime.*
 
 /**

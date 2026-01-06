@@ -1,7 +1,8 @@
+package io.peekandpoke.klang.script
+
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.script.KlangScript
 import io.peekandpoke.klang.script.runtime.NullValue
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.StringValue
@@ -22,7 +23,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("x")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 42.0
+        result.value shouldBe 42.0
     }
 
     "should declare let variable without initializer (defaults to null)" {
@@ -41,7 +42,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("MAX")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 100.0
+        result.value shouldBe 100.0
     }
 
     "should use let variable in expressions" {
@@ -56,7 +57,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("x + y")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 30.0
+        result.value shouldBe 30.0
     }
 
     "should use const variable in expressions" {
@@ -71,7 +72,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("PI * radius * radius")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 78.53975
+        result.value shouldBe 78.53975
     }
 
     "should declare variable with expression as initializer" {
@@ -81,7 +82,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("result")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 14.0  // 2 + (3 * 4)
+        result.value shouldBe 14.0  // 2 + (3 * 4)
     }
 
     "should declare variable with function call as initializer" {
@@ -93,7 +94,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("x")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 99.0
+        result.value shouldBe 99.0
     }
 
     "should declare string variable" {
@@ -103,7 +104,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("greeting")
         result.shouldBeInstanceOf<StringValue>()
-        (result as StringValue).value shouldBe "Hello, World!"
+        result.value shouldBe "Hello, World!"
     }
 
     "should support multiple variable declarations" {
@@ -136,7 +137,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("(x => x * multiplier)(5)")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 50.0
+        result.value shouldBe 50.0
     }
 
     "should capture variable in closure" {
@@ -151,7 +152,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("makeAdder(23)")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 123.0
+        result.value shouldBe 123.0
     }
 
     "should pass variable to native function" {
@@ -166,6 +167,6 @@ class VariableTest : StringSpec({
 
         val result = script.execute("double(value)")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 42.0
+        result.value shouldBe 42.0
     }
 })
