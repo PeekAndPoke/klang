@@ -4,6 +4,7 @@ import com.github.h0tk3y.betterParse.combinators.*
 import com.github.h0tk3y.betterParse.grammar.Grammar
 import com.github.h0tk3y.betterParse.grammar.parseToEnd
 import com.github.h0tk3y.betterParse.grammar.parser
+import com.github.h0tk3y.betterParse.lexer.TokenMatch
 import com.github.h0tk3y.betterParse.lexer.literalToken
 import com.github.h0tk3y.betterParse.lexer.regexToken
 import com.github.h0tk3y.betterParse.parser.Parser
@@ -28,8 +29,22 @@ import io.peekandpoke.klang.script.ast.*
  * - Parenthesized expressions
  * - Single-line comments
  * - Multiple statements (newline-separated)
+ * - Source location tracking (line, column, source file name)
  */
 object KlangScriptParser : Grammar<Program>() {
+
+    /**
+     * Current source file name for location tracking
+     * This is set before parsing and used in all AST node creation
+     */
+    private var currentSource: String? = null
+
+    /**
+     * Helper function to create SourceLocation from TokenMatch
+     */
+    private fun TokenMatch.toLocation(): SourceLocation {
+        return SourceLocation(currentSource, row, column)
+    }
 
     // ============================================================
     // Lexical Tokens
@@ -123,7 +138,7 @@ object KlangScriptParser : Grammar<Program>() {
      * - { "first-name": "John" }
      */
     private val objectLiteral: Parser<Expression> by
-    (-leftBrace and separatedTerms(
+    (leftBrace and separatedTerms(
         // Parse key-value pair: identifier or string (including backtick), then colon, then expression
         ((identifier map { it.text }) or
                 (backtickString use { text.substring(1, text.length - 1) }) or
@@ -132,8 +147,8 @@ object KlangScriptParser : Grammar<Program>() {
                 parser(this::expression),
         comma,
         acceptZero = true
-    ) and -rightBrace).map { properties ->
-        ObjectLiteral(properties.map { (key, value) -> key to value })
+    ) and -rightBrace).map { (lbrace, properties) ->
+        ObjectLiteral(properties.map { (key, value) -> key to value }, lbrace.toLocation())
     }
 
     /**
@@ -141,14 +156,19 @@ object KlangScriptParser : Grammar<Program>() {
      * Numbers, strings, booleans, null, identifiers, object literals, or parenthesized expressions
      */
     private val primaryExpr: Parser<Expression> by
-    (number use { NumberLiteral(text.toDouble()) }) or
-            (trueKeyword use { BooleanLiteral(true) }) or
-            (falseKeyword use { BooleanLiteral(false) }) or
+    (number use { NumberLiteral(text.toDouble(), toLocation()) }) or
+            (trueKeyword use { BooleanLiteral(true, toLocation()) }) or
+            (falseKeyword use { BooleanLiteral(false, toLocation()) }) or
             (nullKeyword use { NullLiteral }) or
-            (backtickString use { StringLiteral(text.substring(1, text.length - 1)) }) or  // Strip backticks
-            (string use { StringLiteral(text.substring(1, text.length - 1)) }) or  // Strip quotes
+            (backtickString use {
+                StringLiteral(
+                    text.substring(1, text.length - 1),
+                    toLocation()
+                )
+            }) or  // Strip backticks
+            (string use { StringLiteral(text.substring(1, text.length - 1), toLocation()) }) or  // Strip quotes
             objectLiteral or
-            (identifier use { Identifier(text) }) or
+            (identifier use { Identifier(text, toLocation()) }) or
             (-leftParen * parser(this::expression) * -rightParen)  // Parenthesized expressions
 
     /**
@@ -166,11 +186,12 @@ object KlangScriptParser : Grammar<Program>() {
      * - `!` : Logical NOT (boolean negation)
      */
     private val unaryExpr: Parser<Expression> by
-    ((minus use { UnaryOperator.NEGATE }) or
-            (plus use { UnaryOperator.PLUS }) or
-            (exclamation use { UnaryOperator.NOT }) and
-            parser(this::unaryExpr)).map { (op, operand) ->
-        UnaryOperation(op, operand)
+    ((minus use { Pair(UnaryOperator.NEGATE, toLocation()) }) or
+            (plus use { Pair(UnaryOperator.PLUS, toLocation()) }) or
+            (exclamation use { Pair(UnaryOperator.NOT, toLocation()) }) and
+            parser(this::unaryExpr)).map { (opWithLoc, operand) ->
+        val (op, loc) = opWithLoc
+        UnaryOperation(op, operand, loc)
     } or primaryExpr
 
     /**
@@ -191,7 +212,7 @@ object KlangScriptParser : Grammar<Program>() {
     (unaryExpr and zeroOrMore(-dot and identifier)).map { (base, properties) ->
         // Fold the property list into nested MemberAccess nodes
         properties.fold(base) { obj, property ->
-            MemberAccess(obj, property.text)
+            MemberAccess(obj, property.text, property.toLocation())
         }
     }
 
@@ -219,16 +240,16 @@ object KlangScriptParser : Grammar<Program>() {
     private val callExpr: Parser<Expression> by
     (memberExpr and zeroOrMore(
         // Parse: (args) followed by optional .property.property...
-        (-leftParen and separatedTerms(expression, comma, acceptZero = true) and -rightParen) and
+        (leftParen and separatedTerms(expression, comma, acceptZero = true) and -rightParen) and
                 zeroOrMore(-dot and identifier)
     )).map { (base, callAndMemberPairs) ->
         // Fold through each call-and-member-access pair
-        callAndMemberPairs.fold(base) { current, (args, properties) ->
+        callAndMemberPairs.fold(base) { current, (lparen, args, properties) ->
             // First apply the call
-            val afterCall = CallExpression(current, args)
+            val afterCall = CallExpression(current, args, lparen.toLocation())
             // Then apply any member accesses
             properties.fold(afterCall as Expression) { obj, property ->
-                MemberAccess(obj, property.text)
+                MemberAccess(obj, property.text, property.toLocation())
             }
         }
     }
@@ -244,7 +265,7 @@ object KlangScriptParser : Grammar<Program>() {
             "/" -> BinaryOperator.DIVIDE
             else -> error("Unexpected operator: $op")
         }
-        BinaryOperation(left, operator, right)
+        BinaryOperation(left, operator, right, op.toLocation())
     }
 
     /**
@@ -258,7 +279,7 @@ object KlangScriptParser : Grammar<Program>() {
             "-" -> BinaryOperator.SUBTRACT
             else -> error("Unexpected operator: $op")
         }
-        BinaryOperation(left, operator, right)
+        BinaryOperation(left, operator, right, op.toLocation())
     }
 
     /**
@@ -298,9 +319,9 @@ object KlangScriptParser : Grammar<Program>() {
                             ) and -rightParen).map { params ->
                                 params.map { it.text }
                             }
-                    ) and -arrow and parser(this::arrowExpr)  // Right-associative for nested arrows
-            ).map { (params, body) ->
-            ArrowFunction(params, body)
+                    ) and arrow and parser(this::arrowExpr)  // Right-associative for nested arrows
+            ).map { (params, arrowToken, body) ->
+            ArrowFunction(params, body, arrowToken.toLocation())
         } or additionExpr  // Fall back to addition expression if not an arrow function
 
     /**
@@ -313,8 +334,8 @@ object KlangScriptParser : Grammar<Program>() {
      * - let uninitialized
      */
     private val letDeclaration: Parser<Statement> by
-    (-letKeyword and identifier and optional(-equals and expression)).map { (name, initOpt) ->
-        LetDeclaration(name.text, initOpt)
+    (letKeyword and identifier and optional(-equals and expression)).map { (letToken, name, initOpt) ->
+        LetDeclaration(name.text, initOpt, letToken.toLocation())
     }
 
     /**
@@ -328,8 +349,8 @@ object KlangScriptParser : Grammar<Program>() {
      * - const PI = 3.14159
      */
     private val constDeclaration: Parser<Statement> by
-    (-constKeyword and identifier and -equals and expression).map { (name, init) ->
-        ConstDeclaration(name.text, init)
+    (constKeyword and identifier and -equals and expression).map { (constToken, name, init) ->
+        ConstDeclaration(name.text, init, constToken.toLocation())
     }
 
     /**
@@ -355,12 +376,12 @@ object KlangScriptParser : Grammar<Program>() {
     }
 
     private val exportStatement: Parser<Statement> by
-    (-exportKeyword and -leftBrace and separatedTerms(
+    (exportKeyword and -leftBrace and separatedTerms(
         exportSpecifier,
         comma,
         acceptZero = false
-    ) and -rightBrace).map { specifiers ->
-        ExportStatement(specifiers)
+    ) and -rightBrace).map { (exportToken, specifiers) ->
+        ExportStatement(specifiers, exportToken.toLocation())
     }
 
     /**
@@ -368,10 +389,10 @@ object KlangScriptParser : Grammar<Program>() {
      * Namespace import: import * as name from "lib"
      */
     private val wildcardImport: Parser<Statement> by
-    (-importKeyword and -times and optional(-asKeyword and identifier) and -fromKeyword and string).map { (namespaceOpt, libraryNameToken) ->
+    (importKeyword and -times and optional(-asKeyword and identifier) and -fromKeyword and string).map { (importToken, namespaceOpt, libraryNameToken) ->
         val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
         val namespaceAlias = namespaceOpt?.text
-        ImportStatement(libraryName, imports = null, namespaceAlias = namespaceAlias)
+        ImportStatement(libraryName, imports = null, namespaceAlias = namespaceAlias, importToken.toLocation())
     }
 
     /**
@@ -389,13 +410,13 @@ object KlangScriptParser : Grammar<Program>() {
      * Selective import: import { name1, name2 as alias2 } from "lib"
      */
     private val selectiveImport: Parser<Statement> by
-    (-importKeyword and -leftBrace and separatedTerms(
+    (importKeyword and -leftBrace and separatedTerms(
         importSpecifier,
         comma,
         acceptZero = false
-    ) and -rightBrace and -fromKeyword and string).map { (specifiers, libraryNameToken) ->
+    ) and -rightBrace and -fromKeyword and string).map { (importToken, specifiers, libraryNameToken) ->
         val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
-        ImportStatement(libraryName, specifiers)
+        ImportStatement(libraryName, specifiers, location = importToken.toLocation())
     }
 
     /**
@@ -443,10 +464,16 @@ object KlangScriptParser : Grammar<Program>() {
      * Parse source code into an AST
      *
      * @param source The KlangScript source code
+     * @param sourceName Optional source file name for error reporting (e.g., "main.klang", "math.klang")
      * @return Program AST node
      * @throws ParseException on syntax errors
      */
-    fun parse(source: String): Program {
-        return parseToEnd(source)
+    fun parse(source: String, sourceName: String? = null): Program {
+        currentSource = sourceName
+        try {
+            return parseToEnd(source)
+        } finally {
+            currentSource = null  // Clean up after parsing
+        }
     }
 }
