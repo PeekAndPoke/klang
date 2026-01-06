@@ -97,11 +97,11 @@ data class Interval(
         fun tokenize(str: String?): List<String> {
             if (str == null) return listOf("", "")
 
-            TONAL_REG.matchEntire(str)?.let { m ->
-                return listOf(m.groupValues[1], m.groupValues[2])
+            TONAL_REG.matchEntire(str)?.groupValues?.let { (_, num, quality) ->
+                return listOf(num, quality)
             }
-            SHORTHAND_REG.matchEntire(str)?.let { m ->
-                return listOf(m.groupValues[2], m.groupValues[1])
+            SHORTHAND_REG.matchEntire(str)?.groupValues?.let { (_, quality, num) ->
+                return listOf(num, quality)
             }
             return listOf("", "")
         }

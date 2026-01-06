@@ -11,13 +11,8 @@ object AbcNotation {
      * Tokenizes an ABC notation string into [accidentals, letter, octaveMarks].
      */
     fun tokenize(str: String): List<String> {
-        val m = REGEX.matchEntire(str)
-        return if (m != null) {
-            val groups = m.groupValues
-            listOf(groups[1], groups[2], groups[3])
-        } else {
-            listOf("", "", "")
-        }
+        val (_, acc, letter, octave) = REGEX.matchEntire(str)?.groupValues ?: return listOf("", "", "")
+        return listOf(acc, letter, octave)
     }
 
     /**

@@ -95,9 +95,7 @@ data class DurationValue(
          * @param name The duration name or shorthand (e.g., "quarter", "q", "q..").
          */
         fun get(name: String): DurationValue = cache.getOrPut(name) {
-            val match = REGEX.matchEntire(name) ?: return@getOrPut NoDuration
-            val simple = match.groupValues[1]
-            val dots = match.groupValues[2]
+            val (_, simple, dots) = REGEX.matchEntire(name)?.groupValues ?: return@getOrPut NoDuration
 
             // Find base duration in the pre-calculated VALUES list
             val base = VALUES.find { it.shorthand == simple || simple in it.names }

@@ -82,9 +82,7 @@ sealed class TimeSignature {
          * Get time signature properties from a string (e.g., "4/4", "3+2/8").
          */
         fun get(literal: String): TimeSignature {
-            val match = REGEX.matchEntire(literal) ?: return Invalid
-            val up = match.groupValues[1]
-            val low = match.groupValues[2]
+            val (_, up, low) = REGEX.matchEntire(literal)?.groupValues ?: return Invalid
             val parsed = parseParts(up, low) ?: return Invalid
             return buildTimeSignature(parsed.first, parsed.second)
         }

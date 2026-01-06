@@ -64,18 +64,9 @@ data class RomanNumeral(
          * @private
          */
         fun tokenize(str: String): List<String> {
-            val m = REGEX.matchEntire(str)
-            return if (m != null) {
-                val groups = m.groupValues
-                listOf(
-                    groups[0],
-                    groups[1],
-                    groups[2],
-                    groups[3]
-                )
-            } else {
-                listOf("", "", "", "")
-            }
+            val (fullMatch, acc, roman, chordType) = REGEX.matchEntire(str)?.groupValues
+                ?: return listOf("", "", "", "")
+            return listOf(fullMatch, acc, roman, chordType)
         }
 
         /**

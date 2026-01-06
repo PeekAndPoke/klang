@@ -60,7 +60,7 @@ object TestKotlinPatterns {
                         [a3 a2 a2 a1 e1 c1 [c2 c3] [c4 c5]]
                     >
                 """.trimIndent()
-        ).sound("supersaw").spread(0.5).unison(16).detune(0.1)
+        ).sound("supersaw").spread(0.5).unison(16).detune(0.3)
             .orbit(2).pan(0.0).gain(0.4)
             .room(0.05).rsize(1.0),
 

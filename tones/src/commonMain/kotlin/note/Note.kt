@@ -94,18 +94,14 @@ data class Note(
          * @private
          */
         fun tokenize(str: String): List<String> {
-            val m = REGEX.matchEntire(str)
-            return if (m != null) {
-                val groups = m.groupValues
-                listOf(
-                    groups[1].uppercase(),
-                    groups[2].replace("x", "##"),
-                    groups[3],
-                    groups[4]
-                )
-            } else {
-                listOf("", "", "", "")
-            }
+            val (_, letter, acc, oct, rest) = REGEX.matchEntire(str)?.groupValues
+                ?: return listOf("", "", "", "")
+            return listOf(
+                letter.uppercase(),
+                acc.replace("x", "##"),
+                oct,
+                rest
+            )
         }
 
         /**
