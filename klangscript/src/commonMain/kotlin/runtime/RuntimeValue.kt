@@ -213,6 +213,68 @@ data class NativeObjectValue<T : Any>(
 }
 
 /**
+ * Array value
+ *
+ * Represents a JavaScript-style array (ordered collection) in KlangScript.
+ * Arrays can contain any mix of runtime value types and can be nested.
+ *
+ * **Key characteristics:**
+ * - Zero-based indexing: first element at index 0
+ * - Mutable: elements can be added, removed, or changed
+ * - Dynamic sizing: arrays grow/shrink as needed
+ * - Mixed types: `[1, "hello", true, null, { a: 1 }]` is valid
+ * - Nested arrays: `[[1, 2], [3, 4]]` is valid
+ *
+ * **Usage patterns:**
+ * ```javascript
+ * // Creating arrays
+ * let numbers = [1, 2, 3]
+ * let mixed = [42, "hello", true, null]
+ * let nested = [[1, 2], [3, 4]]
+ *
+ * // Arrays as arguments
+ * print([1, 2, 3])
+ *
+ * // Arrays in objects
+ * let data = { items: [1, 2, 3], names: ["a", "b"] }
+ * ```
+ *
+ * **Future enhancements:**
+ * - Index access: `arr[0]`, `arr[1]`
+ * - Array methods: `push()`, `pop()`, `map()`, `filter()`, etc.
+ * - Length property: `arr.length`
+ *
+ * @property elements Mutable list of runtime values (allows dynamic array operations)
+ *
+ * Example:
+ * ```kotlin
+ * // Simple array
+ * ArrayValue(mutableListOf(NumberValue(1.0), NumberValue(2.0), NumberValue(3.0)))
+ *
+ * // Mixed types
+ * ArrayValue(mutableListOf(
+ *     NumberValue(42.0),
+ *     StringValue("hello"),
+ *     BooleanValue(true),
+ *     NullValue
+ * ))
+ *
+ * // Nested arrays
+ * ArrayValue(mutableListOf(
+ *     ArrayValue(mutableListOf(NumberValue(1.0), NumberValue(2.0))),
+ *     ArrayValue(mutableListOf(NumberValue(3.0), NumberValue(4.0)))
+ * ))
+ * ```
+ */
+data class ArrayValue(
+    val elements: MutableList<RuntimeValue>,
+) : RuntimeValue() {
+    override fun toDisplayString(): String {
+        return "[${elements.joinToString(", ") { it.toDisplayString() }}]"
+    }
+}
+
+/**
  * Bound native method
  *
  * Represents an extension method bound to a specific native object receiver.

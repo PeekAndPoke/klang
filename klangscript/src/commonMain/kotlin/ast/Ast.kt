@@ -580,3 +580,66 @@ data class ObjectLiteral(
     val properties: List<Pair<String, Expression>>,
     override val location: SourceLocation? = null,
 ) : Expression(location)
+
+/**
+ * An array literal expression
+ *
+ * Represents JavaScript-style array literals with zero or more elements.
+ * Array literals create new ArrayValue instances at runtime with the
+ * specified elements.
+ *
+ * **Syntax:**
+ * - Empty array: `[]`
+ * - With elements: `[1, 2, 3]`
+ * - Mixed types: `[1, "hello", true, null]`
+ * - Expressions: `[x + 1, func(), obj.prop]`
+ * - Nested arrays: `[[1, 2], [3, 4]]`
+ * - Trailing commas allowed: `[1, 2, 3,]`
+ *
+ * **Element types:**
+ * Any expression can be used as an array element:
+ * - Literals: `[42, "hello", true, null]`
+ * - Variables: `[x, y, z]`
+ * - Function calls: `[getValue(), calculate()]`
+ * - Arrow functions: `[x => x * 2, y => y + 1]`
+ * - Objects: `[{ a: 1 }, { b: 2 }]`
+ * - Nested arrays: `[[1, 2], [3, 4]]`
+ *
+ * Examples:
+ * ```javascript
+ * // Empty array
+ * []
+ *
+ * // Simple array
+ * [1, 2, 3]
+ *
+ * // Mixed types
+ * [42, "hello", true, null, { x: 10 }]
+ *
+ * // Expressions as elements
+ * [x + 1, y * 2, calculate()]
+ *
+ * // Nested arrays
+ * [[1, 2], [3, 4], [5, 6]]
+ *
+ * // Arrays in variables
+ * let numbers = [1, 2, 3, 4, 5]
+ *
+ * // Arrays as function arguments
+ * print([1, 2, 3])
+ *
+ * // Arrays in objects
+ * { items: [1, 2, 3], names: ["a", "b"] }
+ * ```
+ *
+ * AST structure:
+ * - `[1, 2, 3]` becomes ArrayLiteral([NumberLiteral(1), NumberLiteral(2), NumberLiteral(3)])
+ * - Empty array `[]` becomes ArrayLiteral([])
+ * - Nested `[[1, 2]]` becomes ArrayLiteral([ArrayLiteral([NumberLiteral(1), NumberLiteral(2)])])
+ *
+ * @param elements List of expressions representing array elements
+ */
+data class ArrayLiteral(
+    val elements: List<Expression>,
+    override val location: SourceLocation? = null,
+) : Expression(location)

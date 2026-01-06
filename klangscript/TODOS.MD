@@ -167,16 +167,110 @@
   - [x] Complex values (function calls, expressions)
   - [ ] Trailing commas
 
-#### Step 1.11: Parser - Array / List literal
+#### Step 1.11: Parser - Array / List Literals
 
-- [ ] Parse empty arrays: `[]`
-- [ ] Parse arrays with elements: `[1, "2", obj, func]`
-- todo: complete the todos
-- [ ] Write unit tests for:
-  - [ ] Empty arrays
-  - [ ] Simple elements
-  - [ ] Complex elements (function calls,
-  - todo: complete the task list
+**Goal**: Add JavaScript-style array literals `[1, 2, 3]` to enable collections and list-based operations.
+
+**Syntax**:
+
+- Empty arrays: `[]`
+- With elements: `[1, 2, 3]`
+- Mixed types: `[1, "hello", true, null]`
+- Expressions: `[x + 1, func(), obj.prop]`
+- Nested: `[[1, 2], [3, 4]]`
+- Trailing commas: `[1, 2, 3,]`
+
+**Implementation Tasks**:
+
+**Phase 1: AST Node**
+
+- [ ] Add `ArrayLiteral` expression to `ast/Ast.kt`
+  - [ ] `data class ArrayLiteral(val elements: List<Expression>, location: SourceLocation?)`
+  - [ ] Document syntax and examples in KDoc
+  - [ ] Sealed class hierarchy: `ArrayLiteral : Expression`
+
+**Phase 2: Lexer - Tokens**
+
+- [ ] Add `[` and `]` tokens to parser lexer
+  - [ ] `lBracket = literalToken("[", true)`
+  - [ ] `rBracket = literalToken("]", true)`
+  - [ ] Ensure no conflicts with existing tokens
+
+**Phase 3: Parser - Array Literals**
+
+- [ ] Implement array literal parser rule
+  - [ ] Handle empty arrays: `[]`
+  - [ ] Handle single element: `[1]`
+  - [ ] Handle multiple elements: `[1, 2, 3]`
+  - [ ] Support trailing commas: `[1, 2,]`
+  - [ ] Parse any expression as element: `[x + 1, func(), { a: 1 }]`
+  - [ ] Nested arrays: `[[1, 2], [3, 4]]`
+- [ ] Integrate into expression parser
+  - [ ] Add array literal to primary expression parser
+  - [ ] Ensure correct precedence (same as literals)
+
+**Phase 4: Runtime Value**
+
+- [ ] Add `ArrayValue` to `runtime/RuntimeValue.kt`
+  - [ ] `data class ArrayValue(val elements: MutableList<RuntimeValue>)`
+  - [ ] Implement `toDisplayString()` -> `"[1, 2, 3]"`
+  - [ ] Mutable list for dynamic operations (push, pop, etc.)
+
+**Phase 5: Interpreter - Array Evaluation**
+
+- [ ] Implement array literal evaluation in Interpreter
+  - [ ] `evaluateArrayLiteral(arrayLiteral: ArrayLiteral): RuntimeValue`
+  - [ ] Evaluate each element expression
+  - [ ] Collect results into `ArrayValue`
+  - [ ] Handle nested arrays (recursive evaluation)
+
+**Phase 6: Array Member Access (Optional - Basic)**
+
+- [ ] Support array indexing: `arr[0]`, `arr[1]`
+  - [ ] Requires index access expression `arr[index]` (different from member access)
+  - [ ] May defer to later if complex
+
+**Phase 7: Testing**
+
+- [ ] Write comprehensive tests in `ArrayLiteralTest.kt`
+  - [ ] Empty arrays: `[]`
+  - [ ] Single element: `[42]`
+  - [ ] Multiple elements: `[1, 2, 3]`
+  - [ ] Mixed types: `[1, "hello", true, null]`
+  - [ ] Expressions: `[1 + 1, 2 * 2]`
+  - [ ] Function calls: `[func(), getValue()]`
+  - [ ] Nested arrays: `[[1, 2], [3, 4]]`
+  - [ ] Trailing commas: `[1, 2, 3,]`
+  - [ ] Arrays in variables: `let arr = [1, 2, 3]`
+  - [ ] Arrays as function arguments: `print([1, 2, 3])`
+  - [ ] Arrays in objects: `{ items: [1, 2, 3] }`
+  - [ ] Edge cases: nested mixed types, empty arrays in arrays
+
+**Phase 8: Array Methods (Deferred to Step 2.13)**
+
+- [ ] Implement native array methods (defer to later step)
+  - [ ] `length` property
+  - [ ] `push()`, `pop()`, `shift()`, `unshift()`
+  - [ ] `map()`, `filter()`, `reduce()`
+  - [ ] `forEach()`, `find()`, `indexOf()`
+  - [ ] See Phase 6 enhancements for full list
+
+**Future Enhancements (Phase 6)**:
+
+- [ ] Array indexing: `arr[0]`, `arr[1]`
+- [ ] Index assignment: `arr[0] = 42`
+- [ ] Spread operator: `[...arr1, ...arr2]`
+- [ ] Destructuring: `let [a, b] = [1, 2]`
+- [ ] Array comprehensions (if desired)
+
+**Files to Create/Modify**:
+
+- **Modified**: `ast/Ast.kt` - Add `ArrayLiteral` expression
+- **Modified**: `parser/KlangScriptParser.kt` - Add array parsing rules
+- **Modified**: `runtime/RuntimeValue.kt` - Add `ArrayValue`
+- **Modified**: `runtime/Interpreter.kt` - Add array evaluation
+- **New**: `ArrayLiteralTest.kt` - Comprehensive tests
+- **Modified**: `TODOS.MD` - Track progress
 
 #### Step 1.12: Parser - Complete Program ✅
 

@@ -308,6 +308,9 @@ class Interpreter(
 
             // Object literals create object values
             is ObjectLiteral -> evaluateObjectLiteral(expression)
+
+            // Array literals create array values
+            is ArrayLiteral -> evaluateArrayLiteral(expression)
         }
     }
 
@@ -678,6 +681,60 @@ class Interpreter(
         }
 
         return ObjectValue(properties)
+    }
+
+    /**
+     * Evaluate an array literal expression
+     *
+     * Array literals create new ArrayValue instances at runtime.
+     * Each element expression is evaluated and the results are collected into a mutable list.
+     *
+     * **Process:**
+     * 1. Iterate through all element expressions in the array literal
+     * 2. Evaluate each element expression in the current environment
+     * 3. Collect all evaluated values into a mutable list
+     * 4. Return an ArrayValue containing the elements
+     *
+     * **Supports:**
+     * - Empty arrays: `[]` produces `ArrayValue(mutableListOf())`
+     * - Any expression types: literals, variables, function calls, nested arrays, objects
+     * - Nested evaluation: `[[1, 2], [3, 4]]` recursively evaluates inner arrays
+     *
+     * @param arrayLiteral The array literal AST node to evaluate
+     * @return ArrayValue containing the evaluated element values
+     *
+     * Examples:
+     * ```javascript
+     * // Simple array
+     * [1, 2, 3] -> ArrayValue([NumberValue(1), NumberValue(2), NumberValue(3)])
+     *
+     * // Mixed types
+     * [1, "hello", true] -> ArrayValue([NumberValue(1), StringValue("hello"), BooleanValue(true)])
+     *
+     * // Expressions
+     * let x = 5
+     * [x, x + 1, x * 2] -> ArrayValue([NumberValue(5), NumberValue(6), NumberValue(10)])
+     *
+     * // Nested arrays
+     * [[1, 2], [3, 4]] -> ArrayValue([
+     *     ArrayValue([NumberValue(1), NumberValue(2)]),
+     *     ArrayValue([NumberValue(3), NumberValue(4)])
+     * ])
+     *
+     * // Arrays with function calls
+     * [getValue(), calculate()] // Calls both functions, stores results
+     * ```
+     */
+    private fun evaluateArrayLiteral(arrayLiteral: ArrayLiteral): RuntimeValue {
+        val elements = mutableListOf<RuntimeValue>()
+
+        // Evaluate each element expression
+        for (elementExpr in arrayLiteral.elements) {
+            val value = evaluate(elementExpr)
+            elements.add(value)
+        }
+
+        return ArrayValue(elements)
     }
 
     /**
