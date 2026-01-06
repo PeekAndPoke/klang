@@ -194,3 +194,60 @@ data class MemberAccess(
     val obj: Expression,
     val property: String,
 ) : Expression()
+
+/**
+ * An arrow function expression (lambda/anonymous function)
+ *
+ * Represents JavaScript-style arrow functions for callbacks and functional programming.
+ * Arrow functions are first-class values that can be passed as arguments, returned from
+ * functions, and stored in variables.
+ *
+ * **Current implementation: Expression bodies only**
+ * - Single expression after `=>`: `x => x + 1`
+ * - Block bodies deferred to Phase 6: `x => { return x + 1; }`
+ *
+ * **Parameter syntax:**
+ * - Single parameter (no parens): `x => expr`
+ * - Multiple parameters (with parens): `(a, b) => expr`
+ * - No parameters: `() => expr`
+ *
+ * **Closure semantics:**
+ * Arrow functions capture their lexical environment (closure), allowing access
+ * to variables from outer scopes.
+ *
+ * Examples:
+ * ```
+ * // Single parameter, simple expression
+ * x => x + 1
+ *
+ * // Multiple parameters
+ * (a, b) => a + b
+ *
+ * // No parameters
+ * () => 42
+ *
+ * // Nested arrow functions
+ * x => y => x + y
+ *
+ * // As callback argument
+ * note("a b c").superImpose(x => x.detune(0.5))
+ *
+ * // Returning object literal (wrapped in parens to avoid ambiguity)
+ * x => ({ value: x, doubled: x * 2 })
+ *
+ * // Closure capturing outer variable
+ * let offset = 5
+ * let addOffset = x => x + offset
+ * ```
+ *
+ * AST structure:
+ * - `x => x + 1` becomes ArrowFunction(["x"], BinaryOperation(...))
+ * - `(a, b) => a * b` becomes ArrowFunction(["a", "b"], BinaryOperation(...))
+ *
+ * @param parameters List of parameter names (identifiers)
+ * @param body Expression to evaluate and return
+ */
+data class ArrowFunction(
+    val parameters: List<String>,
+    val body: Expression,
+) : Expression()

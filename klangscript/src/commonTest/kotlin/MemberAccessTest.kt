@@ -1,7 +1,8 @@
+package io.peekandpoke.klang.script
+
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.script.KlangScript
 import io.peekandpoke.klang.script.runtime.NullValue
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.ObjectValue
@@ -23,7 +24,7 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("person.name")
         result.shouldBeInstanceOf<StringValue>()
-        (result as StringValue).value shouldBe "Alice"
+        result.value shouldBe "Alice"
     }
 
     "should access nested properties" {
@@ -42,7 +43,7 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("person.address.city")
         result.shouldBeInstanceOf<StringValue>()
-        (result as StringValue).value shouldBe "Berlin"
+        result.value shouldBe "Berlin"
     }
 
     "should return NullValue for missing property" {
@@ -67,7 +68,7 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("obj.getValue()")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 42.0
+        result.value shouldBe 42.0
     }
 
     "should support method chaining with two calls" {
@@ -91,7 +92,7 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("createChain().add(5).value")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 15.0
+        result.value shouldBe 15.0
     }
 
     "should support complex method chaining" {
@@ -128,7 +129,7 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("note(\"c\").gain(0.5).pan(1.0).panValue")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 1.0
+        result.value shouldBe 1.0
     }
 
     "should access property after function call" {
@@ -145,7 +146,7 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("getObject().x")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 100.0
+        result.value shouldBe 100.0
     }
 
     "should support multiple chained property accesses" {
@@ -158,7 +159,7 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("a.b.c.value")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 42.0
+        result.value shouldBe 42.0
     }
 
     "should support method call in middle of chain" {
@@ -180,7 +181,7 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("obj.getInner().name")
         result.shouldBeInstanceOf<StringValue>()
-        (result as StringValue).value shouldBe "test"
+        result.value shouldBe "test"
     }
 
     "should evaluate complex expression with member access and arithmetic" {
@@ -196,23 +197,6 @@ class MemberAccessTest : StringSpec({
 
         val result = script.execute("obj.x + obj.y * 2")
         result.shouldBeInstanceOf<NumberValue>()
-        (result as NumberValue).value shouldBe 20.0
+        result.value shouldBe 20.0
     }
 })
-
-/**
- * Helper extension for KlangScript to register variables
- */
-private fun KlangScript.registerVariable(name: String, value: io.peekandpoke.klang.script.runtime.RuntimeValue) {
-    getInterpreter().getEnvironment().define(name, value)
-}
-
-/**
- * Helper extension to create native functions for testing
- */
-private fun KlangScript.createNativeFunction(
-    name: String,
-    function: (List<io.peekandpoke.klang.script.runtime.RuntimeValue>) -> io.peekandpoke.klang.script.runtime.RuntimeValue,
-): io.peekandpoke.klang.script.runtime.NativeFunctionValue {
-    return io.peekandpoke.klang.script.runtime.NativeFunctionValue(name, function)
-}

@@ -83,6 +83,41 @@ data class NativeFunctionValue(
 }
 
 /**
+ * Script function value (arrow functions)
+ *
+ * Represents a function defined in KlangScript code using arrow function syntax.
+ * Script functions are first-class values that capture their lexical environment (closures).
+ *
+ * **Closure semantics:**
+ * When a function is created, it captures the environment where it was defined.
+ * This allows the function to access variables from outer scopes even after
+ * those scopes have exited.
+ *
+ * Example:
+ * ```javascript
+ * let x = 10
+ * let addX = y => x + y
+ * addX(5)  // Returns 15, accessing captured 'x'
+ * ```
+ *
+ * **Usage in callbacks:**
+ * ```javascript
+ * note("a b c").superImpose(x => x.detune(0.5))
+ * ```
+ *
+ * @param parameters List of parameter names
+ * @param body Expression to evaluate when function is called
+ * @param closureEnv The environment captured at function definition time
+ */
+data class FunctionValue(
+    val parameters: List<String>,
+    val body: io.peekandpoke.klang.script.ast.Expression,
+    val closureEnv: Environment,
+) : RuntimeValue() {
+    override fun toDisplayString(): String = "[function(${parameters.joinToString(", ")})]"
+}
+
+/**
  * Object value
  *
  * Represents an object with properties that can be accessed via member access (dot notation).

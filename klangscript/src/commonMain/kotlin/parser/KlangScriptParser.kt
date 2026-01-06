@@ -64,15 +64,18 @@ object KlangScriptParser : Grammar<Program>() {
     /** Member access operator */
     private val dot by literalToken(".")
 
+    /** Arrow function operator */
+    private val arrow by literalToken("=>")
+
     // ============================================================
     // Grammar Rules
     // ============================================================
 
     /**
      * Forward declaration for top-level expressions
-     * Points to the lowest precedence operation (addition)
+     * Points to the lowest precedence operation (arrow functions)
      */
-    private val expression: Parser<Expression> by parser(this::additionExpr)
+    private val expression: Parser<Expression> by parser(this::arrowExpr)
 
     /**
      * Primary expressions - atomic building blocks
@@ -171,6 +174,48 @@ object KlangScriptParser : Grammar<Program>() {
         }
         BinaryOperation(left, operator, right)
     }
+
+    /**
+     * Arrow function expressions (lowest precedence)
+     * Syntax:
+     * - Single parameter: `x => expr`
+     * - Multiple parameters: `(a, b) => expr`
+     * - No parameters: `() => expr`
+     *
+     * Arrow functions have the lowest precedence to allow expressions in the body:
+     * `x => x + 1` parses as `x => (x + 1)`, not `(x => x) + 1`
+     *
+     * Implementation strategy:
+     * 1. Try to parse parameter list (single identifier OR parenthesized list)
+     * 2. If we see `=>`, we have an arrow function
+     * 3. Otherwise, fall back to regular expression (additionExpr)
+     *
+     * Examples:
+     * - `x => x + 1` - Single param, arithmetic body
+     * - `(a, b) => a * b` - Multi param
+     * - `() => 42` - No params
+     * - `x => y => x + y` - Nested (right-associative)
+     * - `x => x.method()` - Method chaining in body
+     */
+    private val arrowExpr: Parser<Expression> by
+    // Try to parse arrow function first
+    (
+            // Parse parameters: either single identifier or parenthesized list
+            (
+                    // Single parameter (no parens): x => expr
+                    (identifier map { listOf(it.text) }) or
+                            // Multiple/zero parameters (with parens): (a, b) => expr or () => expr
+                            (-leftParen and separatedTerms(
+                                identifier,
+                                comma,
+                                acceptZero = true
+                            ) and -rightParen).map { params ->
+                                params.map { it.text }
+                            }
+                    ) and -arrow and parser(this::arrowExpr)  // Right-associative for nested arrows
+            ).map { (params, body) ->
+            ArrowFunction(params, body)
+        } or additionExpr  // Fall back to addition expression if not an arrow function
 
     /**
      * Expression statements

@@ -96,12 +96,16 @@ class Interpreter(
 
             // Member access is delegated to evaluateMemberAccess
             is MemberAccess -> evaluateMemberAccess(expression)
-            // Future: arrow functions, etc.
+
+            // Arrow functions create function values with closure
+            is ArrowFunction -> FunctionValue(expression.parameters, expression.body, environment)
         }
     }
 
     /**
      * Evaluate a function call expression
+     *
+     * Handles both native Kotlin functions and script-defined arrow functions.
      *
      * Process:
      * 1. Evaluate the callee (what we're calling) expression
@@ -110,35 +114,76 @@ class Interpreter(
      * 4. Call the function with the evaluated arguments
      * 5. Return the function's result
      *
+     * For script functions (arrow functions):
+     * - Create a new environment extending the function's closure
+     * - Bind parameters to argument values in the new environment
+     * - Evaluate the function body in the new environment
+     * - Restore the previous environment
+     *
      * @param call The call expression AST node
      * @return The runtime value returned by the function
-     * @throws RuntimeException if callee is not a function
+     * @throws RuntimeException if callee is not a function or argument count mismatch
      *
-     * Example:
+     * Example (native function):
      * ```
-     * // Script: print(upper("hello"))
-     * // 1. Evaluate callee: "print" → NativeFunctionValue
-     * // 2. Evaluate arg: upper("hello")
-     * //    2a. Evaluate "upper" → NativeFunctionValue
-     * //    2b. Evaluate "hello" → StringValue
-     * //    2c. Call upper with ["hello"] → StringValue("HELLO")
-     * // 3. Call print with ["HELLO"] → NullValue
+     * // Script: print("hello")
+     * // 1. Evaluate "print" → NativeFunctionValue
+     * // 2. Evaluate "hello" → StringValue
+     * // 3. Call native function → NullValue
+     * ```
+     *
+     * Example (script function):
+     * ```
+     * // Script: (x => x + 1)(5)
+     * // 1. Evaluate arrow function → FunctionValue
+     * // 2. Evaluate 5 → NumberValue(5.0)
+     * // 3. Create new environment with x=5
+     * // 4. Evaluate body: x + 1 → NumberValue(6.0)
      * ```
      */
     private fun evaluateCall(call: CallExpression): RuntimeValue {
         // Evaluate what we're calling (usually an identifier)
         val callee = evaluate(call.callee)
 
-        // Ensure it's a function
-        if (callee !is NativeFunctionValue) {
-            throw RuntimeException("Cannot call non-function value")
-        }
-
         // Evaluate all arguments left-to-right
         val args = call.arguments.map { evaluate(it) }
 
-        // Call the function and return its result
-        return callee.function(args)
+        // Handle different function types
+        return when (callee) {
+            is NativeFunctionValue -> {
+                // Call native Kotlin function
+                callee.function(args)
+            }
+
+            is FunctionValue -> {
+                // Call script-defined arrow function
+
+                // Verify argument count matches parameter count
+                if (args.size != callee.parameters.size) {
+                    throw RuntimeException(
+                        "Function expects ${callee.parameters.size} arguments, got ${args.size}"
+                    )
+                }
+
+                // Create new environment extending the function's closure
+                val funcEnv = Environment(callee.closureEnv)
+
+                // Bind parameters to arguments
+                callee.parameters.zip(args).forEach { (param, arg) ->
+                    funcEnv.define(param, arg)
+                }
+
+                // Create temporary interpreter with function environment to evaluate body
+                val funcInterpreter = Interpreter(funcEnv)
+
+                // Evaluate function body in the new environment
+                funcInterpreter.evaluate(callee.body)
+            }
+
+            else -> {
+                throw RuntimeException("Cannot call non-function value: ${callee.toDisplayString()}")
+            }
+        }
     }
 
     /**
