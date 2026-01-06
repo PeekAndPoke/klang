@@ -46,7 +46,16 @@ class Interpreter(
     private val environment: Environment = Environment(),
     /** Optional library loader for import statements */
     private val libraryLoader: LibraryLoader? = null,
+    /** Call stack for tracking function calls and generating stack traces */
+    private val callStack: CallStack = CallStack(),
 ) {
+    /**
+     * Get the current stack trace
+     *
+     * Returns a snapshot of the current call stack for error reporting.
+     */
+    private fun getStackTrace(): List<CallStackFrame> = callStack.getFrames()
+
     /**
      * Execute a complete program
      *
@@ -142,7 +151,8 @@ class Interpreter(
             throw ImportError(
                 null,
                 "Cannot import libraries: no library loader configured",
-                location = importStmt.location
+                location = importStmt.location,
+                stackTrace = getStackTrace()
             )
         }
 
@@ -153,7 +163,8 @@ class Interpreter(
             throw ImportError(
                 importStmt.libraryName,
                 "Failed to load library: ${e.message}",
-                location = importStmt.location
+                location = importStmt.location,
+                stackTrace = getStackTrace()
             )
         }
 
@@ -198,7 +209,12 @@ class Interpreter(
         if (namespaceAlias != null) {
             // Namespace import - create an object containing all exports
             if (imports != null) {
-                throw ImportError(null, "Cannot use namespace import with selective imports", location = null)
+                throw ImportError(
+                    null,
+                    "Cannot use namespace import with selective imports",
+                    location = null,
+                    stackTrace = getStackTrace()
+                )
             }
             val namespaceObject = ObjectValue(exports.toMutableMap())
             environment.define(namespaceAlias, namespaceObject, mutable = true)
@@ -215,7 +231,8 @@ class Interpreter(
                 throw ImportError(
                     libraryName,
                     "Cannot import non-exported symbols: ${missingExports.joinToString()}",
-                    location = null
+                    location = null,
+                    stackTrace = getStackTrace()
                 )
             }
 
@@ -272,7 +289,7 @@ class Interpreter(
             is NullLiteral -> NullValue
 
             // Identifiers look up variables in the environment
-            is Identifier -> environment.get(expression.name, expression.location)
+            is Identifier -> environment.get(expression.name, expression.location, getStackTrace())
 
             // Function calls are delegated to evaluateCall
             is CallExpression -> evaluateCall(expression)
@@ -343,13 +360,17 @@ class Interpreter(
         // Handle different function types
         return when (callee) {
             is NativeFunctionValue -> {
-                // Call native Kotlin function
-                callee.function(args)
+                // Push native function onto call stack
+                callStack.push("<native>", call.location)
+                try {
+                    // Call native Kotlin function
+                    callee.function(args)
+                } finally {
+                    callStack.pop()
+                }
             }
 
             is FunctionValue -> {
-                // Call script-defined arrow function
-
                 // Verify argument count matches parameter count
                 if (args.size != callee.parameters.size) {
                     throw ArgumentError(
@@ -357,30 +378,38 @@ class Interpreter(
                         message = "Function expects ${callee.parameters.size} arguments, got ${args.size}",
                         expected = callee.parameters.size,
                         actual = args.size,
-                        location = call.location
+                        location = call.location,
+                        stackTrace = getStackTrace()
                     )
                 }
 
-                // Create new environment extending the function's closure
-                val funcEnv = Environment(callee.closureEnv)
+                // Push function onto call stack
+                callStack.push("<anonymous>", call.location)
+                try {
+                    // Create new environment extending the function's closure
+                    val funcEnv = Environment(callee.closureEnv)
 
-                // Bind parameters to arguments
-                callee.parameters.zip(args).forEach { (param, arg) ->
-                    funcEnv.define(param, arg)
+                    // Bind parameters to arguments
+                    callee.parameters.zip(args).forEach { (param, arg) ->
+                        funcEnv.define(param, arg)
+                    }
+
+                    // Create temporary interpreter with function environment and shared call stack
+                    val funcInterpreter = Interpreter(funcEnv, libraryLoader, callStack)
+
+                    // Evaluate function body in the new environment
+                    funcInterpreter.evaluate(callee.body)
+                } finally {
+                    callStack.pop()
                 }
-
-                // Create temporary interpreter with function environment to evaluate body
-                val funcInterpreter = Interpreter(funcEnv)
-
-                // Evaluate function body in the new environment
-                funcInterpreter.evaluate(callee.body)
             }
 
             else -> {
                 throw TypeError(
                     "Cannot call non-function value: ${callee.toDisplayString()}",
                     operation = "function call",
-                    location = call.location
+                    location = call.location,
+                    stackTrace = getStackTrace()
                 )
             }
         }
@@ -448,7 +477,8 @@ class Interpreter(
                     throw TypeError(
                         "Negation operator requires a number, got ${operandValue.toDisplayString()}",
                         operation = "unary -",
-                        location = unaryOp.location
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
                     )
                 }
                 NumberValue(-operandValue.value)
@@ -459,7 +489,8 @@ class Interpreter(
                     throw TypeError(
                         "Unary plus operator requires a number, got ${operandValue.toDisplayString()}",
                         operation = "unary +",
-                        location = unaryOp.location
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
                     )
                 }
                 NumberValue(operandValue.value)
@@ -489,7 +520,8 @@ class Interpreter(
             throw TypeError(
                 "Binary ${binOp.operator} operation requires numbers, got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
                 operation = binOp.operator.toString(),
-                location = binOp.location
+                location = binOp.location,
+                stackTrace = getStackTrace()
             )
         }
 
@@ -501,7 +533,12 @@ class Interpreter(
             BinaryOperator.DIVIDE -> {
                 // Check for division by zero
                 if (rightValue.value == 0.0) {
-                    throw TypeError("Division by zero", operation = "division", location = binOp.location)
+                    throw TypeError(
+                        "Division by zero",
+                        operation = "division",
+                        location = binOp.location,
+                        stackTrace = getStackTrace()
+                    )
                 }
                 leftValue.value / rightValue.value
             }
@@ -551,7 +588,8 @@ class Interpreter(
             throw TypeError(
                 "Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}",
                 operation = "member access",
-                location = memberAccess.location
+                location = memberAccess.location,
+                stackTrace = getStackTrace()
             )
         }
 

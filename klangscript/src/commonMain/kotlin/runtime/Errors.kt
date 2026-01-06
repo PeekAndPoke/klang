@@ -6,25 +6,33 @@ import io.peekandpoke.klang.script.ast.SourceLocation
  * Base class for all KlangScript runtime errors
  *
  * Provides structured error information including error type, message,
- * and optional source location information for debugging.
+ * optional source location, and call stack trace for debugging.
  */
 sealed class KlangScriptError(
     message: String,
     val errorType: String,
     val location: SourceLocation? = null,
+    val stackTrace: List<CallStackFrame> = emptyList(),
 ) : RuntimeException(message) {
 
     /**
      * Format the error message for display
      *
-     * Returns a formatted error message including the error type and message.
+     * Returns a formatted error message including the error type, message,
+     * and stack trace (if available).
      * Subclasses can override to add additional context.
      */
     open fun format(): String {
-        return if (location != null) {
+        val header = if (location != null) {
             "$errorType at $location: $message"
         } else {
             "$errorType: $message"
+        }
+
+        return if (stackTrace.isNotEmpty()) {
+            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        } else {
+            header
         }
     }
 }
@@ -43,7 +51,8 @@ class ReferenceError(
     val symbolName: String,
     message: String = "Undefined variable: $symbolName",
     location: SourceLocation? = null,
-) : KlangScriptError(message, "ReferenceError", location)
+    stackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptError(message, "ReferenceError", location, stackTrace)
 
 /**
  * TypeError - Type mismatch or invalid operation
@@ -60,16 +69,23 @@ class TypeError(
     message: String,
     val operation: String? = null,
     location: SourceLocation? = null,
-) : KlangScriptError(message, "TypeError", location) {
+    stackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptError(message, "TypeError", location, stackTrace) {
 
     override fun format(): String {
         val prefix = if (location != null) "$errorType at $location" else errorType
-        return if (operation != null) {
+        val header = if (operation != null) {
             "$prefix in $operation: $message"
         } else if (location != null) {
             "$prefix: $message"
         } else {
-            super.format()
+            "$errorType: $message"
+        }
+
+        return if (stackTrace.isNotEmpty()) {
+            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        } else {
+            header
         }
     }
 }
@@ -89,14 +105,21 @@ class ArgumentError(
     val expected: Int? = null,
     val actual: Int? = null,
     location: SourceLocation? = null,
-) : KlangScriptError(message, "ArgumentError", location) {
+    stackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptError(message, "ArgumentError", location, stackTrace) {
 
     override fun format(): String {
         val prefix = if (location != null) "$errorType at $location" else errorType
-        return if (expected != null && actual != null) {
+        val header = if (expected != null && actual != null) {
             "$prefix in $functionName: Expected $expected arguments, got $actual"
         } else {
             "$prefix in $functionName: $message"
+        }
+
+        return if (stackTrace.isNotEmpty()) {
+            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        } else {
+            header
         }
     }
 }
@@ -115,16 +138,23 @@ class ImportError(
     val libraryName: String?,
     message: String,
     location: SourceLocation? = null,
-) : KlangScriptError(message, "ImportError", location) {
+    stackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptError(message, "ImportError", location, stackTrace) {
 
     override fun format(): String {
         val prefix = if (location != null) "$errorType at $location" else errorType
-        return if (libraryName != null) {
+        val header = if (libraryName != null) {
             "$prefix in library '$libraryName': $message"
         } else if (location != null) {
             "$prefix: $message"
         } else {
-            super.format()
+            "$errorType: $message"
+        }
+
+        return if (stackTrace.isNotEmpty()) {
+            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        } else {
+            header
         }
     }
 }
@@ -141,16 +171,39 @@ class AssignmentError(
     val variableName: String?,
     message: String,
     location: SourceLocation? = null,
-) : KlangScriptError(message, "AssignmentError", location) {
+    stackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptError(message, "AssignmentError", location, stackTrace) {
 
     override fun format(): String {
         val prefix = if (location != null) "$errorType at $location" else errorType
-        return if (variableName != null) {
+        val header = if (variableName != null) {
             "$prefix for variable '$variableName': $message"
         } else if (location != null) {
             "$prefix: $message"
         } else {
-            super.format()
+            "$errorType: $message"
+        }
+
+        return if (stackTrace.isNotEmpty()) {
+            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        } else {
+            header
         }
     }
 }
+
+/**
+ * StackOverflowError - Call stack exceeded maximum depth
+ *
+ * Thrown when the call stack grows beyond the configured limit (default 1000 frames).
+ * This prevents infinite recursion from consuming all memory.
+ *
+ * Examples:
+ * - Infinite recursion: `let f = () => f(); f()`
+ * - Deeply nested calls exceeding limit
+ */
+class StackOverflowError(
+    message: String,
+    location: SourceLocation? = null,
+    stackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptError(message, "StackOverflowError", location, stackTrace)
