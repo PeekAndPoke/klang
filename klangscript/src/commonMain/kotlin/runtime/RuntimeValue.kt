@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.getUniqueClassName
+import kotlin.reflect.KClass
 
 /**
  * Runtime value types for KlangScript
@@ -20,7 +22,9 @@ import io.peekandpoke.klang.script.getUniqueClassName
  * All values in the KlangScript runtime inherit from this sealed class.
  * This allows exhaustive when expressions and type-safe pattern matching.
  */
-sealed class RuntimeValue {
+sealed interface RuntimeValue {
+    val value: Any?
+
     /**
      * Convert this value to a human-readable string
      * Used for debugging and console output
@@ -36,7 +40,7 @@ sealed class RuntimeValue {
  *
  * Examples: 42, 3.14, -0.5
  */
-data class NumberValue(val value: Double) : RuntimeValue() {
+data class NumberValue(override val value: Double) : RuntimeValue {
     override fun toDisplayString(): String = value.toString()
 }
 
@@ -47,7 +51,7 @@ data class NumberValue(val value: Double) : RuntimeValue() {
  *
  * Examples: "hello", 'world'
  */
-data class StringValue(val value: String) : RuntimeValue() {
+data class StringValue(override val value: String) : RuntimeValue {
     override fun toDisplayString(): String = value
 }
 
@@ -59,7 +63,7 @@ data class StringValue(val value: String) : RuntimeValue() {
  *
  * Examples: true, false
  */
-data class BooleanValue(val value: Boolean) : RuntimeValue() {
+data class BooleanValue(override val value: Boolean) : RuntimeValue {
     override fun toDisplayString(): String = value.toString()
 }
 
@@ -69,7 +73,9 @@ data class BooleanValue(val value: Boolean) : RuntimeValue() {
  * Represents the absence of a value.
  * KlangScript has no 'undefined' - only 'null'.
  */
-data object NullValue : RuntimeValue() {
+data object NullValue : RuntimeValue {
+    override val value: Nothing? = null
+
     override fun toDisplayString(): String = "null"
 }
 
@@ -92,7 +98,9 @@ data object NullValue : RuntimeValue() {
 data class NativeFunctionValue(
     val name: String,
     val function: (List<RuntimeValue>) -> RuntimeValue,
-) : RuntimeValue() {
+) : RuntimeValue {
+    override val value = null
+
     override fun toDisplayString(): String = "[native function $name]"
 }
 
@@ -125,9 +133,11 @@ data class NativeFunctionValue(
  */
 data class FunctionValue(
     val parameters: List<String>,
-    val body: io.peekandpoke.klang.script.ast.Expression,
+    val body: Expression,
     val closureEnv: Environment,
-) : RuntimeValue() {
+) : RuntimeValue {
+    override val value = null
+
     override fun toDisplayString(): String = "[function(${parameters.joinToString(", ")})]"
 }
 
@@ -162,7 +172,11 @@ data class FunctionValue(
  */
 data class ObjectValue(
     val properties: MutableMap<String, RuntimeValue> = mutableMapOf(),
-) : RuntimeValue() {
+) : RuntimeValue {
+    override val value: Map<String, Any?> by lazy {
+        properties.mapValues { it.value.value }
+    }
+
     override fun toDisplayString(): String = "[object]"
 
     /**
@@ -207,10 +221,10 @@ data class ObjectValue(
  * ```
  */
 data class NativeObjectValue<T : Any>(
-    val kClass: kotlin.reflect.KClass<out T>,
+    val kClass: KClass<out T>,
     val qualifiedName: String = kClass.getUniqueClassName(),
-    val value: T,
-) : RuntimeValue() {
+    override val value: T,
+) : RuntimeValue {
     companion object {
         inline operator fun <reified T : Any> invoke(value: T): NativeObjectValue<T> =
             NativeObjectValue(T::class, value = value)
@@ -275,7 +289,11 @@ data class NativeObjectValue<T : Any>(
  */
 data class ArrayValue(
     val elements: MutableList<RuntimeValue>,
-) : RuntimeValue() {
+) : RuntimeValue {
+    override val value by lazy {
+        elements.map { it.value }
+    }
+
     override fun toDisplayString(): String {
         return "[${elements.joinToString(", ") { it.toDisplayString() }}]"
     }
@@ -307,6 +325,8 @@ data class BoundNativeMethod(
     val methodName: String,
     val receiver: NativeObjectValue<*>,
     val invoker: (List<RuntimeValue>) -> RuntimeValue,
-) : RuntimeValue() {
+) : RuntimeValue {
+    override val value = null
+
     override fun toDisplayString(): String = "[bound method $methodName on ${receiver.qualifiedName}]"
 }

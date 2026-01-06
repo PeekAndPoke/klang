@@ -33,71 +33,17 @@ data class ExtensionMethod(
  * Supports: String, Double, Int, Boolean, and native objects.
  *
  * @param T The target Kotlin type
- * @param value The RuntimeValue to convert
  * @return The converted Kotlin value
  * @throws TypeError if conversion fails
  */
-inline fun <reified T : Any> convertParameter(value: RuntimeValue): T {
-    return when {
-        // String conversion
-        T::class == String::class -> {
-            when (value) {
-                is StringValue -> value.value as T
-                else -> throw TypeError(
-                    "Cannot convert ${value::class.simpleName} to String",
-                    operation = "parameter conversion"
-                )
-            }
-        }
+inline fun <reified T : Any> RuntimeValue.convertToKotlin(): T {
 
-        // Double conversion
-        T::class == Double::class -> {
-            when (value) {
-                is NumberValue -> value.value as T
-                else -> throw TypeError(
-                    "Cannot convert ${value::class.simpleName} to Double",
-                    operation = "parameter conversion"
-                )
-            }
-        }
+    val isValid = T::class.isInstance(value)
 
-        // Int conversion
-        T::class == Int::class -> {
-            when (value) {
-                is NumberValue -> value.value.toInt() as T
-                else -> throw TypeError(
-                    "Cannot convert ${value::class.simpleName} to Int",
-                    operation = "parameter conversion"
-                )
-            }
-        }
-
-        // Boolean conversion
-        T::class == Boolean::class -> {
-            when (value) {
-                is BooleanValue -> value.value as T
-                else -> throw TypeError(
-                    "Cannot convert ${value::class.simpleName} to Boolean",
-                    operation = "parameter conversion"
-                )
-            }
-        }
-
-        // Native object conversion
-        value is NativeObjectValue<*> -> {
-            if (value.kClass == T::class) {
-                value.value as T
-            } else {
-                throw TypeError(
-                    "Cannot convert native type ${value.qualifiedName} to ${T::class.simpleName}",
-                    operation = "parameter conversion"
-                )
-            }
-        }
-
-        // Unsupported conversion
+    when (isValid) {
+        true -> return value as T
         else -> throw TypeError(
-            "Cannot convert ${value::class.simpleName} to ${T::class.simpleName}",
+            "Cannot convert ${this::class.simpleName} to ${T::class.simpleName}",
             operation = "parameter conversion"
         )
     }
@@ -120,6 +66,8 @@ fun wrapAsRuntimeValue(value: Any?): RuntimeValue {
         is Double -> NumberValue(value)
         is Int -> NumberValue(value.toDouble())
         is Boolean -> BooleanValue(value)
+        // TODO: list -> ArrayValue
+        // TODO: Map -> ObjectValue
         else -> {
             // Wrap as native object
             val kClass = value::class

@@ -114,7 +114,7 @@ class KlangScript private constructor(
                     actual = args.size
                 )
             }
-            val param = convertParameter<TParam>(args[0])
+            val param = args[0].convertToKotlin<TParam>()
             val result = function(param)
             wrapAsRuntimeValue(result)
         }
@@ -283,7 +283,7 @@ class KlangScript private constructor(
                     )
                 }
                 @Suppress("UNCHECKED_CAST")
-                val param = convertParameter<TParam>(args[0])
+                val param = args[0].convertToKotlin<TParam>()
                 val result = method(receiver as TReceiver, param)
                 wrapAsRuntimeValue(result)
             }
@@ -335,8 +335,8 @@ class KlangScript private constructor(
                     )
                 }
                 @Suppress("UNCHECKED_CAST")
-                val param1 = convertParameter<TParam1>(args[0])
-                val param2 = convertParameter<TParam2>(args[1])
+                val param1 = args[0].convertToKotlin<TParam1>()
+                val param2 = args[1].convertToKotlin<TParam2>()
                 val result = method(receiver as TReceiver, param1, param2)
                 wrapAsRuntimeValue(result)
             }
@@ -512,7 +512,7 @@ class KlangScript private constructor(
                         actual = args.size
                     )
                 }
-                val param = convertParameter<TParam>(args[0])
+                val param = args[0].convertToKotlin<TParam>()
                 val result = function(param)
                 wrapAsRuntimeValue(result)
             }
@@ -610,7 +610,7 @@ class KlangScript private constructor(
                         )
                     }
                     @Suppress("UNCHECKED_CAST")
-                    val param = convertParameter<TParam>(args[0])
+                    val param = args[0].convertToKotlin<TParam>()
                     val result = method(receiver as TReceiver, param)
                     wrapAsRuntimeValue(result)
                 }
@@ -657,8 +657,8 @@ class KlangScript private constructor(
                         )
                     }
                     @Suppress("UNCHECKED_CAST")
-                    val param1 = convertParameter<TParam1>(args[0])
-                    val param2 = convertParameter<TParam2>(args[1])
+                    val param1 = args[0].convertToKotlin<TParam1>()
+                    val param2 = args[1].convertToKotlin<TParam2>()
                     val result = method(receiver as TReceiver, param1, param2)
                     wrapAsRuntimeValue(result)
                 }
