@@ -595,10 +595,10 @@ Known limitation: Native function argument errors don't have locations (architec
 - [x] API for parsing source code (internal - uses KlangScriptParser)
 - [x] API for executing scripts (execute() method)
 - [x] API for registering functions (registerFunction, registerFunction0, registerFunction1)
-- [ ] API for registering objects (not yet implemented)
+- [x] API for registering objects
 - [x] Write unit tests for:
   - [x] Basic usage patterns (KlangScriptIntegrationTest.kt)
-  - [ ] Multiple scripts in same engine
+  - [x] Multiple scripts in same engine
   - [ ] Isolated vs shared environments
 
 #### Step 3.2: Function Registration System ✅ (Basic)
@@ -1049,38 +1049,79 @@ registrations (functions, types, extension methods).
 separately. Library authors should be able to create self-contained packages that include both script code and native
 bindings.
 
-**Use Case**:
+**Use Case** (Updated with new builder architecture):
 
 ```kotlin
-// Library author creates a reusable library
-val strudelLib = KlangScriptLibrary("strudel")
-  .source(
+// Library author creates a reusable library using builder pattern
+val strudelLib = klangScriptLibrary("strudel") {
+  source(
     """
         let sequence = (pattern) => note(pattern)
         export { sequence }
     """
   )
-  .registerNativeFunction<String, StrudelPattern>("note") { pattern ->
+
+  // Register native function that returns StrudelPattern
+  registerFunction("note") { pattern: String ->
     StrudelPattern(pattern)
   }
-  .registerExtensionMethod1<StrudelPattern, String, StrudelPattern>("sound") { receiver, soundName ->
-    receiver.sound(soundName)
-  }
 
-// User registers the library with their engine
-engine.registerLibrary(strudelLib)
+  // Register extension methods on StrudelPattern using registerType
+  registerType<StrudelPattern> {
+    registerMethod("sound") { soundName: String ->
+      this.sound(soundName)
+    }
+    registerMethod("gain") { amount: Double ->
+      this.gain(amount)
+    }
+  }
+}
+
+// User creates engine and registers the library
+val engine = klangScript {
+  registerLibrary(strudelLib)
+}
 
 // Script can now import and use the library
 engine.execute(
   """
     import * from "strudel"
-    note("a b c d").sound("saw")
+    note("a b c d").sound("saw").gain(0.8)
 """
 )
 
-// Library can be reused across multiple engines
-val engine2 = KlangScript()
-engine2.registerLibrary(strudelLib)
+// Library can be reused across multiple engines (immutable)
+val engine2 = klangScript {
+  registerLibrary(strudelLib)
+}
+```
+
+**Alternative: Using `registerObject` for singleton helpers**:
+
+```kotlin
+val mathLib = klangScriptLibrary("math") {
+  source("export { Math }")
+
+  // Register Math as a singleton object with methods
+  registerObject("Math", MathHelper) {
+    registerMethod("sqrt") { x: Double -> sqrt(x) }
+    registerMethod("pow") { base: Double, exp: Double -> base.pow(exp) }
+    registerMethod("min") { a: Double, b: Double -> min(a, b) }
+    registerMethod("max") { a: Double, b: Double -> max(a, b) }
+  }
+}
+
+val engine = klangScript {
+  registerLibrary(mathLib)
+}
+
+engine.execute(
+  """
+    import * from "math"
+    let result = Math.sqrt(Math.pow(3, 2) + Math.pow(4, 2))
+    print(result)  // 5.0
+"""
+)
 ```
 
 **Architecture**:
@@ -1253,39 +1294,6 @@ A significant architectural improvement was made to centralize all native regist
 - ✅ 100% backward compatibility maintained
 - ✅ Cleaner, more maintainable codebase
 
-**Target Architecture**:
-
-```kotlin
-// Library: Immutable after construction
-val strudelLib = KlangScriptLibrary.builder("strudel")
-  .source(
-    """
-        let sequence = (pattern) => note(pattern)
-        export { sequence }
-    """
-  )
-  .registerNativeFunction<String, StrudelPattern>("note") { pattern ->
-    StrudelPattern(pattern)
-  }
-  .registerExtensionMethod1<StrudelPattern, String, StrudelPattern>("sound") { receiver, soundName ->
-    receiver.sound(soundName)
-  }
-  .build()  // Returns immutable KlangScriptLibrary
-
-// Engine: Immutable after construction
-val engine = KlangScript.builder()
-  .registerLibrary(strudelLib)
-  .registerLibrary(mathLib)
-  .registerFunction("print") { args ->
-    println(args[0].toDisplayString())
-    NullValue
-  }
-  .build()  // Returns immutable KlangScript
-
-// Execution phase - engine is immutable, can only execute scripts
-val result = engine.execute("note('a b c').sound('saw')")
-```
-
 **Design Decision: Strict Immutability (Option A)**
 
 After construction, neither `KlangScriptLibrary` nor `KlangScript` can be modified:
@@ -1296,13 +1304,6 @@ After construction, neither `KlangScriptLibrary` nor `KlangScript` can be modifi
 - ✅ Prevents bugs from registering functions mid-execution
 - ✅ Forces good organization - everything in libraries, not ad-hoc registrations
 - ✅ Matches live coding use case - libraries defined once, scripts executed repeatedly
-
-**Alternative Considered (Option B - Hybrid):**
-Keep registration methods on `KlangScript` for REPL scenarios. **Rejected** because:
-
-- Live coding is not REPL - configuration is known upfront
-- Immutability is the primary goal for stability
-- If dynamic behavior needed later, can create new engine with additional libraries
 
 **Implementation Completed**: ✅
 
