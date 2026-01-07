@@ -9,7 +9,7 @@ JavaScript-like scripting language for live coding
 - **Parser**: better-parse (combinator library)
 - **Runtime**: Tree-walking interpreter
 - **Platforms**: Kotlin Multiplatform (JVM + JS)
-- **Current Status**: 359+ tests passing on both platforms
+- **Current Status**: 420+ tests passing on both platforms
 
 ---
 

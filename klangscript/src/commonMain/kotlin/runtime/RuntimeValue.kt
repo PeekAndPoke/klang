@@ -68,6 +68,33 @@ inline fun <reified T : Any> RuntimeValue.toObjectOrNull(): T? = (value as? T)
 /** Converts the value to an object of type T if possible, otherwise default */
 inline fun <reified T : Any> RuntimeValue.toObjectOr(default: T): T = toObjectOrNull() ?: default
 
+/** Converts the value to a float if possible, otherwise null */
+fun RuntimeValue.toFloatOrNull() = (value as? Number)?.toFloat()
+
+/** Converts the value to a float if possible, otherwise default */
+fun RuntimeValue.toFloatOr(default: Float) = toFloatOrNull() ?: default
+
+/** Checks if this value is a number */
+fun RuntimeValue.isNumber() = this is NumberValue
+
+/** Checks if this value is a string */
+fun RuntimeValue.isString() = this is StringValue
+
+/** Checks if this value is a boolean */
+fun RuntimeValue.isBoolean() = this is BooleanValue
+
+/** Checks if this value is null */
+fun RuntimeValue.isNull() = this is NullValue
+
+/** Checks if this value is an array */
+fun RuntimeValue.isArray() = this is ArrayValue
+
+/** Checks if this value is an object */
+fun RuntimeValue.isObject() = this is ObjectValue
+
+/** Checks if this value is a function */
+fun RuntimeValue.isFunction() = this is FunctionValue || this is NativeFunctionValue || this is BoundNativeMethod
+
 /**
  * Numeric value
  *
