@@ -4,9 +4,12 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 
 internal class TimeModifierPattern(
-    val pattern: StrudelPattern,
+    val source: StrudelPattern,
     val factor: Double,
 ) : StrudelPattern {
+    // Time modifiers transform the inner pattern's time but should preserve its structural weight.
+    override val weight: Double get() = source.weight
+
     override fun queryArc(
         from: Double,
         to: Double,
@@ -16,7 +19,7 @@ internal class TimeModifierPattern(
         val innerFrom = from / factor
         val innerTo = to / factor
 
-        val innerEvents = pattern.queryArc(innerFrom, innerTo)
+        val innerEvents = source.queryArc(innerFrom, innerTo)
 
         return innerEvents.map { ev ->
             // Map inner events back to outer time

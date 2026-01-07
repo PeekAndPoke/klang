@@ -82,7 +82,7 @@ private suspend fun helloStrudel() {
                 sound("bd@2 hh sd@2 hh")
 //                .pan(sine.range(-1.0, 1.0).slow(4))
 //                .gain(0.1)
-//                .fast(2)
+                .fast(2.13)
             """.trimIndent()
         )!!
 

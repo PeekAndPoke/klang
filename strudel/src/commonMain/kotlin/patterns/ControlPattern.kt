@@ -19,6 +19,10 @@ internal class ControlPattern(
     val combiner: (VoiceData, VoiceData) -> VoiceData,
 ) : StrudelPattern {
 
+    // Control patterns wrap a source pattern and should preserve its weight.
+    // E.g. (bd@2).gain(0.5) should still have a weight of 2.
+    override val weight: Double get() = source.weight
+
     override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
         val sourceEvents = source.queryArc(from, to)
         if (sourceEvents.isEmpty()) return emptyList()

@@ -3,22 +3,11 @@ package io.peekandpoke.klang.strudel
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.strudel.lang.strudelLib
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.max
 
 /**
  * Strudel pattern.
  */
 interface StrudelPattern {
-    /**
-     * Weight for proportional time distribution in sequences.
-     * Default is 1.0. Used by the @ operator in mini-notation (e.g., "bd@2" has weight 2.0).
-     */
-    val weight: Double get() = 1.0
-
     companion object {
         fun compile(code: String): StrudelPattern? {
             val code = """
@@ -36,56 +25,18 @@ interface StrudelPattern {
         }
     }
 
-    @Serializable
-    class Static(
-        val events: List<StrudelPatternEvent>,
-    ) : StrudelPattern {
-
-        companion object {
-            private val codec = Json {
-                ignoreUnknownKeys = true
-                explicitNulls = false
-            }
-
-            fun fromJson(json: String): Static = codec.decodeFromString(serializer(), json)
-        }
-
-        private val totalCycles = ceil(max(1.0, events.maxOfOrNull { it.end } ?: 0.0))
-
-        override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
-            if (events.isEmpty()) return emptyList()
-
-            val fromMod = from % totalCycles
-            val toMod = fromMod + (to - from)
-
-            val offset = floor(from / totalCycles) * totalCycles
-
-            // println("from=$from, to=$to, offset=$offset, fromMod=$fromMod, toMod=$toMod")
-
-            return events
-                .filter { evt ->
-
-                    evt.begin >= fromMod && evt.begin < toMod
-                }
-                .map {
-                    it.copy(begin = it.begin + offset, end = it.end + offset)
-                }
-        }
-
-        fun toJson(): String {
-            val lines = events.map { codec.encodeToString(it) }
-
-            return buildString {
-                appendLine("{")
-                appendLine("  \"events\": [")
-                lines.forEachIndexed { idx, line ->
-                    appendLine("    $line${if (idx < lines.lastIndex) "," else ""}")
-                }
-                appendLine("  ]")
-                appendLine("}")
-            }
-        }
+    /**
+     * A helper interface for patterns with a fixed weight of 1.0.
+     */
+    interface Fixed : StrudelPattern {
+        override val weight: Double get() = 1.0
     }
+
+    /**
+     * Weight for proportional time distribution in sequences.
+     * Used by the @ operator in mini-notation (e.g., "bd@2" has weight 2.0).
+     */
+    val weight: Double
 
     /**
      * Queries events from [from] and [to] cycles.
@@ -104,5 +55,5 @@ fun StrudelPattern.asEventSource(): StrudelEventSource = StrudelEventSource(this
  *
  * Acts like recording the arc [from] - [to] for later playback.
  */
-fun StrudelPattern.makeStatic(from: Double, to: Double): StrudelPattern.Static =
-    StrudelPattern.Static(events = queryArc(from, to))
+fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
+    StaticStrudelPattern(events = queryArc(from, to))

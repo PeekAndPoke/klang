@@ -11,7 +11,10 @@ import kotlin.math.min
  * Sequence Pattern: Squashes multiple patterns into a single cycle.
  * Implementation of `seq(a, b)`.
  */
-internal class SequencePattern(val patterns: List<StrudelPattern>) : StrudelPattern {
+internal class SequencePattern(
+    val patterns: List<StrudelPattern>,
+) : StrudelPattern.Fixed {
+
     override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
 
@@ -24,6 +27,8 @@ internal class SequencePattern(val patterns: List<StrudelPattern>) : StrudelPatt
         weights.forEach { w ->
             offsets.add(offsets.last() + (w / totalWeight))
         }
+        // Ensure last offset is exactly 1.0 to avoid floating-point accumulation errors
+        offsets[offsets.lastIndex] = 1.0
 
         // Optimize: Iterate only over the cycles involved in the query
         val startCycle = floor(from).toInt()
@@ -46,7 +51,9 @@ internal class SequencePattern(val patterns: List<StrudelPattern>) : StrudelPatt
                     // The inner pattern covers 0..1 logically for this step.
                     // Formula: t_inner = (t_outer - stepStart) / stepSize + cycle
                     val innerFrom = (intersectStart - stepStart) / stepSize + cycle
-                    val innerTo = (intersectEnd - stepStart) / stepSize + cycle
+                    // Clamp innerTo to the end of the cycle to avoid floating point errors
+                    // picking up events from the next cycle of the inner pattern.
+                    val innerTo = min((intersectEnd - stepStart) / stepSize + cycle, cycle + 1.0)
 
                     val innerEvents = pattern.queryArc(innerFrom, innerTo)
 

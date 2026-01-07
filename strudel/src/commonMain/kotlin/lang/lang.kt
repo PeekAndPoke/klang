@@ -37,7 +37,7 @@ private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
 
 @StrudelDsl
 val silence by dslObject {
-    object : StrudelPattern {
+    object : StrudelPattern.Fixed {
         override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> = emptyList()
     }
 }

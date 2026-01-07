@@ -12,7 +12,7 @@ import kotlin.math.min
  */
 internal class ArrangementPattern(
     val segments: List<Pair<Double, StrudelPattern>>,
-) : StrudelPattern {
+) : StrudelPattern.Fixed {
 
     val totalDuration = segments.sumOf { it.first }
 

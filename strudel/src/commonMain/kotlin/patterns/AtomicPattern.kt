@@ -10,9 +10,9 @@ import kotlin.math.floor
  * Atomic Pattern: Represents a single event that repeats every cycle (0, 1, 2...).
  * Used for basic primitives like `note("c3")`.
  */
-internal class AtomicPattern(val data: VoiceData) : StrudelPattern {
+internal class AtomicPattern(val data: VoiceData) : StrudelPattern.Fixed {
     companion object {
-        val pure = AtomicPattern(VoiceData.Companion.empty)
+        val pure = AtomicPattern(VoiceData.empty)
     }
 
     override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
@@ -34,6 +34,7 @@ internal class AtomicPattern(val data: VoiceData) : StrudelPattern {
                 )
             }
         }
+
         return events
     }
 }

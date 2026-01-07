@@ -13,7 +13,12 @@ import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeToStringOrNull
 import io.peekandpoke.klang.tones.Tones
 import org.graalvm.polyglot.Value
 
-class GraalStrudelPattern(val value: Value, val graal: GraalStrudelCompiler) : StrudelPattern {
+class GraalStrudelPattern(
+    val value: Value,
+    val graal: GraalStrudelCompiler,
+) : StrudelPattern.Fixed {
+    // Graal patterns are treated as opaque units from the JS side, so we default to weight 1.0.
+    override val weight: Double = 1.0
 
     override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
         val arc = graal.queryPattern(value, from, to)

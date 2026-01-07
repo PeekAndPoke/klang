@@ -9,7 +9,8 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
  */
 open class ContinuousPattern(
     val getValue: (Double) -> Double,
-) : StrudelPattern {
+) : StrudelPattern.Fixed {
+
     override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
         return listOf(
             StrudelPatternEvent(
