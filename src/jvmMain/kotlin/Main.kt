@@ -74,23 +74,17 @@ private suspend fun helloStrudel() {
 
 //        val tetrisPattern = TestKotlinPatterns.tetris
 
-//        val pattern = StrudelPattern.compile(TestTextPatterns.tetris)
-//            ?: error("Pattern was not compiled")
-//
-        val pattern = StrudelPattern.compile(
-            """
-                sound("bd hh sd hh")
-                .pan(sine.range(-1.0, 1.0).slow(4))
-                .gain(0.1)
-                .fast(2)
-            """.trimIndent()
-        )!!
+        val pattern = StrudelPattern.compile(TestTextPatterns.tetris)
+            ?: error("Pattern was not compiled")
 
-//        val pattern = sound("bd hh sd hh")
-//            .pan(sine.range(-0.3, 1.0).slow(8))
-//            .gain(0.1)
-//            .fast(2)
-
+//        val pattern = StrudelPattern.compile(
+//            """
+//                sound("bd hh sd hh")
+//                .pan(sine.range(-1.0, 1.0).slow(4))
+//                .gain(0.1)
+//                .fast(2)
+//            """.trimIndent()
+//        )!!
 
         println("=======================================================================")
         println(

@@ -36,7 +36,7 @@ private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
 // Structure Functions /////////////////////////////////////////////////////////////////////////////////////////////////
 
 @StrudelDsl
-val silence by dslFunction<Any> {
+val silence by dslObject {
     object : StrudelPattern {
         override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> = emptyList()
     }
@@ -48,7 +48,7 @@ val silence by dslFunction<Any> {
  * For now, simple silence is usually enough.
  */
 @StrudelDsl
-val rest by dslFunction<Any> { silence() }
+val rest by dslObject { silence }
 
 // Continuous patterns /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -91,14 +91,14 @@ val square by dslObject {
 @StrudelDsl
 val seq by dslFunction<StrudelPattern> { args ->
     val patterns = args.flattenToPatterns().toList()
-    if (patterns.isEmpty()) silence() else SequencePattern(patterns)
+    if (patterns.isEmpty()) silence else SequencePattern(patterns)
 }
 
 /** Plays multiple patterns at the same time. */
 @StrudelDsl
 val stack by dslFunction<StrudelPattern> { args ->
     val patterns = args.flattenToPatterns().toList()
-    if (patterns.isEmpty()) silence() else StackPattern(patterns)
+    if (patterns.isEmpty()) silence else StackPattern(patterns)
 }
 
 // arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
@@ -116,11 +116,11 @@ val arrange by dslFunction<Any> { args ->
             }
             // Case: [pattern] (defaults to 1 cycle)
             is List<*> if arg.size == 1 && arg[0] is StrudelPattern -> 1.0 to (arg[0] as StrudelPattern)
-            else -> 0.0 to silence()
+            else -> 0.0 to silence
         }
     }.filter { it.first > 0.0 }
 
-    if (segments.isEmpty()) silence()
+    if (segments.isEmpty()) silence
     else ArrangementPattern(segments)
 }
 
@@ -129,7 +129,7 @@ val arrange by dslFunction<Any> { args ->
 val pickRestart by dslFunction<Any> { args ->
     val patterns = args.flattenToPatterns()
     if (patterns.isEmpty()) {
-        silence()
+        silence
     } else {
         // seq plays all in 1 cycle. slow(n) makes each take 1 cycle.
         val s = seq(*patterns) // using our dslFunction 'seq' via kotlin invoke

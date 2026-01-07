@@ -96,7 +96,7 @@ object TestKotlinPatterns {
     val smallTownBoy = stack(
         // melody
         arrange(
-            listOf(8, silence()),
+            listOf(8, silence),
             listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
         ).orbit(1)
             .scale("C4:minor")
@@ -107,7 +107,7 @@ object TestKotlinPatterns {
 
         // melody 2
         arrange(
-            listOf(8, silence()),
+            listOf(8, silence),
             listOf(8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")),
         ).orbit(2)
             .scale("C5:minor")

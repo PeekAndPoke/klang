@@ -11,7 +11,7 @@ class MiniNotationParser(
     private var pos = 0
 
     fun parse(): StrudelPattern {
-        if (tokens.isEmpty()) return silence()
+        if (tokens.isEmpty()) return silence
 
         val result = parseExpression()
 
@@ -39,7 +39,7 @@ class MiniNotationParser(
             steps.add(parseStep())
         }
 
-        return if (steps.isEmpty()) silence()
+        return if (steps.isEmpty()) silence
         else if (steps.size == 1) steps[0]
         else seq(*steps.toTypedArray())
     }
@@ -59,7 +59,7 @@ class MiniNotationParser(
                 p
             }
 
-            match(TokenType.TILDE) -> silence()
+            match(TokenType.TILDE) -> silence
 
             match(TokenType.LITERAL) -> {
                 val text = previous().text
@@ -98,7 +98,7 @@ class MiniNotationParser(
             steps.add(parseStep())
         }
 
-        if (steps.isEmpty()) return silence()
+        if (steps.isEmpty()) return silence
 
         // <a b c> is equivalent to slow(3, seq(a, b, c))
         // This makes each step take 1 full cycle
