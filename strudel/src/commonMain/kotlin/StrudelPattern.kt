@@ -13,6 +13,12 @@ import kotlin.math.max
  * Strudel pattern.
  */
 interface StrudelPattern {
+    /**
+     * Weight for proportional time distribution in sequences.
+     * Default is 1.0. Used by the @ operator in mini-notation (e.g., "bd@2" has weight 2.0).
+     */
+    val weight: Double get() = 1.0
+
     companion object {
         fun compile(code: String): StrudelPattern? {
             val code = """

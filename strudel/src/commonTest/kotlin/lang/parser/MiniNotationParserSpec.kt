@@ -155,5 +155,87 @@ class MiniNotationParserSpec : StringSpec() {
             events.count { it.data.note == "c3" } shouldBe 1
             events.count { it.data.note == "e3" } shouldBe 2
         }
+
+        "Parsing basic weight 'e@2 a'" {
+            // e has weight 2, a has weight 1 (default)
+            // Total weight = 3
+            // e gets 2/3 (0.0 to 0.667), a gets 1/3 (0.667 to 1.0)
+            val pattern = parse("e@2 a")
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+            events.size shouldBe 2
+
+            with(events[0]) {
+                data.note shouldBe "e"
+                begin shouldBe 0.0
+                end shouldBe (2.0 / 3.0)
+            }
+
+            with(events[1]) {
+                data.note shouldBe "a"
+                begin shouldBe (2.0 / 3.0)
+                end shouldBe 1.0
+            }
+        }
+
+        "Parsing multiple weights 'a b@3 c'" {
+            // Total weight = 1 + 3 + 1 = 5
+            // a gets 1/5, b gets 3/5, c gets 1/5
+            val pattern = parse("a b@3 c")
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+            events.size shouldBe 3
+
+            with(events[0]) {
+                data.note shouldBe "a"
+                begin shouldBe 0.0
+                end shouldBe 0.2
+            }
+
+            with(events[1]) {
+                data.note shouldBe "b"
+                begin shouldBe 0.2
+                end shouldBe 0.8
+            }
+
+            with(events[2]) {
+                data.note shouldBe "c"
+                begin shouldBe 0.8
+                end shouldBe 1.0
+            }
+        }
+
+        "Parsing equal weights 'a@2 b@2'" {
+            // Both have weight 2, should be equal distribution (like 'a b')
+            val pattern = parse("a@2 b@2")
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+            events.size shouldBe 2
+
+            with(events[0]) {
+                data.note shouldBe "a"
+                begin shouldBe 0.0
+                end shouldBe 0.5
+            }
+
+            with(events[1]) {
+                data.note shouldBe "b"
+                begin shouldBe 0.5
+                end shouldBe 1.0
+            }
+        }
+
+        "Parsing weight with other modifiers 'c3@2*2'" {
+            // Weight applied first, then speed modifier
+            val pattern = parse("c3@2*2")
+            // c3@2 in a sequence would take 2/3 time, but here it's alone so takes full cycle
+            // Then *2 makes it play twice
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+            events.size shouldBe 2
+            events.forEach {
+                it.data.note shouldBe "c3"
+            }
+        }
     }
 }

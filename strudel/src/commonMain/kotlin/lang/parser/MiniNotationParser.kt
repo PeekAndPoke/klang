@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang.parser
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.patterns.WeightedPattern
 
 class MiniNotationParser(
     input: String,
@@ -73,8 +74,8 @@ class MiniNotationParser(
             }
         }
 
-        // Apply modifiers (*, /)
-        while (check(TokenType.STAR) || check(TokenType.SLASH)) {
+        // Apply modifiers (*, /, @)
+        while (check(TokenType.STAR) || check(TokenType.SLASH) || check(TokenType.AT)) {
             if (match(TokenType.STAR)) {
                 val factorStr = consume(TokenType.LITERAL, "Expected number after '*'").text
                 val factor = factorStr.toDoubleOrNull() ?: 1.0
@@ -83,6 +84,10 @@ class MiniNotationParser(
                 val factorStr = consume(TokenType.LITERAL, "Expected number after '/'").text
                 val factor = factorStr.toDoubleOrNull() ?: 1.0
                 pattern = pattern.slow(factor)
+            } else if (match(TokenType.AT)) {
+                val weightStr = consume(TokenType.LITERAL, "Expected number after '@'").text
+                val weight = weightStr.toDoubleOrNull() ?: 1.0
+                pattern = WeightedPattern(pattern, weight)
             }
         }
 
@@ -110,7 +115,7 @@ class MiniNotationParser(
 
     private enum class TokenType {
         L_BRACKET, R_BRACKET, L_ANGLE, R_ANGLE,
-        COMMA, STAR, SLASH, TILDE, LITERAL
+        COMMA, STAR, SLASH, TILDE, AT, LITERAL
     }
 
     private data class Token(val type: TokenType, val text: String)
@@ -154,13 +159,17 @@ class MiniNotationParser(
                     tokens.add(Token(TokenType.TILDE, "~")); i++
                 }
 
+                '@' -> {
+                    tokens.add(Token(TokenType.AT, "@")); i++
+                }
+
                 else -> {
                     val start = i
                     while (i < input.length) {
                         val next = input[i]
-                        // Note: '-', ':', '@', '!' are allowed within literals
+                        // Note: '-', ':', '!' are allowed within literals
                         // (e.g., "kick-808", "bd:3", "0.1:0.2:0.3:0.4")
-                        if (next in " []<>,*/~ \t\n\r") break
+                        if (next in " []<>,*/~@ \t\n\r") break
                         i++
                     }
                     tokens.add(Token(TokenType.LITERAL, input.substring(start, i)))

@@ -16,7 +16,14 @@ internal class SequencePattern(val patterns: List<StrudelPattern>) : StrudelPatt
         if (patterns.isEmpty()) return emptyList()
 
         val events = mutableListOf<StrudelPatternEvent>()
-        val stepSize = 1.0 / patterns.size
+
+        // Calculate proportional offsets based on weights
+        val weights = patterns.map { it.weight }
+        val totalWeight = weights.sum()
+        val offsets = mutableListOf(0.0)
+        weights.forEach { w ->
+            offsets.add(offsets.last() + (w / totalWeight))
+        }
 
         // Optimize: Iterate only over the cycles involved in the query
         val startCycle = floor(from).toInt()
@@ -25,8 +32,9 @@ internal class SequencePattern(val patterns: List<StrudelPattern>) : StrudelPatt
         for (cycle in startCycle until endCycle) {
             patterns.forEachIndexed { index, pattern ->
                 val cycleOffset = cycle.toDouble()
-                val stepStart = cycleOffset + (index * stepSize)
-                val stepEnd = cycleOffset + ((index + 1) * stepSize)
+                val stepStart = cycleOffset + offsets[index]
+                val stepEnd = cycleOffset + offsets[index + 1]
+                val stepSize = offsets[index + 1] - offsets[index]
 
                 // Calculate the intersection of this step with the query arc
                 val intersectStart = max(from, stepStart)
