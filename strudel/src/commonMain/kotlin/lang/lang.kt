@@ -58,6 +58,33 @@ val sine by dslObject {
     ContinuousPattern { t -> sin(t * 2.0 * PI) }
 }
 
+/** Sawtooth oscillator: -1 to 1, period of 1 cycle */
+@StrudelDsl
+val saw by dslObject {
+    ContinuousPattern { t -> (t % 1.0) * 2.0 - 1.0 }
+}
+
+/** Inverse Sawtooth oscillator: 1 to -1, period of 1 cycle */
+@StrudelDsl
+val isaw by dslObject {
+    ContinuousPattern { t -> 1.0 - (t % 1.0) * 2.0 }
+}
+
+/** Triangle oscillator: -1 to 1 to -1, period of 1 cycle */
+@StrudelDsl
+val tri by dslObject {
+    ContinuousPattern { t ->
+        val phase = t % 1.0
+        if (phase < 0.5) (phase * 4.0) - 1.0 else 3.0 - (phase * 4.0)
+    }
+}
+
+/** Square oscillator: -1 or 1, period of 1 cycle */
+@StrudelDsl
+val square by dslObject {
+    ContinuousPattern { t -> if (t % 1.0 < 0.5) 1.0 else -1.0 }
+}
+
 // Host patterns ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Creates a sequence pattern. */
