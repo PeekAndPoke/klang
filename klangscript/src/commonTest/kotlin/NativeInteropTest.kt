@@ -7,6 +7,7 @@ import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.builder.registerNativeExtensionMethod
 import io.peekandpoke.klang.script.builder.registerNativeFunction
+import io.peekandpoke.klang.script.runtime.ArgumentError
 import io.peekandpoke.klang.script.runtime.TypeError
 
 
@@ -200,10 +201,10 @@ class NativeInteropTest : StringSpec() {
 
             val script = """
                 let pattern = note("a b c d")
-                pattern.sound("saw", "extra")
+                pattern.sound()
             """.trimIndent()
 
-            shouldThrow<TypeError> {
+            shouldThrow<ArgumentError> {
                 engine.execute(script)
             }
         }

@@ -25,7 +25,7 @@ class KlangStdLibTest : StringSpec({
 
     "print() outputs single argument" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it) }
+        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
 
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
@@ -33,9 +33,9 @@ class KlangStdLibTest : StringSpec({
 
         engine.execute(
             """
-            import * from "stdlib"
-            print("Hello, World!")
-        """.trimIndent()
+                import * from "stdlib"
+                print("Hello, World!")
+            """.trimIndent()
         )
 
         output.size shouldBe 1
@@ -44,7 +44,7 @@ class KlangStdLibTest : StringSpec({
 
     "print() outputs multiple arguments separated by spaces" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it) }
+        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
 
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
@@ -66,7 +66,7 @@ class KlangStdLibTest : StringSpec({
 
     "print() with no arguments outputs empty line" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it) }
+        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
 
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
@@ -85,7 +85,7 @@ class KlangStdLibTest : StringSpec({
 
     "console_log() works like print()" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it) }
+        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
 
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
@@ -418,7 +418,7 @@ class KlangStdLibTest : StringSpec({
 
     "functions work with variables and expressions" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it) }
+        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
 
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
@@ -443,19 +443,19 @@ class KlangStdLibTest : StringSpec({
 
     // ===== Error Handling =====
 
-    "Math.sqrt() with wrong argument count throws error" {
+    "Math.sqrt() with too many arguments still works" {
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
         }
 
-        shouldThrow<Exception> {
-            engine.execute(
-                """
+        val result = engine.execute(
+            """
                 import * from "stdlib"
                 Math.sqrt(16, 25)
             """.trimIndent()
-            )
-        }
+        )
+
+        result shouldBe NumberValue(4.0)
     }
 
     "Math.sqrt() with non-number throws error" {

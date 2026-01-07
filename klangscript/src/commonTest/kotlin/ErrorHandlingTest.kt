@@ -6,6 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.builder.registerLibrary
+import io.peekandpoke.klang.script.builder.registerNativeFunction
 import io.peekandpoke.klang.script.runtime.*
 
 /**
@@ -122,21 +123,20 @@ class ErrorHandlingTest : StringSpec({
 
     "ArgumentError - wrong number of arguments to native function" {
         val builder = KlangScript.builder()
-        builder.registerNativeFunction("double") { values ->
-            val x = values[0]
-            NumberValue((x as NumberValue).value * 2)
+        builder.registerNativeFunction<Double, Double>("double") { value ->
+            value * 2
         }
 
         val engine = builder.build()
 
         val error = shouldThrow<ArgumentError> {
-            engine.execute("double(1, 2, 3)")
+            engine.execute("double()")
         }
 
         error.errorType shouldBe "ArgumentError"
         error.functionName shouldBe "double"
         error.expected shouldBe 1
-        error.actual shouldBe 3
+        error.actual shouldBe 0
     }
 
     "ArgumentError - wrong number of arguments to script function" {
@@ -400,15 +400,15 @@ class ErrorHandlingTest : StringSpec({
 
     "Error messages should be descriptive - argument count" {
         val builder = KlangScript.builder()
-        builder.registerNativeFunction("test") { x -> x.first() }
+        builder.registerNativeFunction<Double, Double, Double>("test") { x, y -> x + y }
 
         val engine = builder.build()
 
         val error = shouldThrow<ArgumentError> {
-            engine.execute("test(1, 2)")
+            engine.execute("test(1)")
         }
 
-        error.format() shouldContain "Expected 1 arguments, got 2"
+        error.format() shouldContain "Expected 2 arguments, got 1"
     }
 
     // ============================================================

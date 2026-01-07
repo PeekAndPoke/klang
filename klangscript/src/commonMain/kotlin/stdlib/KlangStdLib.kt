@@ -3,6 +3,7 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.builder.registerNativeExtensionMethod
 import io.peekandpoke.klang.script.builder.registerNativeExtensionMethodVararg
+import io.peekandpoke.klang.script.builder.registerNativeFunctionVararg
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.*
 import io.peekandpoke.klang.script.stdlib.KlangStdLib.ConsoleObject.printImpl
@@ -115,7 +116,7 @@ object KlangStdLib {
          *
          * Prints all arguments separated by spaces
          */
-        fun printImpl(args: List<RuntimeValue>): RuntimeValue {
+        fun printImpl(args: List<Any?>): RuntimeValue {
             outputHandler(args)
             return NullValue
         }
@@ -149,10 +150,9 @@ object KlangStdLib {
             with(MathObject) { register() }
 
             // Output functions
-            registerNativeFunction("print") { args ->
+            registerNativeFunctionVararg("print") { args ->
                 printImpl(args)
             }
-
 
             // String Functions (kept as global functions)
             registerNativeFunction("length") { args ->

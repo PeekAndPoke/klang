@@ -1,3 +1,5 @@
+@file:Suppress("DuplicatedCode")
+
 package io.peekandpoke.klang.script.builder
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
@@ -148,6 +150,7 @@ inline fun <reified P : Any, reified R : Any> NativeRegistryBuilder.registerNati
 ) {
     registerNativeFunction(name) { args ->
         val params = List(args.size) { index ->
+            println("Converting arg $index of type ${args[index].value!!::class} to type ${P::class}")
             convertArgToKotlin(name, args, index, P::class)
         }
         val result = fn(params)
@@ -174,6 +177,7 @@ inline fun <reified P1 : Any, reified R : Any> NativeRegistryBuilder.registerNat
     name: String, noinline fn: (P1) -> R,
 ) {
     registerNativeFunction(name) { args ->
+        checkArgsSize(name, args, 1)
         val param = convertArgToKotlin(name, args, 0, P1::class)
         val result = fn(param)
         wrapAsRuntimeValue(result)
@@ -187,6 +191,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> NativeRegistryB
     name: String, noinline fn: (P1, P2) -> R,
 ) {
     registerNativeFunction(name) { args ->
+        checkArgsSize(name, args, 2)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
         val result = fn(p1, p2)
@@ -200,6 +205,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> NativeRegistryB
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any>
         NativeRegistryBuilder.registerNativeFunction(name: String, noinline fn: (P1, P2, P3) -> R) {
     registerNativeFunction(name) { args ->
+        checkArgsSize(name, args, 3)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
         val p3 = convertArgToKotlin(name, args, 2, P3::class)
@@ -214,6 +220,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : An
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
         NativeRegistryBuilder.registerNativeFunction(name: String, noinline fn: (P1, P2, P3, P4) -> R) {
     registerNativeFunction(name) { args ->
+        checkArgsSize(name, args, 4)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
         val p3 = convertArgToKotlin(name, args, 2, P3::class)
@@ -229,11 +236,12 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
         NativeRegistryBuilder.registerNativeFunction(name: String, noinline fn: (P1, P2, P3, P4, P5) -> R) {
     registerNativeFunction(name) { args ->
+        checkArgsSize(name, args, 5)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
         val p3 = convertArgToKotlin(name, args, 2, P3::class)
         val p4 = convertArgToKotlin(name, args, 3, P4::class)
-        val p5 = convertArgToKotlin(name, args, 3, P5::class)
+        val p5 = convertArgToKotlin(name, args, 4, P5::class)
         val result = fn(p1, p2, p3, p4, p5)
         wrapAsRuntimeValue(result)
     }
@@ -274,6 +282,7 @@ inline fun <reified TRes : Any, reified P1 : Any, reified R : Any> NativeRegistr
     name: String, noinline fn: TRes.(P1) -> R,
 ) {
     registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
+        checkArgsSize(name, args, 1)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val result = receiver.fn(p1)
         wrapAsRuntimeValue(result)
@@ -288,6 +297,7 @@ inline fun <reified TRes : Any, reified P1 : Any, reified P2 : Any, reified R : 
     name: String, noinline fn: TRes.(P1, P2) -> R,
 ) {
     registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
+        checkArgsSize(name, args, 2)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
         val result = receiver.fn(p1, p2)
@@ -303,10 +313,48 @@ inline fun <reified TRes : Any, reified P1 : Any, reified P2 : Any, reified P3 :
     name: String, noinline fn: TRes.(P1, P2, P3) -> R,
 ) {
     registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
+        checkArgsSize(name, args, 3)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
         val p3 = convertArgToKotlin(name, args, 2, P3::class)
         val result = receiver.fn(p1, p2, p3)
+        wrapAsRuntimeValue(result)
+    }
+}
+
+/**
+ * Register a native extension method with four parameters
+ */
+inline fun <reified TRes : Any, reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
+        NativeRegistryBuilder.registerNativeExtensionMethod(
+    name: String, noinline fn: TRes.(P1, P2, P3, P4) -> R,
+) {
+    registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
+        checkArgsSize(name, args, 4)
+        val p1 = convertArgToKotlin(name, args, 0, P1::class)
+        val p2 = convertArgToKotlin(name, args, 1, P2::class)
+        val p3 = convertArgToKotlin(name, args, 2, P3::class)
+        val p4 = convertArgToKotlin(name, args, 3, P4::class)
+        val result = receiver.fn(p1, p2, p3, p4)
+        wrapAsRuntimeValue(result)
+    }
+}
+
+/**
+ * Register a native extension method with four parameters
+ */
+inline fun <reified TRes : Any, reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
+        NativeRegistryBuilder.registerNativeExtensionMethod(
+    name: String, noinline fn: TRes.(P1, P2, P3, P4, P5) -> R,
+) {
+    registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
+        checkArgsSize(name, args, 5)
+        val p1 = convertArgToKotlin(name, args, 0, P1::class)
+        val p2 = convertArgToKotlin(name, args, 1, P2::class)
+        val p3 = convertArgToKotlin(name, args, 2, P3::class)
+        val p4 = convertArgToKotlin(name, args, 3, P4::class)
+        val p5 = convertArgToKotlin(name, args, 4, P5::class)
+        val result = receiver.fn(p1, p2, p3, p4, p5)
         wrapAsRuntimeValue(result)
     }
 }

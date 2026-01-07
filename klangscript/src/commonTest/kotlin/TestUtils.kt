@@ -23,7 +23,7 @@ import io.peekandpoke.klang.script.runtime.RuntimeValue
  * ```
  */
 fun KlangScript.registerVariable(name: String, value: RuntimeValue) {
-    getInterpreter().getEnvironment().define(name, value)
+    environment.define(name, value)
 }
 
 /**

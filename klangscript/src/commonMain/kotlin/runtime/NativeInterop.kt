@@ -26,18 +26,16 @@ data class NativeExtensionMethod(
     val invoker: (receiver: Any, args: List<RuntimeValue>) -> RuntimeValue,
 )
 
-/**
- * Convert a RuntimeValue to a Kotlin type
- *
- * Performs type-safe conversion from script runtime values to native Kotlin types.
- * Supports: String, Double, Int, Boolean, and native objects.
- *
- * @param T The target Kotlin type
- * @return The converted Kotlin value
- * @throws TypeError if conversion fails
- */
-inline fun <reified T : Any> RuntimeValue.convertToKotlin(): T {
-    return convertToKotlin(T::class)
+/** Check if the number of arguments matches the expected count */
+fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int) {
+    if (args.size < expected) {
+        throw ArgumentError(
+            functionName = fn,
+            message = "Expected $expected arguments",
+            expected = expected,
+            actual = args.size,
+        )
+    }
 }
 
 /**
@@ -67,7 +65,6 @@ fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: In
 
     return arg.convertToKotlin(cls)
 }
-
 
 /**
  * Wrap a value as a RuntimeValue
