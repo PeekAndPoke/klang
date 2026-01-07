@@ -208,7 +208,7 @@ class DslPatternModifier<T>(
     val modify: VoiceDataModifier<T>,
     val fromStr: (String) -> T,
     val toStr: (T) -> String,
-    val combine: VoiceDataMerger,
+    val combiner: VoiceDataMerger,
 ) {
     /** Parses mini notation and uses the resulting pattern as a control pattern  */
     operator fun invoke(mini: String): StrudelPattern {
@@ -229,7 +229,23 @@ class DslPatternModifier<T>(
 
     /** Uses a control pattern to modify voice events */
     operator fun invoke(control: StrudelPattern): StrudelPattern {
-        return pattern.applyControl(control, combine)
+        // Logic to map the custom "VoiceData.value" into the correct value
+        val valueMapper: (VoiceData) -> VoiceData = { data ->
+            @Suppress("UNCHECKED_CAST")
+            val value = data.value as? T
+
+            if (value != null) {
+                data.modify(value)
+            } else {
+                data
+            }
+        }
+
+        return pattern.applyControl(
+            control = control,
+            mapper = valueMapper,
+            combiner = combiner,
+        )
     }
 }
 
@@ -241,5 +257,11 @@ class DslPatternModifier<T>(
 @StrudelDsl
 private fun StrudelPattern.applyControl(
     control: StrudelPattern,
+    mapper: (VoiceData) -> VoiceData,
     combiner: VoiceDataMerger,
-): StrudelPattern = ControlPattern(this, control, combiner)
+): StrudelPattern = ControlPattern(
+    source = this,
+    control = control,
+    mapper = mapper,
+    combiner = combiner,
+)

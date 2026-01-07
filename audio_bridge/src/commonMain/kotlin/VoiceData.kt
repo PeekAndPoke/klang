@@ -75,6 +75,9 @@ data class VoiceData(
 
     // ???
     val bandf: Double?,
+
+    // Custom value
+    val value: Double? = null,
 ) {
     companion object {
         val empty = VoiceData(
@@ -108,7 +111,8 @@ data class VoiceData(
             delayFeedback = null,
             room = null,
             roomSize = null,
-            bandf = null
+            bandf = null,
+            value = null,
         )
     }
 

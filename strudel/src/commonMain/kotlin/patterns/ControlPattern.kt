@@ -9,11 +9,13 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
  *
  * @param source The pattern defining the rhythm/structure (e.g. note("..."))
  * @param control The pattern defining the values (e.g. seq(0.5, 1.0))
+ * @param mapper additional mapper from VoiceData to VoiceData
  * @param combiner Function to merge the source VoiceData with the control event's VoiceData
  */
 internal class ControlPattern(
     val source: StrudelPattern,
     val control: StrudelPattern,
+    val mapper: (VoiceData) -> VoiceData,
     val combiner: (VoiceData, VoiceData) -> VoiceData,
 ) : StrudelPattern {
 
@@ -24,27 +26,16 @@ internal class ControlPattern(
         val result = mutableListOf<StrudelPatternEvent>()
 
         for (event in sourceEvents) {
-            // Strategy: Sample control pattern at the event's ONSET (or midpoint).
-            // Strudel/Tidal standard for |> is onset.
-
-            // To ensure we catch the control value starting exactly at event.begin,
-            // we query a tiny epsilon interval.
             val queryTime = event.begin
-
-            // We need to find the control event that is "active" at queryTime.
-            // queryArc returns events overlapping the interval.
             val controlEvents = control.queryArc(queryTime, queryTime + 0.00001)
-
-            // Pick the best match.
-            // Usually the one that started at or before queryTime.
-            // If multiple, usually the latest one (layering) or first one.
             val match = controlEvents.firstOrNull()
 
             if (match != null) {
-                val newData = combiner(event.data, match.data)
+                // Apply the mapper to the control data BEFORE combining
+                val mappedControlData = mapper(match.data)
+                val newData = combiner(event.data, mappedControlData)
                 result.add(event.copy(data = newData))
             } else {
-                // If no control value, keep original (or drop if you strictly mask)
                 result.add(event)
             }
         }

@@ -4,12 +4,11 @@ import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.patterns.ArrangementPattern
-import io.peekandpoke.klang.strudel.patterns.SequencePattern
-import io.peekandpoke.klang.strudel.patterns.StackPattern
-import io.peekandpoke.klang.strudel.patterns.TimeModifierPattern
+import io.peekandpoke.klang.strudel.patterns.*
 import io.peekandpoke.klang.tones.Tones
+import kotlin.math.PI
 import kotlin.math.max
+import kotlin.math.sin
 
 @DslMarker
 annotation class StrudelDsl
@@ -33,6 +32,7 @@ private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
     }.toTypedArray()
 }
 
+
 // Structure Functions /////////////////////////////////////////////////////////////////////////////////////////////////
 
 @StrudelDsl
@@ -49,6 +49,18 @@ val silence by dslFunction<Any> {
  */
 @StrudelDsl
 val rest by dslFunction<Any> { silence() }
+
+// Continuous patterns /////////////////////////////////////////////////////////////////////////////////////////////////
+
+/** Sine oscillator: 0 to 1, period of 1 cycle */
+@StrudelDsl
+val sine by dslFunction<Any> {
+    ContinuousPattern(
+        getValue = { t -> sin(t * 2.0 * PI) },
+    )
+}
+
+// Host patterns ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Creates a sequence pattern. */
 @StrudelDsl
@@ -117,6 +129,7 @@ val StrudelPattern.fast by dslMethod<Number> { p, args ->
     val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
     TimeModifierPattern(p, 1.0 / max(1.0 / 128.0, factor))
 }
+
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private val noteMutation = voiceModifier<String?> { copy(note = it, freqHz = Tones.noteToFreq(it ?: "")) }

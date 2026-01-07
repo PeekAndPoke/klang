@@ -41,7 +41,7 @@ interface KlangScriptExtensionBuilder {
     /** Register a library with the engine */
     fun registerLibrary(library: KlangScriptLibrary)
 
-    /** Register a native function */
+    /** Registers a native function as a top-level function */
     fun registerFunctionRaw(name: String, fn: (List<RuntimeValue>) -> RuntimeValue)
 
     /** Register a native Kotlin type */
@@ -264,7 +264,7 @@ inline fun <reified T : Any> KlangScriptExtensionBuilder.registerType(
     registerType(cls = T::class, block = block)
 }
 
-/** Register a native function with variable number of parameters */
+/** Registers a native function as a top-level vararg function */
 inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.registerVarargFunction(
     name: String, noinline fn: (List<P>) -> R,
 ) {
@@ -278,7 +278,7 @@ inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.regist
     }
 }
 
-/** Register a native function with no parameters */
+/** Registers a native function as a top-level function with no parameters */
 @JvmName("registerNativeFunction0")
 inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (Any?) -> R,
@@ -289,7 +289,7 @@ inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     }
 }
 
-/** Register a native function with one parameter */
+/** Registers a native function as a top-level function with one parameter */
 inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (P1) -> R,
 ) {
@@ -301,7 +301,7 @@ inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.regis
     }
 }
 
-/** Register a native function with two parameters */
+/** Registers a native function as a top-level function with two parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (P1, P2) -> R,
 ) {
@@ -314,7 +314,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExte
     }
 }
 
-/** Register a native function with three parameters */
+/** Registers a native function as a top-level function with three parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3) -> R) {
     registerFunctionRaw(name) { args ->
@@ -327,7 +327,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : An
     }
 }
 
-/** Register a native function with four parameters */
+/** Registers a native function as a top-level function with four parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4) -> R) {
     registerFunctionRaw(name) { args ->
@@ -341,7 +341,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
     }
 }
 
-/** Register a native function with five parameters */
+/** Registers a native function as a top-level function with five parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4, P5) -> R) {
     registerFunctionRaw(name) { args ->
