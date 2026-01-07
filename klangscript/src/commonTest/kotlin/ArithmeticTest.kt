@@ -106,7 +106,7 @@ class ArithmeticTest : StringSpec({
         var receivedValue: Double? = null
 
         val engine = klangScript {
-            registerFunction("check") { value ->
+            registerFunctionRaw("check") { value ->
                 receivedValue = (value.first() as NumberValue).value
                 value.first()
             }
@@ -121,7 +121,7 @@ class ArithmeticTest : StringSpec({
         var receivedValue: Double? = null
 
         val engine = klangScript {
-            registerFunction("setCps") { value ->
+            registerFunctionRaw("setCps") { value ->
                 receivedValue = (value.first() as NumberValue).value
                 value.first()
             }
@@ -136,7 +136,7 @@ class ArithmeticTest : StringSpec({
         val results = mutableListOf<Double>()
 
         val engine = klangScript {
-            registerFunction("record") { value ->
+            registerFunctionRaw("record") { value ->
                 results.add((value.first() as NumberValue).value)
                 value.first()
             }

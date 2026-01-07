@@ -87,7 +87,7 @@ class VariableTest : StringSpec({
 
     "should declare variable with function call as initializer" {
         val script = klangScript {
-            registerFunction("getValue") { NumberValue(99.0) }
+            registerFunctionRaw("getValue") { NumberValue(99.0) }
         }
 
         script.execute("let x = getValue()")
@@ -157,7 +157,7 @@ class VariableTest : StringSpec({
 
     "should pass variable to native function" {
         val script = klangScript {
-            registerFunction("double") { args ->
+            registerFunctionRaw("double") { args ->
                 val num = (args[0] as NumberValue).value
                 NumberValue(num * 2)
             }

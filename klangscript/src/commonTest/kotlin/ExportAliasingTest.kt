@@ -286,7 +286,7 @@ class ExportAliasingTest : StringSpec({
 
     "should handle complex real-world pattern with export aliases" {
         val engine = klangScript {
-            registerFunction("nativeLog") { values ->
+            registerFunctionRaw("nativeLog") { values ->
                 val value = values[0]
                 NumberValue((value as NumberValue).value * 10)
             }

@@ -29,8 +29,17 @@ sealed interface RuntimeValue {
      * Convert this value to a human-readable string
      * Used for debugging and console output
      */
-    abstract fun toDisplayString(): String
+    fun toDisplayString(): String
 }
+
+/** Converts the value to an integer if possible, otherwise null */
+fun RuntimeValue.toIntOrNull() = (value as? Number)?.toInt()
+
+/** Converts the value to a double if possible, otherwise null */
+fun RuntimeValue.toDoubleOrNull() = (value as? Number)?.toDouble()
+
+/** Converts the value to a string if possible, otherwise null */
+fun RuntimeValue.toStringOrNull() = (value as? String)
 
 /**
  * Numeric value

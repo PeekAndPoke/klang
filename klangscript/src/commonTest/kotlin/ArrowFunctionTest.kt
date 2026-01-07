@@ -61,7 +61,7 @@ class ArrowFunctionTest : StringSpec({
     "should pass arrow function as argument to native function" {
         val script = klangScript {
             // Register a function that accepts a callback and calls it
-            registerFunction("applyFunc") { args ->
+            registerFunctionRaw("applyFunc") { args ->
                 // Parse the callback call expression and execute it
                 // We'll use the execute method to invoke: callback(value)
                 val func = args[0] as FunctionValue
@@ -96,7 +96,7 @@ class ArrowFunctionTest : StringSpec({
     "should handle arrow function with method chaining in body" {
         val script = klangScript {
             // Register a function that returns an object
-            registerFunction("createObj") { args ->
+            registerFunctionRaw("createObj") { args ->
                 val value = (args[0] as NumberValue).value
                 ObjectValue(
                     mutableMapOf(
@@ -115,7 +115,7 @@ class ArrowFunctionTest : StringSpec({
 
     "should handle arrow function with string operations" {
         val script = klangScript {
-            registerFunction("concat") { args ->
+            registerFunctionRaw("concat") { args ->
                 val a = (args[0] as StringValue).value
                 val b = (args[1] as StringValue).value
                 StringValue(a + b)

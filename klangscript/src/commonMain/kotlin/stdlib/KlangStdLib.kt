@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
-import io.peekandpoke.klang.script.builder.registerNativeFunctionVararg
+import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.NullValue
 import io.peekandpoke.klang.script.runtime.NumberValue
@@ -128,22 +128,22 @@ object KlangStdLib {
             with(MathObject) { register() }
 
             // Output functions
-            registerNativeFunctionVararg("print") { args ->
+            registerVarargFunction("print") { args ->
                 printImpl(args)
             }
 
             // String Functions (kept as global functions)
-            registerFunction("length") { args ->
+            registerFunctionRaw("length") { args ->
                 requireExactly(args, 1, "length")
                 val str = toString(args[0], "length")
                 NumberValue(str.length.toDouble())
             }
-            registerFunction("toUpperCase") { args ->
+            registerFunctionRaw("toUpperCase") { args ->
                 requireExactly(args, 1, "toUpperCase")
                 val str = toString(args[0], "toUpperCase")
                 StringValue(str.uppercase())
             }
-            registerFunction("toLowerCase") { args ->
+            registerFunctionRaw("toLowerCase") { args ->
                 requireExactly(args, 1, "toLowerCase")
                 val str = toString(args[0], "toLowerCase")
                 StringValue(str.lowercase())

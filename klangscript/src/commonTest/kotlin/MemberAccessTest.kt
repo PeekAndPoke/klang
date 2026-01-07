@@ -73,7 +73,7 @@ class MemberAccessTest : StringSpec({
 
     "should access property after function call" {
         val script = klangScript {
-            registerFunction("getObject") {
+            registerFunctionRaw("getObject") {
                 ObjectValue(
                     mutableMapOf(
                         "x" to NumberValue(100.0),

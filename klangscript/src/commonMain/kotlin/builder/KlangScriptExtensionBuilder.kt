@@ -42,7 +42,7 @@ interface KlangScriptExtensionBuilder {
     fun registerLibrary(library: KlangScriptLibrary)
 
     /** Register a native function */
-    fun registerFunction(name: String, fn: (List<RuntimeValue>) -> RuntimeValue)
+    fun registerFunctionRaw(name: String, fn: (List<RuntimeValue>) -> RuntimeValue)
 
     /** Register a native Kotlin type */
     fun <T : Any> registerType(cls: KClass<T>, block: NativeObjectExtensionsBuilder<T>.() -> Unit = {})
@@ -92,7 +92,7 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
     }
 
     /** Register a native function */
-    override fun registerFunction(name: String, fn: (List<RuntimeValue>) -> RuntimeValue) {
+    override fun registerFunctionRaw(name: String, fn: (List<RuntimeValue>) -> RuntimeValue) {
         nativeFunctions.add(name to fn)
     }
 
@@ -265,10 +265,10 @@ inline fun <reified T : Any> KlangScriptExtensionBuilder.registerType(
 }
 
 /** Register a native function with variable number of parameters */
-inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.registerNativeFunctionVararg(
+inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.registerVarargFunction(
     name: String, noinline fn: (List<P>) -> R,
 ) {
-    registerFunction(name) { args ->
+    registerFunctionRaw(name) { args ->
         val params = List(args.size) { index ->
             println("Converting arg $index of type ${args[index].value!!::class} to type ${P::class}")
             convertArgToKotlin(name, args, index, P::class)
@@ -279,11 +279,12 @@ inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.regist
 }
 
 /** Register a native function with no parameters */
+@JvmName("registerNativeFunction0")
 inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
-    name: String, noinline fn: () -> R,
+    name: String, noinline fn: (Any?) -> R,
 ) {
-    registerFunction(name) { _ ->
-        val result = fn()
+    registerFunctionRaw(name) { _ ->
+        val result = fn(null)
         wrapAsRuntimeValue(result)
     }
 }
@@ -292,7 +293,7 @@ inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
 inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (P1) -> R,
 ) {
-    registerFunction(name) { args ->
+    registerFunctionRaw(name) { args ->
         checkArgsSize(name, args, 1)
         val param = convertArgToKotlin(name, args, 0, P1::class)
         val result = fn(param)
@@ -304,7 +305,7 @@ inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.regis
 inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (P1, P2) -> R,
 ) {
-    registerFunction(name) { args ->
+    registerFunctionRaw(name) { args ->
         checkArgsSize(name, args, 2)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -316,7 +317,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExte
 /** Register a native function with three parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3) -> R) {
-    registerFunction(name) { args ->
+    registerFunctionRaw(name) { args ->
         checkArgsSize(name, args, 3)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -329,7 +330,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : An
 /** Register a native function with four parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4) -> R) {
-    registerFunction(name) { args ->
+    registerFunctionRaw(name) { args ->
         checkArgsSize(name, args, 4)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -343,7 +344,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
 /** Register a native function with five parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4, P5) -> R) {
-    registerFunction(name) { args ->
+    registerFunctionRaw(name) { args ->
         checkArgsSize(name, args, 5)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)

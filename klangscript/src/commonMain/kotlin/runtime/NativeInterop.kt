@@ -43,16 +43,34 @@ fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int) {
  */
 fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
 
-    val isValid = cls.isInstance(value)
+    println("Converting ${this::class.simpleName} to ${cls.simpleName}")
+
+    val result = when (this) {
+        // Special conversion logic for numeric values
+        is NumberValue -> when (cls) {
+            Double::class -> value
+            Float::class -> value.toFloat()
+            Int::class -> value.toInt()
+            Short::class -> value.toInt().toShort()
+            Byte::class -> value.toInt().toByte()
+            else -> value
+        }
+
+        else -> {
+            val isValid = cls.isInstance(value)
+
+            when (isValid) {
+                true -> value
+                else -> throw TypeError(
+                    "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
+                    operation = "parameter conversion"
+                )
+            }
+        }
+    }
 
     @Suppress("UNCHECKED_CAST")
-    when (isValid) {
-        true -> return value as T
-        else -> throw TypeError(
-            "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
-            operation = "parameter conversion"
-        )
-    }
+    return result as T
 }
 
 fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: Int, cls: KClass<T>): T {

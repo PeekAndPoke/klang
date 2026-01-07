@@ -248,7 +248,7 @@ class NativeInteropTest : StringSpec() {
                 registerFunction<String, NativeObject>("note") { pattern ->
                     NativeObject(pattern)
                 }
-                registerFunction("capture") { args ->
+                registerFunctionRaw("capture") { args ->
                     captured.add(args[0].toDisplayString())
                     args[0]
                 }
