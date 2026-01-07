@@ -2,7 +2,7 @@ package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.builder.NativeRegistry
+import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import kotlin.reflect.KClass
 
 /**
@@ -54,7 +54,7 @@ class Environment(
     /** Map of local names to exported names (for libraries with export aliasing) */
     private val exportAliases = mutableMapOf<String, String>()
 
-    fun register(native: NativeRegistry) {
+    fun register(native: KlangScriptExtension) {
         // Register all libraries
         libraries.putAll(native.libraries)
 

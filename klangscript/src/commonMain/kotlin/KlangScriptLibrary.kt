@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.script
 
-import io.peekandpoke.klang.script.builder.NativeRegistry
-import io.peekandpoke.klang.script.builder.NativeRegistryBuilder
+import io.peekandpoke.klang.script.builder.KlangScriptExtension
+import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 
 /**
  * Shorthand factory method to create a KlangScript library.
@@ -44,7 +44,7 @@ fun klangScriptLibrary(name: String, builder: KlangScriptLibrary.Builder.() -> U
 class KlangScriptLibrary internal constructor(
     val name: String,
     val sourceCode: String,
-    val native: NativeRegistry,
+    val native: KlangScriptExtension,
 ) {
     companion object {
         /**
@@ -74,8 +74,8 @@ class KlangScriptLibrary internal constructor(
      */
     class Builder(
         private val name: String,
-        private val registry: NativeRegistryBuilder = NativeRegistryBuilder(),
-    ) : NativeRegistryBuilder by registry {
+        private val registry: KlangScriptExtensionBuilder = KlangScriptExtensionBuilder(),
+    ) : KlangScriptExtensionBuilder by registry {
         /** The KlangScript source code for this library (optional) */
         private val sourceCode = mutableListOf<String>()
 

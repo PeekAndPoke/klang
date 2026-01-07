@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.script
 
 import com.github.h0tk3y.betterParse.parser.ParseException
-import io.peekandpoke.klang.script.builder.NativeRegistry
-import io.peekandpoke.klang.script.builder.NativeRegistryBuilder
+import io.peekandpoke.klang.script.builder.KlangScriptExtension
+import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.Interpreter
 import io.peekandpoke.klang.script.runtime.LibraryLoader
@@ -44,7 +44,7 @@ fun klangScript(builder: KlangScript.Builder.() -> Unit = {}) =
  * - Providing convenient function registration helpers
  */
 class KlangScript private constructor(
-    native: NativeRegistry,
+    native: KlangScriptExtension,
 ) : LibraryLoader {
     companion object {
         /**
@@ -160,8 +160,8 @@ class KlangScript private constructor(
      * and applies them when build() is called, producing an immutable engine.
      */
     class Builder(
-        private val registry: NativeRegistryBuilder = NativeRegistryBuilder(),
-    ) : NativeRegistryBuilder by registry {
+        private val registry: KlangScriptExtensionBuilder = KlangScriptExtensionBuilder(),
+    ) : KlangScriptExtensionBuilder by registry {
 
         /**
          * Build the configured KlangScript engine
