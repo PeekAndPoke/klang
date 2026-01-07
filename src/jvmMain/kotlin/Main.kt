@@ -77,6 +77,11 @@ private suspend fun helloStrudel() {
         val pattern = StrudelPattern.compile(TestTextPatterns.tetris)
             ?: error("Pattern was not compiled")
 
+//        val pattern =                     sound("bd hh sd hh")
+//            .pan(-0.5).gain(0.1)
+//            .fast(2)
+
+
         println("=======================================================================")
         println(
             pattern.makeStatic(0.0, 8.0).toJson()

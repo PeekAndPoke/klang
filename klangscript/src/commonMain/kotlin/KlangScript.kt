@@ -76,7 +76,7 @@ class KlangScript private constructor(
     }
 
     /** The interpreter that executes parsed programs */
-    val interpreter = Interpreter(libraryLoader = this)
+    val interpreter = Interpreter(engine = this)
 
     /** The global environment where functions and variables are stored */
     val environment = interpreter.getEnvironment().apply {

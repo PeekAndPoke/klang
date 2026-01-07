@@ -55,7 +55,7 @@ class Environment(
     private val exportAliases = mutableMapOf<String, String>()
 
     // caches
-    private val getExtensionMethodCache = mutableMapOf<KClass<*>, NativeExtensionMethod?>()
+    private val getExtensionMethodCache = mutableMapOf<Pair<KClass<*>, String>, NativeExtensionMethod?>()
     private val getExtensionMethodNamesCache = mutableMapOf<KClass<*>, Set<String>>()
     private val getWithSuperTypesCache = mutableMapOf<KClass<*>, List<KClass<*>>>()
 
@@ -228,7 +228,7 @@ class Environment(
      * @return The extension method, or null if not found
      */
     fun getExtensionMethod(kClass: KClass<*>, methodName: String): NativeExtensionMethod? {
-        return getExtensionMethodCache.getOrPut(kClass) {
+        return getExtensionMethodCache.getOrPut(kClass to methodName) {
             val allTypes = getWithSuperTypes(kClass)
 
             allTypes.firstNotNullOfOrNull { nativeExtensionMethods[it]?.get(methodName) }

@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.script.KlangScript
 import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.parser.KlangScriptParser
 
 /**
  * Interface for loading library source code
@@ -44,9 +45,9 @@ interface LibraryLoader {
  */
 class Interpreter(
     /** The environment for variable and function storage */
-    private val environment: Environment = Environment(),
+    private val env: Environment = Environment(),
     /** Optional library loader for import statements */
-    private val libraryLoader: LibraryLoader? = null,
+    private val engine: KlangScript,
     /** Call stack for tracking function calls and generating stack traces */
     private val callStack: CallStack = CallStack(),
 ) {
@@ -102,14 +103,14 @@ class Interpreter(
                 } else {
                     NullValue
                 }
-                environment.define(statement.name, value, mutable = true)
+                env.define(statement.name, value, mutable = true)
                 NullValue  // Declarations don't produce values
             }
 
             // Const declaration: create immutable variable
             is ConstDeclaration -> {
                 val value = evaluate(statement.initializer)
-                environment.define(statement.name, value, mutable = false)
+                env.define(statement.name, value, mutable = false)
                 NullValue  // Declarations don't produce values
             }
 
@@ -147,19 +148,9 @@ class Interpreter(
      * ```
      */
     private fun executeImport(importStmt: ImportStatement): RuntimeValue {
-        // Check if library loader is available
-        if (libraryLoader == null) {
-            throw ImportError(
-                null,
-                "Cannot import libraries: no library loader configured",
-                location = importStmt.location,
-                stackTrace = getStackTrace()
-            )
-        }
-
         // Load library source code
         val librarySource = try {
-            libraryLoader.loadLibrary(importStmt.libraryName)
+            engine.loadLibrary(importStmt.libraryName)
         } catch (e: Exception) {
             throw ImportError(
                 importStmt.libraryName,
@@ -170,15 +161,15 @@ class Interpreter(
         }
 
         // Parse library source code
-        val libraryProgram = io.peekandpoke.klang.script.parser.KlangScriptParser.parse(librarySource)
+        val libraryProgram = KlangScriptParser.parse(librarySource)
 
         // Create isolated environment for library evaluation
         // The library environment has the current environment as parent, so it can access
         // native functions and global variables, but its own definitions are isolated
-        val libraryEnv = Environment(parent = environment)
+        val libraryEnv = Environment(parent = env)
 
         // Execute library in isolated environment
-        val libraryInterpreter = Interpreter(libraryEnv, libraryLoader)
+        val libraryInterpreter = Interpreter(env = libraryEnv, engine = engine)
         libraryInterpreter.execute(libraryProgram)
 
         // Import symbols from library environment into current environment
@@ -218,11 +209,11 @@ class Interpreter(
                 )
             }
             val namespaceObject = ObjectValue(exports.toMutableMap())
-            environment.define(namespaceAlias, namespaceObject, mutable = true)
+            env.define(namespaceAlias, namespaceObject, mutable = true)
         } else if (imports == null) {
             // Wildcard import - import all exports with their original names
             for ((name, value) in exports) {
-                environment.define(name, value, mutable = true)
+                env.define(name, value, mutable = true)
             }
         } else {
             // Selective import - import only specified names, applying aliases
@@ -240,7 +231,7 @@ class Interpreter(
             // Import each symbol with its alias
             for ((exportName, localAlias) in imports) {
                 val value = exports[exportName]!!  // Safe because we validated above
-                environment.define(localAlias, value, mutable = true)
+                env.define(localAlias, value, mutable = true)
             }
         }
     }
@@ -268,7 +259,7 @@ class Interpreter(
      */
     private fun executeExport(exportStmt: ExportStatement): RuntimeValue {
         // Mark the symbols as exported in the environment with their aliases
-        environment.markExports(exportStmt.exports)
+        env.markExports(exportStmt.exports)
         return NullValue  // Exports don't produce values
     }
 
@@ -290,7 +281,7 @@ class Interpreter(
             is NullLiteral -> NullValue
 
             // Identifiers look up variables in the environment
-            is Identifier -> environment.get(expression.name, expression.location, getStackTrace())
+            is Identifier -> env.get(expression.name, expression.location, getStackTrace())
 
             // Function calls are delegated to evaluateCall
             is CallExpression -> evaluateCall(expression)
@@ -305,7 +296,7 @@ class Interpreter(
             is MemberAccess -> evaluateMemberAccess(expression)
 
             // Arrow functions create function values with closure
-            is ArrowFunction -> FunctionValue(expression.parameters, expression.body, environment)
+            is ArrowFunction -> FunctionValue(expression.parameters, expression.body, env)
 
             // Object literals create object values
             is ObjectLiteral -> evaluateObjectLiteral(expression)
@@ -399,7 +390,7 @@ class Interpreter(
                     }
 
                     // Create temporary interpreter with function environment and shared call stack
-                    val funcInterpreter = Interpreter(funcEnv, libraryLoader, callStack)
+                    val funcInterpreter = Interpreter(funcEnv, engine, callStack)
 
                     // Evaluate function body in the new environment
                     funcInterpreter.evaluate(callee.body)
@@ -602,21 +593,18 @@ class Interpreter(
 
         // Handle native objects - lookup extension methods
         if (objValue is NativeObjectValue<*>) {
-            val engine = libraryLoader as? KlangScript
-            if (engine != null) {
-                val extensionMethod = engine.getNativeExtensionMethod(objValue.kClass, memberAccess.property)
-                if (extensionMethod != null) {
-                    // Return bound method
-                    return BoundNativeMethod(
-                        methodName = memberAccess.property,
-                        receiver = objValue,
-                        invoker = { args -> extensionMethod.invoker(objValue.value, args) }
-                    )
-                }
+            val extensionMethod = engine.getNativeExtensionMethod(objValue.kClass, memberAccess.property)
+            if (extensionMethod != null) {
+                // Return bound method
+                return BoundNativeMethod(
+                    methodName = memberAccess.property,
+                    receiver = objValue,
+                    invoker = { args -> extensionMethod.invoker(objValue.value, args) }
+                )
             }
 
             // Method not found - throw error with helpful message
-            val availableMethods = engine?.getExtensionMethodNames(objValue.kClass) ?: emptyList()
+            val availableMethods = engine.getExtensionMethodNames(objValue.kClass) ?: emptyList()
             val suggestion = if (availableMethods.isNotEmpty()) {
                 " Available methods: ${availableMethods.joinToString(", ")}"
             } else {
@@ -630,25 +618,21 @@ class Interpreter(
                 stackTrace = getStackTrace()
             )
         }
-
         // Handle built-in runtime types (ArrayValue, StringValue, etc.) - lookup extension methods
-        if (objValue is ArrayValue || objValue is StringValue || objValue is NumberValue) {
-            val engine = libraryLoader as? KlangScript
-            if (engine != null) {
-                val extensionMethod = engine.getNativeExtensionMethod(objValue::class, memberAccess.property)
-                if (extensionMethod != null) {
-                    // Return bound method
-                    return BoundNativeMethod(
-                        methodName = memberAccess.property,
-                        receiver = NativeObjectValue.fromValue(objValue),
-                        invoker = { args -> extensionMethod.invoker(objValue, args) }
-                    )
-                }
+        else if (objValue is ArrayValue || objValue is StringValue || objValue is NumberValue) {
+            val extensionMethod = engine.getNativeExtensionMethod(objValue::class, memberAccess.property)
+            if (extensionMethod != null) {
+                // Return bound method
+                return BoundNativeMethod(
+                    methodName = memberAccess.property,
+                    receiver = NativeObjectValue.fromValue(objValue),
+                    invoker = { args -> extensionMethod.invoker(objValue, args) }
+                )
             }
 
             // If there are registered extension methods for this type but the requested one doesn't exist,
             // throw a helpful error. Otherwise, fall through to the generic error below.
-            val availableMethods = engine?.getExtensionMethodNames(objValue::class) ?: emptyList()
+            val availableMethods = engine.getExtensionMethodNames(objValue::class)
             if (availableMethods.isNotEmpty()) {
                 val typeName = objValue::class.simpleName ?: "unknown"
                 val suggestion = " Available methods: ${availableMethods.joinToString(", ")}"
@@ -778,5 +762,5 @@ class Interpreter(
      *
      * @return The interpreter's environment
      */
-    fun getEnvironment(): Environment = environment
+    fun getEnvironment(): Environment = env
 }
