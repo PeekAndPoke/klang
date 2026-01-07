@@ -4,12 +4,6 @@ import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 
 /**
- * Shorthand factory method to create a KlangScript library.
- */
-fun klangScriptLibrary(name: String, builder: KlangScriptLibrary.Builder.() -> Unit) =
-    KlangScriptLibrary.builder(name).apply(builder).build()
-
-/**
  * Immutable library definition for KlangScript
  *
  * A library bundles KlangScript source code with native Kotlin registrations (functions, types, extension methods).

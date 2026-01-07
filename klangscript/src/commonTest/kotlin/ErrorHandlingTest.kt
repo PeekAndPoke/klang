@@ -122,7 +122,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "ArgumentError - wrong number of arguments to native function" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         builder.registerFunction<Double, Double>("double") { value ->
             value * 2
         }
@@ -191,7 +191,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "ImportError - importing non-exported symbol" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         builder.registerLibrary(
             "math", """
                 let internal = 42
@@ -284,7 +284,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "Error in library function should be thrown" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         builder.registerLibrary(
             "broken", """
                 let divide = (a, b) => a / b
@@ -308,7 +308,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError in library operation" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         builder.registerLibrary(
             "math", """
                 let badAdd = (a, b) => a + b
@@ -335,7 +335,7 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "Error in nested function call" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         builder.registerFunctionRaw("process") { values ->
             val x = values[0]
             NumberValue((x as NumberValue).value * 2)
@@ -399,7 +399,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "Error messages should be descriptive - argument count" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         builder.registerFunction<Double, Double, Double>("test") { x, y -> x + y }
 
         val engine = builder.build()
@@ -608,7 +608,7 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "ReferenceError - undefined in chained calls" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         builder.registerFunctionRaw("process") { x -> x.first() }
 
         val engine = builder.build()

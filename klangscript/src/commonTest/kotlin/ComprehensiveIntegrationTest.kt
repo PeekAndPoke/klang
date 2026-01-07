@@ -13,7 +13,7 @@ import io.peekandpoke.klang.script.runtime.*
 class ComprehensiveIntegrationTest : StringSpec({
 
     "Complete live coding example with variables, functions, and chaining" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         val events = mutableListOf<String>()
 
         // Register a note() function that returns a chainable object
@@ -76,7 +76,7 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Complex script with library imports, exports, and namespaces" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         val results = mutableListOf<Double>()
 
         // Register native math operations
@@ -140,7 +140,7 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Nested closures and higher-order functions" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         val results = mutableListOf<Double>()
 
         builder.registerFunctionRaw("add") { args ->
@@ -196,7 +196,7 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Object literals, property access, and methods" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         val results = mutableListOf<String>()
 
         builder.registerFunctionRaw("capture") { value ->
@@ -291,7 +291,7 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Multiple scripts with shared and isolated environments" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         val results = mutableListOf<Double>()
 
         builder.registerFunctionRaw("add") { args ->
@@ -324,7 +324,7 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Complex arithmetic and operator precedence" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         val results = mutableListOf<Double>()
 
         builder.registerFunctionRaw("capture") { value ->
@@ -366,7 +366,7 @@ class ComprehensiveIntegrationTest : StringSpec({
     }
 
     "Live coding pattern: Strudel-style musical sequencing" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
         val sequence = mutableListOf<String>()
 
         // Register a note() function that returns a pattern object

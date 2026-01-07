@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.script.runtime
 
-import io.peekandpoke.klang.script.KlangScript
+import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.*
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 
@@ -47,7 +47,7 @@ class Interpreter(
     /** The environment for variable and function storage */
     private val env: Environment = Environment(),
     /** Optional library loader for import statements */
-    private val engine: KlangScript,
+    private val engine: KlangScriptEngine,
     /** Call stack for tracking function calls and generating stack traces */
     private val callStack: CallStack = CallStack(),
 ) {

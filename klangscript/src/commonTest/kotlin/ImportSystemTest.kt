@@ -151,7 +151,7 @@ class ImportSystemTest : StringSpec({
     }
 
     "should throw error when library not found" {
-        val engine = KlangScript.builder().build()
+        val engine = KlangScriptEngine.builder().build()
 
         try {
             engine.execute(

@@ -67,7 +67,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should import using exported alias name" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
 
         builder.registerLibrary(
             "math", """
@@ -89,7 +89,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should not allow importing using original name when aliased" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
 
         builder.registerLibrary(
             "math", """
@@ -114,7 +114,7 @@ class ExportAliasingTest : StringSpec({
     }
 
     "should support multiple export aliases" {
-        val builder = KlangScript.builder()
+        val builder = KlangScriptEngine.builder()
 
         builder.registerLibrary(
             "math", """

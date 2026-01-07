@@ -22,7 +22,7 @@ import io.peekandpoke.klang.script.runtime.RuntimeValue
  * script.execute("x + 1") // Returns 43.0
  * ```
  */
-fun KlangScript.registerVariable(name: String, value: RuntimeValue) {
+fun KlangScriptEngine.registerVariable(name: String, value: RuntimeValue) {
     environment.define(name, value)
 }
 
@@ -42,7 +42,7 @@ fun KlangScript.registerVariable(name: String, value: RuntimeValue) {
  * ```
  */
 @Suppress("UnusedReceiverParameter")
-fun KlangScript.createNativeFunction(
+fun KlangScriptEngine.createNativeFunction(
     name: String,
     function: (List<RuntimeValue>) -> RuntimeValue,
 ): NativeFunctionValue {
