@@ -4,8 +4,8 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -77,10 +77,19 @@ private suspend fun helloStrudel() {
 //        val pattern = StrudelPattern.compile(TestTextPatterns.tetris)
 //            ?: error("Pattern was not compiled")
 //
-        val pattern = sound("bd hh sd hh")
-            .pan(sine().slow(8))
-            .gain(0.1)
-            .fast(2)
+        val pattern = StrudelPattern.compile(
+            """
+                sound("bd hh sd hh")
+                .pan(sine.range(-1.0, 1.0).slow(4))
+                .gain(0.1)
+                .fast(2)
+            """.trimIndent()
+        )!!
+
+//        val pattern = sound("bd hh sd hh")
+//            .pan(sine.range(-0.3, 1.0).slow(8))
+//            .gain(0.1)
+//            .fast(2)
 
 
         println("=======================================================================")

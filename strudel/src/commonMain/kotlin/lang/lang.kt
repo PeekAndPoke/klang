@@ -54,10 +54,8 @@ val rest by dslFunction<Any> { silence() }
 
 /** Sine oscillator: 0 to 1, period of 1 cycle */
 @StrudelDsl
-val sine by dslFunction<Any> {
-    ContinuousPattern(
-        getValue = { t -> sin(t * 2.0 * PI) },
-    )
+val sine by dslObject {
+    ContinuousPattern { t -> sin(t * 2.0 * PI) }
 }
 
 // Host patterns ///////////////////////////////////////////////////////////////////////////////////////////////////////

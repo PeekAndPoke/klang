@@ -4,6 +4,7 @@ import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.wrapAsRuntimeValue
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.patterns.ContinuousPattern
 
 /**
  * Create the Strudel DSL library for KlangScript.
@@ -25,7 +26,12 @@ fun KlangScriptExtensionBuilder.registerStrudelDsl() {
     // populating StrudelRegistry with all the DSL definitions.
     strudelLangInit = true
 
-    // 2. Register Global Functions (e.g., note(), silence, s(), etc.)
+    // 2. Register Global symbols / object
+    StrudelRegistry.symbols.forEach { (name, instance) ->
+        registerObject(name, instance)
+    }
+
+    // 3. Register Global Functions (e.g., note(), silence, s(), etc.)
     StrudelRegistry.functions.forEach { (name, handler) ->
         registerFunctionRaw(name) { args ->
             // Convert RuntimeValues back to native Kotlin values
@@ -42,7 +48,7 @@ fun KlangScriptExtensionBuilder.registerStrudelDsl() {
         }
     }
 
-    // 3. Register Extension Methods (e.g., pattern.slow(), pattern.note(), etc.)
+    // 4. Register Extension Methods (e.g., pattern.slow(), pattern.note(), etc.)
     // These are registered specifically for the StrudelPattern type.
     StrudelRegistry.methods.forEach { (name, handler) ->
         registerExtensionMethod(StrudelPattern::class, name) { receiver, args ->
@@ -52,6 +58,14 @@ fun KlangScriptExtensionBuilder.registerStrudelDsl() {
             val result = handler(receiver, nativeArgs as List<Any>)
 
             wrapAsRuntimeValue(result)
+        }
+    }
+
+    // 5. Register specific methods
+    // TODO: improve registration in KlangScript to allow auto-detection
+    registerType(ContinuousPattern::class) {
+        registerMethod("range") { min: Double, max: Double ->
+            range(min, max)
         }
     }
 }

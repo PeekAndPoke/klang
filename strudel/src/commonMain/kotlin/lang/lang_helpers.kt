@@ -12,6 +12,7 @@ import kotlin.reflect.KProperty
 // --- Registry ---
 
 object StrudelRegistry {
+    val symbols = mutableMapOf<String, Any>()
     val functions = mutableMapOf<String, (List<Any?>) -> StrudelPattern>()
     val methods = mutableMapOf<String, (StrudelPattern, List<Any?>) -> StrudelPattern>()
 }
@@ -21,7 +22,68 @@ object StrudelRegistry {
 typealias VoiceDataModifier<T> = VoiceData.(T) -> VoiceData
 typealias VoiceDataMerger = (source: VoiceData, control: VoiceData) -> VoiceData
 
+// --- High Level Helpers ---
+
 fun <T> voiceModifier(modify: VoiceDataModifier<T>): VoiceDataModifier<T> = modify
+
+/**
+ * Creates a DSL function that returns a StrudelPattern.
+ * [In] is the type used for varargs in Kotlin (e.g. StrudelPattern or Any).
+ */
+fun <In> dslFunction(handler: (List<Any?>) -> StrudelPattern) = DslFunctionProvider<In>(handler)
+
+/**
+ * Creates a DSL extension method on StrudelPattern that returns a StrudelPattern.
+ */
+fun <In> dslMethod(handler: (StrudelPattern, List<Any?>) -> StrudelPattern) = DslMethodProvider<In>(handler)
+
+/**
+ * Creates a DSL object that is registered in the StrudelRegistry.
+ */
+fun <T : StrudelPattern> dslObject(handler: () -> T) = DslObjectProvider(handler)
+
+@JvmName("dslPatternCreatorGeneric")
+fun <T> dslPatternCreator(
+    modify: VoiceDataModifier<T>,
+    fromStr: (String) -> T,
+) = DslPatternCreatorProvider(modify, fromStr)
+
+@JvmName("dslPatternCreatorString")
+fun dslPatternCreator(
+    modify: VoiceDataModifier<String>,
+) = dslPatternCreator(modify) { it }
+
+@JvmName("dslPatternCreatorNumber")
+fun dslPatternCreator(
+    modify: VoiceDataModifier<Number>,
+) = dslPatternCreator(modify) { (it.toDoubleOrNull() ?: 0.0) as Number }
+
+
+@JvmName("dslPatternModifierGeneric")
+fun <T> dslPatternModifier(
+    modify: VoiceDataModifier<T>,
+    combine: VoiceDataMerger,
+    fromStr: (String) -> T,
+    toStr: (T) -> String,
+) = DslPatternModifierProvider(modify, combine, fromStr, toStr)
+
+@JvmName("dslPatternModifierString")
+fun dslPatternModifier(modify: VoiceDataModifier<String>, combine: VoiceDataMerger) =
+    dslPatternModifier(
+        modify = modify,
+        fromStr = { it },
+        toStr = { it },
+        combine = combine
+    )
+
+@JvmName("dslPatternModifierNumber")
+fun dslPatternModifier(modify: VoiceDataModifier<Number>, combine: VoiceDataMerger) =
+    dslPatternModifier(
+        modify = modify,
+        fromStr = { (it.toDoubleOrNull() ?: 0.0) as Number },
+        toStr = { it.toString() },
+        combine = combine
+    )
 
 // --- Generic Function Delegate (stack, arrange, etc.) ---
 
@@ -39,11 +101,6 @@ class DslFunctionProvider<In>(
     }
 }
 
-/**
- * Creates a DSL function that returns a StrudelPattern.
- * [In] is the type used for varargs in Kotlin (e.g. StrudelPattern or Any).
- */
-fun <In> dslFunction(handler: (List<Any?>) -> StrudelPattern) = DslFunctionProvider<In>(handler)
 
 class DslFunction<In>(val handler: (List<Any?>) -> StrudelPattern) {
     // Typed for Kotlin usage
@@ -77,7 +134,6 @@ class DslMethodProvider<In>(
     }
 }
 
-fun <In> dslMethod(handler: (StrudelPattern, List<Any?>) -> StrudelPattern) = DslMethodProvider<In>(handler)
 
 /**
  * A method bound to a specific [pattern] instance.
@@ -114,22 +170,6 @@ class DslPatternCreatorProvider<T>(
     }
 }
 
-@JvmName("dslPatternCreatorGeneric")
-fun <T> dslPatternCreator(
-    modify: VoiceDataModifier<T>,
-    fromStr: (String) -> T,
-) = DslPatternCreatorProvider(modify, fromStr)
-
-@JvmName("dslPatternCreatorString")
-fun dslPatternCreator(
-    modify: VoiceDataModifier<String>,
-) = dslPatternCreator(modify) { it }
-
-@JvmName("dslPatternCreatorNumber")
-fun dslPatternCreator(
-    modify: VoiceDataModifier<Number>,
-) = dslPatternCreator(modify) { (it.toDoubleOrNull() ?: 0.0) as Number }
-
 // --- Modifier Delegate (Specialized for VoiceData) ---
 
 class DslPatternModifierProvider<T>(
@@ -160,32 +200,6 @@ class DslPatternModifierProvider<T>(
         }
     }
 }
-
-@JvmName("dslPatternModifierGeneric")
-fun <T> dslPatternModifier(
-    modify: VoiceDataModifier<T>,
-    combine: VoiceDataMerger,
-    fromStr: (String) -> T,
-    toStr: (T) -> String,
-) = DslPatternModifierProvider(modify, combine, fromStr, toStr)
-
-@JvmName("dslPatternModifierString")
-fun dslPatternModifier(modify: VoiceDataModifier<String>, combine: VoiceDataMerger) =
-    dslPatternModifier(
-        modify = modify,
-        fromStr = { it },
-        toStr = { it },
-        combine = combine
-    )
-
-@JvmName("dslPatternModifierNumber")
-fun dslPatternModifier(modify: VoiceDataModifier<Number>, combine: VoiceDataMerger) =
-    dslPatternModifier(
-        modify = modify,
-        fromStr = { (it.toDoubleOrNull() ?: 0.0) as Number },
-        toStr = { it.toString() },
-        combine = combine
-    )
 
 // --- Implementations ---
 
@@ -247,21 +261,37 @@ class DslPatternModifier<T>(
             combiner = combiner,
         )
     }
+
+    /**
+     * Applies a control pattern to the current pattern.
+     * The structure comes from [this] pattern.
+     * The values are taken from [control] pattern sampled at each event.
+     */
+    @StrudelDsl
+    private fun StrudelPattern.applyControl(
+        control: StrudelPattern,
+        mapper: (VoiceData) -> VoiceData,
+        combiner: VoiceDataMerger,
+    ): StrudelPattern = ControlPattern(
+        source = this,
+        control = control,
+        mapper = mapper,
+        combiner = combiner,
+    )
 }
 
-/**
- * Applies a control pattern to the current pattern.
- * The structure comes from [this] pattern.
- * The values are taken from [control] pattern sampled at each event.
- */
-@StrudelDsl
-private fun StrudelPattern.applyControl(
-    control: StrudelPattern,
-    mapper: (VoiceData) -> VoiceData,
-    combiner: VoiceDataMerger,
-): StrudelPattern = ControlPattern(
-    source = this,
-    control = control,
-    mapper = mapper,
-    combiner = combiner,
-)
+// --- Generic Object Delegate (sine, saw, etc.) ---
+
+class DslObjectProvider<T : StrudelPattern>(
+    private val handler: () -> T,
+) {
+    operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, T> {
+        val name = prop.name
+        val instance = handler()
+
+        // Register in the evaluator registry as a function that returns the instance
+        StrudelRegistry.symbols[name] = instance
+
+        return ReadOnlyProperty { _, _ -> instance }
+    }
+}

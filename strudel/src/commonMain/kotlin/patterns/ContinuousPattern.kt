@@ -7,7 +7,7 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 /**
  * A pattern that generates a value based on continuous cycle time.
  */
-internal class ContinuousPattern(
+open class ContinuousPattern(
     val getValue: (Double) -> Double,
 ) : StrudelPattern {
     override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
@@ -22,7 +22,16 @@ internal class ContinuousPattern(
     /** Creates a new version of this pattern with a transformed value range */
     fun range(min: Double, max: Double): ContinuousPattern {
         return ContinuousPattern(
-            getValue = { t -> min + (getValue(t) * (max - min)) },
+            getValue = { t ->
+                val value = getValue(t)
+                // Normalize bipolar (-1..1) to unipolar (0..1)
+                val normalized = (value + 1.0) / 2.0
+
+                (min + (normalized * (max - min)))
+                // .also {
+                // println("$t | $value | $min | $max -> $it")
+                // }
+            },
         )
     }
 }
