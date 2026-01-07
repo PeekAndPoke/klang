@@ -10,11 +10,6 @@ class MiniNotationParser(
     private val tokens = tokenize(input)
     private var pos = 0
 
-    data class AtomInfo(
-        val base: String,
-        val sampleIndex: Int? = null,
-    )
-
     fun parse(): StrudelPattern {
         if (tokens.isEmpty()) return silence
 
@@ -65,11 +60,10 @@ class MiniNotationParser(
             }
 
             match(TokenType.TILDE) -> silence
-            match(TokenType.DASH) -> silence
 
             match(TokenType.LITERAL) -> {
                 val text = previous().text
-                parseAtom(text)
+                atomFactory(text)
             }
 
             else -> {
@@ -79,64 +73,20 @@ class MiniNotationParser(
             }
         }
 
-        // Apply modifiers (*, /, @, !)
-        while (check(TokenType.STAR) || check(TokenType.SLASH) || check(TokenType.AT) || check(TokenType.EXCLAIM)) {
-            when {
-                match(TokenType.STAR) -> {
-                    val factorStr = consume(TokenType.LITERAL, "Expected number after '*'").text
-                    val factor = factorStr.toDoubleOrNull() ?: 1.0
-                    pattern = pattern.fast(factor)
-                }
-
-                match(TokenType.SLASH) -> {
-                    val factorStr = consume(TokenType.LITERAL, "Expected number after '/'").text
-                    val factor = factorStr.toDoubleOrNull() ?: 1.0
-                    pattern = pattern.slow(factor)
-                }
-
-                match(TokenType.AT) -> {
-                    val factorStr = consume(TokenType.LITERAL, "Expected number after '@'").text
-                    val factor = factorStr.toDoubleOrNull() ?: 1.0
-                    // @n elongates: stretch the pattern to n times its duration
-                    pattern = pattern.slow(factor)
-                }
-
-                match(TokenType.EXCLAIM) -> {
-                    val factorStr = consume(TokenType.LITERAL, "Expected number after '!'").text
-                    val times = factorStr.toIntOrNull() ?: 1
-                    // !n replicates: repeat the pattern n times within the same duration
-                    pattern = pattern.fast(times.toDouble())
-                }
+        // Apply modifiers (*, /)
+        while (check(TokenType.STAR) || check(TokenType.SLASH)) {
+            if (match(TokenType.STAR)) {
+                val factorStr = consume(TokenType.LITERAL, "Expected number after '*'").text
+                val factor = factorStr.toDoubleOrNull() ?: 1.0
+                pattern = pattern.fast(factor)
+            } else if (match(TokenType.SLASH)) {
+                val factorStr = consume(TokenType.LITERAL, "Expected number after '/'").text
+                val factor = factorStr.toDoubleOrNull() ?: 1.0
+                pattern = pattern.slow(factor)
             }
         }
 
         return pattern
-    }
-
-    // Parse atom with optional :n sample selection
-    private fun parseAtom(text: String): StrudelPattern {
-        val atomInfo = parseAtomText(text)
-        val pattern = atomFactory(atomInfo.base)
-
-        // If we have a sample index, apply it using .n()
-        return if (atomInfo.sampleIndex != null) {
-            pattern.n(atomInfo.sampleIndex)
-        } else {
-            pattern
-        }
-    }
-
-    // Parse "bd:3" into AtomInfo("bd", 3)
-    private fun parseAtomText(text: String): AtomInfo {
-        val colonIndex = text.indexOf(':')
-        return if (colonIndex > 0) {
-            val base = text.substring(0, colonIndex)
-            val indexStr = text.substring(colonIndex + 1)
-            val index = indexStr.toIntOrNull()
-            AtomInfo(base, index)
-        } else {
-            AtomInfo(text, null)
-        }
     }
 
     // Alternation: < a b c >  (Sequence treated as one per cycle)
@@ -160,7 +110,7 @@ class MiniNotationParser(
 
     private enum class TokenType {
         L_BRACKET, R_BRACKET, L_ANGLE, R_ANGLE,
-        COMMA, STAR, SLASH, TILDE, DASH, AT, EXCLAIM, LITERAL
+        COMMA, STAR, SLASH, TILDE, LITERAL
     }
 
     private data class Token(val type: TokenType, val text: String)
@@ -204,24 +154,13 @@ class MiniNotationParser(
                     tokens.add(Token(TokenType.TILDE, "~")); i++
                 }
 
-                '-' -> {
-                    tokens.add(Token(TokenType.DASH, "-")); i++
-                }
-
-                '@' -> {
-                    tokens.add(Token(TokenType.AT, "@")); i++
-                }
-
-                '!' -> {
-                    tokens.add(Token(TokenType.EXCLAIM, "!")); i++
-                }
-
                 else -> {
                     val start = i
                     while (i < input.length) {
                         val next = input[i]
-                        // Note: ':' is allowed within literals for sample selection (e.g., "bd:3")
-                        if (next in " []<>,*/~-@! \t\n\r") break
+                        // Note: '-', ':', '@', '!' are allowed within literals
+                        // (e.g., "kick-808", "bd:3", "0.1:0.2:0.3:0.4")
+                        if (next in " []<>,*/~ \t\n\r") break
                         i++
                     }
                     tokens.add(Token(TokenType.LITERAL, input.substring(start, i)))
