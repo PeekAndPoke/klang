@@ -21,7 +21,7 @@ Strudel.
 - `stack()` - Plays multiple patterns simultaneously
 - `arrange()` - Arranges patterns with specified durations
 - `pickRestart()` - Alternates patterns per cycle (slowcat equivalent)
-- `silence()` - Empty/silent pattern
+- `silence` - Empty/silent pattern
 - `rest` - Rest event (alias for silence)
 
 ### DSL Architecture ✅
