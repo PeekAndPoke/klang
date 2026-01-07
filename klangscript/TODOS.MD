@@ -77,6 +77,8 @@ JavaScript-like scripting language for live coding
   - [x] **String Methods**: `length()`, `charAt()`, `substring()`, `indexOf()`, `split()`, `toUpperCase()`,
     `toLowerCase()`, `trim()`, `startsWith()`, `endsWith()`, `replace()`, `slice()`, `concat()`, `repeat()`
   - [x] **Object Utilities**: `Object.keys()`, `Object.values()`, `Object.entries()`
+  - [x] **RuntimeValue Helpers**: Type conversion (`toIntOrNull/Or`, `toDoubleOrNull/Or`, etc.) and type checking
+    (`isNumber()`, `isString()`, `isArray()`, etc.)
   - [ ] Indexing: `arr[0]`, `arr[1]` (requires index access expression) - *Deferred*
   - [ ] Higher-order: `map()`, `filter()`, `forEach()`, `find()`, `some()`, `every()` - *Deferred (requires callback
     execution support)*
@@ -260,11 +262,12 @@ All methods support 0-5 parameters + vararg:
 
 ## Test Status
 
-- ✅ **393 tests passing** on both JVM and JS
+- ✅ **420 tests passing** on both JVM and JS
 - ✅ Comprehensive coverage of all implemented features
 - ✅ Integration tests validate end-to-end scenarios
 - ✅ Error handling and stack trace tests
 - ✅ Array, String, and Object method tests
+- ✅ RuntimeValue helper function tests
 - ✅ Multiplatform compatibility verified
 
 ---
