@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.script.KlangScript
 import io.peekandpoke.klang.script.ast.*
 
 /**
@@ -601,7 +602,7 @@ class Interpreter(
 
         // Handle native objects - lookup extension methods
         if (objValue is NativeObjectValue<*>) {
-            val engine = libraryLoader as? io.peekandpoke.klang.script.KlangScript
+            val engine = libraryLoader as? KlangScript
             if (engine != null) {
                 val extensionMethod = engine.getNativeExtensionMethod(objValue.kClass, memberAccess.property)
                 if (extensionMethod != null) {
@@ -632,7 +633,7 @@ class Interpreter(
 
         // Handle built-in runtime types (ArrayValue, StringValue, etc.) - lookup extension methods
         if (objValue is ArrayValue || objValue is StringValue || objValue is NumberValue) {
-            val engine = libraryLoader as? io.peekandpoke.klang.script.KlangScript
+            val engine = libraryLoader as? KlangScript
             if (engine != null) {
                 val extensionMethod = engine.getNativeExtensionMethod(objValue::class, memberAccess.property)
                 if (extensionMethod != null) {

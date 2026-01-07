@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.strudel
 
-import com.github.h0tk3y.betterParse.grammar.parseToEnd
-import io.peekandpoke.klang.strudel.lang.parser.StrudelCodeGrammar
-import io.peekandpoke.klang.strudel.lang.parser.StrudelExpressionEvaluator
+import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.toObjectOrNull
+import io.peekandpoke.klang.strudel.lang.strudelLib
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.ceil
@@ -14,12 +14,19 @@ import kotlin.math.max
  */
 interface StrudelPattern {
     companion object {
-        fun compile(code: String): StrudelPattern {
-            val evaluator = StrudelExpressionEvaluator()
-            val ast = StrudelCodeGrammar.parseToEnd(code)
-            val result = evaluator.evaluate(ast)
+        fun compile(code: String): StrudelPattern? {
+            val code = """
+                import * from "stdlib"
+                import * from "strudel"
+                
+                
+            """.trimIndent() + code
 
-            return result as StrudelPattern
+            val klangScriptEngine = klangScript {
+                registerLibrary(strudelLib)
+            }
+
+            return klangScriptEngine.execute(code).toObjectOrNull<StrudelPattern>()
         }
     }
 

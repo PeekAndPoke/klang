@@ -37,6 +37,7 @@ kotlin {
                 implementation(Deps.KotlinLibs.better_parse)
 
                 api(project(":klang"))
+                api(project(":klangscript"))
             }
         }
 

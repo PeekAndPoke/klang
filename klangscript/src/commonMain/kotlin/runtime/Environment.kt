@@ -54,7 +54,17 @@ class Environment(
     /** Map of local names to exported names (for libraries with export aliasing) */
     private val exportAliases = mutableMapOf<String, String>()
 
+    // caches
+    private val getExtensionMethodCache = mutableMapOf<KClass<*>, NativeExtensionMethod?>()
+    private val getExtensionMethodNamesCache = mutableMapOf<KClass<*>, Set<String>>()
+    private val getWithSuperTypesCache = mutableMapOf<KClass<*>, List<KClass<*>>>()
+
     fun register(native: KlangScriptExtension) {
+        // clear all caches
+        getExtensionMethodCache.clear()
+        getExtensionMethodNamesCache.clear()
+        getWithSuperTypesCache.clear()
+
         // Register all libraries
         libraries.putAll(native.libraries)
 
@@ -218,8 +228,12 @@ class Environment(
      * @return The extension method, or null if not found
      */
     fun getExtensionMethod(kClass: KClass<*>, methodName: String): NativeExtensionMethod? {
-        return nativeExtensionMethods[kClass]?.get(methodName)
-            ?: parent?.getExtensionMethod(kClass, methodName)
+        return getExtensionMethodCache.getOrPut(kClass) {
+            val allTypes = getWithSuperTypes(kClass)
+
+            allTypes.firstNotNullOfOrNull { nativeExtensionMethods[it]?.get(methodName) }
+                ?: parent?.getExtensionMethod(kClass, methodName)
+        }
     }
 
     /**
@@ -230,10 +244,21 @@ class Environment(
      * @param kClass The Kotlin class to get methods for
      * @return List of method names
      */
-    fun getExtensionMethodNames(kClass: KClass<*>): List<String> {
-        val local = nativeExtensionMethods[kClass]?.keys?.toList() ?: emptyList()
-        val parent = parent?.getExtensionMethodNames(kClass) ?: emptyList()
+    fun getExtensionMethodNames(kClass: KClass<*>): Set<String> {
+        return getExtensionMethodNamesCache.getOrPut(kClass) {
+            val allTypes = getWithSuperTypes(kClass)
 
-        return local + parent
+            val local = allTypes.flatMap { nativeExtensionMethods[it]?.keys ?: emptyList() }.toSet()
+
+            val parent = parent?.getExtensionMethodNames(kClass) ?: emptyList()
+
+            local + parent
+        }
+    }
+
+    private fun getWithSuperTypes(cls: KClass<*>): List<KClass<*>> {
+        return getWithSuperTypesCache.getOrPut(cls) {
+            listOf(cls) + cls.supertypes.mapNotNull { it.classifier as? KClass<*> }
+        }
     }
 }

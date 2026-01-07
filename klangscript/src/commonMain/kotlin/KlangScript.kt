@@ -8,13 +8,22 @@ import io.peekandpoke.klang.script.runtime.Interpreter
 import io.peekandpoke.klang.script.runtime.LibraryLoader
 import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
 import io.peekandpoke.klang.script.runtime.RuntimeValue
+import io.peekandpoke.klang.script.stdlib.KlangStdLib
 import kotlin.reflect.KClass
 
 /**
  * Shorthand for using the [KlangScript.Builder]
  */
-fun klangScript(builder: KlangScript.Builder.() -> Unit = {}) =
-    KlangScript.Builder().apply(builder).build()
+fun klangScript(builder: KlangScript.Builder.() -> Unit = {}): KlangScript {
+
+    val script = KlangScript.Builder()
+
+    // Always register the standard library
+    script.registerLibrary(KlangStdLib.create())
+    script.apply(builder)
+
+    return script.build()
+}
 
 /**
  * Main facade for the KlangScript engine
@@ -149,7 +158,7 @@ class KlangScript private constructor(
      * @param kClass The Kotlin class to get methods for
      * @return List of method names
      */
-    fun getExtensionMethodNames(kClass: KClass<*>): List<String> {
+    fun getExtensionMethodNames(kClass: KClass<*>): Set<String> {
         return environment.getExtensionMethodNames(kClass)
     }
 

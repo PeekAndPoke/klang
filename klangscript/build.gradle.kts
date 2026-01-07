@@ -30,6 +30,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
@@ -42,6 +43,19 @@ kotlin {
             dependencies {
                 Deps.Test {
                     commonTestDeps()
+                }
+            }
+        }
+
+        jsMain {
+            dependencies {
+            }
+        }
+
+        jsTest {
+            dependencies {
+                Deps.Test {
+                    jsTestDeps()
                 }
             }
         }
