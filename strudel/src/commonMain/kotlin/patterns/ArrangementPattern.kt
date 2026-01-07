@@ -1,10 +1,11 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.strudel.patterns
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Plays a list of (duration, pattern) segments sequentially, looping the total duration.
@@ -45,7 +46,7 @@ internal class ArrangementPattern(
 
                     // Constrain query to the intersection of the request and the segment
                     val qStart = max(from, segStart)
-                    val qEnd = kotlin.math.min(to, segEnd)
+                    val qEnd = min(to, segEnd)
 
                     val innerEvents = pat.queryArc(qStart - segStart, qEnd - segStart)
 

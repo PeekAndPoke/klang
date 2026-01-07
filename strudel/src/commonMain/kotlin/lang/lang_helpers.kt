@@ -3,6 +3,8 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.MiniNotationParser
+import io.peekandpoke.klang.strudel.patterns.AtomicPattern
+import io.peekandpoke.klang.strudel.patterns.ControlPattern
 import kotlin.jvm.JvmName
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -10,8 +12,8 @@ import kotlin.reflect.KProperty
 // --- Registry ---
 
 object StrudelRegistry {
-    val functions = mutableMapOf<String, (List<Any>) -> Any>()
-    val methods = mutableMapOf<String, (Any, List<Any>) -> Any>()
+    val functions = mutableMapOf<String, (List<Any?>) -> StrudelPattern>()
+    val methods = mutableMapOf<String, (StrudelPattern, List<Any?>) -> StrudelPattern>()
 }
 
 // --- Type Aliases ---
@@ -24,7 +26,7 @@ fun <T> voiceModifier(modify: VoiceDataModifier<T>): VoiceDataModifier<T> = modi
 // --- Generic Function Delegate (stack, arrange, etc.) ---
 
 class DslFunctionProvider<In>(
-    private val handler: (List<Any>) -> StrudelPattern,
+    private val handler: (List<Any?>) -> StrudelPattern,
 ) {
     operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, DslFunction<In>> {
         val name = prop.name
@@ -41,15 +43,15 @@ class DslFunctionProvider<In>(
  * Creates a DSL function that returns a StrudelPattern.
  * [In] is the type used for varargs in Kotlin (e.g. StrudelPattern or Any).
  */
-fun <In> dslFunction(handler: (List<Any>) -> StrudelPattern) = DslFunctionProvider<In>(handler)
+fun <In> dslFunction(handler: (List<Any?>) -> StrudelPattern) = DslFunctionProvider<In>(handler)
 
-class DslFunction<In>(val handler: (List<Any>) -> StrudelPattern) {
+class DslFunction<In>(val handler: (List<Any?>) -> StrudelPattern) {
     // Typed for Kotlin usage
     @Suppress("UNCHECKED_CAST")
     operator fun invoke(vararg args: In): StrudelPattern = handler(args.toList() as List<Any>)
 
     // Internal usage
-    fun invokeUntyped(args: List<Any>): StrudelPattern = handler(args)
+    fun invokeUntyped(args: List<Any?>): StrudelPattern = handler(args)
 }
 
 // --- Generic Method Delegate (fast, slow, etc.) ---
@@ -58,14 +60,14 @@ class DslFunction<In>(val handler: (List<Any>) -> StrudelPattern) {
  * Provider that registers the method name and creates bound delegates.
  */
 class DslMethodProvider<In>(
-    private val handler: (StrudelPattern, List<Any>) -> StrudelPattern,
+    private val handler: (StrudelPattern, List<Any?>) -> StrudelPattern,
 ) {
     operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<StrudelPattern, DslMethod<In>> {
         val name = prop.name
 
         // Register in the evaluator registry
         StrudelRegistry.methods[name] = { recv, args ->
-            handler(recv as StrudelPattern, args)
+            handler(recv, args)
         }
 
         // Return a delegate that creates a BOUND method when accessed
@@ -75,7 +77,7 @@ class DslMethodProvider<In>(
     }
 }
 
-fun <In> dslMethod(handler: (StrudelPattern, List<Any>) -> StrudelPattern) = DslMethodProvider<In>(handler)
+fun <In> dslMethod(handler: (StrudelPattern, List<Any?>) -> StrudelPattern) = DslMethodProvider<In>(handler)
 
 /**
  * A method bound to a specific [pattern] instance.
@@ -143,9 +145,8 @@ class DslPatternModifierProvider<T>(
         val name = prop.name
 
         // Logic for the registered method
-        StrudelRegistry.methods[name] = { receiver, args ->
-            val p = receiver as StrudelPattern
-            val modifier = DslPatternModifier(p, modify, fromStr, toStr, combine)
+        StrudelRegistry.methods[name] = { pattern, args ->
+            val modifier = DslPatternModifier(pattern, modify, fromStr, toStr, combine)
             val arg = args.firstOrNull() ?: error("Method $name requires an argument")
 
             when (arg) {

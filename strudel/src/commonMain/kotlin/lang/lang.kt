@@ -4,6 +4,10 @@ import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.patterns.ArrangementPattern
+import io.peekandpoke.klang.strudel.patterns.SequencePattern
+import io.peekandpoke.klang.strudel.patterns.StackPattern
+import io.peekandpoke.klang.strudel.patterns.TimeModifierPattern
 import io.peekandpoke.klang.tones.Tones
 import kotlin.math.max
 
@@ -19,7 +23,7 @@ annotation class StrudelDsl
 var strudelLangInit = false
 
 // Helpers
-private fun List<Any>.flattenToPatterns(): Array<StrudelPattern> {
+private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
     return this.flatMap { arg ->
         when (arg) {
             is StrudelPattern -> listOf(arg)

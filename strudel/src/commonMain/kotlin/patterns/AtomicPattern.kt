@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.strudel.patterns
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -12,7 +12,7 @@ import kotlin.math.floor
  */
 internal class AtomicPattern(val data: VoiceData) : StrudelPattern {
     companion object {
-        val pure = AtomicPattern(VoiceData.empty)
+        val pure = AtomicPattern(VoiceData.Companion.empty)
     }
 
     override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
