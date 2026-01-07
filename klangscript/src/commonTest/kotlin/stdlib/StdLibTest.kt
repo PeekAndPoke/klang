@@ -19,7 +19,7 @@ import io.peekandpoke.klang.script.runtime.StringValue
  * - Library import and usage patterns
  * - Error handling for invalid arguments
  */
-class KlangStdLibTest : StringSpec({
+class StdLibTest : StringSpec({
 
     // ===== I/O Functions =====
 

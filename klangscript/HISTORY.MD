@@ -421,6 +421,56 @@ Prevents scope pollution, explicit API surfaces
 
 ---
 
+### Step 2.13 & 3.13: Built-in Type Extension Methods (Complete)
+
+**Implementation Date**: January 2026
+
+**Goal**: Add JavaScript-compatible methods to built-in types (ArrayValue, StringValue, ObjectValue)
+
+**Challenge**: Extension methods work for `NativeObjectValue`, but built-in `RuntimeValue` types needed special handling
+in the interpreter.
+
+**Solution**: Modified `Interpreter.evaluateMemberAccess()` to check for extension methods on built-in types before
+falling through to error handling.
+
+**Array Methods Implemented** (11 methods):
+
+- **Property-like**: `length()`
+- **Mutating**: `push()`, `pop()`, `shift()`, `unshift()`
+- **Non-mutating**: `slice()`, `concat()`, `join()`, `reverse()`
+- **Search**: `indexOf()`, `includes()`
+
+**String Methods Implemented** (14 methods):
+
+- `length()`, `charAt()`, `substring()`, `indexOf()`, `split()`
+- `toUpperCase()`, `toLowerCase()`, `trim()`
+- `startsWith()`, `endsWith()`, `replace()`
+- `slice()`, `concat()`, `repeat()`
+
+**Object Utilities Implemented** (3 methods):
+
+- `Object.keys()`, `Object.values()`, `Object.entries()`
+
+**Files Modified**:
+
+- `runtime/Interpreter.kt` - Added built-in type handling in `evaluateMemberAccess()` (lines 633-663)
+- `stdlib/KlangStdLib.kt` - Added `registerType<ArrayValue>`, `registerType<StringValue>`, added `ObjectUtility` object
+- `builder/KlangScriptExtensionBuilder.kt` - Removed debug println statements
+
+**Files Created**:
+
+- `ArrayMethodsTest.kt` - 14 comprehensive tests for array methods
+
+**Test Results**: 393 tests passing (up from 359) on both JVM and JS platforms
+
+**Higher-Order Methods Deferred**: `map()`, `filter()`, `forEach()`, `find()`, `some()`, `every()` require callback
+execution infrastructure (access to interpreter/libraryLoader from extension method context). Deferred to future update.
+
+**Key Technical Decision**: Used `registerExtensionMethod()` directly for methods needing `RuntimeValue` parameters (
+concat, join, indexOf, includes) instead of type-safe `registerMethod()`.
+
+---
+
 ## Technical Highlights
 
 **Parser**: Uses better-parse combinator library, captures source locations

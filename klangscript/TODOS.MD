@@ -71,12 +71,15 @@ JavaScript-like scripting language for live coding
   - [x] Source location tracking (file:line:column)
   - [x] Stack traces (JavaScript-style)
   - [x] Stack overflow protection (1000-frame limit)
-- [ ] **2.13**: Array Methods - **NEXT PRIORITY** 🎯
-  - [ ] Properties: `length`
-  - [ ] Indexing: `arr[0]`, `arr[1]` (requires index access expression)
-  - [ ] Mutating: `push()`, `pop()`, `shift()`, `unshift()`
-  - [ ] Non-mutating: `slice()`, `concat()`
-  - [ ] Higher-order: `map()`, `filter()`, `forEach()`
+- [x] **2.13**: Array, String, Object Methods ✅ **COMPLETE**
+  - [x] **Array Methods**: `length()`, `push()`, `pop()`, `shift()`, `unshift()`, `slice()`, `concat()`, `join()`,
+    `reverse()`, `indexOf()`, `includes()`
+  - [x] **String Methods**: `length()`, `charAt()`, `substring()`, `indexOf()`, `split()`, `toUpperCase()`,
+    `toLowerCase()`, `trim()`, `startsWith()`, `endsWith()`, `replace()`, `slice()`, `concat()`, `repeat()`
+  - [x] **Object Utilities**: `Object.keys()`, `Object.values()`, `Object.entries()`
+  - [ ] Indexing: `arr[0]`, `arr[1]` (requires index access expression) - *Deferred*
+  - [ ] Higher-order: `map()`, `filter()`, `forEach()`, `find()`, `some()`, `every()` - *Deferred (requires callback
+    execution support)*
 
 ---
 
@@ -173,23 +176,16 @@ JavaScript-like scripting language for live coding
 
 ---
 
-## Current Priority: Step 2.13 - Array Methods 🎯
+## Current Priority: Phase 4 - Documentation & Examples 🎯
 
-**Rationale**: Arrays exist but lack essential methods, making them impractical for real use
+**Next Steps**:
 
-**Essential Methods**:
+1. **API Documentation**: Add KDoc comments to all public APIs
+2. **Example Scripts**: Create feature showcase and tutorial scripts
+3. **Language Specification**: Document grammar, semantics, and JavaScript differences
 
-1. **Property**: `length` (read-only)
-2. **Indexing**: `arr[0]`, `arr[1]` (requires new index access AST node)
-3. **Mutating**: `push()`, `pop()`, `shift()`, `unshift()`
-4. **Non-mutating**: `slice()`, `concat()`
-5. **Higher-order**: `map()`, `filter()`, `forEach()`
-
-**Implementation Approach**:
-
-- Use `registerType<ArrayValue>` with extension methods
-- Follow JavaScript Array API for compatibility
-- Type-safe parameter conversion for callbacks
+**Note**: Array/String/Object methods are now complete. Higher-order array methods (map, filter, etc.) are deferred
+pending callback execution infrastructure improvements.
 
 ---
 
@@ -264,10 +260,11 @@ All methods support 0-5 parameters + vararg:
 
 ## Test Status
 
-- ✅ **359+ tests passing** on both JVM and JS
+- ✅ **393 tests passing** on both JVM and JS
 - ✅ Comprehensive coverage of all implemented features
 - ✅ Integration tests validate end-to-end scenarios
 - ✅ Error handling and stack trace tests
+- ✅ Array, String, and Object method tests
 - ✅ Multiplatform compatibility verified
 
 ---

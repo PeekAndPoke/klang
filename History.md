@@ -7,14 +7,25 @@
 - 26-12-2025: bought 50 more AI credits -> 59.90 EUR
 - 05-01-2026: bought 50 more AI credits -> 59.90 EUR
 - 06-01-2026: bought 50 more AI credits -> 59.90 EUR
+- 07-01-2026: bought 50 more AI credits -> 59.90 EUR
 
 ## Diary
+
+### (2026-01-07) KlangScript
+
+- working on KlangScript StdLib
+- adding common math functions
+- adding common string functions
+- adding common list functions
+- adding common object functions
 
 ### (2026-01-06) KlangScript
 
 - creating a Javascript-ish interpreter language called KlangScript
 - making heavy use of Claude-Agent
 - parser based on better-parse
+- kotlin interop with klang-script
+- multiple refactoring and cleanup rounds
 
 ### (2026-01-05) Tones
 

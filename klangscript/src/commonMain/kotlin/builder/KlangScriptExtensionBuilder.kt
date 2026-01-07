@@ -98,7 +98,7 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
 
     /** Register a native Kotlin type */
     override fun <T : Any> registerType(cls: KClass<T>, block: NativeObjectExtensionsBuilder<T>.() -> Unit) {
-        println("Registering native type: ${cls.simpleName} -> ${cls.getUniqueClassName()}")
+        // println("Registering native type: ${cls.simpleName} -> ${cls.getUniqueClassName()}")
 
         if (!nativeTypes.containsKey(cls)) {
             val qualifiedName = cls.getUniqueClassName()
@@ -270,7 +270,7 @@ inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.regist
 ) {
     registerFunctionRaw(name) { args ->
         val params = List(args.size) { index ->
-            println("Converting arg $index of type ${args[index].value!!::class} to type ${P::class}")
+            // println("Converting arg $index of type ${args[index].value!!::class} to type ${P::class}")
             convertArgToKotlin(name, args, index, P::class)
         }
         val result = fn(params)

@@ -630,6 +630,38 @@ class Interpreter(
             )
         }
 
+        // Handle built-in runtime types (ArrayValue, StringValue, etc.) - lookup extension methods
+        if (objValue is ArrayValue || objValue is StringValue || objValue is NumberValue) {
+            val engine = libraryLoader as? io.peekandpoke.klang.script.KlangScript
+            if (engine != null) {
+                val extensionMethod = engine.getNativeExtensionMethod(objValue::class, memberAccess.property)
+                if (extensionMethod != null) {
+                    // Return bound method
+                    return BoundNativeMethod(
+                        methodName = memberAccess.property,
+                        receiver = NativeObjectValue.fromValue(objValue),
+                        invoker = { args -> extensionMethod.invoker(objValue, args) }
+                    )
+                }
+            }
+
+            // If there are registered extension methods for this type but the requested one doesn't exist,
+            // throw a helpful error. Otherwise, fall through to the generic error below.
+            val availableMethods = engine?.getExtensionMethodNames(objValue::class) ?: emptyList()
+            if (availableMethods.isNotEmpty()) {
+                val typeName = objValue::class.simpleName ?: "unknown"
+                val suggestion = " Available methods: ${availableMethods.joinToString(", ")}"
+
+                throw TypeError(
+                    "Type '$typeName' has no method '${memberAccess.property}'.$suggestion",
+                    operation = "member access",
+                    location = memberAccess.location,
+                    stackTrace = getStackTrace()
+                )
+            }
+            // Otherwise, fall through to generic error handling
+        }
+
         // Handle script objects
         if (objValue !is ObjectValue) {
             throw TypeError(

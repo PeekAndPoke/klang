@@ -35,11 +35,38 @@ sealed interface RuntimeValue {
 /** Converts the value to an integer if possible, otherwise null */
 fun RuntimeValue.toIntOrNull() = (value as? Number)?.toInt()
 
+/** Converts the value to an integer if possible, otherwise default */
+fun RuntimeValue.toIntOr(default: Int) = toIntOrNull() ?: default
+
+/** Converts the value to a long if possible, otherwise null */
+fun RuntimeValue.toLongOrNull() = (value as? Number)?.toLong()
+
+/** Converts the value to a long if possible, otherwise default */
+fun RuntimeValue.toLongOr(default: Long) = toLongOrNull() ?: default
+
 /** Converts the value to a double if possible, otherwise null */
 fun RuntimeValue.toDoubleOrNull() = (value as? Number)?.toDouble()
 
+/** Converts the value to a double if possible, otherwise default */
+fun RuntimeValue.toDoubleOr(default: Double) = toDoubleOrNull() ?: default
+
 /** Converts the value to a string if possible, otherwise null */
 fun RuntimeValue.toStringOrNull() = (value as? String)
+
+/** Converts the value to a string if possible, otherwise default */
+fun RuntimeValue.toStringOr(default: String) = toStringOrNull() ?: default
+
+/** Converts the value to a boolean if possible, otherwise null */
+fun RuntimeValue.toBooleanOrNull() = (value as? Boolean)
+
+/** Converts the value to a boolean if possible, otherwise default */
+fun RuntimeValue.toBooleanOr(default: Boolean) = toBooleanOrNull() ?: default
+
+/** Converts the value to an object of type T if possible, otherwise null */
+inline fun <reified T : Any> RuntimeValue.toObjectOrNull(): T? = (value as? T)
+
+/** Converts the value to an object of type T if possible, otherwise default */
+inline fun <reified T : Any> RuntimeValue.toObjectOr(default: T): T = toObjectOrNull() ?: default
 
 /**
  * Numeric value

@@ -43,7 +43,7 @@ fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int) {
  */
 fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
 
-    println("Converting ${this::class.simpleName} to ${cls.simpleName}")
+    // println("Converting ${this::class.simpleName} to ${cls.simpleName}")
 
     val result = when (this) {
         // Special conversion logic for numeric values
