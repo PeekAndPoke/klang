@@ -42,7 +42,10 @@ Strudel.
 - **Parallel stacking** - `,` for simultaneous patterns
 - **Speed multiplication** - `*n` to speed up patterns
 - **Speed division** - `/n` to slow down patterns
-- **Rests** - `~` for silence
+- **Rests** - `~` or `-` for silence
+- **Sample selection** - `:n` notation (e.g., `"bd:3"` selects sample variant 3)
+- **Elongation** - `@n` extends note duration (e.g., `"c@3"` holds for 3 steps)
+- **Replication** - `!n` replicates notes (e.g., `"c!2"` = `"c c"`)
 - **Literal tokens** - Any non-special character sequence
 
 ### Parser Features ✅
@@ -186,7 +189,7 @@ Comprehensive voice data structure supporting:
 - 4 continuous oscillators
 - 4 filter types
 - Complete ADSR envelope system
-- Full mini-notation parser with 8+ operators
+- Full mini-notation parser with 11 operators/features
 - Control pattern system
 - Comprehensive audio parameter support
 

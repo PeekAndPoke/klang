@@ -155,5 +155,104 @@ class MiniNotationParserSpec : StringSpec() {
             events.count { it.data.note == "c3" } shouldBe 1
             events.count { it.data.note == "e3" } shouldBe 2
         }
+
+        "Parsing dash rest 'c3 - e3'" {
+            val pattern = parse("c3 - e3")
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+            events.size shouldBe 2
+
+            with(events[0]) {
+                begin shouldBe 0.0
+                end shouldBe (1.0 / 3.0)
+                data.note shouldBe "c3"
+            }
+
+            with(events[1]) {
+                begin shouldBe (2.0 / 3.0)
+                end shouldBe 1.0
+                data.note shouldBe "e3"
+            }
+        }
+
+        "Parsing sample selection 'bd:3'" {
+            val pattern = parse("bd:3")
+            val events = pattern.queryArc(0.0, 1.0)
+
+            events.size shouldBe 1
+            with(events[0]) {
+                begin shouldBe 0.0
+                end shouldBe 1.0
+                data.note shouldBe "bd"
+                data.soundIndex shouldBe 3
+            }
+        }
+
+        "Parsing elongation 'c3@3'" {
+            // c3@3 -> c3 stretched to 3 cycles
+            val pattern = parse("c3@3")
+            val events = pattern.queryArc(0.0, 1.0)
+
+            events.size shouldBe 1
+            with(events[0]) {
+                data.note shouldBe "c3"
+                begin shouldBe 0.0
+                end shouldBe 3.0 // Stretched to 3 cycles
+            }
+        }
+
+        "Parsing replication 'c3!3'" {
+            // c3!3 -> c3 replicated 3 times in one cycle
+            val pattern = parse("c3!3")
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+            events.size shouldBe 3
+
+            with(events[0]) {
+                data.note shouldBe "c3"
+                begin shouldBe 0.0
+                end shouldBe (1.0 / 3.0)
+            }
+            with(events[1]) {
+                data.note shouldBe "c3"
+                begin shouldBe (1.0 / 3.0)
+                end shouldBe (2.0 / 3.0)
+            }
+            with(events[2]) {
+                data.note shouldBe "c3"
+                begin shouldBe (2.0 / 3.0)
+                end shouldBe 1.0
+            }
+        }
+
+        "Parsing sample selection with sequence 'bd:0 bd:1 bd:2'" {
+            val pattern = parse("bd:0 bd:1 bd:2")
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+            events.size shouldBe 3
+            with(events[0]) {
+                data.note shouldBe "bd"
+                data.soundIndex shouldBe 0
+            }
+            with(events[1]) {
+                data.note shouldBe "bd"
+                data.soundIndex shouldBe 1
+            }
+            with(events[2]) {
+                data.note shouldBe "bd"
+                data.soundIndex shouldBe 2
+            }
+        }
+
+        "Parsing combined modifiers 'c3!2*2'" {
+            // c3!2 -> 2 events, then *2 -> 4 events total
+            val pattern = parse("c3!2*2")
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+            events.size shouldBe 4
+            events.forEach {
+                it.data.note shouldBe "c3"
+            }
+        }
     }
 }

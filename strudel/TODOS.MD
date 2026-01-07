@@ -11,13 +11,13 @@ and category.
 
 #### Sample Selection ⭐⭐⭐
 
-- [ ] **`:n` notation** - Sample number selection in mini-notation (e.g., `"bd:3 hh:2"`)
-- [ ] **`-` (dash) rest** - Currently only `~` works for rests
+- [x] **`:n` notation** - Sample number selection in mini-notation (e.g., `"bd:3 hh:2"`)
+- [x] **`-` (dash) rest** - Alternative to `~` for rests
 
 #### Timing Modifiers ⭐⭐⭐
 
-- [ ] **`@n` elongation** - Extend note duration (e.g., `"c@3"` holds for 3 steps)
-- [ ] **`!n` replication** - Replicate notes (e.g., `"c!2"` = `"c c"`)
+- [x] **`@n` elongation** - Extend note duration (e.g., `"c@3"` holds for 3 steps)
+- [x] **`!n` replication** - Replicate notes (e.g., `"c!2"` = `"c c"`)
 
 #### Probabilistic ⭐⭐⭐
 
@@ -255,7 +255,7 @@ and category.
 
 ### By Category:
 
-- **Mini-Notation**: 8 features missing
+- **Mini-Notation**: 4 features missing (4 completed: `:n`, `-`, `@n`, `!n`)
 - **Pattern Creation**: 6 functions
 - **Time Modification**: 10 functions
 - **Pattern Transformation**: 15 functions
@@ -268,7 +268,7 @@ and category.
 - **Visualization**: 6 tools
 - **System Functions**: 4 functions
 
-### Total Missing: ~130+ features
+### Total Missing: ~126 features (4 completed in Phase 1 & 2)
 
 ---
 
