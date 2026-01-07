@@ -75,8 +75,10 @@ class ArrowFunctionTest : StringSpec({
                     funcEnv.define(func.parameters[0], value)
                 }
 
+                val engine = klangScript()
+
                 // Create interpreter with that environment and execute the body
-                val funcInterpreter = Interpreter(funcEnv)
+                val funcInterpreter = Interpreter(env = funcEnv, engine = engine)
 
                 // We need to execute a small program containing the function body
                 val bodyProgram = Program(

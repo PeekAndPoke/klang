@@ -57,13 +57,13 @@ class Environment(
     // caches
     private val getExtensionMethodCache = mutableMapOf<Pair<KClass<*>, String>, NativeExtensionMethod?>()
     private val getExtensionMethodNamesCache = mutableMapOf<KClass<*>, Set<String>>()
-    private val getWithSuperTypesCache = mutableMapOf<KClass<*>, List<KClass<*>>>()
+    private val getAllRegisteredSupertypes = mutableMapOf<KClass<*>, List<KClass<*>>>()
 
     fun register(native: KlangScriptExtension) {
         // clear all caches
         getExtensionMethodCache.clear()
         getExtensionMethodNamesCache.clear()
-        getWithSuperTypesCache.clear()
+        getAllRegisteredSupertypes.clear()
 
         // Register all libraries
         libraries.putAll(native.libraries)
@@ -204,8 +204,6 @@ class Environment(
      * @throws RuntimeException if the library is not found
      */
     fun loadLibrary(name: String): String {
-        // TODO; look in parent env for the libs as well. Only throw when parent == null
-
         val library = libraries[name] ?: if (parent != null) {
             return parent.loadLibrary(name)
         } else {
@@ -223,16 +221,19 @@ class Environment(
      *
      * Used by the interpreter to lookup methods during member access evaluation.
      *
-     * @param kClass The Kotlin class to lookup methods for
+     * @param value The runtime value to get the extension method names for
      * @param methodName The method name
      * @return The extension method, or null if not found
      */
-    fun getExtensionMethod(kClass: KClass<*>, methodName: String): NativeExtensionMethod? {
-        return getExtensionMethodCache.getOrPut(kClass to methodName) {
-            val allTypes = getWithSuperTypes(kClass)
+    fun getExtensionMethod(value: RuntimeValue, methodName: String): NativeExtensionMethod? {
+        val obj = value.unpackForSupertypeLookup()
+        val cls = obj::class
+
+        return getExtensionMethodCache.getOrPut(cls to methodName) {
+            val allTypes = getAllRegisteredSupertypes(obj)
 
             allTypes.firstNotNullOfOrNull { nativeExtensionMethods[it]?.get(methodName) }
-                ?: parent?.getExtensionMethod(kClass, methodName)
+                ?: parent?.getExtensionMethod(value, methodName)
         }
     }
 
@@ -241,24 +242,42 @@ class Environment(
      *
      * Used for error messages to suggest available methods.
      *
-     * @param kClass The Kotlin class to get methods for
+     * @param value The runtime value to get the extension method names for
      * @return List of method names
      */
-    fun getExtensionMethodNames(kClass: KClass<*>): Set<String> {
-        return getExtensionMethodNamesCache.getOrPut(kClass) {
-            val allTypes = getWithSuperTypes(kClass)
+    fun getExtensionMethodNames(value: RuntimeValue): Set<String> {
+        val obj = value.unpackForSupertypeLookup()
+        val cls = obj::class
+
+        return getExtensionMethodNamesCache.getOrPut(cls) {
+            val allTypes = getAllRegisteredSupertypes(obj)
 
             val local = allTypes.flatMap { nativeExtensionMethods[it]?.keys ?: emptyList() }.toSet()
-
-            val parent = parent?.getExtensionMethodNames(kClass) ?: emptyList()
+            val parent = parent?.getExtensionMethodNames(value) ?: emptyList()
 
             local + parent
         }
     }
 
-    private fun getWithSuperTypes(cls: KClass<*>): List<KClass<*>> {
-        return getWithSuperTypesCache.getOrPut(cls) {
-            listOf(cls) + cls.supertypes.mapNotNull { it.classifier as? KClass<*> }
+    private fun RuntimeValue.unpackForSupertypeLookup() = when (this) {
+        is NativeObjectValue<*> -> value
+        else -> this
+    }
+
+    private fun getAllRegisteredSupertypes(obj: Any): List<KClass<*>> {
+        val cls = obj::class
+
+        return getAllRegisteredSupertypes.getOrPut(cls) {
+
+            val superTypes = nativeTypes.keys.filter { type ->
+                type.isInstance(obj).also {
+                    println("Checking type.isInstance(obj) | $type -> $it")
+                }
+            }
+
+            println("Super types of $cls: $superTypes")
+
+            listOf(cls) + superTypes
         }
     }
 }

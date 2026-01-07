@@ -61,7 +61,7 @@ suspend fun runStrudelDemo() {
 //    val pattern = TestKotlinPatterns.tetris
 
     console.log("Compiling pattern")
-    val pattern = StrudelPattern.compile(TestTextPatterns.tetris)
+    val pattern = StrudelPattern.compile(TestTextPatterns.tetris)!!
 
     console.log("Running strudel player")
 

@@ -133,6 +133,8 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
                 wrapAsRuntimeValue(result)
             })
 
+        registerType(receiver)
+
         nativeExtensionMethods.getOrPut(receiver) { mutableMapOf() }[name] = extensionMethod
     }
 }

@@ -593,7 +593,7 @@ class Interpreter(
 
         // Handle native objects - lookup extension methods
         if (objValue is NativeObjectValue<*>) {
-            val extensionMethod = engine.getNativeExtensionMethod(objValue.kClass, memberAccess.property)
+            val extensionMethod = engine.getExtensionMethod(objValue, memberAccess.property)
             if (extensionMethod != null) {
                 // Return bound method
                 return BoundNativeMethod(
@@ -604,7 +604,7 @@ class Interpreter(
             }
 
             // Method not found - throw error with helpful message
-            val availableMethods = engine.getExtensionMethodNames(objValue.kClass) ?: emptyList()
+            val availableMethods = engine.getExtensionMethodNames(objValue)
             val suggestion = if (availableMethods.isNotEmpty()) {
                 " Available methods: ${availableMethods.joinToString(", ")}"
             } else {
@@ -620,7 +620,7 @@ class Interpreter(
         }
         // Handle built-in runtime types (ArrayValue, StringValue, etc.) - lookup extension methods
         else if (objValue is ArrayValue || objValue is StringValue || objValue is NumberValue) {
-            val extensionMethod = engine.getNativeExtensionMethod(objValue::class, memberAccess.property)
+            val extensionMethod = engine.getExtensionMethod(objValue, memberAccess.property)
             if (extensionMethod != null) {
                 // Return bound method
                 return BoundNativeMethod(
@@ -632,7 +632,7 @@ class Interpreter(
 
             // If there are registered extension methods for this type but the requested one doesn't exist,
             // throw a helpful error. Otherwise, fall through to the generic error below.
-            val availableMethods = engine.getExtensionMethodNames(objValue::class)
+            val availableMethods = engine.getExtensionMethodNames(objValue)
             if (availableMethods.isNotEmpty()) {
                 val typeName = objValue::class.simpleName ?: "unknown"
                 val suggestion = " Available methods: ${availableMethods.joinToString(", ")}"

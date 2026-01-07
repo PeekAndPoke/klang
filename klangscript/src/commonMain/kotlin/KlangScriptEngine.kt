@@ -8,7 +8,6 @@ import io.peekandpoke.klang.script.runtime.Interpreter
 import io.peekandpoke.klang.script.runtime.LibraryLoader
 import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
 import io.peekandpoke.klang.script.runtime.RuntimeValue
-import kotlin.reflect.KClass
 
 /**
  * Main facade for the KlangScript engine
@@ -127,12 +126,12 @@ class KlangScriptEngine private constructor(
      *
      * Used by the interpreter to lookup methods during member access evaluation.
      *
-     * @param kClass The Kotlin class to lookup methods for
+     * @param value The runtime value to get the extension method names for
      * @param methodName The method name
      * @return The extension method, or null if not found
      */
-    fun getNativeExtensionMethod(kClass: KClass<*>, methodName: String): NativeExtensionMethod? {
-        return environment.getExtensionMethod(kClass, methodName)
+    fun getExtensionMethod(value: RuntimeValue, methodName: String): NativeExtensionMethod? {
+        return environment.getExtensionMethod(value, methodName)
     }
 
     /**
@@ -140,11 +139,11 @@ class KlangScriptEngine private constructor(
      *
      * Used for error messages to suggest available methods.
      *
-     * @param kClass The Kotlin class to get methods for
+     * @param value The runtime value to get the extension method names for
      * @return List of method names
      */
-    fun getExtensionMethodNames(kClass: KClass<*>): Set<String> {
-        return environment.getExtensionMethodNames(kClass)
+    fun getExtensionMethodNames(value: RuntimeValue): Set<String> {
+        return environment.getExtensionMethodNames(value)
     }
 
     /**
