@@ -211,26 +211,23 @@ class ArrayLiteralTest : StringSpec({
         result.toDisplayString() shouldBe "[object]"
     }
 
-    // TODO: Trailing commas not yet supported (see TODOS.MD Step 1.11)
-    // "Trailing comma in array" {
-    //     val engine = klangScript()
-    //     val result = engine.execute("[1, 2, 3,]")
-    //
-    //     result shouldBe ArrayValue(
-    //         mutableListOf(
-    //             NumberValue(1.0),
-    //             NumberValue(2.0),
-    //             NumberValue(3.0)
-    //         )
-    //     )
-    // }
-    //
-    // "Array with trailing comma after single element" {
-    //     val engine = klangScript()
-    //     val result = engine.execute("[42,]")
-    //
-    //     result shouldBe ArrayValue(mutableListOf(NumberValue(42.0)))
-    // }
+    "Trailing comma in array" {
+        val engine = klangScript()
+        val result = engine.execute("[1, 2, 3,]") as ArrayValue
+
+        result.elements.size shouldBe 3
+        result.toDisplayString() shouldContain "1"
+        result.toDisplayString() shouldContain "2"
+        result.toDisplayString() shouldContain "3"
+    }
+
+    "Array with trailing comma after single element" {
+        val engine = klangScript()
+        val result = engine.execute("[42,]") as ArrayValue
+
+        result.elements.size shouldBe 1
+        result.toDisplayString() shouldContain "42"
+    }
 
     "Multi-line array" {
         val engine = klangScript()

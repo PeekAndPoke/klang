@@ -152,7 +152,7 @@ object KlangScriptParser : Grammar<Program>() {
                 parser(this::expression),
         comma,
         acceptZero = true
-    ) and -rightBrace).map { (lbrace, properties) ->
+    ) and optional(comma) and -rightBrace).map { (lbrace, properties, _) ->
         ObjectLiteral(properties.map { (key, value) -> key to value }, lbrace.toLocation())
     }
 
@@ -175,7 +175,7 @@ object KlangScriptParser : Grammar<Program>() {
         parser(this::expression),
         comma,
         acceptZero = true
-    ) and -rightBracket).map { (lbracket, elements) ->
+    ) and optional(comma) and -rightBracket).map { (lbracket, elements, _) ->
         ArrayLiteral(elements, lbracket.toLocation())
     }
 
@@ -269,11 +269,11 @@ object KlangScriptParser : Grammar<Program>() {
     private val callExpr: Parser<Expression> by
     (memberExpr and zeroOrMore(
         // Parse: (args) followed by optional .property.property...
-        (leftParen and separatedTerms(expression, comma, acceptZero = true) and -rightParen) and
+        (leftParen and separatedTerms(expression, comma, acceptZero = true) and optional(comma) and -rightParen) and
                 zeroOrMore(-dot and identifier)
     )).map { (base, callAndMemberPairs) ->
         // Fold through each call-and-member-access pair
-        callAndMemberPairs.fold(base) { current, (lparen, args, properties) ->
+        callAndMemberPairs.fold(base) { current, (lparen, args, _, properties) ->
             // First apply the call
             val afterCall = CallExpression(current, args, lparen.toLocation())
             // Then apply any member accesses
@@ -317,6 +317,7 @@ object KlangScriptParser : Grammar<Program>() {
      * - Single parameter: `x => expr`
      * - Multiple parameters: `(a, b) => expr`
      * - No parameters: `() => expr`
+     * - Trailing commas allowed: `(a, b,) => expr`
      *
      * Arrow functions have the lowest precedence to allow expressions in the body:
      * `x => x + 1` parses as `x => (x + 1)`, not `(x => x) + 1`
@@ -345,7 +346,7 @@ object KlangScriptParser : Grammar<Program>() {
                                 identifier,
                                 comma,
                                 acceptZero = true
-                            ) and -rightParen).map { params ->
+                            ) and optional(comma) and -rightParen).map { (params, _) ->
                                 params.map { it.text }
                             }
                     ) and arrow and parser(this::arrowExpr)  // Right-associative for nested arrows

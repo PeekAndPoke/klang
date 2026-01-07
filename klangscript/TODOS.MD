@@ -9,7 +9,7 @@ JavaScript-like scripting language for live coding
 - **Parser**: better-parse (combinator library)
 - **Runtime**: Tree-walking interpreter
 - **Platforms**: Kotlin Multiplatform (JVM + JS)
-- **Current Status**: 420+ tests passing on both platforms
+- **Current Status**: 490 tests passing on both platforms (980 total: JVM + JS)
 
 ---
 
@@ -45,8 +45,8 @@ JavaScript-like scripting language for live coding
 - [x] **1.7**: Method Chaining (dot notation)
 - [x] **1.8**: Arrow Functions (expression bodies only)
 - [x] **1.9**: Variables (`let`, `const`)
-- [x] **1.10**: Object Literals
-- [x] **1.11**: Array Literals (`[1, 2, 3]`) - *No trailing commas yet*
+- [x] **1.10**: Object Literals (`{ a: 1, b: {}, }`) including trailing commas
+- [x] **1.11**: Array Literals (`[1, 2, 3,]`) including trailing commas
 - [x] **1.12**: Complete Programs (top-level statements)
 - [ ] **1.13**: Parser Error Handling - *Deferred*
 
@@ -251,23 +251,23 @@ All methods support 0-5 parameters + vararg:
 
 ## Known Limitations
 
-1. **Trailing commas**: Not supported in arrays, objects, or function calls
-2. **Array indexing**: Not yet implemented (requires `IndexAccess` AST node)
-3. **Block bodies**: Arrow functions are expression-only
-4. **Default exports**: Not implemented
-5. **Parser errors**: Limited error recovery
-6. **Native function errors**: Don't include source location (architectural constraint)
+1. **Array indexing**: Not yet implemented (requires `IndexAccess` AST node)
+2. **Block bodies**: Arrow functions are expression-only
+3. **Default exports**: Not implemented
+4. **Parser errors**: Limited error recovery
+5. **Native function errors**: Don't include source location (architectural constraint)
 
 ---
 
 ## Test Status
 
-- ✅ **420 tests passing** on both JVM and JS
+- ✅ **490 tests passing** on both JVM and JS platforms (980 total)
 - ✅ Comprehensive coverage of all implemented features
 - ✅ Integration tests validate end-to-end scenarios
 - ✅ Error handling and stack trace tests
 - ✅ Array, String, and Object method tests
 - ✅ RuntimeValue helper function tests
+- ✅ Trailing comma support tests
 - ✅ Multiplatform compatibility verified
 
 ---

@@ -157,4 +157,23 @@ class ObjectLiteralTest : StringSpec({
         (a.getProperty("x") as NumberValue).value shouldBe 1.0
         (b.getProperty("y") as NumberValue).value shouldBe 2.0
     }
+
+    "should support trailing comma in object literal" {
+        val script = klangScript()
+
+        val result = script.execute("{ x: 10, y: 20, }")
+        result.shouldBeInstanceOf<ObjectValue>()
+
+        (result.getProperty("x") as NumberValue).value shouldBe 10.0
+        (result.getProperty("y") as NumberValue).value shouldBe 20.0
+    }
+
+    "should support trailing comma after single property" {
+        val script = klangScript()
+
+        val result = script.execute("{ x: 42, }")
+        result.shouldBeInstanceOf<ObjectValue>()
+
+        (result.getProperty("x") as NumberValue).value shouldBe 42.0
+    }
 })
