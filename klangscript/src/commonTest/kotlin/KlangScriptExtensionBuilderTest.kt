@@ -10,13 +10,13 @@ import io.peekandpoke.klang.script.runtime.toIntOrNull
 import io.peekandpoke.klang.script.runtime.toStringOrNull
 
 /**
- * Comprehensive tests for NativeRegistryBuilder registration methods
+ * Comprehensive tests for KlangScriptExtensionBuilder registration methods
  *
  * Tests all variants of:
  * - registerFunction (0-5 parameters + vararg)
  * - registerMethod (0-5 parameters + vararg)
  */
-class NativeRegistryBuilderTest : StringSpec() {
+class KlangScriptExtensionBuilderTest : StringSpec() {
 
     object MathHelper {
         override fun toString() = "[MathHelper]"
