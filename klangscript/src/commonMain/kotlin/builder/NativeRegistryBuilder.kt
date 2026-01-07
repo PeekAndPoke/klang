@@ -10,9 +10,10 @@ import kotlin.reflect.KClass
 
 class NativeRegistry(
     val libraries: Map<String, KlangScriptLibrary>,
-    val nativeTypes: Map<KClass<*>, NativeTypeInfo>,
-    val nativeExtensionMethods: Map<KClass<*>, MutableMap<String, NativeExtensionMethod>>,
-    val nativeFunctions: List<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>,
+    val functions: List<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>,
+    val types: Map<KClass<*>, NativeTypeInfo>,
+    val objects: Map<String, Any>,
+    val extensionMethods: Map<KClass<*>, MutableMap<String, NativeExtensionMethod>>,
 )
 
 interface NativeRegistryBuilder {
@@ -41,12 +42,17 @@ interface NativeRegistryBuilder {
      * @param fn The function implementation
      * @return This builder for method chaining
      */
-    fun registerNativeFunction(name: String, fn: (List<RuntimeValue>) -> RuntimeValue)
+    fun registerFunction(name: String, fn: (List<RuntimeValue>) -> RuntimeValue)
 
     /**
      * Register a native Kotlin type
      */
-    fun <T : Any> registerNativeType(cls: KClass<T>)
+    fun <T : Any> registerType(cls: KClass<T>, block: NativeObjectExtensionBuilder<T>.() -> Unit = {})
+
+    /**
+     * Register a native Kotlin object
+     */
+    fun <T : Any> registerObject(name: String, obj: T, block: NativeObjectExtensionBuilder<T>.() -> Unit = {})
 
     /**
      * Register a native Kotlin extension method
@@ -61,6 +67,8 @@ class RegistryBuilderImpl : NativeRegistryBuilder {
 
     private val nativeTypes = mutableMapOf<KClass<*>, NativeTypeInfo>()
 
+    private val nativeObjects = mutableMapOf<String, Any>()
+
     private val nativeExtensionMethods = mutableMapOf<KClass<*>, MutableMap<String, NativeExtensionMethod>>()
 
     private val nativeFunctions = mutableListOf<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>()
@@ -70,9 +78,10 @@ class RegistryBuilderImpl : NativeRegistryBuilder {
      */
     override fun buildNativeRegistry(): NativeRegistry = NativeRegistry(
         libraries = libraries,
-        nativeTypes = nativeTypes,
-        nativeExtensionMethods = nativeExtensionMethods,
-        nativeFunctions = nativeFunctions
+        types = nativeTypes,
+        objects = nativeObjects,
+        extensionMethods = nativeExtensionMethods,
+        functions = nativeFunctions
     )
 
     /**
@@ -92,20 +101,44 @@ class RegistryBuilderImpl : NativeRegistryBuilder {
      * @param fn The function implementation
      * @return This builder for method chaining
      */
-    override fun registerNativeFunction(name: String, fn: (List<RuntimeValue>) -> RuntimeValue) {
+    override fun registerFunction(name: String, fn: (List<RuntimeValue>) -> RuntimeValue) {
         nativeFunctions.add(name to fn)
     }
 
     /**
      * Register a native Kotlin type
      */
-    override fun <T : Any> registerNativeType(cls: KClass<T>) {
+    override fun <T : Any> registerType(
+        cls: KClass<T>,
+        block: NativeObjectExtensionBuilder<T>.() -> Unit,
+    ) {
+        println("Registering native type: ${cls.simpleName} -> ${cls.getUniqueClassName()}")
+
         if (!nativeTypes.containsKey(cls)) {
             val qualifiedName = cls.getUniqueClassName()
             nativeTypes[cls] = NativeTypeInfo(cls, qualifiedName)
         }
+
+        block(NativeObjectExtensionBuilder(this, cls))
     }
 
+    /**
+     * Register a native Kotlin object
+     */
+    override fun <T : Any> registerObject(
+        name: String,
+        obj: T,
+        block: NativeObjectExtensionBuilder<T>.() -> Unit,
+    ) {
+        nativeObjects[name] = obj
+
+        @Suppress("UNCHECKED_CAST")
+        registerType(cls = obj::class as KClass<T>, block = block)
+    }
+
+    /**
+     * Register a native Kotlin extension method
+     */
     override fun <T : Any> registerNativeExtensionMethod(
         receiver: KClass<T>, name: String, fn: (T, List<RuntimeValue>) -> RuntimeValue,
     ) {
@@ -119,6 +152,128 @@ class RegistryBuilderImpl : NativeRegistryBuilder {
             })
 
         nativeExtensionMethods.getOrPut(receiver) { mutableMapOf() }[name] = extensionMethod
+    }
+}
+
+class NativeObjectExtensionBuilder<T : Any>(
+    @PublishedApi
+    internal val builder: NativeRegistryBuilder,
+    @PublishedApi
+    internal val cls: KClass<T>,
+) {
+    /**
+     * Register a native extension function with variable number of parameters
+     */
+    inline fun <reified P : Any, reified R : Any> registerVarargMethod(
+        name: String, noinline fn: T.(List<P>) -> R,
+    ) {
+        builder.registerNativeExtensionMethod(cls, name) { receiver, args ->
+            val params = List(args.size) { index ->
+                convertArgToKotlin(name, args, index, P::class)
+            }
+            val result = receiver.fn(params)
+            wrapAsRuntimeValue(result)
+        }
+    }
+
+    /**
+     * Register a native extension method with no parameters
+     */
+    @JvmName("registerNativeExtensionMethod0")
+    inline fun <reified R : Any> registerMethod(
+        name: String, noinline fn: T.(Any?) -> R,
+    ) {
+        builder.registerNativeExtensionMethod(cls, name) { receiver, _ ->
+            val result = receiver.fn(null)
+            wrapAsRuntimeValue(result)
+        }
+    }
+
+    /**
+     * Register a native extension method with one parameter
+     */
+    inline fun <reified P1 : Any, reified R : Any> registerMethod(
+        name: String, noinline fn: T.(P1) -> R,
+    ) {
+        builder.registerNativeExtensionMethod(cls, name) { receiver, args ->
+            checkArgsSize(name, args, 1)
+            val p1 = convertArgToKotlin(name, args, 0, P1::class)
+            val result = receiver.fn(p1)
+            wrapAsRuntimeValue(result)
+        }
+    }
+
+    /**
+     * Register a native extension method with two parameters
+     */
+    inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> registerMethod(
+        name: String, noinline fn: T.(P1, P2) -> R,
+    ) {
+        builder.registerNativeExtensionMethod(cls, name) { receiver, args ->
+            checkArgsSize(name, args, 2)
+            val p1 = convertArgToKotlin(name, args, 0, P1::class)
+            val p2 = convertArgToKotlin(name, args, 1, P2::class)
+            val result = receiver.fn(p1, p2)
+            wrapAsRuntimeValue(result)
+        }
+    }
+
+    /**
+     * Register a native extension method with three parameters
+     */
+    inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any> registerMethod(
+        name: String, noinline fn: T.(P1, P2, P3) -> R,
+    ) {
+        builder.registerNativeExtensionMethod(cls, name) { receiver, args ->
+            checkArgsSize(name, args, 3)
+            val p1 = convertArgToKotlin(name, args, 0, P1::class)
+            val p2 = convertArgToKotlin(name, args, 1, P2::class)
+            val p3 = convertArgToKotlin(name, args, 2, P3::class)
+            val result = receiver.fn(p1, p2, p3)
+            wrapAsRuntimeValue(result)
+        }
+    }
+
+    /**
+     * Register a native extension method with four parameters
+     */
+    inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
+            registerMethod(name: String, noinline fn: T.(P1, P2, P3, P4) -> R) {
+        builder.registerNativeExtensionMethod(cls, name) { receiver, args ->
+            checkArgsSize(name, args, 4)
+            val p1 = convertArgToKotlin(name, args, 0, P1::class)
+            val p2 = convertArgToKotlin(name, args, 1, P2::class)
+            val p3 = convertArgToKotlin(name, args, 2, P3::class)
+            val p4 = convertArgToKotlin(name, args, 3, P4::class)
+            val result = receiver.fn(p1, p2, p3, p4)
+            wrapAsRuntimeValue(result)
+        }
+    }
+
+    /**
+     * Register a native extension method with four parameters
+     */
+    inline fun <
+            reified P1 : Any,
+            reified P2 : Any,
+            reified P3 : Any,
+            reified P4 : Any,
+            reified P5 : Any,
+            reified R : Any,
+            > NativeRegistryBuilder.registerMethod(
+        name: String,
+        noinline fn: T.(P1, P2, P3, P4, P5) -> R,
+    ) {
+        builder.registerNativeExtensionMethod(cls, name) { receiver, args ->
+            checkArgsSize(name, args, 5)
+            val p1 = convertArgToKotlin(name, args, 0, P1::class)
+            val p2 = convertArgToKotlin(name, args, 1, P2::class)
+            val p3 = convertArgToKotlin(name, args, 2, P3::class)
+            val p4 = convertArgToKotlin(name, args, 3, P4::class)
+            val p5 = convertArgToKotlin(name, args, 4, P5::class)
+            val result = receiver.fn(p1, p2, p3, p4, p5)
+            wrapAsRuntimeValue(result)
+        }
     }
 }
 
@@ -138,8 +293,10 @@ fun NativeRegistryBuilder.registerLibrary(name: String, sourceCode: String) {
 /**
  * Register a native Kotlin type
  */
-inline fun <reified T : Any> NativeRegistryBuilder.registerNativeType() {
-    registerNativeType(T::class)
+inline fun <reified T : Any> NativeRegistryBuilder.registerType(
+    noinline block: NativeObjectExtensionBuilder<T>.() -> Unit = {},
+) {
+    registerType(cls = T::class, block = block)
 }
 
 /**
@@ -148,7 +305,7 @@ inline fun <reified T : Any> NativeRegistryBuilder.registerNativeType() {
 inline fun <reified P : Any, reified R : Any> NativeRegistryBuilder.registerNativeFunctionVararg(
     name: String, noinline fn: (List<P>) -> R,
 ) {
-    registerNativeFunction(name) { args ->
+    registerFunction(name) { args ->
         val params = List(args.size) { index ->
             println("Converting arg $index of type ${args[index].value!!::class} to type ${P::class}")
             convertArgToKotlin(name, args, index, P::class)
@@ -161,10 +318,10 @@ inline fun <reified P : Any, reified R : Any> NativeRegistryBuilder.registerNati
 /**
  * Register a native function with no parameters
  */
-inline fun <reified R : Any> NativeRegistryBuilder.registerNativeFunction(
+inline fun <reified R : Any> NativeRegistryBuilder.registerFunction(
     name: String, noinline fn: () -> R,
 ) {
-    registerNativeFunction(name) { _ ->
+    registerFunction(name) { _ ->
         val result = fn()
         wrapAsRuntimeValue(result)
     }
@@ -173,10 +330,10 @@ inline fun <reified R : Any> NativeRegistryBuilder.registerNativeFunction(
 /**
  * Register a native function with one parameter
  */
-inline fun <reified P1 : Any, reified R : Any> NativeRegistryBuilder.registerNativeFunction(
+inline fun <reified P1 : Any, reified R : Any> NativeRegistryBuilder.registerFunction(
     name: String, noinline fn: (P1) -> R,
 ) {
-    registerNativeFunction(name) { args ->
+    registerFunction(name) { args ->
         checkArgsSize(name, args, 1)
         val param = convertArgToKotlin(name, args, 0, P1::class)
         val result = fn(param)
@@ -187,10 +344,10 @@ inline fun <reified P1 : Any, reified R : Any> NativeRegistryBuilder.registerNat
 /**
  * Register a native function with two parameters
  */
-inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> NativeRegistryBuilder.registerNativeFunction(
+inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> NativeRegistryBuilder.registerFunction(
     name: String, noinline fn: (P1, P2) -> R,
 ) {
-    registerNativeFunction(name) { args ->
+    registerFunction(name) { args ->
         checkArgsSize(name, args, 2)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -203,8 +360,8 @@ inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> NativeRegistryB
  * Register a native function with three parameters
  */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any>
-        NativeRegistryBuilder.registerNativeFunction(name: String, noinline fn: (P1, P2, P3) -> R) {
-    registerNativeFunction(name) { args ->
+        NativeRegistryBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3) -> R) {
+    registerFunction(name) { args ->
         checkArgsSize(name, args, 3)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -218,8 +375,8 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : An
  * Register a native function with four parameters
  */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
-        NativeRegistryBuilder.registerNativeFunction(name: String, noinline fn: (P1, P2, P3, P4) -> R) {
-    registerNativeFunction(name) { args ->
+        NativeRegistryBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4) -> R) {
+    registerFunction(name) { args ->
         checkArgsSize(name, args, 4)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -234,8 +391,8 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
  * Register a native function with five parameters
  */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
-        NativeRegistryBuilder.registerNativeFunction(name: String, noinline fn: (P1, P2, P3, P4, P5) -> R) {
-    registerNativeFunction(name) { args ->
+        NativeRegistryBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4, P5) -> R) {
+    registerFunction(name) { args ->
         checkArgsSize(name, args, 5)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -247,114 +404,4 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
     }
 }
 
-/**
- * Register a native extension function with variable number of parameters
- */
-inline fun <reified TRes : Any, reified P : Any, reified R : Any> NativeRegistryBuilder.registerNativeExtensionMethodVararg(
-    name: String, noinline fn: TRes.(List<P>) -> R,
-) {
-    registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
-        val params = List(args.size) { index ->
-            convertArgToKotlin(name, args, index, P::class)
-        }
-        val result = receiver.fn(params)
-        wrapAsRuntimeValue(result)
-    }
-}
 
-/**
- * Register a native extension method with no parameters
- */
-@JvmName("registerNativeExtensionMethod0")
-inline fun <reified TRes : Any, reified R : Any> NativeRegistryBuilder.registerNativeExtensionMethod(
-    name: String, noinline fn: TRes.(Any?) -> R,
-) {
-    registerNativeExtensionMethod(TRes::class, name) { receiver, _ ->
-        val result = receiver.fn(null)
-        wrapAsRuntimeValue(result)
-    }
-}
-
-/**
- * Register a native extension method with one parameter
- */
-inline fun <reified TRes : Any, reified P1 : Any, reified R : Any> NativeRegistryBuilder.registerNativeExtensionMethod(
-    name: String, noinline fn: TRes.(P1) -> R,
-) {
-    registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
-        checkArgsSize(name, args, 1)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class)
-        val result = receiver.fn(p1)
-        wrapAsRuntimeValue(result)
-    }
-}
-
-/**
- * Register a native extension method with two parameters
- */
-inline fun <reified TRes : Any, reified P1 : Any, reified P2 : Any, reified R : Any>
-        NativeRegistryBuilder.registerNativeExtensionMethod(
-    name: String, noinline fn: TRes.(P1, P2) -> R,
-) {
-    registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
-        checkArgsSize(name, args, 2)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class)
-        val p2 = convertArgToKotlin(name, args, 1, P2::class)
-        val result = receiver.fn(p1, p2)
-        wrapAsRuntimeValue(result)
-    }
-}
-
-/**
- * Register a native extension method with three parameters
- */
-inline fun <reified TRes : Any, reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any>
-        NativeRegistryBuilder.registerNativeExtensionMethod(
-    name: String, noinline fn: TRes.(P1, P2, P3) -> R,
-) {
-    registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
-        checkArgsSize(name, args, 3)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class)
-        val p2 = convertArgToKotlin(name, args, 1, P2::class)
-        val p3 = convertArgToKotlin(name, args, 2, P3::class)
-        val result = receiver.fn(p1, p2, p3)
-        wrapAsRuntimeValue(result)
-    }
-}
-
-/**
- * Register a native extension method with four parameters
- */
-inline fun <reified TRes : Any, reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
-        NativeRegistryBuilder.registerNativeExtensionMethod(
-    name: String, noinline fn: TRes.(P1, P2, P3, P4) -> R,
-) {
-    registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
-        checkArgsSize(name, args, 4)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class)
-        val p2 = convertArgToKotlin(name, args, 1, P2::class)
-        val p3 = convertArgToKotlin(name, args, 2, P3::class)
-        val p4 = convertArgToKotlin(name, args, 3, P4::class)
-        val result = receiver.fn(p1, p2, p3, p4)
-        wrapAsRuntimeValue(result)
-    }
-}
-
-/**
- * Register a native extension method with four parameters
- */
-inline fun <reified TRes : Any, reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
-        NativeRegistryBuilder.registerNativeExtensionMethod(
-    name: String, noinline fn: TRes.(P1, P2, P3, P4, P5) -> R,
-) {
-    registerNativeExtensionMethod(TRes::class, name) { receiver, args ->
-        checkArgsSize(name, args, 5)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class)
-        val p2 = convertArgToKotlin(name, args, 1, P2::class)
-        val p3 = convertArgToKotlin(name, args, 2, P3::class)
-        val p4 = convertArgToKotlin(name, args, 3, P4::class)
-        val p5 = convertArgToKotlin(name, args, 4, P5::class)
-        val result = receiver.fn(p1, p2, p3, p4, p5)
-        wrapAsRuntimeValue(result)
-    }
-}

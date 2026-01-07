@@ -83,7 +83,7 @@ class KlangStdLibTest : StringSpec({
         output[0] shouldBe ""
     }
 
-    "console_log() works like print()" {
+    "console.log() works like print()" {
         val output = mutableListOf<String>()
         KlangStdLib.outputHandler = { output.add(it.joinToString()) }
 

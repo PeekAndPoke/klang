@@ -4,10 +4,9 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.peekandpoke.klang.script.builder.registerFunction
 import io.peekandpoke.klang.script.builder.registerLibrary
-import io.peekandpoke.klang.script.builder.registerNativeExtensionMethod
-import io.peekandpoke.klang.script.builder.registerNativeFunction
-import io.peekandpoke.klang.script.builder.registerNativeType
+import io.peekandpoke.klang.script.builder.registerType
 import io.peekandpoke.klang.script.runtime.ImportError
 import io.peekandpoke.klang.script.runtime.NumberValue
 
@@ -96,15 +95,12 @@ class LibrarySystemTest : StringSpec({
     "Library with native functions only" {
 
         val mathLib = klangScriptLibrary("math") {
-            registerNativeFunction<Double, MathHelper>("create") { value ->
-                MathHelper(value)
+            registerType<MathHelper> {
+                registerMethod("double") { double() }
+                registerMethod("add") { value: Double -> add(value) }
             }
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") {
-                double()
-            }
-            registerNativeExtensionMethod<MathHelper, Double, MathHelper>("add") { value ->
-                add(value)
-            }
+
+            registerFunction("create") { value: Double -> MathHelper(value) }
         }
 
         val engine = klangScript {
@@ -130,12 +126,11 @@ class LibrarySystemTest : StringSpec({
                     export { quickDouble }
                 """.trimIndent()
             )
-            registerNativeFunction<Double, MathHelper>("create") { value ->
-                MathHelper(value)
-            }
 
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") {
-                double()
+            registerFunction("create") { value: Double -> MathHelper(value) }
+
+            registerType<MathHelper> {
+                registerMethod("double") { double() }
             }
         }
 
@@ -156,17 +151,15 @@ class LibrarySystemTest : StringSpec({
     "Library with multiple native types" {
 
         val lib = klangScriptLibrary("helpers") {
-            registerNativeFunction<Double, MathHelper>("math") { value ->
-                MathHelper(value)
+            registerFunction("math") { value: Double -> MathHelper(value) }
+            registerFunction("str") { text: String -> StringHelper(text) }
+
+            registerType<MathHelper> {
+                registerMethod("double") { double() }
             }
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") {
-                double()
-            }
-            registerNativeFunction<String, StringHelper>("str") { text ->
-                StringHelper(text)
-            }
-            registerNativeExtensionMethod<StringHelper, StringHelper>("upper") {
-                upper()
+
+            registerType<StringHelper> {
+                registerMethod("upper") { upper() }
             }
         }
 
@@ -188,20 +181,24 @@ class LibrarySystemTest : StringSpec({
 
     "Multiple libraries with different native types" {
         val mathLib = klangScriptLibrary("math") {
-            registerNativeFunction<Double, MathHelper>("createMath") { value ->
+            registerFunction<Double, MathHelper>("createMath") { value ->
                 MathHelper(value)
             }
-            registerNativeExtensionMethod<MathHelper, Double, MathHelper>("add") { value ->
-                add(value)
+
+            registerType<MathHelper> {
+                registerMethod("add") { value: Double -> add(value) }
             }
         }
 
         val stringLib = klangScriptLibrary("strings") {
-            registerNativeFunction<String, StringHelper>("createString") { text ->
+            registerFunction<String, StringHelper>("createString") { text ->
                 StringHelper(text)
             }
-            registerNativeExtensionMethod<StringHelper, String, StringHelper>("append") { suffix ->
-                append(suffix)
+
+            registerType<StringHelper> {
+                registerMethod("append") { suffix: String ->
+                    append(suffix)
+                }
             }
         }
 
@@ -233,11 +230,14 @@ class LibrarySystemTest : StringSpec({
                 """.trimIndent()
             )
 
-            registerNativeFunction<Double, MathHelper>("create") { value ->
+            registerFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") {
-                double()
+
+            registerType<MathHelper> {
+                registerMethod("double") {
+                    double()
+                }
             }
         }
 
@@ -277,11 +277,13 @@ class LibrarySystemTest : StringSpec({
 
     "Native functions registered in library are globally available" {
         val lib = klangScriptLibrary("math") {
-            registerNativeFunction<Double, MathHelper>("create") { value ->
+            registerFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") {
-                double()
+            registerType<MathHelper> {
+                registerMethod("double") {
+                    double()
+                }
             }
         }
 
@@ -305,7 +307,7 @@ class LibrarySystemTest : StringSpec({
                     export { square }
                 """.trimIndent()
             )
-            registerNativeFunction<Double, MathHelper>("create") { value ->
+            registerFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
         }
@@ -341,11 +343,13 @@ class LibrarySystemTest : StringSpec({
 
     "Library with no source code (native only)" {
         val lib = klangScriptLibrary("nativelib") {
-            registerNativeFunction<Double, MathHelper>("create") { value ->
+            registerFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") {
-                double()
+            registerType<MathHelper> {
+                registerMethod("double") {
+                    double()
+                }
             }
         }
 
@@ -382,11 +386,13 @@ class LibrarySystemTest : StringSpec({
                     export { helper1, helper2 }
                 """.trimIndent()
             )
-            registerNativeFunction<Double, MathHelper>("create") { value ->
+            registerFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") {
-                double()
+            registerType<MathHelper> {
+                registerMethod("double") {
+                    double()
+                }
             }
         }
 
@@ -430,14 +436,12 @@ class LibrarySystemTest : StringSpec({
 
     "Chain multiple extension methods from library" {
         val lib = klangScriptLibrary("math") {
-            registerNativeFunction<Double, MathHelper>("create") { value ->
+            registerFunction<Double, MathHelper>("create") { value ->
                 MathHelper(value)
             }
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") {
-                double()
-            }
-            registerNativeExtensionMethod<MathHelper, Double, MathHelper>("add") { value ->
-                add(value)
+            registerType<MathHelper> {
+                registerMethod("double") { double() }
+                registerMethod("add") { value: Double -> add(value) }
             }
         }
 
@@ -459,12 +463,14 @@ class LibrarySystemTest : StringSpec({
         // Verify that all methods return the library for chaining
         val lib = klangScriptLibrary("test") {
             source("let x = 1")
-            registerNativeType<MathHelper>()
-            registerNativeFunction<Double, MathHelper>("create") { MathHelper(it) }
-            registerNativeFunction("test") { _ -> NumberValue(0.0) }
-            registerNativeExtensionMethod<MathHelper, MathHelper>("double") { double() }
-            registerNativeExtensionMethod<MathHelper, Double, MathHelper>("add") { v -> add(v) }
-            registerNativeExtensionMethod<MathHelper, Double, Double, MathHelper>("addTwo") { v1, v2 -> add(v1 + v2) }
+            registerFunction<Double, MathHelper>("create") { MathHelper(it) }
+            registerFunction("test") { _ -> NumberValue(0.0) }
+
+            registerType<MathHelper> {
+                registerMethod("double") { double() }
+                registerMethod("add") { v: Double -> add(v) }
+                registerMethod("addTwo") { v1: Double, v2: Double -> add(v1 + v2) }
+            }
         }
 
         // If this compiles, the fluent API works
@@ -474,7 +480,7 @@ class LibrarySystemTest : StringSpec({
     "Library with registerFunction (not registerNativeFunction)" {
 
         val lib = klangScriptLibrary("utils") {
-            registerNativeFunction("sum") { args ->
+            registerFunction("sum") { args ->
                 val sum = args.sumOf { (it as NumberValue).value }
                 NumberValue(sum)
             }

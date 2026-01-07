@@ -59,13 +59,18 @@ class Environment(
         libraries.putAll(native.libraries)
 
         // Register native functions
-        nativeTypes.putAll(native.nativeTypes)
+        nativeTypes.putAll(native.types)
 
         // Register all native extension methods
-        nativeExtensionMethods.putAll(native.nativeExtensionMethods)
+        nativeExtensionMethods.putAll(native.extensionMethods)
+
+        // Define all native objects as values
+        native.objects.forEach { (name, obj) ->
+            define(name, NativeObjectValue.fromValue(obj))
+        }
 
         // Define all native functions as values
-        native.nativeFunctions.forEach { (name, function) ->
+        native.functions.forEach { (name, function) ->
             define(name, NativeFunctionValue(name, function))
         }
     }
@@ -175,7 +180,7 @@ class Environment(
      * @deprecated Use getExportedSymbols() for library imports
      */
     fun getAllSymbols(): Map<String, RuntimeValue> {
-        return values.toMap()
+        return (parent?.getAllSymbols() ?: emptyMap()) + values.toMap()
     }
 
     /**
@@ -189,8 +194,13 @@ class Environment(
      * @throws RuntimeException if the library is not found
      */
     fun loadLibrary(name: String): String {
-        val library = libraries[name]
-            ?: throw ImportError(name, "Library not found")
+        // TODO; look in parent env for the libs as well. Only throw when parent == null
+
+        val library = libraries[name] ?: if (parent != null) {
+            return parent.loadLibrary(name)
+        } else {
+            throw ImportError(name, "Library not found")
+        }
 
         register(library.native)
 
@@ -209,6 +219,7 @@ class Environment(
      */
     fun getExtensionMethod(kClass: KClass<*>, methodName: String): NativeExtensionMethod? {
         return nativeExtensionMethods[kClass]?.get(methodName)
+            ?: parent?.getExtensionMethod(kClass, methodName)
     }
 
     /**
@@ -220,6 +231,9 @@ class Environment(
      * @return List of method names
      */
     fun getExtensionMethodNames(kClass: KClass<*>): List<String> {
-        return nativeExtensionMethods[kClass]?.keys?.toList() ?: emptyList()
+        val local = nativeExtensionMethods[kClass]?.keys?.toList() ?: emptyList()
+        val parent = parent?.getExtensionMethodNames(kClass) ?: emptyList()
+
+        return local + parent
     }
 }

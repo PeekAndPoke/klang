@@ -104,7 +104,7 @@ class ObjectLiteralTest : StringSpec({
 
     "should create object with function call values" {
         val script = klangScript {
-            registerNativeFunction("getValue") { NumberValue(99.0) }
+            registerFunction("getValue") { NumberValue(99.0) }
         }
 
         val result = script.execute("{ result: getValue() }")

@@ -5,8 +5,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.builder.registerFunction
 import io.peekandpoke.klang.script.builder.registerLibrary
-import io.peekandpoke.klang.script.builder.registerNativeFunction
 import io.peekandpoke.klang.script.runtime.*
 
 /**
@@ -123,7 +123,7 @@ class ErrorHandlingTest : StringSpec({
 
     "ArgumentError - wrong number of arguments to native function" {
         val builder = KlangScript.builder()
-        builder.registerNativeFunction<Double, Double>("double") { value ->
+        builder.registerFunction<Double, Double>("double") { value ->
             value * 2
         }
 
@@ -336,7 +336,7 @@ class ErrorHandlingTest : StringSpec({
 
     "Error in nested function call" {
         val builder = KlangScript.builder()
-        builder.registerNativeFunction("process") { values ->
+        builder.registerFunction("process") { values ->
             val x = values[0]
             NumberValue((x as NumberValue).value * 2)
         }
@@ -400,7 +400,7 @@ class ErrorHandlingTest : StringSpec({
 
     "Error messages should be descriptive - argument count" {
         val builder = KlangScript.builder()
-        builder.registerNativeFunction<Double, Double, Double>("test") { x, y -> x + y }
+        builder.registerFunction<Double, Double, Double>("test") { x, y -> x + y }
 
         val engine = builder.build()
 
@@ -609,7 +609,7 @@ class ErrorHandlingTest : StringSpec({
 
     "ReferenceError - undefined in chained calls" {
         val builder = KlangScript.builder()
-        builder.registerNativeFunction("process") { x -> x.first() }
+        builder.registerFunction("process") { x -> x.first() }
 
         val engine = builder.build()
 

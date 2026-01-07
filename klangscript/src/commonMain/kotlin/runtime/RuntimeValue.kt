@@ -226,8 +226,8 @@ data class NativeObjectValue<T : Any>(
     override val value: T,
 ) : RuntimeValue {
     companion object {
-        inline operator fun <reified T : Any> invoke(value: T): NativeObjectValue<T> =
-            NativeObjectValue(T::class, value = value)
+        fun <T : Any> fromValue(value: T): NativeObjectValue<T> =
+            NativeObjectValue(kClass = value::class, value = value)
     }
 
     override fun toDisplayString(): String = value.toString()

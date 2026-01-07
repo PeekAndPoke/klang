@@ -5,7 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
-import io.peekandpoke.klang.script.builder.registerNativeFunction
+import io.peekandpoke.klang.script.builder.registerFunction
 import io.peekandpoke.klang.script.runtime.ArgumentError
 import io.peekandpoke.klang.script.runtime.ImportError
 import io.peekandpoke.klang.script.runtime.ReferenceError
@@ -111,7 +111,7 @@ class LocationTrackingTest : StringSpec({
         // Note: Native function argument validation happens in the helper functions
         // which don't have access to source location. This is a known limitation.
         val engine = klangScript {
-            registerNativeFunction<Double, Double, Double>("test") { x, y -> x + y }
+            registerFunction<Double, Double, Double>("test") { x, y -> x + y }
         }
 
         val error = shouldThrow<ArgumentError> {

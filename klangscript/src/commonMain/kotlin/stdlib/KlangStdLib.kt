@@ -1,11 +1,12 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
-import io.peekandpoke.klang.script.builder.registerNativeExtensionMethod
-import io.peekandpoke.klang.script.builder.registerNativeExtensionMethodVararg
 import io.peekandpoke.klang.script.builder.registerNativeFunctionVararg
 import io.peekandpoke.klang.script.klangScriptLibrary
-import io.peekandpoke.klang.script.runtime.*
+import io.peekandpoke.klang.script.runtime.NullValue
+import io.peekandpoke.klang.script.runtime.NumberValue
+import io.peekandpoke.klang.script.runtime.RuntimeValue
+import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.script.stdlib.KlangStdLib.ConsoleObject.printImpl
 import kotlin.math.*
 
@@ -60,41 +61,21 @@ object KlangStdLib {
         override fun toString(): String = "[Math object]"
 
         fun KlangScriptLibrary.Builder.register() {
-            // Math object methods - Single parameter
-            registerNativeExtensionMethod<MathObject, Double, Double>(name = "sqrt") { x: Double ->
-                sqrt(x)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double>(name = "abs") { x: Double ->
-                abs(x)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double>("floor") { x ->
-                floor(x)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double>("ceil") { x ->
-                ceil(x)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double>("round") { x ->
-                round(x)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double>("sin") { x ->
-                sin(x)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double>("cos") { x ->
-                cos(x)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double>("tan") { x ->
-                tan(x)
-            }
+            registerObject("Math", MathObject) {
+                // Math object methods - Single parameter
+                registerMethod(name = "sqrt") { x: Double -> sqrt(x) }
+                registerMethod(name = "abs") { x: Double -> abs(x) }
+                registerMethod(name = "floor") { x: Double -> floor(x) }
+                registerMethod(name = "ceil") { x: Double -> ceil(x) }
+                registerMethod(name = "round") { x: Double -> round(x) }
+                registerMethod(name = "sin") { x: Double -> sin(x) }
+                registerMethod(name = "cos") { x: Double -> cos(x) }
+                registerMethod(name = "tan") { x: Double -> tan(x) }
 
-            // Math object methods - Two parameters
-            registerNativeExtensionMethod<MathObject, Double, Double, Double>("min") { a, b ->
-                min(a, b)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double, Double>("max") { a, b ->
-                max(a, b)
-            }
-            registerNativeExtensionMethod<MathObject, Double, Double, Double>("pow") { base, exponent ->
-                base.pow(exponent)
+                // Math object methods - Two parameters
+                registerMethod(name = "min") { a: Double, b: Double -> min(a, b) }
+                registerMethod(name = "max") { a: Double, b: Double -> max(a, b) }
+                registerMethod(name = "pow") { base: Double, exp: Double -> base.pow(exp) }
             }
         }
     }
@@ -106,8 +87,10 @@ object KlangStdLib {
         override fun toString(): String = "[Console object]"
 
         fun KlangScriptLibrary.Builder.register() {
-            registerNativeExtensionMethodVararg<ConsoleObject, Any, Unit>("log") { args ->
-                outputHandler(args)
+            registerObject("console", ConsoleObject) {
+                registerVarargMethod("log") { args ->
+                    outputHandler(args)
+                }
             }
         }
 
@@ -131,9 +114,6 @@ object KlangStdLib {
         return klangScriptLibrary("stdlib") {
             source(
                 """
-                const console = __createConsoleObject()
-                const Math = __createMathObject()
-
                 export {
                     console,
                     Math 
@@ -142,11 +122,9 @@ object KlangStdLib {
             )
 
             // Register console functions
-            registerNativeFunction("__createConsoleObject") { NativeObjectValue(value = ConsoleObject) }
             with(ConsoleObject) { register() }
 
             // Register Math functions
-            registerNativeFunction("__createMathObject") { NativeObjectValue(value = MathObject) }
             with(MathObject) { register() }
 
             // Output functions
@@ -155,17 +133,17 @@ object KlangStdLib {
             }
 
             // String Functions (kept as global functions)
-            registerNativeFunction("length") { args ->
+            registerFunction("length") { args ->
                 requireExactly(args, 1, "length")
                 val str = toString(args[0], "length")
                 NumberValue(str.length.toDouble())
             }
-            registerNativeFunction("toUpperCase") { args ->
+            registerFunction("toUpperCase") { args ->
                 requireExactly(args, 1, "toUpperCase")
                 val str = toString(args[0], "toUpperCase")
                 StringValue(str.uppercase())
             }
-            registerNativeFunction("toLowerCase") { args ->
+            registerFunction("toLowerCase") { args ->
                 requireExactly(args, 1, "toLowerCase")
                 val str = toString(args[0], "toLowerCase")
                 StringValue(str.lowercase())

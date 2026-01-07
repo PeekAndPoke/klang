@@ -17,7 +17,7 @@ class ComprehensiveIntegrationTest : StringSpec({
         val events = mutableListOf<String>()
 
         // Register a note() function that returns a chainable object
-        builder.registerNativeFunction("note") { values ->
+        builder.registerFunction("note") { values ->
             val value = values[0]
             val notes = (value as StringValue).value
             ObjectValue(
@@ -43,7 +43,7 @@ class ComprehensiveIntegrationTest : StringSpec({
         }
 
         // Register a stack() function that takes multiple arguments
-        builder.registerNativeFunction("stack") { args ->
+        builder.registerFunction("stack") { args ->
             events.add("stack(${args.size} items)")
             NullValue
         }
@@ -80,11 +80,11 @@ class ComprehensiveIntegrationTest : StringSpec({
         val results = mutableListOf<Double>()
 
         // Register native math operations
-        builder.registerNativeFunction("add") { args ->
+        builder.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
         }
 
-        builder.registerNativeFunction("mul") { args ->
+        builder.registerFunction("mul") { args ->
             NumberValue(args.fold(1.0) { acc, v -> acc * (v as NumberValue).value })
         }
 
@@ -101,7 +101,7 @@ class ComprehensiveIntegrationTest : StringSpec({
         )
 
         // Register a result capture function
-        builder.registerNativeFunction("capture") { value ->
+        builder.registerFunction("capture") { value ->
             results.add((value.first() as NumberValue).value)
             value.first()
         }
@@ -143,15 +143,15 @@ class ComprehensiveIntegrationTest : StringSpec({
         val builder = KlangScript.builder()
         val results = mutableListOf<Double>()
 
-        builder.registerNativeFunction("add") { args ->
+        builder.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
         }
 
-        builder.registerNativeFunction("mul") { args ->
+        builder.registerFunction("mul") { args ->
             NumberValue(args.fold(1.0) { acc, v -> acc * (v as NumberValue).value })
         }
 
-        builder.registerNativeFunction("capture") { value ->
+        builder.registerFunction("capture") { value ->
             results.add((value.first() as NumberValue).value)
             value.first()
         }
@@ -199,12 +199,12 @@ class ComprehensiveIntegrationTest : StringSpec({
         val builder = KlangScript.builder()
         val results = mutableListOf<String>()
 
-        builder.registerNativeFunction("capture") { value ->
+        builder.registerFunction("capture") { value ->
             results.add(value.first().toDisplayString())
             value.first()
         }
 
-        builder.registerNativeFunction("add") { args ->
+        builder.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
         }
 
@@ -261,7 +261,7 @@ class ComprehensiveIntegrationTest : StringSpec({
 
     "Error handling with stack traces" {
         val engine = klangScript {
-            registerNativeFunction("add") { args ->
+            registerFunction("add") { args ->
                 NumberValue(args.sumOf { (it as NumberValue).value })
             }
         }
@@ -294,11 +294,11 @@ class ComprehensiveIntegrationTest : StringSpec({
         val builder = KlangScript.builder()
         val results = mutableListOf<Double>()
 
-        builder.registerNativeFunction("add") { args ->
+        builder.registerFunction("add") { args ->
             NumberValue(args.sumOf { (it as NumberValue).value })
         }
 
-        builder.registerNativeFunction("capture") { value ->
+        builder.registerFunction("capture") { value ->
             results.add((value.first() as NumberValue).value)
             value.first()
         }
@@ -327,7 +327,7 @@ class ComprehensiveIntegrationTest : StringSpec({
         val builder = KlangScript.builder()
         val results = mutableListOf<Double>()
 
-        builder.registerNativeFunction("capture") { value ->
+        builder.registerFunction("capture") { value ->
             val first = value.first()
             val numValue = when (first) {
                 is NumberValue -> first.value
@@ -370,7 +370,7 @@ class ComprehensiveIntegrationTest : StringSpec({
         val sequence = mutableListOf<String>()
 
         // Register a note() function that returns a pattern object
-        builder.registerNativeFunction("note") { values ->
+        builder.registerFunction("note") { values ->
             val value = values[0]
             val pattern = (value as StringValue).value
             ObjectValue(
@@ -400,7 +400,7 @@ class ComprehensiveIntegrationTest : StringSpec({
             )
         }
 
-        builder.registerNativeFunction("s") { values ->
+        builder.registerFunction("s") { values ->
             val value = values[0]
             val sound = (value as StringValue).value
             sequence.add("s($sound)")

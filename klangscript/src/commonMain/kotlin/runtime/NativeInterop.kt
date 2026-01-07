@@ -31,7 +31,7 @@ fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int) {
     if (args.size < expected) {
         throw ArgumentError(
             functionName = fn,
-            message = "Expected $expected arguments",
+            message = "Call to function $fn expected $expected arguments but got ${args.size}",
             expected = expected,
             actual = args.size,
         )
