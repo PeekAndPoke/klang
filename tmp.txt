@@ -45,3 +45,37 @@ Starting voice with note 'g' at frame 672000
 As we can see from the numbers ... something is off with this one "d" note ...
 It seems to be the opposite problem. Is it picked up when it should not yet be picked up.
 It comes too early i think.
+
+
+Proposed Solution: Rational Numbers
+
+Replace Double with exact rational arithmetic for time coordinates.
+This completely eliminates floating-point drift:
+
+```kotlin
+data class Rational(val num: Long, val den: Long) {
+    operator fun plus(other: Rational): Rational {
+        val n = num * other.den + other.num * den
+        val d = den * other.den
+        return Rational(n, d).simplified()
+    }
+
+    operator fun times(other: Rational): Rational {
+        return Rational(num * other.num, den * other.den).simplified()
+    }
+
+    operator fun div(other: Rational): Rational {
+        return Rational(num * other.den, den * other.num).simplified()
+    }
+
+    fun simplified(): Rational {
+        val g = gcd(kotlin.math.abs(num), kotlin.math.abs(den))
+        return Rational(num / g, den / g)
+    }
+
+    fun toDouble(): Double = num.toDouble() / den.toDouble()
+
+    private fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
+}
+```
+
