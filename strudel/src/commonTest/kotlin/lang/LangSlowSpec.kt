@@ -1,0 +1,98 @@
+package io.peekandpoke.klang.strudel.lang
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+
+class LangSlowSpec : StringSpec({
+
+    "slow() stretches a pattern by the given factor" {
+        // Given a pattern with two sounds in one cycle
+        val p = sound("bd hh").slow(2)
+
+        // When querying two cycles
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+
+        // Then the two sounds are stretched across 2 cycles
+        events.size shouldBe 2
+        events[0].data.sound shouldBe "bd"
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+
+        events[1].data.sound shouldBe "hh"
+        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
+    "slow() with factor 1 leaves pattern unchanged" {
+        // Given a pattern slowed by 1
+        val p = sound("bd hh").slow(1)
+
+        // When querying one cycle
+        val events = p.queryArc(0.0, 1.0)
+
+        // Then it plays normally
+        events.size shouldBe 2
+        events.map { it.data.sound } shouldBe listOf("bd", "hh")
+        events[0].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+    }
+
+    "slow() with large factor" {
+        // Given a pattern slowed by 4
+        val p = sound("bd hh sn cp").slow(4)
+
+        // When querying four cycles
+        val events = p.queryArc(0.0, 4.0).sortedBy { it.begin }
+
+        // Then each sound takes 1 full cycle
+        events.size shouldBe 4
+        events.map { it.data.sound } shouldBe listOf("bd", "hh", "sn", "cp")
+
+        events.forEach { event ->
+            event.dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        }
+    }
+
+    "slow() can be chained multiple times" {
+        // Given a pattern slowed twice
+        val p = sound("bd hh").slow(2).slow(2)
+
+        // When querying four cycles
+        val events = p.queryArc(0.0, 4.0).sortedBy { it.begin }
+
+        // Then the pattern is slowed by 4 total (2 * 2)
+        events.size shouldBe 2
+        events[0].data.sound shouldBe "bd"
+        events[0].dur.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[1].data.sound shouldBe "hh"
+        events[1].dur.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
+    "slow() with fractional factor" {
+        // Given a pattern slowed by 0.5 (which actually speeds it up)
+        val p = sound("bd").slow(0.5)
+
+        // When querying one cycle
+        val events = p.queryArc(0.0, 1.0)
+
+        // Then we get two events (pattern plays twice as fast)
+        events.size shouldBe 2
+        events.all { it.data.sound == "bd" } shouldBe true
+        events[0].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+    }
+
+    "slow() works within compiled code" {
+        val p = StrudelPattern.compile("""sound("bd hh").slow(2)""")
+
+        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.sound } shouldBe listOf("bd", "hh")
+        events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+})
