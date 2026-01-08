@@ -83,19 +83,19 @@ class LangFastSpec : StringSpec({
         events[1].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
-    "fast() is inverse of slow()" {
-        // Given a pattern that is slowed then fasted by the same amount
-        val original = sound("bd hh sn")
-        val slowed = original.slow(3)
-        val fastened = slowed.fast(3)
+    "fast() combined with slow() cancels out" {
+        // Given a pattern that is slowed and then sped up by the same amount
+        val p = sound("bd hh sn").slow(2).fast(2)
 
         // When querying one cycle
-        val eventsOriginal = original.queryArc(0.0, 1.0)
-        val eventsFastened = fastened.queryArc(0.0, 1.0)
+        val events = p.queryArc(0.0, 1.0)
 
-        // Then we get the same result
-        eventsOriginal.size shouldBe eventsFastened.size
-        eventsOriginal.map { it.data.sound } shouldBe eventsFastened.map { it.data.sound }
+        // Then the pattern should play normally (3 events in one cycle)
+        events.size shouldBe 3
+        events.map { it.data.sound } shouldBe listOf("bd", "hh", "sn")
+        events.forEach { event ->
+            event.dur.toDouble() shouldBe ((1.0 / 3.0) plusOrMinus EPSILON)
+        }
     }
 
     "fast() works within compiled code" {
