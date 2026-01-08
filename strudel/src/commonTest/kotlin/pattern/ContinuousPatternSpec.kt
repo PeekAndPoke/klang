@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.sine
 
@@ -19,8 +20,8 @@ class ContinuousPatternSpec : StringSpec({
         events.size shouldBe 1
         val event = events[0]
 
-        event.begin shouldBe (0.25 plusOrMinus EPSILON)
-        event.end shouldBe (0.75 plusOrMinus EPSILON)
+        event.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        event.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         // The value is sampled at the 'from' time
         event.data.value shouldBe (0.25 plusOrMinus EPSILON)
     }

@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.tones.Tones
 import kotlin.math.PI
@@ -38,7 +39,7 @@ private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
 @StrudelDsl
 val silence by dslObject {
     object : StrudelPattern.Fixed {
-        override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> = emptyList()
+        override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> = emptyList()
     }
 }
 

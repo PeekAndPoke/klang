@@ -8,7 +8,6 @@ plugins {
     kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
     id("io.kotest")
-//    id("com.vanniktech.maven.publish")
 }
 
 val GROUP: String by project

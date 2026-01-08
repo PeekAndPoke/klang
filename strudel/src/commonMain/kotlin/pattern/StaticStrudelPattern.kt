@@ -2,11 +2,9 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.max
 
 @Serializable
 class StaticStrudelPattern(
@@ -21,21 +19,20 @@ class StaticStrudelPattern(
         fun fromJson(json: String): StaticStrudelPattern = codec.decodeFromString(serializer(), json)
     }
 
-    private val totalCycles = ceil(max(1.0, events.maxOfOrNull { it.end } ?: 0.0))
+    private val totalCycles = maxOf(Rational.ONE, events.maxOfOrNull { it.end } ?: Rational.ZERO).ceil()
 
-    override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
+    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
         if (events.isEmpty()) return emptyList()
 
         val fromMod = from % totalCycles
         val toMod = fromMod + (to - from)
 
-        val offset = floor(from / totalCycles) * totalCycles
+        val offset = (from / totalCycles).floor() * totalCycles
 
         // println("from=$from, to=$to, offset=$offset, fromMod=$fromMod, toMod=$toMod")
 
         return events
             .filter { evt ->
-
                 evt.begin >= fromMod && evt.begin < toMod
             }
             .map {

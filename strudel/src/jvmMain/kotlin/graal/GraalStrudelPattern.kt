@@ -10,6 +10,7 @@ import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeStringOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeToStringOrNull
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.tones.Tones
 import org.graalvm.polyglot.Value
 
@@ -20,8 +21,8 @@ class GraalStrudelPattern(
     // Graal patterns are treated as opaque units from the JS side, so we default to weight 1.0.
     override val weight: Double = 1.0
 
-    override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
-        val arc = graal.queryPattern(value, from, to)
+    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+        val arc = graal.queryPattern(value, from.toDouble(), to.toDouble())
             ?: return emptyList()
 
         val events = mutableListOf<StrudelPatternEvent>()
@@ -52,9 +53,9 @@ class GraalStrudelPattern(
         val part = event.getMember("part")
 
         // Begin
-        val begin = part?.getMember("begin")?.safeNumber(0.0) ?: 0.0
+        val begin = Rational(part?.getMember("begin")?.safeNumber(0.0) ?: 0.0)
         // End
-        val end = part?.getMember("end")?.safeNumber(0.0) ?: 0.0
+        val end = Rational(part?.getMember("end")?.safeNumber(0.0) ?: 0.0)
         // Get duration
         val dur = end - begin
 

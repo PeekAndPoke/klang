@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.note
@@ -21,8 +22,8 @@ class TimeModifierPatternSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].dur shouldBe (2.0 plusOrMinus EPSILON)
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].dur.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
 
         // Weight should be delegated
         pattern.weight shouldBe inner.weight
@@ -36,12 +37,12 @@ class TimeModifierPatternSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].dur shouldBe (1.0 plusOrMinus EPSILON)
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
         events[1].data.note shouldBe "b"
-        events[1].begin shouldBe (1.0 plusOrMinus EPSILON)
-        events[1].dur shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "TimeModifierPattern: Kotlin DSL (fast)" {
@@ -55,15 +56,15 @@ class TimeModifierPatternSpec : StringSpec({
 
         // 1st iteration
         events[0].data.note shouldBe "a"
-        events[0].dur shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
         events[1].data.note shouldBe "b"
-        events[1].dur shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
 
         // 2nd iteration
         events[2].data.note shouldBe "a"
-        events[2].begin shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[3].data.note shouldBe "b"
-        events[3].begin shouldBe (0.75 plusOrMinus EPSILON)
+        events[3].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
     }
 
     "TimeModifierPattern: Compiled Code" {
@@ -73,7 +74,7 @@ class TimeModifierPatternSpec : StringSpec({
         val events = pattern.queryArc(0.0, 4.0)
 
         events.size shouldBe 1
-        events[0].dur shouldBe (4.0 plusOrMinus EPSILON)
+        events[0].dur.toDouble() shouldBe (4.0 plusOrMinus EPSILON)
     }
 
     "TimeModifierPattern: Weight preservation" {

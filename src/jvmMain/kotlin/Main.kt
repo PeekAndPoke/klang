@@ -4,7 +4,6 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
@@ -72,10 +71,10 @@ private suspend fun helloStrudel() {
 //        ).slow(1)
 
 
-//        val pattern = TestKotlinPatterns.tetris
-
-        val pattern = StrudelPattern.compile(TestTextPatterns.euclidean_3_8)
-            ?: error("Pattern was not compiled")
+        val pattern = TestKotlinPatterns.tetris
+//
+//        val pattern = StrudelPattern.compile(TestTextPatterns.euclidean_3_8)
+//            ?: error("Pattern was not compiled")
 
 //        val pattern = StrudelPattern.compile(
 //            """
@@ -96,7 +95,7 @@ private suspend fun helloStrudel() {
         val playerOptions = KlangPlayer.Options(
             samples = samples,
             sampleRate = 48_000,
-            cyclesPerSecond = 0.5,
+            cyclesPerSecond = 0.66,
         )
 
         val audio1 = strudelPlayer(

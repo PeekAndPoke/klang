@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.serialization.Serializable
 
 /**
@@ -9,11 +10,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class StrudelPatternEvent(
     /** The begin of the note (in cycles) */
-    val begin: Double,
+    val begin: Rational,
     /** The end of the note (in cycles) */
-    val end: Double,
+    val end: Rational,
     /** The duration of the note (in cycles) */
-    val dur: Double,
+    val dur: Rational,
     /** The voice data */
     val data: VoiceData,
 )
