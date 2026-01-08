@@ -394,7 +394,7 @@ object TestTextPatterns {
     """.trimIndent()
 
     val euclidean_3_8 = """
-        note("[a b c d e f g]/8(3,8)")
+        note("[a b c d e f g]/8(3,8)").release(0.2)
     """.trimIndent()
 
     val active = strangerThingsNetflix
