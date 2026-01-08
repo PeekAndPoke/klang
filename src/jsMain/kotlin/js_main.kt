@@ -4,7 +4,6 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.browser.document
 import kotlinx.coroutines.GlobalScope
@@ -54,14 +53,14 @@ suspend fun runStrudelDemo() {
     val playerOptions = KlangPlayer.Options(
         samples = samples,
         sampleRate = 48000,
-        cyclesPerSecond = 0.7,
+        cyclesPerSecond = 0.66,
     )
 
 //    val pattern = StrudelPattern.Static.fromJson(strangerThingsJson)
-//    val pattern = TestKotlinPatterns.tetris
+    val pattern = TestKotlinPatterns.smallTownBoy
 
-    console.log("Compiling pattern")
-    val pattern = StrudelPattern.compile(TestTextPatterns.tetris)!!
+//    console.log("Compiling pattern")
+//    val pattern = StrudelPattern.compile(TestTextPatterns.tetris)!!
 
     console.log("Running strudel player")
 

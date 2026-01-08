@@ -22,7 +22,7 @@ object TestKotlinPatterns {
         ).sound("tri")
             .orbit(0).pan(0.7)
             .gain(0.3)
-            .delay(0.5).delaytime(0.5).delayfeedback(0.5)
+            .delay(0.5).delaytime(0.5).delayfeedback(0.75)
             .room(0.05).rsize(1.0)
             .clip(0.3),
 
@@ -60,36 +60,38 @@ object TestKotlinPatterns {
                         [a3 a2 a2 a1 e1 c1 [c2 c3] [c4 c5]]
                     >
                 """.trimIndent()
-        ).sound("supersaw").spread(0.5).unison(16).detune(0.3)
+        ).sound("supersaw").spread(0.5).unison(16).detune(0.5)
             .orbit(2).pan(0.0).gain(0.4)
             .room(0.05).rsize(1.0),
 
         sound(
             """
             <
-            [[bd, bd cr] hh sd hh] 
+            [[bd:2, bd:2 hh] hh sd hh] 
             [bd hh sd oh]
-            [bd hh*2 sd hh] 
+            [bd hh sd hh] 
             [bd hh sd oh]
             [[bd, cr] hh sd hh] 
             [bd hh sd oh]
-            [bd hh*2 sd hh] 
+            [bd hh sd hh] 
             [bd hh [lt lt, sd] [lt lt, oh]]
             [[bd, cr] hh [sd hh] [sd hh]] 
             [bd hh [sd, cr] oh]
-            [bd hh*2 sd hh] 
+            [bd hh sd hh] 
             [bd hh sd oh]
-            [[bd, cr] hh [sd hh] [sd hh]] 
+            [[bd, cr] hh [sd cr] [sd cr]] 
             [bd hh [sd, cr] oh]
-            [[sd,hh] [lt, hh*2] sd [lt, hh]] 
+            [sd [lt, cr] sd [lt, cr]] 
             [[bd,hh] sd [bd bd, cr] [bd bd, oh]]
             >            
         """.trimIndent()
+//            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+//            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
             .orbit(3)
-            .pan(-0.3).gain(0.4)
-            .room(0.05).rsize(1.0)
-            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
+            .pan(-0.3).gain(0.35)
+            .room(0.05).rsize(2.0)
+//            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
             .fast(2),
     )
 

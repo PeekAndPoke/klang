@@ -27,8 +27,6 @@ internal class SequencePattern(
         weights.forEach { w ->
             offsets.add(offsets.last() + (w / totalWeight))
         }
-        // Ensure last offset is exactly 1.0 to avoid floating-point accumulation errors
-        offsets[offsets.lastIndex] = 1.0
 
         // Optimize: Iterate only over the cycles involved in the query
         val startCycle = floor(from).toInt()

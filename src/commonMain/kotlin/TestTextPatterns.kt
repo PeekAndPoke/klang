@@ -145,7 +145,9 @@ object TestTextPatterns {
               .lpenv(perlin.slow(3).range(1, 4))
               .lpf(perlin.slow(2).range(100, 2000))
               .gain(0.3),
-            note("<a1 e2>/8").clip(0.8).struct("x*8").s("supersaw"),
+            note("<a1 e2>/8").clip(0.8)
+            .struct("x*8")
+            .s("supersaw"),
         )
     """.trimIndent()
 

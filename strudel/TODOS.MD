@@ -9,6 +9,12 @@ and category.
 
 ### Mini-Notation Extensions
 
+#### Rebustness amd User friendly error messages
+
+- the parser must be rebust againts syntax errors
+- it must always parse "something"
+- but it should provide helpful error messages / warnings
+
 #### Sample Selection ⭐⭐⭐
 
 - [x] **`:n` notation** - Sample number selection in mini-notation (e.g., `"bd:3 hh:2"`)
