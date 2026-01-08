@@ -38,7 +38,7 @@ internal class ArrangementPattern(
                 val segEnd = segStart + dur
 
                 // Check overlap
-                if (segEnd > from && segStart < to) {
+                if (segEnd > from + EPSILON && segStart < to - EPSILON) {
                     // We need to query the inner pattern.
                     // The inner pattern is usually infinite (0..1..2..).
                     // We want it to play starting from 0 relative to the segment start.
@@ -48,15 +48,21 @@ internal class ArrangementPattern(
                     val qStart = max(from, segStart)
                     val qEnd = min(to, segEnd)
 
-                    val innerEvents = pat.queryArc(qStart - segStart, qEnd - segStart)
+                    // Fix: Ensure we don't query past the segment end due to precision
+                    val innerQEnd = min(qEnd - segStart, dur - EPSILON)
+                    val innerQStart = max(qStart - segStart, 0.0)
 
-                    events.addAll(innerEvents.map { e ->
-                        // Shift event back to global time
-                        e.copy(
-                            begin = e.begin + segStart,
-                            end = e.end + segStart
-                        )
-                    })
+                    if (innerQEnd > innerQStart) {
+                        val innerEvents = pat.queryArc(innerQStart, innerQEnd)
+
+                        events.addAll(innerEvents.map { e ->
+                            // Shift event back to global time
+                            e.copy(
+                                begin = e.begin + segStart,
+                                end = e.end + segStart
+                            )
+                        })
+                    }
                 }
 
                 segmentOffset += dur

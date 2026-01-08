@@ -202,6 +202,9 @@ class VoiceScheduler(
             val head = scheduled.peek() ?: break
             // Optimization: Early exit if we're past the block end
             if (head.startFrame >= blockEnd) break
+
+            // println("Starting voice with note '${head.data.note}' at frame ${head.startFrame}")
+
             // Remove the head
             scheduled.pop()
             // 1. Drop if too old (e.g. more than 1 block in the past)

@@ -46,7 +46,7 @@ internal class EuclideanPattern(
                     val intersectStart = max(from, stepStart)
                     val intersectEnd = min(to, stepEnd)
 
-                    if (intersectEnd > intersectStart) {
+                    if (intersectEnd > intersectStart + EPSILON) {
                         // 1. Calculate Inner Pattern Time Window
                         // We map the outer step window to the inner pattern's timeline.
                         // To allow the inner pattern to progress (e.g. [a b c]/8), we must include the 'cycle'.
@@ -60,7 +60,7 @@ internal class EuclideanPattern(
 
                         // FIX: Add a small epsilon to the start time to avoid picking up events
                         // that end exactly at the step boundary (floating point artifacts).
-                        val innerFrom = intersectStart + EPSILON
+                        val innerFrom = intersectStart
                         val innerTo = intersectEnd - EPSILON
 
                         val innerEvents = inner.queryArc(innerFrom, innerTo)
@@ -68,7 +68,6 @@ internal class EuclideanPattern(
                         events.addAll(innerEvents.map { ev ->
                             // 2. Strict Clipping
                             // We constrain the event strictly to the current step window.
-
                             val clippedBegin = max(ev.begin, stepStart)
                             // Use a tiny epsilon to ensure we don't accidentally include the very start of the next step
                             // or allow this event to touch the next step's start.

@@ -1,0 +1,47 @@
+Hi! We are working on the euclidean pattern for the strudel.cc kotlin port.
+
+We have the pattern almost working perfectly. There is just on small flaw:
+
+We now hear:
+
+a . . a . . a . | a . . b . . b . | b .. c .. c . | c  . .CD .. d . | d .. d
+
+While we should hear:
+
+a . . a . . a . | a . . b . . b . | b .. c .. c . | c . . c .. d . | d .. d
+
+So the first three bars are ok. But then it plays  c to d in short succession, while only d should be played. After this things are fine again.
+This means somehow the one "d" is picked up to early.
+
+I made some debug outputs:
+
+```
+Starting voice with note 'a' at frame 0
+Starting voice with note 'a' at frame 36000
+Starting voice with note 'a' at frame 72000
+Starting voice with note 'a' at frame 96000
+Starting voice with note 'b' at frame 132000
+Starting voice with note 'b' at frame 168000
+Starting voice with note 'b' at frame 192000
+Starting voice with note 'c' at frame 228000
+Starting voice with note 'c' at frame 264000
+Starting voice with note 'c' at frame 288000
+Starting voice with note 'c' at frame 324000
+Starting voice with note 'd' at frame 329142
+Starting voice with note 'd' at frame 360000
+Starting voice with note 'd' at frame 384000
+Starting voice with note 'd' at frame 420000
+Starting voice with note 'e' at frame 456000
+Starting voice with note 'e' at frame 480000
+Starting voice with note 'e' at frame 516000
+Starting voice with note 'f' at frame 552000
+Starting voice with note 'f' at frame 576000
+Starting voice with note 'f' at frame 612000
+Starting voice with note 'f' at frame 648000
+Starting voice with note 'g' at frame 658285
+Starting voice with note 'g' at frame 672000
+```
+
+As we can see from the numbers ... something is off with this one "d" note ...
+It seems to be the opposite problem. Is it picked up when it should not yet be picked up.
+It comes too early i think.

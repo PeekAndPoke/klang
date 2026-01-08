@@ -62,7 +62,7 @@ internal class SequencePattern(
                         // Map back to outer time
                         val mappedBegin = (ev.begin - cycle) * stepSize + stepStart
                         val mappedEnd = (ev.end - cycle) * stepSize + stepStart
-                        val mappedDur = ev.dur * stepSize // Duration also scales
+                        val mappedDur = mappedEnd - mappedBegin // Duration also scales
 
                         ev.copy(begin = mappedBegin, end = mappedEnd, dur = mappedDur)
                     })
