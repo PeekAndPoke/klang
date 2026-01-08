@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.math.Rational
 
 /**
  * A pattern that generates a value based on continuous cycle time.
@@ -11,11 +12,11 @@ open class ContinuousPattern(
     val getValue: (Double) -> Double,
 ) : StrudelPattern.Fixed {
 
-    override fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> {
+    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
         return listOf(
             StrudelPatternEvent(
                 begin = from, end = to, dur = to - from,
-                data = VoiceData.empty.copy(value = getValue(from))
+                data = VoiceData.empty.copy(value = getValue(from.toDouble()))
             )
         )
     }

@@ -176,9 +176,9 @@ class RationalSpec : StringSpec({
         // Complex calculation that would accumulate errors with doubles
         var result = Rational(1, 3)
         repeat(100) {
-            result = result + Rational(1, 7)
-            result = result * Rational(2)
-            result = result / Rational(3)
+            result += Rational(1, 7)
+            result *= Rational(2)
+            result /= Rational(3)
         }
 
         // Result should still be a valid rational with no drift

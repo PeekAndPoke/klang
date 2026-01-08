@@ -3,6 +3,8 @@ package io.peekandpoke.klang.strudel
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.StaticStrudelPattern
 
 /**
@@ -40,9 +42,17 @@ interface StrudelPattern {
     val weight: Double
 
     /**
+     * Helper to query with doubles instead of rationals.
+     */
+    fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> = queryArc(
+        Rational.fromDouble(from),
+        Rational.fromDouble(to)
+    )
+
+    /**
      * Queries events from [from] and [to] cycles.
      */
-    fun queryArc(from: Double, to: Double): List<StrudelPatternEvent>
+    fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent>
 }
 
 /**
@@ -56,5 +66,14 @@ fun StrudelPattern.asEventSource(): StrudelEventSource = StrudelEventSource(this
  *
  * Acts like recording the arc [from] - [to] for later playback.
  */
-fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
+fun StrudelPattern.makeStatic(from: Rational, to: Rational): StaticStrudelPattern =
     StaticStrudelPattern(events = queryArc(from, to))
+
+/**
+ * Creates a static pattern, that can be stored and used for playback with
+ * any life strudel event generator.
+ *
+ * Acts like recording the arc [from] - [to] for later playback.
+ */
+fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
+    makeStatic(from.toRational(), to.toRational())

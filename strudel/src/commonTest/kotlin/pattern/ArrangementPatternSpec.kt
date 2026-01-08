@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.arrange
 import io.peekandpoke.klang.strudel.lang.note
@@ -25,13 +26,13 @@ class ArrangementPatternSpec : StringSpec({
         events.size shouldBe 3
 
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
 
         events[1].data.note shouldBe "a"
-        events[1].begin shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
         events[2].data.note shouldBe "b"
-        events[2].begin shouldBe (2.0 plusOrMinus EPSILON)
+        events[2].begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
     "ArrangementPattern: Kotlin DSL (arrange function)" {

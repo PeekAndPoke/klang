@@ -15,8 +15,8 @@ class MiniNotationParserSpec : StringSpec() {
 
             events.size shouldBe 1
             with(events[0]) {
-                begin shouldBe 0.0
-                end shouldBe 1.0
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 1.0
                 data.note shouldBe "c3"
             }
         }
@@ -28,14 +28,14 @@ class MiniNotationParserSpec : StringSpec() {
             events.size shouldBe 2
 
             with(events[0]) {
-                begin shouldBe 0.0
-                end shouldBe 0.5
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 0.5
                 data.note shouldBe "c3"
             }
 
             with(events[1]) {
-                begin shouldBe 0.5
-                end shouldBe 1.0
+                begin.toDouble() shouldBe 0.5
+                end.toDouble() shouldBe 1.0
                 data.note shouldBe "e3"
             }
         }
@@ -47,8 +47,8 @@ class MiniNotationParserSpec : StringSpec() {
             events.size shouldBe 1
 
             with(events[0]) {
-                begin shouldBe 0.0
-                end shouldBe 0.5
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 0.5
                 data.note shouldBe "c3"
             }
         }
@@ -62,14 +62,14 @@ class MiniNotationParserSpec : StringSpec() {
             // Both should occupy the full cycle
             with(events[0]) {
                 data.note shouldBe "c3"
-                begin shouldBe 0.0
-                end shouldBe 1.0
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 1.0
             }
 
             with(events[1]) {
                 data.note shouldBe "e3"
-                begin shouldBe 0.0
-                end shouldBe 1.0
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 1.0
             }
         }
 
@@ -85,18 +85,18 @@ class MiniNotationParserSpec : StringSpec() {
 
             with(events[0]) {
                 data.note shouldBe "c3"
-                begin shouldBe 0.0
-                end shouldBe 0.25
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 0.25
             }
             with(events[1]) {
                 data.note shouldBe "e3"
-                begin shouldBe 0.25
-                end shouldBe 0.5
+                begin.toDouble() shouldBe 0.25
+                end.toDouble() shouldBe 0.5
             }
             with(events[2]) {
                 data.note shouldBe "g3"
-                begin shouldBe 0.5
-                end shouldBe 1.0
+                begin.toDouble() shouldBe 0.5
+                end.toDouble() shouldBe 1.0
             }
         }
 
@@ -109,13 +109,13 @@ class MiniNotationParserSpec : StringSpec() {
 
             with(events[0]) {
                 data.note shouldBe "c3"
-                begin shouldBe 0.0
-                end shouldBe 0.5
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 0.5
             }
             with(events[1]) {
                 data.note shouldBe "c3"
-                begin shouldBe 0.5
-                end shouldBe 1.0
+                begin.toDouble() shouldBe 0.5
+                end.toDouble() shouldBe 1.0
             }
         }
 
@@ -127,8 +127,8 @@ class MiniNotationParserSpec : StringSpec() {
             events.size shouldBe 1
             with(events[0]) {
                 data.note shouldBe "c3"
-                begin shouldBe 0.0
-                end shouldBe 2.0 // It's a 2-cycle event
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 2.0 // It's a 2-cycle event
             }
         }
 
@@ -167,14 +167,14 @@ class MiniNotationParserSpec : StringSpec() {
 
             with(events[0]) {
                 data.note shouldBe "e"
-                begin shouldBe 0.0
-                end shouldBe (2.0 / 3.0)
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe (2.0 / 3.0)
             }
 
             with(events[1]) {
                 data.note shouldBe "a"
-                begin shouldBe (2.0 / 3.0)
-                end shouldBe 1.0
+                begin.toDouble() shouldBe (2.0 / 3.0)
+                end.toDouble() shouldBe 1.0
             }
         }
 
@@ -188,20 +188,20 @@ class MiniNotationParserSpec : StringSpec() {
 
             with(events[0]) {
                 data.note shouldBe "a"
-                begin shouldBe 0.0
-                end shouldBe 0.2
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 0.2
             }
 
             with(events[1]) {
                 data.note shouldBe "b"
-                begin shouldBe 0.2
-                end shouldBe 0.8
+                begin.toDouble() shouldBe 0.2
+                end.toDouble() shouldBe 0.8
             }
 
             with(events[2]) {
                 data.note shouldBe "c"
-                begin shouldBe 0.8
-                end shouldBe 1.0
+                begin.toDouble() shouldBe 0.8
+                end.toDouble() shouldBe 1.0
             }
         }
 
@@ -214,14 +214,14 @@ class MiniNotationParserSpec : StringSpec() {
 
             with(events[0]) {
                 data.note shouldBe "a"
-                begin shouldBe 0.0
-                end shouldBe 0.5
+                begin.toDouble() shouldBe 0.0
+                end.toDouble() shouldBe 0.5
             }
 
             with(events[1]) {
                 data.note shouldBe "b"
-                begin shouldBe 0.5
-                end shouldBe 1.0
+                begin.toDouble() shouldBe 0.5
+                end.toDouble() shouldBe 1.0
             }
         }
 

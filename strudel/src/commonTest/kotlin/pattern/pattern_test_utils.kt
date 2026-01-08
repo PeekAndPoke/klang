@@ -17,6 +17,11 @@ fun verifyPattern(
     events.size shouldBe expectedCount
 
     events.forEachIndexed { index, event ->
-        check(index, event.data.note, event.begin, event.dur)
+        check(
+            index,
+            event.data.note,
+            event.begin.toDouble(),
+            event.dur.toDouble(),
+        )
     }
 }

@@ -4,17 +4,29 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.makeStatic
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class StaticStrudelPatternSpec : StringSpec({
 
     "StaticStrudelPattern: Direct Instantiation" {
         // Manually create two events in a 1-cycle window
         val events = listOf(
-            StrudelPatternEvent(0.0, 0.5, 0.5, VoiceData.empty.copy(note = "a")),
-            StrudelPatternEvent(0.5, 1.0, 0.5, VoiceData.empty.copy(note = "b"))
+            StrudelPatternEvent(
+                begin = 0.0.toRational(),
+                end = 0.5.toRational(),
+                dur = 0.5.toRational(),
+                data = VoiceData.empty.copy(note = "a"),
+            ),
+            StrudelPatternEvent(
+                begin = 0.5.toRational(),
+                end = 1.0.toRational(),
+                dur = 0.5.toRational(),
+                data = VoiceData.empty.copy(note = "b"),
+            )
         )
         val pattern = StaticStrudelPattern(events)
 
@@ -35,14 +47,19 @@ class StaticStrudelPatternSpec : StringSpec({
 
     "StaticStrudelPattern: query multiple cycles (looping)" {
         val events = listOf(
-            StrudelPatternEvent(0.0, 1.0, 1.0, VoiceData.empty.copy(note = "kick"))
+            StrudelPatternEvent(
+                begin = 0.0.toRational(),
+                end = 1.0.toRational(),
+                dur = 1.0.toRational(),
+                data = VoiceData.empty.copy(note = "kick"),
+            )
         )
         val pattern = StaticStrudelPattern(events)
 
         // Query cycle 5
         val result = pattern.queryArc(5.0, 6.0)
         result.size shouldBe 1
-        result[0].begin shouldBe (5.0 plusOrMinus EPSILON)
+        result[0].begin.toDouble() shouldBe (5.0 plusOrMinus EPSILON)
         result[0].data.note shouldBe "kick"
     }
 
@@ -58,8 +75,8 @@ class StaticStrudelPatternSpec : StringSpec({
 
         events.size shouldBe 4
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (10.0 plusOrMinus EPSILON)
+        events[0].begin.toDouble() shouldBe (10.0 plusOrMinus EPSILON)
         events[3].data.note shouldBe "d"
-        events[3].begin shouldBe (10.75 plusOrMinus EPSILON)
+        events[3].begin.toDouble() shouldBe (10.75 plusOrMinus EPSILON)
     }
 })

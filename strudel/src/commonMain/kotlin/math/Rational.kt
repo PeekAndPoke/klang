@@ -89,6 +89,21 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
             return Rational(sign * h1, k1).simplified()
         }
 
+        /**
+         * Explicit alias for creating Rational from Double for clarity.
+         * Same as invoke(Double).
+         */
+        fun fromDouble(value: Double, maxDenominator: Long = 1_000_000): Rational =
+            invoke(value, maxDenominator)
+
+        /**
+         * Explicit alias for creating Rational from Double for clarity.
+         *
+         * TODO: write tests
+         */
+        fun Number.toRational(maxDenominator: Long = 1_000_000): Rational =
+            Rational(this.toDouble(), maxDenominator)
+
         /** Greatest common divisor */
         private fun gcd(a: Long, b: Long): Long {
             var x = a.absoluteValue
@@ -137,9 +152,37 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         return this - (quotient * other)
     }
 
+    /**
+     * TODO: write tests for this
+     */
+    operator fun rem(other: Number): Rational = rem(other.toRational())
+
     operator fun unaryMinus(): Rational {
         if (this.isNaN) return NaN
         return Rational(-num, den)
+    }
+
+    // Double interoperability operators
+
+    operator fun times(other: Double): Rational {
+        if (isNaN || other.isNaN()) return NaN
+        return this * Rational(other)
+    }
+
+    operator fun div(other: Double): Rational {
+        if (isNaN || other.isNaN()) return NaN
+        if (other == 0.0) return NaN
+        return this / Rational(other)
+    }
+
+    operator fun plus(other: Double): Rational {
+        if (isNaN || other.isNaN()) return NaN
+        return this + Rational(other)
+    }
+
+    operator fun minus(other: Double): Rational {
+        if (isNaN || other.isNaN()) return NaN
+        return this - Rational(other)
     }
 
     // Comparison
