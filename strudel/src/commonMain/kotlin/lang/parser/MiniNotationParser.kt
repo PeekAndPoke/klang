@@ -2,6 +2,8 @@ package io.peekandpoke.klang.strudel.lang.parser
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
+import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.degradeBy
 import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
 import io.peekandpoke.klang.strudel.pattern.WeightedPattern
 
@@ -75,9 +77,12 @@ class MiniNotationParser(
             }
         }
 
-        // Apply modifiers (*, /, @)
-        // Apply modifiers (*, /, @, (p,s))
-        while (check(TokenType.STAR) || check(TokenType.SLASH) || check(TokenType.AT) || check(TokenType.L_PAREN)) {
+        // Apply modifiers (?, |, !, *, /, @, (p,s))
+        while (!isAtEnd() && (check(TokenType.STAR) || check(TokenType.SLASH) || check(TokenType.AT) ||
+                    check(TokenType.L_PAREN) || check(TokenType.QUESTION) || check(TokenType.PIPE) ||
+                    check(TokenType.BANG))
+        ) {
+
             if (match(TokenType.STAR)) {
                 val factorStr = consume(TokenType.LITERAL, "Expected number after '*'").text
                 val factor = factorStr.toDoubleOrNull() ?: 1.0
@@ -86,6 +91,20 @@ class MiniNotationParser(
                 val factorStr = consume(TokenType.LITERAL, "Expected number after '/'").text
                 val factor = factorStr.toDoubleOrNull() ?: 1.0
                 pattern = pattern.slow(factor)
+            } else if (match(TokenType.BANG)) {
+                val countStr = if (check(TokenType.LITERAL)) consume(TokenType.LITERAL, "").text else "2"
+                val count = countStr.toIntOrNull() ?: 2
+                val steps = List(count) { pattern }
+                pattern = seq(*steps.toTypedArray())
+            } else if (match(TokenType.QUESTION)) {
+                val probStr = if (check(TokenType.LITERAL) && peek().text.firstOrNull()?.isDigit() == true) {
+                    consume(TokenType.LITERAL, "").text
+                } else null
+                val probability = probStr?.toDoubleOrNull() ?: 0.5
+                pattern = pattern.degradeBy(probability)
+            } else if (match(TokenType.PIPE)) {
+                val right = parseStep()
+                pattern = pattern.choice(right)
             } else if (match(TokenType.AT)) {
                 val weightStr = consume(TokenType.LITERAL, "Expected number after '@'").text
                 val weight = weightStr.toDoubleOrNull() ?: 1.0
@@ -136,7 +155,7 @@ class MiniNotationParser(
 
     private enum class TokenType {
         L_BRACKET, R_BRACKET, L_ANGLE, R_ANGLE, L_PAREN, R_PAREN,
-        COMMA, STAR, SLASH, TILDE, AT, LITERAL
+        COMMA, STAR, SLASH, TILDE, AT, PIPE, QUESTION, BANG, LITERAL
     }
 
     private data class Token(val type: TokenType, val text: String)
@@ -192,13 +211,21 @@ class MiniNotationParser(
                     tokens.add(Token(TokenType.AT, "@")); i++
                 }
 
+                '|' -> {
+                    tokens.add(Token(TokenType.PIPE, "|")); i++
+                }
+
+                '?' -> {
+                    tokens.add(Token(TokenType.QUESTION, "?")); i++
+                }
+
+                '!' -> {
+                    tokens.add(Token(TokenType.BANG, "!")); i++
+                }
                 else -> {
                     val start = i
                     while (i < input.length) {
-                        val next = input[i]
-                        // Note: '-', ':', '!' are allowed within literals
-                        // (e.g., "kick-808", "bd:3", "0.1:0.2:0.3:0.4")
-                        if (next in " []<>,*/~@() \t\n\r") break
+                        if (input[i] in " []<>,*/~@()|?! \t\n\r") break
                         i++
                     }
                     tokens.add(Token(TokenType.LITERAL, input.substring(start, i)))
