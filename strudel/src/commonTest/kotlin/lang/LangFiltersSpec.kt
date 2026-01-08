@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangFiltersSpec : StringSpec({
 
@@ -147,5 +148,95 @@ class LangFiltersSpec : StringSpec({
         val withNotch = base.notchf("500 500 500 500")
         val notchEvents = withNotch.queryArc(0.0, 1.0)
         notchEvents.map { (it.data.filters[0] as FilterDef.Notch).q } shouldBe listOf(0.7, 1.3, 2.2, 0.9)
+    }
+
+    "lpf() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""lpf("200 400")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.LowPass).cutoffHz } shouldBe listOf(200.0, 400.0)
+    }
+
+    "lpf() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").lpf("200 400")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.LowPass).cutoffHz } shouldBe listOf(200.0, 400.0)
+    }
+
+    "hpf() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""hpf("100 250")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.HighPass).cutoffHz } shouldBe listOf(100.0, 250.0)
+    }
+
+    "hpf() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").hpf("100 250")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.HighPass).cutoffHz } shouldBe listOf(100.0, 250.0)
+    }
+
+    "bandf() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""bandf("700 900")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.BandPass).cutoffHz } shouldBe listOf(700.0, 900.0)
+    }
+
+    "bandf() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").bandf("700 900")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.BandPass).cutoffHz } shouldBe listOf(700.0, 900.0)
+    }
+
+    "notchf() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""notchf("400 500")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.Notch).cutoffHz } shouldBe listOf(400.0, 500.0)
+    }
+
+    "notchf() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").notchf("400 500")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.Notch).cutoffHz } shouldBe listOf(400.0, 500.0)
+    }
+
+    "resonance() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""lpf("200 400").resonance("1.5 2.5")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.LowPass).q } shouldBe listOf(1.5, 2.5)
+    }
+
+    "resonance() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").lpf("200 400").resonance("1.5 2.5")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { (it.data.filters[0] as FilterDef.LowPass).q } shouldBe listOf(1.5, 2.5)
     }
 })

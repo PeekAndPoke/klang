@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangEffectsRoutingSpec : StringSpec({
 
@@ -152,5 +153,167 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
         events.map { it.data.orbit } shouldBe listOf(1, 3, 1, 3)
+    }
+
+    "distort() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""distort("0 1")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.distort } shouldBe listOf(0.0, 1.0)
+    }
+
+    "distort() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").distort("0 1")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.distort } shouldBe listOf(0.0, 1.0)
+    }
+
+    "crush() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""crush("8 4")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.crush } shouldBe listOf(8.0, 4.0)
+    }
+
+    "crush() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").crush("8 4")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.crush } shouldBe listOf(8.0, 4.0)
+    }
+
+    "coarse() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""coarse("1 2")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.coarse } shouldBe listOf(1.0, 2.0)
+    }
+
+    "coarse() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").coarse("1 2")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.coarse } shouldBe listOf(1.0, 2.0)
+    }
+
+    "room() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""room("0.1 0.9")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.room } shouldBe listOf(0.1, 0.9)
+    }
+
+    "room() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").room("0.1 0.9")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.room } shouldBe listOf(0.1, 0.9)
+    }
+
+    "roomsize() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""roomsize("0.2 0.8")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.roomSize } shouldBe listOf(0.2, 0.8)
+    }
+
+    "roomsize() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").roomsize("0.2 0.8")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.roomSize } shouldBe listOf(0.2, 0.8)
+    }
+
+    "delay() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""delay("0.0 1.0")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.delay } shouldBe listOf(0.0, 1.0)
+    }
+
+    "delay() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").delay("0.0 1.0")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.delay } shouldBe listOf(0.0, 1.0)
+    }
+
+    "delaytime() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""delaytime("0.125 0.25")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.delayTime } shouldBe listOf(0.125, 0.25)
+    }
+
+    "delaytime() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").delaytime("0.125 0.25")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.delayTime } shouldBe listOf(0.125, 0.25)
+    }
+
+    "delayfeedback() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""delayfeedback("0.25 0.75")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.delayFeedback } shouldBe listOf(0.25, 0.75)
+    }
+
+    "delayfeedback() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").delayfeedback("0.25 0.75")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.delayFeedback } shouldBe listOf(0.25, 0.75)
+    }
+
+    "orbit() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""orbit("0 2")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.orbit } shouldBe listOf(0, 2)
+    }
+
+    "orbit() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").orbit("0 2")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.orbit } shouldBe listOf(0, 2)
     }
 })

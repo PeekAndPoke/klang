@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangContinuousPatternsSpec : StringSpec({
 
@@ -49,5 +50,58 @@ class LangContinuousPatternsSpec : StringSpec({
 
     "rest: alias for silence" {
         rest.queryArc(0.0, 1.0) shouldBe emptyList()
+    }
+
+    "sine works within compiled code as top-level pattern" {
+        val p = StrudelPattern.compile("""sine""")
+
+        val events = p?.queryArc(0.0, 0.0) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "saw works within compiled code as top-level pattern" {
+        val p = StrudelPattern.compile("""saw""")
+
+        val events = p?.queryArc(0.5, 0.5) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "isaw works within compiled code as top-level pattern" {
+        val p = StrudelPattern.compile("""isaw""")
+
+        val events = p?.queryArc(0.5, 0.5) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "tri works within compiled code as top-level pattern" {
+        val p = StrudelPattern.compile("""tri""")
+
+        val events = p?.queryArc(0.5, 0.5) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "square works within compiled code as top-level pattern" {
+        val p = StrudelPattern.compile("""square""")
+
+        val events = p?.queryArc(0.1, 0.1) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "silence works within compiled code as top-level pattern" {
+        val p = StrudelPattern.compile("""silence""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events shouldBe emptyList()
     }
 })

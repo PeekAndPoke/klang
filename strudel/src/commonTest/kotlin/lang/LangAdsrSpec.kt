@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangAdsrSpec : StringSpec({
 
@@ -29,5 +30,29 @@ class LangAdsrSpec : StringSpec({
         events.map { it.data.adsr.decay } shouldBe listOf(0.2, 0.3, 0.2, 0.3)
         events.map { it.data.adsr.sustain } shouldBe listOf(0.9, 0.8, 0.9, 0.8)
         events.map { it.data.adsr.release } shouldBe listOf(0.7, 0.6, 0.7, 0.6)
+    }
+
+    "adsr() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""adsr("0.1:0.2:0.8:0.5 0.2:0.3:0.7:0.6")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.adsr.attack } shouldBe listOf(0.1, 0.2)
+        events.map { it.data.adsr.decay } shouldBe listOf(0.2, 0.3)
+        events.map { it.data.adsr.sustain } shouldBe listOf(0.8, 0.7)
+        events.map { it.data.adsr.release } shouldBe listOf(0.5, 0.6)
+    }
+
+    "adsr() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").adsr("0.1:0.2:0.8:0.5 0.2:0.3:0.7:0.6")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.adsr.attack } shouldBe listOf(0.1, 0.2)
+        events.map { it.data.adsr.decay } shouldBe listOf(0.2, 0.3)
+        events.map { it.data.adsr.sustain } shouldBe listOf(0.8, 0.7)
+        events.map { it.data.adsr.release } shouldBe listOf(0.5, 0.6)
     }
 })
