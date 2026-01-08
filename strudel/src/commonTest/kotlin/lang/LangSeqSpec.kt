@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangSeqSpec : StringSpec({
 
@@ -82,6 +83,17 @@ class LangSeqSpec : StringSpec({
         events[1].end.toDouble() shouldBe ((1.0 / 2.0) plusOrMinus EPSILON)
         // sn takes the second half
         events[2].begin.toDouble() shouldBe ((1.0 / 2.0) plusOrMinus EPSILON)
+        events[2].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "seq() works within compiled code" {
+        val p = StrudelPattern.compile("""seq(sound("bd"), sound("hh"), sound("sn"))""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 3
+        events.map { it.data.sound } shouldBe listOf("bd", "hh", "sn")
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[2].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 })
