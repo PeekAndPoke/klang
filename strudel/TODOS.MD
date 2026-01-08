@@ -64,7 +64,7 @@ and category.
 
 ### Pattern Transformation ⭐⭐⭐
 
-- [ ] **`rev()`** - Reverses pattern in each cycle
+- [x] **`rev()`** - Reverses pattern in each cycle
 - [ ] **`jux(function)`** - Apply function to right channel only
 - [ ] **`juxBy(amount, function)`** - Jux with custom stereo width
 - [ ] **`off(time, function)`** - Copies, shifts, and modifies pattern

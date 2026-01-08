@@ -13,6 +13,7 @@ Strudel.
 - **EuclideanPattern** - Euclidean rhythm gating (e.g., `bd(3,8)`, or with rotation `bd(3,8,1)`)
 - **ChoicePattern** - Random selection between pattern alternatives (e.g., `"bd|hh"`)
 - **DegradePattern** - Probabilistic event removal (e.g., `"bd?"` or `"bd?0.5"`)
+- **ReversePattern** - Reverses pattern within each cycle (`rev()`)
 - **ArrangementPattern** - Multi-cycle pattern arrangement (`arrange()`)
 - **TimeModifierPattern** - Speed/tempo modification
 - **ControlPattern** - Applies control patterns to source patterns
@@ -104,6 +105,10 @@ Strudel.
 - `fast(factor)` - Speed up patterns
 - `slow(factor)` - Slow down patterns
 - TimeModifierPattern implementation with cycle scaling
+
+### Pattern Transformation ✅
+
+- `rev()` - Reverses pattern within each cycle, works in mini-notation and as chained method
 
 ## Audio Parameters
 
@@ -213,7 +218,7 @@ Comprehensive voice data structure supporting:
 **Total Implemented:**
 
 - 70+ DSL functions/methods
-- 10 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern)
+- 11 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern)
 - 4 continuous oscillators
 - 4 filter types
 - Complete ADSR envelope system
@@ -240,3 +245,4 @@ Comprehensive voice data structure supporting:
 - ✅ **Probabilistic Patterns** - Implemented `?` (degrade) and `|` (choice) operators with deterministic seeded
   randomness
 - ✅ **Enhanced Testing** - Added comprehensive test suites for Rational numbers, ChoicePattern, and DegradePattern
+- ✅ **Reverse Pattern** - Implemented `rev()` pattern transformation with time reversal per cycle

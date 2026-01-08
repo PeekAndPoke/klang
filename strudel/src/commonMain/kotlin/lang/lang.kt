@@ -146,7 +146,7 @@ val cat by dslFunction<Any> { args ->
     seq(patterns).slow(args.size)
 }
 
-// Tempo modifiers /////////////////////////////////////////////////////////////////////////////////////////////////////
+// Tempo / Time modifiers //////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Slows down all inner patterns by the given factor */
 @StrudelDsl
@@ -160,6 +160,16 @@ val StrudelPattern.slow by dslMethod<Number> { p, args ->
 val StrudelPattern.fast by dslMethod<Number> { p, args ->
     val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
     TempoModifierPattern(p, 1.0 / max(1.0 / 128.0, factor))
+}
+
+@StrudelDsl
+val StrudelPattern.rev by dslMethod<Any?> { pattern, _ ->
+    ReversePattern(pattern)
+}
+
+@StrudelDsl
+val StrudelPattern.palindrome by dslMethod<Any?> { pattern, _ ->
+    seq(listOf(pattern, pattern.rev())).slow(2)
 }
 
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
