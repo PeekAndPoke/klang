@@ -57,7 +57,7 @@ suspend fun runStrudelDemo() {
     )
 
 //    val pattern = StrudelPattern.Static.fromJson(strangerThingsJson)
-    val pattern = TestKotlinPatterns.smallTownBoy
+    val pattern = TestKotlinPatterns.tetris
 
 //    console.log("Compiling pattern")
 //    val pattern = StrudelPattern.compile(TestTextPatterns.tetris)!!

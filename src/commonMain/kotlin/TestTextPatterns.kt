@@ -393,6 +393,9 @@ object TestTextPatterns {
         note("c3 e3 g3 a#3").s("<gm_recorder gm_xylophone>").slow(4)
     """.trimIndent()
 
+    val euclidean_3_8 = """
+        note("[a b c d e f g]/8(3,8)")
+    """.trimIndent()
 
     val active = strangerThingsNetflix
 }

@@ -1,0 +1,85 @@
+package io.peekandpoke.klang.strudel.pattern
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.fast
+import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.strudel.lang.slow
+
+class TimeModifierPatternSpec : StringSpec({
+
+    "TimeModifierPattern: Direct Instantiation (slow 2)" {
+        val inner = AtomicPattern(VoiceData.empty.copy(note = "a"))
+        val pattern = TimeModifierPattern(inner, 2.0)
+
+        // a normally is 0..1. slow(2) makes it 0..2.
+        val events = pattern.queryArc(0.0, 2.0).sortedBy { it.begin }
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe "a"
+        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
+        events[0].dur shouldBe (2.0 plusOrMinus 1e-9)
+
+        // Weight should be delegated
+        pattern.weight shouldBe inner.weight
+    }
+
+    "TimeModifierPattern: Kotlin DSL (slow)" {
+        // [a b] takes 1 cycle. slow(2) makes it take 2 cycles.
+        val pattern = note("a b").slow(2)
+
+        val events = pattern.queryArc(0.0, 2.0).sortedBy { it.begin }
+
+        events.size shouldBe 2
+        events[0].data.note shouldBe "a"
+        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
+        events[0].dur shouldBe (1.0 plusOrMinus 1e-9)
+
+        events[1].data.note shouldBe "b"
+        events[1].begin shouldBe (1.0 plusOrMinus 1e-9)
+        events[1].dur shouldBe (1.0 plusOrMinus 1e-9)
+    }
+
+    "TimeModifierPattern: Kotlin DSL (fast)" {
+        // [a b] takes 1 cycle. fast(2) makes it take 0.5 cycles.
+        val pattern = note("a b").fast(2)
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+        // Should play twice in one cycle
+        events.size shouldBe 4
+
+        // 1st iteration
+        events[0].data.note shouldBe "a"
+        events[0].dur shouldBe (0.25 plusOrMinus 1e-9)
+        events[1].data.note shouldBe "b"
+        events[1].dur shouldBe (0.25 plusOrMinus 1e-9)
+
+        // 2nd iteration
+        events[2].data.note shouldBe "a"
+        events[2].begin shouldBe (0.5 plusOrMinus 1e-9)
+        events[3].data.note shouldBe "b"
+        events[3].begin shouldBe (0.75 plusOrMinus 1e-9)
+    }
+
+    "TimeModifierPattern: Compiled Code" {
+        val pattern = StrudelPattern.compile("""note("a").slow(4)""")
+
+        pattern.shouldNotBeNull()
+        val events = pattern.queryArc(0.0, 4.0)
+
+        events.size shouldBe 1
+        events[0].dur shouldBe (4.0 plusOrMinus 1e-9)
+    }
+
+    "TimeModifierPattern: Weight preservation" {
+        val inner = note("a@5")
+        val pattern = inner.slow(2)
+
+        pattern.weight shouldBe (5.0 plusOrMinus 1e-9)
+    }
+})

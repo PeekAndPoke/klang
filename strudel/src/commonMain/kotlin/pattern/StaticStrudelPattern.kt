@@ -1,5 +1,7 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.strudel.pattern
 
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.math.ceil

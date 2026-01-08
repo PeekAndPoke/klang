@@ -2,7 +2,8 @@ package io.peekandpoke.klang.strudel.lang.parser
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.patterns.WeightedPattern
+import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
+import io.peekandpoke.klang.strudel.pattern.WeightedPattern
 
 class MiniNotationParser(
     input: String,
@@ -75,7 +76,8 @@ class MiniNotationParser(
         }
 
         // Apply modifiers (*, /, @)
-        while (check(TokenType.STAR) || check(TokenType.SLASH) || check(TokenType.AT)) {
+        // Apply modifiers (*, /, @, (p,s))
+        while (check(TokenType.STAR) || check(TokenType.SLASH) || check(TokenType.AT) || check(TokenType.L_PAREN)) {
             if (match(TokenType.STAR)) {
                 val factorStr = consume(TokenType.LITERAL, "Expected number after '*'").text
                 val factor = factorStr.toDoubleOrNull() ?: 1.0
@@ -88,6 +90,19 @@ class MiniNotationParser(
                 val weightStr = consume(TokenType.LITERAL, "Expected number after '@'").text
                 val weight = weightStr.toDoubleOrNull() ?: 1.0
                 pattern = WeightedPattern(pattern, weight)
+            } else if (match(TokenType.L_PAREN)) {
+                // Euclidean rhythm: (pulses, steps)
+                val pulsesStr = consume(TokenType.LITERAL, "Expected pulses number").text
+                val pulses = pulsesStr.toIntOrNull() ?: error("Invalid pulses number: $pulsesStr")
+
+                consume(TokenType.COMMA, "Expected ',' in Euclidean rhythm")
+
+                val stepsStr = consume(TokenType.LITERAL, "Expected steps number").text
+                val steps = stepsStr.toIntOrNull() ?: error("Invalid steps number: $stepsStr")
+
+                consume(TokenType.R_PAREN, "Expected ')' after Euclidean rhythm")
+
+                pattern = EuclideanPattern(pattern, pulses, steps)
             }
         }
 
@@ -114,7 +129,7 @@ class MiniNotationParser(
     // --- Tokenizer ---
 
     private enum class TokenType {
-        L_BRACKET, R_BRACKET, L_ANGLE, R_ANGLE,
+        L_BRACKET, R_BRACKET, L_ANGLE, R_ANGLE, L_PAREN, R_PAREN,
         COMMA, STAR, SLASH, TILDE, AT, LITERAL
     }
 
@@ -127,6 +142,13 @@ class MiniNotationParser(
             val c = input[i]
             when (c) {
                 ' ', '\t', '\n', '\r' -> i++
+                '(' -> {
+                    tokens.add(Token(TokenType.L_PAREN, "(")); i++
+                }
+
+                ')' -> {
+                    tokens.add(Token(TokenType.R_PAREN, ")")); i++
+                }
                 '[' -> {
                     tokens.add(Token(TokenType.L_BRACKET, "[")); i++
                 }
@@ -169,7 +191,7 @@ class MiniNotationParser(
                         val next = input[i]
                         // Note: '-', ':', '!' are allowed within literals
                         // (e.g., "kick-808", "bd:3", "0.1:0.2:0.3:0.4")
-                        if (next in " []<>,*/~@ \t\n\r") break
+                        if (next in " []<>,*/~@() \t\n\r") break
                         i++
                     }
                     tokens.add(Token(TokenType.LITERAL, input.substring(start, i)))

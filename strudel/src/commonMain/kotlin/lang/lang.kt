@@ -4,7 +4,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.patterns.*
+import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.tones.Tones
 import kotlin.math.PI
 import kotlin.math.max

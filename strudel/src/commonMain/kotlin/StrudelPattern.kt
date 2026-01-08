@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.strudel.pattern.StaticStrudelPattern
 
 /**
  * Strudel pattern.

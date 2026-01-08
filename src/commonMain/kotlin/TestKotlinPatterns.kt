@@ -75,14 +75,14 @@ object TestKotlinPatterns {
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh [lt lt, sd] [lt lt, oh]]
-            [[bd, cr] hh [sd hh] [sd hh]] 
+            [[bd, cr] hh sd [sd, hh]] 
             [bd hh [sd, cr] oh]
             [bd hh sd hh] 
-            [bd hh sd oh]
-            [[bd, cr] hh [sd cr] [sd cr]] 
+            [~ [bd, hh] sd oh]
+            [[bd, cr] hh [sd, cr] [sd, cr]] 
             [bd hh [sd, cr] oh]
-            [sd [lt, cr] sd [lt, cr]] 
-            [[bd,hh] sd [bd bd, cr] [bd bd, oh]]
+            [sd mt sd [mt, cr]] 
+            [mt [sd, hh] [bd bd, hh] [bd bd, oh]]
             >            
         """.trimIndent()
 //            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
@@ -148,5 +148,6 @@ object TestKotlinPatterns {
 //            .struct("x*8")
             .s("supersaw"),
     )
+
 
 }

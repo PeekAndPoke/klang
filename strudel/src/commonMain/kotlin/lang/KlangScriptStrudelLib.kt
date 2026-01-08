@@ -4,7 +4,7 @@ import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.patterns.ContinuousPattern
+import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
 
 /**
  * Create the Strudel DSL library for KlangScript.

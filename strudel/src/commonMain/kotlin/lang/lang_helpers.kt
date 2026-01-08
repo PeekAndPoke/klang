@@ -3,8 +3,8 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.MiniNotationParser
-import io.peekandpoke.klang.strudel.patterns.AtomicPattern
-import io.peekandpoke.klang.strudel.patterns.ControlPattern
+import io.peekandpoke.klang.strudel.pattern.AtomicPattern
+import io.peekandpoke.klang.strudel.pattern.ControlPattern
 import kotlin.jvm.JvmName
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
