@@ -91,7 +91,7 @@ class MiniNotationParser(
                 val weight = weightStr.toDoubleOrNull() ?: 1.0
                 pattern = WeightedPattern(pattern, weight)
             } else if (match(TokenType.L_PAREN)) {
-                // Euclidean rhythm: (pulses, steps)
+                // Euclidean rhythm: (pulses, steps) or (pulses, steps, rotation)
                 val pulsesStr = consume(TokenType.LITERAL, "Expected pulses number").text
                 val pulses = pulsesStr.toIntOrNull() ?: error("Invalid pulses number: $pulsesStr")
 
@@ -100,9 +100,15 @@ class MiniNotationParser(
                 val stepsStr = consume(TokenType.LITERAL, "Expected steps number").text
                 val steps = stepsStr.toIntOrNull() ?: error("Invalid steps number: $stepsStr")
 
+                var rotation = 0
+                if (match(TokenType.COMMA)) {
+                    val rotationStr = consume(TokenType.LITERAL, "Expected rotation number").text
+                    rotation = rotationStr.toIntOrNull() ?: error("Invalid rotation number: $rotationStr")
+                }
+
                 consume(TokenType.R_PAREN, "Expected ')' after Euclidean rhythm")
 
-                pattern = EuclideanPattern(pattern, pulses, steps)
+                pattern = EuclideanPattern(pattern, pulses, steps, rotation)
             }
         }
 
@@ -149,6 +155,7 @@ class MiniNotationParser(
                 ')' -> {
                     tokens.add(Token(TokenType.R_PAREN, ")")); i++
                 }
+
                 '[' -> {
                     tokens.add(Token(TokenType.L_BRACKET, "[")); i++
                 }

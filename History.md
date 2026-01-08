@@ -11,6 +11,24 @@
 
 ## Diary
 
+### (2026-01-08) Strudel - New features
+
+-
+
+### (2026-01-08) Strudel - Tests
+
+- tests for all implemented patterns
+- fighting with floating point drift
+- introduced fixed floating point math -> Rational.kt
+- fixed euclidean pattern implementation
+
+### (2026-01-07) Strudel - Using KlangScript as runtime
+
+- porting strudel dsl to the new KlangScript runtime
+- some refactoring on KlangScript kotlin interop and object / method registration
+- enhancing MiniNotation parser with more features
+  - euclidean patterns
+
 ### (2026-01-07) KlangScript
 
 - working on KlangScript StdLib

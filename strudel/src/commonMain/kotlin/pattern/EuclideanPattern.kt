@@ -17,6 +17,7 @@ internal class EuclideanPattern(
     val inner: StrudelPattern,
     val pulses: Int,
     val steps: Int,
+    val rotation: Int,
 ) : StrudelPattern {
 
     override val weight: Double get() = inner.weight
@@ -35,8 +36,11 @@ internal class EuclideanPattern(
         for (cycle in startCycle until endCycle) {
             val cycleOffset = Rational(cycle)
 
-            rhythm.forEachIndexed { stepIndex, isActive ->
+            rhythm.forEachIndexed { rawIndex, isActive ->
                 if (isActive == 1) {
+                    // Apply rotation: shift the starting position of the pulses.
+                    // (rawIndex - rotation) ensures that a positive rotation shifts pulses to the left.
+                    val stepIndex = ((rawIndex - rotation) % steps + steps) % steps
                     val stepStart = cycleOffset + (Rational(stepIndex) * stepDuration)
                     val stepEnd = stepStart + stepDuration
 
@@ -49,7 +53,7 @@ internal class EuclideanPattern(
                         // We only take the latest event to avoid "snapping" from one note to the next
                         val innerEvents = inner.queryArc(intersectStart, intersectEnd)
                             .sortedBy { it.begin }
-                            .takeLast(1)
+                            .take(1)
 
                         events.addAll(innerEvents.map { ev ->
                             ev.copy(

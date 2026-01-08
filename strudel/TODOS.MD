@@ -38,7 +38,7 @@ and category.
 
 - [x] **`(pulses, steps)` notation** - Euclidean rhythm in mini-notation (e.g., `"bd(3,8)"`) ✅ **FIXED WITH RATIONAL
   ARITHMETIC**
-- [ ] **`(pulses, steps, rotation)`** - With rotation parameter
+- [x] **`(pulses, steps, rotation)`** - With rotation parameter
 
 ### Pattern Creation ⭐⭐⭐
 

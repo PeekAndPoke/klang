@@ -10,7 +10,7 @@ Strudel.
 - **AtomicPattern** - Basic pattern building block for single events
 - **SequencePattern** - Sequential pattern execution (`seq()`)
 - **StackPattern** - Parallel pattern layering (`stack()`)
-- **EuclideanPattern** - Euclidean rhythm gating (e.g., `bd(3,8)`)
+- **EuclideanPattern** - Euclidean rhythm gating (e.g., `bd(3,8)`, or with rotation `bd(3,8,1)`)
 - **ArrangementPattern** - Multi-cycle pattern arrangement (`arrange()`)
 - **TimeModifierPattern** - Speed/tempo modification
 - **ControlPattern** - Applies control patterns to source patterns
