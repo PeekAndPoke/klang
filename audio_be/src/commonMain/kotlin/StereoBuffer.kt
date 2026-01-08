@@ -7,6 +7,10 @@ class StereoBuffer(blockFrames: Int) {
     val left = DoubleArray(blockFrames)
     val right = DoubleArray(blockFrames)
 
+    init {
+        clear()
+    }
+
     fun clear() {
         left.fill(0.0)
         right.fill(0.0)

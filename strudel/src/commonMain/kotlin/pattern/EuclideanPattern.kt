@@ -11,6 +11,10 @@ import kotlin.math.min
 /**
  * Euclidean Pattern: Applies a Euclidean rhythm to an inner pattern.
  * Syntax: `pattern(pulses, steps)` e.g., `bd(3,8)`
+ *
+ * This pattern acts as a gate (`struct`). It only allows the inner pattern to play
+ * during the active steps of the Euclidean rhythm.
+ * Events are strictly clipped to the step duration to ensure the rhythmic structure is preserved.
  */
 internal class EuclideanPattern(
     val inner: StrudelPattern,
@@ -29,11 +33,9 @@ internal class EuclideanPattern(
         val endCycle = ceil(to).toInt()
 
         val stepDuration = 1.0 / steps.toDouble()
-        val pulseDuration = 1.0 / pulses.toDouble()
 
         for (cycle in startCycle until endCycle) {
             val cycleOffset = cycle.toDouble()
-            var activePulseIndex = 0
 
             rhythm.forEachIndexed { stepIndex, isActive ->
                 if (isActive == 1) {
@@ -45,41 +47,27 @@ internal class EuclideanPattern(
                     val intersectEnd = min(to, stepEnd)
 
                     if (intersectEnd > intersectStart) {
-                        // Map the active step to the corresponding slice of the inner pattern
-                        // preserving the cycle for long-running patterns.
-                        // Inner pattern time = cycle + (pulseIndex / pulses)
+                        // Query the inner pattern at the absolute time of the step.
+                        // This allows the inner pattern to progress naturally (e.g. if it's slow).
+                        val innerEvents = inner.queryArc(intersectStart, intersectEnd)
 
-                        val innerPulseStart = cycleOffset + (activePulseIndex * pulseDuration)
+                        events.addAll(innerEvents.mapNotNull { ev ->
+                            // Strictly clip the event to the step window
+                            val clippedBegin = max(ev.begin, stepStart)
+                            val clippedEnd = min(ev.end, stepEnd)
+                            val clippedDur = clippedEnd - clippedBegin
 
-                        // We map the window [stepStart, stepEnd] to [innerPulseStart, innerPulseStart + pulseDuration]
-                        val scale = pulseDuration / stepDuration
-
-                        // Map query times
-                        val innerFrom = innerPulseStart + (intersectStart - stepStart) * scale
-                        val innerTo = innerPulseStart + (intersectEnd - stepStart) * scale
-
-                        val innerEvents = inner.queryArc(innerFrom, innerTo)
-
-                        events.addAll(innerEvents.map { ev ->
-                            // Map back to outer time
-                            val offsetFromPulseStart = ev.begin - innerPulseStart
-                            val mappedBegin = stepStart + (offsetFromPulseStart / scale)
-                            val mappedDur = ev.dur / scale
-                            val mappedEnd = mappedBegin + mappedDur
-
-                            // Strict clipping to the step window to ensure rhythm
-                            val clippedBegin = max(mappedBegin, stepStart)
-                            val clippedEnd = min(mappedEnd, stepEnd)
-                            val clippedDur = max(0.0, clippedEnd - clippedBegin)
-
-                            ev.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedDur
-                            )
-                        }.filter { it.dur > 1e-9 })
+                            if (clippedDur > 1e-9) {
+                                ev.copy(
+                                    begin = clippedBegin,
+                                    end = clippedEnd,
+                                    dur = clippedDur
+                                )
+                            } else {
+                                null
+                            }
+                        })
                     }
-                    activePulseIndex++
                 }
             }
         }
