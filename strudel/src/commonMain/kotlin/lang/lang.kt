@@ -86,7 +86,7 @@ val square by dslObject {
     ContinuousPattern { t -> if (t % 1.0 < 0.5) 1.0 else -1.0 }
 }
 
-// Host patterns ///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Structural patterns /////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Creates a sequence pattern. */
 @StrudelDsl
@@ -140,20 +140,26 @@ val pickRestart by dslFunction<Any> { args ->
     }
 }
 
+@StrudelDsl
+val cat by dslFunction<Any> { args ->
+    val patterns = args.flattenToPatterns()
+    seq(patterns).slow(args.size)
+}
+
 // Tempo modifiers /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Slows down all inner patterns by the given factor */
 @StrudelDsl
 val StrudelPattern.slow by dslMethod<Number> { p, args ->
     val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
-    TimeModifierPattern(p, max(1.0 / 128.0, factor))
+    TempoModifierPattern(p, max(1.0 / 128.0, factor))
 }
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
 val StrudelPattern.fast by dslMethod<Number> { p, args ->
     val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
-    TimeModifierPattern(p, 1.0 / max(1.0 / 128.0, factor))
+    TempoModifierPattern(p, 1.0 / max(1.0 / 128.0, factor))
 }
 
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////

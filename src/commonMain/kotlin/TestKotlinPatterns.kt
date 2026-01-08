@@ -22,7 +22,7 @@ object TestKotlinPatterns {
         ).sound("tri")
             .orbit(0).pan(0.7)
             .gain(0.3)
-            .delay(0.5).delaytime(0.5).delayfeedback(0.75)
+            .delay(0.5).delaytime(0.5).delayfeedback(0.5)
             .room(0.05).rsize(1.0)
             .clip(0.3),
 

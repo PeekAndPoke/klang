@@ -101,14 +101,19 @@ class DslFunctionProvider<In>(
     }
 }
 
-
 class DslFunction<In>(val handler: (List<Any?>) -> StrudelPattern) {
     // Typed for Kotlin usage
-    @Suppress("UNCHECKED_CAST")
-    operator fun invoke(vararg args: In): StrudelPattern = handler(args.toList() as List<Any>)
+    @JvmName("invokeVararg")
+    operator fun invoke(vararg args: In): StrudelPattern = handler(args.toList())
+
+    @JvmName("invokeArray")
+    operator fun invoke(args: Array<In>): StrudelPattern = handler(args.toList())
+
+    @JvmName("invokeList")
+    operator fun invoke(args: List<In>): StrudelPattern = handler(args)
 
     // Internal usage
-    fun invokeUntyped(args: List<Any?>): StrudelPattern = handler(args)
+    internal fun invokeUntyped(args: List<Any?>): StrudelPattern = handler(args)
 }
 
 // --- Generic Method Delegate (fast, slow, etc.) ---

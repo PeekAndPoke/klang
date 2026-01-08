@@ -11,11 +11,11 @@ import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.slow
 
-class TimeModifierPatternSpec : StringSpec({
+class TempoModifierPatternSpec : StringSpec({
 
-    "TimeModifierPattern: Direct Instantiation (slow 2)" {
+    "TempoModifierPattern: Direct Instantiation (slow 2)" {
         val inner = AtomicPattern(VoiceData.empty.copy(note = "a"))
-        val pattern = TimeModifierPattern(inner, 2.0)
+        val pattern = TempoModifierPattern(inner, 2.0)
 
         // a normally is 0..1. slow(2) makes it 0..2.
         val events = pattern.queryArc(0.0, 2.0).sortedBy { it.begin }
@@ -29,7 +29,7 @@ class TimeModifierPatternSpec : StringSpec({
         pattern.weight shouldBe inner.weight
     }
 
-    "TimeModifierPattern: Kotlin DSL (slow)" {
+    "TempoModifierPattern: Kotlin DSL (slow)" {
         // [a b] takes 1 cycle. slow(2) makes it take 2 cycles.
         val pattern = note("a b").slow(2)
 
@@ -45,7 +45,7 @@ class TimeModifierPatternSpec : StringSpec({
         events[1].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
-    "TimeModifierPattern: Kotlin DSL (fast)" {
+    "TempoModifierPattern: Kotlin DSL (fast)" {
         // [a b] takes 1 cycle. fast(2) makes it take 0.5 cycles.
         val pattern = note("a b").fast(2)
 
@@ -67,7 +67,7 @@ class TimeModifierPatternSpec : StringSpec({
         events[3].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
     }
 
-    "TimeModifierPattern: Compiled Code" {
+    "TempoModifierPattern: Compiled Code" {
         val pattern = StrudelPattern.compile("""note("a").slow(4)""")
 
         pattern.shouldNotBeNull()
@@ -77,7 +77,7 @@ class TimeModifierPatternSpec : StringSpec({
         events[0].dur.toDouble() shouldBe (4.0 plusOrMinus EPSILON)
     }
 
-    "TimeModifierPattern: Weight preservation" {
+    "TempoModifierPattern: Weight preservation" {
         val inner = note("a@5")
         val pattern = inner.slow(2)
 

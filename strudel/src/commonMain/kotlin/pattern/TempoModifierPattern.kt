@@ -4,7 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
-internal class TimeModifierPattern(
+internal class TempoModifierPattern(
     val source: StrudelPattern,
     val factor: Double,
 ) : StrudelPattern {
