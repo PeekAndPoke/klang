@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.math
 
+import io.peekandpoke.klang.strudel.math.Rational.Companion.invoke
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -7,346 +8,159 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlin.math.absoluteValue
+import kotlin.jvm.JvmInline
+import kotlin.math.roundToLong
 
 /**
- * Rational number representation for exact time arithmetic.
- * Eliminates floating-point drift in pattern timing calculations.
+ * Rational number representation using 32.32 Fixed Point arithmetic.
  *
- * @param num Numerator
- * @param den Denominator (zero represents NaN)
+ * This implementation is a `value class`, meaning it is inlined to a primitive [Long] at runtime,
+ * resulting in zero heap allocations for arithmetic operations.
+ *
+ * It uses 32 bits for the fractional part, providing a resolution of ~2.3e-10.
  */
 @Serializable(with = RationalSerializer::class)
-data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
-
-    /** Returns true if this rational represents NaN (denominator is zero) */
-    val isNaN: Boolean get() = den == 0L
+@JvmInline
+value class Rational private constructor(private val bits: Long) : Comparable<Rational> {
 
     companion object {
+        private const val PRECISION_BITS = 32
+        private const val MULTIPLIER_D = 4294967296.0 // 2^32 as Double
+        private const val MULTIPLIER_L = 1L shl PRECISION_BITS
+        private const val FRACTION_MASK = MULTIPLIER_L - 1
+
         /** Zero as a rational number */
-        val ZERO = Rational(0, 1)
+        val ZERO = Rational(0L)
 
         /** One as a rational number */
-        val ONE = Rational(1, 1)
+        val ONE = Rational(MULTIPLIER_L)
 
-        /** NaN as a rational number (denominator is zero) */
-        val NaN = Rational(0, 0)
+        /** NaN as a rational number, represented by the minimum Long value */
+        val NaN = Rational(Long.MIN_VALUE)
 
-        /** Create a rational from an integer */
-        operator fun invoke(value: Int): Rational = Rational(value.toLong(), 1)
+        /** Creates a Rational from a [Long] */
+        operator fun invoke(value: Long): Rational = Rational(value shl PRECISION_BITS)
 
-        /** Create a rational from a long */
-        operator fun invoke(value: Long): Rational = Rational(value, 1)
+        /** Creates a Rational from an [Int] */
+        operator fun invoke(value: Int): Rational = invoke(value.toLong())
 
-        /**
-         * Approximate a rational from a double.
-         * Uses continued fractions algorithm with a maximum denominator to avoid overflow.
-         */
-        operator fun invoke(value: Double, maxDenominator: Long = 1_000_000): Rational {
-            if (value.isNaN()) return NaN
-            if (value.isInfinite()) return NaN
-
-            if (value == 0.0) return ZERO
-
-            val sign = if (value < 0.0) -1L else 1L
-            val absValue = value.absoluteValue
-
-            // Simple cases
-            val intPart = absValue.toLong()
-            if (absValue == intPart.toDouble()) {
-                return Rational(sign * intPart, 1)
-            }
-
-            // Continued fractions algorithm
-            var h0 = 0L
-            var h1 = 1L
-            var k0 = 1L
-            var k1 = 0L
-
-            var x = absValue
-            var maxIterations = 20
-
-            while (maxIterations > 0) {
-                maxIterations--
-
-                val a = x.toLong()
-                val h = a * h1 + h0
-                val k = a * k1 + k0
-
-                if (k > maxDenominator) break
-
-                h0 = h1
-                h1 = h
-                k0 = k1
-                k1 = k
-
-                val remainder = x - a
-                if (remainder < 1e-10) break
-
-                x = 1.0 / remainder
-            }
-
-            return Rational(sign * h1, k1).simplified()
+        /** Creates a Rational from a [Double] by rounding to the nearest fixed-point step */
+        operator fun invoke(value: Double): Rational {
+            if (value.isNaN() || value.isInfinite()) return NaN
+            return Rational((value * MULTIPLIER_D).roundToLong())
         }
 
-        /**
-         * Explicit alias for creating Rational from Double for clarity.
-         * Same as invoke(Double).
-         *
-         * @param value The double value to convert
-         * @param maxDenominator Maximum allowed denominator to prevent overflow
-         * @return Rational approximation of the double value
-         */
-        fun fromDouble(value: Double, maxDenominator: Long = 1_000_000): Rational =
-            invoke(value, maxDenominator)
+        /** Alias for [invoke] to convert a Double to Rational */
+        fun fromDouble(value: Double): Rational = invoke(value)
 
-        /**
-         * Extension function to convert any Number to Rational.
-         * Useful for concise conversions like: `5.toRational()` or `2.5.toRational()`
-         *
-         * @param maxDenominator Maximum allowed denominator to prevent overflow
-         * @return Rational representation of this number
-         */
-        fun Number.toRational(maxDenominator: Long = 1_000_000): Rational =
-            Rational(this.toDouble(), maxDenominator)
-
-        /** Greatest common divisor */
-        private fun gcd(a: Long, b: Long): Long {
-            var x = a.absoluteValue
-            var y = b.absoluteValue
-            while (y != 0L) {
-                val temp = y
-                y = x % y
-                x = temp
-            }
-            return x
-        }
+        /** Extension to convert any [Number] to a Rational */
+        fun Number.toRational(): Rational = invoke(this.toDouble())
     }
 
-    // Arithmetic operators
+    /** Returns true if this value represents NaN */
+    val isNaN: Boolean get() = bits == NaN.bits
 
-    /** Adds two rational numbers using exact arithmetic */
-    operator fun plus(other: Rational): Rational {
-        if (this.isNaN || other.isNaN) return NaN
-        val n = num * other.den + other.num * den
-        val d = den * other.den
-        return Rational(n, d).simplified()
-    }
+    // --- Arithmetic Operators ---
 
-    /** Subtracts another rational number from this one using exact arithmetic */
-    operator fun minus(other: Rational): Rational {
-        if (this.isNaN || other.isNaN) return NaN
-        val n = num * other.den - other.num * den
-        val d = den * other.den
-        return Rational(n, d).simplified()
-    }
+    /** Adds two rational numbers */
+    operator fun plus(other: Rational): Rational =
+        if (isNaN || other.isNaN) NaN else Rational(bits + other.bits)
 
-    /** Multiplies two rational numbers using exact arithmetic */
+    /** Subtracts another rational number from this one */
+    operator fun minus(other: Rational): Rational =
+        if (isNaN || other.isNaN) NaN else Rational(bits - other.bits)
+
+    /**
+     * Multiplies two rational numbers.
+     * Uses Double for the intermediate product to prevent 64-bit overflow.
+     */
     operator fun times(other: Rational): Rational {
-        if (this.isNaN || other.isNaN) return NaN
-        return Rational(num * other.num, den * other.den).simplified()
+        if (isNaN || other.isNaN) return NaN
+        val res = (bits.toDouble() * other.bits.toDouble()) / MULTIPLIER_D
+        return Rational(res.toLong())
     }
 
-    /** Divides this rational by another using exact arithmetic */
+    /**
+     * Divides this rational by another.
+     * Uses Double for the intermediate to prevent 64-bit overflow.
+     */
     operator fun div(other: Rational): Rational {
-        if (this.isNaN || other.isNaN) return NaN
-        if (other.num == 0L) return NaN  // Division by zero returns NaN
-        return Rational(num * other.den, den * other.num).simplified()
+        if (isNaN || other.isNaN || other.bits == 0L) return NaN
+        val res = (bits.toDouble() / other.bits.toDouble()) * MULTIPLIER_D
+        return Rational(res.toLong())
     }
 
-    /** Computes the modulo (remainder after division) of this rational by another */
+    /** Computes the remainder of division between two rational numbers */
     operator fun rem(other: Rational): Rational {
-        if (this.isNaN || other.isNaN) return NaN
-        if (other.num == 0L) return NaN
-        // a mod b = a - floor(a/b) * b
-        val quotient = (this / other).floor()
-        return this - (quotient * other)
+        if (isNaN || other.isNaN || other.bits == 0L) return NaN
+        return Rational(bits % other.bits)
     }
 
-    /** Computes the modulo (remainder after division) of this rational by a Number (convenience method) */
-    operator fun rem(other: Number): Rational = rem(other.toRational())
+    /** Negates the rational number */
+    operator fun unaryMinus(): Rational = if (isNaN) NaN else Rational(-bits)
 
-    /** Returns the negation of this rational number */
-    operator fun unaryMinus(): Rational {
-        if (this.isNaN) return NaN
-        return Rational(-num, den)
-    }
+    // --- Number Interoperability ---
 
-    // Double interoperability operators
+    operator fun plus(other: Number): Rational = this + other.toRational()
+    operator fun minus(other: Number): Rational = this - other.toRational()
+    operator fun times(other: Number): Rational = this * other.toRational()
+    operator fun div(other: Number): Rational = this / other.toRational()
+    operator fun rem(other: Number): Rational = this % other.toRational()
 
-    /** Multiplies this rational by a Double value (converts Double to Rational first) */
-    operator fun times(other: Double): Rational {
-        if (isNaN || other.isNaN()) return NaN
-        return this * Rational(other)
-    }
+    // --- Comparison ---
 
-    /** Divides this rational by a Double value (converts Double to Rational first) */
-    operator fun div(other: Double): Rational {
-        if (isNaN || other.isNaN()) return NaN
-        if (other == 0.0) return NaN
-        return this / Rational(other)
-    }
+    override operator fun compareTo(other: Rational): Int = bits.compareTo(other.bits)
 
-    /** Adds a Double value to this rational (converts Double to Rational first) */
-    operator fun plus(other: Double): Rational {
-        if (isNaN || other.isNaN()) return NaN
-        return this + Rational(other)
-    }
+    // --- Conversions ---
 
-    /** Subtracts a Double value from this rational (converts Double to Rational first) */
-    operator fun minus(other: Double): Rational {
-        if (isNaN || other.isNaN()) return NaN
-        return this - Rational(other)
-    }
+    /** Converts the fixed-point value back to a [Double] */
+    fun toDouble(): Double = if (isNaN) Double.NaN else bits.toDouble() / MULTIPLIER_D
 
-    // Comparison
+    /** Converts to [Long], truncating the fractional part */
+    fun toLong(): Long = if (isNaN) 0L else bits shr PRECISION_BITS
 
-    /**
-     * Compares this rational to another rational.
-     * Returns negative if this < other, zero if equal, positive if this > other.
-     * NaN is treated as equal to everything for comparison purposes.
-     */
-    override operator fun compareTo(other: Rational): Int {
-        // NaN is not comparable, but we need to return something
-        if (this.isNaN || other.isNaN) return 0
-        // Compare by cross-multiplication to avoid overflow
-        val left = num * other.den
-        val right = other.num * den
-        return left.compareTo(right)
-    }
-
-    /**
-     * Checks if this rational equals another object.
-     * Compares simplified forms to ensure 1/2 == 2/4.
-     */
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is Rational) return false
-
-        // Compare simplified forms
-        val a = this.simplified()
-        val b = other.simplified()
-        return a.num == b.num && a.den == b.den
-    }
-
-    /** Computes hash code based on the simplified form */
-    override fun hashCode(): Int {
-        val simplified = this.simplified()
-        return 31 * simplified.num.hashCode() + simplified.den.hashCode()
-    }
-
-    // Conversion methods
-
-    /** Converts this rational to a Double (may lose precision) */
-    fun toDouble(): Double = if (isNaN) Double.NaN else num.toDouble() / den.toDouble()
-
-    /** Converts this rational to a Float (may lose precision) */
-    fun toFloat(): Float = if (isNaN) Float.NaN else num.toFloat() / den.toFloat()
-
-    /** Converts this rational to a Long (truncates fractional part) */
-    fun toLong(): Long = if (isNaN) 0L else num / den
-
-    /** Converts this rational to an Int (truncates fractional part) */
+    /** Converts to [Int], truncating the fractional part */
     fun toInt(): Int = toLong().toInt()
 
-    // Utility methods
+    // --- Utilities ---
 
     /** Returns the absolute value of this rational */
     fun abs(): Rational {
         if (isNaN) return NaN
-        return if (num < 0) Rational(-num, den) else this
+        return if (bits < 0) Rational(-bits) else this
     }
 
-    /**
-     * Returns a simplified (reduced) form of this rational.
-     * E.g., 4/8 becomes 1/2, sign is normalized to numerator.
-     */
-    fun simplified(): Rational {
-        if (isNaN) return NaN
-        if (num == 0L) return ZERO
-
-        val g = gcd(num, den)
-        val newNum = num / g
-        val newDen = den / g
-
-        // Normalize: keep sign in numerator, denominator always positive
-        return if (newDen < 0) {
-            Rational(-newNum, -newDen)
-        } else {
-            Rational(newNum, newDen)
-        }
-    }
-
-    /**
-     * Returns the largest integer less than or equal to this rational.
-     * For negative numbers, rounds toward negative infinity.
-     */
+    /** Returns the largest integer (as Rational) less than or equal to this value */
     fun floor(): Rational {
         if (isNaN) return NaN
-        val wholePart = if (num >= 0) {
-            num / den
-        } else {
-            // For negative numbers, floor rounds toward negative infinity
-            (num - den + 1) / den
-        }
-        return Rational(wholePart, 1)
+        return Rational((bits shr PRECISION_BITS) shl PRECISION_BITS)
     }
 
-    /**
-     * Returns the smallest integer greater than or equal to this rational.
-     * For positive numbers, rounds up; for negative numbers, rounds toward zero.
-     */
+    /** Returns the smallest integer (as Rational) greater than or equal to this value */
     fun ceil(): Rational {
         if (isNaN) return NaN
-        val wholePart = if (num >= 0) {
-            // For positive numbers, ceil rounds up
-            (num + den - 1) / den
-        } else {
-            num / den
-        }
-        return Rational(wholePart, 1)
+        val f = floor()
+        return if (f.bits == bits) f else Rational(f.bits + MULTIPLIER_L)
     }
 
-    /**
-     * Returns the fractional part of this rational (always between 0 and 1).
-     * Computed as this - floor(this).
-     */
+    /** Returns the fractional part of the number (the remainder after floor) */
     fun frac(): Rational {
         if (isNaN) return NaN
-        return this - floor()
+        return Rational(bits and FRACTION_MASK)
     }
 
-    /**
-     * Returns a string representation of this rational.
-     * Integers are shown without denominator (e.g., "5"), fractions with slash (e.g., "3/4").
-     */
-    override fun toString(): String {
-        return if (isNaN) {
-            "NaN"
-        } else if (den == 1L) {
-            num.toString()
-        } else {
-            "$num/$den"
-        }
-    }
+    override fun toString(): String = if (isNaN) "NaN" else toDouble().toString()
 }
 
-/**
- * Custom serializer for Rational numbers.
- * Serializes as "num/den" string format.
- */
 object RationalSerializer : KSerializer<Rational> {
     override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("Rational", PrimitiveKind.STRING)
+        PrimitiveSerialDescriptor("Rational", PrimitiveKind.DOUBLE)
 
     override fun serialize(encoder: Encoder, value: Rational) {
-        encoder.encodeString("${value.num}/${value.den}")
+        encoder.encodeDouble(value.toDouble())
     }
 
     override fun deserialize(decoder: Decoder): Rational {
-        val str = decoder.decodeString()
-        val parts = str.split("/")
-        require(parts.size == 2) { "Invalid Rational format: $str" }
-        return Rational(parts[0].toLong(), parts[1].toLong())
+        return Rational(decoder.decodeDouble())
     }
 }

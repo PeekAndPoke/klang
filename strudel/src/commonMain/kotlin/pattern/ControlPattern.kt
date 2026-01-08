@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * Applies a control pattern to a source pattern.
@@ -31,7 +32,7 @@ internal class ControlPattern(
         val result = mutableListOf<StrudelPatternEvent>()
 
         // Tiny epsilon for querying control values at a specific point
-        val epsilon = Rational(1, 100000)
+        val epsilon = 1e-5.toRational()
 
         for (event in sourceEvents) {
             val queryTime = event.begin

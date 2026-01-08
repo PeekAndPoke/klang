@@ -1,7 +1,9 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.lang.note
 
 class MiniNotationParserSpec : StringSpec() {
@@ -168,13 +170,13 @@ class MiniNotationParserSpec : StringSpec() {
             with(events[0]) {
                 data.note shouldBe "e"
                 begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe (2.0 / 3.0)
+                end.toDouble() shouldBe ((2.0 / 3.0) plusOrMinus EPSILON)
             }
 
             with(events[1]) {
                 data.note shouldBe "a"
-                begin.toDouble() shouldBe (2.0 / 3.0)
-                end.toDouble() shouldBe 1.0
+                begin.toDouble() shouldBe ((2.0 / 3.0) plusOrMinus EPSILON)
+                end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
             }
         }
 
@@ -188,20 +190,20 @@ class MiniNotationParserSpec : StringSpec() {
 
             with(events[0]) {
                 data.note shouldBe "a"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 0.2
+                begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+                end.toDouble() shouldBe (0.2 plusOrMinus EPSILON)
             }
 
             with(events[1]) {
                 data.note shouldBe "b"
-                begin.toDouble() shouldBe 0.2
-                end.toDouble() shouldBe 0.8
+                begin.toDouble() shouldBe (0.2 plusOrMinus EPSILON)
+                end.toDouble() shouldBe (0.8 plusOrMinus EPSILON)
             }
 
             with(events[2]) {
                 data.note shouldBe "c"
-                begin.toDouble() shouldBe 0.8
-                end.toDouble() shouldBe 1.0
+                begin.toDouble() shouldBe (0.8 plusOrMinus EPSILON)
+                end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
             }
         }
 
