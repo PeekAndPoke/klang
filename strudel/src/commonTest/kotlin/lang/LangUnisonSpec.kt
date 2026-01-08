@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangUnisonSpec : StringSpec({
 
@@ -44,5 +45,23 @@ class LangUnisonSpec : StringSpec({
         val eventsCtrl = pCtrl.queryArc(0.0, 2.0)
         eventsCtrl.size shouldBe 4
         eventsCtrl.map { it.data.voices } shouldBe listOf(2.0, 3.0, 2.0, 3.0)
+    }
+
+    "unison() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""unison("2 4")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.voices } shouldBe listOf(2.0, 4.0)
+    }
+
+    "unison() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").unison("2 4")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.voices } shouldBe listOf(2.0, 4.0)
     }
 })

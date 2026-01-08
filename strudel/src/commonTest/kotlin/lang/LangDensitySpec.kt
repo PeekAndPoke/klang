@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangDensitySpec : StringSpec({
 
@@ -29,5 +30,23 @@ class LangDensitySpec : StringSpec({
 
         // Then only assert the density values in order
         events.map { it.data.density } shouldBe listOf(2.0, 4.0, 2.0, 4.0)
+    }
+
+    "density() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""density("1 3")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.density } shouldBe listOf(1.0, 3.0)
+    }
+
+    "density() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").density("1 3")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.density } shouldBe listOf(1.0, 3.0)
     }
 })

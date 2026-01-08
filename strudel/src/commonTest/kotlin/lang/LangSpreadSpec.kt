@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangSpreadSpec : StringSpec({
 
@@ -29,5 +30,23 @@ class LangSpreadSpec : StringSpec({
 
         // Then only assert the panSpread values in order
         events.map { it.data.panSpread } shouldBe listOf(0.3, 0.6, 0.3, 0.6)
+    }
+
+    "spread() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""spread("0.1 0.2")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.panSpread } shouldBe listOf(0.1, 0.2)
+    }
+
+    "spread() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").spread("0.1 0.2")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.panSpread } shouldBe listOf(0.1, 0.2)
     }
 })

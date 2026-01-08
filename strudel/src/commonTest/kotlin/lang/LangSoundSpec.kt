@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangSoundSpec : StringSpec({
 
@@ -29,5 +30,23 @@ class LangSoundSpec : StringSpec({
 
         // Then only assert the sound values in order
         events.map { it.data.sound } shouldBe listOf("tri", "square", "tri", "square")
+    }
+
+    "sound() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""sound("bd hh")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.sound } shouldBe listOf("bd", "hh")
+    }
+
+    "sound() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").sound("bd hh")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.sound } shouldBe listOf("bd", "hh")
     }
 })

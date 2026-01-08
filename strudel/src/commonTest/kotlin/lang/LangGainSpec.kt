@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangGainSpec : StringSpec({
 
@@ -29,5 +30,23 @@ class LangGainSpec : StringSpec({
 
         // Then only assert the gain values in order
         events.map { it.data.gain } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
+    }
+
+    "gain() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""gain("0.5 1.0")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.gain } shouldBe listOf(0.5, 1.0)
+    }
+
+    "gain() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").gain("0.5 1.0")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.gain } shouldBe listOf(0.5, 1.0)
     }
 })

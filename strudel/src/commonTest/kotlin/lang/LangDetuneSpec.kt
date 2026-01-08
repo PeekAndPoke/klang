@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangDetuneSpec : StringSpec({
 
@@ -29,5 +30,23 @@ class LangDetuneSpec : StringSpec({
 
         // Then only assert the freqSpread values in order
         events.map { it.data.freqSpread } shouldBe listOf(0.05, 0.15, 0.05, 0.15)
+    }
+
+    "detune() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""detune("0.1 0.25")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.freqSpread } shouldBe listOf(0.1, 0.25)
+    }
+
+    "detune() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").detune("0.1 0.25")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.freqSpread } shouldBe listOf(0.1, 0.25)
     }
 })

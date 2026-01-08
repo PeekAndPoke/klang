@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangVibratoModSpec : StringSpec({
 
@@ -33,5 +34,23 @@ class LangVibratoModSpec : StringSpec({
         val eCtrl = pCtrl.queryArc(0.0, 2.0)
         eCtrl.size shouldBe 4
         eCtrl.map { it.data.vibratoMod } shouldBe listOf(0.75, 1.25, 0.75, 1.25)
+    }
+
+    "vibratoMod() works within compiled code as top-level function" {
+        val p = StrudelPattern.compile("""vibratoMod("2 4.5")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.vibratoMod } shouldBe listOf(2.0, 4.5)
+    }
+
+    "vibratoMod() works within compiled code as chained-level function" {
+        val p = StrudelPattern.compile("""note("a b").vibratoMod("2 4.5")""")
+
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 2
+        events.map { it.data.vibratoMod } shouldBe listOf(2.0, 4.5)
     }
 })
