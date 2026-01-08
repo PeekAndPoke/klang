@@ -82,4 +82,7 @@ data class Rational(val num: Long, val den: Long) {
 This mean we will need to change StrudelPatternEvent so that "begin" and "end" are Rational instead of Double.
 This would also require quite some refactoring of the existing patterns.
 
+In order to address the problem with introduced "Rational" number math, to avoid floating point drift.
+The refactoring was successful, but the main issue is still not fixed.
+
 Please make a plan.

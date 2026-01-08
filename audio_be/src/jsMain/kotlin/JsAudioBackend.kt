@@ -90,7 +90,7 @@ class JsAudioBackend(
                 }
 
                 if (scope.isActive) {
-                    window.setTimeout({ loop() }, 10)
+                    window.setTimeout({ loop() }, 50)
                 }
             }
 

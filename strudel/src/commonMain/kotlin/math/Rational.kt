@@ -92,14 +92,20 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         /**
          * Explicit alias for creating Rational from Double for clarity.
          * Same as invoke(Double).
+         *
+         * @param value The double value to convert
+         * @param maxDenominator Maximum allowed denominator to prevent overflow
+         * @return Rational approximation of the double value
          */
         fun fromDouble(value: Double, maxDenominator: Long = 1_000_000): Rational =
             invoke(value, maxDenominator)
 
         /**
-         * Explicit alias for creating Rational from Double for clarity.
+         * Extension function to convert any Number to Rational.
+         * Useful for concise conversions like: `5.toRational()` or `2.5.toRational()`
          *
-         * TODO: write tests
+         * @param maxDenominator Maximum allowed denominator to prevent overflow
+         * @return Rational representation of this number
          */
         fun Number.toRational(maxDenominator: Long = 1_000_000): Rational =
             Rational(this.toDouble(), maxDenominator)
@@ -119,6 +125,7 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
 
     // Arithmetic operators
 
+    /** Adds two rational numbers using exact arithmetic */
     operator fun plus(other: Rational): Rational {
         if (this.isNaN || other.isNaN) return NaN
         val n = num * other.den + other.num * den
@@ -126,6 +133,7 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         return Rational(n, d).simplified()
     }
 
+    /** Subtracts another rational number from this one using exact arithmetic */
     operator fun minus(other: Rational): Rational {
         if (this.isNaN || other.isNaN) return NaN
         val n = num * other.den - other.num * den
@@ -133,17 +141,20 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         return Rational(n, d).simplified()
     }
 
+    /** Multiplies two rational numbers using exact arithmetic */
     operator fun times(other: Rational): Rational {
         if (this.isNaN || other.isNaN) return NaN
         return Rational(num * other.num, den * other.den).simplified()
     }
 
+    /** Divides this rational by another using exact arithmetic */
     operator fun div(other: Rational): Rational {
         if (this.isNaN || other.isNaN) return NaN
         if (other.num == 0L) return NaN  // Division by zero returns NaN
         return Rational(num * other.den, den * other.num).simplified()
     }
 
+    /** Computes the modulo (remainder after division) of this rational by another */
     operator fun rem(other: Rational): Rational {
         if (this.isNaN || other.isNaN) return NaN
         if (other.num == 0L) return NaN
@@ -152,11 +163,10 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         return this - (quotient * other)
     }
 
-    /**
-     * TODO: write tests for this
-     */
+    /** Computes the modulo (remainder after division) of this rational by a Number (convenience method) */
     operator fun rem(other: Number): Rational = rem(other.toRational())
 
+    /** Returns the negation of this rational number */
     operator fun unaryMinus(): Rational {
         if (this.isNaN) return NaN
         return Rational(-num, den)
@@ -164,22 +174,26 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
 
     // Double interoperability operators
 
+    /** Multiplies this rational by a Double value (converts Double to Rational first) */
     operator fun times(other: Double): Rational {
         if (isNaN || other.isNaN()) return NaN
         return this * Rational(other)
     }
 
+    /** Divides this rational by a Double value (converts Double to Rational first) */
     operator fun div(other: Double): Rational {
         if (isNaN || other.isNaN()) return NaN
         if (other == 0.0) return NaN
         return this / Rational(other)
     }
 
+    /** Adds a Double value to this rational (converts Double to Rational first) */
     operator fun plus(other: Double): Rational {
         if (isNaN || other.isNaN()) return NaN
         return this + Rational(other)
     }
 
+    /** Subtracts a Double value from this rational (converts Double to Rational first) */
     operator fun minus(other: Double): Rational {
         if (isNaN || other.isNaN()) return NaN
         return this - Rational(other)
@@ -187,6 +201,11 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
 
     // Comparison
 
+    /**
+     * Compares this rational to another rational.
+     * Returns negative if this < other, zero if equal, positive if this > other.
+     * NaN is treated as equal to everything for comparison purposes.
+     */
     override operator fun compareTo(other: Rational): Int {
         // NaN is not comparable, but we need to return something
         if (this.isNaN || other.isNaN) return 0
@@ -196,6 +215,10 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         return left.compareTo(right)
     }
 
+    /**
+     * Checks if this rational equals another object.
+     * Compares simplified forms to ensure 1/2 == 2/4.
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Rational) return false
@@ -206,6 +229,7 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         return a.num == b.num && a.den == b.den
     }
 
+    /** Computes hash code based on the simplified form */
     override fun hashCode(): Int {
         val simplified = this.simplified()
         return 31 * simplified.num.hashCode() + simplified.den.hashCode()
@@ -213,23 +237,30 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
 
     // Conversion methods
 
+    /** Converts this rational to a Double (may lose precision) */
     fun toDouble(): Double = if (isNaN) Double.NaN else num.toDouble() / den.toDouble()
 
+    /** Converts this rational to a Float (may lose precision) */
     fun toFloat(): Float = if (isNaN) Float.NaN else num.toFloat() / den.toFloat()
 
+    /** Converts this rational to a Long (truncates fractional part) */
     fun toLong(): Long = if (isNaN) 0L else num / den
 
+    /** Converts this rational to an Int (truncates fractional part) */
     fun toInt(): Int = toLong().toInt()
 
     // Utility methods
 
-    /** Returns the absolute value */
+    /** Returns the absolute value of this rational */
     fun abs(): Rational {
         if (isNaN) return NaN
         return if (num < 0) Rational(-num, den) else this
     }
 
-    /** Returns a simplified (reduced) form of this rational */
+    /**
+     * Returns a simplified (reduced) form of this rational.
+     * E.g., 4/8 becomes 1/2, sign is normalized to numerator.
+     */
     fun simplified(): Rational {
         if (isNaN) return NaN
         if (num == 0L) return ZERO
@@ -246,7 +277,10 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         }
     }
 
-    /** Returns the largest integer less than or equal to this rational */
+    /**
+     * Returns the largest integer less than or equal to this rational.
+     * For negative numbers, rounds toward negative infinity.
+     */
     fun floor(): Rational {
         if (isNaN) return NaN
         val wholePart = if (num >= 0) {
@@ -258,7 +292,10 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         return Rational(wholePart, 1)
     }
 
-    /** Returns the smallest integer greater than or equal to this rational */
+    /**
+     * Returns the smallest integer greater than or equal to this rational.
+     * For positive numbers, rounds up; for negative numbers, rounds toward zero.
+     */
     fun ceil(): Rational {
         if (isNaN) return NaN
         val wholePart = if (num >= 0) {
@@ -270,12 +307,19 @@ data class Rational(val num: Long, val den: Long) : Comparable<Rational> {
         return Rational(wholePart, 1)
     }
 
-    /** Returns the fractional part (always between 0 and 1) */
+    /**
+     * Returns the fractional part of this rational (always between 0 and 1).
+     * Computed as this - floor(this).
+     */
     fun frac(): Rational {
         if (isNaN) return NaN
         return this - floor()
     }
 
+    /**
+     * Returns a string representation of this rational.
+     * Integers are shown without denominator (e.g., "5"), fractions with slash (e.g., "3/4").
+     */
     override fun toString(): String {
         return if (isNaN) {
             "NaN"

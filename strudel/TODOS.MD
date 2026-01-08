@@ -36,7 +36,8 @@ and category.
 
 #### Euclidean Rhythms ⭐⭐⭐
 
-- [ ] **`(pulses, steps)` notation** - Euclidean rhythm in mini-notation (e.g., `"bd(3,8)"`)
+- [x] **`(pulses, steps)` notation** - Euclidean rhythm in mini-notation (e.g., `"bd(3,8)"`) ✅ **FIXED WITH RATIONAL
+  ARITHMETIC**
 - [ ] **`(pulses, steps, rotation)`** - With rotation parameter
 
 ### Pattern Creation ⭐⭐⭐
@@ -229,6 +230,8 @@ and category.
 
 ### Pattern System Enhancements
 
+- [x] **Rational number time coordinates** - ✅ **IMPLEMENTED** - Replaces Double with exact rational arithmetic for all
+  time calculations, eliminating floating-point drift and timing bugs
 - [ ] **Negative time querying** - Support for `early()` functionality
 - [ ] **Pattern queryArc optimization** - Cache/memoization for repeated queries
 - [ ] **Event metadata** - Track event IDs, origins for debugging

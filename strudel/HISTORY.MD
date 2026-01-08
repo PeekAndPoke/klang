@@ -10,10 +10,34 @@ Strudel.
 - **AtomicPattern** - Basic pattern building block for single events
 - **SequencePattern** - Sequential pattern execution (`seq()`)
 - **StackPattern** - Parallel pattern layering (`stack()`)
+- **EuclideanPattern** - Euclidean rhythm gating (e.g., `bd(3,8)`)
 - **ArrangementPattern** - Multi-cycle pattern arrangement (`arrange()`)
 - **TimeModifierPattern** - Speed/tempo modification
 - **ControlPattern** - Applies control patterns to source patterns
 - **ContinuousPattern** - Time-based continuous signal generation
+
+### Rational Number Time System ✅ **NEW!**
+
+**Major architectural improvement** replacing floating-point time coordinates with exact rational arithmetic:
+
+- **Rational** class in `io.peekandpoke.klang.strudel.math` package
+- All time coordinates (`begin`, `end`, `dur`) now use Rational instead of Double
+- **Eliminates floating-point drift** that caused timing bugs in Euclidean patterns
+- Full arithmetic operators: `+`, `-`, `*`, `/`, `%`, unary `-`
+- Comparison support via `Comparable` interface
+- Double interoperability operators for seamless integration
+- Conversion methods: `toDouble()`, `toFloat()`, `toLong()`, `toInt()`
+- Utility functions: `abs()`, `floor()`, `ceil()`, `frac()`, `simplified()`
+- Helper methods: `Number.toRational()`, `fromDouble()`
+- Serialization support for `kotlinx.serialization`
+- Comprehensive test suite with 20+ tests
+
+**Impact:**
+
+- ✅ Fixed Euclidean pattern timing bug (premature event triggering)
+- ✅ Mathematically exact time calculations
+- ✅ No need for EPSILON workarounds
+- ✅ Cleaner, more maintainable code
 
 ### Pattern Constructors ✅
 
@@ -185,18 +209,27 @@ Comprehensive voice data structure supporting:
 **Total Implemented:**
 
 - 70+ DSL functions/methods
-- 5 core pattern types
+- 8 core pattern types (including EuclideanPattern)
 - 4 continuous oscillators
 - 4 filter types
 - Complete ADSR envelope system
-- Full mini-notation parser with 11 operators/features
+- Full mini-notation parser with 11 operators/features (including Euclidean rhythms)
 - Control pattern system
 - Comprehensive audio parameter support
+- **Rational number time system** for exact arithmetic
 
 **Architecture Highlights:**
 
+- **Rational number time coordinates** - Exact arithmetic eliminates floating-point drift
 - Property delegation for clean DSL
 - Type-safe pattern construction
 - Extensible voice data mutation system
 - Parser with proper tokenization
 - Immutable pattern design
+
+**Recent Major Improvements (2026-01-08):**
+
+- ✅ **Rational Time System** - Replaced all Double time coordinates with exact Rational arithmetic
+- ✅ **Euclidean Pattern Fix** - Fixed timing bug that caused premature event triggering
+- ✅ **EPSILON Removal** - No longer needed thanks to exact arithmetic
+- ✅ **Enhanced Testing** - Added comprehensive Rational number test suite

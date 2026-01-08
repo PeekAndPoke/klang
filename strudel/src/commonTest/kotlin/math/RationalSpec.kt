@@ -203,4 +203,51 @@ class RationalSpec : StringSpec({
         offsets[2] shouldBe Rational(3, 4)
         offsets[3] shouldBe Rational(1) // Should be exactly 1.0
     }
+
+    "Number.toRational() extension function" {
+        // Test with Int
+        5.toRational() shouldBe Rational(5, 1)
+        0.toRational() shouldBe Rational.ZERO
+        (-3).toRational() shouldBe Rational(-3, 1)
+
+        // Test with Double
+        0.5.toRational() shouldBe Rational(1, 2)
+        0.25.toRational() shouldBe Rational(1, 4)
+        2.5.toRational() shouldBe Rational(5, 2)
+        (-1.5).toRational() shouldBe Rational(-3, 2)
+
+        // Test with Long
+        100L.toRational() shouldBe Rational(100, 1)
+
+        // Test with Float
+        0.75f.toRational() shouldBe Rational(3, 4)
+    }
+
+    "rem(Number) operator convenience method" {
+        // Test modulo with Int
+        (Rational(7, 2) % 2) shouldBe Rational(3, 2)
+        (Rational(5) % 3) shouldBe Rational(2)
+
+        // Test modulo with Double
+        (Rational(10, 3) % 1.0) shouldBe Rational(1, 3)
+        (Rational(7, 2) % 2.0) shouldBe Rational(3, 2)
+
+        // Test modulo with different number types
+        (Rational(11, 4) % 2) shouldBe Rational(3, 4)
+        (Rational(13, 5) % 2L) shouldBe Rational(3, 5)
+    }
+
+    "fromDouble() companion method" {
+        // Same as Rational(Double) but more explicit
+        Rational.fromDouble(0.5) shouldBe Rational(1, 2)
+        Rational.fromDouble(0.25) shouldBe Rational(1, 4)
+        Rational.fromDouble(2.5) shouldBe Rational(5, 2)
+        Rational.fromDouble(-1.5) shouldBe Rational(-3, 2)
+
+        // Test with custom max denominator
+        val pi = Rational.fromDouble(3.14159265359, maxDenominator = 100)
+        (pi.toDouble() - 3.14159265359).let { diff ->
+            diff < 0.01 && diff > -0.01
+        } shouldBe true
+    }
 })
