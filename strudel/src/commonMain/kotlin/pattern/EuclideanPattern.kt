@@ -46,25 +46,16 @@ internal class EuclideanPattern(
 
                     // No EPSILON needed - exact arithmetic!
                     if (intersectEnd > intersectStart) {
-                        // Query the inner pattern at the EXACT same absolute time as the gate.
-                        // This allows [a b...]/8 to play a, then b, then c as time passes naturally.
-                        val innerFrom = intersectStart
-                        val innerTo = intersectEnd
-
-                        val innerEvents = inner.queryArc(innerFrom, innerTo)
+                        // We only take the latest event to avoid "snapping" from one note to the next
+                        val innerEvents = inner.queryArc(intersectStart, intersectEnd)
+                            .sortedBy { it.begin }
+                            .takeLast(1)
 
                         events.addAll(innerEvents.map { ev ->
-                            // Strict Clipping
-                            // We constrain the event strictly to the current step window.
-                            val clippedBegin = maxOf(ev.begin, stepStart)
-                            val clippedEnd = minOf(ev.end, stepEnd)
-
-                            val clippedDur = clippedEnd - clippedBegin
-
                             ev.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedDur
+                                begin = intersectStart,
+                                end = intersectEnd,
+                                dur = intersectEnd - intersectStart,
                             )
                         })
                     }
