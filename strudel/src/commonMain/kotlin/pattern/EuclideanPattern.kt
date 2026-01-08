@@ -61,7 +61,7 @@ internal class EuclideanPattern(
                         // FIX: Add a small epsilon to the start time to avoid picking up events
                         // that end exactly at the step boundary (floating point artifacts).
                         val innerFrom = intersectStart
-                        val innerTo = intersectEnd - EPSILON
+                        val innerTo = intersectEnd
 
                         val innerEvents = inner.queryArc(innerFrom, innerTo)
 
@@ -71,7 +71,7 @@ internal class EuclideanPattern(
                             val clippedBegin = max(ev.begin, stepStart)
                             // Use a tiny epsilon to ensure we don't accidentally include the very start of the next step
                             // or allow this event to touch the next step's start.
-                            val clippedEnd = min(ev.end, stepEnd - EPSILON)
+                            val clippedEnd = min(ev.end, stepEnd)
 
                             val clippedDur = clippedEnd - clippedBegin
 

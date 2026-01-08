@@ -38,7 +38,7 @@ internal class ArrangementPattern(
                 val segEnd = segStart + dur
 
                 // Check overlap
-                if (segEnd > from + EPSILON && segStart < to - EPSILON) {
+                if (segEnd >= from && segStart < to) {
                     // We need to query the inner pattern.
                     // The inner pattern is usually infinite (0..1..2..).
                     // We want it to play starting from 0 relative to the segment start.
@@ -49,7 +49,7 @@ internal class ArrangementPattern(
                     val qEnd = min(to, segEnd)
 
                     // Fix: Ensure we don't query past the segment end due to precision
-                    val innerQEnd = min(qEnd - segStart, dur - EPSILON)
+                    val innerQEnd = min(qEnd - segStart, dur)
                     val innerQStart = max(qStart - segStart, 0.0)
 
                     if (innerQEnd > innerQStart) {

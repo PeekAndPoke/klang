@@ -31,7 +31,7 @@ internal class ControlPattern(
 
         for (event in sourceEvents) {
             val queryTime = event.begin
-            val controlEvents = control.queryArc(queryTime, queryTime + EPSILON)
+            val controlEvents = control.queryArc(queryTime, queryTime + 0.00001)
             val match = controlEvents.firstOrNull()
 
             if (match != null) {

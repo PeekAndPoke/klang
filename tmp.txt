@@ -79,3 +79,7 @@ data class Rational(val num: Long, val den: Long) {
 }
 ```
 
+This mean we will need to change StrudelPatternEvent so that "begin" and "end" are Rational instead of Double.
+This would also require quite some refactoring of the existing patterns.
+
+Please make a plan.
