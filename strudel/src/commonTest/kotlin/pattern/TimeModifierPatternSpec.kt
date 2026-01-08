@@ -21,8 +21,8 @@ class TimeModifierPatternSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
-        events[0].dur shouldBe (2.0 plusOrMinus 1e-9)
+        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].dur shouldBe (2.0 plusOrMinus EPSILON)
 
         // Weight should be delegated
         pattern.weight shouldBe inner.weight
@@ -36,12 +36,12 @@ class TimeModifierPatternSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
-        events[0].dur shouldBe (1.0 plusOrMinus 1e-9)
+        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].dur shouldBe (1.0 plusOrMinus EPSILON)
 
         events[1].data.note shouldBe "b"
-        events[1].begin shouldBe (1.0 plusOrMinus 1e-9)
-        events[1].dur shouldBe (1.0 plusOrMinus 1e-9)
+        events[1].begin shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].dur shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "TimeModifierPattern: Kotlin DSL (fast)" {
@@ -55,15 +55,15 @@ class TimeModifierPatternSpec : StringSpec({
 
         // 1st iteration
         events[0].data.note shouldBe "a"
-        events[0].dur shouldBe (0.25 plusOrMinus 1e-9)
+        events[0].dur shouldBe (0.25 plusOrMinus EPSILON)
         events[1].data.note shouldBe "b"
-        events[1].dur shouldBe (0.25 plusOrMinus 1e-9)
+        events[1].dur shouldBe (0.25 plusOrMinus EPSILON)
 
         // 2nd iteration
         events[2].data.note shouldBe "a"
-        events[2].begin shouldBe (0.5 plusOrMinus 1e-9)
+        events[2].begin shouldBe (0.5 plusOrMinus EPSILON)
         events[3].data.note shouldBe "b"
-        events[3].begin shouldBe (0.75 plusOrMinus 1e-9)
+        events[3].begin shouldBe (0.75 plusOrMinus EPSILON)
     }
 
     "TimeModifierPattern: Compiled Code" {
@@ -73,13 +73,13 @@ class TimeModifierPatternSpec : StringSpec({
         val events = pattern.queryArc(0.0, 4.0)
 
         events.size shouldBe 1
-        events[0].dur shouldBe (4.0 plusOrMinus 1e-9)
+        events[0].dur shouldBe (4.0 plusOrMinus EPSILON)
     }
 
     "TimeModifierPattern: Weight preservation" {
         val inner = note("a@5")
         val pattern = inner.slow(2)
 
-        pattern.weight shouldBe (5.0 plusOrMinus 1e-9)
+        pattern.weight shouldBe (5.0 plusOrMinus EPSILON)
     }
 })

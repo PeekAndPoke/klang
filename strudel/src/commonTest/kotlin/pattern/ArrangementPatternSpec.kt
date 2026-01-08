@@ -25,13 +25,13 @@ class ArrangementPatternSpec : StringSpec({
         events.size shouldBe 3
 
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
+        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
 
         events[1].data.note shouldBe "a"
-        events[1].begin shouldBe (1.0 plusOrMinus 1e-9)
+        events[1].begin shouldBe (1.0 plusOrMinus EPSILON)
 
         events[2].data.note shouldBe "b"
-        events[2].begin shouldBe (2.0 plusOrMinus 1e-9)
+        events[2].begin shouldBe (2.0 plusOrMinus EPSILON)
     }
 
     "ArrangementPattern: Kotlin DSL (arrange function)" {

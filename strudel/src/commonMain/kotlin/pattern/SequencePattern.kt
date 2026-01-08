@@ -44,14 +44,17 @@ internal class SequencePattern(
                 val intersectEnd = min(to, stepEnd)
 
                 // If there is an overlap
-                if (intersectEnd > intersectStart) {
+                if (intersectEnd > intersectStart + EPSILON) {
                     // Map the "outer" time to the "inner" pattern time.
                     // The inner pattern covers 0..1 logically for this step.
                     // Formula: t_inner = (t_outer - stepStart) / stepSize + cycle
                     val innerFrom = (intersectStart - stepStart) / stepSize + cycle
                     // Clamp innerTo to the end of the cycle to avoid floating point errors
                     // picking up events from the next cycle of the inner pattern.
-                    val innerTo = min((intersectEnd - stepStart) / stepSize + cycle, cycle + 1.0)
+                    val innerTo = min(
+                        (intersectEnd - stepStart) / stepSize + cycle,
+                        cycle + 1.0 - EPSILON,
+                    )
 
                     val innerEvents = pattern.queryArc(innerFrom, innerTo)
 

@@ -23,14 +23,14 @@ class ControlPatternSpec : StringSpec({
 
         verifyPattern(pattern, 1) { _, note, begin, _ ->
             note shouldBe "c3"
-            begin shouldBe (0.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
         }
 
         // Weight should be delegated to source
         pattern.weight shouldBe source.weight
 
         val events = pattern.queryArc(0.0, 1.0)
-        events[0].data.gain shouldBe (0.5 plusOrMinus 1e-9)
+        events[0].data.gain shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "ControlPattern: Kotlin DSL (gain modifier)" {
@@ -38,11 +38,11 @@ class ControlPatternSpec : StringSpec({
 
         verifyPattern(pattern, 1) { _, note, begin, _ ->
             note shouldBe "c3"
-            begin shouldBe (0.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
         }
 
         val events = pattern.queryArc(0.0, 1.0)
-        events[0].data.gain shouldBe (0.7 plusOrMinus 1e-9)
+        events[0].data.gain shouldBe (0.7 plusOrMinus EPSILON)
     }
 
     "ControlPattern: Compiled Code" {
@@ -53,7 +53,7 @@ class ControlPatternSpec : StringSpec({
         }
 
         val events = pattern!!.queryArc(0.0, 1.0)
-        events[0].data.gain shouldBe (0.2 plusOrMinus 1e-9)
+        events[0].data.gain shouldBe (0.2 plusOrMinus EPSILON)
     }
 
     "ControlPattern: Weight preservation" {
@@ -63,6 +63,6 @@ class ControlPatternSpec : StringSpec({
         val pattern = source.gain(0.5)
 
         // The resulting pattern should still have weight 3
-        pattern.weight shouldBe (3.0 plusOrMinus 1e-9)
+        pattern.weight shouldBe (3.0 plusOrMinus EPSILON)
     }
 })

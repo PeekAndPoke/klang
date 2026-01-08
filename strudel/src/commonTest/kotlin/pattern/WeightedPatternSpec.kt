@@ -15,13 +15,13 @@ class WeightedPatternSpec : StringSpec({
         val pattern = WeightedPattern(inner, 3.5)
 
         // Verify that the weight property is explicitly set to the provided value
-        pattern.weight shouldBe (3.5 plusOrMinus 1e-9)
+        pattern.weight shouldBe (3.5 plusOrMinus EPSILON)
 
         // Verify that events are passed through from the inner pattern without modification
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "a"
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 
@@ -29,12 +29,12 @@ class WeightedPatternSpec : StringSpec({
         // "a@2" in mini-notation creates a WeightedPattern with weight 2.0
         val pattern = note("a@2")
 
-        pattern.weight shouldBe (2.0 plusOrMinus 1e-9)
+        pattern.weight shouldBe (2.0 plusOrMinus EPSILON)
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "a"
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 
@@ -42,12 +42,12 @@ class WeightedPatternSpec : StringSpec({
         val pattern = StrudelPattern.compile("""note("a@5.0")""")
 
         pattern.shouldNotBeNull()
-        pattern.weight shouldBe (5.0 plusOrMinus 1e-9)
+        pattern.weight shouldBe (5.0 plusOrMinus EPSILON)
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "a"
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 })

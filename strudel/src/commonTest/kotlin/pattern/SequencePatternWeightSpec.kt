@@ -31,12 +31,12 @@ class SequencePatternWeightSpec : StringSpec({
 
             events.forEachIndexed { index, event ->
                 event.data.note shouldBe expectedNotes[index]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDurations[index] plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDurations[index] plusOrMinus EPSILON)
                 lastEnd = event.end
             }
 
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -55,11 +55,11 @@ class SequencePatternWeightSpec : StringSpec({
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBe expectedNotes[i]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDur plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDur plusOrMinus EPSILON)
                 lastEnd = event.end
             }
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -80,11 +80,11 @@ class SequencePatternWeightSpec : StringSpec({
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBe expectedNotes[i]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDurs[i] plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
             }
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -104,11 +104,11 @@ class SequencePatternWeightSpec : StringSpec({
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBe expectedNotes[i]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDurs[i] plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
             }
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -128,11 +128,11 @@ class SequencePatternWeightSpec : StringSpec({
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBe expectedNotes[i]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDurs[i] plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
             }
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -155,17 +155,17 @@ class SequencePatternWeightSpec : StringSpec({
             val d = events.find { it.data.note == "d" }!!
 
             // Layer 1 (a@3 b -> 3/4, 1/4)
-            a.dur shouldBe (0.75 plusOrMinus 1e-9)
-            b.dur shouldBe (0.25 plusOrMinus 1e-9)
-            b.begin shouldBe (a.end plusOrMinus 1e-9)
+            a.dur shouldBe (0.75 plusOrMinus EPSILON)
+            b.dur shouldBe (0.25 plusOrMinus EPSILON)
+            b.begin shouldBe (a.end plusOrMinus EPSILON)
 
             // Layer 2 (c d -> 1/2, 1/2)
-            c.dur shouldBe (0.5 plusOrMinus 1e-9)
-            d.dur shouldBe (0.5 plusOrMinus 1e-9)
-            d.begin shouldBe (c.end plusOrMinus 1e-9)
+            c.dur shouldBe (0.5 plusOrMinus EPSILON)
+            d.dur shouldBe (0.5 plusOrMinus EPSILON)
+            d.begin shouldBe (c.end plusOrMinus EPSILON)
 
-            (a.begin % 1.0) shouldBe (0.0 plusOrMinus 1e-9)
-            (c.begin % 1.0) shouldBe (0.0 plusOrMinus 1e-9)
+            (a.begin % 1.0) shouldBe (0.0 plusOrMinus EPSILON)
+            (c.begin % 1.0) shouldBe (0.0 plusOrMinus EPSILON)
         }
     }
 
@@ -182,12 +182,12 @@ class SequencePatternWeightSpec : StringSpec({
             val b = events[1]
 
             a.data.note shouldBe "a"
-            a.dur shouldBe (0.75 plusOrMinus 1e-9)
-            a.data.gain shouldBe (0.5 plusOrMinus 1e-9)
+            a.dur shouldBe (0.75 plusOrMinus EPSILON)
+            a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBe "b"
-            b.dur shouldBe (0.25 plusOrMinus 1e-9)
-            b.data.gain shouldBe (0.5 plusOrMinus 1e-9)
+            b.dur shouldBe (0.25 plusOrMinus EPSILON)
+            b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
 
@@ -204,12 +204,12 @@ class SequencePatternWeightSpec : StringSpec({
             val b = events[1]
 
             a.data.note shouldBe "a"
-            a.begin shouldBe (from plusOrMinus 1e-9)
-            a.dur shouldBe (1.5 plusOrMinus 1e-9)
+            a.begin shouldBe (from plusOrMinus EPSILON)
+            a.dur shouldBe (1.5 plusOrMinus EPSILON)
 
             b.data.note shouldBe "b"
-            b.begin shouldBe (from + 1.5 plusOrMinus 1e-9)
-            b.dur shouldBe (0.5 plusOrMinus 1e-9)
+            b.begin shouldBe (from + 1.5 plusOrMinus EPSILON)
+            b.dur shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
 
@@ -229,14 +229,14 @@ class SequencePatternWeightSpec : StringSpec({
             val b2 = events[3]
 
             a1.data.note shouldBe "a"
-            a1.dur shouldBe (0.375 plusOrMinus 1e-9)
+            a1.dur shouldBe (0.375 plusOrMinus EPSILON)
             b1.data.note shouldBe "b"
-            b1.dur shouldBe (0.125 plusOrMinus 1e-9)
+            b1.dur shouldBe (0.125 plusOrMinus EPSILON)
 
             a2.data.note shouldBe "a"
-            a2.dur shouldBe (0.375 plusOrMinus 1e-9)
+            a2.dur shouldBe (0.375 plusOrMinus EPSILON)
             b2.data.note shouldBe "b"
-            b2.dur shouldBe (0.125 plusOrMinus 1e-9)
+            b2.dur shouldBe (0.125 plusOrMinus EPSILON)
         }
     }
 
@@ -253,12 +253,12 @@ class SequencePatternWeightSpec : StringSpec({
             val b = events[1]
 
             a.data.note shouldBe "a"
-            a.dur shouldBe (1.5 plusOrMinus 1e-9)
-            a.data.gain shouldBe (0.5 plusOrMinus 1e-9)
+            a.dur shouldBe (1.5 plusOrMinus EPSILON)
+            a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBe "b"
-            b.dur shouldBe (0.5 plusOrMinus 1e-9)
-            b.data.gain shouldBe (0.5 plusOrMinus 1e-9)
+            b.dur shouldBe (0.5 plusOrMinus EPSILON)
+            b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
 
@@ -274,8 +274,8 @@ class SequencePatternWeightSpec : StringSpec({
             val a = events[0]
 
             a.data.note shouldBe "a"
-            a.begin shouldBe (from plusOrMinus 1e-9)
-            a.dur shouldBe (0.75 plusOrMinus 1e-9)
+            a.begin shouldBe (from plusOrMinus EPSILON)
+            a.dur shouldBe (0.75 plusOrMinus EPSILON)
         }
     }
 })

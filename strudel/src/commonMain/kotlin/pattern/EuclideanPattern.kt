@@ -47,25 +47,40 @@ internal class EuclideanPattern(
                     val intersectEnd = min(to, stepEnd)
 
                     if (intersectEnd > intersectStart) {
-                        // Query the inner pattern at the absolute time of the step.
-                        // This allows the inner pattern to progress naturally (e.g. if it's slow).
-                        val innerEvents = inner.queryArc(intersectStart, intersectEnd)
+                        // 1. Calculate Inner Pattern Time Window
+                        // We map the outer step window to the inner pattern's timeline.
+                        // To allow the inner pattern to progress (e.g. [a b c]/8), we must include the 'cycle'.
+                        // To allow the inner pattern to be "fast" enough to change on pulses, we use the pulse mapping logic?
+                        // NO, let's stick to the "gating" logic where inner pattern runs at its own speed.
+                        // If the inner pattern is meant to be fast, the user should speed it up.
+                        // However, to fix "only 'a' plays", we must ensure we query the absolute time.
 
-                        events.addAll(innerEvents.mapNotNull { ev ->
-                            // Strictly clip the event to the step window
+                        // We query the inner pattern at the EXACT same absolute time as the gate.
+                        // This allows [a b...]/8 to play a, then b, then c as time passes naturally.
+
+                        // FIX: Add a small epsilon to the start time to avoid picking up events
+                        // that end exactly at the step boundary (floating point artifacts).
+                        val innerFrom = intersectStart + EPSILON
+                        val innerTo = intersectEnd - EPSILON
+
+                        val innerEvents = inner.queryArc(innerFrom, innerTo)
+
+                        events.addAll(innerEvents.map { ev ->
+                            // 2. Strict Clipping
+                            // We constrain the event strictly to the current step window.
+
                             val clippedBegin = max(ev.begin, stepStart)
-                            val clippedEnd = min(ev.end, stepEnd)
+                            // Use a tiny epsilon to ensure we don't accidentally include the very start of the next step
+                            // or allow this event to touch the next step's start.
+                            val clippedEnd = min(ev.end, stepEnd - EPSILON)
+
                             val clippedDur = clippedEnd - clippedBegin
 
-                            if (clippedDur > 1e-9) {
-                                ev.copy(
-                                    begin = clippedBegin,
-                                    end = clippedEnd,
-                                    dur = clippedDur
-                                )
-                            } else {
-                                null
-                            }
+                            ev.copy(
+                                begin = clippedBegin,
+                                end = clippedEnd,
+                                dur = clippedDur
+                            )
                         })
                     }
                 }

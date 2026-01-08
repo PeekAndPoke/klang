@@ -33,16 +33,16 @@ class EuclideanPatternSpec : StringSpec({
 
         // Step size is 1/8 = 0.125
         // Pulse 1 at step 0
-        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
-        events[0].dur shouldBe (0.125 plusOrMinus 1e-9)
+        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].dur shouldBe (0.125 plusOrMinus EPSILON)
 
         // Pulse 2 at step 3 (0.375)
-        events[1].begin shouldBe (0.375 plusOrMinus 1e-9)
-        events[1].dur shouldBe (0.125 plusOrMinus 1e-9)
+        events[1].begin shouldBe (0.375 plusOrMinus EPSILON)
+        events[1].dur shouldBe (0.125 plusOrMinus EPSILON)
 
         // Pulse 3 at step 6 (0.75)
-        events[2].begin shouldBe (0.75 plusOrMinus 1e-9)
-        events[2].dur shouldBe (0.125 plusOrMinus 1e-9)
+        events[2].begin shouldBe (0.75 plusOrMinus EPSILON)
+        events[2].dur shouldBe (0.125 plusOrMinus EPSILON)
     }
 
     "EuclideanPattern: Kotlin DSL / Mini-notation (3,8)" {
@@ -52,9 +52,9 @@ class EuclideanPatternSpec : StringSpec({
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 3
-        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
-        events[1].begin shouldBe (0.375 plusOrMinus 1e-9)
-        events[2].begin shouldBe (0.75 plusOrMinus 1e-9)
+        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
+        events[1].begin shouldBe (0.375 plusOrMinus EPSILON)
+        events[2].begin shouldBe (0.75 plusOrMinus EPSILON)
     }
 
     "EuclideanPattern: Compiled Code" {
@@ -65,8 +65,8 @@ class EuclideanPatternSpec : StringSpec({
 
         // (2,4) is [1, 0, 1, 0] -> beats at 0.0 and 0.5
         events.size shouldBe 2
-        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
-        events[1].begin shouldBe (0.5 plusOrMinus 1e-9)
+        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
+        events[1].begin shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "EuclideanPattern: Complex inner pattern [a b](1,2)" {
@@ -79,12 +79,12 @@ class EuclideanPatternSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (0.0 plusOrMinus 1e-9)
-        events[0].dur shouldBe (0.25 plusOrMinus 1e-9)
+        events[0].begin shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].dur shouldBe (0.25 plusOrMinus EPSILON)
 
         events[1].data.note shouldBe "b"
-        events[1].begin shouldBe (0.25 plusOrMinus 1e-9)
-        events[1].dur shouldBe (0.25 plusOrMinus 1e-9)
+        events[1].begin shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].dur shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "EuclideanPattern: weight preservation" {
@@ -94,6 +94,6 @@ class EuclideanPatternSpec : StringSpec({
         val pattern = EuclideanPattern(inner, 3, 8)
 
         // It should still have weight 2
-        pattern.weight shouldBe (2.0 plusOrMinus 1e-9)
+        pattern.weight shouldBe (2.0 plusOrMinus EPSILON)
     }
 })

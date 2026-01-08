@@ -14,8 +14,8 @@ class AtomicPatternSpec : StringSpec({
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "c3"
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 
@@ -24,8 +24,8 @@ class AtomicPatternSpec : StringSpec({
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "c3"
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 
@@ -34,8 +34,8 @@ class AtomicPatternSpec : StringSpec({
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "c3"
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 })

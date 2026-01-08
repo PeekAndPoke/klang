@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.pattern.EPSILON
 
 class WeightDebugTest : StringSpec({
 
@@ -35,16 +36,16 @@ class WeightDebugTest : StringSpec({
                 event.data.note shouldBe expectedNotes[index]
 
                 // Check start time (should start exactly where previous ended)
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
 
                 // Check duration
-                event.dur shouldBe (expectedDurations[index] plusOrMinus 1e-9)
+                event.dur shouldBe (expectedDurations[index] plusOrMinus EPSILON)
 
                 lastEnd = event.end
             }
 
             // Ensure the last event ends exactly at the end of the cycle
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -64,11 +65,11 @@ class WeightDebugTest : StringSpec({
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBe expectedNotes[i]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDur plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDur plusOrMinus EPSILON)
                 lastEnd = event.end
             }
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -93,11 +94,11 @@ class WeightDebugTest : StringSpec({
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBe expectedNotes[i]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDurs[i] plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
             }
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -120,11 +121,11 @@ class WeightDebugTest : StringSpec({
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBe expectedNotes[i]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDurs[i] plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
             }
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -149,11 +150,11 @@ class WeightDebugTest : StringSpec({
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBe expectedNotes[i]
-                event.begin shouldBe (lastEnd plusOrMinus 1e-9)
-                event.dur shouldBe (expectedDurs[i] plusOrMinus 1e-9)
+                event.begin shouldBe (lastEnd plusOrMinus EPSILON)
+                event.dur shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
             }
-            lastEnd shouldBe (to plusOrMinus 1e-9)
+            lastEnd shouldBe (to plusOrMinus EPSILON)
         }
     }
 
@@ -181,20 +182,20 @@ class WeightDebugTest : StringSpec({
             val d = events.find { it.data.note == "d" }!!
 
             // Layer 1
-            a.dur shouldBe (0.75 plusOrMinus 1e-9)
-            b.dur shouldBe (0.25 plusOrMinus 1e-9)
+            a.dur shouldBe (0.75 plusOrMinus EPSILON)
+            b.dur shouldBe (0.25 plusOrMinus EPSILON)
             // b starts after a
-            b.begin shouldBe (a.end plusOrMinus 1e-9)
+            b.begin shouldBe (a.end plusOrMinus EPSILON)
 
             // Layer 2
-            c.dur shouldBe (0.5 plusOrMinus 1e-9)
-            d.dur shouldBe (0.5 plusOrMinus 1e-9)
+            c.dur shouldBe (0.5 plusOrMinus EPSILON)
+            d.dur shouldBe (0.5 plusOrMinus EPSILON)
             // d starts after c
-            d.begin shouldBe (c.end plusOrMinus 1e-9)
+            d.begin shouldBe (c.end plusOrMinus EPSILON)
 
             // Both layers start at beginning of cycle (relative to cycle start)
-            (a.begin % 1.0) shouldBe (0.0 plusOrMinus 1e-9)
-            (c.begin % 1.0) shouldBe (0.0 plusOrMinus 1e-9)
+            (a.begin % 1.0) shouldBe (0.0 plusOrMinus EPSILON)
+            (c.begin % 1.0) shouldBe (0.0 plusOrMinus EPSILON)
         }
     }
 
@@ -212,12 +213,12 @@ class WeightDebugTest : StringSpec({
             val b = events[1]
 
             a.data.note shouldBe "a"
-            a.dur shouldBe (0.75 plusOrMinus 1e-9)
-            a.data.gain shouldBe (0.5 plusOrMinus 1e-9)
+            a.dur shouldBe (0.75 plusOrMinus EPSILON)
+            a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBe "b"
-            b.dur shouldBe (0.25 plusOrMinus 1e-9)
-            b.data.gain shouldBe (0.5 plusOrMinus 1e-9)
+            b.dur shouldBe (0.25 plusOrMinus EPSILON)
+            b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
 
@@ -242,12 +243,12 @@ class WeightDebugTest : StringSpec({
             val b = events[1]
 
             a.data.note shouldBe "a"
-            a.begin shouldBe (from plusOrMinus 1e-9)
-            a.dur shouldBe (1.5 plusOrMinus 1e-9) // 0.75 * 2
+            a.begin shouldBe (from plusOrMinus EPSILON)
+            a.dur shouldBe (1.5 plusOrMinus EPSILON) // 0.75 * 2
 
             b.data.note shouldBe "b"
-            b.begin shouldBe (from + 1.5 plusOrMinus 1e-9)
-            b.dur shouldBe (0.5 plusOrMinus 1e-9) // 0.25 * 2
+            b.begin shouldBe (from + 1.5 plusOrMinus EPSILON)
+            b.dur shouldBe (0.5 plusOrMinus EPSILON) // 0.25 * 2
         }
     }
 
@@ -274,15 +275,15 @@ class WeightDebugTest : StringSpec({
 
             // 1st iteration
             a1.data.note shouldBe "a"
-            a1.dur shouldBe (0.375 plusOrMinus 1e-9)
+            a1.dur shouldBe (0.375 plusOrMinus EPSILON)
             b1.data.note shouldBe "b"
-            b1.dur shouldBe (0.125 plusOrMinus 1e-9)
+            b1.dur shouldBe (0.125 plusOrMinus EPSILON)
 
             // 2nd iteration
             a2.data.note shouldBe "a"
-            a2.dur shouldBe (0.375 plusOrMinus 1e-9)
+            a2.dur shouldBe (0.375 plusOrMinus EPSILON)
             b2.data.note shouldBe "b"
-            b2.dur shouldBe (0.125 plusOrMinus 1e-9)
+            b2.dur shouldBe (0.125 plusOrMinus EPSILON)
         }
     }
 
@@ -303,12 +304,12 @@ class WeightDebugTest : StringSpec({
             val b = events[1]
 
             a.data.note shouldBe "a"
-            a.dur shouldBe (1.5 plusOrMinus 1e-9)
-            a.data.gain shouldBe (0.5 plusOrMinus 1e-9)
+            a.dur shouldBe (1.5 plusOrMinus EPSILON)
+            a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBe "b"
-            b.dur shouldBe (0.5 plusOrMinus 1e-9)
-            b.data.gain shouldBe (0.5 plusOrMinus 1e-9)
+            b.dur shouldBe (0.5 plusOrMinus EPSILON)
+            b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
 
@@ -329,10 +330,10 @@ class WeightDebugTest : StringSpec({
             val a = events[0]
 
             a.data.note shouldBe "a"
-            a.begin shouldBe (from plusOrMinus 1e-9)
+            a.begin shouldBe (from plusOrMinus EPSILON)
             // Note: queryArc typically returns events that *overlap* the arc.
             // The event's duration property describes the event itself, usually not clipped to query.
-            a.dur shouldBe (0.75 plusOrMinus 1e-9)
+            a.dur shouldBe (0.75 plusOrMinus EPSILON)
         }
     }
 })

@@ -18,12 +18,12 @@ class SequencePatternSpec : StringSpec({
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
                 note shouldBe "a"
-                begin shouldBe (0.0 plusOrMinus 1e-9)
-                dur shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.0 plusOrMinus EPSILON)
+                dur shouldBe (0.5 plusOrMinus EPSILON)
             } else {
                 note shouldBe "b"
-                begin shouldBe (0.5 plusOrMinus 1e-9)
-                dur shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.5 plusOrMinus EPSILON)
+                dur shouldBe (0.5 plusOrMinus EPSILON)
             }
         }
     }
@@ -34,12 +34,12 @@ class SequencePatternSpec : StringSpec({
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
                 note shouldBe "a"
-                begin shouldBe (0.0 plusOrMinus 1e-9)
-                dur shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.0 plusOrMinus EPSILON)
+                dur shouldBe (0.5 plusOrMinus EPSILON)
             } else {
                 note shouldBe "b"
-                begin shouldBe (0.5 plusOrMinus 1e-9)
-                dur shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.5 plusOrMinus EPSILON)
+                dur shouldBe (0.5 plusOrMinus EPSILON)
             }
         }
     }
@@ -50,12 +50,12 @@ class SequencePatternSpec : StringSpec({
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
                 note shouldBe "a"
-                begin shouldBe (0.0 plusOrMinus 1e-9)
-                dur shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.0 plusOrMinus EPSILON)
+                dur shouldBe (0.5 plusOrMinus EPSILON)
             } else {
                 note shouldBe "b"
-                begin shouldBe (0.5 plusOrMinus 1e-9)
-                dur shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.5 plusOrMinus EPSILON)
+                dur shouldBe (0.5 plusOrMinus EPSILON)
             }
         }
     }
@@ -66,12 +66,12 @@ class SequencePatternSpec : StringSpec({
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
                 note shouldBe "a"
-                begin shouldBe (0.0 plusOrMinus 1e-9)
-                dur shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.0 plusOrMinus EPSILON)
+                dur shouldBe (0.5 plusOrMinus EPSILON)
             } else {
                 note shouldBe "b"
-                begin shouldBe (0.5 plusOrMinus 1e-9)
-                dur shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.5 plusOrMinus EPSILON)
+                dur shouldBe (0.5 plusOrMinus EPSILON)
             }
         }
     }

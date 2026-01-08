@@ -19,17 +19,17 @@ class StaticStrudelPatternSpec : StringSpec({
         val pattern = StaticStrudelPattern(events)
 
         // It should implement Fixed, so weight is 1.0
-        pattern.weight shouldBe (1.0 plusOrMinus 1e-9)
+        pattern.weight shouldBe (1.0 plusOrMinus EPSILON)
 
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
                 note shouldBe "a"
-                begin shouldBe (0.0 plusOrMinus 1e-9)
+                begin shouldBe (0.0 plusOrMinus EPSILON)
             } else {
                 note shouldBe "b"
-                begin shouldBe (0.5 plusOrMinus 1e-9)
+                begin shouldBe (0.5 plusOrMinus EPSILON)
             }
-            dur shouldBe (0.5 plusOrMinus 1e-9)
+            dur shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
 
@@ -42,7 +42,7 @@ class StaticStrudelPatternSpec : StringSpec({
         // Query cycle 5
         val result = pattern.queryArc(5.0, 6.0)
         result.size shouldBe 1
-        result[0].begin shouldBe (5.0 plusOrMinus 1e-9)
+        result[0].begin shouldBe (5.0 plusOrMinus EPSILON)
         result[0].data.note shouldBe "kick"
     }
 
@@ -58,8 +58,8 @@ class StaticStrudelPatternSpec : StringSpec({
 
         events.size shouldBe 4
         events[0].data.note shouldBe "a"
-        events[0].begin shouldBe (10.0 plusOrMinus 1e-9)
+        events[0].begin shouldBe (10.0 plusOrMinus EPSILON)
         events[3].data.note shouldBe "d"
-        events[3].begin shouldBe (10.75 plusOrMinus 1e-9)
+        events[3].begin shouldBe (10.75 plusOrMinus EPSILON)
     }
 })

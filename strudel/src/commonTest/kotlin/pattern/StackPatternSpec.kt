@@ -18,8 +18,8 @@ class StackPatternSpec : StringSpec({
         // We sort by begin in verifyPattern, but notes "a" and "b" both start at 0.0.
         // We just check that both are present.
         verifyPattern(pattern, 2) { _, note, begin, dur ->
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
             listOf("a", "b").contains(note) shouldBe true
         }
     }
@@ -28,8 +28,8 @@ class StackPatternSpec : StringSpec({
         val pattern = stack(note("a"), note("b"))
 
         verifyPattern(pattern, 2) { _, note, begin, dur ->
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
             listOf("a", "b").contains(note) shouldBe true
         }
     }
@@ -39,8 +39,8 @@ class StackPatternSpec : StringSpec({
         val pattern = note("a, b")
 
         verifyPattern(pattern, 2) { _, note, begin, dur ->
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
             listOf("a", "b").contains(note) shouldBe true
         }
     }
@@ -49,8 +49,8 @@ class StackPatternSpec : StringSpec({
         val pattern = StrudelPattern.compile("""stack(note("a"), note("b"))""")
 
         verifyPattern(pattern, 2) { _, note, begin, dur ->
-            begin shouldBe (0.0 plusOrMinus 1e-9)
-            dur shouldBe (1.0 plusOrMinus 1e-9)
+            begin shouldBe (0.0 plusOrMinus EPSILON)
+            dur shouldBe (1.0 plusOrMinus EPSILON)
             listOf("a", "b").contains(note) shouldBe true
         }
     }
