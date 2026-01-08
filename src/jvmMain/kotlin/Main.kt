@@ -96,7 +96,7 @@ private suspend fun helloStrudel() {
         val playerOptions = KlangPlayer.Options(
             samples = samples,
             sampleRate = 48_000,
-            cyclesPerSecond = 0.66,
+            cyclesPerSecond = 0.5,
         )
 
         val audio1 = strudelPlayer(

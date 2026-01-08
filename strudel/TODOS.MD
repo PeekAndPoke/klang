@@ -5,6 +5,10 @@ and category.
 
 ---
 
+## Things to check
+
+- [ ] check https://larkob.github.io/strudel/tutorial/ and produce new todos
+
 ## 🔴 HIGH PRIORITY - Common Use Cases
 
 ### Mini-Notation Extensions

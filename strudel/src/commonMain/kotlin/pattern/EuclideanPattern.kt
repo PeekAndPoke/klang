@@ -29,9 +29,11 @@ internal class EuclideanPattern(
         val endCycle = ceil(to).toInt()
 
         val stepDuration = 1.0 / steps.toDouble()
+        val pulseDuration = 1.0 / pulses.toDouble()
 
         for (cycle in startCycle until endCycle) {
             val cycleOffset = cycle.toDouble()
+            var activePulseIndex = 0
 
             rhythm.forEachIndexed { stepIndex, isActive ->
                 if (isActive == 1) {
@@ -43,33 +45,41 @@ internal class EuclideanPattern(
                     val intersectEnd = min(to, stepEnd)
 
                     if (intersectEnd > intersectStart) {
-                        // Map outer time to inner time (0..1 for the inner pattern)
-                        // Formula: t_inner = (t_outer - stepStart) / stepDuration
+                        // Map the active step to the corresponding slice of the inner pattern
+                        // preserving the cycle for long-running patterns.
+                        // Inner pattern time = cycle + (pulseIndex / pulses)
 
-                        // FIX: Add 'cycle' to inner query so slowly evolving patterns (like those using /8)
-                        // progress correctly over time instead of resetting to cycle 0 every step.
-                        // Standard patterns repeat every cycle, so querying 1.0..2.0 is same as 0.0..1.0.
-                        val innerFrom = cycle + (intersectStart - stepStart) / stepDuration
+                        val innerPulseStart = cycleOffset + (activePulseIndex * pulseDuration)
 
-                        // Clamp innerTo to end of this logical cycle (cycle + 1.0)
-                        // The inner pattern is squeezed into the step, so 1 full inner cycle = 1 step.
-                        val innerTo = cycle + min((intersectEnd - stepStart) / stepDuration, 1.0)
+                        // We map the window [stepStart, stepEnd] to [innerPulseStart, innerPulseStart + pulseDuration]
+                        val scale = pulseDuration / stepDuration
+
+                        // Map query times
+                        val innerFrom = innerPulseStart + (intersectStart - stepStart) * scale
+                        val innerTo = innerPulseStart + (intersectEnd - stepStart) * scale
 
                         val innerEvents = inner.queryArc(innerFrom, innerTo)
 
                         events.addAll(innerEvents.map { ev ->
                             // Map back to outer time
-                            // We need to subtract 'cycle' before scaling back down
-                            val relativeInnerBegin = ev.begin - cycle
-                            val relativeInnerEnd = ev.end - cycle
+                            val offsetFromPulseStart = ev.begin - innerPulseStart
+                            val mappedBegin = stepStart + (offsetFromPulseStart / scale)
+                            val mappedDur = ev.dur / scale
+                            val mappedEnd = mappedBegin + mappedDur
 
-                            val mappedBegin = (relativeInnerBegin * stepDuration) + stepStart
-                            val mappedEnd = (relativeInnerEnd * stepDuration) + stepStart
-                            val mappedDur = ev.dur * stepDuration
+                            // Strict clipping to the step window to ensure rhythm
+                            val clippedBegin = max(mappedBegin, stepStart)
+                            val clippedEnd = min(mappedEnd, stepEnd)
+                            val clippedDur = max(0.0, clippedEnd - clippedBegin)
 
-                            ev.copy(begin = mappedBegin, end = mappedEnd, dur = mappedDur)
-                        })
+                            ev.copy(
+                                begin = clippedBegin,
+                                end = clippedEnd,
+                                dur = clippedDur
+                            )
+                        }.filter { it.dur > 1e-9 })
                     }
+                    activePulseIndex++
                 }
             }
         }
