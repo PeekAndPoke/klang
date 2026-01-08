@@ -31,8 +31,8 @@ and category.
 
 #### Probabilistic ⭐⭐⭐
 
-- [ ] **`?` random removal** - Probabilistic event removal (e.g., `"bd?"` or `"bd?0.5"`)
-- [ ] **`|` random choice** - Random selection between alternatives (e.g., `"bd|hh"`)
+- [x] **`?` random removal** - Probabilistic event removal (e.g., `"bd?"` or `"bd?0.5"`)
+- [x] **`|` random choice** - Random selection between alternatives (e.g., `"bd|hh"`)
 
 #### Euclidean Rhythms ⭐⭐⭐
 
@@ -137,7 +137,7 @@ and category.
 
 - [ ] **`sometimes(function)`** - Randomly applies effects
 - [ ] **`rarely(function)`** - Infrequently applies variations
-- [ ] **`degradeBy(amount)`** - Probabilistic event removal
+- [x] **`degradeBy(amount)`** - Probabilistic event removal
 
 ### Sample Functions
 
@@ -268,7 +268,7 @@ and category.
 
 ### By Category:
 
-- **Mini-Notation**: 4 features missing (4 completed: `:n`, `-`, `@n`, `!n`)
+- **Mini-Notation**: 2 features missing (6 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`)
 - **Pattern Creation**: 6 functions
 - **Time Modification**: 10 functions
 - **Pattern Transformation**: 15 functions
@@ -281,7 +281,7 @@ and category.
 - **Visualization**: 6 tools
 - **System Functions**: 4 functions
 
-### Total Missing: ~126 features (4 completed in Phase 1 & 2)
+### Total Missing: ~123 features (7 completed in Phase 1 & 2)
 
 ---
 

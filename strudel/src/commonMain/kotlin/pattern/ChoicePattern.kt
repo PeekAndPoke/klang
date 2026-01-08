@@ -3,37 +3,36 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
-import kotlin.math.floor
 import kotlin.random.Random
 
 internal class ChoicePattern(
-    val patterns: List<StrudelPattern>,
+    val choices: List<StrudelPattern>,
 ) : StrudelPattern.Fixed {
 
     companion object {
         // This matches what the parser calls: pattern.choice(right)
         fun StrudelPattern.choice(other: StrudelPattern): StrudelPattern {
-            return if (this is ChoicePattern) {
-                // Flatten the structure: reuse existing choices and add the new one
-                ChoicePattern(this.patterns + other)
-            } else {
-                // Create a new choice pattern
-                ChoicePattern(listOf(this, other))
-            }
+            // Flatten both sides to ensure equal probability for all items in a sequence like a|b|c
+            val left = if (this is ChoicePattern) this.choices else listOf(this)
+            val right = if (other is ChoicePattern) other.choices else listOf(other)
+
+            return ChoicePattern(left + right)
         }
     }
 
     override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
-        if (patterns.isEmpty()) return emptyList()
+        if (choices.isEmpty()) return emptyList()
 
-        // Strudel's choice works per cycle.
-        // We find which cycle we are in and pick a pattern for that cycle.
-        val cycle = floor(from.toDouble()).toLong()
-        val seed = cycle.hashCode().toLong()
+        // Use the event's start time as a seed for deterministic randomness
+        // We use a large prime multiplier to scramble the bits effectively
+        val random = createSeededRandom(from.toDouble())
 
-        // Standard behavior: Equal probability for all choices
-        val pickedIndex = Random(seed).nextInt(patterns.size)
+        return choices.random(random).queryArc(from, to)
+    }
 
-        return patterns[pickedIndex].queryArc(from, to)
+    fun createSeededRandom(value: Double): Random {
+        val hash = value.hashCode().toLong()
+        val seed = (hash * 6364136223846793005L) + 1442695040888963407L
+        return Random(seed)
     }
 }

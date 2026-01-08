@@ -17,12 +17,20 @@ internal class DegradePattern(
     override val weight: Double get() = inner.weight
 
     override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
-        return inner.queryArc(from, to).filter { event ->
-            // Use the event's start time as a seed for deterministic randomness
-            // We use the hash of the start time to get a stable seed for that specific event
-            val seed = event.begin.hashCode().toLong()
-            val random = Random(seed)
+        // Use seeded random based on the events start time
+        val random = createSeededRandom(from.toDouble())
+
+        return inner.queryArc(from, to).filter {
             random.nextDouble() > probability
         }
+    }
+
+    private fun createSeededRandom(value: Double): Random {
+        // Use a distinct mixing strategy for ChoicePattern to avoid correlation with DegradePattern
+        val cycleHash = value.hashCode().toLong()
+        // Different multiplier and addend than DegradePattern
+        val seed = (cycleHash * 48271L) + 2147483647L
+
+        return Random(seed)
     }
 }

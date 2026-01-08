@@ -11,6 +11,8 @@ Strudel.
 - **SequencePattern** - Sequential pattern execution (`seq()`)
 - **StackPattern** - Parallel pattern layering (`stack()`)
 - **EuclideanPattern** - Euclidean rhythm gating (e.g., `bd(3,8)`, or with rotation `bd(3,8,1)`)
+- **ChoicePattern** - Random selection between pattern alternatives (e.g., `"bd|hh"`)
+- **DegradePattern** - Probabilistic event removal (e.g., `"bd?"` or `"bd?0.5"`)
 - **ArrangementPattern** - Multi-cycle pattern arrangement (`arrange()`)
 - **TimeModifierPattern** - Speed/tempo modification
 - **ControlPattern** - Applies control patterns to source patterns
@@ -70,6 +72,8 @@ Strudel.
 - **Sample selection** - `:n` notation (e.g., `"bd:3"` selects sample variant 3)
 - **Elongation** - `@n` extends note duration (e.g., `"c@3"` holds for 3 steps)
 - **Replication** - `!n` replicates notes (e.g., `"c!2"` = `"c c"`)
+- **Probabilistic removal** - `?` for random event removal (e.g., `"bd?"` or `"bd?0.5"`)
+- **Random choice** - `|` for random selection between alternatives (e.g., `"bd|hh"`)
 - **Literal tokens** - Any non-special character sequence
 
 ### Parser Features ✅
@@ -209,14 +213,15 @@ Comprehensive voice data structure supporting:
 **Total Implemented:**
 
 - 70+ DSL functions/methods
-- 8 core pattern types (including EuclideanPattern)
+- 10 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern)
 - 4 continuous oscillators
 - 4 filter types
 - Complete ADSR envelope system
-- Full mini-notation parser with 11 operators/features (including Euclidean rhythms)
+- Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
 - Control pattern system
 - Comprehensive audio parameter support
 - **Rational number time system** for exact arithmetic
+- **Deterministic seeded randomness** for consistent pattern playback
 
 **Architecture Highlights:**
 
@@ -232,4 +237,6 @@ Comprehensive voice data structure supporting:
 - ✅ **Rational Time System** - Replaced all Double time coordinates with exact Rational arithmetic
 - ✅ **Euclidean Pattern Fix** - Fixed timing bug that caused premature event triggering
 - ✅ **EPSILON Removal** - No longer needed thanks to exact arithmetic
-- ✅ **Enhanced Testing** - Added comprehensive Rational number test suite
+- ✅ **Probabilistic Patterns** - Implemented `?` (degrade) and `|` (choice) operators with deterministic seeded
+  randomness
+- ✅ **Enhanced Testing** - Added comprehensive test suites for Rational numbers, ChoicePattern, and DegradePattern
