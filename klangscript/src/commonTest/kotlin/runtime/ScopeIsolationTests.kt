@@ -159,4 +159,108 @@ class ScopeIsolationTest : StringSpec({
         engine1.execute("val").toDisplayString().toDouble() shouldBe 1.0
         engine2.execute("val").toDisplayString().toDouble() shouldBe 2.0
     }
+
+    "Encapsulation: Closure captures variable reference (mutable)" {
+        // Functions capture the environment, so they should see updates to variables
+        // in that environment.
+        val engine = klangScript()
+        val script = """
+            let x = 10
+            let getX = () => x
+            let x = 20  
+            getX()
+        """.trimIndent()
+
+        val result = engine.execute(script)
+        result.toDisplayString().toDouble() shouldBe 20.0
+    }
+
+    "Encapsulation: Parameter isolation (Pass-by-value semantics)" {
+        val engine = klangScript()
+        // We verify that a parameter 'val' inside the function shadows the global 'val'.
+        // And since we can't mutate it, we mostly check shadowing.
+        val script = """
+            let val = 10
+            // Arrow function (val) => val returns the parameter, shadowing global
+            let check = (val) => val
+            check(20) // returns 20
+        """.trimIndent()
+
+        val result = engine.execute(script)
+        result.toDisplayString().toDouble() shouldBe 20.0
+
+        // Global should remain 10
+        engine.getVariable("val").toDisplayString().toDouble() shouldBe 10.0
+    }
+
+    "Encapsulation: Object Literal Scope" {
+        // Object keys are not variables.
+        val engine = klangScript()
+        val script = """
+            let a = 1
+            let obj = { a: 2, b: a } // 'b' should see outer 'a' (1), not sibling property 'a' (2)
+            obj.b
+        """.trimIndent()
+
+        val result = engine.execute(script)
+        result.toDisplayString().toDouble() shouldBe 1.0
+    }
+
+    "Encapsulation: Deeply nested shadowing" {
+        val engine = klangScript()
+        val script = """
+            let x = "global"
+            // l1 takes x, immediately calls an inner arrow that also takes x
+            let l1 = (x) => ( (x) => x )("inner")
+            l1("middle")
+        """.trimIndent()
+
+        val result = engine.execute(script)
+        result.toDisplayString() shouldBe "inner"
+    }
+
+    "Encapsulation: Sibling function isolation" {
+        // Two functions defined in same scope should not see each other's parameters
+        val engine = klangScript()
+        val script = """
+            let f1 = (a) => a
+            let f2 = (b) => a // Should fail, 'a' is local to f1
+            f2(1)
+        """.trimIndent()
+
+        shouldThrow<ReferenceError> {
+            engine.execute(script)
+        }
+    }
+
+    "Encapsulation: Callbacks passed to native functions retain closure" {
+        val engine = klangScript {
+            registerFunctionRaw("runCallback") { args ->
+                val fn = args[0] as FunctionValue
+                val kotlinFn: () -> Any? = fn.convertFunctionToKotlin()
+                val result = kotlinFn()
+                wrapAsRuntimeValue(result)
+            }
+        }
+
+        val script = """
+            let secret = "hidden"
+            let callback = () => secret
+            runCallback(callback)
+        """.trimIndent()
+
+        val result = engine.execute(script)
+        result.toDisplayString() shouldBe "hidden"
+    }
+
+    "Encapsulation: Variable not visible in its own initializer" {
+        val engine = klangScript()
+        val script = """
+            let a = 10
+            let a = a + 5  // Should use OLD 'a' (10) then overwrite 'a' with 15
+        """.trimIndent()
+
+        engine.execute(script)
+        engine.getVariable("a").toDisplayString().toDouble() shouldBe 15.0
+    }
 })
