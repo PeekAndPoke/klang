@@ -2,9 +2,12 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.tones.Tones
+import io.peekandpoke.klang.tones.scale.Scale
 import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.sin
@@ -30,6 +33,11 @@ private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
         }
     }.toTypedArray()
 }
+
+/**
+ * Cleans up the scale name
+ */
+private fun String.cleanScaleName() = replace(":", " ")
 
 // Continuous patterns /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -71,7 +79,7 @@ val tri by dslObject {
 /** Square oscillator: 0 or 1, period of 1 cycle */
 @StrudelDsl
 val square by dslObject {
-    ContinuousPattern { t -> if (t % 1.0 < 0.5) 1.0 else 0.0 }
+    ContinuousPattern { t -> if (t % 1.0 < 0.5) 0.0 else 1.0 }
 }
 
 // Structural patterns /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -170,6 +178,29 @@ val StrudelPattern.palindrome by dslMethod<Any?> { pattern, _ ->
     cat(pattern, pattern.rev())
 }
 
+/**
+ * Structures the pattern according to another pattern (the mask).
+ *
+ * The structural pattern (usually mini-notation) uses 'x' to indicate where
+ * the source pattern should be heard.
+ *
+ * Example: note("c e g").struct("x ~ x")
+ */
+@StrudelDsl
+val StrudelPattern.struct by dslMethod<Any> { source, args ->
+    val structure = when (val structArg = args.firstOrNull()) {
+        is StrudelPattern -> structArg
+
+        is String -> parseMiniNotation(input = structArg) {
+            AtomicPattern(VoiceData.empty.copy(note = it))
+        }
+
+        else -> silence
+    }
+
+    StructPattern(source, structure)
+}
+
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private val noteMutation = voiceModifier<String?> { copy(note = it, freqHz = Tones.noteToFreq(it ?: "")) }
@@ -188,11 +219,24 @@ val note by dslPatternCreator(noteMutation)
 // n() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private val nMutation = voiceModifier<Number?> {
-    // n can drive the note (e.g. for scales) or the sample index
-    copy(
-        note = it?.toString(),
-        soundIndex = it?.toInt()
-    )
+    val n = it?.toInt()
+    val scaleName = scale?.cleanScaleName()
+
+    if (n != null && !scaleName.isNullOrEmpty()) {
+        // Use Scale.steps for 0-based indexing (standard in Strudel)
+        // This returns the note name (e.g., "C4") based on the scale and the index n
+        val noteName = Scale.steps(scaleName).invoke(n)
+
+        copy(
+            note = noteName,
+            freqHz = Tones.noteToFreq(noteName),
+        )
+    } else {
+        // Fallback: n drives the note string directly or the sample index
+        copy(
+            note = it?.toString(),
+        )
+    }
 }
 
 /** Sets the note number or sample index */
@@ -850,7 +894,24 @@ val orbit by dslPatternCreator(orbitMutation)
 
 // Context scale() /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val scaleMutation = voiceModifier<String?> { copy(scale = it) }
+private val scaleMutation = voiceModifier<String?> { it ->
+    val newScale = it?.cleanScaleName()
+    val currentNote = note
+    val n = currentNote?.toDoubleOrNull()?.toInt()
+
+    if (n != null && !newScale.isNullOrEmpty()) {
+        // If the current note is a number, interpret it using the new scale
+        val noteName = Scale.steps(newScale).invoke(n)
+
+        copy(
+            scale = newScale,
+            note = noteName,
+            freqHz = Tones.noteToFreq(noteName)
+        )
+    } else {
+        copy(scale = newScale)
+    }
+}
 
 /**
  * Sets the musical scale for interpreting note numbers.

@@ -7,6 +7,10 @@ import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.degradeBy
 import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
 import io.peekandpoke.klang.strudel.pattern.WeightedPattern
 
+/** Shortcut for parsing mini notation into patterns */
+fun parseMiniNotation(input: String, atomFactory: (String) -> StrudelPattern): StrudelPattern =
+    MiniNotationParser(input, atomFactory).parse()
+
 class MiniNotationParser(
     input: String,
     private val atomFactory: (String) -> StrudelPattern,

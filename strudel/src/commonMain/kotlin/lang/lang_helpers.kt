@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.MiniNotationParser
+import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
 import kotlin.jvm.JvmName
@@ -212,14 +213,9 @@ class DslPatternCreator<T>(
     val modify: VoiceDataModifier<T>,
     val fromStr: (String) -> T,
 ) {
-    operator fun invoke(mini: String): StrudelPattern =
-        MiniNotationParser(input = mini) {
-            AtomicPattern(
-                VoiceData.empty.modify(
-                    fromStr(it),
-                )
-            )
-        }.parse()
+    operator fun invoke(mini: String): StrudelPattern = parseMiniNotation(input = mini) {
+        AtomicPattern(VoiceData.empty.modify(fromStr(it)))
+    }
 }
 
 class DslPatternModifier<T>(

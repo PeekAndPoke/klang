@@ -367,7 +367,7 @@ object TestTextPatterns {
 
 
     val bandF = """
-        n("0 2 4").scale("C4:minor")
+        n("0 1 2 3 4 5 6 7").scale("C4:minor")
          .bandf("500 1000 200").resonance(5)
          .slow(4)         
     """.trimIndent()

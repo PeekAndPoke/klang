@@ -71,9 +71,13 @@ private suspend fun helloStrudel() {
 //        ).slow(1)
 
 
-        val pattern = TestKotlinPatterns.tetris
+        val pattern = TestKotlinPatterns.strangerThings
+//        val pattern = note("<a1 e2>/8").clip(0.8)
+//            .struct("x*8")
+//            .s("tri")
 
-//        val pattern = StrudelPattern.compile(TestTextPatterns.euclidean_3_8)
+
+//        val pattern = StrudelPattern.compile(TestTextPatterns.bandF)
 //            ?: error("Pattern was not compiled")
 
 //        val pattern = StrudelPattern.compile(

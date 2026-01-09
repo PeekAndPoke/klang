@@ -310,8 +310,9 @@ data class Scale(
          * Same as degrees but with 0-based index.
          */
         fun steps(scaleName: String): (Int) -> String {
-            val s = get(scaleName)
-            return Distance.tonicIntervalsTransposer(s.intervals, s.tonic)
+            val cleanName = scaleName.replace(":", " ")
+            val scale = get(cleanName)
+            return Distance.tonicIntervalsTransposer(scale.intervals, scale.tonic)
         }
 
         /**

@@ -125,7 +125,7 @@ object TestKotlinPatterns {
             .gain(0.3),
         note("<a1 e2>/8")
             .clip(0.8)
-//            .struct("x*8")
+            .struct("x*8")
             .s("supersaw"),
     )
 

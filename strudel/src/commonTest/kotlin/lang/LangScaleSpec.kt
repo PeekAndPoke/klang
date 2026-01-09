@@ -11,7 +11,7 @@ class LangScaleSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events.map { it.data.scale } shouldBe listOf("C4:minor", "pentatonic")
+        events.map { it.data.scale } shouldBe listOf("C4 minor", "pentatonic")
     }
 
     "control pattern scale() sets VoiceData.scale on existing pattern" {

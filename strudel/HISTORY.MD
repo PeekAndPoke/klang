@@ -14,6 +14,7 @@ Strudel.
 - **ChoicePattern** - Random selection between pattern alternatives (e.g., `"bd|hh"`)
 - **DegradePattern** - Probabilistic event removal (e.g., `"bd?"` or `"bd?0.5"`)
 - **ReversePattern** - Reverses pattern within each cycle (`rev()`)
+- **StructPattern** - Structures pattern according to mask using 'x' markers (`struct()`)
 - **ArrangementPattern** - Multi-cycle pattern arrangement (`arrange()`)
 - **TimeModifierPattern** - Speed/tempo modification
 - **ControlPattern** - Applies control patterns to source patterns
@@ -96,7 +97,9 @@ Strudel.
 ### Pitch & Note Control ✅
 
 - `note()` - Musical note specification
+- `n()` - Note number or sample index, with automatic scale integration
 - Note-to-frequency conversion via `Tones.noteToFreq()`
+- Scale-aware note indexing - `n()` automatically converts numeric indices to note names when scale is set
 
 ## Timing & Tempo
 
@@ -109,6 +112,8 @@ Strudel.
 ### Pattern Transformation ✅
 
 - `rev()` - Reverses pattern within each cycle, works in mini-notation and as chained method
+- `struct(pattern)` - Structures source pattern according to mask pattern using 'x' markers (e.g.,
+  `note("c e g").struct("x ~ x")`)
 
 ## Audio Parameters
 
@@ -169,7 +174,7 @@ Strudel.
 - `saw` - Sawtooth oscillator (-1 to 1)
 - `isaw` - Inverse sawtooth (1 to -1)
 - `tri` - Triangle oscillator (-1 to 1)
-- `square` - Square wave oscillator (-1 or 1)
+- `square` - Square wave oscillator (0 or 1)
 
 ### Signal Processing ✅
 
@@ -179,7 +184,9 @@ Strudel.
 
 ### Musical Context ✅
 
-- `scale()` - Musical scale setting
+- `scale()` - Musical scale setting with automatic note conversion for numeric notes
+- Scale name format support for both "C4:major" and "C4 major" notations
+- Integration with `n()` for scale-based note generation
 
 ### Audio Routing ✅
 
@@ -218,7 +225,7 @@ Comprehensive voice data structure supporting:
 **Total Implemented:**
 
 - 70+ DSL functions/methods
-- 11 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern)
+- 12 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern, StructPattern)
 - 4 continuous oscillators
 - 4 filter types
 - Complete ADSR envelope system
@@ -237,7 +244,7 @@ Comprehensive voice data structure supporting:
 - Parser with proper tokenization
 - Immutable pattern design
 
-**Recent Major Improvements (2026-01-08):**
+**Recent Major Improvements (2026-01-08 to 2026-01-09):**
 
 - ✅ **Rational Time System** - Replaced all Double time coordinates with exact Rational arithmetic
 - ✅ **Euclidean Pattern Fix** - Fixed timing bug that caused premature event triggering
@@ -246,3 +253,6 @@ Comprehensive voice data structure supporting:
   randomness
 - ✅ **Enhanced Testing** - Added comprehensive test suites for Rational numbers, ChoicePattern, and DegradePattern
 - ✅ **Reverse Pattern** - Implemented `rev()` pattern transformation with time reversal per cycle
+- ✅ **Struct Pattern** - Implemented `struct()` for masking patterns with structural markers ('x' notation)
+- ✅ **Scale Integration** - Enhanced `n()` and `scale()` to work together, automatic note name conversion from indices
+- ✅ **Square Wave Fix** - Corrected square oscillator output values
