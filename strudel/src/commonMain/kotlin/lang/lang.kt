@@ -156,12 +156,12 @@ val StrudelPattern.fast by dslMethod<Number> { p, args ->
 
 @StrudelDsl
 val StrudelPattern.rev: DslMethod<Any?> by dslMethod { pattern, args ->
-    val n = args.firstOrNull()?.toString()?.toIntOrNull() ?: 1
+    val firstArgInt = args.firstOrNull()?.toString()?.toIntOrNull() ?: 1
 
-    if (n <= 1) {
+    if (firstArgInt <= 1) {
         ReversePattern(pattern)
     } else {
-        pattern.fast(n).rev().slow(n)
+        pattern.fast(firstArgInt).rev().slow(firstArgInt)
     }
 }
 
@@ -208,7 +208,14 @@ val n: DslPatternCreator<Number> by dslPatternCreator(nMutation)
 
 // sound() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val soundMutation = voiceModifier<String?> { copy(sound = it) }
+private val soundMutation = voiceModifier<String?> {
+    val split = it?.split(":") ?: emptyList()
+
+    copy(
+        sound = split.getOrNull(0),
+        soundIndex = split.getOrNull(1)?.toIntOrNull(),
+    )
+}
 
 private val soundModifier = dslPatternModifier(
     modify = soundMutation,

@@ -13,7 +13,9 @@ object JsCompatTestData {
         Triple(true, "Oscillators", """s("<sine saw isaw tri square>").fast(2)"""),
         Triple(true, "Noise Generators", """s("<white brown pink crackle dust>").gain(0.5)"""),
         Triple(true, "Impulse", """s("impulse").gain(0.5)"""),
-
+        // Sounds
+        Triple(true, "Drum Sounds", """s("bd hh sd oh")"""),
+        Triple(true, "Drum Sounds with Sound Index", """s("bd:0 hh:1 sd:2 oh:3")"""),
         // Structure & Control
         Triple(true, "Arrange", """arrange([1, note("c")], [2, note("e")])"""),
         // TODO: pickRestart cannot be used at the top-level in strudel ... need another test patterns here
