@@ -80,20 +80,23 @@ class JsCompatTests : StringSpec() {
         val nativeArc = nativePattern.queryArc(0.0, 64.0).sort()
 
         assertSoftly {
-            withClue("Number of events must match") {
+            withClue("Number of events must match | Graal: ${graalArc.size} VS Native: ${nativeArc.size}") {
                 graalArc.size shouldBe nativeArc.size
             }
 
             val zippedArc = graalArc.zip(nativeArc)
 
-            zippedArc.forEachIndexed { index, (graal, native) ->
+            var errors = 0
 
-                val comparison = buildComparisonReport(graal, native)
+            zippedArc.asSequence().filter { errors < 10 }
+                .forEachIndexed { index, (graal, native) ->
 
+                    val comparison = buildComparisonReport(graal, native)
 
+                    if (comparison.errors.isNotEmpty()) errors++
 
-                withClue(
-                    """
+                    withClue(
+                        """
 ============================================================================================
 Event $index must be equal:
 --------------------------------------------------------------------------------------------
@@ -102,10 +105,10 @@ ${comparison.errors.joinToString("\n")}
 ${comparison.report}
 
                     """.trimIndent()
-                ) {
-                    comparison.success shouldBe true
+                    ) {
+                        comparison.success shouldBe true
+                    }
                 }
-            }
         }
     }
 

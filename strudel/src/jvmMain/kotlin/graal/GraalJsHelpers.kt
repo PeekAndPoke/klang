@@ -55,6 +55,14 @@ object GraalJsHelpers {
      */
     suspend fun <T> Value.awaitPromise(map: (Value) -> T): T = this.promiseToDeferred(map).await()
 
+    fun Value?.safeGetMember(name: String): Value? {
+        if (this == null) return null
+
+        if (!hasMember(name)) return null
+
+        return getMember(name)
+    }
+
     fun Value?.safeNumberOrNull(): Double? {
         if (this == null) return null
 

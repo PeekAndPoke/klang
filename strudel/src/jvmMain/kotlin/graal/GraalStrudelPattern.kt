@@ -7,6 +7,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeGetMember
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeStringOrNull
@@ -32,7 +33,7 @@ class GraalStrudelPattern(
         for (i in 0 until count) {
             val item = arc.getArrayElement(i)
 
-//            println(graal.prettyFormat(item))
+            println(graal.prettyFormat(item))
 
             val event = item.toStrudelEvent()
             events += event
@@ -51,57 +52,57 @@ class GraalStrudelPattern(
 
         val filters = mutableListOf<FilterDef>()
 
-        val part = event.getMember("part")
+        val part = event.safeGetMember("part")
 
         // Begin
-        val begin = Rational(part?.getMember("begin")?.safeNumber(0.0) ?: 0.0)
+        val begin = Rational(part?.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
         // End
-        val end = Rational(part?.getMember("end")?.safeNumber(0.0) ?: 0.0)
+        val end = Rational(part?.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
         // Get duration
         val dur = end - begin
 
         // Get details from "value" field
-        val value = event.getMember("value")
+        val value = event.safeGetMember("value")
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Get note
-        val note = value.getMember("note").safeToStringOrNull()
+        val note = value.safeGetMember("note").safeToStringOrNull()
         // scale
-        val scale = event.getMember("context")?.getMember("scale").safeStringOrNull()
+        val scale = event.safeGetMember("context")?.safeGetMember("scale").safeStringOrNull()
         // Get or calculate the frequency
-        val freq = value.getMember("freq").safeNumberOrNull()
+        val freq = value.safeGetMember("freq").safeNumberOrNull()
             ?: note?.let { Tones.resolveFreq(note, scale) }
 
         // ////////////////////////////////////////////////////////////////////////////////////////
         // Gain / Dynamics
-        val gain = value.getMember("gain").safeNumberOrNull()
-            ?: value.getMember("amp").safeNumberOrNull()
+        val gain = value.safeGetMember("gain").safeNumberOrNull()
+            ?: value.safeGetMember("amp").safeNumberOrNull()
             ?: 1.0
 
-        val legato = value.getMember("clip").safeNumberOrNull()
-            ?: value.getMember("legator").safeNumberOrNull()
+        val legato = value.safeGetMember("clip").safeNumberOrNull()
+            ?: value.safeGetMember("legator").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Get sound parameters / sample bank and index
-        val bank = value.getMember("bank").safeStringOrNull()
-        val sound = value.getMember("s").safeStringOrNull()
-            ?: value.getMember("wave").safeStringOrNull()
-            ?: value.getMember("sound").safeStringOrNull()
-        val soundIndex = value.getMember("n").safeNumberOrNull()?.toInt()
+        val bank = value.safeGetMember("bank").safeStringOrNull()
+        val sound = value.safeGetMember("s").safeStringOrNull()
+            ?: value.safeGetMember("wave").safeStringOrNull()
+            ?: value.safeGetMember("sound").safeStringOrNull()
+        val soundIndex = value.safeGetMember("n").safeNumberOrNull()?.toInt()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Get Oscillator parameters
-        val density = value.getMember("density").safeNumberOrNull()
-        val voices = value.getMember("unison").safeNumberOrNull()
-        val panSpread = value.getMember("spread").safeNumberOrNull()
-        val freqSpread = value.getMember("detune").safeNumberOrNull()
+        val density = value.safeGetMember("density").safeNumberOrNull()
+        val voices = value.safeGetMember("unison").safeNumberOrNull()
+        val panSpread = value.safeGetMember("spread").safeNumberOrNull()
+        val freqSpread = value.safeGetMember("detune").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // ADRS
-        val attack = value.getMember("attack").safeNumberOrNull()
-        val decay = value.getMember("decay").safeNumberOrNull()
-        val sustain = value.getMember("sustain").safeNumberOrNull()
-        val release = value.getMember("release").safeNumberOrNull()
+        val attack = value.safeGetMember("attack").safeNumberOrNull()
+        val decay = value.safeGetMember("decay").safeNumberOrNull()
+        val sustain = value.safeGetMember("sustain").safeNumberOrNull()
+        val release = value.safeGetMember("release").safeNumberOrNull()
 
         val adsr = AdsrEnvelope(
             attack = attack,
@@ -112,69 +113,69 @@ class GraalStrudelPattern(
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Pitch / Glisando
-        val accelerate = value.getMember("accelerate").safeNumberOrNull()
+        val accelerate = value.safeGetMember("accelerate").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Vibrato
-        val vibrato = value.getMember("vib").safeNumberOrNull()
-            ?: value.getMember("vibrato").safeNumberOrNull()
-        val vibratoMod = value.getMember("vibmod").safeNumberOrNull()
-            ?: value.getMember("vibratoMod").safeNumberOrNull()
+        val vibrato = value.safeGetMember("vib").safeNumberOrNull()
+            ?: value.safeGetMember("vibrato").safeNumberOrNull()
+        val vibratoMod = value.safeGetMember("vibmod").safeNumberOrNull()
+            ?: value.safeGetMember("vibratoMod").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Routing
-        val orbit = value.getMember("orbit").safeNumberOrNull()?.toInt()
+        val orbit = value.safeGetMember("orbit").safeNumberOrNull()?.toInt()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Pan
-        val pan = value.getMember("pan").safeNumberOrNull()
+        val pan = value.safeGetMember("pan").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Delay
-        val delay = value.getMember("delay").safeNumberOrNull()
-        val delayTime = value.getMember("delaytime").safeNumberOrNull()
-        val delayFeedback = value.getMember("delayfeedback").safeNumberOrNull()
+        val delay = value.safeGetMember("delay").safeNumberOrNull()
+        val delayTime = value.safeGetMember("delaytime").safeNumberOrNull()
+        val delayFeedback = value.safeGetMember("delayfeedback").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Reverb See https://strudel.cc/learn/effects/#roomsize
         //
         // Room is between [0 and 1]
         // Room size is between [0 and 10]
-        val room = value.getMember("room").safeNumberOrNull()
-        val roomSize = value.getMember("roomsize").safeNumberOrNull()
+        val room = value.safeGetMember("room").safeNumberOrNull()
+        val roomSize = value.safeGetMember("roomsize").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Distortion
-        val distort = value.getMember("distort").safeNumberOrNull()
-            ?: value.getMember("shape").safeNumberOrNull()
+        val distort = value.safeGetMember("distort").safeNumberOrNull()
+            ?: value.safeGetMember("shape").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Crush
-        val crush = value.getMember("crush").safeNumberOrNull()
+        val crush = value.safeGetMember("crush").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Coarse
-        val coarse = value.getMember("coarse").safeNumberOrNull()
+        val coarse = value.safeGetMember("coarse").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Apply low pass filter?
-        val resonance = value.getMember("resonance").safeNumberOrNull()
+        val resonance = value.safeGetMember("resonance").safeNumberOrNull()
 
-        val cutoff = value.getMember("cutoff").safeNumberOrNull()
+        val cutoff = value.safeGetMember("cutoff").safeNumberOrNull()
         cutoff?.let { filters.add(FilterDef.LowPass(cutoffHz = it, q = resonance)) }
 
         // Apply high pass filter?
-        val hcutoff = value.getMember("hcutoff").safeNumberOrNull()
+        val hcutoff = value.safeGetMember("hcutoff").safeNumberOrNull()
         hcutoff?.let { filters.add(FilterDef.HighPass(cutoffHz = it, q = resonance)) }
 
         // Apply band pass filter?
-        val bandf = value.getMember("bandf").safeNumberOrNull()
-            ?: value.getMember("bandpass").safeNumberOrNull()
+        val bandf = value.safeGetMember("bandf").safeNumberOrNull()
+            ?: value.safeGetMember("bandpass").safeNumberOrNull()
         bandf?.let { filters.add(FilterDef.BandPass(cutoffHz = it, q = resonance)) }
 
         // Apply notch filter?
-        val notchf = value.getMember("notchf").safeNumberOrNull()
-            ?: value.getMember("notch").safeNumberOrNull()
+        val notchf = value.safeGetMember("notchf").safeNumberOrNull()
+            ?: value.safeGetMember("notch").safeNumberOrNull()
         notchf?.let { filters.add(FilterDef.Notch(cutoffHz = it, q = resonance)) }
 
         // add event

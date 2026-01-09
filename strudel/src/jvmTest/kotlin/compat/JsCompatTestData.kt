@@ -10,6 +10,8 @@ object JsCompatTestData {
         Triple(true, "n() without scale", """n("0 1 2 3")"""),
         Triple(true, "C4:minor scale", """n("0 2 4").scale("C4:minor")"""),
         Triple(true, "C4:major scale", """n("0 2 4").scale("C4:major")"""),
+        // Sequences
+        Triple(true, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
         // Oscillators & Generators
         Triple(true, "Oscillators", """s("<sine saw isaw tri square>").fast(2)"""),
         Triple(true, "Noise Generators", """s("<white brown pink crackle dust>").gain(0.5)"""),
@@ -76,6 +78,7 @@ object JsCompatTestData {
         Triple(true, "Mask #2", """note("c3*8").mask(square.fast(4))"""),
         Triple(true, "SuperImpose #1", """note("a").superimpose(p => p.note("c"))"""),
         Triple(true, "SuperImpose #2", """note("a c e h").superimpose(p => p.note("e c"))"""),
+        Triple(true, "Layer #1", """n("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8").layer { x -> x.add("-2,2") }.scale("C4:minor")"""),
         // TODO: more complex tests for rev() an palindrome()
         Triple(true, "Reverse", """note("c e g").rev()"""),
         Triple(true, "Palindrome", """note("c e g").palindrome()"""),

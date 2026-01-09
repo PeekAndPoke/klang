@@ -26,14 +26,20 @@ annotation class StrudelDsl
 var strudelLangInit = false
 
 // Helpers
-private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
+private fun List<Any?>.flattenToPatterns(
+    atomFactory: (String) -> StrudelPattern = {
+        AtomicPattern(VoiceData.empty.copy(note = it))
+    },
+): List<StrudelPattern> {
     return this.flatMap { arg ->
         when (arg) {
+            is String -> listOf(parseMiniNotation(arg, atomFactory))
+            is Number -> listOf(atomFactory(arg.toString()))
             is StrudelPattern -> listOf(arg)
-            is List<*> -> arg.filterIsInstance<StrudelPattern>()
+            is List<*> -> arg.flattenToPatterns(atomFactory)
             else -> emptyList()
         }
-    }.toTypedArray()
+    }
 }
 
 /**
@@ -108,21 +114,26 @@ val StrudelPattern.range by dslMethod { p, args ->
 
 /** Creates a sequence pattern. */
 @StrudelDsl
-val seq by dslFunction<StrudelPattern> { args ->
-    val patterns = args.flattenToPatterns().toList()
+val seq by dslFunction { args ->
+    val patterns = args.flattenToPatterns(
+        atomFactory = {
+            AtomicPattern(VoiceData.empty.copy(value = it.toDoubleOrNull()))
+        }
+    ).toList()
+
     if (patterns.isEmpty()) silence else SequencePattern(patterns)
 }
 
 /** Plays multiple patterns at the same time. */
 @StrudelDsl
-val stack by dslFunction<StrudelPattern> { args ->
+val stack by dslFunction { args ->
     val patterns = args.flattenToPatterns().toList()
     if (patterns.isEmpty()) silence else StackPattern(patterns)
 }
 
 // arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
 @StrudelDsl
-val arrange by dslFunction<Any> { args ->
+val arrange by dslFunction { args ->
     val segments = args.map { arg ->
         when (arg) {
             // Case: pattern (defaults to 1 cycle)
@@ -135,6 +146,7 @@ val arrange by dslFunction<Any> { args ->
             }
             // Case: [pattern] (defaults to 1 cycle)
             is List<*> if arg.size == 1 && arg[0] is StrudelPattern -> 1.0 to (arg[0] as StrudelPattern)
+            // Unknown
             else -> 0.0 to silence
         }
     }.filter { it.first > 0.0 }
@@ -145,13 +157,13 @@ val arrange by dslFunction<Any> { args ->
 
 // pickRestart([a, b, c]) -> picks patterns sequentially per cycle (slowcat)
 @StrudelDsl
-val pickRestart by dslFunction<Any> { args ->
+val pickRestart by dslFunction { args ->
     val patterns = args.flattenToPatterns()
     if (patterns.isEmpty()) {
         silence
     } else {
         // seq plays all in 1 cycle. slow(n) makes each take 1 cycle.
-        val s = seq(*patterns) // using our dslFunction 'seq' via kotlin invoke
+        val s = seq(patterns) // using our dslFunction 'seq' via kotlin invoke
         // We need to call .slow on the result. But 'slow' is a property delegate now!
         // In Kotlin code: s.slow(n). In internal code, we access the DslMethod 'slow'.
         s.slow(patterns.size)
@@ -159,7 +171,7 @@ val pickRestart by dslFunction<Any> { args ->
 }
 
 @StrudelDsl
-val cat by dslFunction<Any> { args ->
+val cat by dslFunction { args ->
     val patterns = args.flattenToPatterns()
     when {
         patterns.isEmpty() -> silence
@@ -249,6 +261,44 @@ val StrudelPattern.superimpose by dslMethod { source, args ->
     val transform = args.firstOrNull() as? (StrudelPattern) -> StrudelPattern ?: { it }
     SuperimposePattern(source, transform)
 }
+
+/**
+ * Applies multiple transformation functions to the pattern and stacks the results.
+ *
+ * Example: s("bd").layer({ it.fast(2) }, { it.rev() })
+ */
+@StrudelDsl
+val StrudelPattern.layer by dslMethod { source, args ->
+    val transforms = args.filterIsInstance<(StrudelPattern) -> StrudelPattern>()
+
+    if (transforms.isEmpty()) {
+        silence
+    } else {
+        val patterns = transforms.mapNotNull { transform ->
+            try {
+                transform(source)
+            } catch (e: Exception) {
+                println("Error applying layer transform: ${e.stackTraceToString()}")
+                null
+            }
+        }
+
+        if (patterns.size == 1) {
+            patterns.first()
+        } else {
+            StackPattern(patterns)
+        }
+    }
+}
+
+/**
+ * Alias for [layer].
+ */
+@StrudelDsl
+val StrudelPattern.apply by dslMethod { source, args ->
+    source.layer(args)
+}
+
 
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1033,6 +1083,64 @@ val StrudelPattern.vibmod by vibratoModModifier
 
 /** Alias for [vibratoMod] */
 val vibmod by vibratoModCreator
+
+// add() ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Adds the given amount to the pattern's value.
+ *
+ * This is commonly used to transpose note numbers or modify continuous signals.
+ *
+ * Example: n("0 2").add("5") -> n("5 7")
+ */
+@StrudelDsl
+val StrudelPattern.add: DslMethod by dslMethod { source, args ->
+    val arg = args.firstOrNull() ?: return@dslMethod source
+
+    // Create the control pattern from the argument
+    val controlPattern = when (arg) {
+        is StrudelPattern -> arg
+        is Number -> AtomicPattern(VoiceData.empty.copy(value = arg.toDouble()))
+        // Use parseMiniNotation with a factory that sets 'value'
+        else -> parseMiniNotation(arg.toString()) {
+            AtomicPattern(VoiceData.empty.copy(value = it.toDoubleOrNull() ?: 0.0))
+        }
+    }
+
+    ControlPattern(
+        source = source,
+        control = controlPattern,
+        mapper = { it }, // No mapping needed for the control data itself
+        combiner = { srcData, ctrlData ->
+            val amount = (ctrlData.value as? Number)?.toDouble() ?: 0.0
+
+            // Add to 'value' if present
+            val newValue = if (srcData.value is Number) {
+                (srcData.value as Number).toDouble() + amount
+            } else {
+                null
+            }
+
+            // Add to 'soundIndex' if present
+            val newSoundIndex = if (srcData.soundIndex != null) {
+                srcData.soundIndex!! + amount.toInt()
+            } else {
+                // If we didn't have soundIndex but have a value (e.g. from n()), use that?
+                // Or if we only have 'value', maybe we shouldn't force soundIndex unless needed.
+                // But for <0 2 ...>, we set both.
+                null
+            }
+
+            // If we have a note string, we might want to transpose it?
+            // (Leaving note transposition for a dedicated 'transpose' function or future improvement)
+
+            srcData.copy(
+                value = newValue ?: srcData.value,
+                soundIndex = newSoundIndex ?: srcData.soundIndex
+            )
+        }
+    )
+}
 
 // accelerate() ////////////////////////////////////////////////////////////////////////////////////////////////////////
 

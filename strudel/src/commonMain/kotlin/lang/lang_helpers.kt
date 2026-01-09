@@ -31,7 +31,7 @@ fun <T> voiceModifier(modify: VoiceDataModifier<T>): VoiceDataModifier<T> = modi
  * Creates a DSL function that returns a StrudelPattern.
  * [In] is the type used for varargs in Kotlin (e.g. StrudelPattern or Any).
  */
-fun <In> dslFunction(handler: (List<Any?>) -> StrudelPattern) = DslFunctionProvider<In>(handler)
+fun dslFunction(handler: (List<Any?>) -> StrudelPattern) = DslFunctionProvider(handler)
 
 /**
  * Creates a DSL extension method on StrudelPattern that returns a StrudelPattern.
@@ -88,12 +88,12 @@ fun dslPatternModifier(modify: VoiceDataModifier<Number>, combine: VoiceDataMerg
 
 // --- Generic Function Delegate (stack, arrange, etc.) ---
 
-class DslFunctionProvider<In>(
+class DslFunctionProvider(
     private val handler: (List<Any?>) -> StrudelPattern,
 ) {
-    operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, DslFunction<In>> {
+    operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, DslFunction> {
         val name = prop.name
-        val func = DslFunction<In>(handler)
+        val func = DslFunction(handler)
 
         // Register in the evaluator registry
         StrudelRegistry.functions[name] = { args -> func.invokeUntyped(args) }
@@ -102,16 +102,16 @@ class DslFunctionProvider<In>(
     }
 }
 
-class DslFunction<In>(val handler: (List<Any?>) -> StrudelPattern) {
+class DslFunction(val handler: (List<Any?>) -> StrudelPattern) {
     // Typed for Kotlin usage
     @JvmName("invokeVararg")
-    operator fun invoke(vararg args: In): StrudelPattern = handler(args.toList())
+    operator fun invoke(vararg args: Any?): StrudelPattern = handler(args.toList())
 
     @JvmName("invokeArray")
-    operator fun invoke(args: Array<In>): StrudelPattern = handler(args.toList())
+    operator fun invoke(args: Array<Any?>): StrudelPattern = handler(args.toList())
 
     @JvmName("invokeList")
-    operator fun invoke(args: List<In>): StrudelPattern = handler(args)
+    operator fun invoke(args: List<Any?>): StrudelPattern = handler(args)
 
     // Internal usage
     internal fun invokeUntyped(args: List<Any?>): StrudelPattern = handler(args)
@@ -152,14 +152,22 @@ class DslMethod(
     val pattern: StrudelPattern,
     val handler: (StrudelPattern, List<Any?>) -> StrudelPattern,
 ) {
+    operator fun invoke(): StrudelPattern {
+        return handler(pattern, emptyList())
+    }
+
+    operator fun invoke(block: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+        return handler(pattern, listOf(block))
+    }
+
     // Typed invocation for Kotlin usage: p.slow(2)
     // The pattern is already bound, so we only pass args.
     operator fun invoke(vararg args: Any?): StrudelPattern {
         return handler(pattern, args.toList())
     }
 
-    operator fun invoke(block: (StrudelPattern) -> StrudelPattern): StrudelPattern {
-        return handler(pattern, listOf(block))
+    operator fun invoke(vararg block: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+        return handler(pattern, block.toList())
     }
 }
 

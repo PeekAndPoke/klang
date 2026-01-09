@@ -1,7 +1,10 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
 import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.degradeBy
 import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
@@ -17,6 +20,15 @@ class MiniNotationParser(
 ) {
     private val tokens = tokenize(input)
     private var pos = 0
+
+    // Internal pattern to mark sequences that should be flattened into the parent
+    private class SplittableSequencePattern(val patterns: List<StrudelPattern>) : StrudelPattern {
+        // This pattern acts like a SequencePattern if used directly (fallback)
+        val inner = seq(*patterns.toTypedArray())
+        override val weight: Double get() = inner.weight
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> =
+            inner.queryArcContextual(from, to, ctx)
+    }
 
     fun parse(): StrudelPattern {
         if (tokens.isEmpty()) return silence
@@ -44,7 +56,12 @@ class MiniNotationParser(
         val steps = mutableListOf<StrudelPattern>()
 
         while (!isAtEnd() && !check(TokenType.COMMA) && !check(TokenType.R_BRACKET) && !check(TokenType.R_ANGLE)) {
-            steps.add(parseStep())
+            val step = parseStep()
+            if (step is SplittableSequencePattern) {
+                steps.addAll(step.patterns)
+            } else {
+                steps.add(step)
+            }
         }
 
         return if (steps.isEmpty()) silence
@@ -99,7 +116,8 @@ class MiniNotationParser(
                 val countStr = if (check(TokenType.LITERAL)) consume(TokenType.LITERAL, "").text else "2"
                 val count = countStr.toIntOrNull() ?: 2
                 val steps = List(count) { pattern }
-                pattern = seq(*steps.toTypedArray())
+                // Wrap in SplittableSequencePattern to allow flattening
+                pattern = SplittableSequencePattern(steps)
             } else if (match(TokenType.QUESTION)) {
                 val probStr = if (check(TokenType.LITERAL) && peek().text.firstOrNull()?.isDigit() == true) {
                     consume(TokenType.LITERAL, "").text
@@ -144,7 +162,15 @@ class MiniNotationParser(
 
         // Parse items until '>'
         while (!isAtEnd() && !check(TokenType.R_ANGLE)) {
-            steps.add(parseStep())
+            val step = parseStep()
+            // Should we flatten ! inside alternation?
+            // <a!2 c> -> <a a c> -> Cycle 0: a, Cycle 1: a, Cycle 2: c.
+            // Yes, this is consistent.
+            if (step is SplittableSequencePattern) {
+                steps.addAll(step.patterns)
+            } else {
+                steps.add(step)
+            }
         }
 
         if (steps.isEmpty()) return silence
@@ -226,6 +252,7 @@ class MiniNotationParser(
                 '!' -> {
                     tokens.add(Token(TokenType.BANG, "!")); i++
                 }
+
                 else -> {
                     val start = i
                     while (i < input.length) {
