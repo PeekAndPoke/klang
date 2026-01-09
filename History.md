@@ -11,6 +11,17 @@
 
 ## Diary
 
+### (2026-01-09) Strudel - New features
+
+- compatibility tests
+  - we compile patterns with GraalJS and compare the event sequence to the native KlangScript+Strudel result
+  - very helpful!
+- ensured compatibility of continuous patterns with strudel
+- added struct()
+- added mask()
+- finally implemented n() ... "stranger things" now perfect
+  - missing is lpenv, perlin, superimpose
+
 ### (2026-01-08) Strudel - New features
 
 - cat() function
