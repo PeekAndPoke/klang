@@ -489,9 +489,13 @@ val adsr: DslPatternCreator<String> by dslPatternCreator(adsrMutation)
 // Filters - LowPass - lpf() ///////////////////////////////////////////////////////////////////////////////////////////
 
 private val lpfMutation = voiceModifier<Number?> {
-    val filter = FilterDef.LowPass(cutoffHz = it?.toDouble() ?: 1000.0, q = resonance ?: 1.0)
+    val cutoff = it?.toDouble()
+    val filter = FilterDef.LowPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
-    copy(filters = filters.addOrReplace(filter))
+    copy(
+        cutoff = cutoff,
+        filters = filters.addOrReplace(filter),
+    )
 }
 
 /** Adds a Low Pass Filter with the given cutoff frequency. */
@@ -512,9 +516,13 @@ val lpf by dslPatternCreator(lpfMutation)
 // Filters - HighPass - hpf() //////////////////////////////////////////////////////////////////////////////////////////
 
 private val hpfMutation = voiceModifier<Number?> {
-    val filter = FilterDef.HighPass(cutoffHz = it?.toDouble() ?: 1000.0, q = resonance ?: 1.0)
+    val cutoff = it?.toDouble()
+    val filter = FilterDef.HighPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
-    copy(filters = filters.addOrReplace(filter))
+    copy(
+        cutoff = cutoff,
+        filters = filters.addOrReplace(filter),
+    )
 }
 
 /** Adds a High Pass Filter with the given cutoff frequency. */
@@ -535,9 +543,13 @@ val hpf: DslPatternCreator<Number> by dslPatternCreator(hpfMutation)
 // Filters - BandPass - bandf() ////////////////////////////////////////////////////////////////////////////////////////
 
 private val bandfMutation = voiceModifier<Number?> {
-    val filter = FilterDef.BandPass(cutoffHz = it?.toDouble() ?: 1000.0, q = resonance ?: 1.0)
+    val cutoff = it?.toDouble()
+    val filter = FilterDef.BandPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
-    copy(filters = filters.addOrReplace(filter))
+    copy(
+        cutoff = cutoff,
+        filters = filters.addOrReplace(filter),
+    )
 }
 
 private val bandfModifier = dslPatternModifier(
@@ -570,9 +582,13 @@ val bpf by bandfCreator
 // Filters - Notch | inverse BandPass - notchf() ///////////////////////////////////////////////////////////////////////
 
 private val notchfMutation = voiceModifier<Number?> {
-    val filter = FilterDef.Notch(cutoffHz = it?.toDouble() ?: 1000.0, q = resonance ?: 1.0)
+    val cutoff = it?.toDouble()
+    val filter = FilterDef.Notch(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
-    copy(filters = filters.addOrReplace(filter))
+    copy(
+        cutoff = cutoff,
+        filters = filters.addOrReplace(filter),
+    )
 }
 
 /** Adds a Notch Filter with the given cutoff frequency. */

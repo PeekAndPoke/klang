@@ -270,12 +270,13 @@ class Environment(
         return getAllRegisteredSupertypes.getOrPut(cls) {
 
             val superTypes = nativeTypes.keys.filter { type ->
-                type.isInstance(obj).also {
-                    println("Checking type.isInstance(obj) | $type -> $it")
-                }
+                type.isInstance(obj)
+//                    .also {
+//                        println("Checking type.isInstance(obj) | $type -> $it")
+//                    }
             }
 
-            println("Super types of $cls: $superTypes")
+//            println("Super types of $cls: $superTypes")
 
             listOf(cls) + superTypes
         }
