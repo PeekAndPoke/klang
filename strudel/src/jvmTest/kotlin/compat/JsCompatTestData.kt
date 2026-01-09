@@ -26,8 +26,8 @@ object JsCompatTestData {
         Triple(true, "Euclidean", """note("c(3,8)")"""),
         Triple(true, "Euclidean with rotation", """note("c(3,8,2)")"""),
         // Time & Tempo
-        Triple(true, "Reverse", """note("c e g").rev()"""),
-        Triple(true, "Palindrome", """note("c e g").palindrome()"""),
+        Triple(true, "Slow", """note("c e g").slow(2)"""),
+        Triple(true, "Fast", """note("c e g").fast(2)"""),
         Triple(true, "Slow & Fast", """note("c e g").slow(2).fast(2)"""),
         // Voice Attributes
         Triple(true, "Gain & Pan", """note("c").gain(0.5).pan("-0.5 0.5")"""),
@@ -69,11 +69,16 @@ object JsCompatTestData {
         // Modulation
         Triple(true, "Vibrato", """note("c").vib(5).vibmod(0.1)"""),
         Triple(true, "Accelerate", """note("c").accelerate(1)"""),
-        // Masking
+        // Transformation
         Triple(true, "Struct #1", """note("c,eb,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
         Triple(true, "Struct #2", """note("c3 d3").fast(2).struct("x")"""),
         Triple(true, "Mask #1", """note("c [eb,g] d [eb,g]").mask("<1 [0 1]>")"""),
         Triple(true, "Mask #2", """note("c3*8").mask(square.fast(4))"""),
+        Triple(true, "SuperImpose #1", """note("a").superimpose(p => p.note("c"))"""),
+        Triple(true, "SuperImpose #2", """note("a c e h").superimpose(p => p.note("e c"))"""),
+        // TODO: more complex tests for rev() an palindrome()
+        Triple(true, "Reverse", """note("c e g").rev()"""),
+        Triple(true, "Palindrome", """note("c e g").palindrome()"""),
     )
 
     val songs: List<Triple<Boolean, String, String>> = listOf(

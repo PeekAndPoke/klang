@@ -71,7 +71,7 @@ and category.
 - [ ] **`jux(function)`** - Apply function to right channel only
 - [ ] **`juxBy(amount, function)`** - Jux with custom stereo width
 - [ ] **`off(time, function)`** - Copies, shifts, and modifies pattern
-- [ ] **`superimpose(function)`** - Layers modified pattern on top
+- [x] **`superimpose(function)`** - Layers modified pattern on top
 - [x] **`mask(pattern)`** - Conditionally applies pattern elements (boolean masking)
 
 ### Tonal Functions ⭐⭐⭐
