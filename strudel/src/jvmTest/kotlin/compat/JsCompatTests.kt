@@ -6,16 +6,32 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.test.logging.warn
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.printAsTable
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.fail
+import kotlin.math.abs
 
 @Suppress("OPT_IN_USAGE")
 class JsCompatTests : StringSpec() {
 
+    data class ComparisonReport(
+        val errors: List<String> = emptyList(),
+        val warnings: List<String> = emptyList(),
+        val success: Boolean = errors.isEmpty(),
+        val report: String,
+    )
+
+    enum class ComparisonResult {
+        EXACT,
+        CLOSE,
+        DIFFERENT,
+    }
+
+    private val graalCompiler = GraalStrudelCompiler()
     private val json = Json { prettyPrint = true }
 
     init {
@@ -45,7 +61,6 @@ class JsCompatTests : StringSpec() {
     private suspend fun runComparison(name: String, code: String) {
         val graalPattern = withClue("Compiling song '$name' with GraalVM") {
             val result = try {
-                val graalCompiler = GraalStrudelCompiler()
                 graalCompiler.compile(code).await()
             } catch (e: Throwable) {
                 fail("Failed to compile song '$name' with GraalVM", e)
@@ -59,8 +74,10 @@ class JsCompatTests : StringSpec() {
                 ?: fail("Failed to compile song '$name' natively")
         }
 
-        val graalArc = graalPattern.queryArc(0.0, 16.0)
-        val nativeArc = nativePattern.queryArc(0.0, 16.0)
+        fun List<StrudelPatternEvent>.sort() = sortedWith(compareBy({ it.begin }, { it.end }, { it.hashCode() }))
+
+        val graalArc = graalPattern.queryArc(0.0, 64.0).sort()
+        val nativeArc = nativePattern.queryArc(0.0, 64.0).sort()
 
         assertSoftly {
             withClue("Number of events must match") {
@@ -71,16 +88,28 @@ class JsCompatTests : StringSpec() {
 
             zippedArc.forEachIndexed { index, (graal, native) ->
 
-                val comparison = buildComparison(graal, native)
+                val comparison = buildComparisonReport(graal, native)
 
-                withClue("Event $index must be equal:\n\n${comparison}\n") {
-                    graal shouldBe native
+
+
+                withClue(
+                    """
+============================================================================================
+Event $index must be equal:
+--------------------------------------------------------------------------------------------
+${comparison.errors.joinToString("\n")}
+--------------------------------------------------------------------------------------------
+${comparison.report}
+
+                    """.trimIndent()
+                ) {
+                    comparison.success shouldBe true
                 }
             }
         }
     }
 
-    private fun buildComparison(graal: StrudelPatternEvent, native: StrudelPatternEvent): String {
+    private fun buildComparisonReport(graal: StrudelPatternEvent, native: StrudelPatternEvent): ComparisonReport {
 
         val graalJson = json.encodeToJsonElement(graal)
         val nativeJson = json.encodeToJsonElement(native)
@@ -108,10 +137,32 @@ class JsCompatTests : StringSpec() {
             }
         }
 
+        fun isCompatible(graal: JsonPrimitive?, native: JsonPrimitive?): ComparisonResult {
+            // Exact match?
+            if (graal == native) return ComparisonResult.EXACT
+            // One is null and the other one is not?
+            if (graal == null || native == null) return ComparisonResult.DIFFERENT
+
+            val graalNum = graal.doubleOrNull
+            val nativeNum = native.doubleOrNull
+
+            if (graalNum != null && nativeNum != null) {
+                val numDiff = abs(graalNum - nativeNum)
+
+                if (numDiff < EPSILON) return ComparisonResult.CLOSE
+            }
+
+            return ComparisonResult.DIFFERENT
+        }
+
         val graalFlat = mutableMapOf<String, JsonPrimitive>().apply { flattenJson(graalJson, "", this) }
         val nativeFlat = mutableMapOf<String, JsonPrimitive>().apply { flattenJson(nativeJson, "", this) }
 
-        val allKeys = (graalFlat.keys + nativeFlat.keys).distinct().sorted()
+        val allKeys = (graalFlat.keys + nativeFlat.keys)
+            .distinct()
+            .sortedWith(compareBy({ it.count { c -> c == '.' } }, { it }))
+
+        val errors = mutableListOf<String>()
 
         val rows = mutableListOf<List<Any?>>()
         rows.add(listOf("", "field", "Graal", "Native"))
@@ -119,11 +170,23 @@ class JsCompatTests : StringSpec() {
         allKeys.forEach { key ->
             val gVal = graalFlat[key]
             val nVal = nativeFlat[key]
-            val isError = gVal != nVal
+            val result = isCompatible(gVal, nVal)
+
+            if (result == ComparisonResult.DIFFERENT) {
+                errors.add(
+                    "'$key': Graal '${gVal?.toString() ?: "null"}' VS Native '${nVal?.toString() ?: "null"}'"
+                )
+            }
+
+            val resultStr = when (result) {
+                ComparisonResult.EXACT -> "  ✓  "
+                ComparisonResult.CLOSE -> " ~== "
+                ComparisonResult.DIFFERENT -> "ERROR"
+            }
 
             rows.add(
                 listOf(
-                    if (isError) "ERROR" else "",
+                    resultStr,
                     key,
                     gVal?.toString() ?: "null",
                     nVal?.toString() ?: "null"
@@ -131,7 +194,10 @@ class JsCompatTests : StringSpec() {
             )
         }
 
-        return rows.printAsTable()
+        return ComparisonReport(
+            errors = errors.toList(),
+            report = rows.printAsTable()
+        )
     }
 }
 

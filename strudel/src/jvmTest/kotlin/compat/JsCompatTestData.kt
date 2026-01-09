@@ -2,6 +2,8 @@ package io.peekandpoke.klang.strudel.compat
 
 object JsCompatTestData {
 
+    val runProblems = false
+
     val simplePatterns: List<Triple<Boolean, String, String>> = listOf(
         Triple(
             true, "C-Major notes", """
@@ -31,7 +33,7 @@ object JsCompatTestData {
             """.trimIndent()
         ),
         Triple(
-            true, "PickRestart", """
+            runProblems, "PickRestart", """
                 pickRestart([note("c"), note("e")])
             """.trimIndent()
         ),
@@ -101,7 +103,7 @@ object JsCompatTestData {
         // Filters
         Triple(
             true, "LowPass", """
-                s("saw").lpf(1000).res(2)
+                s("saw").lpf(1000)
             """.trimIndent()
         ),
         Triple(

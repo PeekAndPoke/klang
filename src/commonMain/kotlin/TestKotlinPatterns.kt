@@ -24,7 +24,7 @@ object TestKotlinPatterns {
             .gain(0.3)
             .delay(0.25).delaytime(0.5).delayfeedback(0.5)
             .room(0.05).rsize(1.0)
-            .clip(0.3).rev(8),
+            .clip(0.3),
 
         // Melody percussion
         note(
