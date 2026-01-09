@@ -13,7 +13,9 @@
 
 ### (2026-01-08) Strudel - New features
 
--
+- cat() function
+- rev() function
+- palindrome() function
 
 ### (2026-01-08) Strudel - Tests
 

@@ -1,88 +1,274 @@
-Hi! We are working on the euclidean pattern for the strudel.cc kotlin port.
+# Instruction: Expand JS Compatibility Test Data
 
-We have the pattern almost working perfectly. There is just on small flaw:
+**Context:**
+We are improving the test coverage for the `Strudel` language implementation in the `klang` project. The goal is to ensure that the Kotlin implementation produces identical events to the original JavaScript implementation (running via GraalVM).
 
-We now hear:
+**Target File:**
+`strudel/jvmTest/kotlin/compat/JsCompatTestData.kt`
 
-a . . a . . a . | a . . b . . b . | b .. c .. c . | c  . .CD .. d . | d .. d
+**Task:**
+Please update the `JsCompatTestData` object in the target file by adding the following test cases. The file contains two main lists: `simplePatterns` and `songs`.
 
-While we should hear:
+1.  **Simple Patterns:** Add the items from **Section 1 (Simple Patterns / Feature Tests)** below to the `simplePatterns` list.
+    *   Format: `listOf("Descriptive Name", """code""")`
+    *   These tests target specific language features defined in `strudel/src/commonMain/kotlin/lang/lang.kt`.
 
-a . . a . . a . | a . . b . . b . | b .. c .. c . | c . . c .. d . | d .. d
+2.  **Complex Patterns:** Add the items from **Section 2 (Complex Patterns / Songs)** below to the `songs` list.
+    *   Format: `listOf("Song Name", """code""")`
+    *   **Important:** For these items, do not reference the `TestTextPatterns` object directly. Instead, please **copy the actual string content** (pattern code) provided in the list below or from the source file `src/commonMain/kotlin/TestTextPatterns.kt` into the test data. This keeps `JsCompatTestData.kt` self-contained.
 
-So the first three bars are ok. But then it plays  c to d in short succession, while only d should be played. After this things are fine again.
-This means somehow the one "d" is picked up to early.
+---
 
-I made some debug outputs:
+### 1. Simple Patterns / Feature Tests
+*(Add these to `JsCompatTestData.simplePatterns`)*
 
-```
-Starting voice with note 'a' at frame 0
-Starting voice with note 'a' at frame 36000
-Starting voice with note 'a' at frame 72000
-Starting voice with note 'a' at frame 96000
-Starting voice with note 'b' at frame 132000
-Starting voice with note 'b' at frame 168000
-Starting voice with note 'b' at frame 192000
-Starting voice with note 'c' at frame 228000
-Starting voice with note 'c' at frame 264000
-Starting voice with note 'c' at frame 288000
-Starting voice with note 'c' at frame 324000
-Starting voice with note 'd' at frame 329142
-Starting voice with note 'd' at frame 360000
-Starting voice with note 'd' at frame 384000
-Starting voice with note 'd' at frame 420000
-Starting voice with note 'e' at frame 456000
-Starting voice with note 'e' at frame 480000
-Starting voice with note 'e' at frame 516000
-Starting voice with note 'f' at frame 552000
-Starting voice with note 'f' at frame 576000
-Starting voice with note 'f' at frame 612000
-Starting voice with note 'f' at frame 648000
-Starting voice with note 'g' at frame 658285
-Starting voice with note 'g' at frame 672000
-```
+*   **Oscillators & Generators**
+    *   `Oscillators`: `s("<sine saw isaw tri square>").fast(2)`
+    *   `Noise Generators`: `s("<white brown pink crackle dust>").gain(0.5)`
+    *   `Impulse`: `s("impulse").gain(0.5)`
 
-As we can see from the numbers ... something is off with this one "d" note ...
-It seems to be the opposite problem. Is it picked up when it should not yet be picked up.
-It comes too early i think.
+*   **Structure & Control**
+    *   `Arrange`: `arrange([1, note("c")], [2, note("e")])`
+    *   `PickRestart`: `pickRestart([note("c"), note("e")])`
+    *   `Cat`: `cat(note("c"), note("e"))`
+    *   `Stack`: `stack(note("c"), note("e"))`
+    *   `Euclidean`: `note("c(3,8)")`
 
+*   **Time & Tempo**
+    *   `Reverse`: `note("c e g").rev()`
+    *   `Palindrome`: `note("c e g").palindrome()`
+    *   `Slow & Fast`: `note("c e g").slow(2).fast(2)`
 
-Proposed Solution: Rational Numbers
+*   **Voice Attributes**
+    *   `Gain & Pan`: `note("c").gain(0.5).pan("-0.5 0.5")`
+    *   `Legato/Clip`: `note("c e").legato(0.5)` and `note("c e").clip(0.5)`
+    *   `Unison/Detune/Spread`: `note("c").unison(4).detune(0.1).spread(0.5)`
 
-Replace Double with exact rational arithmetic for time coordinates.
-This completely eliminates floating-point drift:
+*   **ADSR Envelopes**
+    *   `Individual Params`: `note("c").attack(0.1).decay(0.2).sustain(0.5).release(1.0)`
+    *   `ADSR String`: `note("c").adsr("0.1:0.2:0.5:1.0")`
 
+*   **Filters**
+    *   `LowPass`: `s("saw").lpf(1000).res(2)`
+    *   `HighPass`: `s("saw").hpf(500)`
+    *   `BandPass`: `s("saw").bandf(1000).res(5)`
+    *   `Notch`: `s("saw").notchf(1000)`
+
+*   **Effects**
+    *   `Distortion`: `note("c").distort(0.5)`
+    *   `Bitcrush`: `note("c").crush(4)`
+    *   `Downsample`: `note("c").coarse(4)`
+    *   `Reverb`: `note("c").room(0.5).roomsize(2.0)`
+    *   `Delay`: `note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)`
+
+*   **Modulation & Scales**
+    *   `Vibrato`: `note("c").vib(5).vibmod(0.1)`
+    *   `Accelerate`: `note("c").accelerate(1)`
+    *   `Scales`: `n("0 2 4").scale("C4:minor")`
+
+### 2. Complex Patterns / Songs
+*(Add these to `JsCompatTestData.songs` - Use the full code strings provided below)*
+
+*   **Small Town Boy - Melody**
 ```kotlin
-data class Rational(val num: Long, val den: Long) {
-    operator fun plus(other: Rational): Rational {
-        val n = num * other.den + other.num * den
-        val d = den * other.den
-        return Rational(n, d).simplified()
-    }
-
-    operator fun times(other: Rational): Rational {
-        return Rational(num * other.num, den * other.den).simplified()
-    }
-
-    operator fun div(other: Rational): Rational {
-        return Rational(num * other.den, den * other.num).simplified()
-    }
-
-    fun simplified(): Rational {
-        val g = gcd(kotlin.math.abs(num), kotlin.math.abs(den))
-        return Rational(num / g, den / g)
-    }
-
-    fun toDouble(): Double = num.toDouble() / den.toDouble()
-
-    private fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
-}
+n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")
+    .scale("C4:minor")
+    .sound("saw")
 ```
 
-This mean we will need to change StrudelPatternEvent so that "begin" and "end" are Rational instead of Double.
-This would also require quite some refactoring of the existing patterns.
 
-In order to address the problem with introduced "Rational" number math, to avoid floating point drift.
-The refactoring was successful, but the main issue is still not fixed.
+*   **Small Town Boy - Full**
+```kotlin
+stack(
+        // melody
+        arrange(
+          [8, silence],
+          [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
+        ).orbit(1)
+        .scale("C4:minor")
+        .adsr("0.05:0.7:0.0:0.5")
+        .hpf(800)
+        .sound("triangle")
+        .gain(0.3),
 
-Please make a plan.
+        // melody 2
+        arrange(
+          [8, silence],
+          [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
+        ).orbit(2)
+        .scale("C5:minor")
+        .adsr("0.05:0.7:0.0:0.5")
+        .hpf(1600)
+        .sound("triangle")
+        .gain(0.4),
+
+        // bass
+        note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
+        .orbit(3)
+        .sound("supersaw").unison(4).detune(0.1)
+        .adsr("0.0:0.3:0.0:0.8")
+        .lpf(800)
+        .gain(0.8).pan(-0.5),
+
+        // Drums
+        sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
+         .orbit(4)
+         .pan(0.5)
+         .gain(0.4)
+         .delay("0.2").delaytime(0.25).delayfeedback(0.3),
+    ).room(0.025).rsize(5.0)
+```
+
+
+*   **Tetris Remix**
+```kotlin
+stack(
+        note(`<
+            [e5 [b4 c5] d5 [c5 b4]]
+            [a4 [a4 c5] e5 [d5 c5]]
+            [b4 [~ c5] d5 e5]
+            [c5 a4 a4 ~]
+            [[~ d5] [~ f5] a5 [g5 f5]]
+            [e5 [~ c5] e5 [d5 c5]]
+            [b4 [b4 c5] d5 e5]
+            [c5 a4 a4 ~]
+        >`).sound("triangle").orbit(0)
+        .gain("0.3")
+        .fast(0.5)
+        .room(0.01).rsize(3.0)
+        .delay("0.25").delaytime(0.25).delayfeedback(0.75),
+
+        note(`<
+            [[e2 e3]*4]
+            [[a2 a3]*4]
+            [[g#2 g#3]*2 [e2 e3]*2]
+            [a2 a3 a2 a3 a2 a3 b1 c2]
+            [[d2 d3]*4]
+            [[c2 c3]*4]
+            [[b1 b2]*2 [e2 e3]*2]
+            [[a1 a2]*4]
+        >`).sound("supersaw").orbit(1)
+        .pan(0.6).gain(0.6)
+        .room(0.01).rsize(3.0),
+
+        sound("bd hh sd hh").orbit(2)
+        .pan(-0.7).gain(0.8)
+        .room(0.01).rsize(3.0)
+        .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.75)
+        .fast(2),
+    )
+```
+
+
+*   **Stranger Things Main Theme**
+```kotlin
+stack(
+        n("0 2 4 6 7 6 4 2")
+          .scale("<c3:major>/2")
+          .s("supersaw")
+          .distort(0.7)
+          .superimpose((x) => x.detune("<0.5>"))
+          .lpenv(perlin.slow(3).range(1, 4))
+          .lpf(perlin.slow(2).range(100, 2000))
+          .gain(0.3),
+        note("<a1 e2>/8").clip(0.8)
+        .struct("x*8")
+        .s("supersaw"),
+    )
+```
+
+
+*   **Simple Drums (Poly)**
+```kotlin
+sound("bd hh sd oh bd:1 hh:1 sd:1 oh:1 bd:2 hh:2 sd:2 oh:2 bd:3 hh:3 sd:3 oh:3")
+    .gain(0.8).slow(2)
+```
+
+
+*   **Drums with Delay**
+```kotlin
+sound("bd hh sd oh")
+    .gain(0.8)
+    .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
+    .pan(sine.slow(8))
+    .fast(2)
+```
+
+
+*   **Drums with Reverb**
+```kotlin
+sound("bd hh sd oh")
+    .gain(0.8)
+    .room(0.01).rsize(3.0)
+    .pan(sine.slow(8))
+    .fast(2)
+```
+
+
+*   **Off-Beat Drums**
+```kotlin
+sound("bd hh sd oh")
+     .gain(1.0)
+    //         .delay("0.0 0.0 0.5 0.0")
+     .delay(0.5)
+     .delaytime(0.25)
+     .delayfeedback(0.5)
+```
+
+
+*   **Dub Triplets**
+```kotlin
+sound("bd hh sd oh")
+      .delay(0.6)
+      .delaytime(0.375)
+      // High feedback for long tails
+      .delayfeedback(0.7)
+```
+
+
+*   **Slapback**
+```kotlin
+sound("bd hh sd oh")
+      .delay(0.4)
+       // 50ms
+      .delaytime(0.05)
+      // Low feedback
+      .delayfeedback(0.2)
+```
+
+
+*   **Double Sample Bug**
+```kotlin
+stack(
+      //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
+      sound("bd hh sd oh")
+      .lpf("100 200 300 400 500 600 700 800")
+      .fast(2)
+      .gain(1.0),
+    )
+```
+
+
+*   **Glissando Test**
+```kotlin
+n("1 3 5 7").scale("C4:minor")
+    .sound("sine")
+    .gain(1.0)
+    .slow(4)
+    .accelerate(1)
+    .vib(8)
+    .vmod(0.5)
+```
+
+
+*   **Two Orbits**
+```kotlin
+stack(
+      // Snare only delay on the drums
+      sound("bd hh sd oh").gain(0.7).delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5).orbit(0),
+      // Full delay on the melody
+      note("c ~ d ~ e ~ f ~").delay("0.0").delaytime(0.25).orbit(1),
+    )
+```
+
+

@@ -43,6 +43,8 @@ and category.
 ### Pattern Creation ⭐⭐⭐
 
 - [ ] **`cat()`** - Concatenates patterns, each taking one full cycle
+  - [x] implement as top-level function
+  - [ ] implement as chainable method on Pattern
 - [ ] **`polymeter()`** - Aligns steps of patterns creating polymeters
 - [ ] **`polymeterSteps()`** - Polymeter with step specification
 - [ ] **`run(n)`** - Creates discrete pattern of numbers 0 to n-1

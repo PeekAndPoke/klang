@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.compat
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.engine.test.logging.warn
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -12,22 +13,31 @@ import io.peekandpoke.klang.strudel.printAsTable
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.fail
 
+@Suppress("OPT_IN_USAGE")
 class JsCompatTests : StringSpec() {
 
     private val json = Json { prettyPrint = true }
 
     init {
         // Testing that simple pattern code produces the same results
-        JsCompatTestData.simplePatterns.forEachIndexed { index, (name, code) ->
+        JsCompatTestData.simplePatterns.forEachIndexed { index, (shouldRun, name, code) ->
             "Simple Pattern ${index + 1}: $name" {
-                runComparison(name, code)
+                if (shouldRun) {
+                    runComparison(name, code)
+                } else {
+                    warn { "Skipping test '$name' because it's marked as 'shouldRun = false'" }
+                }
             }
         }
 
         // Testing that songs code produces the same results
-        JsCompatTestData.songs.forEachIndexed { index, (name, code) ->
+        JsCompatTestData.songs.forEachIndexed { index, (shouldRun, name, code) ->
             "Song ${index + 1}: $name" {
-                runComparison(name, code)
+                if (shouldRun) {
+                    runComparison(name, code)
+                } else {
+                    warn { "Skipping test '$name' because it's marked as 'shouldRun = false'" }
+                }
             }
         }
     }
