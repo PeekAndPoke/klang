@@ -20,32 +20,11 @@ object TestKotlinPatterns {
                 >
                 """.trimIndent()
         ).sound("tri")
-            .orbit(0).pan(0.7)
+            .orbit(0).pan(0.3)
             .gain(0.3)
             .delay(0.25).delaytime(0.5).delayfeedback(0.5)
             .room(0.05).rsize(1.0)
             .clip(0.3),
-
-        // Melody percussion
-        note(
-            """
-                <
-                    [e5 [b4 c5] d5 [c5 b4]]
-                    [a4 [a4 c5] e5 [d5 c5]]
-                    [b4 [~ c5] d5 e5]
-                    [c5 a4 a4 ~]
-                    [[~ d5] [~ f5] a5 [g5 f5]]
-                    [e5 [~ c5] e5 [d5 c5]]
-                    [b4 [b4 c5] d5 e5]
-                    [c5 a4 a4 ~]
-                >
-                """.trimIndent()
-        ).sound("marimba")
-            .orbit(1).pan(-0.7)
-            .gain(0.0)
-            .delay("0.25").delaytime(0.25).delayfeedback(0.05)
-            .room(0.05).rsize(1.0)
-            .coarse(1).fast(1),
 
         note(
             """
@@ -60,8 +39,9 @@ object TestKotlinPatterns {
                         [c3 c2 c2 c1 e1 [c1 e2] [c2 c3] [c4 c5]]
                     >
                 """.trimIndent()
-        ).sound("supersaw").spread(0.5).unison(16).detune(0.5)
+        ).sound("supersaw").spread(0.5).unison(8).detune(0.3)
             .orbit(2).pan(0.0).gain(0.5)
+//            .adsr("0.05:2.0:0.0:1.0")
             .room(0.05).rsize(1.0),
 
         sound(
@@ -89,7 +69,7 @@ object TestKotlinPatterns {
 //            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
             .orbit(3)
-            .pan(-0.3).gain(0.4)
+            .pan(-0.3).gain(0.5)
             .room(0.05).rsize(2.0)
 //            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
             .fast(2),
