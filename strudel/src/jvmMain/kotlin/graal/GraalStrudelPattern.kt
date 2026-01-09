@@ -17,7 +17,7 @@ import org.graalvm.polyglot.Value
 class GraalStrudelPattern(
     val value: Value,
     val graal: GraalStrudelCompiler,
-) : StrudelPattern.Fixed {
+) : StrudelPattern.FixedWeight {
     // Graal patterns are treated as opaque units from the JS side, so we default to weight 1.0.
     override val weight: Double = 1.0
 

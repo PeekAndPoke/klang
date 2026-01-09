@@ -9,7 +9,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  */
 internal class ArrangementPattern(
     val segments: List<Pair<Double, StrudelPattern>>,
-) : StrudelPattern.Fixed {
+) : StrudelPattern.FixedWeight {
 
     private val segmentsRational = segments.map { (dur, pat) -> Rational(dur) to pat }
     private val totalDuration = segmentsRational.fold(Rational.ZERO) { acc, (dur, _) -> acc + dur }
@@ -46,18 +46,15 @@ internal class ArrangementPattern(
                     val qStart = maxOf(from, segStart)
                     val qEnd = minOf(to, segEnd)
 
-                    val innerQEnd = minOf(qEnd - segStart, dur)
-                    val innerQStart = maxOf(qStart - segStart, Rational.ZERO)
-
-                    if (innerQEnd > innerQStart) {
-                        val innerEvents = pat.queryArc(innerQStart, innerQEnd)
+                    // To match strudel.cc, we query the pattern at its absolute time position.
+                    // This allows patterns like < > to progress correctly across the arrangement.
+                    if (qEnd > qStart) {
+                        val innerEvents = pat.queryArc(qStart, qEnd)
 
                         events.addAll(innerEvents.map { e ->
-                            // Shift event back to global time
-                            e.copy(
-                                begin = e.begin + segStart,
-                                end = e.end + segStart
-                            )
+                            // Since we query at absolute time, the events are already
+                            // at the correct global positions. No shifting needed.
+                            e
                         })
                     }
                 }

@@ -10,7 +10,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  */
 open class ContinuousPattern(
     val getValue: (Double) -> Double,
-) : StrudelPattern.Fixed {
+) : StrudelPattern.FixedWeight {
 
     override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
         return listOf(

@@ -7,7 +7,7 @@ import kotlin.random.Random
 
 internal class ChoicePattern(
     val choices: List<StrudelPattern>,
-) : StrudelPattern.Fixed {
+) : StrudelPattern.FixedWeight {
 
     companion object {
         // This matches what the parser calls: pattern.choice(right)

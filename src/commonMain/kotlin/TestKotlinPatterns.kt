@@ -24,7 +24,7 @@ object TestKotlinPatterns {
             .gain(0.3)
             .delay(0.25).delaytime(0.5).delayfeedback(0.5)
             .room(0.05).rsize(1.0)
-            .clip(0.3).palindrome(),
+            .clip(0.3).rev(8),
 
         // Melody percussion
         note(
@@ -42,7 +42,7 @@ object TestKotlinPatterns {
                 """.trimIndent()
         ).sound("marimba")
             .orbit(1).pan(-0.7)
-            .gain(0.3)
+            .gain(0.0)
             .delay("0.25").delaytime(0.25).delayfeedback(0.05)
             .room(0.05).rsize(1.0)
             .coarse(1).fast(1),

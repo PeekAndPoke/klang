@@ -8,7 +8,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  * Stack Pattern: Plays multiple patterns simultaneously.
  * Implementation of `stack(a, b)`.
  */
-internal class StackPattern(val patterns: List<StrudelPattern>) : StrudelPattern.Fixed {
+internal class StackPattern(val patterns: List<StrudelPattern>) : StrudelPattern.FixedWeight {
 
     override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
         // Simply collect events from all patterns for the same time arc

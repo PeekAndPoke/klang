@@ -38,7 +38,7 @@ private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
 
 @StrudelDsl
 val silence by dslObject {
-    object : StrudelPattern.Fixed {
+    object : StrudelPattern.FixedWeight {
         override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> = emptyList()
     }
 }
@@ -143,7 +143,11 @@ val pickRestart by dslFunction<Any> { args ->
 @StrudelDsl
 val cat by dslFunction<Any> { args ->
     val patterns = args.flattenToPatterns()
-    seq(patterns).slow(args.size)
+    when {
+        patterns.isEmpty() -> silence
+        patterns.size == 1 -> patterns.first()
+        else -> ArrangementPattern(patterns.map { 1.0 to it })
+    }
 }
 
 // Tempo / Time modifiers //////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,13 +167,19 @@ val StrudelPattern.fast by dslMethod<Number> { p, args ->
 }
 
 @StrudelDsl
-val StrudelPattern.rev by dslMethod<Any?> { pattern, _ ->
-    ReversePattern(pattern)
+val StrudelPattern.rev: DslMethod<Any?> by dslMethod { pattern, args ->
+    val n = args.firstOrNull()?.toString()?.toIntOrNull() ?: 1
+
+    if (n <= 1) {
+        ReversePattern(pattern)
+    } else {
+        pattern.fast(n).rev().slow(n)
+    }
 }
 
 @StrudelDsl
 val StrudelPattern.palindrome by dslMethod<Any?> { pattern, _ ->
-    seq(listOf(pattern, pattern.rev())).slow(2)
+    cat(pattern, pattern.rev())
 }
 
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////

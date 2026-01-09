@@ -9,7 +9,7 @@ import kotlinx.serialization.json.Json
 @Serializable
 class StaticStrudelPattern(
     val events: List<StrudelPatternEvent>,
-) : StrudelPattern.Fixed {
+) : StrudelPattern.FixedWeight {
     companion object {
         private val codec = Json {
             ignoreUnknownKeys = true

@@ -10,7 +10,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  */
 internal class SequencePattern(
     val patterns: List<StrudelPattern>,
-) : StrudelPattern.Fixed {
+) : StrudelPattern.FixedWeight {
 
     override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()

@@ -31,7 +31,7 @@ interface StrudelPattern {
     /**
      * A helper interface for patterns with a fixed weight of 1.0.
      */
-    interface Fixed : StrudelPattern {
+    interface FixedWeight : StrudelPattern {
         override val weight: Double get() = 1.0
     }
 

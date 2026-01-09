@@ -9,7 +9,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  * Atomic Pattern: Represents a single event that repeats every cycle (0, 1, 2...).
  * Used for basic primitives like `note("c3")`.
  */
-internal class AtomicPattern(val data: VoiceData) : StrudelPattern.Fixed {
+internal class AtomicPattern(val data: VoiceData) : StrudelPattern.FixedWeight {
     companion object {
         val pure = AtomicPattern(VoiceData.empty)
     }
