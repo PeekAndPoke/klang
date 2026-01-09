@@ -3,8 +3,6 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.tones.Tones
 import kotlin.math.PI
@@ -33,57 +31,47 @@ private fun List<Any?>.flattenToPatterns(): Array<StrudelPattern> {
     }.toTypedArray()
 }
 
+// Continuous patterns /////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Structure Functions /////////////////////////////////////////////////////////////////////////////////////////////////
-
+/** Empty pattern that does not produce any events */
 @StrudelDsl
-val silence by dslObject {
-    object : StrudelPattern.FixedWeight {
-        override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> = emptyList()
-    }
-}
+val silence by dslObject { EmptyPattern }
 
-/**
- * A pattern that produces a single "rest" event (often represented as `~` in mini-notation).
- * Depending on implementation, this might just be silence or an explicit rest event.
- * For now, simple silence is usually enough.
- */
+/** Empty pattern that does not produce any events */
 @StrudelDsl
 val rest by dslObject { silence }
-
-// Continuous patterns /////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Sine oscillator: 0 to 1, period of 1 cycle */
 @StrudelDsl
 val sine by dslObject {
-    ContinuousPattern { t -> sin(t * 2.0 * PI) }
+    ContinuousPattern { t -> (sin(t * 2.0 * PI) + 1.0) / 2.0 }
 }
 
-/** Sawtooth oscillator: -1 to 1, period of 1 cycle */
+/** Sawtooth oscillator: 0 to 1, period of 1 cycle */
 @StrudelDsl
 val saw by dslObject {
-    ContinuousPattern { t -> (t % 1.0) * 2.0 - 1.0 }
+    ContinuousPattern { t -> t % 1.0 }
 }
 
-/** Inverse Sawtooth oscillator: 1 to -1, period of 1 cycle */
+/** Inverse Sawtooth oscillator: 1 to 0, period of 1 cycle */
 @StrudelDsl
 val isaw by dslObject {
-    ContinuousPattern { t -> 1.0 - (t % 1.0) * 2.0 }
+    ContinuousPattern { t -> 1.0 - (t % 1.0) }
 }
 
-/** Triangle oscillator: -1 to 1 to -1, period of 1 cycle */
+/** Triangle oscillator: 0 to 1 to 0, period of 1 cycle */
 @StrudelDsl
 val tri by dslObject {
     ContinuousPattern { t ->
         val phase = t % 1.0
-        if (phase < 0.5) (phase * 4.0) - 1.0 else 3.0 - (phase * 4.0)
+        if (phase < 0.5) phase * 2.0 else 2.0 - (phase * 2.0)
     }
 }
 
-/** Square oscillator: -1 or 1, period of 1 cycle */
+/** Square oscillator: 0 or 1, period of 1 cycle */
 @StrudelDsl
 val square by dslObject {
-    ContinuousPattern { t -> if (t % 1.0 < 0.5) 1.0 else -1.0 }
+    ContinuousPattern { t -> if (t % 1.0 < 0.5) 1.0 else 0.0 }
 }
 
 // Structural patterns /////////////////////////////////////////////////////////////////////////////////////////////////

@@ -2,167 +2,70 @@ package io.peekandpoke.klang.strudel.compat
 
 object JsCompatTestData {
 
-    val runProblems = false
+    private const val RUN_PROBLEMS = false
 
     val simplePatterns: List<Triple<Boolean, String, String>> = listOf(
-        Triple(
-            true, "C-Major notes", """
-                note("c3 d3 e3 f3 g3 a3 b3 c4")
-            """.trimIndent()
-        ),
+        // Scales
+        Triple(true, "C-Major notes", """note("c3 d3 e3 f3 g3 a3 b3 c4")"""),
+        Triple(true, "C4:minor scale", """n("0 2 4").scale("C4:minor")"""),
+        Triple(true, "C4:major scale", """n("0 2 4").scale("C4:major")"""),
         // Oscillators & Generators
-        Triple(
-            true, "Oscillators", """
-                s("<sine saw isaw tri square>").fast(2)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Noise Generators", """
-                s("<white brown pink crackle dust>").gain(0.5)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Impulse", """
-                s("impulse").gain(0.5)
-            """.trimIndent()
-        ),
+        Triple(true, "Oscillators", """s("<sine saw isaw tri square>").fast(2)"""),
+        Triple(true, "Noise Generators", """s("<white brown pink crackle dust>").gain(0.5)"""),
+        Triple(true, "Impulse", """s("impulse").gain(0.5)"""),
+
         // Structure & Control
-        Triple(
-            true, "Arrange", """
-                arrange([1, note("c")], [2, note("e")])
-            """.trimIndent()
-        ),
-        Triple(
-            runProblems, "PickRestart", """
-                pickRestart([note("c"), note("e")])
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Cat", """
-                cat(note("c"), note("e"))
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Stack", """
-                stack(note("c"), note("e"))
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Euclidean", """
-                note("c(3,8)")
-            """.trimIndent()
-        ),
+        Triple(true, "Arrange", """arrange([1, note("c")], [2, note("e")])"""),
+        // TODO: pickRestart cannot be used at the top-level in strudel ... need another test patterns here
+        Triple(RUN_PROBLEMS, "PickRestart", """pickRestart([note("c"), note("e")])"""),
+        Triple(true, "Cat", """cat(note("c"), note("e"))"""),
+        Triple(true, "Stack", """stack(note("c"), note("e"))"""),
+        Triple(true, "Euclidean", """note("c(3,8)")"""),
+        Triple(true, "Euclidean with rotation", """note("c(3,8,2)")"""),
         // Time & Tempo
-        Triple(
-            true, "Reverse", """
-                note("c e g").rev()
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Palindrome", """
-                note("c e g").palindrome()
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Slow & Fast", """
-                note("c e g").slow(2).fast(2)
-            """.trimIndent()
-        ),
+        Triple(true, "Reverse", """note("c e g").rev()"""),
+        Triple(true, "Palindrome", """note("c e g").palindrome()"""),
+        Triple(true, "Slow & Fast", """note("c e g").slow(2).fast(2)"""),
         // Voice Attributes
-        Triple(
-            true, "Gain & Pan", """
-                note("c").gain(0.5).pan("-0.5 0.5")
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Legato", """
-                note("c e").legato(0.5)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Clip", """
-                note("c e").clip(0.5)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Unison/Detune/Spread", """
-                note("c").unison(4).detune(0.1).spread(0.5)
-            """.trimIndent()
-        ),
+        Triple(true, "Gain & Pan", """note("c").gain(0.5).pan("-0.5 0.5")"""),
+        Triple(true, "Legato", """note("c e").legato(0.5)"""),
+        Triple(true, "Clip", """note("c e").clip(0.5)"""),
+        Triple(true, "Unison/Detune/Spread", """note("c").unison(4).detune(0.1).spread(0.5)"""),
         // ADSR Envelopes
-        Triple(
-            true, "Individual Params", """
-                note("c").attack(0.1).decay(0.2).sustain(0.5).release(1.0)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "ADSR String", """
-                note("c").adsr("0.1:0.2:0.5:1.0")
-            """.trimIndent()
-        ),
+        Triple(true, "ADSR single", """note("c").attack(0.1).decay(0.2).sustain(0.5).release(1.0)"""),
+        Triple(true, "ADSR String", """note("c").adsr("0.1:0.2:0.5:1.0")"""),
         // Filters
-        Triple(
-            true, "LowPass", """
-                s("saw").lpf(333)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "HighPass", """
-                s("saw").hpf(444)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "BandPass", """
-                s("saw").bandf(555)
-            """.trimIndent()
-        ),
-        Triple(
-            runProblems, "Notch", """
-                s("saw").notchf(666)
-            """.trimIndent()
-        ),
+        Triple(true, "LowPass", """s("saw").lpf(333)"""),
+        Triple(true, "HighPass", """s("saw").hpf(444)"""),
+        Triple(true, "BandPass", """s("saw").bandf(555)"""),
+        // TODO: notchf does not seem to exist in strudel ... or we need to figure how?
+        Triple(RUN_PROBLEMS, "Notch", """s("saw").notchf(666)"""),
         // Effects
-        Triple(
-            true, "Distortion", """
-                note("c").distort(0.5)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Bitcrush", """
-                note("c").crush(4)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Downsample", """
-                note("c").coarse(4)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Reverb", """
-                note("c").room(0.5).roomsize(2.0)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Delay", """
-                note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)
-            """.trimIndent()
-        ),
-        // Modulation & Scales
-        Triple(
-            true, "Vibrato", """
-                note("c").vib(5).vibmod(0.1)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Accelerate", """
-                note("c").accelerate(1)
-            """.trimIndent()
-        ),
-        Triple(
-            true, "Scales", """
-                n("0 2 4").scale("C4:minor")
-            """.trimIndent()
-        )
+        Triple(true, "Distortion low", """note("c").distort(0.5)"""),
+        Triple(true, "Distortion medium", """note("c").distort(7.0)"""),
+        Triple(true, "Distortion high", """note("c").distort(50.0)"""),
+        Triple(true, "Bitcrush", """note("c").crush(4)"""),
+        Triple(true, "Downsample", """note("c").coarse(4)"""),
+        Triple(true, "Reverb", """note("c").room(0.5).roomsize(2.0)"""),
+        Triple(true, "Delay", """note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)"""),
+        // Continuous patterns Sine
+        Triple(true, "Continuous | Sine", """note("a b c d").pan(sine)"""),
+        Triple(true, "Continuous | Sine range", """note("a b c d").pan(sine.range(-0.5, 0.5))"""),
+        // Continuous patterns Saw
+        Triple(true, "Continuous | Saw", """note("a b c d").pan(saw)"""),
+        Triple(true, "Continuous | Saw range", """note("a b c d").pan(saw.range(-0.5, 0.5))"""),
+        // Continuous patterns ISaw
+        Triple(true, "Continuous | ISaw", """note("a b c d").pan(isaw)"""),
+        Triple(true, "Continuous | ISaw range", """note("a b c d").pan(isaw.range(-0.5, 0.5))"""),
+        // Continuous patterns Tri
+        Triple(true, "Continuous | Tri", """note("a b c d").pan(tri)"""),
+        Triple(true, "Continuous | Tri range", """note("a b c d").pan(tri.range(-0.5, 0.5))"""),
+        // Continuous patterns Square
+        Triple(true, "Continuous | Square", """note("a b c d").pan(square)"""),
+        Triple(true, "Continuous | Square range", """note("a b c d").pan(square.range(-0.5, 0.5))"""),
+        // Modulation
+        Triple(true, "Vibrato", """note("c").vib(5).vibmod(0.1)"""),
+        Triple(true, "Accelerate", """note("c").accelerate(1)"""),
     )
 
     val songs: List<Triple<Boolean, String, String>> = listOf(

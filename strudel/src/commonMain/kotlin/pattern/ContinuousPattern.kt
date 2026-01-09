@@ -8,7 +8,9 @@ import io.peekandpoke.klang.strudel.math.Rational
 /**
  * A pattern that generates a value based on continuous cycle time.
  */
-open class ContinuousPattern(
+class ContinuousPattern(
+    val min: Double = 0.0,
+    val max: Double = 1.0,
     val getValue: (Double) -> Double,
 ) : StrudelPattern.FixedWeight {
 
@@ -24,15 +26,13 @@ open class ContinuousPattern(
     /** Creates a new version of this pattern with a transformed value range */
     fun range(min: Double, max: Double): ContinuousPattern {
         return ContinuousPattern(
+            min = min,
+            max = max,
             getValue = { t ->
                 val value = getValue(t)
-                // Normalize bipolar (-1..1) to unipolar (0..1)
-                val normalized = (value + 1.0) / 2.0
-
+                // Map current value (from this.min..this.max) to the new range
+                val normalized = (value - this.min) / (this.max - this.min)
                 (min + (normalized * (max - min)))
-                // .also {
-                // println("$t | $value | $min | $max -> $it")
-                // }
             },
         )
     }

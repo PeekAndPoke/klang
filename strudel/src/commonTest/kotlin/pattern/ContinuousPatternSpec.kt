@@ -7,6 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.sine
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class ContinuousPatternSpec : StringSpec({
 
@@ -15,7 +16,7 @@ class ContinuousPatternSpec : StringSpec({
         val pattern = ContinuousPattern { t -> t % 1.0 }
 
         // Querying a continuous pattern returns exactly one event covering the queried arc
-        val events = pattern.queryArc(0.25, 0.75)
+        val events = pattern.queryArc(0.25.toRational(), 0.75.toRational())
 
         events.size shouldBe 1
         val event = events[0]
@@ -29,9 +30,9 @@ class ContinuousPatternSpec : StringSpec({
     "ContinuousPattern: Kotlin DSL (sine)" {
         val pattern = sine
 
-        // sine is sin(t * 2 * PI)
-        // at t=0.25, sin(0.5 * PI) = 1.0
-        val events = pattern.queryArc(0.25, 0.5)
+        // sine is (sin(t * 2 * PI) + 1) / 2
+        // at t=0.25, (sin(0.5 * PI) + 1) / 2 = (1 + 1) / 2 = 1.0
+        val events = pattern.queryArc(0.25.toRational(), 0.5.toRational())
 
         events.size shouldBe 1
         events[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
@@ -41,21 +42,21 @@ class ContinuousPatternSpec : StringSpec({
         val pattern = StrudelPattern.compile("sine")
 
         pattern.shouldNotBeNull()
-        val events = pattern.queryArc(0.5, 1.0)
+        // at t=0.5, (sin(PI) + 1) / 2 = (0 + 1) / 2 = 0.5
+        val events = pattern.queryArc(0.5.toRational(), 1.0.toRational())
 
         events.size shouldBe 1
-        // at t=0.5, sin(PI) = 0.0
-        events[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "ContinuousPattern: range mapping" {
-        val base = ContinuousPattern { 0.5 } // Constant signal
-        // range(min, max) maps bipoloar -1..1 to min..max
-        // 0.5 is unipolar 0.75 ( since (0.5 + 1) / 2 = 0.75 )
-        // range(0, 100) -> 0 + 0.75 * 100 = 75
+        // base is unipolar 0..1 by default
+        val base = ContinuousPattern { 0.5 }
+
+        // mapping 0..1 to 0..100. 0.5 is exactly the middle.
         val mapped = base.range(0.0, 100.0)
 
-        val events = mapped.queryArc(0.0, 1.0)
-        events[0].data.value shouldBe (75.0 plusOrMinus EPSILON)
+        val events = mapped.queryArc(0.0.toRational(), 1.0.toRational())
+        events[0].data.value shouldBe (50.0 plusOrMinus EPSILON)
     }
 })
