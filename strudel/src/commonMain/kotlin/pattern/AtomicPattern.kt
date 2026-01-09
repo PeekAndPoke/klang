@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -14,7 +15,7 @@ internal class AtomicPattern(val data: VoiceData) : StrudelPattern.FixedWeight {
         val pure = AtomicPattern(VoiceData.empty)
     }
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val startCycle = from.floor().toInt()
         val endCycle = to.ceil().toInt()
         val events = mutableListOf<StrudelPatternEvent>()

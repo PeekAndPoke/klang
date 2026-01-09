@@ -7,6 +7,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.PerlinNoise
 import io.peekandpoke.klang.strudel.pattern.*
+import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.tones.scale.Scale
 import kotlin.math.PI
@@ -94,17 +95,12 @@ val perlin by dslObject {
  */
 @StrudelDsl
 val StrudelPattern.range by dslMethod { p, args ->
-    if (p !is ContinuousPattern) {
-        // TODO: we need a way to "inject" this
-        //   - walk down the chain until we find a continuous pattern
-        //   - update the continuous pattern's range
-        //   - wrap the with what once wrapped the old
-        p
-    } else {
-        val min = (args.getOrNull(0) as? Number)?.toDouble() ?: 0.0
-        val max = (args.getOrNull(1) as? Number)?.toDouble() ?: 1.0
+    val min = (args.getOrNull(0) as? Number)?.toDouble() ?: 0.0
+    val max = (args.getOrNull(1) as? Number)?.toDouble() ?: 1.0
 
-        p.applyRange(min, max)
+    p.withContext {
+        setIfAbsent(ContinuousPattern.minKey, min)
+        setIfAbsent(ContinuousPattern.maxKey, max)
     }
 }
 

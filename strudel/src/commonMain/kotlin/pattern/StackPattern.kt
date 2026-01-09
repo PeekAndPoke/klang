@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -10,9 +11,10 @@ import io.peekandpoke.klang.strudel.math.Rational
  */
 internal class StackPattern(val patterns: List<StrudelPattern>) : StrudelPattern.FixedWeight {
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
-        // Simply collect events from all patterns for the same time arc
-        return patterns.flatMap { it.queryArc(from, to) }
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+
+        return patterns
+            .flatMap { it.queryArcContextual(from, to, ctx) }
             .sortedBy { it.begin } // Sort them to keep order nice (optional but good for debugging)
     }
 }

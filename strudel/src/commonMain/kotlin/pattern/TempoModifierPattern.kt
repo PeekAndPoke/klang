@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -13,16 +14,13 @@ internal class TempoModifierPattern(
 
     private val factorRational = Rational(factor)
 
-    override fun queryArc(
-        from: Rational,
-        to: Rational,
-    ): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         // Map outer time to inner time
         // If slow(2), outer 0..2 becomes inner 0..1
         val innerFrom = from / factorRational
         val innerTo = to / factorRational
 
-        val innerEvents = source.queryArc(innerFrom, innerTo)
+        val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
         return innerEvents.map { ev ->
             // Map inner events back to outer time

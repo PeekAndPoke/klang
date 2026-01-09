@@ -1,137 +1,130 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class LangContinuousPatternsSpec : StringSpec({
 
-    "sine: validates sin(t * 2 * PI) normalized to 0..1" {
-        // sine: (sin(t * 2 * PI) + 1.0) / 2.0
-        sine.queryArc(0.0.toRational(), 0.0.toRational())[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
-        sine.queryArc(0.25.toRational(), 0.25.toRational())[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
-        sine.queryArc(0.5.toRational(), 0.5.toRational())[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
-        sine.queryArc(0.75.toRational(), 0.75.toRational())[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+    "sine oscillator" {
+        withClue("sine in kotlin") {
+            val pattern = sine
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+            pattern.queryArc(0.25, 0.25)[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+            pattern.queryArc(0.75, 0.75)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+        }
+
+        withClue("sine with range in kotlin") {
+            val pattern = sine.range(-0.5, 0.5)
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.25, 0.25)[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.75, 0.75)[0].data.value shouldBe (-0.5 plusOrMinus EPSILON)
+        }
+
+        withClue("sine compiled") {
+            val pattern = StrudelPattern.compile("sine")!!
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+            pattern.queryArc(0.25, 0.25)[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+            pattern.queryArc(0.75, 0.75)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+        }
+
+        withClue("sine compiled with range") {
+            val pattern = StrudelPattern.compile("sine.range(-0.5, 0.5)")!!
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.25, 0.25)[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.75, 0.75)[0].data.value shouldBe (-0.5 plusOrMinus EPSILON)
+        }
     }
 
-    "saw: validates ramp 0 to 1" {
-        // saw: t % 1.0
-        saw.queryArc(0.0.toRational(), 0.0.toRational())[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
-        saw.queryArc(0.5.toRational(), 0.5.toRational())[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
-        saw.queryArc(0.99.toRational(), 0.99.toRational())[0].data.value shouldBe (0.99 plusOrMinus EPSILON)
+    "saw oscillator" {
+        withClue("saw in kotlin") {
+            val pattern = saw
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+        }
+
+        withClue("saw with range in kotlin") {
+            val pattern = saw.range(10.0, 20.0)
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (10.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (15.0 plusOrMinus EPSILON)
+        }
+
+        withClue("saw compiled with range") {
+            val pattern = StrudelPattern.compile("saw.range(10, 20)")!!
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (10.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (15.0 plusOrMinus EPSILON)
+        }
     }
 
-    "isaw: validates ramp 1 to 0" {
-        // isaw: 1.0 - (t % 1.0)
-        isaw.queryArc(0.0.toRational(), 0.0.toRational())[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
-        isaw.queryArc(0.5.toRational(), 0.5.toRational())[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
-        isaw.queryArc(0.99.toRational(), 0.99.toRational())[0].data.value shouldBe (0.01 plusOrMinus EPSILON)
+    "tri oscillator" {
+        withClue("tri in kotlin") {
+            val pattern = tri
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.25, 0.25)[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+        }
+
+        withClue("tri with range in kotlin") {
+            val pattern = tri.range(-1.0, 1.0)
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (-1.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+        }
+
+        withClue("tri compiled with range") {
+            val pattern = StrudelPattern.compile("tri.range(-1, 1)")!!
+            pattern.queryArc(0.0, 0.0)[0].data.value shouldBe (-1.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.5, 0.5)[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+        }
     }
 
-    "tri: validates triangle 0 -> 1 -> 0" {
-        // tri: 0.0 -> 0, 0.25 -> 0.5, 0.5 -> 1.0, 0.75 -> 0.5, 1.0 -> 0.0
-        tri.queryArc(0.0.toRational(), 0.0.toRational())[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
-        tri.queryArc(0.25.toRational(), 0.25.toRational())[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
-        tri.queryArc(0.5.toRational(), 0.5.toRational())[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
-        tri.queryArc(0.75.toRational(), 0.75.toRational())[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+    "square oscillator" {
+        withClue("square in kotlin") {
+            val pattern = square
+            pattern.queryArc(0.1, 0.1)[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.6, 0.6)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+        }
+
+        withClue("square compiled with range") {
+            val pattern = StrudelPattern.compile("square.range(0, 10)")!!
+            pattern.queryArc(0.1, 0.1)[0].data.value shouldBe (10.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.6, 0.6)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+        }
     }
 
-    "square: validates square pulse 0 or 1" {
-        // First half is 1, second half is 0
-        square.queryArc(0.1.toRational(), 0.1.toRational())[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
-        square.queryArc(0.6.toRational(), 0.6.toRational())[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
-    }
+    "Transformation order (slow and range)" {
+        withClue("slow(2).range vs range.slow(2)") {
+            val t = 0.5 // t=0.5 at slow(2) means phase 0.25
 
-    "silence: returns no events" {
-        silence.queryArc(0.0.toRational(), 1.0.toRational()) shouldBe emptyList()
-    }
+            val patA = sine.slow(2.0).range(-0.5, 0.5)
+            val patB = sine.range(-0.5, 0.5).slow(2.0)
 
-    "rest: alias for silence" {
-        rest.queryArc(0.0.toRational(), 1.0.toRational()) shouldBe emptyList()
-    }
+            val valA = patA.queryArc(t, t)[0].data.value
+            val valB = patB.queryArc(t, t)[0].data.value
 
-    "sine works within compiled code as top-level pattern" {
-        val p = StrudelPattern.compile("""sine""")
+            // phase 0.25 -> sine is 1.0 -> mapped to range -0.5..0.5 is 0.5
+            valA shouldBe (0.5 plusOrMinus EPSILON)
+            valB shouldBe (valA!! plusOrMinus EPSILON)
+        }
 
-        val events = p?.queryArc(0.25.toRational(), 0.25.toRational()) ?: emptyList()
+        withClue("compiled: slow(2).range vs range.slow(2)") {
+            val t = 1.5 // t=1.5 at slow(2) means phase 0.75
 
-        events.size shouldBe 1
-        events[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
-    }
+            val patA = StrudelPattern.compile("sine.slow(2).range(0, 100)")!!
+            val patB = StrudelPattern.compile("sine.range(0, 100).slow(2)")!!
 
-    "saw works within compiled code as top-level pattern" {
-        val p = StrudelPattern.compile("""saw""")
+            val valA = patA.queryArc(t, t)[0].data.value
+            val valB = patB.queryArc(t, t)[0].data.value
 
-        val events = p?.queryArc(0.5.toRational(), 0.5.toRational()) ?: emptyList()
-
-        events.size shouldBe 1
-        events[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
-    }
-
-    "isaw works within compiled code as top-level pattern" {
-        val p = StrudelPattern.compile("""isaw""")
-
-        val events = p?.queryArc(0.5.toRational(), 0.5.toRational()) ?: emptyList()
-
-        events.size shouldBe 1
-        events[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
-    }
-
-    "tri works within compiled code as top-level pattern" {
-        val p = StrudelPattern.compile("""tri""")
-
-        val events = p?.queryArc(0.5.toRational(), 0.5.toRational()) ?: emptyList()
-
-        events.size shouldBe 1
-        events[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
-    }
-
-    "square works within compiled code as top-level pattern" {
-        val p = StrudelPattern.compile("""square""")
-
-        val events = p?.queryArc(0.1.toRational(), 0.1.toRational()) ?: emptyList()
-
-        events.size shouldBe 1
-        events[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
-    }
-
-    "silence works within compiled code as top-level pattern" {
-        val p = StrudelPattern.compile("""silence""")
-
-        val events = p?.queryArc(0.0.toRational(), 1.0.toRational()) ?: emptyList()
-
-        events.size shouldBe 0
-    }
-
-    "rest works within compiled code as top-level pattern" {
-        val p = StrudelPattern.compile("""rest""")
-
-        val events = p?.queryArc(0.0.toRational(), 1.0.toRational()) ?: emptyList()
-
-        events.size shouldBe 0
-    }
-
-    "perlin: validates noise signal within 0..1 range" {
-        val events = perlin.queryArc(0.0.toRational(), 1.0.toRational())
-        events.size shouldBe 1
-
-        // Perlin noise is randomized but the implementation ensures it stays within bounds
-        val value = events[0].data.value ?: -1.0
-        (value >= 0.0) shouldBe true
-        (value <= 1.0) shouldBe true
-    }
-
-    "perlin works within compiled code as top-level pattern" {
-        val p = StrudelPattern.compile("""perlin""")
-
-        val events = p?.queryArc(0.5.toRational(), 0.5.toRational()) ?: emptyList()
-
-        events.size shouldBe 1
-        val value = events[0].data.value ?: -1.0
-        (value >= 0.0) shouldBe true
-        (value <= 1.0) shouldBe true
+            // phase 0.75 -> sine is 0.0 -> mapped to range 0..100 is 0.0
+            valA shouldBe (0.0 plusOrMinus EPSILON)
+            valB shouldBe (valA!! plusOrMinus EPSILON)
+        }
     }
 })

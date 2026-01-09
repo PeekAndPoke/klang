@@ -15,12 +15,39 @@ Strudel.
 - **DegradePattern** - Probabilistic event removal (e.g., `"bd?"` or `"bd?0.5"`)
 - **ReversePattern** - Reverses pattern within each cycle (`rev()`)
 - **StructPattern** - Structures pattern according to mask using 'x' markers (`struct()`)
+- **ContextModifierPattern** - Modifies query context for downstream patterns
 - **ArrangementPattern** - Multi-cycle pattern arrangement (`arrange()`)
 - **TimeModifierPattern** - Speed/tempo modification
 - **ControlPattern** - Applies control patterns to source patterns
-- **ContinuousPattern** - Time-based continuous signal generation
+- **ContinuousPattern** - Time-based continuous signal generation with context-aware range mapping
 
-### Rational Number Time System ✅ **NEW!**
+### QueryContext System ✅ **NEW!**
+
+**Major architectural improvement** introducing a context-passing mechanism for pattern queries:
+
+- **QueryContext** class with type-safe key-value storage for passing information down the pattern hierarchy
+- **QueryContext.Key<T>** for type-safe context keys
+- **QueryContext.Updater** with efficient copy-on-write updates to minimize allocations
+- Conditional update methods: `set()`, `setIfAbsent()`, `setWhen()`
+- **queryArcContextual()** method - all patterns now implement context-aware querying
+- **ContextModifierPattern** - new pattern type for context manipulation
+- Comprehensive test suite with 20+ tests covering all context operations
+
+**Benefits:**
+
+- **Transformation order independence** - patterns work correctly regardless of composition order (e.g.,
+  `sine.slow(2).range(0,100)` == `sine.range(0,100).slow(2)`)
+- Information flows down the pattern hierarchy without coupling patterns together
+- Enables future features like scale context propagation, tempo inheritance, and more
+- Clean separation of concerns - patterns don't need to know about wrapping patterns
+
+**Impact:**
+
+- ✅ Fixed `range()` to work with any transformation order
+- ✅ Enables context-aware continuous patterns
+- ✅ Foundation for future context-dependent features
+
+### Rational Number Time System ✅
 
 **Major architectural improvement** replacing floating-point time coordinates with exact rational arithmetic:
 
@@ -179,7 +206,7 @@ Strudel.
 
 ### Signal Processing ✅
 
-- `range(min, max)` - Rescale continuous pattern values
+- `range(min, max)` - Rescale continuous pattern values (transformation order independent via QueryContext)
 
 ## Context & Routing
 
@@ -226,7 +253,8 @@ Comprehensive voice data structure supporting:
 **Total Implemented:**
 
 - 70+ DSL functions/methods
-- 12 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern, StructPattern)
+- 13 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern, StructPattern,
+  ContextModifierPattern)
 - 5 continuous oscillators (sine, saw, isaw, tri, square)
 - 1 noise generator (perlin)
 - 4 filter types
@@ -239,6 +267,8 @@ Comprehensive voice data structure supporting:
 
 **Architecture Highlights:**
 
+- **QueryContext system** - Context-passing enables transformation order independence and future context-dependent
+  features
 - **Rational number time coordinates** - Exact arithmetic eliminates floating-point drift
 - Property delegation for clean DSL
 - Type-safe pattern construction
@@ -248,12 +278,15 @@ Comprehensive voice data structure supporting:
 
 **Recent Major Improvements (2026-01-08 to 2026-01-09):**
 
+- ✅ **QueryContext System** - Major architectural improvement introducing context-passing for transformation order
+  independence and enabling future context-dependent features (scale propagation, tempo inheritance, etc.)
 - ✅ **Rational Time System** - Replaced all Double time coordinates with exact Rational arithmetic
 - ✅ **Euclidean Pattern Fix** - Fixed timing bug that caused premature event triggering
 - ✅ **EPSILON Removal** - No longer needed thanks to exact arithmetic
 - ✅ **Probabilistic Patterns** - Implemented `?` (degrade) and `|` (choice) operators with deterministic seeded
   randomness
-- ✅ **Enhanced Testing** - Added comprehensive test suites for Rational numbers, ChoicePattern, and DegradePattern
+- ✅ **Enhanced Testing** - Added comprehensive test suites for Rational numbers, ChoicePattern, DegradePattern, and
+  QueryContext
 - ✅ **Reverse Pattern** - Implemented `rev()` pattern transformation with time reversal per cycle
 - ✅ **Struct Pattern** - Implemented `struct()` for masking patterns with structural markers ('x' notation)
 - ✅ **Scale Integration** - Enhanced `n()` and `scale()` to work together, automatic note name conversion from indices
@@ -261,3 +294,5 @@ Comprehensive voice data structure supporting:
 - ✅ **Perlin Noise** - Implemented 1D Perlin noise generator with `perlin` continuous pattern
 - ✅ **DSL Type System Simplification** - Removed generic type parameters from `dslMethod`, cleaner architecture with
   `Any?` handling
+- ✅ **Transformation Order Independence** - `range()` now works correctly regardless of composition order with tempo
+  modifiers

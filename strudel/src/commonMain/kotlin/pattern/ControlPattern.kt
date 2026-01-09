@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -25,8 +26,8 @@ internal class ControlPattern(
     // E.g. (bd@2).gain(0.5) should still have a weight of 2.
     override val weight: Double get() = source.weight
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
-        val sourceEvents = source.queryArc(from, to)
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        val sourceEvents = source.queryArcContextual(from, to, ctx)
         if (sourceEvents.isEmpty()) return emptyList()
 
         val result = mutableListOf<StrudelPatternEvent>()
@@ -36,7 +37,7 @@ internal class ControlPattern(
 
         for (event in sourceEvents) {
             val queryTime = event.begin
-            val controlEvents = control.queryArc(queryTime, queryTime + epsilon)
+            val controlEvents = control.queryArcContextual(queryTime, queryTime + epsilon, ctx)
             val match = controlEvents.firstOrNull()
 
             if (match != null) {

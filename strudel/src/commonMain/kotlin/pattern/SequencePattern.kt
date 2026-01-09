@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -12,7 +13,7 @@ internal class SequencePattern(
     val patterns: List<StrudelPattern>,
 ) : StrudelPattern.FixedWeight {
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
 
         val events = mutableListOf<StrudelPatternEvent>()
@@ -49,13 +50,13 @@ internal class SequencePattern(
                     // Clamp innerTo to the end of the cycle
                     val innerTo = minOf((intersectEnd - stepStart) / stepSize + cycleOffset, cycleOffset + Rational.ONE)
 
-                    val innerEvents = pattern.queryArc(innerFrom, innerTo)
+                    val innerEvents = pattern.queryArcContextual(innerFrom, innerTo, ctx)
 
                     events.addAll(innerEvents.map { ev ->
                         // Map back to outer time
                         val mappedBegin = (ev.begin - cycleOffset) * stepSize + stepStart
                         val mappedEnd = (ev.end - cycleOffset) * stepSize + stepStart
-                        val mappedDur = ev.dur * stepSize // Duration also scales
+                        val mappedDur = mappedEnd - mappedBegin // Duration also scales
 
                         ev.copy(begin = mappedBegin, end = mappedEnd, dur = mappedDur)
                     })

@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.serialization.Serializable
@@ -21,7 +22,7 @@ class StaticStrudelPattern(
 
     private val totalCycles = maxOf(Rational.ONE, events.maxOfOrNull { it.end } ?: Rational.ZERO).ceil()
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (events.isEmpty()) return emptyList()
 
         val fromMod = from % totalCycles

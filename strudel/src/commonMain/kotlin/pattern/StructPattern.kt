@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -19,9 +20,9 @@ internal class StructPattern(
     override val weight: Double get() = structure.weight
 
     @Suppress("DuplicatedCode")
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         // 1. Get the rhythmic structure
-        val structEvents = structure.queryArc(from, to)
+        val structEvents = structure.queryArcContextual(from, to, ctx)
         if (structEvents.isEmpty()) return emptyList()
 
         val result = mutableListOf<StrudelPatternEvent>()
@@ -30,7 +31,7 @@ internal class StructPattern(
             val isTruthy = maskEvent.data.note == "x"
 
             if (isTruthy) {
-                val sourceEvents = source.queryArc(maskEvent.begin, maskEvent.end)
+                val sourceEvents = source.queryArcContextual(maskEvent.begin, maskEvent.end, ctx)
 
                 for (sourceEvent in sourceEvents) {
                     val intersectionBegin = maxOf(sourceEvent.begin, maskEvent.begin)

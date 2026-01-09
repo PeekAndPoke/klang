@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -11,7 +12,7 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 internal class ReversePattern(val inner: StrudelPattern) : StrudelPattern {
     override val weight: Double get() = inner.weight
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val startCycle = from.floor()
         val endCycle = to.ceil()
         val events = mutableListOf<StrudelPatternEvent>()
@@ -29,7 +30,7 @@ internal class ReversePattern(val inner: StrudelPattern) : StrudelPattern {
                 val innerTo = Rational.ONE + (cycle * Rational(2)) - intersectStart
                 val innerFrom = Rational.ONE + (cycle * Rational(2)) - intersectEnd
 
-                inner.queryArc(innerFrom, innerTo).forEach { ev ->
+                inner.queryArcContextual(innerFrom, innerTo, ctx).forEach { ev ->
                     val mappedBegin = Rational.ONE + (cycle * Rational(2)) - ev.end
                     val mappedEnd = Rational.ONE + (cycle * Rational(2)) - ev.begin
                     events.add(ev.copy(begin = mappedBegin, end = mappedEnd))

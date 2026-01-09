@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlin.random.Random
@@ -16,11 +17,11 @@ internal class DegradePattern(
 
     override val weight: Double get() = inner.weight
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         // Use seeded random based on the events start time
         val random = createSeededRandom(from.toDouble())
 
-        return inner.queryArc(from, to).filter {
+        return inner.queryArcContextual(from, to, ctx).filter {
             random.nextDouble() > probability
         }
     }

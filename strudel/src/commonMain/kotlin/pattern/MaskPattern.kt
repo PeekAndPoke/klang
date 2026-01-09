@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -19,16 +20,16 @@ internal class MaskPattern(
     // Mask patterns preserve the source's weight as they filter existing events
     override val weight: Double get() = source.weight
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         // 1. Get all events from the source
-        val sourceEvents = source.queryArc(from, to)
+        val sourceEvents = source.queryArcContextual(from, to, ctx)
         if (sourceEvents.isEmpty()) return emptyList()
 
         val result = mutableListOf<StrudelPatternEvent>()
 
         for (sourceEvent in sourceEvents) {
             // 2. Query the mask for the specific duration of this source event
-            val maskEvents = mask.queryArc(sourceEvent.begin, sourceEvent.end)
+            val maskEvents = mask.queryArcContextual(sourceEvent.begin, sourceEvent.end, ctx)
 
             // 3. Check if any mask event in this duration is truthy
             val isAllowed = maskEvents.any { maskEvent ->

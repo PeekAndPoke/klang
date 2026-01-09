@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -14,7 +15,7 @@ internal class ArrangementPattern(
     private val segmentsRational = segments.map { (dur, pat) -> Rational(dur) to pat }
     private val totalDuration = segmentsRational.fold(Rational.ZERO) { acc, (dur, _) -> acc + dur }
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (totalDuration == Rational.ZERO) return emptyList()
 
         val events = mutableListOf<StrudelPatternEvent>()
@@ -49,7 +50,7 @@ internal class ArrangementPattern(
                     // To match strudel.cc, we query the pattern at its absolute time position.
                     // This allows patterns like < > to progress correctly across the arrangement.
                     if (qEnd > qStart) {
-                        val innerEvents = pat.queryArc(qStart, qEnd)
+                        val innerEvents = pat.queryArcContextual(qStart, qEnd, ctx)
 
                         events.addAll(innerEvents.map { e ->
                             // Since we query at absolute time, the events are already

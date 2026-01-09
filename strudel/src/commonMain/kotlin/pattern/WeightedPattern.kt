@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -12,7 +13,7 @@ internal class WeightedPattern(
     private val inner: StrudelPattern,
     override val weight: Double,
 ) : StrudelPattern {
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
-        return inner.queryArc(from, to)
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        return inner.queryArcContextual(from, to, ctx)
     }
 }

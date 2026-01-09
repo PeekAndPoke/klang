@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.tones.time.Rhythm
@@ -24,7 +25,7 @@ internal class EuclideanPattern(
 
     private val rhythm = Rhythm.euclid(steps, pulses)
 
-    override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val events = mutableListOf<StrudelPatternEvent>()
 
         val startCycle = from.floor().toInt()
@@ -51,7 +52,7 @@ internal class EuclideanPattern(
                     // No EPSILON needed - exact arithmetic!
                     if (intersectEnd > intersectStart) {
                         // We only take the latest event to avoid "snapping" from one note to the next
-                        val innerEvents = inner.queryArc(intersectStart, intersectEnd)
+                        val innerEvents = inner.queryArcContextual(intersectStart, intersectEnd, ctx)
                             .sortedBy { it.begin }
                             .take(1)
 

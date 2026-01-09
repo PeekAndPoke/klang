@@ -71,7 +71,8 @@ private suspend fun helloStrudel() {
 //        ).slow(1)
 
 
-        val pattern = TestKotlinPatterns.strangerThings
+//        val pattern = TestKotlinPatterns.strangerThings
+        val pattern = TestKotlinPatterns.tetris
 //        val pattern = note("<a1 e2>/8").clip(0.8)
 //            .struct("x*8")
 //            .s("tri")
