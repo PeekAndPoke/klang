@@ -72,7 +72,7 @@ and category.
 - [ ] **`juxBy(amount, function)`** - Jux with custom stereo width
 - [ ] **`off(time, function)`** - Copies, shifts, and modifies pattern
 - [ ] **`superimpose(function)`** - Layers modified pattern on top
-- [ ] **`mask(pattern)`** - Conditionally applies pattern elements (boolean masking)
+- [x] **`mask(pattern)`** - Conditionally applies pattern elements (boolean masking)
 
 ### Tonal Functions ⭐⭐⭐
 

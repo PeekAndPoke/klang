@@ -68,6 +68,11 @@ object JsCompatTestData {
         // Modulation
         Triple(true, "Vibrato", """note("c").vib(5).vibmod(0.1)"""),
         Triple(true, "Accelerate", """note("c").accelerate(1)"""),
+        // Masking
+        Triple(true, "Struct #1", """note("c,eb,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
+        Triple(true, "Struct #2", """note("c3 d3").fast(2).struct("x")"""),
+        Triple(true, "Mask #1", """note("c [eb,g] d [eb,g]").mask("<1 [0 1]>")"""),
+        Triple(true, "Mask #2", """note("c3*8").mask(square.fast(4))"""),
     )
 
     val songs: List<Triple<Boolean, String, String>> = listOf(

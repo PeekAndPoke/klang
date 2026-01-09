@@ -41,8 +41,8 @@ class LangContinuousPatternsSpec : StringSpec({
 
     "square: validates square pulse 0 or 1" {
         // First half is 1, second half is 0
-        square.queryArc(0.1.toRational(), 0.1.toRational())[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
-        square.queryArc(0.6.toRational(), 0.6.toRational())[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+        square.queryArc(0.1.toRational(), 0.1.toRational())[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+        square.queryArc(0.6.toRational(), 0.6.toRational())[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "silence: returns no events" {

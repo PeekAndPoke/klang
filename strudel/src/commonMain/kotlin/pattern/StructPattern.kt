@@ -18,6 +18,7 @@ internal class StructPattern(
     // Struct patterns usually preserve the weight of the structure's rhythm
     override val weight: Double get() = structure.weight
 
+    @Suppress("DuplicatedCode")
     override fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> {
         // 1. Get the rhythmic structure
         val structEvents = structure.queryArc(from, to)
@@ -25,28 +26,26 @@ internal class StructPattern(
 
         val result = mutableListOf<StrudelPatternEvent>()
 
-        for (structEvent in structEvents) {
-            // In Strudel, 'x' marks the active steps in a struct
-            if (structEvent.data.note == "x") {
-                // 2. Query the source for the duration of this specific structural event
-                val sourceEvents = source
-                    .queryArc(structEvent.begin, structEvent.end)
-//                    .take(1)
+        for (maskEvent in structEvents) {
+            val isTruthy = maskEvent.data.note == "x"
+
+            if (isTruthy) {
+                val sourceEvents = source.queryArc(maskEvent.begin, maskEvent.end)
 
                 for (sourceEvent in sourceEvents) {
-                    // 3. Clip the source event to the boundaries of the structural step
-//                    val intersectionBegin = maxOf(sourceEvent.begin, structEvent.begin)
-//                    val intersectionEnd = minOf(sourceEvent.end, structEvent.end)
-//
-//                    if (intersectionBegin < intersectionEnd) {
-                    result.add(
-                        sourceEvent.copy(
-                            begin = structEvent.begin,
-                            end = structEvent.end,
-                            dur = structEvent.dur,
+                    val intersectionBegin = maxOf(sourceEvent.begin, maskEvent.begin)
+                    val intersectionEnd = minOf(sourceEvent.end, maskEvent.end)
+                    val intersectionDur = intersectionEnd - intersectionBegin
+
+                    if (intersectionBegin < intersectionEnd) {
+                        result.add(
+                            sourceEvent.copy(
+                                begin = intersectionBegin,
+                                end = intersectionEnd,
+                                dur = intersectionDur,
+                            )
                         )
-                    )
-//                    }
+                    }
                 }
             }
         }

@@ -190,15 +190,30 @@ val StrudelPattern.palindrome by dslMethod<Any?> { pattern, _ ->
 val StrudelPattern.struct by dslMethod<Any> { source, args ->
     val structure = when (val structArg = args.firstOrNull()) {
         is StrudelPattern -> structArg
-
-        is String -> parseMiniNotation(input = structArg) {
-            AtomicPattern(VoiceData.empty.copy(note = it))
-        }
-
+        is String -> parseMiniNotation(input = structArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
         else -> silence
     }
 
     StructPattern(source, structure)
+}
+
+/**
+ * Filters the pattern using a boolean mask.
+ *
+ * Events in the source pattern are only heard if the mask pattern
+ * has a truthy value at that time.
+ *
+ * Example: note("c e g").mask("1 0 1")
+ */
+@StrudelDsl
+val StrudelPattern.mask by dslMethod<Any> { source, args ->
+    val maskPattern = when (val maskArg = args.firstOrNull()) {
+        is StrudelPattern -> maskArg
+        is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+        else -> silence
+    }
+
+    MaskPattern(source, maskPattern)
 }
 
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
