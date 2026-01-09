@@ -4,10 +4,7 @@ import com.github.h0tk3y.betterParse.parser.ParseException
 import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.parser.KlangScriptParser
-import io.peekandpoke.klang.script.runtime.Interpreter
-import io.peekandpoke.klang.script.runtime.LibraryLoader
-import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
-import io.peekandpoke.klang.script.runtime.RuntimeValue
+import io.peekandpoke.klang.script.runtime.*
 
 /**
  * Main facade for the KlangScript engine
@@ -59,13 +56,19 @@ class KlangScriptEngine private constructor(
         fun builder(): Builder = Builder()
     }
 
-    /** The interpreter that executes parsed programs */
-    val interpreter = Interpreter(engine = this)
-
-    /** The global environment where functions and variables are stored */
-    val environment = interpreter.getEnvironment().apply {
+    /**
+     * The root environment containing only native registrations.
+     * Used as a parent for libraries to ensure isolation.
+     */
+    internal val nativeEnvironment = Environment().apply {
         register(native)
     }
+
+    /** The global environment where user functions and variables are stored */
+    val environment = Environment(parent = nativeEnvironment)
+
+    /** The interpreter that executes parsed programs */
+    val interpreter = Interpreter(env = environment, engine = this)
 
     /**
      * Execute a KlangScript program
@@ -106,7 +109,7 @@ class KlangScriptEngine private constructor(
      * @throws RuntimeException if the library is not found
      */
     override fun loadLibrary(name: String): String {
-        return environment.loadLibrary(name)
+        return nativeEnvironment.loadLibrary(name)
     }
 
     /**

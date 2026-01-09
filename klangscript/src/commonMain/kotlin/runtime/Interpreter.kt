@@ -163,12 +163,11 @@ class Interpreter(
         // Parse library source code
         val libraryProgram = KlangScriptParser.parse(librarySource)
 
-        // Create isolated environment for library evaluation
-        // The library environment has the current environment as parent, so it can access
-        // native functions and global variables, but its own definitions are isolated
-        val libraryEnv = Environment(parent = env)
+        // Create an isolated environment / scope for library evaluation,
+        // starting with the native environment of the engine.
+        val libraryEnv = Environment(parent = engine.nativeEnvironment)
 
-        // Execute library in isolated environment
+        // Execute the library in an isolated environment
         val libraryInterpreter = Interpreter(env = libraryEnv, engine = engine)
         libraryInterpreter.execute(libraryProgram)
 

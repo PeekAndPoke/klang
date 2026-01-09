@@ -1,11 +1,9 @@
-package io.peekandpoke.klang.script
+package io.peekandpoke.klang.script.runtime
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.script.ast.NumberLiteral
-import io.peekandpoke.klang.script.runtime.Environment
-import io.peekandpoke.klang.script.runtime.FunctionValue
-import io.peekandpoke.klang.script.runtime.convertFunctionToKotlin
+import io.peekandpoke.klang.script.klangScript
 
 /**
  * Tests calling function from script-land into kotlin-land
