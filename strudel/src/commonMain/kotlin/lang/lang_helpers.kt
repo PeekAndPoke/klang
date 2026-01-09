@@ -36,7 +36,7 @@ fun <In> dslFunction(handler: (List<Any?>) -> StrudelPattern) = DslFunctionProvi
 /**
  * Creates a DSL extension method on StrudelPattern that returns a StrudelPattern.
  */
-fun <In> dslMethod(handler: (StrudelPattern, List<Any?>) -> StrudelPattern) = DslMethodProvider<In>(handler)
+fun dslMethod(handler: (StrudelPattern, List<Any?>) -> StrudelPattern) = DslMethodProvider(handler)
 
 /**
  * Creates a DSL object that is registered in the StrudelRegistry.
@@ -122,10 +122,13 @@ class DslFunction<In>(val handler: (List<Any?>) -> StrudelPattern) {
 /**
  * Provider that registers the method name and creates bound delegates.
  */
-class DslMethodProvider<In>(
+class DslMethodProvider(
     private val handler: (StrudelPattern, List<Any?>) -> StrudelPattern,
 ) {
-    operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<StrudelPattern, DslMethod<In>> {
+    operator fun provideDelegate(
+        thisRef: Any?,
+        prop: KProperty<*>,
+    ): ReadOnlyProperty<StrudelPattern, DslMethod> {
         val name = prop.name
 
         // Register in the evaluator registry
@@ -145,15 +148,15 @@ class DslMethodProvider<In>(
  * A method bound to a specific [pattern] instance.
  * When invoked, it applies the handler to the bound pattern and arguments.
  */
-class DslMethod<In>(
+class DslMethod(
     val pattern: StrudelPattern,
-    val handler: (StrudelPattern, List<Any>) -> StrudelPattern,
+    val handler: (StrudelPattern, List<Any?>) -> StrudelPattern,
 ) {
     // Typed invocation for Kotlin usage: p.slow(2)
     // The pattern is already bound, so we only pass args.
-    operator fun invoke(vararg args: In): StrudelPattern {
+    operator fun invoke(vararg args: Any?): StrudelPattern {
         @Suppress("UNCHECKED_CAST")
-        return handler(pattern, args.toList() as List<Any>)
+        return handler(pattern, args.toList())
     }
 }
 

@@ -4,7 +4,6 @@ import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
 
 /**
  * Create the Strudel DSL library for KlangScript.
@@ -41,14 +40,6 @@ fun KlangScriptExtensionBuilder.registerStrudelDsl() {
     registerType(StrudelPattern::class) {
         StrudelRegistry.methods.forEach { (name, handler) ->
             registerVarargMethod(name) { args -> handler(this, args) }
-        }
-    }
-
-    // 5. Register specific methods
-    // TODO: improve registration in KlangScript to allow auto-detection
-    registerType(ContinuousPattern::class) {
-        registerMethod("range") { min: Double, max: Double ->
-            range(min, max)
         }
     }
 }

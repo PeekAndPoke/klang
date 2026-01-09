@@ -6,10 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.gain
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.saw
-import io.peekandpoke.klang.strudel.lang.sine
+import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class ControlPatternSpec : StringSpec({

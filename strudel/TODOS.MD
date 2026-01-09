@@ -108,7 +108,7 @@ and category.
 - [ ] **`cosine`** / **`cosine2`** - Cosine wave oscillators
 - [ ] **`saw2`**, **`sine2`**, **`tri2`**, **`square2`** - Bipolar (-1 to 1) versions
 - [ ] **`rand`** / **`rand2`** - Random signals (unipolar/bipolar)
-- [ ] **`perlin`** - Perlin noise
+- [x] **`perlin`** - Perlin noise
 - [ ] **`irand(n)`** - Random integers from 0 to n-1
 - [ ] **`brand`** - Binary random (0 or 1)
 - [ ] **`brandBy(probability)`** - Binary random with custom probability

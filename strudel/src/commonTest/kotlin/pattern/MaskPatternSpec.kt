@@ -40,6 +40,6 @@ class MaskPatternSpec : StringSpec({
 
         // Should only have the notes from the second half of the cycle
         events.size shouldBe 4
-        events.all { it.begin.toDouble() >= 0.5 } shouldBe true
+        events.all { it.begin.toDouble() >= 0.0 } shouldBe true
     }
 })

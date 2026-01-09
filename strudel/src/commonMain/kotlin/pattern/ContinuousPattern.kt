@@ -24,7 +24,7 @@ class ContinuousPattern(
     }
 
     /** Creates a new version of this pattern with a transformed value range */
-    fun range(min: Double, max: Double): ContinuousPattern {
+    internal fun applyRange(min: Double, max: Double): ContinuousPattern {
         return ContinuousPattern(
             min = min,
             max = max,

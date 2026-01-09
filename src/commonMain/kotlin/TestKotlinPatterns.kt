@@ -121,7 +121,7 @@ object TestKotlinPatterns {
             .distort(0.7)
 //            .superimpose((x) => x.detune("<0.5>"))
 //        .lpenv(perlin.slow(3).range(1, 4))
-//        .lpf(perlin.slow(2).range(100, 2000))
+            .lpf(perlin.range(100, 2000).slow(2))
             .gain(0.3),
         note("<a1 e2>/8")
             .clip(0.8)

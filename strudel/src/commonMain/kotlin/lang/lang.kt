@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.strudel.math.PerlinNoise
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.tones.scale.Scale
@@ -82,6 +83,31 @@ val square by dslObject {
     ContinuousPattern { t -> if (t % 1.0 < 0.5) 0.0 else 1.0 }
 }
 
+/** Square oscillator: 0 or 1, period of 1 cycle */
+@StrudelDsl
+val perlin by dslObject {
+    ContinuousPattern { t -> (PerlinNoise.noise(t) + 1.0) / 2.0 }
+}
+
+/**
+ * Sets the range of a continuous pattern to a new minimum and maximum value.
+ */
+@StrudelDsl
+val StrudelPattern.range by dslMethod { p, args ->
+    if (p !is ContinuousPattern) {
+        // TODO: we need a way to "inject" this
+        //   - walk down the chain until we find a continuous pattern
+        //   - update the continuous pattern's range
+        //   - wrap the with what once wrapped the old
+        p
+    } else {
+        val min = (args.getOrNull(0) as? Number)?.toDouble() ?: 0.0
+        val max = (args.getOrNull(1) as? Number)?.toDouble() ?: 1.0
+
+        p.applyRange(min, max)
+    }
+}
+
 // Structural patterns /////////////////////////////////////////////////////////////////////////////////////////////////
 
 /** Creates a sequence pattern. */
@@ -150,20 +176,20 @@ val cat by dslFunction<Any> { args ->
 
 /** Slows down all inner patterns by the given factor */
 @StrudelDsl
-val StrudelPattern.slow by dslMethod<Number> { p, args ->
+val StrudelPattern.slow by dslMethod { p, args ->
     val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
     TempoModifierPattern(p, max(1.0 / 128.0, factor))
 }
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
-val StrudelPattern.fast by dslMethod<Number> { p, args ->
+val StrudelPattern.fast by dslMethod { p, args ->
     val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
     TempoModifierPattern(p, 1.0 / max(1.0 / 128.0, factor))
 }
 
 @StrudelDsl
-val StrudelPattern.rev: DslMethod<Any?> by dslMethod { pattern, args ->
+val StrudelPattern.rev: DslMethod by dslMethod { pattern, args ->
     val firstArgInt = args.firstOrNull()?.toString()?.toIntOrNull() ?: 1
 
     if (firstArgInt <= 1) {
@@ -174,7 +200,7 @@ val StrudelPattern.rev: DslMethod<Any?> by dslMethod { pattern, args ->
 }
 
 @StrudelDsl
-val StrudelPattern.palindrome by dslMethod<Any?> { pattern, _ ->
+val StrudelPattern.palindrome by dslMethod { pattern, _ ->
     cat(pattern, pattern.rev())
 }
 
@@ -187,7 +213,7 @@ val StrudelPattern.palindrome by dslMethod<Any?> { pattern, _ ->
  * Example: note("c e g").struct("x ~ x")
  */
 @StrudelDsl
-val StrudelPattern.struct by dslMethod<Any> { source, args ->
+val StrudelPattern.struct by dslMethod { source, args ->
     val structure = when (val structArg = args.firstOrNull()) {
         is StrudelPattern -> structArg
         is String -> parseMiniNotation(input = structArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
@@ -206,7 +232,7 @@ val StrudelPattern.struct by dslMethod<Any> { source, args ->
  * Example: note("c e g").mask("1 0 1")
  */
 @StrudelDsl
-val StrudelPattern.mask by dslMethod<Any> { source, args ->
+val StrudelPattern.mask by dslMethod { source, args ->
     val maskPattern = when (val maskArg = args.firstOrNull()) {
         is StrudelPattern -> maskArg
         is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }

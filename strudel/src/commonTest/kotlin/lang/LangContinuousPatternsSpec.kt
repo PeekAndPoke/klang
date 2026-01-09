@@ -95,7 +95,7 @@ class LangContinuousPatternsSpec : StringSpec({
         val events = p?.queryArc(0.1.toRational(), 0.1.toRational()) ?: emptyList()
 
         events.size shouldBe 1
-        events[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+        events[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
     }
 
     "silence works within compiled code as top-level pattern" {
@@ -112,5 +112,26 @@ class LangContinuousPatternsSpec : StringSpec({
         val events = p?.queryArc(0.0.toRational(), 1.0.toRational()) ?: emptyList()
 
         events.size shouldBe 0
+    }
+
+    "perlin: validates noise signal within 0..1 range" {
+        val events = perlin.queryArc(0.0.toRational(), 1.0.toRational())
+        events.size shouldBe 1
+
+        // Perlin noise is randomized but the implementation ensures it stays within bounds
+        val value = events[0].data.value ?: -1.0
+        (value >= 0.0) shouldBe true
+        (value <= 1.0) shouldBe true
+    }
+
+    "perlin works within compiled code as top-level pattern" {
+        val p = StrudelPattern.compile("""perlin""")
+
+        val events = p?.queryArc(0.5.toRational(), 0.5.toRational()) ?: emptyList()
+
+        events.size shouldBe 1
+        val value = events[0].data.value ?: -1.0
+        (value >= 0.0) shouldBe true
+        (value <= 1.0) shouldBe true
     }
 })

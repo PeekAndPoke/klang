@@ -175,6 +175,7 @@ Strudel.
 - `isaw` - Inverse sawtooth (1 to -1)
 - `tri` - Triangle oscillator (-1 to 1)
 - `square` - Square wave oscillator (0 or 1)
+- `perlin` - Perlin noise generator (0 to 1, scaled from native -1 to 1 range)
 
 ### Signal Processing ✅
 
@@ -226,7 +227,8 @@ Comprehensive voice data structure supporting:
 
 - 70+ DSL functions/methods
 - 12 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern, StructPattern)
-- 4 continuous oscillators
+- 5 continuous oscillators (sine, saw, isaw, tri, square)
+- 1 noise generator (perlin)
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
@@ -256,3 +258,6 @@ Comprehensive voice data structure supporting:
 - ✅ **Struct Pattern** - Implemented `struct()` for masking patterns with structural markers ('x' notation)
 - ✅ **Scale Integration** - Enhanced `n()` and `scale()` to work together, automatic note name conversion from indices
 - ✅ **Square Wave Fix** - Corrected square oscillator output values
+- ✅ **Perlin Noise** - Implemented 1D Perlin noise generator with `perlin` continuous pattern
+- ✅ **DSL Type System Simplification** - Removed generic type parameters from `dslMethod`, cleaner architecture with
+  `Any?` handling

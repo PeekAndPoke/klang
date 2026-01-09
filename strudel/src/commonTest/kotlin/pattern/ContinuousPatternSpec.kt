@@ -6,6 +6,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.range
 import io.peekandpoke.klang.strudel.lang.sine
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
