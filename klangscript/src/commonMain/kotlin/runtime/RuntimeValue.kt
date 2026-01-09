@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.getUniqueClassName
 import kotlin.reflect.KClass
@@ -198,6 +199,7 @@ data class FunctionValue(
     val parameters: List<String>,
     val body: Expression,
     val closureEnv: Environment,
+    val engine: KlangScriptEngine,
 ) : RuntimeValue {
     override val value = null
 

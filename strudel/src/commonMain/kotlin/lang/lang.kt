@@ -238,6 +238,18 @@ val StrudelPattern.mask by dslMethod { source, args ->
     MaskPattern(source, maskPattern)
 }
 
+/**
+ * Layers a modified version of the pattern on top of itself.
+ *
+ * Example: s("bd sd").superimpose { it.fast(2) }
+ */
+@StrudelDsl
+val StrudelPattern.superimpose by dslMethod { source, args ->
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.firstOrNull() as? (StrudelPattern) -> StrudelPattern ?: { it }
+    SuperimposePattern(source, transform)
+}
+
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 private val noteMutation = voiceModifier<String?> { copy(note = it, freqHz = Tones.noteToFreq(it ?: "")) }
@@ -267,11 +279,12 @@ private val nMutation = voiceModifier<Number?> {
         copy(
             note = noteName,
             freqHz = Tones.noteToFreq(noteName),
+            soundIndex = n,
         )
     } else {
         // Fallback: n drives the note string directly or the sample index
         copy(
-            note = it?.toString(),
+            soundIndex = n,
         )
     }
 }
@@ -931,19 +944,19 @@ val orbit by dslPatternCreator(orbitMutation)
 
 // Context scale() /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val scaleMutation = voiceModifier<String?> { it ->
-    val newScale = it?.cleanScaleName()
-    val currentNote = note
-    val n = currentNote?.toDoubleOrNull()?.toInt()
+private val scaleMutation = voiceModifier<String?> { scale ->
+    val newScale = scale?.cleanScaleName()
+    val currentN = soundIndex
 
-    if (n != null && !newScale.isNullOrEmpty()) {
+    if (currentN != null && !newScale.isNullOrEmpty()) {
         // If the current note is a number, interpret it using the new scale
-        val noteName = Scale.steps(newScale).invoke(n)
+        val noteName = Scale.steps(newScale).invoke(currentN)
 
         copy(
             scale = newScale,
             note = noteName,
-            freqHz = Tones.noteToFreq(noteName)
+            freqHz = Tones.noteToFreq(noteName),
+            soundIndex = null, // clear the sound index
         )
     } else {
         copy(scale = newScale)

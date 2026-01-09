@@ -253,19 +253,24 @@ class RuntimeValueHelpersTest : StringSpec({
     // ===== Conversion between different RuntimeValue types =====
 
     "Number helpers return null for ArrayValue" {
-        val value = ArrayValue(mutableListOf(NumberValue(1.0)))
+        val value = ArrayValue(elements = mutableListOf(NumberValue(1.0)))
         value.toIntOrNull() shouldBe null
         value.toLongOrNull() shouldBe null
         value.toDoubleOrNull() shouldBe null
     }
 
     "String helpers return null for ObjectValue" {
-        val value = ObjectValue(mutableMapOf("key" to StringValue("value")))
+        val value = ObjectValue(properties = mutableMapOf("key" to StringValue("value")))
         value.toStringOrNull() shouldBe null
     }
 
     "Boolean helpers return null for FunctionValue" {
-        val value = FunctionValue(listOf("x"), NumberLiteral(1.0), Environment())
+        val value = FunctionValue(
+            parameters = listOf(element = "x"),
+            body = NumberLiteral(1.0),
+            closureEnv = Environment(),
+            engine = klangScript(),
+        )
         value.toBooleanOrNull() shouldBe null
     }
 
@@ -350,7 +355,7 @@ class RuntimeValueHelpersTest : StringSpec({
     }
 
     "isArray() returns true for ArrayValue" {
-        val value = ArrayValue(mutableListOf(NumberValue(1.0), NumberValue(2.0)))
+        val value = ArrayValue(elements = mutableListOf(NumberValue(1.0), NumberValue(2.0)))
         value.isArray() shouldBe true
     }
 
@@ -361,7 +366,7 @@ class RuntimeValueHelpersTest : StringSpec({
     }
 
     "isObject() returns true for ObjectValue" {
-        val value = ObjectValue(mutableMapOf("key" to StringValue("value")))
+        val value = ObjectValue(properties = mutableMapOf("key" to StringValue("value")))
         value.isObject() shouldBe true
     }
 
@@ -372,7 +377,12 @@ class RuntimeValueHelpersTest : StringSpec({
     }
 
     "isFunction() returns true for FunctionValue" {
-        val value = FunctionValue(listOf("x"), NumberLiteral(1.0), Environment())
+        val value = FunctionValue(
+            parameters = listOf("x"),
+            body = NumberLiteral(1.0),
+            closureEnv = Environment(),
+            engine = klangScript(),
+        )
         value.isFunction() shouldBe true
     }
 

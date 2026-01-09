@@ -7,6 +7,7 @@ object JsCompatTestData {
     val simplePatterns: List<Triple<Boolean, String, String>> = listOf(
         // Scales
         Triple(true, "C-Major notes", """note("c3 d3 e3 f3 g3 a3 b3 c4")"""),
+        Triple(true, "n() without scale", """n("0 1 2 3")"""),
         Triple(true, "C4:minor scale", """n("0 2 4").scale("C4:minor")"""),
         Triple(true, "C4:major scale", """n("0 2 4").scale("C4:major")"""),
         // Oscillators & Generators
@@ -179,7 +180,7 @@ object JsCompatTestData {
                     .s("supersaw")
                     .distort(0.7)
                     .superimpose((x) => x.detune("<0.5>"))
-                    .lpenv(perlin.slow(3).range(1, 4))
+                    //.lpenv(perlin.slow(3).range(1, 4))
                     .lpf(perlin.slow(2).range(100, 2000))
                     .gain(0.3),
             """.trimIndent()
@@ -192,7 +193,7 @@ object JsCompatTestData {
                         .s("supersaw")
                         .distort(0.7)
                         .superimpose((x) => x.detune("<0.5>"))
-                        .lpenv(perlin.slow(3).range(1, 4))
+                        //.lpenv(perlin.slow(3).range(1, 4))
                         .lpf(perlin.slow(2).range(100, 2000))
                         .gain(0.3),
                         

@@ -71,8 +71,8 @@ private suspend fun helloStrudel() {
 //        ).slow(1)
 
 
-//        val pattern = TestKotlinPatterns.strangerThings
-        val pattern = TestKotlinPatterns.tetris
+        val pattern = TestKotlinPatterns.strangerThings
+//        val pattern = TestKotlinPatterns.tetris
 //        val pattern = note("<a1 e2>/8").clip(0.8)
 //            .struct("x*8")
 //            .s("tri")
@@ -83,10 +83,9 @@ private suspend fun helloStrudel() {
 
 //        val pattern = StrudelPattern.compile(
 //            """
-//                sound("bd@2 hh sd@2 hh")
-//                .pan(sine.range(-1.0, 1.0).slow(4))
-//                .gain(0.1)
-//                .fast(2.13)
+//                note("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")
+//                   .superimpose(x=>x.add(2))
+//                   .scale('C:minor')
 //            """.trimIndent()
 //        )!!
 

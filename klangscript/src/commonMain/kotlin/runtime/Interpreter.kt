@@ -272,7 +272,7 @@ class Interpreter(
      * @param expression The expression AST node to evaluate
      * @return The runtime value that the expression evaluates to
      */
-    private fun evaluate(expression: Expression): RuntimeValue {
+    fun evaluate(expression: Expression): RuntimeValue {
         return when (expression) {
             // Literals evaluate to themselves
             is NumberLiteral -> NumberValue(expression.value)
@@ -296,7 +296,12 @@ class Interpreter(
             is MemberAccess -> evaluateMemberAccess(expression)
 
             // Arrow functions create function values with closure
-            is ArrowFunction -> FunctionValue(expression.parameters, expression.body, env)
+            is ArrowFunction -> FunctionValue(
+                parameters = expression.parameters,
+                body = expression.body,
+                closureEnv = env,
+                engine = engine,
+            )
 
             // Object literals create object values
             is ObjectLiteral -> evaluateObjectLiteral(expression)

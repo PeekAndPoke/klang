@@ -155,8 +155,11 @@ class DslMethod(
     // Typed invocation for Kotlin usage: p.slow(2)
     // The pattern is already bound, so we only pass args.
     operator fun invoke(vararg args: Any?): StrudelPattern {
-        @Suppress("UNCHECKED_CAST")
         return handler(pattern, args.toList())
+    }
+
+    operator fun invoke(block: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+        return handler(pattern, listOf(block))
     }
 }
 

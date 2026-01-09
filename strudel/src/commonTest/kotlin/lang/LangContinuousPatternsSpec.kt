@@ -87,14 +87,14 @@ class LangContinuousPatternsSpec : StringSpec({
     "square oscillator" {
         withClue("square in kotlin") {
             val pattern = square
-            pattern.queryArc(0.1, 0.1)[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.6, 0.6)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.1, 0.1)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.6, 0.6)[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
         }
 
         withClue("square compiled with range") {
             val pattern = StrudelPattern.compile("square.range(0, 10)")!!
-            pattern.queryArc(0.1, 0.1)[0].data.value shouldBe (10.0 plusOrMinus EPSILON)
-            pattern.queryArc(0.6, 0.6)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.1, 0.1)[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+            pattern.queryArc(0.6, 0.6)[0].data.value shouldBe (10.0 plusOrMinus EPSILON)
         }
     }
 

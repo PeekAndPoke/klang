@@ -56,6 +56,8 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
             else -> value
         }
 
+        is FunctionValue -> this.convertFunctionToKotlin()
+
         else -> {
             val isValid = cls.isInstance(value)
 
@@ -73,6 +75,89 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
     return result as T
 }
 
+fun <T : Any> FunctionValue.convertFunctionToKotlin(): T {
+
+    val func = this
+
+    val fn = when (func.parameters.size) {
+        0 -> run {
+            // NOTICE: The -> is important. It defines a Function0
+            @Suppress("UNCHECKED_CAST")
+            { -> callFunction(listOf(Unit)) } as T
+        }
+
+        1 -> { a1: Any? ->
+            callFunction(listOf(a1))
+        }
+
+        2 -> { a1: Any?, a2: Any? ->
+            callFunction(listOf(a1, a2))
+        }
+
+        3 -> { a1: Any?, a2: Any?, a3: Any? ->
+            callFunction(listOf(a1, a2, a3))
+        }
+
+        4 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any? ->
+            callFunction(listOf(a1, a2, a3, a4))
+        }
+
+        5 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any? ->
+            callFunction(listOf(a1, a2, a3, a4, a5))
+        }
+
+        6 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any? ->
+            callFunction(listOf(a1, a2, a3, a4, a5, a6))
+        }
+
+        7 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any?, a7: Any? ->
+            callFunction(listOf(a1, a2, a3, a4, a5, a6, a7))
+        }
+
+        8 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any?, a7: Any?, a8: Any? ->
+            callFunction(listOf(a1, a2, a3, a4, a5, a6, a7, a8))
+        }
+
+        9 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any?, a7: Any?, a8: Any?, a9: Any? ->
+            callFunction(listOf(a1, a2, a3, a4, a5, a6, a7, a8, a9))
+        }
+
+        10 -> { a1: Any?, a2: Any?, a3: Any?, a4: Any?, a5: Any?, a6: Any?, a7: Any?, a8: Any?, a9: Any?, a10: Any? ->
+            callFunction(listOf(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10))
+        }
+
+        else -> throw TypeError(
+            "Cannot convert script function to Kotlin. " +
+                    "Only functions with up to 5 parameters are supported.",
+            operation = "parameter conversion"
+        )
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    return fn as T
+}
+
+/**
+ * Calls the function with the provided arguments
+ */
+private fun FunctionValue.callFunction(args: List<Any?>): Any? {
+    // 1. Wrap arguments
+    val wrappedArgs = args.map { wrapAsRuntimeValue(it) }
+    // 2. Create a new environment for this call, extending the closure
+    val callEnv = Environment(parent = closureEnv)
+    // 3. Bind the arguments to parameters
+    parameters.zip(wrappedArgs).forEach { (paramName, argValue) ->
+        callEnv.define(paramName, argValue)
+    }
+    // 4. Create a new Interpreter instance
+    val interpreter = Interpreter(env = callEnv, engine = engine)
+    // 5. Evaluate the body using the interpreter
+    val result = interpreter.evaluate(body)
+    // 6. Unwrap the result
+    return result.value
+}
+
+// ... existing code ...
 fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: Int, cls: KClass<T>): T {
     val arg = args.getOrNull(index) ?: throw ArgumentError(
         fn,
