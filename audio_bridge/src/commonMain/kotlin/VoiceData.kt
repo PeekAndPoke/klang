@@ -54,8 +54,13 @@ data class VoiceData(
     val crush: Double?,
 
     // HPF / LPF
+    /** Low pass filter cutoff frequency */
     val cutoff: Double?,
+    /** High pass filter cutoff frequency */
     val hcutoff: Double?,
+    /** Band pass filter cutoff frequency */
+    val bandf: Double?,
+    /** Resonance amount for filters */
     val resonance: Double?,
 
     // Routing
@@ -72,9 +77,6 @@ data class VoiceData(
     // Reverb
     val room: Double?,
     val roomSize: Double?,
-
-    // ???
-    val bandf: Double?,
 
     // Custom value
     val value: Double? = null,
@@ -103,6 +105,7 @@ data class VoiceData(
             crush = null,
             cutoff = null,
             hcutoff = null,
+            bandf = null,
             resonance = null,
             orbit = null,
             pan = null,
@@ -111,7 +114,6 @@ data class VoiceData(
             delayFeedback = null,
             room = null,
             roomSize = null,
-            bandf = null,
             value = null,
         )
     }

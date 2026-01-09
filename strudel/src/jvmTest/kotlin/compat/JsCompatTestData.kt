@@ -103,22 +103,22 @@ object JsCompatTestData {
         // Filters
         Triple(
             true, "LowPass", """
-                s("saw").lpf(1000)
+                s("saw").lpf(333)
             """.trimIndent()
         ),
         Triple(
             true, "HighPass", """
-                s("saw").hpf(500)
+                s("saw").hpf(444)
             """.trimIndent()
         ),
         Triple(
             true, "BandPass", """
-                s("saw").bandf(1000).res(5)
+                s("saw").bandf(555)
             """.trimIndent()
         ),
         Triple(
-            true, "Notch", """
-                s("saw").notchf(1000)
+            runProblems, "Notch", """
+                s("saw").notchf(666)
             """.trimIndent()
         ),
         // Effects

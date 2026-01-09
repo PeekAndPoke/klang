@@ -31,7 +31,7 @@ class GraalStrudelPattern(
         for (i in 0 until count) {
             val item = arc.getArrayElement(i)
 
-//            println(graal.prettyFormat(item))
+            println(graal.prettyFormat(item))
 
             val event = item.toStrudelEvent()
             events += event
@@ -216,6 +216,7 @@ class GraalStrudelPattern(
                 // HPF / LPF
                 cutoff = cutoff,
                 hcutoff = hcutoff,
+                bandf = bandf,
                 resonance = resonance,
                 // Routing
                 orbit = orbit,
@@ -228,8 +229,6 @@ class GraalStrudelPattern(
                 // Reverb
                 room = room,
                 roomSize = roomSize,
-                // ???
-                bandf = null, // TODO ...
             ),
         )
     }

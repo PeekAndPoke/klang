@@ -520,7 +520,7 @@ private val hpfMutation = voiceModifier<Number?> {
     val filter = FilterDef.HighPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
-        cutoff = cutoff,
+        hcutoff = cutoff,
         filters = filters.addOrReplace(filter),
     )
 }
@@ -547,7 +547,7 @@ private val bandfMutation = voiceModifier<Number?> {
     val filter = FilterDef.BandPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
-        cutoff = cutoff,
+        bandf = cutoff,
         filters = filters.addOrReplace(filter),
     )
 }

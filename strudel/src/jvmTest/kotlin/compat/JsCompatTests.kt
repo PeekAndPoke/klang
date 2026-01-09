@@ -59,11 +59,11 @@ class JsCompatTests : StringSpec() {
     }
 
     private suspend fun runComparison(name: String, code: String) {
-        val graalPattern = withClue("Compiling song '$name' with GraalVM") {
+        val graalPattern = withClue("Compiling '$name' with GraalVM") {
             val result = try {
                 graalCompiler.compile(code).await()
             } catch (e: Throwable) {
-                fail("Failed to compile song '$name' with GraalVM", e)
+                fail("Failed to compile '$name' with GraalVM", e)
             }
 
             result.shouldNotBeNull()
