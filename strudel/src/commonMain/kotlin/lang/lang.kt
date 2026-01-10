@@ -167,7 +167,7 @@ val StrudelPattern.range by dslPatternExtension { p, args ->
 // -- Structural - seq() -----------------------------------------------------------------------------------------------
 
 /** Creates a sequence pattern. */
-private fun seqImpl(patterns: List<StrudelPattern>): StrudelPattern {
+private fun applySeq(patterns: List<StrudelPattern>): StrudelPattern {
     return if (patterns.isEmpty()) EmptyPattern
     else if (patterns.size == 1) patterns.first()
     else SequencePattern(patterns)
@@ -183,13 +183,19 @@ val seq by dslFunction { args ->
 @StrudelDsl
 val StrudelPattern.seq by dslPatternExtension { p, args ->
     val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
-    seqImpl(patterns)
+    applySeq(patterns)
 }
 
 @StrudelDsl
 val String.seq by dslStringExtension { p, args ->
     val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
-    seqImpl(patterns)
+    applySeq(patterns)
+}
+
+// -- Structural - stack() ---------------------------------------------------------------------------------------------
+
+private fun applyStack(patterns: List<StrudelPattern>): StrudelPattern {
+    return if (patterns.size == 1) patterns.first() else StackPattern(patterns)
 }
 
 /** Plays multiple patterns at the same time. */
@@ -197,10 +203,34 @@ val String.seq by dslStringExtension { p, args ->
 val stack by dslFunction { args ->
     // If the result of converting args is a SequencePattern, we treat its children as the stack elements.
     // If it's a single pattern, we wrap it.
-    args.toPattern(defaultModifier).let {
-        if (it is SequencePattern) StackPattern(it.patterns) else StackPattern(listOf(it))
-    }
+    // Wait, the original logic was:
+    // args.toPattern(defaultModifier).let { if (it is SequencePattern) StackPattern(it.patterns) else StackPattern(listOf(it)) }
+
+    // This implies that stack("a", "b") -> toPattern -> Sequence("a", "b") -> Stack("a", "b").
+    // stack("a") -> toPattern -> "a" -> Stack("a").
+    // stack(seq("a", "b")) -> toPattern -> Sequence("a", "b") -> Stack("a", "b").
+
+    // So we need to mimic this behavior or simply take the list of patterns.
+    // If we use args.toListOfPatterns(defaultModifier), we get [a, b].
+    // Then we can just wrap them in StackPattern.
+
+    val patterns = args.toListOfPatterns(defaultModifier)
+    if (patterns.isEmpty()) silence else StackPattern(patterns)
 }
+
+@StrudelDsl
+val StrudelPattern.stack by dslPatternExtension { p, args ->
+    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
+    applyStack(patterns)
+}
+
+@StrudelDsl
+val String.stack by dslStringExtension { p, args ->
+    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
+    applyStack(patterns)
+}
+
+// -- Structural - arrange() -------------------------------------------------------------------------------------------
 
 // arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
 @StrudelDsl

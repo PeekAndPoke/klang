@@ -95,7 +95,7 @@ object TestKotlinPatterns {
             .room(0.05).rsize(2.0)
 //            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
             .fast(2)
-            .rev(4).rev(3),
+//            .rev(4).rev(3),
     )
 
     val smallTownBoy = stack(
