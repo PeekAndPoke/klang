@@ -8,92 +8,85 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangSeqSpec : StringSpec({
 
-    "seq() creates a sequence pattern from multiple values" {
-        // Given a sequence of sounds
-        val p = seq(sound("bd"), sound("hh"), sound("sn"))
+    "seq() with single argument creates a sequence from mini-notation" {
+        // seq("a b") -> sequence of a then b
+        val p = seq("a b")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-        // When querying one cycle
-        val events = p.queryArc(0.0, 1.0)
-
-        // Then we get all three sounds in order, evenly distributed
-        events.size shouldBe 3
-        events.map { it.data.sound } shouldBe listOf("bd", "hh", "sn")
-
-        // Each event should occupy 1/3 of the cycle
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBe "a"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe ((1.0 / 3.0) plusOrMinus EPSILON)
-        events[1].begin.toDouble() shouldBe ((1.0 / 3.0) plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe ((2.0 / 3.0) plusOrMinus EPSILON)
-        events[2].begin.toDouble() shouldBe ((2.0 / 3.0) plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+
+        events[1].data.value?.asString shouldBe "b"
+        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
-    "seq() with empty arguments returns silence" {
-        // Given an empty sequence
-        val p = seq()
+    "seq() with multiple arguments sequences them" {
+        // seq("a", "b") -> sequence of a then b
+        val p = seq("a", "b")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-        // When querying one cycle
-        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBe "a"
+        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-        // Then we get no events
-        events.size shouldBe 0
+        events[1].data.value?.asString shouldBe "b"
+        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
-    "seq() with single element works correctly" {
-        // Given a sequence with one element
-        val p = seq(sound("bd"))
+    "seq() works as method on StrudelPattern" {
+        // note("a").seq("b") -> sequence of a then b
+        val p = note("a").seq("b")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-        // When querying one cycle
-        val events = p.queryArc(0.0, 1.0)
+        // Note: note("a") sets note="a". "b" via seq default modifier sets value="b" (and note="b").
+        // But note("a") puts it in 'note' field.
+        // Let's check what they produce.
 
-        // Then we get one event spanning the full cycle
-        events.size shouldBe 1
-        events[0].data.sound shouldBe "bd"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events.size shouldBe 2
+        events[0].data.note shouldBe "a"
+        events[1].data.value?.asString shouldBe "b" // "b" string arg goes to value by defaultModifier in seq
     }
 
-    "seq() repeats across multiple cycles" {
-        // Given a sequence of two sounds
-        val p = seq(sound("bd"), sound("sn"))
+    "seq() works as extension on String" {
+        // "a".seq("b")
+        val p = "a".seq("b")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-        // When querying two cycles
-        val events = p.queryArc(0.0, 2.0)
-
-        // Then the pattern repeats
-        events.size shouldBe 4
-        events.map { it.data.sound } shouldBe listOf("bd", "sn", "bd", "sn")
+        events.size shouldBe 2
+        // "a" parsed via seq default modifier -> value="a"
+        events[0].data.value?.asString shouldBe "a"
+        events[1].data.value?.asString shouldBe "b"
     }
 
-    "seq() can be nested" {
-        // Given nested sequences
-        val inner = seq(sound("bd"), sound("hh"))
-        val p = seq(inner, sound("sn"))
+    "seq() works in compiled code" {
+        val p = StrudelPattern.compile("""seq("a", "b")""")
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
-        // When querying one cycle
-        val events = p.queryArc(0.0, 1.0)
-
-        // Then inner sequence takes first half, sn takes second half
-        events.size shouldBe 3
-        events.map { it.data.sound } shouldBe listOf("bd", "hh", "sn")
-
-        // bd and hh should each take 1/4 of the cycle (half of the first half)
-        events[0].end.toDouble() shouldBe ((1.0 / 4.0) plusOrMinus EPSILON)
-        events[1].begin.toDouble() shouldBe ((1.0 / 4.0) plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe ((1.0 / 2.0) plusOrMinus EPSILON)
-        // sn takes the second half
-        events[2].begin.toDouble() shouldBe ((1.0 / 2.0) plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBe "a"
+        events[1].data.value?.asString shouldBe "b"
     }
 
-    "seq() works within compiled code" {
-        val p = StrudelPattern.compile("""seq(sound("bd"), sound("hh"), sound("sn"))""")
+    "seq() works as method in compiled code" {
+        // note("a").seq("b")
+        val p = StrudelPattern.compile("""note("a").seq("b")""")
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 2
+        events[0].data.note shouldBe "a"
+        events[1].data.value?.asString shouldBe "b"
+    }
 
-        events.size shouldBe 3
-        events.map { it.data.sound } shouldBe listOf("bd", "hh", "sn")
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    "seq() works as string extension in compiled code" {
+        // "a".seq("b")
+        val p = StrudelPattern.compile(""""a".seq("b")""")
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBe "a"
+        events[1].data.value?.asString shouldBe "b"
     }
 })

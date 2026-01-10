@@ -79,7 +79,7 @@ data class VoiceData(
     val roomSize: Double?,
 
     // Custom value
-    val value: Double? = null,
+    val value: VoiceValue? = null,
 ) {
     companion object {
         val empty = VoiceData(

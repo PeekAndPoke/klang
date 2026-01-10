@@ -1,4 +1,3 @@
-
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
@@ -87,13 +86,13 @@ class LangCatSpec : StringSpec({
         val events = p.queryArc(0.0, 3.0).sortedBy { it.begin }
 
         events.size shouldBe 3
-        events[0].data.note shouldBe "a"
+        events[0].data.value?.asString shouldBe "a"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBe "b"
+        events[1].data.value?.asString shouldBe "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
-        events[2].data.note shouldBe "c"
+        events[2].data.value?.asString shouldBe "c"
         events[2].begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
@@ -125,8 +124,8 @@ class LangCatSpec : StringSpec({
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "b"
+        events[0].data.value?.asString shouldBe "a"
+        events[1].data.value?.asString shouldBe "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 })

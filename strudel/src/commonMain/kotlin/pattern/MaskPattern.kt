@@ -35,9 +35,9 @@ internal class MaskPattern(
             val isAllowed = maskEvents.any { maskEvent ->
                 val data = maskEvent.data
                 val note = data.note ?: ""
-                val value = data.value ?: 0.0
+                val value = data.value?.asString ?: ""
 
-                (note.isNotEmpty() && note != "~" && note != "0") || (value > 0.0)
+                (note.isNotEmpty() && note != "~" && note != "0") || (value.isNotBlank())
             }
 
             if (isAllowed) {

@@ -4,7 +4,6 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
@@ -58,49 +57,14 @@ private suspend fun helloStrudel() {
 //        val code = TestTextPatterns.smallTownBoy
 //        val pattern = strudel.compile(code).await()
 
-//        val pattern1 = stack(
-//            note("c3", "e3", "g3", "b3").sound("tri", "supersaw").slow(2)
-//            sound("bd", "hh", "sd", "oh").slow(1),
-//        )
-
-//        val pattern1 = stack(
-//            seq(
-//                note("c3 e3 g3 b3"),
-//                note("c3 e3 g3 b#3"),
-//            ).sound("tri supersaw").gain(0.1, 0.3, 0.5, 1.0).adsr("0.2:0.2:0.8:0.5"),
-//            sound("bd [hh hh hh] sd oh").gain(1),
-//        ).slow(1)
-
-
 //        val pattern = TestKotlinPatterns.strangerThings
-//        val pattern = TestKotlinPatterns.tetris
-//        val pattern = note("<a1 e2>/8").clip(0.8)
-//            .struct("x*8")
-//            .s("tri")
+        val pattern = TestKotlinPatterns.tetris
 
-
-//        val pattern = StrudelPattern.compile(TestTextPatterns.bandF)
-//            ?: error("Pattern was not compiled")
-
-        val pattern = StrudelPattern.compile(
-            """
-                seq("0 1").scale("C4:minor").note()
-            """.trimIndent()
-        )!!
-
-//        val pattern = seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")
-//            .range(-100, 100)
-//            .note()
-
-//        val pattern = n("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")
-//            .layer { x -> x.add("-2,2") }.scale("C4:minor")
-//
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {
                 println(it)
             }
         }
-
 
         println("=======================================================================")
         println(

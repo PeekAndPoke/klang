@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.PerlinNoise
@@ -30,7 +31,7 @@ var strudelLangInit = false
 
 /** Default modifier for patterns that don't have a specific semantic yet (like sequence or stack items) */
 val defaultModifier: VoiceDataModifier = {
-    copy(note = it?.toString(), value = it?.toString()?.toDoubleOrNull())
+    copy(value = it?.asVoiceValue())
 }
 
 /** Cleans up the scale name */
@@ -63,7 +64,7 @@ private fun VoiceData.resolveNote(newIndex: Int? = null): VoiceData {
     // 1. Explicit argument (newIndex)
     // 2. Existing soundIndex
     // 3. Existing value interpreted as integer
-    val n = newIndex ?: soundIndex ?: value?.toString()?.toDoubleOrNull()?.toInt()
+    val n = newIndex ?: soundIndex ?: value?.asInt
 
     // Try to resolve note from index + scale
     if (n != null && !effectiveScale.isNullOrEmpty()) {
@@ -87,7 +88,7 @@ private fun VoiceData.resolveNote(newIndex: Int? = null): VoiceData {
     // Case B: Reinterpretation or fallback.
     // If we derived an index 'n' (e.g. from value), we preserve it.
     // We also ensure 'note' is populated (e.g. from 'value' if 'note' is missing).
-    val fallbackNote = note ?: value?.toString()
+    val fallbackNote = note ?: value?.asString
 
     return copy(
         note = fallbackNote,
@@ -159,13 +160,36 @@ val StrudelPattern.range by dslPatternExtension { p, args ->
     }
 }
 
-// Structural patterns /////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Structural patterns
+// ///
+
+// -- Structural - seq() -----------------------------------------------------------------------------------------------
+
+/** Creates a sequence pattern. */
+private fun seqImpl(patterns: List<StrudelPattern>): StrudelPattern {
+    return if (patterns.isEmpty()) EmptyPattern
+    else if (patterns.size == 1) patterns.first()
+    else SequencePattern(patterns)
+}
 
 /** Creates a sequence pattern. */
 @StrudelDsl
 val seq by dslFunction { args ->
     // specialized modifier for seq to prioritize value
     args.toPattern(defaultModifier)
+}
+
+@StrudelDsl
+val StrudelPattern.seq by dslPatternExtension { p, args ->
+    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
+    seqImpl(patterns)
+}
+
+@StrudelDsl
+val String.seq by dslStringExtension { p, args ->
+    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
+    seqImpl(patterns)
 }
 
 /** Plays multiple patterns at the same time. */
@@ -1028,7 +1052,7 @@ val vibmod by dslFunction { args -> args.toPattern(vibratoModMutation) }
 @StrudelDsl
 val StrudelPattern.add: DslPatternMethod by dslPatternExtension { source, args ->
     val controlPattern = args.toPattern {
-        copy(value = it?.toString()?.toDoubleOrNull() ?: 0.0)
+        copy(value = it?.asVoiceValue())
     }
 
     ControlPattern(
@@ -1036,25 +1060,20 @@ val StrudelPattern.add: DslPatternMethod by dslPatternExtension { source, args -
         control = controlPattern,
         mapper = { it }, // No mapping needed for the control data itself
         combiner = { srcData, ctrlData ->
-            val amount = (ctrlData.value as? Number)?.toDouble() ?: 0.0
-
+            val amount = ctrlData.value
             // Add to 'value' if present
-            val newValue = if (srcData.value is Number) {
-                (srcData.value as Number).toDouble() + amount
-            } else {
-                null
-            }
+            val newValue = srcData.value?.plus(ctrlData.value)
 
-            // Add to 'soundIndex' if present
-            val newSoundIndex = if (srcData.soundIndex != null) {
-                srcData.soundIndex!! + amount.toInt()
-            } else {
-                null
-            }
+//            // Add to 'soundIndex' if present
+//            val newSoundIndex = if (srcData.soundIndex != null) {
+//                srcData.soundIndex!! + amount.toInt()
+//            } else {
+//                null
+//            }
 
             srcData.copy(
                 value = newValue ?: srcData.value,
-                soundIndex = newSoundIndex ?: srcData.soundIndex
+//                soundIndex = newSoundIndex ?: srcData.soundIndex
             )
         }
     )
