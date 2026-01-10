@@ -330,10 +330,8 @@ val String.cat by dslStringExtension { p, args ->
 @StrudelDsl
 val slow by dslFunction { args ->
     val factor = args.getOrNull(0)?.asDoubleOrNull() ?: 1.0
-    // Find the first pattern argument? Or strict [factor, pattern]?
-    // Strudel JS allows flexible args usually, but let's stick to [factor, pattern] or [pattern, factor]?
-    // Usually slow(factor, pattern).
-    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull() ?: silence
+    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
 
     TempoModifierPattern(pattern, max(1.0 / 128.0, factor))
 }
@@ -352,7 +350,7 @@ val String.slow by dslStringExtension { p, args ->
 
 // -- Tempo - fast() ---------------------------------------------------------------------------------------------------
 
-private fun fastImpl(pattern: StrudelPattern, factor: Double): StrudelPattern {
+private fun applyFast(pattern: StrudelPattern, factor: Double): StrudelPattern {
     return TempoModifierPattern(pattern, 1.0 / max(1.0 / 128.0, factor))
 }
 
@@ -360,21 +358,23 @@ private fun fastImpl(pattern: StrudelPattern, factor: Double): StrudelPattern {
 @StrudelDsl
 val fast by dslFunction { args ->
     val factor = args.getOrNull(0)?.asDoubleOrNull() ?: 1.0
-    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull() ?: silence
-    fastImpl(pattern, factor)
+    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
+
+    applyFast(pattern, factor)
 }
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
 val StrudelPattern.fast by dslPatternExtension { p, args ->
-    val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
-    fastImpl(p, factor)
+    val factor = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
+    applyFast(p, factor)
 }
 
 @StrudelDsl
 val String.fast by dslStringExtension { p, args ->
-    val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
-    fastImpl(p, factor)
+    val factor = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
+    applyFast(p, factor)
 }
 
 // -- Tempo - rev() ----------------------------------------------------------------------------------------------------
