@@ -7,46 +7,59 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
-internal class KeepIfPattern(
+/**
+ * Handles structure combination logic (In/Out) with optional filtering.
+ *
+ * - [mode] determines which pattern provides the structure (In = Source, Out = Other).
+ * - [filterByTruthiness] determines if we check the value of the 'other' pattern (true = keepif, false = keep).
+ */
+internal class StructurePattern(
     val source: StrudelPattern,
     val other: StrudelPattern,
-    val structure: StructureMode,
+    val mode: Mode,
+    val filterByTruthiness: Boolean,
 ) : StrudelPattern {
 
-    enum class StructureMode {
+    enum class Mode {
         In,  // Source provides structure (Mask behavior)
         Out  // Other provides structure (Struct behavior)
     }
 
-    override val weight: Double = if (structure == StructureMode.In) source.weight else other.weight
+    override val weight: Double = if (mode == Mode.In) source.weight else other.weight
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        return when (structure) {
-            StructureMode.In -> queryIn(from, to, ctx)
-            StructureMode.Out -> queryOut(from, to, ctx)
+        return when (mode) {
+            Mode.In -> queryIn(from, to, ctx)
+            Mode.Out -> queryOut(from, to, ctx)
         }
     }
 
     /**
-     * mask() logic: The source provides the structure.
-     * We iterate over source events and sample the mask (other) at the midpoint to decide inclusion.
+     * In Mode (mask/maskAll): The source provides the structure.
+     * We iterate over source events and sample the 'other' pattern at the midpoint to decide inclusion.
      */
     private fun queryIn(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val sourceEvents = source.queryArcContextual(from, to, ctx)
         val result = mutableListOf<StrudelPatternEvent>()
 
-        // Use a tiny epsilon for point queries to satisfy discrete patterns that ignore zero-width arcs
-        val epsilon = 1e-7.toRational()
+        // Use a tiny epsilon for point queries to ensure we catch events in discrete patterns
+        val epsilon = 1e-6.toRational()
 
         for (sourceEvent in sourceEvents) {
             val mid = (sourceEvent.begin + sourceEvent.end) / Rational(2)
 
-            // Sample the mask at the midpoint.
-            // We use a tiny interval [mid, mid + epsilon] to ensure discrete patterns (SequencePattern)
-            // detect the overlap.
+            // Sample the other pattern at the midpoint.
             val otherEvents = other.queryArcContextual(mid, mid + epsilon, ctx)
 
-            if (otherEvents.any { it.data.isTruthy() }) {
+            val keep = if (filterByTruthiness) {
+                // keepif: keep only if overlapping event is truthy
+                otherEvents.any { it.data.isTruthy() }
+            } else {
+                // keep: keep if any overlapping event exists
+                otherEvents.isNotEmpty()
+            }
+
+            if (keep) {
                 result.add(sourceEvent)
             }
         }
@@ -54,26 +67,24 @@ internal class KeepIfPattern(
     }
 
     /**
-     * struct() logic: The mask (other) provides the outer structure window.
-     * We behave like an intersection: we find source events that overlap with truthy mask events
-     * and clip them to the mask's duration.
+     * Out Mode (struct/structAll): The 'other' pattern provides the structure.
+     * We behave like an intersection: clipping source events to the mask's duration.
      */
     private fun queryOut(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // 1. Get the rhythmic structure from the mask
         val otherEvents = other.queryArcContextual(from, to, ctx)
         if (otherEvents.isEmpty()) return emptyList()
 
         val result = mutableListOf<StrudelPatternEvent>()
 
         for (maskEvent in otherEvents) {
-            // Only consider truthy mask events
-            if (!maskEvent.data.isTruthy()) continue
+            // If filtering by truthiness, skip falsy mask events
+            if (filterByTruthiness && !maskEvent.data.isTruthy()) continue
 
-            // 2. Query the source for the duration of this specific mask event
+            // Query the source for the duration of this specific mask event
             val sourceEvents = source.queryArcContextual(maskEvent.begin, maskEvent.end, ctx)
 
             for (sourceEvent in sourceEvents) {
-                // Intersection: The resulting event only exists where BOTH overlap.
+                // Intersection logic: clip source event to mask event
                 val newBegin = maxOf(maskEvent.begin, sourceEvent.begin)
                 val newEnd = minOf(maskEvent.end, sourceEvent.end)
 
@@ -91,11 +102,10 @@ internal class KeepIfPattern(
         return result
     }
 
-    /** Helper extension for VoiceData truthiness */
     private fun VoiceData.isTruthy(): Boolean {
         val noteStr = note ?: ""
+        // Use the VoiceValue truthiness logic (which now correctly handles 0.0 vs 1.0)
         val valueTruthy = value?.isTruthy() ?: false
-        // In Strudel/Tidal: "0", "~", "false" are falsy.
         val noteTruthy = noteStr.isNotEmpty() && noteStr != "~" && noteStr != "0" && noteStr != "false"
         return valueTruthy || noteTruthy
     }
