@@ -352,12 +352,32 @@ val String.slow by dslStringExtension { p, args ->
 
 // -- Tempo - fast() ---------------------------------------------------------------------------------------------------
 
+private fun fastImpl(pattern: StrudelPattern, factor: Double): StrudelPattern {
+    return TempoModifierPattern(pattern, 1.0 / max(1.0 / 128.0, factor))
+}
+
+/** Speeds up all inner patterns by the given factor */
+@StrudelDsl
+val fast by dslFunction { args ->
+    val factor = args.getOrNull(0)?.asDoubleOrNull() ?: 1.0
+    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull() ?: silence
+    fastImpl(pattern, factor)
+}
+
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
 val StrudelPattern.fast by dslPatternExtension { p, args ->
     val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
-    TempoModifierPattern(p, 1.0 / max(1.0 / 128.0, factor))
+    fastImpl(p, factor)
 }
+
+@StrudelDsl
+val String.fast by dslStringExtension { p, args ->
+    val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
+    fastImpl(p, factor)
+}
+
+// -- Tempo - rev() ----------------------------------------------------------------------------------------------------
 
 @StrudelDsl
 val StrudelPattern.rev: DslPatternMethod by dslPatternExtension { pattern, args ->
