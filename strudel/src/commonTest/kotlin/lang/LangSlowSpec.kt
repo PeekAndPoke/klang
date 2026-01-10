@@ -26,6 +26,31 @@ class LangSlowSpec : StringSpec({
         events[1].end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
+    "slow() works as a standalone function slow(factor, pattern)" {
+        // slow(2, sound("bd hh"))
+        val p = slow(2, sound("bd hh"))
+
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+
+        events.size shouldBe 2
+        events[0].data.sound shouldBe "bd"
+        events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].data.sound shouldBe "hh"
+        events[1].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "slow() works as extension on String" {
+        // "bd hh".slow(2)
+        val p = "bd hh".slow(2)
+
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+
+        // "bd hh" parses to note("bd hh") by default
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBe "bd"
+        events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
     "slow() with factor 1 leaves pattern unchanged" {
         // Given a pattern slowed by 1
         val p = sound("bd hh").slow(1)
@@ -94,5 +119,14 @@ class LangSlowSpec : StringSpec({
         events.map { it.data.sound } shouldBe listOf("bd", "hh")
         events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[1].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "slow() as function works in compiled code" {
+        val p = StrudelPattern.compile("""slow(2, sound("bd hh"))""")
+
+        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 })

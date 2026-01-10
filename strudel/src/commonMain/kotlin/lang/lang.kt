@@ -232,9 +232,7 @@ val String.stack by dslStringExtension { p, args ->
 
 // -- Structural - arrange() -------------------------------------------------------------------------------------------
 
-// arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
-@StrudelDsl
-val arrange by dslFunction { args ->
+private fun applyArrange(args: List<Any?>): StrudelPattern {
     val segments = args.map { arg ->
         when (arg) {
             // Case: pattern (defaults to 1 cycle)
@@ -252,9 +250,36 @@ val arrange by dslFunction { args ->
         }
     }.filter { it.first > 0.0 }
 
-    if (segments.isEmpty()) silence
+    return if (segments.isEmpty()) silence
     else ArrangementPattern(segments)
 }
+
+// arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
+@StrudelDsl
+val arrange by dslFunction { args ->
+    applyArrange(args)
+}
+
+@StrudelDsl
+val StrudelPattern.arrange by dslPatternExtension { p, args ->
+    // When calling p.arrange(args), p is the first element (implicitly 1 cycle unless args says otherwise, but args are the *other* elements).
+    // So it's effectively arrange(p, *args).
+    applyArrange(listOf(p) + args)
+}
+
+@StrudelDsl
+val String.arrange by dslStringExtension { p, args ->
+    // "p".arrange(args) -> arrange("p", *args).
+    // "p" needs to be converted to a pattern first because arrangeImpl expects patterns or [dur, pat] lists.
+    // dslStringExtension passes 'p' as a Pattern (parsed via defaultModifier) to the handler?
+    // Wait, looking at dslStringExtension in lang_helpers.kt:
+    // It calls `val pattern = parse(recv)` then `handler(pattern, args)`.
+    // So `p` here is `StrudelPattern`.
+    applyArrange(listOf(p) + args)
+}
+
+// -- Structural - pickRestart() ---------------------------------------------------------------------------------------
+
 
 // pickRestart([a, b, c]) -> picks patterns sequentially per cycle (slowcat)
 // TODO: make this really work. Must be dslMethod -> https://strudel.cc/learn/conditional-modifiers/#pickrestart
@@ -272,9 +297,9 @@ val pickRestart by dslFunction { args ->
     }
 }
 
-// Structural - cat() //////////////////////////////////////////////////////////////////////////////////////////////////
+// -- Structural - cat() -----------------------------------------------------------------------------------------------
 
-private fun catImpl(patterns: List<StrudelPattern>): StrudelPattern = when {
+private fun applyCat(patterns: List<StrudelPattern>): StrudelPattern = when {
     patterns.isEmpty() -> silence
     patterns.size == 1 -> patterns.first()
     else -> ArrangementPattern(patterns.map { 1.0 to it })
@@ -282,27 +307,50 @@ private fun catImpl(patterns: List<StrudelPattern>): StrudelPattern = when {
 
 @StrudelDsl
 val cat by dslFunction { args ->
-    catImpl(args.toListOfPatterns(defaultModifier))
+    applyCat(args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
 val StrudelPattern.cat by dslPatternExtension { p, args ->
-    catImpl(listOf(p) + args.toListOfPatterns(defaultModifier))
+    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
 val String.cat by dslStringExtension { p, args ->
-    catImpl(listOf(p) + args.toListOfPatterns(defaultModifier))
+    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
-// Tempo / Time modifiers //////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Tempo / Time modifiers
+// ///
+
+// -- Tempo - slow() ---------------------------------------------------------------------------------------------------
 
 /** Slows down all inner patterns by the given factor */
 @StrudelDsl
+val slow by dslFunction { args ->
+    val factor = args.getOrNull(0)?.asDoubleOrNull() ?: 1.0
+    // Find the first pattern argument? Or strict [factor, pattern]?
+    // Strudel JS allows flexible args usually, but let's stick to [factor, pattern] or [pattern, factor]?
+    // Usually slow(factor, pattern).
+    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull() ?: silence
+
+    TempoModifierPattern(pattern, max(1.0 / 128.0, factor))
+}
+
+@StrudelDsl
 val StrudelPattern.slow by dslPatternExtension { p, args ->
-    val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
+    val factor = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
     TempoModifierPattern(p, max(1.0 / 128.0, factor))
 }
+
+@StrudelDsl
+val String.slow by dslStringExtension { p, args ->
+    val factor = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
+    TempoModifierPattern(p, max(1.0 / 128.0, factor))
+}
+
+// -- Tempo - fast() ---------------------------------------------------------------------------------------------------
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
