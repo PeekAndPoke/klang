@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
@@ -72,7 +73,7 @@ private suspend fun helloStrudel() {
 
 
 //        val pattern = TestKotlinPatterns.strangerThings
-        val pattern = TestKotlinPatterns.tetris
+//        val pattern = TestKotlinPatterns.tetris
 //        val pattern = note("<a1 e2>/8").clip(0.8)
 //            .struct("x*8")
 //            .s("tri")
@@ -81,11 +82,15 @@ private suspend fun helloStrudel() {
 //        val pattern = StrudelPattern.compile(TestTextPatterns.bandF)
 //            ?: error("Pattern was not compiled")
 
-//        val pattern = StrudelPattern.compile(
-//            """
-//                seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")
-//            """.trimIndent()
-//        )!!
+        val pattern = StrudelPattern.compile(
+            """
+                note("a b").accelerate("0 1")
+            """.trimIndent()
+        )!!
+
+//        val pattern = seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")
+//            .range(-100, 100)
+//            .note()
 
 //        val pattern = n("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")
 //            .layer { x -> x.add("-2,2") }.scale("C4:minor")

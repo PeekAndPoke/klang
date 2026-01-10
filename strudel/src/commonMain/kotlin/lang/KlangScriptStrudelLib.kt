@@ -39,7 +39,12 @@ fun KlangScriptExtensionBuilder.registerStrudelDsl() {
     // These are registered specifically for the StrudelPattern type.
     registerType(StrudelPattern::class) {
         StrudelRegistry.methods.forEach { (name, handler) ->
-            registerVarargMethod(name) { args -> handler(this, args) }
+            registerVarargMethod(name) { args ->
+
+                println("Calling $name with ${args.size} arguments: ${args}")
+
+                handler(this, args)
+            }
         }
     }
 }

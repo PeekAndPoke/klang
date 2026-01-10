@@ -27,16 +27,18 @@ var strudelLangInit = false
 
 // Helpers
 private fun List<Any?>.flattenToPatterns(
-    atomFactory: (String) -> StrudelPattern = {
-        AtomicPattern(VoiceData.empty.copy(note = it))
-    },
+    voiceFactory: VoiceData.(String) -> VoiceData = { copy(note = it, value = it.toDoubleOrNull()) },
 ): List<StrudelPattern> {
+    val atomFactory = { it: String ->
+        AtomicPattern(VoiceData.empty.voiceFactory(it))
+    }
+
     return this.flatMap { arg ->
         when (arg) {
             is String -> listOf(parseMiniNotation(arg, atomFactory))
             is Number -> listOf(atomFactory(arg.toString()))
             is StrudelPattern -> listOf(arg)
-            is List<*> -> arg.flattenToPatterns(atomFactory)
+            is List<*> -> arg.flattenToPatterns(voiceFactory)
             else -> emptyList()
         }
     }
@@ -46,6 +48,18 @@ private fun List<Any?>.flattenToPatterns(
  * Cleans up the scale name
  */
 private fun String.cleanScaleName() = replace(":", " ")
+
+private fun Any.asDoubleOrNull(): Double? = when (this) {
+    is Number -> this.toDouble()
+    is String -> this.toDoubleOrNull()
+    else -> null
+}
+
+private fun Any.asIntOrNull(): Int? = when (this) {
+    is Number -> this.toInt()
+    is String -> this.toDoubleOrNull()?.toInt()
+    else -> null
+}
 
 // Continuous patterns /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -101,8 +115,8 @@ val perlin by dslObject {
  */
 @StrudelDsl
 val StrudelPattern.range by dslMethod { p, args ->
-    val min = (args.getOrNull(0) as? Number)?.toDouble() ?: 0.0
-    val max = (args.getOrNull(1) as? Number)?.toDouble() ?: 1.0
+    val min = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
+    val max = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
 
     p.withContext {
         setIfAbsent(ContinuousPattern.minKey, min)
@@ -115,11 +129,7 @@ val StrudelPattern.range by dslMethod { p, args ->
 /** Creates a sequence pattern. */
 @StrudelDsl
 val seq by dslFunction { args ->
-    val patterns = args.flattenToPatterns(
-        atomFactory = {
-            AtomicPattern(VoiceData.empty.copy(value = it.toDoubleOrNull()))
-        }
-    ).toList()
+    val patterns = args.flattenToPatterns { copy(value = it.toDoubleOrNull()) }
 
     if (patterns.isEmpty()) silence else SequencePattern(patterns)
 }
@@ -243,7 +253,10 @@ val StrudelPattern.struct by dslMethod { source, args ->
 val StrudelPattern.mask by dslMethod { source, args ->
     val maskPattern = when (val maskArg = args.firstOrNull()) {
         is StrudelPattern -> maskArg
-        is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+        is String -> parseMiniNotation(input = maskArg) {
+            AtomicPattern(VoiceData.empty.copy(note = it))
+        }
+
         else -> silence
     }
 
@@ -302,7 +315,15 @@ val StrudelPattern.apply by dslMethod { source, args ->
 
 // note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val noteMutation = voiceModifier<String?> { copy(note = it, freqHz = Tones.noteToFreq(it ?: "")) }
+private val noteMutation = voiceModifier { input ->
+    // when the input is null, we re-interpret the current pattern as note
+    val newNote = input?.toString() ?: value?.toString()
+
+    copy(
+        note = newNote,
+        freqHz = Tones.noteToFreq(newNote ?: ""),
+    )
+}
 
 /** Modifies the notes of a pattern */
 @StrudelDsl
@@ -317,8 +338,9 @@ val note by dslPatternCreator(noteMutation)
 
 // n() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val nMutation = voiceModifier<Number?> {
-    val n = it?.toInt()
+private val nMutation = voiceModifier {
+    // when the input is null, we re-interpret the current pattern as n
+    val n = it?.asIntOrNull() ?: value?.toInt()
     val scaleName = scale?.cleanScaleName()
 
     if (n != null && !scaleName.isNullOrEmpty()) {
@@ -343,17 +365,17 @@ private val nMutation = voiceModifier<Number?> {
 @StrudelDsl
 val StrudelPattern.n by dslPatternModifier(
     modify = nMutation,
-    combine = { source, control -> source.nMutation(control.note?.toDoubleOrNull()) }
+    combine = { source, control -> source.nMutation(control.note) }
 )
 
 /** Sets the note number or sample index */
 @StrudelDsl
-val n: DslPatternCreator<Number> by dslPatternCreator(nMutation)
+val n: DslPatternCreator by dslPatternCreator(nMutation)
 
 // sound() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val soundMutation = voiceModifier<String?> {
-    val split = it?.split(":") ?: emptyList()
+private val soundMutation = voiceModifier {
+    val split = it?.toString()?.split(":") ?: emptyList()
 
     copy(
         sound = split.getOrNull(0),
@@ -386,7 +408,9 @@ val s by soundCreator
 
 // bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val bankMutation = voiceModifier<String?> { copy(bank = it) }
+private val bankMutation = voiceModifier {
+    copy(bank = it?.toString())
+}
 
 /** Modifies the banks of a pattern */
 @StrudelDsl
@@ -397,11 +421,13 @@ val StrudelPattern.bank by dslPatternModifier(
 
 /** Creates a pattern with banks */
 @StrudelDsl
-val bank: DslPatternCreator<String> by dslPatternCreator(bankMutation)
+val bank: DslPatternCreator by dslPatternCreator(bankMutation)
 
 // bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val gainMutation = voiceModifier<Number?> { copy(gain = it?.toDouble()) }
+private val gainMutation = voiceModifier {
+    copy(gain = it?.toString()?.toDoubleOrNull())
+}
 
 /** Modifies the gains of a pattern */
 @StrudelDsl
@@ -412,11 +438,13 @@ val StrudelPattern.gain by dslPatternModifier(
 
 /** Creates a pattern with gains */
 @StrudelDsl
-val gain: DslPatternCreator<Number> by dslPatternCreator(gainMutation)
+val gain: DslPatternCreator by dslPatternCreator(gainMutation)
 
 // bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val panMutation = voiceModifier<Number?> { copy(pan = it?.toDouble()) }
+private val panMutation = voiceModifier {
+    copy(pan = it?.toString()?.toDoubleOrNull())
+}
 
 /** Modifies the pans of a pattern */
 @StrudelDsl
@@ -427,11 +455,13 @@ val StrudelPattern.pan by dslPatternModifier(
 
 /** Creates a pattern with pans */
 @StrudelDsl
-val pan: DslPatternCreator<Number> by dslPatternCreator(panMutation)
+val pan: DslPatternCreator by dslPatternCreator(panMutation)
 
 // legato() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val legatoMutation = voiceModifier<Number?> { copy(legato = it?.toDouble()) }
+private val legatoMutation = voiceModifier {
+    copy(legato = it?.asDoubleOrNull())
+}
 
 private val legatoModifier = dslPatternModifier(
     modify = legatoMutation,
@@ -458,7 +488,9 @@ val clip by legatoCreator
 
 // unison //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val unisonMutation = voiceModifier<Number?> { copy(voices = it?.toDouble()) }
+private val unisonMutation = voiceModifier {
+    copy(voices = it?.asDoubleOrNull())
+}
 
 private val unisonModifier = dslPatternModifier(
     modify = unisonMutation,
@@ -485,7 +517,9 @@ val uni by unisonCreator
 
 // detune //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val detuneMutation = voiceModifier<Number?> { copy(freqSpread = it?.toDouble()) }
+private val detuneMutation = voiceModifier {
+    copy(freqSpread = it?.asDoubleOrNull())
+}
 
 /** Sets the oscillator frequency spread (for supersaw) */
 @StrudelDsl
@@ -500,7 +534,9 @@ val detune by dslPatternCreator(detuneMutation)
 
 // detune //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val spreadMutation = voiceModifier<Number?> { copy(panSpread = it?.toDouble()) }
+private val spreadMutation = voiceModifier {
+    copy(panSpread = it?.asDoubleOrNull())
+}
 
 /** Sets the oscillator pan spread (for supersaw) */
 @StrudelDsl
@@ -511,11 +547,13 @@ val StrudelPattern.spread by dslPatternModifier(
 
 /** Sets the oscillator pan spread (for supersaw) */
 @StrudelDsl
-val spread: DslPatternCreator<Number> by dslPatternCreator(spreadMutation)
+val spread: DslPatternCreator by dslPatternCreator(spreadMutation)
 
 // density /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val densityMutation = voiceModifier<Number?> { copy(density = it?.toDouble()) }
+private val densityMutation = voiceModifier {
+    copy(density = it?.asDoubleOrNull())
+}
 
 private val densityModifier = dslPatternModifier(
     modify = densityMutation,
@@ -542,7 +580,9 @@ val d by densityCreator
 
 // ADSR Attack /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val attackMutation = voiceModifier<Number?> { copy(adsr = adsr.copy(attack = it?.toDouble())) }
+private val attackMutation = voiceModifier {
+    copy(adsr = adsr.copy(attack = it?.asDoubleOrNull()))
+}
 
 /** Sets the note envelope attack */
 @StrudelDsl
@@ -553,11 +593,13 @@ val StrudelPattern.attack by dslPatternModifier(
 
 /** Sets the note envelope attack */
 @StrudelDsl
-val attack: DslPatternCreator<Number> by dslPatternCreator(attackMutation)
+val attack: DslPatternCreator by dslPatternCreator(attackMutation)
 
 // ADSR Decay //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val decayMutation = voiceModifier<Number?> { copy(adsr = adsr.copy(decay = it?.toDouble())) }
+private val decayMutation = voiceModifier {
+    copy(adsr = adsr.copy(decay = it?.asDoubleOrNull()))
+}
 
 /** Sets the note envelope decay */
 @StrudelDsl
@@ -568,11 +610,13 @@ val StrudelPattern.decay by dslPatternModifier(
 
 /** Sets the note envelope decay */
 @StrudelDsl
-val decay: DslPatternCreator<Number> by dslPatternCreator(decayMutation)
+val decay: DslPatternCreator by dslPatternCreator(decayMutation)
 
 // ADSR Sustain ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val sustainMutation = voiceModifier<Number?> { copy(adsr = adsr.copy(sustain = it?.toDouble())) }
+private val sustainMutation = voiceModifier {
+    copy(adsr = adsr.copy(sustain = it?.asDoubleOrNull()))
+}
 
 /** Sets the note envelope sustain */
 @StrudelDsl
@@ -583,11 +627,13 @@ val StrudelPattern.sustain by dslPatternModifier(
 
 /** Sets the note envelope sustain */
 @StrudelDsl
-val sustain: DslPatternCreator<Number> by dslPatternCreator(sustainMutation)
+val sustain: DslPatternCreator by dslPatternCreator(sustainMutation)
 
 // ADSR Release ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val releaseMutation = voiceModifier<Number?> { copy(adsr = adsr.copy(release = it?.toDouble())) }
+private val releaseMutation = voiceModifier {
+    copy(adsr = adsr.copy(release = it?.asDoubleOrNull()))
+}
 
 /** Sets the note envelope release */
 @StrudelDsl
@@ -598,12 +644,14 @@ val StrudelPattern.release by dslPatternModifier(
 
 /** Sets the note envelope release */
 @StrudelDsl
-val release: DslPatternCreator<Number> by dslPatternCreator(releaseMutation)
+val release: DslPatternCreator by dslPatternCreator(releaseMutation)
 
 // ADSR Combined ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-val adsrMutation = voiceModifier<String> {
-    val parts = it.split(":").mapNotNull { d -> d.toDoubleOrNull() }
+val adsrMutation = voiceModifier {
+    val parts = it?.toString()?.split(":")
+        ?.mapNotNull { d -> d.toDoubleOrNull() } ?: emptyList()
+
     val newAdsr = AdsrEnvelope(
         attack = parts.getOrNull(0),
         decay = parts.getOrNull(1),
@@ -623,12 +671,12 @@ val StrudelPattern.adsr by dslPatternModifier(
 
 /** Sets the note envelope release */
 @StrudelDsl
-val adsr: DslPatternCreator<String> by dslPatternCreator(adsrMutation)
+val adsr: DslPatternCreator by dslPatternCreator(adsrMutation)
 
 // Filters - LowPass - lpf() ///////////////////////////////////////////////////////////////////////////////////////////
 
-private val lpfMutation = voiceModifier<Number?> {
-    val cutoff = it?.toDouble()
+private val lpfMutation = voiceModifier {
+    val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.LowPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
@@ -654,8 +702,8 @@ val lpf by dslPatternCreator(lpfMutation)
 
 // Filters - HighPass - hpf() //////////////////////////////////////////////////////////////////////////////////////////
 
-private val hpfMutation = voiceModifier<Number?> {
-    val cutoff = it?.toDouble()
+private val hpfMutation = voiceModifier {
+    val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.HighPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
@@ -677,12 +725,12 @@ val StrudelPattern.hpf by dslPatternModifier(
 
 /** Adds a High Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val hpf: DslPatternCreator<Number> by dslPatternCreator(hpfMutation)
+val hpf: DslPatternCreator by dslPatternCreator(hpfMutation)
 
 // Filters - BandPass - bandf() ////////////////////////////////////////////////////////////////////////////////////////
 
-private val bandfMutation = voiceModifier<Number?> {
-    val cutoff = it?.toDouble()
+private val bandfMutation = voiceModifier {
+    val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.BandPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
@@ -720,8 +768,8 @@ val bpf by bandfCreator
 
 // Filters - Notch | inverse BandPass - notchf() ///////////////////////////////////////////////////////////////////////
 
-private val notchfMutation = voiceModifier<Number?> {
-    val cutoff = it?.toDouble()
+private val notchfMutation = voiceModifier {
+    val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.Notch(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
@@ -743,12 +791,12 @@ val StrudelPattern.notchf by dslPatternModifier(
 
 /** Adds a Notch Filter with the given cutoff frequency. */
 @StrudelDsl
-val notchf: DslPatternCreator<Number> by dslPatternCreator(notchfMutation)
+val notchf: DslPatternCreator by dslPatternCreator(notchfMutation)
 
 // Filters - resonance() ///////////////////////////////////////////////////////////////////////////////////////////////
 
-private val resonanceMutation = voiceModifier<Number?> {
-    val newQ = it?.toDouble() ?: 1.0
+private val resonanceMutation = voiceModifier {
+    val newQ = it?.asDoubleOrNull() ?: 1.0
 
     val newFilters = filters.modifyAll { filter ->
         when (filter) {
@@ -787,7 +835,9 @@ val res by resonanceCreator
 
 // distort() ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val distortMutation = voiceModifier<Number?> { copy(distort = it?.toDouble()) }
+private val distortMutation = voiceModifier {
+    copy(distort = it?.asDoubleOrNull())
+}
 
 /**
  * Applies distortion to the signal.
@@ -806,11 +856,11 @@ val StrudelPattern.distort by dslPatternModifier(
  * Useful for adding grit to synths or drums.
  */
 @StrudelDsl
-val distort: DslPatternCreator<Number> by dslPatternCreator(distortMutation)
+val distort: DslPatternCreator by dslPatternCreator(distortMutation)
 
 // crush() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val crushMutation = voiceModifier<Number?> { copy(crush = it?.toDouble()) }
+private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
 
 /**
  * Reduces the bit depth (or similar degradation) of the signal.
@@ -827,11 +877,13 @@ val StrudelPattern.crush by dslPatternModifier(
  * Range: 1.0 to 16.0 (typically). Smaller values = more destruction.
  */
 @StrudelDsl
-val crush: DslPatternCreator<Number> by dslPatternCreator(crushMutation)
+val crush: DslPatternCreator by dslPatternCreator(crushMutation)
 
 // coarse() ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val coarseMutation = voiceModifier<Number?> { copy(coarse = it?.toDouble()) }
+private val coarseMutation = voiceModifier {
+    copy(coarse = it?.asDoubleOrNull())
+}
 
 /**
  * Reduces the sample rate (downsampling) of the signal.
@@ -848,11 +900,13 @@ val StrudelPattern.coarse by dslPatternModifier(
  * The value represents the step size (e.g. 1 = normal, 2 = half rate).
  */
 @StrudelDsl
-val coarse: DslPatternCreator<Number> by dslPatternCreator(coarseMutation)
+val coarse: DslPatternCreator by dslPatternCreator(coarseMutation)
 
 // Reverb room() ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val roomMutation = voiceModifier<Number?> { copy(room = it?.toDouble()) }
+private val roomMutation = voiceModifier {
+    copy(room = it?.asDoubleOrNull())
+}
 
 /**
  * Sets the reverb mix level.
@@ -873,7 +927,9 @@ val room by dslPatternCreator(roomMutation)
 
 // Reverb roomsize() ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val roomSizeMutation = voiceModifier<Number?> { copy(roomSize = it?.toDouble()) }
+private val roomSizeMutation = voiceModifier {
+    copy(roomSize = it?.asDoubleOrNull())
+}
 
 private val roomSizeModifier = dslPatternModifier(
     modify = roomSizeMutation,
@@ -906,7 +962,9 @@ val rsize by roomSizeCreator
 
 // Delay delay() ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val delayMutation = voiceModifier<Number?> { copy(delay = it?.toDouble()) }
+private val delayMutation = voiceModifier {
+    copy(delay = it?.asDoubleOrNull())
+}
 
 /**
  * Sets the delay mix level.
@@ -927,7 +985,9 @@ val delay by dslPatternCreator(delayMutation)
 
 // Delay delaytime() ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val delayTimeMutation = voiceModifier<Number?> { copy(delayTime = it?.toDouble()) }
+private val delayTimeMutation = voiceModifier {
+    copy(delayTime = it?.asDoubleOrNull())
+}
 
 /**
  * Sets the delay time in seconds (or cycles, depending on engine config).
@@ -948,7 +1008,9 @@ val delaytime by dslPatternCreator(delayTimeMutation)
 
 // Delay delayfeedback() ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val delayFeedbackMutation = voiceModifier<Number?> { copy(delayFeedback = it?.toDouble()) }
+private val delayFeedbackMutation = voiceModifier {
+    copy(delayFeedback = it?.asDoubleOrNull())
+}
 
 /**
  * Sets the delay feedback amount.
@@ -971,7 +1033,9 @@ val delayfeedback by dslPatternCreator(delayFeedbackMutation)
 
 // Routing orbit() /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val orbitMutation = voiceModifier<Number?> { copy(orbit = it?.toInt()) }
+private val orbitMutation = voiceModifier {
+    copy(orbit = it?.asIntOrNull())
+}
 
 /**
  * Routes the audio to a specific output bus or "orbit".
@@ -994,8 +1058,8 @@ val orbit by dslPatternCreator(orbitMutation)
 
 // Context scale() /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val scaleMutation = voiceModifier<String?> { scale ->
-    val newScale = scale?.cleanScaleName()
+private val scaleMutation = voiceModifier { scale ->
+    val newScale = scale?.toString()?.cleanScaleName()
     val currentN = soundIndex
 
     if (currentN != null && !newScale.isNullOrEmpty()) {
@@ -1034,7 +1098,9 @@ val scale by dslPatternCreator(scaleMutation)
 
 // vibrato() ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val vibratoMutation = voiceModifier<Number?> { copy(vibrato = it?.toDouble()) }
+private val vibratoMutation = voiceModifier {
+    copy(vibrato = it?.asDoubleOrNull())
+}
 
 private val vibratoModifier = dslPatternModifier(
     modify = vibratoMutation,
@@ -1061,7 +1127,9 @@ val vib by vibratoCreator
 
 // vibratoMod() ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val vibratoModMutation = voiceModifier<Number?> { copy(vibratoMod = it?.toDouble()) }
+private val vibratoModMutation = voiceModifier {
+    copy(vibratoMod = it?.asDoubleOrNull())
+}
 
 private val vibratoModModifier = dslPatternModifier(
     modify = vibratoModMutation,
@@ -1076,7 +1144,7 @@ val StrudelPattern.vibratoMod by vibratoModModifier
 
 /** Sets the vibratoMod frequency (speed) in Hz. */
 @StrudelDsl
-val vibratoMod: DslPatternCreator<Number> by vibratoModCreator
+val vibratoMod: DslPatternCreator by vibratoModCreator
 
 /** Alias for [vibratoMod] */
 val StrudelPattern.vibmod by vibratoModModifier
@@ -1144,7 +1212,9 @@ val StrudelPattern.add: DslMethod by dslMethod { source, args ->
 
 // accelerate() ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-private val accelerateMutation = voiceModifier<Number?> { copy(accelerate = it?.toDouble()) }
+private val accelerateMutation = voiceModifier {
+    copy(accelerate = it?.asDoubleOrNull())
+}
 
 /**
  * Applies a pitch glide (accelerate) effect.
@@ -1163,4 +1233,4 @@ val StrudelPattern.accelerate by dslPatternModifier(
  * The amount is usually frequency change per cycle or similar unit.
  */
 @StrudelDsl
-val accelerate: DslPatternCreator<Number> by dslPatternCreator(accelerateMutation)
+val accelerate: DslPatternCreator by dslPatternCreator(accelerateMutation)
