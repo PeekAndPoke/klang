@@ -5,6 +5,8 @@ object JsCompatTestData {
     private const val RUN_PROBLEMS = false
 
     val simplePatterns: List<Triple<Boolean, String, String>> = listOf(
+        // Chords
+        Triple(true, "Chords #1", """note("c,eb,g").slow(2)"""),
         // Scales
         Triple(true, "C-Major notes", """note("c3 d3 e3 f3 g3 a3 b3 c4")"""),
         Triple(true, "n() without scale", """n("0 1 2 3")"""),
@@ -72,8 +74,10 @@ object JsCompatTestData {
         Triple(true, "Vibrato", """note("c").vib(5).vibmod(0.1)"""),
         Triple(true, "Accelerate", """note("c").accelerate(1)"""),
         // Transformation
-        Triple(true, "Struct #1", """note("c,eb,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
-        Triple(true, "Struct #2", """note("c3 d3").fast(2).struct("x")"""),
+        Triple(true, "Struct #1", """note("c e").struct("x")"""),
+        Triple(true, "Struct #2", """note("c,eb,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
+        Triple(true, "Struct #3", """note("c3 d3").fast(2).struct("x")"""),
+        Triple(true, "Struct #4", """note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x")"""),
         Triple(true, "Mask #1", """note("c [eb,g] d [eb,g]").mask("<1 [0 1]>")"""),
         Triple(true, "Mask #2", """note("c3*8").mask(square.fast(4))"""),
         Triple(true, "SuperImpose #1", """note("a").superimpose(p => p.note("c"))"""),

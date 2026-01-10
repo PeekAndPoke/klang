@@ -324,24 +324,53 @@ val String.cat by dslStringExtension { p, args ->
 
 // -- struct() ---------------------------------------------------------------------------------------------------------
 
+private fun applyStruct(source: StrudelPattern, structArg: Any?): StrudelPattern {
+    val structure = when (structArg) {
+        is StrudelPattern -> structArg
+        is String -> parseMiniNotation(input = structArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+        else -> silence
+    }
+
+    return KeepIfPattern(source, structure, KeepIfPattern.StructureMode.Out)
+}
+
 /**
  * Structures the pattern according to another pattern (the mask).
  *
  * The structural pattern (usually mini-notation) uses 'x' to indicate where
  * the source pattern should be heard.
  *
+ * Example: struct("x ~ x", note("c e g"))
+ */
+@StrudelDsl
+val struct by dslFunction { args ->
+    val structArg = args.getOrNull(0)
+    val source = args.filterIsInstance<StrudelPattern>().let {
+        // If the first arg is the structure (Pattern), the source is likely the second arg.
+        if (it.size >= 2 && structArg is StrudelPattern) it[1] else it.firstOrNull()
+    } ?: return@dslFunction silence
+
+    applyStruct(source, structArg)
+}
+
+/**
+ * Structures the pattern according to another pattern (the mask).
+ *
  * Example: note("c e g").struct("x ~ x")
  */
 @StrudelDsl
 val StrudelPattern.struct by dslPatternExtension { source, args ->
-    val structure = when (val structArg = args.firstOrNull()) {
-        is StrudelPattern -> structArg
-        is String -> parseMiniNotation(input = structArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
-        else -> silence
-    }
-
-    StructPattern(source, structure)
+    applyStruct(source, args.firstOrNull())
 }
+
+/**
+ * Structures the pattern according to another pattern (the mask).
+ */
+@StrudelDsl
+val String.struct by dslStringExtension { source, args ->
+    applyStruct(source, args.firstOrNull())
+}
+
 
 /**
  * Filters the pattern using a boolean mask.
@@ -355,14 +384,10 @@ val StrudelPattern.struct by dslPatternExtension { source, args ->
 val StrudelPattern.mask by dslPatternExtension { source, args ->
     val maskPattern = when (val maskArg = args.firstOrNull()) {
         is StrudelPattern -> maskArg
-        is String -> parseMiniNotation(input = maskArg) {
-            AtomicPattern(VoiceData.empty.copy(note = it))
-        }
-
+        is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
         else -> silence
     }
-
-    MaskPattern(source, maskPattern)
+    KeepIfPattern(source, maskPattern, KeepIfPattern.StructureMode.In)
 }
 
 /**

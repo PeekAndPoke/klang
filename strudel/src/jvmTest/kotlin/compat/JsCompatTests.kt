@@ -98,6 +98,9 @@ class JsCompatTests : StringSpec() {
                     withClue(
                         """
 ============================================================================================
+Name:    $name
+Pattern: $code
+
 Event $index must be equal:
 --------------------------------------------------------------------------------------------
 ${comparison.errors.joinToString("\n")}

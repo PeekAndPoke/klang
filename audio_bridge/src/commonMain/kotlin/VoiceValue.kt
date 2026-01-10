@@ -21,6 +21,17 @@ sealed interface VoiceValue {
     val asDouble: Double?
     val asInt: Int?
 
+    fun isTruthy(): Boolean {
+        // If it can be interpreted as a number, use numerical truthiness (non-zero)
+        val d = asDouble
+        if (d != null) {
+            return d != 0.0
+        }
+        // Otherwise use string truthiness (not blank, not "false")
+        // Note: "0" or "0.0" is handled by the numeric check above as they parse to 0.0
+        return asString.isNotBlank() && asString != "false"
+    }
+    
     operator fun plus(amount: Double): VoiceValue? {
         val current = asDouble ?: return null
         return Num(current + amount)

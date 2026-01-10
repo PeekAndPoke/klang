@@ -563,7 +563,7 @@ class Oscillators private constructor(
         panSpread: Double?,
         freqSpread: Double?,
     ): OscFn {
-        if (name == null) return sine
+        if (name == null) return triangle
 
         val density = (density ?: 0.2)
         val unison = (voices ?: 5.0)
