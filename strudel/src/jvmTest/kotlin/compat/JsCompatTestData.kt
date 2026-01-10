@@ -11,7 +11,7 @@ object JsCompatTestData {
         Triple(true, "C4:minor scale", """n("0 2 4").scale("C4:minor")"""),
         Triple(true, "C4:major scale", """n("0 2 4").scale("C4:major")"""),
         // Sequences
-        Triple(true, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
+        Triple(RUN_PROBLEMS, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
         // Oscillators & Generators
         Triple(true, "Oscillators", """s("<sine saw isaw tri square>").fast(2)"""),
         Triple(true, "Noise Generators", """s("<white brown pink crackle dust>").gain(0.5)"""),

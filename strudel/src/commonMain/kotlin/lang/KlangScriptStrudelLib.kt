@@ -1,8 +1,10 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
+import io.peekandpoke.klang.script.builder.registerType
 import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.klangScriptLibrary
+import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 /**
@@ -35,16 +37,19 @@ fun KlangScriptExtensionBuilder.registerStrudelDsl() {
         registerVarargFunction(name) { args -> handler(args) }
     }
 
-    // 4. Register Extension Methods (e.g., pattern.slow(), pattern.note(), etc.)
+    // 4. Register Pattern Extension Methods (e.g., pattern.slow(), pattern.note(), etc.)
     // These are registered specifically for the StrudelPattern type.
-    registerType(StrudelPattern::class) {
-        StrudelRegistry.methods.forEach { (name, handler) ->
-            registerVarargMethod(name) { args ->
+    registerType<StrudelPattern> {
+        StrudelRegistry.patternExtensionMethods.forEach { (name, handler) ->
+            registerVarargMethod(name) { args -> handler(this, args) }
+        }
+    }
 
-                println("Calling $name with ${args.size} arguments: ${args}")
-
-                handler(this, args)
-            }
+    // 5. Register String Extension Methods (e.g., "pattern".slow(), "pattern".note(), etc.)
+    // These are registered specifically for the String type.
+    registerType<StringValue> {
+        StrudelRegistry.stringExtensionMethods.forEach { (name, handler) ->
+            registerVarargMethod(name) { args -> handler(value, args) }
         }
     }
 }

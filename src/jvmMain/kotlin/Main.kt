@@ -84,7 +84,7 @@ private suspend fun helloStrudel() {
 
         val pattern = StrudelPattern.compile(
             """
-                note("a b").accelerate("0 1")
+                seq("0 1").scale("C4:minor").note()
             """.trimIndent()
         )!!
 
