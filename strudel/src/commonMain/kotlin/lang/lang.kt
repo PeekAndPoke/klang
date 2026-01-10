@@ -151,6 +151,7 @@ val perlin by dslObject {
  */
 @StrudelDsl
 val StrudelPattern.range by dslPatternExtension { p, args ->
+    // TODO: We must be able to provide these parameters from other patterns as well
     val min = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
     val max = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
 
@@ -379,16 +380,41 @@ val String.fast by dslStringExtension { p, args ->
 
 // -- Tempo - rev() ----------------------------------------------------------------------------------------------------
 
-@StrudelDsl
-val StrudelPattern.rev: DslPatternMethod by dslPatternExtension { pattern, args ->
-    val firstArgInt = args.firstOrNull()?.toString()?.toIntOrNull() ?: 1
-
-    if (firstArgInt <= 1) {
+private fun applyRev(pattern: StrudelPattern, n: Int): StrudelPattern {
+    // TODO: Make this parameter available through a pattern as well (e.g. sine)
+    return if (n <= 1) {
         ReversePattern(pattern)
     } else {
-        pattern.fast(firstArgInt).rev().slow(firstArgInt)
+        // Reverses every n-th cycle by speeding up, reversing, then slowing back down
+        pattern.fast(n).rev().slow(n)
     }
 }
+
+/** Reverses the pattern */
+@StrudelDsl
+val rev by dslFunction { args ->
+    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
+
+    applyRev(pattern, n)
+}
+
+/** Reverses the pattern */
+@StrudelDsl
+val StrudelPattern.rev by dslPatternExtension { p, args ->
+    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+    applyRev(p, n)
+}
+
+/** Reverses the pattern */
+@StrudelDsl
+val String.rev by dslStringExtension { p, args ->
+    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+    applyRev(p, n)
+}
+
+
 
 @StrudelDsl
 val StrudelPattern.palindrome by dslPatternExtension { pattern, _ ->
