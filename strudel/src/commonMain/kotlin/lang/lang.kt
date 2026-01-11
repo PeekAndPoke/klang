@@ -962,6 +962,29 @@ val vibmod by dslFunction { args -> args.toPattern(vibratoModMutation) }
 @StrudelDsl
 val String.vibmod by dslStringExtension { p, args -> applyVibratoMod(p, args) }
 
+// -- accelerate() -----------------------------------------------------------------------------------------------------
+
+private val accelerateMutation = voiceModifier {
+    copy(accelerate = it?.asDoubleOrNull())
+}
+
+private fun applyAccelerate(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, accelerateMutation) { src, ctrl -> src.accelerateMutation(ctrl.accelerate) }
+}
+
+@StrudelDsl
+val StrudelPattern.accelerate by dslPatternExtension { p, args ->
+    applyAccelerate(p, args)
+}
+
+@StrudelDsl
+val accelerate by dslFunction { args -> args.toPattern(accelerateMutation) }
+
+@StrudelDsl
+val String.accelerate by dslStringExtension { p, args ->
+    applyAccelerate(p, args)
+}
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dynamics, Gain, Pan, Envelope ...
 // ///
@@ -1699,73 +1722,87 @@ val String.delayfeedback by dslStringExtension { p, args ->
 // Routing
 // ///
 
-// Routing orbit() /////////////////////////////////////////////////////////////////////////////////////////////////////
+// -- orbit() ----------------------------------------------------------------------------------------------------------
 
 private val orbitMutation = voiceModifier {
     copy(orbit = it?.asIntOrNull())
 }
 
+private fun applyOrbit(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, orbitMutation) { src, ctrl -> src.orbitMutation(ctrl.orbit) }
+}
+
 @StrudelDsl
 val StrudelPattern.orbit by dslPatternExtension { p, args ->
-    p.applyParam(args, orbitMutation) { source, control -> source.orbitMutation(control.orbit) }
+    applyOrbit(p, args)
 }
 
 @StrudelDsl
 val orbit by dslFunction { args -> args.toPattern(orbitMutation) }
 
+@StrudelDsl
+val String.orbit by dslStringExtension { p, args ->
+    applyOrbit(p, args)
+}
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Arithmatic
 // ///
 
-// add() ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// -- add() ------------------------------------------------------------------------------------------------------------
 
-/**
- * Adds the given amount to the pattern's value.
- *
- * This is commonly used to transpose note numbers or modify continuous signals.
- *
- * Example: n("0 2").add("5") -> n("5 7")
- */
-@StrudelDsl
-val StrudelPattern.add: DslPatternMethod by dslPatternExtension { source, args ->
-    val controlPattern = args.toPattern {
-        copy(value = it?.asVoiceValue())
-    }
+private fun applyAdd(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    // We use defaultModifier for args because we just want the 'value'
+    val controlPattern = args.toPattern(defaultModifier)
 
-    ControlPattern(
+    return ControlPattern(
         source = source,
         control = controlPattern,
-        mapper = { it }, // No mapping needed for the control data itself
+        mapper = { it }, // No mapping needed
         combiner = { srcData, ctrlData ->
             val amount = ctrlData.value
-            // Add to 'value' if present
-            val newValue = srcData.value?.plus(ctrlData.value)
 
-//            // Add to 'soundIndex' if present
-//            val newSoundIndex = if (srcData.soundIndex != null) {
-//                srcData.soundIndex!! + amount.toInt()
-//            } else {
-//                null
-//            }
+            val srcValue = srcData.value
+                ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
+                ?: srcData.note?.asVoiceValue()
+
+            val newValue = srcValue?.plus(amount)
 
             srcData.copy(
                 value = newValue ?: srcData.value,
-//                soundIndex = newSoundIndex ?: srcData.soundIndex
+                soundIndex = if (newValue != null) null else srcData.soundIndex
             )
         }
     )
 }
 
-// accelerate() ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val accelerateMutation = voiceModifier {
-    copy(accelerate = it?.asDoubleOrNull())
+/**
+ * Adds the given amount to the pattern's value.
+ * Example: n("0 2").add("5") -> n("5 7")
+ */
+@StrudelDsl
+val StrudelPattern.add by dslPatternExtension { source, args ->
+    applyAdd(source, args)
 }
 
+/** Adds the given amount to the pattern's value on a string. */
 @StrudelDsl
-val StrudelPattern.accelerate by dslPatternExtension { p, args ->
-    p.applyParam(args, accelerateMutation) { source, control -> source.accelerateMutation(control.accelerate) }
+val String.add by dslStringExtension { source, args ->
+    applyAdd(source, args)
 }
 
+/**
+ * Top-level add function.
+ * Usage: add(amount, pattern) -> adds amount to pattern
+ * Usage: add(value) -> creates a pattern with that value
+ */
 @StrudelDsl
-val accelerate by dslFunction { args -> args.toPattern(accelerateMutation) }
+val add by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        val amountArgs = args.dropLast(1)
+        applyAdd(source, amountArgs)
+    } else {
+        args.toPattern(defaultModifier)
+    }
+}

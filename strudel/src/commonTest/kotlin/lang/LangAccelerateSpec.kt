@@ -23,6 +23,15 @@ class LangAccelerateSpec : StringSpec({
         events.map { it.data.accelerate } shouldBe listOf(0.1, -0.2, 0.1, -0.2)
     }
 
+    "accelerate() works as string extension" {
+        val p = "c3".accelerate("0.5")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.value?.asString shouldBe "c3"
+        events[0].data.accelerate shouldBe 0.5
+    }
+
     "accelerate() works within compiled code as top-level function" {
         val p = StrudelPattern.compile("""accelerate("0 1")""")
 
