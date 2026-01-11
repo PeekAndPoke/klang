@@ -5,6 +5,28 @@ Strudel.
 
 ## Core Pattern System
 
+### VoiceValue Type System ✅ **NEW!**
+
+**Major type system improvement** introducing type-safe value handling:
+
+- **VoiceValue** sealed interface with `Num` and `Text` variants
+- Type-safe value operations (replaces generic `Any?` for pattern values)
+- Built-in arithmetic operators: `+`, `-`, `*`, `/`, `%`, `pow`
+- Bitwise operators: `band`, `bor`, `bxor`, `shl` (left shift), `shr` (right shift)
+- Comparison operators: `lt`, `gt`, `lte`, `gte`, `eq`, `ne`
+- Logical operators: `and`, `or` (short-circuit evaluation)
+- Unary operations: `log2()`
+- Truthiness evaluation for conditional logic
+- Custom JSON serialization support
+- Automatic type coercion between numbers and strings
+
+**Benefits:**
+
+- Type safety for value operations
+- Consistent behavior across arithmetic, comparison, and logical operations
+- Foundation for complex value manipulations in patterns
+- Clean interoperability between numeric and string values
+
 ### Pattern Types ✅
 
 - **AtomicPattern** - Basic pattern building block for single events
@@ -84,8 +106,10 @@ Strudel.
 - **StrudelDsl** annotation marker
 - **StrudelRegistry** for dynamic function/method lookup
 - Property delegation system for DSL functions (`dslFunction`, `dslMethod`, `dslObject`)
+- **Unified DSL patterns** - Many functions now work as pattern methods, string extensions, AND standalone functions
 - Type-safe pattern creator/modifier system
 - VoiceData mutation and merging framework
+- Generic `dslPatternExtension` and `dslStringExtension` for triple-mode functions
 
 ## Mini-Notation Parser
 
@@ -132,15 +156,50 @@ Strudel.
 
 ### Speed Control ✅
 
-- `fast(factor)` - Speed up patterns
-- `slow(factor)` - Slow down patterns
+- `fast(factor)` - Speed up patterns (works as pattern method, string extension, and standalone function)
+- `slow(factor)` - Slow down patterns (works as pattern method, string extension, and standalone function)
 - TimeModifierPattern implementation with cycle scaling
+
+### Arithmetic Operations ✅
+
+- `add()` - Addition (pattern method, string extension, standalone function)
+- `sub()` - Subtraction
+- `mul()` - Multiplication
+- `div()` - Division
+- `mod()` - Modulo
+- `pow()` - Power/exponentiation
+- `log2()` - Base-2 logarithm (unary operation)
+
+All arithmetic operations work on pattern values and can be applied as:
+
+- Pattern methods: `note("0 2 4").add(5)`
+- String extensions: `"0 2 4".add(5)`
+- Standalone functions: `add(5, note("0 2 4"))`
+
+### Bitwise Operations ✅
+
+- `band()` - Bitwise AND
+- `bor()` - Bitwise OR
+- `bxor()` - Bitwise XOR
+- `blshift()` - Bitwise left shift
+- `brshift()` - Bitwise right shift
+
+### Comparison & Logic Operations ✅
+
+- Comparison: `lt()`, `gt()`, `lte()`, `gte()`, `eq()`, `ne()`
+- Logical: `and()`, `or()` (short-circuit evaluation)
+- All return numeric values (1.0 for true, 0.0 for false)
 
 ### Pattern Transformation ✅
 
 - `rev()` - Reverses pattern within each cycle, works in mini-notation and as chained method
+- `palindrome()` - Alternates forward and backward playback (combines pattern with its reverse)
 - `struct(pattern)` - Structures source pattern according to mask pattern using 'x' markers (e.g.,
   `note("c e g").struct("x ~ x")`)
+- `structAll(pattern)` - Applies structural masking to all events
+- `mask(pattern)` - Conditionally applies pattern elements (boolean masking)
+- `maskAll(pattern)` - Boolean masking for all events
+- `superimpose(function)` - Layers modified pattern on top of original
 
 ## Audio Parameters
 
@@ -252,7 +311,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 70+ DSL functions/methods
+- 100+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 13 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern, StructPattern,
   ContextModifierPattern)
 - 5 continuous oscillators (sine, saw, isaw, tri, square)
@@ -267,17 +326,30 @@ Comprehensive voice data structure supporting:
 
 **Architecture Highlights:**
 
+- **VoiceValue type system** - Sealed interface for type-safe value operations with arithmetic, bitwise, comparison, and
+  logical operators
 - **QueryContext system** - Context-passing enables transformation order independence and future context-dependent
   features
 - **Rational number time coordinates** - Exact arithmetic eliminates floating-point drift
+- **Unified DSL patterns** - Triple-mode functions work as pattern methods, string extensions, and standalone functions
 - Property delegation for clean DSL
 - Type-safe pattern construction
 - Extensible voice data mutation system
 - Parser with proper tokenization
 - Immutable pattern design
 
-**Recent Major Improvements (2026-01-08 to 2026-01-09):**
+**Recent Major Improvements (2026-01-08 to 2026-01-11):**
 
+- ✅ **VoiceValue Type System** - Major type system improvement with sealed interface for type-safe value operations (
+  arithmetic, bitwise, comparison, logical)
+- ✅ **Arithmetic Operations** - Complete set of arithmetic functions: `add()`, `sub()`, `mul()`, `div()`, `mod()`,
+  `pow()`, `log2()`
+- ✅ **Bitwise Operations** - Full bitwise operator support: `band()`, `bor()`, `bxor()`, `blshift()`, `brshift()`
+- ✅ **Comparison & Logic** - Comparison operators (`lt()`, `gt()`, `lte()`, `gte()`, `eq()`, `ne()`) and logical
+  operators (`and()`, `or()`)
+- ✅ **Unified DSL Patterns** - Major DSL refactoring enabling triple-mode functions (pattern method + string extension +
+  standalone function) for 50+ functions
+- ✅ **Pattern Transformations** - Added `palindrome()`, `structAll()`, `maskAll()`, `superimpose()`
 - ✅ **QueryContext System** - Major architectural improvement introducing context-passing for transformation order
   independence and enabling future context-dependent features (scale propagation, tempo inheritance, etc.)
 - ✅ **Rational Time System** - Replaced all Double time coordinates with exact Rational arithmetic
@@ -285,8 +357,8 @@ Comprehensive voice data structure supporting:
 - ✅ **EPSILON Removal** - No longer needed thanks to exact arithmetic
 - ✅ **Probabilistic Patterns** - Implemented `?` (degrade) and `|` (choice) operators with deterministic seeded
   randomness
-- ✅ **Enhanced Testing** - Added comprehensive test suites for Rational numbers, ChoicePattern, DegradePattern, and
-  QueryContext
+- ✅ **Enhanced Testing** - Added comprehensive test suites for Rational numbers, ChoicePattern, DegradePattern,
+  QueryContext, and VoiceValue
 - ✅ **Reverse Pattern** - Implemented `rev()` pattern transformation with time reversal per cycle
 - ✅ **Struct Pattern** - Implemented `struct()` for masking patterns with structural markers ('x' notation)
 - ✅ **Scale Integration** - Enhanced `n()` and `scale()` to work together, automatic note name conversion from indices
