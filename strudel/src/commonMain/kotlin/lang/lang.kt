@@ -886,6 +886,82 @@ val clip by dslFunction { args -> args.toPattern(legatoMutation) }
 @StrudelDsl
 val String.clip by dslStringExtension { p, args -> applyLegato(p, args) }
 
+// -- vibrato() --------------------------------------------------------------------------------------------------------
+
+private val vibratoMutation = voiceModifier {
+    copy(vibrato = it?.asDoubleOrNull())
+}
+
+private fun applyVibrato(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, vibratoMutation) { src, ctrl -> src.vibratoMutation(ctrl.vibrato) }
+}
+
+/** Sets the vibrato frequency (speed) in Hz. */
+@StrudelDsl
+val StrudelPattern.vibrato by dslPatternExtension { p, args ->
+    applyVibrato(p, args)
+}
+
+/** Sets the vibrato frequency (speed) in Hz. */
+@StrudelDsl
+val vibrato by dslFunction { args -> args.toPattern(vibratoMutation) }
+
+/** Sets the vibrato frequency (speed) in Hz on a string. */
+@StrudelDsl
+val String.vibrato by dslStringExtension { p, args ->
+    applyVibrato(p, args)
+}
+
+/** Alias for [vibrato] */
+@StrudelDsl
+val StrudelPattern.vib by dslPatternExtension { p, args -> applyVibrato(p, args) }
+
+/** Alias for [vibrato] */
+@StrudelDsl
+val vib by dslFunction { args -> args.toPattern(vibratoMutation) }
+
+/** Alias for [vibrato] on a string */
+@StrudelDsl
+val String.vib by dslStringExtension { p, args -> applyVibrato(p, args) }
+
+// -- vibratoMod() -----------------------------------------------------------------------------------------------------
+
+private val vibratoModMutation = voiceModifier {
+    copy(vibratoMod = it?.asDoubleOrNull())
+}
+
+private fun applyVibratoMod(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, vibratoModMutation) { src, ctrl -> src.vibratoModMutation(ctrl.vibratoMod) }
+}
+
+/** Sets the vibratoMod depth (amplitude). */
+@StrudelDsl
+val StrudelPattern.vibratoMod by dslPatternExtension { p, args ->
+    applyVibratoMod(p, args)
+}
+
+/** Sets the vibratoMod depth (amplitude). */
+@StrudelDsl
+val vibratoMod by dslFunction { args -> args.toPattern(vibratoModMutation) }
+
+/** Sets the vibratoMod depth (amplitude) on a string. */
+@StrudelDsl
+val String.vibratoMod by dslStringExtension { p, args ->
+    applyVibratoMod(p, args)
+}
+
+/** Alias for [vibratoMod] */
+@StrudelDsl
+val StrudelPattern.vibmod by dslPatternExtension { p, args -> applyVibratoMod(p, args) }
+
+/** Alias for [vibratoMod] */
+@StrudelDsl
+val vibmod by dslFunction { args -> args.toPattern(vibratoModMutation) }
+
+/** Alias for [vibratoMod] on a string */
+@StrudelDsl
+val String.vibmod by dslStringExtension { p, args -> applyVibratoMod(p, args) }
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dynamics, Gain, Pan, Envelope ...
 // ///
@@ -1216,6 +1292,8 @@ val String.adsr by dslStringExtension { p, args ->
 // Filters
 // ///
 
+// -- lpf() ------------------------------------------------------------------------------------------------------------
+
 private val lpfMutation = voiceModifier {
     val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.LowPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
@@ -1226,21 +1304,31 @@ private val lpfMutation = voiceModifier {
     )
 }
 
+private fun applyLpf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, lpfMutation) { src, ctrl ->
+        src
+            .copy(resonance = ctrl.resonance ?: src.resonance)
+            .lpfMutation(ctrl.filters.getByType<FilterDef.LowPass>()?.cutoffHz)
+    }
+}
+
 /** Adds a Low Pass Filter with the given cutoff frequency. */
 @StrudelDsl
 val StrudelPattern.lpf by dslPatternExtension { p, args ->
-    p.applyParam(args, lpfMutation) { source, control ->
-        source
-            .copy(resonance = control.resonance ?: source.resonance)
-            .lpfMutation(control.filters.getByType<FilterDef.LowPass>()?.cutoffHz)
-    }
+    applyLpf(p, args)
 }
 
 /** Adds a Low Pass Filter with the given cutoff frequency. */
 @StrudelDsl
 val lpf by dslFunction { args -> args.toPattern(lpfMutation) }
 
-// Filters - HighPass - hpf() //////////////////////////////////////////////////////////////////////////////////////////
+/** Adds a Low Pass Filter with the given cutoff frequency on a string. */
+@StrudelDsl
+val String.lpf by dslStringExtension { p, args ->
+    applyLpf(p, args)
+}
+
+// -- hpf() ------------------------------------------------------------------------------------------------------------
 
 private val hpfMutation = voiceModifier {
     val cutoff = it?.asDoubleOrNull()
@@ -1252,21 +1340,31 @@ private val hpfMutation = voiceModifier {
     )
 }
 
+private fun applyHpf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, hpfMutation) { src, ctrl ->
+        src
+            .copy(resonance = ctrl.resonance ?: src.resonance)
+            .hpfMutation(ctrl.filters.getByType<FilterDef.HighPass>()?.cutoffHz)
+    }
+}
+
 /** Adds a High Pass Filter with the given cutoff frequency. */
 @StrudelDsl
 val StrudelPattern.hpf by dslPatternExtension { p, args ->
-    p.applyParam(args, hpfMutation) { source, control ->
-        source
-            .copy(resonance = control.resonance ?: source.resonance)
-            .hpfMutation(control.filters.getByType<FilterDef.HighPass>()?.cutoffHz)
-    }
+    applyHpf(p, args)
 }
 
 /** Adds a High Pass Filter with the given cutoff frequency. */
 @StrudelDsl
 val hpf by dslFunction { args -> args.toPattern(hpfMutation) }
 
-// Filters - BandPass - bandf() ////////////////////////////////////////////////////////////////////////////////////////
+/** Adds a High Pass Filter with the given cutoff frequency on a string. */
+@StrudelDsl
+val String.hpf by dslStringExtension { p, args ->
+    applyHpf(p, args)
+}
+
+// -- bandf() / bpf() --------------------------------------------------------------------------------------------------
 
 private val bandfMutation = voiceModifier {
     val cutoff = it?.asDoubleOrNull()
@@ -1278,29 +1376,43 @@ private val bandfMutation = voiceModifier {
     )
 }
 
-/** Adds a High Pass Filter with the given cutoff frequency. */
-@StrudelDsl
-val StrudelPattern.bandf by dslPatternExtension { p, args ->
-    p.applyParam(args, bandfMutation) { source, control ->
-        source
-            .copy(resonance = control.resonance ?: source.resonance)
-            .bandfMutation(control.filters.getByType<FilterDef.BandPass>()?.cutoffHz)
+private fun applyBandf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, bandfMutation) { src, ctrl ->
+        src
+            .copy(resonance = ctrl.resonance ?: src.resonance)
+            .bandfMutation(ctrl.filters.getByType<FilterDef.BandPass>()?.cutoffHz)
     }
 }
 
-/** Adds a High Pass Filter with the given cutoff frequency. */
+/** Adds a Band Pass Filter with the given cutoff frequency. */
+@StrudelDsl
+val StrudelPattern.bandf by dslPatternExtension { p, args ->
+    applyBandf(p, args)
+}
+
+/** Adds a Band Pass Filter with the given cutoff frequency. */
 @StrudelDsl
 val bandf by dslFunction { args -> args.toPattern(bandfMutation) }
 
+/** Adds a Band Pass Filter with the given cutoff frequency on a string. */
+@StrudelDsl
+val String.bandf by dslStringExtension { p, args ->
+    applyBandf(p, args)
+}
+
 /** Alias for [bandf] */
 @StrudelDsl
-val StrudelPattern.bpf by dslPatternExtension { p, args -> p.bandf(args) }
+val StrudelPattern.bpf by dslPatternExtension { p, args -> applyBandf(p, args) }
 
 /** Alias for [bandf] */
 @StrudelDsl
 val bpf by dslFunction { args -> args.toPattern(bandfMutation) }
 
-// Filters - Notch | inverse BandPass - notchf() ///////////////////////////////////////////////////////////////////////
+/** Alias for [bandf] on a string */
+@StrudelDsl
+val String.bpf by dslStringExtension { p, args -> applyBandf(p, args) }
+
+// -- notchf() ---------------------------------------------------------------------------------------------------------
 
 private val notchfMutation = voiceModifier {
     val cutoff = it?.asDoubleOrNull()
@@ -1312,21 +1424,31 @@ private val notchfMutation = voiceModifier {
     )
 }
 
+private fun applyNotchf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, notchfMutation) { src, ctrl ->
+        src
+            .copy(resonance = ctrl.resonance ?: src.resonance)
+            .notchfMutation(ctrl.filters.getByType<FilterDef.Notch>()?.cutoffHz)
+    }
+}
+
 /** Adds a Notch Filter with the given cutoff frequency. */
 @StrudelDsl
 val StrudelPattern.notchf by dslPatternExtension { p, args ->
-    p.applyParam(args, notchfMutation) { source, control ->
-        source
-            .copy(resonance = control.resonance ?: source.resonance)
-            .notchfMutation(control.filters.getByType<FilterDef.Notch>()?.cutoffHz)
-    }
+    applyNotchf(p, args)
 }
 
 /** Adds a Notch Filter with the given cutoff frequency. */
 @StrudelDsl
 val notchf by dslFunction { args -> args.toPattern(notchfMutation) }
 
-// Filters - resonance() ///////////////////////////////////////////////////////////////////////////////////////////////
+/** Adds a Notch Filter with the given cutoff frequency on a string. */
+@StrudelDsl
+val String.notchf by dslStringExtension { p, args ->
+    applyNotchf(p, args)
+}
+
+// -- resonance() / res() ----------------------------------------------------------------------------------------------
 
 private val resonanceMutation = voiceModifier {
     val newQ = it?.asDoubleOrNull() ?: 1.0
@@ -1343,23 +1465,41 @@ private val resonanceMutation = voiceModifier {
     copy(resonance = newQ, filters = newFilters)
 }
 
-/** Sets the note envelope release */
-@StrudelDsl
-val StrudelPattern.resonance by dslPatternExtension { p, args ->
-    p.applyParam(args, resonanceMutation) { source, control -> source.resonanceMutation(control.resonance) }
+private fun applyResonance(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, resonanceMutation) { src, ctrl -> src.resonanceMutation(ctrl.resonance) }
 }
 
-/** Sets the note envelope release */
+/** Sets the filter resonance. */
+@StrudelDsl
+val StrudelPattern.resonance by dslPatternExtension { p, args ->
+    applyResonance(p, args)
+}
+
+/** Sets the filter resonance. */
 @StrudelDsl
 val resonance by dslFunction { args -> args.toPattern(resonanceMutation) }
 
+/** Sets the filter resonance on a string. */
+@StrudelDsl
+val String.resonance by dslStringExtension { p, args ->
+    applyResonance(p, args)
+}
+
 /** Alias for [resonance] */
 @StrudelDsl
-val StrudelPattern.res by dslPatternExtension { p, args -> p.resonance(args) }
+val StrudelPattern.res by dslPatternExtension { p, args -> applyResonance(p, args) }
 
 /** Alias for [resonance] */
 @StrudelDsl
 val res by dslFunction { args -> args.toPattern(resonanceMutation) }
+
+/** Alias for [resonance] on a string */
+@StrudelDsl
+val String.res by dslStringExtension { p, args -> applyResonance(p, args) }
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Effects
+// ///
 
 // distort() ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1492,52 +1632,6 @@ val StrudelPattern.orbit by dslPatternExtension { p, args ->
 
 @StrudelDsl
 val orbit by dslFunction { args -> args.toPattern(orbitMutation) }
-
-// vibrato() ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val vibratoMutation = voiceModifier {
-    copy(vibrato = it?.asDoubleOrNull())
-}
-
-/** Sets the vibrato frequency (speed) in Hz. */
-@StrudelDsl
-val StrudelPattern.vibrato by dslPatternExtension { p, args ->
-    p.applyParam(args, vibratoMutation) { source, control -> source.vibratoMutation(control.vibrato) }
-}
-
-/** Sets the vibrato frequency (speed) in Hz. */
-@StrudelDsl
-val vibrato by dslFunction { args -> args.toPattern(vibratoMutation) }
-
-/** Alias for [vibrato] */
-@StrudelDsl
-val StrudelPattern.vib by dslPatternExtension { p, args -> p.vibrato(args) }
-
-/** Alias for [vibrato] */
-@StrudelDsl
-val vib by dslFunction { args -> args.toPattern(vibratoMutation) }
-
-// vibratoMod() ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val vibratoModMutation = voiceModifier {
-    copy(vibratoMod = it?.asDoubleOrNull())
-}
-
-/** Sets the vibratoMod frequency (speed) in Hz. */
-@StrudelDsl
-val StrudelPattern.vibratoMod by dslPatternExtension { p, args ->
-    p.applyParam(args, vibratoModMutation) { source, control -> source.vibratoModMutation(control.vibratoMod) }
-}
-
-/** Sets the vibratoMod frequency (speed) in Hz. */
-@StrudelDsl
-val vibratoMod by dslFunction { args -> args.toPattern(vibratoModMutation) }
-
-/** Alias for [vibratoMod] */
-val StrudelPattern.vibmod by dslPatternExtension { p, args -> p.vibratoMod(args) }
-
-/** Alias for [vibratoMod] */
-val vibmod by dslFunction { args -> args.toPattern(vibratoModMutation) }
 
 // add() ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
