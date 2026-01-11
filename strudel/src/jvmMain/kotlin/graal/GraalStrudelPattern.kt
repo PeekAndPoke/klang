@@ -33,7 +33,7 @@ class GraalStrudelPattern(
         for (i in 0 until count) {
             val item = arc.getArrayElement(i)
 
-            println(graal.prettyFormat(item))
+//            println(graal.prettyFormat(item))
 
             val event = item.toStrudelEvent()
             events += event

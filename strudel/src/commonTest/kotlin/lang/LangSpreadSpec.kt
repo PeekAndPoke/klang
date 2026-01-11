@@ -6,47 +6,34 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangSpreadSpec : StringSpec({
 
-    "top-level spread() sets VoiceData.panSpread correctly" {
-        // Given a simple sequence of spread values within one cycle
-        val p = spread("0.1 0.2")
-
-        // When querying one cycle
+    "spread() sets VoiceData.panSpread" {
+        val p = spread("0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
-        // Then only assert the panSpread values in order
         events.size shouldBe 2
-        events.map { it.data.panSpread } shouldBe listOf(0.1, 0.2)
+        events.map { it.data.panSpread } shouldBe listOf(0.5, 1.0)
     }
 
-    "control pattern spread() sets VoiceData.panSpread on existing pattern" {
-        // Given a base note pattern producing two events per cycle
-        val base = note("c3 e3")
+    "spread() works as pattern extension" {
+        val p = note("c").spread("0.5")
+        val events = p.queryArc(0.0, 1.0)
 
-        // When applying a control pattern that sets the spread per step
-        val p = base.spread("0.3 0.6")
-
-        val events = p.queryArc(0.0, 2.0)
-        events.size shouldBe 4
-
-        // Then only assert the panSpread values in order
-        events.map { it.data.panSpread } shouldBe listOf(0.3, 0.6, 0.3, 0.6)
+        events.size shouldBe 1
+        events[0].data.panSpread shouldBe 0.5
     }
 
-    "spread() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""spread("0.1 0.2")""")
+    "spread() works as string extension" {
+        val p = "c".spread("0.5")
+        val events = p.queryArc(0.0, 1.0)
 
+        events.size shouldBe 1
+        events[0].data.panSpread shouldBe 0.5
+    }
+
+    "spread() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").spread("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.panSpread } shouldBe listOf(0.1, 0.2)
-    }
-
-    "spread() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").spread("0.1 0.2")""")
-
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.panSpread } shouldBe listOf(0.1, 0.2)
+        events.size shouldBe 1
+        events[0].data.panSpread shouldBe 0.5
     }
 })

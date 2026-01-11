@@ -57,45 +57,23 @@ private suspend fun helloStrudel() {
 //        val code = TestTextPatterns.smallTownBoy
 //        val pattern = strudel.compile(code).await()
 
-//        val pattern1 = stack(
-//            note("c3", "e3", "g3", "b3").sound("tri", "supersaw").slow(2)
-//            sound("bd", "hh", "sd", "oh").slow(1),
-//        )
-
-//        val pattern1 = stack(
-//            seq(
-//                note("c3 e3 g3 b3"),
-//                note("c3 e3 g3 b#3"),
-//            ).sound("tri supersaw").gain(0.1, 0.3, 0.5, 1.0).adsr("0.2:0.2:0.8:0.5"),
-//            sound("bd [hh hh hh] sd oh").gain(1),
-//        ).slow(1)
-
-
 //        val pattern = TestKotlinPatterns.strangerThings
         val pattern = TestKotlinPatterns.tetris
-//        val pattern = note("<a1 e2>/8").clip(0.8)
-//            .struct("x*8")
-//            .s("tri")
+//        val pattern = "c e".struct("x").note()
+//        val pattern = note("c,e,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)
+//        val pattern = note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x ~ x")
 
-
-//        val pattern = StrudelPattern.compile(TestTextPatterns.bandF)
-//            ?: error("Pattern was not compiled")
-
-//        val pattern = StrudelPattern.compile(
+//        val pattern = strudel.compile(
 //            """
-//                seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")
+//                note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x ~ x")
 //            """.trimIndent()
-//        )!!
+//        ).await()!!
 
-//        val pattern = n("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")
-//            .layer { x -> x.add("-2,2") }.scale("C4:minor")
-//
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {
                 println(it)
             }
         }
-
 
         println("=======================================================================")
         println(

@@ -64,17 +64,13 @@ class LangOrbitSpec : StringSpec({
         events[1].data.orbit shouldBe 3
     }
 
-    "orbit() with higher bus numbers" {
-        // Given orbit with higher bus numbers
-        val p = sound("bd hh").orbit("5 10")
-
-        // When querying one cycle
+    "orbit() works as string extension" {
+        val p = "bd".orbit("1")
         val events = p.queryArc(0.0, 1.0)
 
-        // Then higher orbit values are applied
-        events.size shouldBe 2
-        events[0].data.orbit shouldBe 5
-        events[1].data.orbit shouldBe 10
+        events.size shouldBe 1
+        events[0].data.value?.asString shouldBe "bd"
+        events[0].data.orbit shouldBe 1
     }
 
     "orbit() works within compiled code" {

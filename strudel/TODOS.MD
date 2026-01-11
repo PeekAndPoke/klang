@@ -42,9 +42,7 @@ and category.
 
 ### Pattern Creation ⭐⭐⭐
 
-- [ ] **`cat()`** - Concatenates patterns, each taking one full cycle
-  - [x] implement as top-level function
-  - [ ] implement as chainable method on Pattern
+- [x] **`cat()`** - Concatenates patterns, each taking one full cycle
 - [ ] **`polymeter()`** - Aligns steps of patterns creating polymeters
 - [ ] **`polymeterSteps()`** - Polymeter with step specification
 - [ ] **`run(n)`** - Creates discrete pattern of numbers 0 to n-1
@@ -53,6 +51,8 @@ and category.
 
 ### Time Modification ⭐⭐⭐
 
+- [x] **`fast(factor)`** - Speeds up pattern
+- [x] **`slow(factor)`** - Slows down pattern
 - [ ] **`early(cycles)`** - Nudge pattern earlier in time
 - [ ] **`late(cycles)`** - Nudge pattern later in time
 - [ ] **`euclid(pulses, steps)`** - Euclidean rhythm function
@@ -81,6 +81,35 @@ and category.
 - [ ] **`chord()`** - Create chord patterns
 - [ ] **`voicing()`** - Generate chord voicings with full parameters
 - [ ] **`rootNotes(octave)`** - Extract root notes from chords
+
+### Arithmetic & Math Functions ⭐⭐⭐
+
+- [x] **`add()`** - Addition operation
+- [x] **`sub()`** - Subtraction operation
+- [x] **`mul()`** - Multiplication operation
+- [x] **`div()`** - Division operation
+- [x] **`mod()`** - Modulo operation
+- [x] **`pow()`** - Power/exponentiation operation
+- [x] **`log2()`** - Base-2 logarithm (unary)
+
+### Bitwise Operators ⭐
+
+- [x] **`band()`** - Bitwise AND
+- [x] **`bor()`** - Bitwise OR
+- [x] **`bxor()`** - Bitwise XOR
+- [x] **`blshift()`** - Bitwise left shift
+- [x] **`brshift()`** - Bitwise right shift
+
+### Comparison & Logic Operators ⭐⭐
+
+- [x] **`lt()`** - Less than comparison
+- [x] **`gt()`** - Greater than comparison
+- [x] **`lte()`** - Less than or equal comparison
+- [x] **`gte()`** - Greater than or equal comparison
+- [x] **`eq()`** - Equality comparison
+- [x] **`ne()`** - Not equal comparison
+- [x] **`and()`** - Logical AND
+- [x] **`or()`** - Logical OR
 
 ### Audio Effects ⭐⭐⭐
 
@@ -121,7 +150,7 @@ and category.
 
 ### Pattern Operations
 
-- [ ] **`palindrome()`** - Alternates forward/backward playback
+- [x] **`palindrome()`** - Alternates forward/backward playback
 - [ ] **`iter(subdivisions)`** - Plays pattern subdivisions in order
 - [ ] **`iterBack(subdivisions)`** - Plays subdivisions in reverse
 - [ ] **`zoom(start, end)`** - Plays portion of pattern

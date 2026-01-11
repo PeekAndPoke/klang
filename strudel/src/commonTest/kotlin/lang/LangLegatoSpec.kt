@@ -32,6 +32,15 @@ class LangLegatoSpec : StringSpec({
         events.map { it.data.legato } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
     }
 
+    "legato() works as string extension" {
+        val p = "c3".legato("0.5")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.value?.asString shouldBe "c3"
+        events[0].data.legato shouldBe 0.5
+    }
+
     "alias clip behaves like legato" {
         // Given: use alias clip (both top-level creator and modifier exist)
         val pTop = clip("0.3 0.6")
@@ -44,6 +53,15 @@ class LangLegatoSpec : StringSpec({
         val eventsCtrl = pCtrl.queryArc(0.0, 2.0)
         eventsCtrl.size shouldBe 4
         eventsCtrl.map { it.data.legato } shouldBe listOf(0.8, 0.4, 0.8, 0.4)
+    }
+
+    "clip() works as string extension" {
+        val p = "c3".clip("0.5")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.value?.asString shouldBe "c3"
+        events[0].data.legato shouldBe 0.5
     }
 
     "legato() works within compiled code as top-level function" {
@@ -62,5 +80,13 @@ class LangLegatoSpec : StringSpec({
 
         events.size shouldBe 2
         events.map { it.data.legato } shouldBe listOf(0.25, 0.75)
+    }
+
+    "clip() works within compiled code" {
+        val p = StrudelPattern.compile("""note("a").clip("0.5")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.legato shouldBe 0.5
     }
 })

@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
@@ -23,7 +24,7 @@ class ContinuousPattern(
             min = ctx.getOrDefault(minKey, 0.0),
             max = ctx.getOrDefault(maxKey, 1.0),
             t = from.toDouble(),
-        )
+        ).asVoiceValue()
 
         return listOf(
             StrudelPatternEvent(

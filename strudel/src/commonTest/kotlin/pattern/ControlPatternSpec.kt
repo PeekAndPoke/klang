@@ -7,7 +7,6 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class ControlPatternSpec : StringSpec({
 
@@ -30,7 +29,7 @@ class ControlPatternSpec : StringSpec({
         // Weight should be delegated to source
         pattern.weight shouldBe source.weight
 
-        val events = pattern.queryArc(0.0.toRational(), 1.0.toRational())
+        val events = pattern.queryArc(0.0, 1.0)
         events[0].data.gain shouldBe (0.5 plusOrMinus EPSILON)
     }
 
@@ -42,7 +41,7 @@ class ControlPatternSpec : StringSpec({
             begin shouldBe (0.0 plusOrMinus EPSILON)
         }
 
-        val events = pattern.queryArc(0.0.toRational(), 1.0.toRational())
+        val events = pattern.queryArc(0.0, 1.0)
         events[0].data.gain shouldBe (0.7 plusOrMinus EPSILON)
     }
 
@@ -53,7 +52,7 @@ class ControlPatternSpec : StringSpec({
             note shouldBe "c3"
         }
 
-        val events = pattern!!.queryArc(0.0.toRational(), 1.0.toRational())
+        val events = pattern!!.queryArc(0.0, 1.0)
         events[0].data.gain shouldBe (0.2 plusOrMinus EPSILON)
     }
 
@@ -69,20 +68,20 @@ class ControlPatternSpec : StringSpec({
 
     "ContinuousPattern: Oscillator ranges (0..1 by default)" {
         // Sine is normalized: (sin(0) + 1) / 2 = 0.5
-        sine.queryArc(0.0.toRational(), 1.0.toRational())[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+        sine.queryArc(0.0, 1.0)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
         // At t=0.25: (sin(π/2) + 1) / 2 = (1 + 1) / 2 = 1.0
-        sine.queryArc(0.25.toRational(), 0.5.toRational())[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+        sine.queryArc(0.25, 0.5)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
 
         // Saw starts at 0.0
-        saw.queryArc(0.0.toRational(), 1.0.toRational())[0].data.value shouldBe (0.0 plusOrMinus EPSILON)
+        saw.queryArc(0.0, 1.0)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         // Saw at half cycle is 0.5
-        saw.queryArc(0.5.toRational(), 1.0.toRational())[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+        saw.queryArc(0.5, 1.0)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
 
         // Range mapping: mapping 0..1 to 10..20
         val rangedSine = sine.range(10.0, 20.0)
         // at t=0, sine is 0.5, so mapped value is 15.0
-        rangedSine.queryArc(0.0.toRational(), 1.0.toRational())[0].data.value shouldBe (15.0 plusOrMinus EPSILON)
+        rangedSine.queryArc(0.0, 1.0)[0].data.value?.asDouble shouldBe (15.0 plusOrMinus EPSILON)
         // at t=0.25, sine is 1.0, so mapped value is 20.0
-        rangedSine.queryArc(0.25.toRational(), 0.5.toRational())[0].data.value shouldBe (20.0 plusOrMinus EPSILON)
+        rangedSine.queryArc(0.25, 0.5)[0].data.value?.asDouble shouldBe (20.0 plusOrMinus EPSILON)
     }
 })

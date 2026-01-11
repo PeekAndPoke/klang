@@ -25,7 +25,7 @@ class ContinuousPatternSpec : StringSpec({
         event.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
         event.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         // The value is sampled at the 'from' time
-        event.data.value shouldBe (0.25 plusOrMinus EPSILON)
+        event.data.value?.asDouble shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "ContinuousPattern: Kotlin DSL (sine)" {
@@ -36,7 +36,7 @@ class ContinuousPatternSpec : StringSpec({
         val events = pattern.queryArc(0.25.toRational(), 0.5.toRational())
 
         events.size shouldBe 1
-        events[0].data.value shouldBe (1.0 plusOrMinus EPSILON)
+        events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "ContinuousPattern: Compiled Code" {
@@ -47,7 +47,7 @@ class ContinuousPatternSpec : StringSpec({
         val events = pattern.queryArc(0.5.toRational(), 1.0.toRational())
 
         events.size shouldBe 1
-        events[0].data.value shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "ContinuousPattern: range mapping" {
@@ -58,6 +58,6 @@ class ContinuousPatternSpec : StringSpec({
         val mapped = base.range(0.0, 100.0)
 
         val events = mapped.queryArc(0.0.toRational(), 1.0.toRational())
-        events[0].data.value shouldBe (50.0 plusOrMinus EPSILON)
+        events[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
     }
 })

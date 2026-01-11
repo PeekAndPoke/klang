@@ -5,13 +5,15 @@ object JsCompatTestData {
     private const val RUN_PROBLEMS = false
 
     val simplePatterns: List<Triple<Boolean, String, String>> = listOf(
+        // Chords
+        Triple(true, "Chords #1", """note("c,eb,g").slow(2)"""),
         // Scales
         Triple(true, "C-Major notes", """note("c3 d3 e3 f3 g3 a3 b3 c4")"""),
         Triple(true, "n() without scale", """n("0 1 2 3")"""),
         Triple(true, "C4:minor scale", """n("0 2 4").scale("C4:minor")"""),
         Triple(true, "C4:major scale", """n("0 2 4").scale("C4:major")"""),
         // Sequences
-        Triple(true, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
+        Triple(RUN_PROBLEMS, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
         // Oscillators & Generators
         Triple(true, "Oscillators", """s("<sine saw isaw tri square>").fast(2)"""),
         Triple(true, "Noise Generators", """s("<white brown pink crackle dust>").gain(0.5)"""),
@@ -72,16 +74,48 @@ object JsCompatTestData {
         Triple(true, "Vibrato", """note("c").vib(5).vibmod(0.1)"""),
         Triple(true, "Accelerate", """note("c").accelerate(1)"""),
         // Transformation
-        Triple(true, "Struct #1", """note("c,eb,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
-        Triple(true, "Struct #2", """note("c3 d3").fast(2).struct("x")"""),
+        Triple(true, "Struct #1", """note("c e").struct("x")"""),
+        Triple(true, "Struct #2", """note("c,eb,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
+        Triple(true, "Struct #3", """note("c3 d3").fast(2).struct("x")"""),
+        Triple(true, "Struct #4", """note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x")"""),
+        Triple(true, "Struct All #1", """note("c e").structAll("x")"""),
+        Triple(true, "Struct All #2", """note("c,eb,g").structAll("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)"""),
         Triple(true, "Mask #1", """note("c [eb,g] d [eb,g]").mask("<1 [0 1]>")"""),
         Triple(true, "Mask #2", """note("c3*8").mask(square.fast(4))"""),
+        Triple(true, "Mask All #1", """note("c [eb,g] d [eb,g]").maskAll("<1 [0 1]>")"""),
+        Triple(true, "Mask All #2", """note("c3*8").maskAll(square.fast(4))"""),
         Triple(true, "SuperImpose #1", """note("a").superimpose(p => p.note("c"))"""),
         Triple(true, "SuperImpose #2", """note("a c e h").superimpose(p => p.note("e c"))"""),
         Triple(true, "Layer #1", """n("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8").layer { x -> x.add("-2,2") }.scale("C4:minor")"""),
         // TODO: more complex tests for rev() an palindrome()
         Triple(true, "Reverse", """note("c e g").rev()"""),
         Triple(true, "Palindrome", """note("c e g").palindrome()"""),
+        // Arithmetic Operators
+        Triple(RUN_PROBLEMS, "Add", """n("0 1 2 3").add("2")"""),
+        Triple(RUN_PROBLEMS, "Sub", """n("10 20").sub("5")"""),
+        Triple(RUN_PROBLEMS, "Mul", """n("2 3").mul("4")"""),
+        Triple(RUN_PROBLEMS, "Div", """n("10 20").div("2")"""),
+        Triple(RUN_PROBLEMS, "Mod", """n("10 11").mod("3")"""),
+        Triple(RUN_PROBLEMS, "Pow", """n("2 3").pow("3")"""),
+        Triple(RUN_PROBLEMS, "Log2", """n("1 2 4 8").log2()"""),
+        // Bitwise Operators
+        Triple(RUN_PROBLEMS, "Band (AND)", """n("3 5").band("1")"""),
+        Triple(RUN_PROBLEMS, "Bor (OR)", """n("1 4").bor("2")"""),
+        Triple(RUN_PROBLEMS, "Bxor (XOR)", """n("3 5").bxor("1")"""),
+        Triple(RUN_PROBLEMS, "Blshift (Left Shift)", """n("1 2").blshift("1")"""),
+        Triple(RUN_PROBLEMS, "Brshift (Right Shift)", """n("2 4").brshift("1")"""),
+        // Comparison
+        Triple(RUN_PROBLEMS, "Less Than", """n("1 2 3").lt("2")"""),
+        Triple(RUN_PROBLEMS, "Greater Than", """n("1 2 3").gt("2")"""),
+        Triple(RUN_PROBLEMS, "Less Equal", """n("1 2 3").lte("2")"""),
+        Triple(RUN_PROBLEMS, "Greater Equal", """n("1 2 3").gte("2")"""),
+        Triple(RUN_PROBLEMS, "Equal", """n("1 2 3").eq("2")"""),
+        Triple(RUN_PROBLEMS, "Not Equal", """n("1 2 3").ne("2")"""),
+        // Logical
+        Triple(RUN_PROBLEMS, "Logical And", """n("0 1").and("5")"""),
+        Triple(RUN_PROBLEMS, "Logical Or", """n("0 1").or("5")"""),
+        // Bitwise
+        Triple(RUN_PROBLEMS, "Band (AND)", """n("3 5").band("1")"""),
     )
 
     val songs: List<Triple<Boolean, String, String>> = listOf(

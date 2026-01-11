@@ -57,6 +57,45 @@ class LangCatSpec : StringSpec({
         events[2].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
+    "cat() works as a method on StrudelPattern" {
+        // Given a pattern
+        val p1 = note("a")
+
+        // When chaining cat()
+        val p = p1.cat(note("b"), note("c"))
+
+        // Then it should sequence them (total 3 cycles)
+        val events = p.queryArc(0.0, 3.0).sortedBy { it.begin }
+
+        events.size shouldBe 3
+        events[0].data.note shouldBe "a"
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+
+        events[1].data.note shouldBe "b"
+        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+
+        events[2].data.note shouldBe "c"
+        events[2].begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
+    "cat() works as an extension on String" {
+        // When using string extension "a".cat(...)
+        val p = "a".cat("b", "c")
+
+        // Then it should sequence them (total 3 cycles)
+        val events = p.queryArc(0.0, 3.0).sortedBy { it.begin }
+
+        events.size shouldBe 3
+        events[0].data.value?.asString shouldBe "a"
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+
+        events[1].data.value?.asString shouldBe "b"
+        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+
+        events[2].data.value?.asString shouldBe "c"
+        events[2].begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
     "cat() works within compiled code" {
         val p = StrudelPattern.compile("""cat(note("a"), note("b"))""")
 
@@ -65,6 +104,28 @@ class LangCatSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.note shouldBe "a"
         events[1].data.note shouldBe "b"
+        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "cat() works as method in compiled code" {
+        val p = StrudelPattern.compile("""note("a").cat(note("b"))""")
+
+        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.note shouldBe "a"
+        events[1].data.note shouldBe "b"
+        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "cat() works as string extension in compiled code" {
+        val p = StrudelPattern.compile(""""a".cat("b")""")
+
+        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBe "a"
+        events[1].data.value?.asString shouldBe "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 })

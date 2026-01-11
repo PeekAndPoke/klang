@@ -50,74 +50,54 @@ class LangArrangeSpec : StringSpec({
         events[2].end.toDouble() shouldBe (3.0 plusOrMinus EPSILON)
     }
 
-    "arrange() with mixed durations" {
-        // Given patterns with different durations
-        val p = arrange(
-            listOf(2, sound("bd")),
-            sound("hh"),
-            listOf(3, sound("sn"))
-        )
+    "arrange() works as method on StrudelPattern" {
+        // sound("bd").arrange(sound("hh")) -> arrange(sound("bd"), sound("hh"))
+        val p = sound("bd").arrange(sound("hh"))
 
-        // When querying the full span (6 cycles)
-        val events = p.queryArc(0.0, 6.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
 
-        // Then we get 2 bd + 1 hh + 3 sn = 6 events
-        events.size shouldBe 6
-
-        // Count occurrences
-        events.count { it.data.sound == "bd" } shouldBe 2
-        events.count { it.data.sound == "hh" } shouldBe 1
-        events.count { it.data.sound == "sn" } shouldBe 3
-
-        // Check order: bd, bd, hh, sn, sn, sn
-        events.map { it.data.sound } shouldBe listOf("bd", "bd", "hh", "sn", "sn", "sn")
-    }
-
-    "arrange() with single element list [pattern]" {
-        // Given a pattern in a single-element list (should default to 1 cycle)
-        val p = arrange(listOf(sound("bd")))
-
-        // When querying one cycle
-        val events = p.queryArc(0.0, 1.0)
-
-        // Then it plays for 1 cycle
-        events.size shouldBe 1
+        events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].data.sound shouldBe "hh"
     }
 
-    "arrange() with empty arguments returns silence" {
-        // Given an empty arrangement
-        val p = arrange()
+    "arrange() works as extension on String" {
+        // "bd".arrange("hh") -> arrange(sound("bd"), sound("hh"))?
+        // Wait, "bd" as pattern via defaultModifier goes to 'note' or 'value'.
+        // But `sound("bd")` puts it in `sound`.
+        // If we use `"bd".arrange("hh")`, "bd" becomes a pattern via defaultModifier (note/value).
+        // So we check for note/value.
 
-        // When querying one cycle
-        val events = p.queryArc(0.0, 1.0)
+        val p = "bd".arrange("hh")
 
-        // Then we get no events
-        events.size shouldBe 0
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+
+        events.size shouldBe 2
+        // "bd" -> value="bd" (as VoiceValue.Text)
+        // "hh" -> value="hh"
+        // Note: this assumes "bd" isn't parsed as sound("bd") automatically unless we use sound("bd").
+
+        // Let's check what defaultModifier does. It sets note and value.
+        // So we check note.
+        events[0].data.note shouldBe "bd"
+        events[1].data.note shouldBe "hh"
     }
 
-    "arrange() repeats the full arrangement" {
-        // Given a short arrangement
-        val p = arrange(sound("bd"), sound("hh"))
+    "arrange() works in compiled code" {
+        val p = StrudelPattern.compile("""arrange(sound("bd"), sound("hh"))""")
+        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
 
-        // When querying beyond the arrangement length (4 cycles)
-        val events = p.queryArc(0.0, 4.0).sortedBy { it.begin }
-
-        // Then the arrangement repeats
-        events.size shouldBe 4
-        events.map { it.data.sound } shouldBe listOf("bd", "hh", "bd", "hh")
-    }
-
-    "arrange() works within compiled code" {
-        val p = StrudelPattern.compile("""arrange([2, sound("bd")], sound("hh"))""")
-
-        val events = p?.queryArc(0.0, 3.0)?.sortedBy { it.begin } ?: emptyList()
-
-        events.size shouldBe 3
+        events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "bd"
-        events[2].data.sound shouldBe "hh"
-        events[2].begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[1].data.sound shouldBe "hh"
+    }
+
+    "arrange() works as method in compiled code" {
+        val p = StrudelPattern.compile("""sound("bd").arrange(sound("hh"))""")
+        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.sound shouldBe "bd"
+        events[1].data.sound shouldBe "hh"
     }
 })

@@ -8,8 +8,17 @@
 - 05-01-2026: bought 50 more AI credits -> 59.90 EUR
 - 06-01-2026: bought 50 more AI credits -> 59.90 EUR
 - 07-01-2026: bought 50 more AI credits -> 59.90 EUR
+- 11-01-2026: bought 50 more AI credits -> 59.90 EUR
 
 ## Diary
+
+### (2026-01-10) Strudel - Cleanup and refactoring
+
+- streamlining the api surface of all strudel functions
+  - making them extension on StrudelPattern
+  - making them extension on String
+  - making all of this available to KlangScript as well
+- Generalized StructurePattern so cover struct(), structAll(), mask(), maskAll(), etc...
 
 ### (2026-01-09) Strudel - New features
 

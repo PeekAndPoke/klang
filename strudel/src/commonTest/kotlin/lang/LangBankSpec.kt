@@ -6,47 +6,37 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangBankSpec : StringSpec({
 
-    "top-level bank() sets VoiceData.bank correctly" {
-        // Given a simple sequence of banks within one cycle
-        val p = bank("MPC Akai")
-
-        // When querying one cycle
+    "bank() sets VoiceData.bank" {
+        val p = bank("RolandCR78")
         val events = p.queryArc(0.0, 1.0)
 
-        // Then only assert the bank values in order
-        events.size shouldBe 2
-        events.map { it.data.bank } shouldBe listOf("MPC", "Akai")
+        events.size shouldBe 1
+        events[0].data.bank shouldBe "RolandCR78"
     }
 
-    "control pattern bank() sets VoiceData.bank on existing pattern" {
-        // Given a base note pattern producing two events per cycle
-        val base = note("c3 e3")
+    "bank() works as pattern extension" {
+        val p = note("c").bank("User1")
+        val events = p.queryArc(0.0, 1.0)
 
-        // When applying a control pattern that sets the bank per step
-        val p = base.bank("A B")
-
-        val events = p.queryArc(0.0, 2.0)
-        events.size shouldBe 4
-
-        // Then only assert the bank values in order
-        events.map { it.data.bank } shouldBe listOf("A", "B", "A", "B")
+        events.size shouldBe 1
+        events[0].data.note shouldBe "c"
+        events[0].data.bank shouldBe "User1"
     }
 
-    "bank() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""bank("A B")""")
+    "bank() works as string extension" {
+        val p = "c".bank("User1")
+        val events = p.queryArc(0.0, 1.0)
 
+        events.size shouldBe 1
+        events[0].data.value?.asString shouldBe "c"
+        events[0].data.bank shouldBe "User1"
+    }
+
+    "bank() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").bank("RolandCR78")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
-        events.size shouldBe 2
-        events.map { it.data.bank } shouldBe listOf("A", "B")
-    }
-
-    "bank() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").bank("A B")""")
-
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.bank } shouldBe listOf("A", "B")
+        events.size shouldBe 1
+        events[0].data.bank shouldBe "RolandCR78"
     }
 })

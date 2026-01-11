@@ -36,6 +36,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(Deps.KotlinX.serialization_core)
+                implementation(Deps.KotlinX.serialization_json)
             }
         }
 

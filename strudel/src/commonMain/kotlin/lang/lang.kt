@@ -1,23 +1,29 @@
+@file:Suppress("DuplicatedCode")
+
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.PerlinNoise
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
+import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.tones.scale.Scale
 import kotlin.math.PI
-import kotlin.math.max
 import kotlin.math.sin
 
 @DslMarker
 annotation class StrudelDsl
 
-// Initialization Helper ///////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Helpers
+// ///
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -25,29 +31,77 @@ annotation class StrudelDsl
  */
 var strudelLangInit = false
 
-// Helpers
-private fun List<Any?>.flattenToPatterns(
-    atomFactory: (String) -> StrudelPattern = {
-        AtomicPattern(VoiceData.empty.copy(note = it))
-    },
-): List<StrudelPattern> {
-    return this.flatMap { arg ->
-        when (arg) {
-            is String -> listOf(parseMiniNotation(arg, atomFactory))
-            is Number -> listOf(atomFactory(arg.toString()))
-            is StrudelPattern -> listOf(arg)
-            is List<*> -> arg.flattenToPatterns(atomFactory)
-            else -> emptyList()
-        }
-    }
+/** Default modifier for patterns that don't have a specific semantic yet (like sequence or stack items) */
+val defaultModifier: VoiceDataModifier = {
+    copy(value = it?.asVoiceValue())
+}
+
+/** Cleans up the scale name */
+private fun String.cleanScaleName() = replace(":", " ")
+
+/** Safely convert any value to a double or null */
+private fun Any.asDoubleOrNull(): Double? = when (this) {
+    is Number -> this.toDouble()
+    is String -> this.toDoubleOrNull()
+    else -> null
+}
+
+/** Safely convert any value to an int or null */
+private fun Any.asIntOrNull(): Int? = when (this) {
+    is Number -> this.toInt()
+    is String -> this.toDoubleOrNull()?.toInt()
+    else -> null
 }
 
 /**
- * Cleans up the scale name
+ * Resolves the note and frequency based on the index and the current scale.
+ *
+ * @param newIndex An optional new index to force (e.g. from n("0")).
+ *                 If null, it tries to use existing soundIndex or interpret value as index.
  */
-private fun String.cleanScaleName() = replace(":", " ")
+private fun VoiceData.resolveNote(newIndex: Int? = null): VoiceData {
+    val effectiveScale = scale?.cleanScaleName()
 
-// Continuous patterns /////////////////////////////////////////////////////////////////////////////////////////////////
+    // Determine the effective index:
+    // 1. Explicit argument (newIndex)
+    // 2. Existing soundIndex
+    // 3. Existing value interpreted as integer
+    val n = newIndex ?: soundIndex ?: value?.asInt
+
+    // Try to resolve note from index + scale
+    if (n != null && !effectiveScale.isNullOrEmpty()) {
+        val noteName = Scale.steps(effectiveScale).invoke(n)
+        return copy(
+            note = noteName,
+            freqHz = Tones.noteToFreq(noteName),
+            soundIndex = null, // this clears the sound-index
+            value = null, // this also clears the value
+        )
+    }
+
+    // Fallback cases
+
+    // Case A: Explicit index was provided, but no scale found.
+    // We must set the soundIndex.
+    if (newIndex != null) {
+        return copy(soundIndex = newIndex)
+    }
+
+    // Case B: Reinterpretation or fallback.
+    // If we derived an index 'n' (e.g. from value), we preserve it.
+    // We also ensure 'note' is populated (e.g. from 'value' if 'note' is missing).
+    val fallbackNote = note ?: value?.asString
+
+    return copy(
+        note = fallbackNote,
+        freqHz = Tones.noteToFreq(fallbackNote ?: ""),
+        soundIndex = n ?: soundIndex
+    )
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Continuous patterns
+// ///
 
 /** Empty pattern that does not produce any events */
 @StrudelDsl
@@ -100,9 +154,10 @@ val perlin by dslObject {
  * Sets the range of a continuous pattern to a new minimum and maximum value.
  */
 @StrudelDsl
-val StrudelPattern.range by dslMethod { p, args ->
-    val min = (args.getOrNull(0) as? Number)?.toDouble() ?: 0.0
-    val max = (args.getOrNull(1) as? Number)?.toDouble() ?: 1.0
+val StrudelPattern.range by dslPatternExtension { p, args ->
+    // TODO: We must be able to provide these parameters from other patterns as well
+    val min = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
+    val max = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
 
     p.withContext {
         setIfAbsent(ContinuousPattern.minKey, min)
@@ -110,30 +165,79 @@ val StrudelPattern.range by dslMethod { p, args ->
     }
 }
 
-// Structural patterns /////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Structural patterns
+// ///
+
+// -- seq() ------------------------------------------------------------------------------------------------------------
+
+/** Creates a sequence pattern. */
+private fun applySeq(patterns: List<StrudelPattern>): StrudelPattern {
+    return if (patterns.isEmpty()) EmptyPattern
+    else if (patterns.size == 1) patterns.first()
+    else SequencePattern(patterns)
+}
 
 /** Creates a sequence pattern. */
 @StrudelDsl
 val seq by dslFunction { args ->
-    val patterns = args.flattenToPatterns(
-        atomFactory = {
-            AtomicPattern(VoiceData.empty.copy(value = it.toDoubleOrNull()))
-        }
-    ).toList()
+    // specialized modifier for seq to prioritize value
+    args.toPattern(defaultModifier)
+}
 
-    if (patterns.isEmpty()) silence else SequencePattern(patterns)
+@StrudelDsl
+val StrudelPattern.seq by dslPatternExtension { p, args ->
+    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
+    applySeq(patterns)
+}
+
+@StrudelDsl
+val String.seq by dslStringExtension { p, args ->
+    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
+    applySeq(patterns)
+}
+
+// -- stack() ----------------------------------------------------------------------------------------------------------
+
+private fun applyStack(patterns: List<StrudelPattern>): StrudelPattern {
+    return if (patterns.size == 1) patterns.first() else StackPattern(patterns)
 }
 
 /** Plays multiple patterns at the same time. */
 @StrudelDsl
 val stack by dslFunction { args ->
-    val patterns = args.flattenToPatterns().toList()
+    // If the result of converting args is a SequencePattern, we treat its children as the stack elements.
+    // If it's a single pattern, we wrap it.
+    // Wait, the original logic was:
+    // args.toPattern(defaultModifier).let { if (it is SequencePattern) StackPattern(it.patterns) else StackPattern(listOf(it)) }
+
+    // This implies that stack("a", "b") -> toPattern -> Sequence("a", "b") -> Stack("a", "b").
+    // stack("a") -> toPattern -> "a" -> Stack("a").
+    // stack(seq("a", "b")) -> toPattern -> Sequence("a", "b") -> Stack("a", "b").
+
+    // So we need to mimic this behavior or simply take the list of patterns.
+    // If we use args.toListOfPatterns(defaultModifier), we get [a, b].
+    // Then we can just wrap them in StackPattern.
+
+    val patterns = args.toListOfPatterns(defaultModifier)
     if (patterns.isEmpty()) silence else StackPattern(patterns)
 }
 
-// arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
 @StrudelDsl
-val arrange by dslFunction { args ->
+val StrudelPattern.stack by dslPatternExtension { p, args ->
+    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
+    applyStack(patterns)
+}
+
+@StrudelDsl
+val String.stack by dslStringExtension { p, args ->
+    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
+    applyStack(patterns)
+}
+
+// -- arrange() --------------------------------------------------------------------------------------------------------
+
+private fun applyArrange(args: List<Any?>): StrudelPattern {
     val segments = args.map { arg ->
         when (arg) {
             // Case: pattern (defaults to 1 cycle)
@@ -151,103 +255,235 @@ val arrange by dslFunction { args ->
         }
     }.filter { it.first > 0.0 }
 
-    if (segments.isEmpty()) silence
+    return if (segments.isEmpty()) silence
     else ArrangementPattern(segments)
 }
 
+// arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
+@StrudelDsl
+val arrange by dslFunction { args ->
+    applyArrange(args)
+}
+
+@StrudelDsl
+val StrudelPattern.arrange by dslPatternExtension { p, args ->
+    // When calling p.arrange(args), p is the first element (implicitly 1 cycle unless args says otherwise, but args are the *other* elements).
+    // So it's effectively arrange(p, *args).
+    applyArrange(listOf(p) + args)
+}
+
+@StrudelDsl
+val String.arrange by dslStringExtension { p, args ->
+    // "p".arrange(args) -> arrange("p", *args).
+    // "p" needs to be converted to a pattern first because arrangeImpl expects patterns or [dur, pat] lists.
+    // dslStringExtension passes 'p' as a Pattern (parsed via defaultModifier) to the handler?
+    // Wait, looking at dslStringExtension in lang_helpers.kt:
+    // It calls `val pattern = parse(recv)` then `handler(pattern, args)`.
+    // So `p` here is `StrudelPattern`.
+    applyArrange(listOf(p) + args)
+}
+
+// -- pickRestart() ----------------------------------------------------------------------------------------------------
+
 // pickRestart([a, b, c]) -> picks patterns sequentially per cycle (slowcat)
+// TODO: make this really work. Must be dslMethod -> https://strudel.cc/learn/conditional-modifiers/#pickrestart
 @StrudelDsl
 val pickRestart by dslFunction { args ->
-    val patterns = args.flattenToPatterns()
+    val patterns = args.toListOfPatterns(defaultModifier)
     if (patterns.isEmpty()) {
         silence
     } else {
         // seq plays all in 1 cycle. slow(n) makes each take 1 cycle.
-        val s = seq(patterns) // using our dslFunction 'seq' via kotlin invoke
+        val s = SequencePattern(patterns)
         // We need to call .slow on the result. But 'slow' is a property delegate now!
         // In Kotlin code: s.slow(n). In internal code, we access the DslMethod 'slow'.
         s.slow(patterns.size)
     }
 }
 
+// -- cat() ------------------------------------------------------------------------------------------------------------
+
+private fun applyCat(patterns: List<StrudelPattern>): StrudelPattern = when {
+    patterns.isEmpty() -> silence
+    patterns.size == 1 -> patterns.first()
+    else -> ArrangementPattern(patterns.map { 1.0 to it })
+}
+
 @StrudelDsl
 val cat by dslFunction { args ->
-    val patterns = args.flattenToPatterns()
-    when {
-        patterns.isEmpty() -> silence
-        patterns.size == 1 -> patterns.first()
-        else -> ArrangementPattern(patterns.map { 1.0 to it })
-    }
-}
-
-// Tempo / Time modifiers //////////////////////////////////////////////////////////////////////////////////////////////
-
-/** Slows down all inner patterns by the given factor */
-@StrudelDsl
-val StrudelPattern.slow by dslMethod { p, args ->
-    val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
-    TempoModifierPattern(p, max(1.0 / 128.0, factor))
-}
-
-/** Speeds up all inner patterns by the given factor */
-@StrudelDsl
-val StrudelPattern.fast by dslMethod { p, args ->
-    val factor = (args.firstOrNull() as? Number)?.toDouble() ?: 1.0
-    TempoModifierPattern(p, 1.0 / max(1.0 / 128.0, factor))
+    applyCat(args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.rev: DslMethod by dslMethod { pattern, args ->
-    val firstArgInt = args.firstOrNull()?.toString()?.toIntOrNull() ?: 1
-
-    if (firstArgInt <= 1) {
-        ReversePattern(pattern)
-    } else {
-        pattern.fast(firstArgInt).rev().slow(firstArgInt)
-    }
+val StrudelPattern.cat by dslPatternExtension { p, args ->
+    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.palindrome by dslMethod { pattern, _ ->
-    cat(pattern, pattern.rev())
+val String.cat by dslStringExtension { p, args ->
+    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
-/**
- * Structures the pattern according to another pattern (the mask).
- *
- * The structural pattern (usually mini-notation) uses 'x' to indicate where
- * the source pattern should be heard.
- *
- * Example: note("c e g").struct("x ~ x")
- */
-@StrudelDsl
-val StrudelPattern.struct by dslMethod { source, args ->
-    val structure = when (val structArg = args.firstOrNull()) {
+// -- struct() ---------------------------------------------------------------------------------------------------------
+
+private fun applyStruct(source: StrudelPattern, structArg: Any?): StrudelPattern {
+    val structure = when (structArg) {
         is StrudelPattern -> structArg
         is String -> parseMiniNotation(input = structArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
         else -> silence
     }
 
-    StructPattern(source, structure)
+    return StructurePattern(
+        source = source,
+        other = structure,
+        mode = StructurePattern.Mode.Out,
+        filterByTruthiness = true
+    )
 }
 
 /**
- * Filters the pattern using a boolean mask.
- *
- * Events in the source pattern are only heard if the mask pattern
- * has a truthy value at that time.
- *
- * Example: note("c e g").mask("1 0 1")
+ * Structures the pattern according to another pattern (the mask).
  */
 @StrudelDsl
-val StrudelPattern.mask by dslMethod { source, args ->
-    val maskPattern = when (val maskArg = args.firstOrNull()) {
+val struct by dslFunction { args ->
+    val structArg = args.getOrNull(0)
+    val source = args.filterIsInstance<StrudelPattern>().let {
+        if (it.size >= 2 && structArg is StrudelPattern) it[1] else it.firstOrNull()
+    } ?: return@dslFunction silence
+
+    applyStruct(source, structArg)
+}
+
+@StrudelDsl
+val StrudelPattern.struct by dslPatternExtension { source, args ->
+    applyStruct(source, args.firstOrNull())
+}
+
+@StrudelDsl
+val String.struct by dslStringExtension { source, args ->
+    applyStruct(source, args.firstOrNull())
+}
+
+// -- structAll() ------------------------------------------------------------------------------------------------------
+
+private fun applyStructAll(source: StrudelPattern, structArg: Any?): StrudelPattern {
+    val structure = when (structArg) {
+        is StrudelPattern -> structArg
+        is String -> parseMiniNotation(input = structArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+        else -> silence
+    }
+
+    // We use a different implementation for structAll that preserves all source events
+    return StructurePattern(
+        source = source,
+        other = structure,
+        mode = StructurePattern.Mode.Out,
+        filterByTruthiness = false
+    )
+}
+
+/**
+ * Structures the pattern according to another pattern, keeping all source events that overlap.
+ *
+ * Example: structAll("x", note("c e")) -> keeps both c and e within the x window
+ */
+@StrudelDsl
+val structAll by dslFunction { args ->
+    val structArg = args.getOrNull(0)
+    val source = args.filterIsInstance<StrudelPattern>().let {
+        if (it.size >= 2 && structArg is StrudelPattern) it[1] else it.firstOrNull()
+    } ?: return@dslFunction silence
+
+    applyStructAll(source, structArg)
+}
+
+@StrudelDsl
+val StrudelPattern.structAll by dslPatternExtension { source, args ->
+    applyStructAll(source, args.firstOrNull())
+}
+
+@StrudelDsl
+val String.structAll by dslStringExtension { source, args ->
+    applyStructAll(source, args.firstOrNull())
+}
+
+private fun applyMask(source: StrudelPattern, maskArg: Any?): StrudelPattern {
+    val maskPattern = when (maskArg) {
         is StrudelPattern -> maskArg
         is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
         else -> silence
     }
 
-    MaskPattern(source, maskPattern)
+    return StructurePattern(
+        source = source,
+        other = maskPattern,
+        mode = StructurePattern.Mode.In,
+        filterByTruthiness = true
+    )
+}
+
+/**
+ * Filters the pattern using a boolean mask.
+ * Only events from the source that overlap with "truthy" events in the mask are kept.
+ */
+@StrudelDsl
+val mask by dslFunction { args ->
+    val maskArg = args.getOrNull(0)
+    val source = args.filterIsInstance<StrudelPattern>().let {
+        if (it.size >= 2 && maskArg is StrudelPattern) it[1] else it.firstOrNull()
+    } ?: return@dslFunction silence
+
+    applyMask(source, maskArg)
+}
+
+@StrudelDsl
+val StrudelPattern.mask by dslPatternExtension { source, args ->
+    applyMask(source, args.firstOrNull())
+}
+
+@StrudelDsl
+val String.mask by dslStringExtension { source, args ->
+    applyMask(source, args.firstOrNull())
+}
+
+// -- maskAll() --------------------------------------------------------------------------------------------------------
+
+private fun applyMaskAll(source: StrudelPattern, maskArg: Any?): StrudelPattern {
+    val maskPattern = when (maskArg) {
+        is StrudelPattern -> maskArg
+        is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+        else -> silence
+    }
+
+    return StructurePattern(
+        source = source,
+        other = maskPattern,
+        mode = StructurePattern.Mode.In,
+        filterByTruthiness = false
+    )
+}
+
+/**
+ * Filters the pattern using a mask, keeping all source events that overlap with the mask's structure.
+ */
+@StrudelDsl
+val maskAll by dslFunction { args ->
+    val maskArg = args.getOrNull(0)
+    val source = args.filterIsInstance<StrudelPattern>().let {
+        if (it.size >= 2 && maskArg is StrudelPattern) it[1] else it.firstOrNull()
+    } ?: return@dslFunction silence
+
+    applyMaskAll(source, maskArg)
+}
+
+@StrudelDsl
+val StrudelPattern.maskAll by dslPatternExtension { source, args ->
+    applyMaskAll(source, args.firstOrNull())
+}
+
+@StrudelDsl
+val String.maskAll by dslStringExtension { source, args ->
+    applyMaskAll(source, args.firstOrNull())
 }
 
 /**
@@ -256,7 +492,7 @@ val StrudelPattern.mask by dslMethod { source, args ->
  * Example: s("bd sd").superimpose { it.fast(2) }
  */
 @StrudelDsl
-val StrudelPattern.superimpose by dslMethod { source, args ->
+val StrudelPattern.superimpose by dslPatternExtension { source, args ->
     @Suppress("UNCHECKED_CAST")
     val transform = args.firstOrNull() as? (StrudelPattern) -> StrudelPattern ?: { it }
     SuperimposePattern(source, transform)
@@ -268,7 +504,7 @@ val StrudelPattern.superimpose by dslMethod { source, args ->
  * Example: s("bd").layer({ it.fast(2) }, { it.rev() })
  */
 @StrudelDsl
-val StrudelPattern.layer by dslMethod { source, args ->
+val StrudelPattern.layer by dslPatternExtension { source, args ->
     val transforms = args.filterIsInstance<(StrudelPattern) -> StrudelPattern>()
 
     if (transforms.isEmpty()) {
@@ -295,65 +531,250 @@ val StrudelPattern.layer by dslMethod { source, args ->
  * Alias for [layer].
  */
 @StrudelDsl
-val StrudelPattern.apply by dslMethod { source, args ->
+val StrudelPattern.apply by dslPatternExtension { source, args ->
     source.layer(args)
 }
 
 
-// note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Tempo / Timing / Order modifiers
+// ///
 
-private val noteMutation = voiceModifier<String?> { copy(note = it, freqHz = Tones.noteToFreq(it ?: "")) }
+// -- slow() -----------------------------------------------------------------------------------------------------------
+
+private fun applySlow(pattern: StrudelPattern, factorArg: Any?): StrudelPattern {
+    val factor = factorArg?.asDoubleOrNull() ?: 1.0
+    return TempoModifierPattern(pattern, factor = factor, invertPattern = false)
+}
+
+/** Slows down all inner patterns by the given factor */
+@StrudelDsl
+val slow by dslFunction { args ->
+    val factor: Any?
+    val sourceParts: List<Any?>
+
+    // Heuristic: If >1 args, the first one is the factor, the rest is the source.
+    // If only 1 arg, it is treated as the source (with factor 1.0).
+    if (args.size > 1) {
+        factor = args[0]
+        sourceParts = args.drop(1)
+    } else {
+        factor = 1.0
+        sourceParts = args
+    }
+
+    val source = sourceParts.toPattern(defaultModifier)
+    applySlow(source, factor)
+}
+
+@StrudelDsl
+val StrudelPattern.slow by dslPatternExtension { p, args ->
+    applySlow(p, args.firstOrNull())
+}
+
+@StrudelDsl
+val String.slow by dslStringExtension { p, args ->
+    applySlow(p, args.firstOrNull())
+}
+
+// -- fast() -----------------------------------------------------------------------------------------------------------
+
+private fun applyFast(pattern: StrudelPattern, factorArg: Any?): StrudelPattern {
+    val factor = factorArg?.asDoubleOrNull() ?: 1.0
+    return TempoModifierPattern(pattern, factor = factor, invertPattern = true)
+}
+
+/** Speeds up all inner patterns by the given factor */
+@StrudelDsl
+val fast by dslFunction { args ->
+    val factor: Any?
+    val sourceParts: List<Any?>
+
+    if (args.size > 1) {
+        factor = args[0]
+        sourceParts = args.drop(1)
+    } else {
+        factor = 1.0
+        sourceParts = args
+    }
+
+    val source = sourceParts.toPattern(defaultModifier)
+    applyFast(source, factor)
+}
+
+/** Speeds up all inner patterns by the given factor */
+@StrudelDsl
+val StrudelPattern.fast by dslPatternExtension { p, args ->
+    applyFast(p, args.firstOrNull())
+}
+
+@StrudelDsl
+val String.fast by dslStringExtension { p, args ->
+    applyFast(p, args.firstOrNull())
+}
+
+// -- rev() ------------------------------------------------------------------------------------------------------------
+
+private fun applyRev(pattern: StrudelPattern, n: Int): StrudelPattern {
+    // TODO: Make this parameter available through a pattern as well (e.g. sine)
+    return if (n <= 1) {
+        ReversePattern(pattern)
+    } else {
+        // Reverses every n-th cycle by speeding up, reversing, then slowing back down
+        pattern.fast(n).rev().slow(n)
+    }
+}
+
+/** Reverses the pattern */
+@StrudelDsl
+val rev by dslFunction { args ->
+    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
+
+    applyRev(pattern, n)
+}
+
+/** Reverses the pattern */
+@StrudelDsl
+val StrudelPattern.rev by dslPatternExtension { p, args ->
+    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+    applyRev(p, n)
+}
+
+/** Reverses the pattern */
+@StrudelDsl
+val String.rev by dslStringExtension { p, args ->
+    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+    applyRev(p, n)
+}
+
+// -- palindrome() -----------------------------------------------------------------------------------------------------
+
+private fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
+    return applyCat(listOf(pattern, applyRev(pattern, 1)))
+}
+
+/** Plays the pattern forward then backward over two cycles */
+@StrudelDsl
+val palindrome by dslFunction { args ->
+    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
+
+    applyPalindrome(pattern)
+}
+
+/** Plays the pattern forward then backward over two cycles */
+@StrudelDsl
+val StrudelPattern.palindrome by dslPatternExtension { p, _ ->
+    applyPalindrome(p)
+}
+
+/** Plays the pattern forward then backward over two cycles */
+@StrudelDsl
+val String.palindrome by dslStringExtension { p, _ ->
+    applyPalindrome(p)
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Note / Sound generation
+// ///
+
+// -- scale() ----------------------------------------------------------------------------------------------------------
+
+private val scaleMutation = voiceModifier { scale ->
+    val newScale = scale?.toString()?.cleanScaleName()
+    copy(scale = newScale).resolveNote()
+}
+
+private fun applyScale(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    // If there is no argument, we might be reapplying scale logic or just doing nothing?
+    // But scale() usually takes an argument.
+    // If called as scale(), it should behave like other patterns.
+
+    return source.applyParam(args, scaleMutation) { src, ctrl ->
+        src.copy(scale = ctrl.scale).resolveNote()
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.scale by dslPatternExtension { p, args ->
+    applyScale(p, args)
+}
+
+@StrudelDsl
+val scale by dslFunction { args -> args.toPattern(scaleMutation) }
+
+@StrudelDsl
+val String.scale by dslStringExtension { p, args ->
+    applyScale(p, args)
+}
+
+// -- note() -----------------------------------------------------------------------------------------------------------
+
+private val noteMutation = voiceModifier { input ->
+    val newNote = input?.toString()
+    copy(note = newNote, freqHz = Tones.noteToFreq(newNote ?: ""))
+}
+
+private fun applyNote(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return if (args.isEmpty()) {
+        source.reinterpretVoice { it.resolveNote() }
+    } else {
+        source.applyParam(args, noteMutation) { src, ctrl -> src.noteMutation(ctrl.note) }
+    }
+}
 
 /** Modifies the notes of a pattern */
 @StrudelDsl
-val StrudelPattern.note by dslPatternModifier(
-    modify = noteMutation,
-    combine = { source, control -> source.noteMutation(control.note) }
-)
+val StrudelPattern.note by dslPatternExtension { p, args ->
+    applyNote(p, args)
+}
 
 /** Creates a pattern with notes */
 @StrudelDsl
-val note by dslPatternCreator(noteMutation)
+val note by dslFunction { args -> args.toPattern(noteMutation) }
 
-// n() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Modifies the notes of a pattern defined by a string */
+@StrudelDsl
+val String.note by dslStringExtension { p, args ->
+    applyNote(p, args)
+}
 
-private val nMutation = voiceModifier<Number?> {
-    val n = it?.toInt()
-    val scaleName = scale?.cleanScaleName()
+// -- n() --------------------------------------------------------------------------------------------------------------
 
-    if (n != null && !scaleName.isNullOrEmpty()) {
-        // Use Scale.steps for 0-based indexing (standard in Strudel)
-        // This returns the note name (e.g., "C4") based on the scale and the index n
-        val noteName = Scale.steps(scaleName).invoke(n)
+private val nMutation = voiceModifier {
+    resolveNote(it?.asIntOrNull())
+}
 
-        copy(
-            note = noteName,
-            freqHz = Tones.noteToFreq(noteName),
-            soundIndex = n,
-        )
+private fun applyN(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return if (args.isEmpty()) {
+        source.reinterpretVoice { it.resolveNote() }
     } else {
-        // Fallback: n drives the note string directly or the sample index
-        copy(
-            soundIndex = n,
-        )
+        source.applyParam(args, nMutation) { src, ctrl -> src.resolveNote(ctrl.soundIndex) }
     }
 }
 
 /** Sets the note number or sample index */
 @StrudelDsl
-val StrudelPattern.n by dslPatternModifier(
-    modify = nMutation,
-    combine = { source, control -> source.nMutation(control.note?.toDoubleOrNull()) }
-)
+val StrudelPattern.n by dslPatternExtension { p, args ->
+    applyN(p, args)
+}
 
 /** Sets the note number or sample index */
 @StrudelDsl
-val n: DslPatternCreator<Number> by dslPatternCreator(nMutation)
+val n by dslFunction { args -> args.toPattern(nMutation) }
 
-// sound() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note number or sample index on a string pattern */
+@StrudelDsl
+val String.n by dslStringExtension { p, args ->
+    applyN(p, args)
+}
 
-private val soundMutation = voiceModifier<String?> {
-    val split = it?.split(":") ?: emptyList()
+// -- sound() / s() ----------------------------------------------------------------------------------------------------
+
+private val soundMutation = voiceModifier {
+    val split = it?.toString()?.split(":") ?: emptyList()
 
     copy(
         sound = split.getOrNull(0),
@@ -361,249 +782,504 @@ private val soundMutation = voiceModifier<String?> {
     )
 }
 
-private val soundModifier = dslPatternModifier(
-    modify = soundMutation,
-    combine = { source, control -> source.soundMutation(control.sound) }
-)
-
-private val soundCreator = dslPatternCreator(soundMutation)
+private fun applySound(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return if (args.isEmpty()) {
+        source.reinterpretVoice { it.soundMutation(it.value?.asString) }
+    } else {
+        source.applyParam(args, soundMutation) { src, ctrl ->
+            src.copy(
+                sound = ctrl.sound ?: src.sound,
+                soundIndex = ctrl.soundIndex ?: src.soundIndex
+            )
+        }
+    }
+}
 
 /** Modifies the sounds of a pattern */
 @StrudelDsl
-val StrudelPattern.sound by soundModifier
+val StrudelPattern.sound by dslPatternExtension { p, args ->
+    applySound(p, args)
+}
 
 /** Creates a pattern with sounds */
 @StrudelDsl
-val sound by soundCreator
+val sound by dslFunction { args -> args.toPattern(soundMutation) }
+
+/** Modifies the sounds of a pattern defined by a string */
+@StrudelDsl
+val String.sound by dslStringExtension { p, args ->
+    applySound(p, args)
+}
 
 /** Alias for [sound] */
 @StrudelDsl
-val StrudelPattern.s by soundModifier
+val StrudelPattern.s by dslPatternExtension { p, args -> applySound(p, args) }
 
 /** Alias for [sound] */
 @StrudelDsl
-val s by soundCreator
+val s by dslFunction { args -> args.toPattern(soundMutation) }
 
-// bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Alias for [sound] on a string */
+@StrudelDsl
+val String.s by dslStringExtension { p, args -> applySound(p, args) }
 
-private val bankMutation = voiceModifier<String?> { copy(bank = it) }
+// -- bank() -----------------------------------------------------------------------------------------------------------
+
+private val bankMutation = voiceModifier {
+    copy(bank = it?.toString())
+}
+
+private fun applyBank(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, bankMutation) { src, ctrl -> src.bankMutation(ctrl.bank) }
+}
 
 /** Modifies the banks of a pattern */
 @StrudelDsl
-val StrudelPattern.bank by dslPatternModifier(
-    modify = bankMutation,
-    combine = { source, control -> source.bankMutation(control.bank) }
-)
+val StrudelPattern.bank by dslPatternExtension { p, args ->
+    applyBank(p, args)
+}
 
 /** Creates a pattern with banks */
 @StrudelDsl
-val bank: DslPatternCreator<String> by dslPatternCreator(bankMutation)
+val bank by dslFunction { args -> args.toPattern(bankMutation) }
 
-// bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val gainMutation = voiceModifier<Number?> { copy(gain = it?.toDouble()) }
-
-/** Modifies the gains of a pattern */
+/** Modifies the banks of a pattern defined by a string */
 @StrudelDsl
-val StrudelPattern.gain by dslPatternModifier(
-    modify = gainMutation,
-    combine = { source, control -> source.gainMutation(control.gain) }
-)
+val String.bank by dslStringExtension { p, args ->
+    applyBank(p, args)
+}
 
-/** Creates a pattern with gains */
-@StrudelDsl
-val gain: DslPatternCreator<Number> by dslPatternCreator(gainMutation)
+// -- legato() / clip() ------------------------------------------------------------------------------------------------
 
-// bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+private val legatoMutation = voiceModifier {
+    copy(legato = it?.asDoubleOrNull())
+}
 
-private val panMutation = voiceModifier<Number?> { copy(pan = it?.toDouble()) }
-
-/** Modifies the pans of a pattern */
-@StrudelDsl
-val StrudelPattern.pan by dslPatternModifier(
-    modify = panMutation,
-    combine = { source, control -> source.panMutation(control.pan) }
-)
-
-/** Creates a pattern with pans */
-@StrudelDsl
-val pan: DslPatternCreator<Number> by dslPatternCreator(panMutation)
-
-// legato() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val legatoMutation = voiceModifier<Number?> { copy(legato = it?.toDouble()) }
-
-private val legatoModifier = dslPatternModifier(
-    modify = legatoMutation,
-    combine = { source, control -> source.legatoMutation(control.legato) }
-)
-
-private val legatoCreator = dslPatternCreator(legatoMutation)
+private fun applyLegato(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, legatoMutation) { src, ctrl -> src.legatoMutation(ctrl.legato) }
+}
 
 /** Modifies the legatos of a pattern */
 @StrudelDsl
-val StrudelPattern.legato by legatoModifier
+val StrudelPattern.legato by dslPatternExtension { p, args ->
+    applyLegato(p, args)
+}
 
 /** Creates a pattern with legatos */
 @StrudelDsl
-val legato by legatoCreator
+val legato by dslFunction { args -> args.toPattern(legatoMutation) }
+
+/** Modifies the legatos of a pattern defined by a string */
+@StrudelDsl
+val String.legato by dslStringExtension { p, args ->
+    applyLegato(p, args)
+}
 
 /** Alias for [legato] */
 @StrudelDsl
-val StrudelPattern.clip by legatoModifier
+val StrudelPattern.clip by dslPatternExtension { p, args -> applyLegato(p, args) }
 
 /** Alias for [legato] */
 @StrudelDsl
-val clip by legatoCreator
+val clip by dslFunction { args -> args.toPattern(legatoMutation) }
 
-// unison //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Alias for [legato] on a string */
+@StrudelDsl
+val String.clip by dslStringExtension { p, args -> applyLegato(p, args) }
 
-private val unisonMutation = voiceModifier<Number?> { copy(voices = it?.toDouble()) }
+// -- vibrato() --------------------------------------------------------------------------------------------------------
 
-private val unisonModifier = dslPatternModifier(
-    modify = unisonMutation,
-    combine = { source, control -> source.unisonMutation(control.voices) }
-)
+private val vibratoMutation = voiceModifier {
+    copy(vibrato = it?.asDoubleOrNull())
+}
 
-private val unisonCreator = dslPatternCreator(unisonMutation)
+private fun applyVibrato(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, vibratoMutation) { src, ctrl -> src.vibratoMutation(ctrl.vibrato) }
+}
+
+/** Sets the vibrato frequency (speed) in Hz. */
+@StrudelDsl
+val StrudelPattern.vibrato by dslPatternExtension { p, args ->
+    applyVibrato(p, args)
+}
+
+/** Sets the vibrato frequency (speed) in Hz. */
+@StrudelDsl
+val vibrato by dslFunction { args -> args.toPattern(vibratoMutation) }
+
+/** Sets the vibrato frequency (speed) in Hz on a string. */
+@StrudelDsl
+val String.vibrato by dslStringExtension { p, args ->
+    applyVibrato(p, args)
+}
+
+/** Alias for [vibrato] */
+@StrudelDsl
+val StrudelPattern.vib by dslPatternExtension { p, args -> applyVibrato(p, args) }
+
+/** Alias for [vibrato] */
+@StrudelDsl
+val vib by dslFunction { args -> args.toPattern(vibratoMutation) }
+
+/** Alias for [vibrato] on a string */
+@StrudelDsl
+val String.vib by dslStringExtension { p, args -> applyVibrato(p, args) }
+
+// -- vibratoMod() -----------------------------------------------------------------------------------------------------
+
+private val vibratoModMutation = voiceModifier {
+    copy(vibratoMod = it?.asDoubleOrNull())
+}
+
+private fun applyVibratoMod(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, vibratoModMutation) { src, ctrl -> src.vibratoModMutation(ctrl.vibratoMod) }
+}
+
+/** Sets the vibratoMod depth (amplitude). */
+@StrudelDsl
+val StrudelPattern.vibratoMod by dslPatternExtension { p, args ->
+    applyVibratoMod(p, args)
+}
+
+/** Sets the vibratoMod depth (amplitude). */
+@StrudelDsl
+val vibratoMod by dslFunction { args -> args.toPattern(vibratoModMutation) }
+
+/** Sets the vibratoMod depth (amplitude) on a string. */
+@StrudelDsl
+val String.vibratoMod by dslStringExtension { p, args ->
+    applyVibratoMod(p, args)
+}
+
+/** Alias for [vibratoMod] */
+@StrudelDsl
+val StrudelPattern.vibmod by dslPatternExtension { p, args -> applyVibratoMod(p, args) }
+
+/** Alias for [vibratoMod] */
+@StrudelDsl
+val vibmod by dslFunction { args -> args.toPattern(vibratoModMutation) }
+
+/** Alias for [vibratoMod] on a string */
+@StrudelDsl
+val String.vibmod by dslStringExtension { p, args -> applyVibratoMod(p, args) }
+
+// -- accelerate() -----------------------------------------------------------------------------------------------------
+
+private val accelerateMutation = voiceModifier {
+    copy(accelerate = it?.asDoubleOrNull())
+}
+
+private fun applyAccelerate(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, accelerateMutation) { src, ctrl -> src.accelerateMutation(ctrl.accelerate) }
+}
+
+@StrudelDsl
+val StrudelPattern.accelerate by dslPatternExtension { p, args ->
+    applyAccelerate(p, args)
+}
+
+@StrudelDsl
+val accelerate by dslFunction { args -> args.toPattern(accelerateMutation) }
+
+@StrudelDsl
+val String.accelerate by dslStringExtension { p, args ->
+    applyAccelerate(p, args)
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Dynamics, Gain, Pan, Envelope ...
+// ///
+
+// -- gain() -----------------------------------------------------------------------------------------------------------
+
+private val gainMutation = voiceModifier {
+    copy(gain = it?.toString()?.toDoubleOrNull())
+}
+
+private fun applyGain(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, gainMutation) { src, ctrl -> src.gainMutation(ctrl.gain) }
+}
+
+/** Modifies the gains of a pattern */
+@StrudelDsl
+val StrudelPattern.gain by dslPatternExtension { p, args ->
+    applyGain(p, args)
+}
+
+/** Creates a pattern with gains */
+@StrudelDsl
+val gain by dslFunction { args -> args.toPattern(gainMutation) }
+
+/** Modifies the gains of a pattern defined by a string */
+@StrudelDsl
+val String.gain by dslStringExtension { p, args ->
+    applyGain(p, args)
+}
+
+// -- pan() ------------------------------------------------------------------------------------------------------------
+
+private val panMutation = voiceModifier {
+    copy(pan = it?.toString()?.toDoubleOrNull())
+}
+
+private fun applyPan(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, panMutation) { src, ctrl -> src.panMutation(ctrl.pan) }
+}
+
+/** Modifies the pans of a pattern */
+@StrudelDsl
+val StrudelPattern.pan by dslPatternExtension { p, args ->
+    applyPan(p, args)
+}
+
+/** Creates a pattern with pans */
+@StrudelDsl
+val pan by dslFunction { args -> args.toPattern(panMutation) }
+
+/** Modifies the pans of a pattern defined by a string */
+@StrudelDsl
+val String.pan by dslStringExtension { p, args ->
+    applyPan(p, args)
+}
+
+// -- unison() ---------------------------------------------------------------------------------------------------------
+
+private val unisonMutation = voiceModifier {
+    copy(voices = it?.asDoubleOrNull())
+}
+
+private fun applyUnison(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, unisonMutation) { src, ctrl -> src.unisonMutation(ctrl.voices) }
+}
 
 /** Modifies the voices of a pattern */
 @StrudelDsl
-val StrudelPattern.unison by unisonModifier
+val StrudelPattern.unison by dslPatternExtension { p, args ->
+    applyUnison(p, args)
+}
 
 /** Creates a pattern with unison */
 @StrudelDsl
-val unison by unisonCreator
+val unison by dslFunction { args -> args.toPattern(unisonMutation) }
+
+/** Modifies the voices of a pattern defined by a string */
+@StrudelDsl
+val String.unison by dslStringExtension { p, args ->
+    applyUnison(p, args)
+}
 
 /** Alias for [unison] */
 @StrudelDsl
-val StrudelPattern.uni by unisonModifier
+val StrudelPattern.uni by dslPatternExtension { p, args -> applyUnison(p, args) }
 
 /** Alias for [unison] */
 @StrudelDsl
-val uni by unisonCreator
+val uni by dslFunction { args -> args.toPattern(unisonMutation) }
 
-// detune //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Alias for [unison] on a string */
+@StrudelDsl
+val String.uni by dslStringExtension { p, args -> applyUnison(p, args) }
 
-private val detuneMutation = voiceModifier<Number?> { copy(freqSpread = it?.toDouble()) }
+// -- detune() ---------------------------------------------------------------------------------------------------------
+
+private val detuneMutation = voiceModifier {
+    copy(freqSpread = it?.asDoubleOrNull())
+}
+
+private fun applyDetune(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, detuneMutation) { src, ctrl -> src.detuneMutation(ctrl.freqSpread) }
+}
 
 /** Sets the oscillator frequency spread (for supersaw) */
 @StrudelDsl
-val StrudelPattern.detune by dslPatternModifier(
-    modify = detuneMutation,
-    combine = { source, control -> source.detuneMutation(control.freqSpread) }
-)
+val StrudelPattern.detune by dslPatternExtension { p, args ->
+    applyDetune(p, args)
+}
 
 /** Sets the oscillator frequency spread (for supersaw) */
 @StrudelDsl
-val detune by dslPatternCreator(detuneMutation)
+val detune by dslFunction { args -> args.toPattern(detuneMutation) }
 
-// detune //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the oscillator frequency spread (for supersaw) on a string */
+@StrudelDsl
+val String.detune by dslStringExtension { p, args ->
+    applyDetune(p, args)
+}
 
-private val spreadMutation = voiceModifier<Number?> { copy(panSpread = it?.toDouble()) }
+// -- spread() ---------------------------------------------------------------------------------------------------------
+
+private val spreadMutation = voiceModifier {
+    copy(panSpread = it?.asDoubleOrNull())
+}
+
+private fun applySpread(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, spreadMutation) { src, ctrl -> src.spreadMutation(ctrl.panSpread) }
+}
 
 /** Sets the oscillator pan spread (for supersaw) */
 @StrudelDsl
-val StrudelPattern.spread by dslPatternModifier(
-    modify = spreadMutation,
-    combine = { source, control -> source.spreadMutation(control.panSpread) }
-)
+val StrudelPattern.spread by dslPatternExtension { p, args ->
+    applySpread(p, args)
+}
 
 /** Sets the oscillator pan spread (for supersaw) */
 @StrudelDsl
-val spread: DslPatternCreator<Number> by dslPatternCreator(spreadMutation)
+val spread by dslFunction { args -> args.toPattern(spreadMutation) }
 
-// density /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the oscillator pan spread (for supersaw) on a string */
+@StrudelDsl
+val String.spread by dslStringExtension { p, args ->
+    applySpread(p, args)
+}
 
-private val densityMutation = voiceModifier<Number?> { copy(density = it?.toDouble()) }
+// -- density() --------------------------------------------------------------------------------------------------------
 
-private val densityModifier = dslPatternModifier(
-    modify = densityMutation,
-    combine = { source, control -> source.densityMutation(control.density) }
-)
+private val densityMutation = voiceModifier {
+    copy(density = it?.asDoubleOrNull())
+}
 
-private val densityCreator = dslPatternCreator(densityMutation)
+private fun applyDensity(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, densityMutation) { src, ctrl -> src.densityMutation(ctrl.density) }
+}
 
 /** Sets the oscillator density (for supersaw) */
 @StrudelDsl
-val StrudelPattern.density by densityModifier
+val StrudelPattern.density by dslPatternExtension { p, args ->
+    applyDensity(p, args)
+}
 
 /** Sets the oscillator density (for supersaw) */
 @StrudelDsl
-val density by densityCreator
+val density by dslFunction { args -> args.toPattern(densityMutation) }
+
+/** Sets the oscillator density (for supersaw) on a string */
+@StrudelDsl
+val String.density by dslStringExtension { p, args ->
+    applyDensity(p, args)
+}
 
 /** Alias for [density] */
 @StrudelDsl
-val StrudelPattern.d by densityModifier
+val StrudelPattern.d by dslPatternExtension { p, args -> applyDensity(p, args) }
 
 /** Alias for [density] */
 @StrudelDsl
-val d by densityCreator
+val d by dslFunction { args -> args.toPattern(densityMutation) }
 
-// ADSR Attack /////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Alias for [density] on a string */
+@StrudelDsl
+val String.d by dslStringExtension { p, args -> applyDensity(p, args) }
 
-private val attackMutation = voiceModifier<Number?> { copy(adsr = adsr.copy(attack = it?.toDouble())) }
+// -- ADSR attack() ----------------------------------------------------------------------------------------------------
+
+private val attackMutation = voiceModifier {
+    copy(adsr = adsr.copy(attack = it?.asDoubleOrNull()))
+}
+
+private fun applyAttack(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, attackMutation) { src, ctrl -> src.attackMutation(ctrl.adsr.attack) }
+}
 
 /** Sets the note envelope attack */
 @StrudelDsl
-val StrudelPattern.attack by dslPatternModifier(
-    modify = attackMutation,
-    combine = { source, control -> source.attackMutation(control.adsr.attack) }
-)
+val StrudelPattern.attack by dslPatternExtension { p, args ->
+    applyAttack(p, args)
+}
 
 /** Sets the note envelope attack */
 @StrudelDsl
-val attack: DslPatternCreator<Number> by dslPatternCreator(attackMutation)
+val attack by dslFunction { args -> args.toPattern(attackMutation) }
 
-// ADSR Decay //////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope attack on a string */
+@StrudelDsl
+val String.attack by dslStringExtension { p, args ->
+    applyAttack(p, args)
+}
 
-private val decayMutation = voiceModifier<Number?> { copy(adsr = adsr.copy(decay = it?.toDouble())) }
+// -- ADSR decay() -----------------------------------------------------------------------------------------------------
+
+private val decayMutation = voiceModifier {
+    copy(adsr = adsr.copy(decay = it?.asDoubleOrNull()))
+}
+
+private fun applyDecay(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, decayMutation) { src, ctrl -> src.decayMutation(ctrl.adsr.decay) }
+}
 
 /** Sets the note envelope decay */
 @StrudelDsl
-val StrudelPattern.decay by dslPatternModifier(
-    modify = decayMutation,
-    combine = { source, control -> source.decayMutation(control.adsr.decay) }
-)
+val StrudelPattern.decay by dslPatternExtension { p, args ->
+    applyDecay(p, args)
+}
 
 /** Sets the note envelope decay */
 @StrudelDsl
-val decay: DslPatternCreator<Number> by dslPatternCreator(decayMutation)
+val decay by dslFunction { args -> args.toPattern(decayMutation) }
 
-// ADSR Sustain ////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope decay on a string */
+@StrudelDsl
+val String.decay by dslStringExtension { p, args ->
+    applyDecay(p, args)
+}
 
-private val sustainMutation = voiceModifier<Number?> { copy(adsr = adsr.copy(sustain = it?.toDouble())) }
+// -- ADSR sustain() ---------------------------------------------------------------------------------------------------
+
+private val sustainMutation = voiceModifier {
+    copy(adsr = adsr.copy(sustain = it?.asDoubleOrNull()))
+}
+
+private fun applySustain(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, sustainMutation) { src, ctrl -> src.sustainMutation(ctrl.adsr.sustain) }
+}
 
 /** Sets the note envelope sustain */
 @StrudelDsl
-val StrudelPattern.sustain by dslPatternModifier(
-    modify = sustainMutation,
-    combine = { source, control -> source.sustainMutation(control.adsr.sustain) }
-)
+val StrudelPattern.sustain by dslPatternExtension { p, args ->
+    applySustain(p, args)
+}
 
 /** Sets the note envelope sustain */
 @StrudelDsl
-val sustain: DslPatternCreator<Number> by dslPatternCreator(sustainMutation)
+val sustain by dslFunction { args -> args.toPattern(sustainMutation) }
 
-// ADSR Release ////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope sustain on a string */
+@StrudelDsl
+val String.sustain by dslStringExtension { p, args ->
+    applySustain(p, args)
+}
 
-private val releaseMutation = voiceModifier<Number?> { copy(adsr = adsr.copy(release = it?.toDouble())) }
+// -- ADSR release() ---------------------------------------------------------------------------------------------------
+
+private val releaseMutation = voiceModifier {
+    copy(adsr = adsr.copy(release = it?.asDoubleOrNull()))
+}
+
+private fun applyRelease(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, releaseMutation) { src, ctrl -> src.releaseMutation(ctrl.adsr.release) }
+}
 
 /** Sets the note envelope release */
 @StrudelDsl
-val StrudelPattern.release by dslPatternModifier(
-    modify = releaseMutation,
-    combine = { source, control -> source.releaseMutation(control.adsr.release) }
-)
+val StrudelPattern.release by dslPatternExtension { p, args ->
+    applyRelease(p, args)
+}
 
 /** Sets the note envelope release */
 @StrudelDsl
-val release: DslPatternCreator<Number> by dslPatternCreator(releaseMutation)
+val release by dslFunction { args -> args.toPattern(releaseMutation) }
 
-// ADSR Combined ///////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope release on a string */
+@StrudelDsl
+val String.release by dslStringExtension { p, args ->
+    applyRelease(p, args)
+}
 
-val adsrMutation = voiceModifier<String> {
-    val parts = it.split(":").mapNotNull { d -> d.toDoubleOrNull() }
+// -- ADSR adsr() ------------------------------------------------------------------------------------------------------
+
+private val adsrMutation = voiceModifier {
+    val parts = it?.toString()?.split(":")
+        ?.mapNotNull { d -> d.toDoubleOrNull() } ?: emptyList()
+
     val newAdsr = AdsrEnvelope(
         attack = parts.getOrNull(0),
         decay = parts.getOrNull(1),
@@ -614,21 +1290,36 @@ val adsrMutation = voiceModifier<String> {
     copy(adsr = newAdsr.mergeWith(adsr))
 }
 
-/** Sets the note envelope release */
+private fun applyAdsr(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, adsrMutation) { src, ctrl ->
+        src.copy(adsr = ctrl.adsr.mergeWith(src.adsr))
+    }
+}
+
+/** Sets the note envelope via string or pattern */
 @StrudelDsl
-val StrudelPattern.adsr by dslPatternModifier(
-    modify = adsrMutation,
-    combine = { source, control -> source.copy(adsr = control.adsr.mergeWith(source.adsr)) }
-)
+val StrudelPattern.adsr by dslPatternExtension { p, args ->
+    applyAdsr(p, args)
+}
 
-/** Sets the note envelope release */
+/** Sets the note envelope via string or pattern */
 @StrudelDsl
-val adsr: DslPatternCreator<String> by dslPatternCreator(adsrMutation)
+val adsr by dslFunction { args -> args.toPattern(adsrMutation) }
 
-// Filters - LowPass - lpf() ///////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope via string or pattern on a string */
+@StrudelDsl
+val String.adsr by dslStringExtension { p, args ->
+    applyAdsr(p, args)
+}
 
-private val lpfMutation = voiceModifier<Number?> {
-    val cutoff = it?.toDouble()
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Filters
+// ///
+
+// -- lpf() ------------------------------------------------------------------------------------------------------------
+
+private val lpfMutation = voiceModifier {
+    val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.LowPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
@@ -637,25 +1328,34 @@ private val lpfMutation = voiceModifier<Number?> {
     )
 }
 
-/** Adds a Low Pass Filter with the given cutoff frequency. */
-@StrudelDsl
-val StrudelPattern.lpf by dslPatternModifier(
-    modify = lpfMutation,
-    combine = { source, control ->
-        source
-            .copy(resonance = control.resonance ?: source.resonance)
-            .lpfMutation(control.filters.getByType<FilterDef.LowPass>()?.cutoffHz)
+private fun applyLpf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, lpfMutation) { src, ctrl ->
+        src
+            .copy(resonance = ctrl.resonance ?: src.resonance)
+            .lpfMutation(ctrl.filters.getByType<FilterDef.LowPass>()?.cutoffHz)
     }
-)
+}
 
 /** Adds a Low Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val lpf by dslPatternCreator(lpfMutation)
+val StrudelPattern.lpf by dslPatternExtension { p, args ->
+    applyLpf(p, args)
+}
 
-// Filters - HighPass - hpf() //////////////////////////////////////////////////////////////////////////////////////////
+/** Adds a Low Pass Filter with the given cutoff frequency. */
+@StrudelDsl
+val lpf by dslFunction { args -> args.toPattern(lpfMutation) }
 
-private val hpfMutation = voiceModifier<Number?> {
-    val cutoff = it?.toDouble()
+/** Adds a Low Pass Filter with the given cutoff frequency on a string. */
+@StrudelDsl
+val String.lpf by dslStringExtension { p, args ->
+    applyLpf(p, args)
+}
+
+// -- hpf() ------------------------------------------------------------------------------------------------------------
+
+private val hpfMutation = voiceModifier {
+    val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.HighPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
@@ -664,25 +1364,34 @@ private val hpfMutation = voiceModifier<Number?> {
     )
 }
 
-/** Adds a High Pass Filter with the given cutoff frequency. */
-@StrudelDsl
-val StrudelPattern.hpf by dslPatternModifier(
-    modify = hpfMutation,
-    combine = { source, control ->
-        source
-            .copy(resonance = control.resonance ?: source.resonance)
-            .hpfMutation(control.filters.getByType<FilterDef.HighPass>()?.cutoffHz)
+private fun applyHpf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, hpfMutation) { src, ctrl ->
+        src
+            .copy(resonance = ctrl.resonance ?: src.resonance)
+            .hpfMutation(ctrl.filters.getByType<FilterDef.HighPass>()?.cutoffHz)
     }
-)
+}
 
 /** Adds a High Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val hpf: DslPatternCreator<Number> by dslPatternCreator(hpfMutation)
+val StrudelPattern.hpf by dslPatternExtension { p, args ->
+    applyHpf(p, args)
+}
 
-// Filters - BandPass - bandf() ////////////////////////////////////////////////////////////////////////////////////////
+/** Adds a High Pass Filter with the given cutoff frequency. */
+@StrudelDsl
+val hpf by dslFunction { args -> args.toPattern(hpfMutation) }
 
-private val bandfMutation = voiceModifier<Number?> {
-    val cutoff = it?.toDouble()
+/** Adds a High Pass Filter with the given cutoff frequency on a string. */
+@StrudelDsl
+val String.hpf by dslStringExtension { p, args ->
+    applyHpf(p, args)
+}
+
+// -- bandf() / bpf() --------------------------------------------------------------------------------------------------
+
+private val bandfMutation = voiceModifier {
+    val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.BandPass(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
@@ -691,37 +1400,46 @@ private val bandfMutation = voiceModifier<Number?> {
     )
 }
 
-private val bandfModifier = dslPatternModifier(
-    modify = bandfMutation,
-    combine = { source, control ->
-        source
-            .copy(resonance = control.resonance ?: source.resonance)
-            .bandfMutation(control.filters.getByType<FilterDef.BandPass>()?.cutoffHz)
+private fun applyBandf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, bandfMutation) { src, ctrl ->
+        src
+            .copy(resonance = ctrl.resonance ?: src.resonance)
+            .bandfMutation(ctrl.filters.getByType<FilterDef.BandPass>()?.cutoffHz)
     }
-)
+}
 
-private val bandfCreator = dslPatternCreator(bandfMutation)
-
-/** Adds a High Pass Filter with the given cutoff frequency. */
+/** Adds a Band Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val StrudelPattern.bandf by bandfModifier
+val StrudelPattern.bandf by dslPatternExtension { p, args ->
+    applyBandf(p, args)
+}
 
-/** Adds a High Pass Filter with the given cutoff frequency. */
+/** Adds a Band Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val bandf by bandfCreator
+val bandf by dslFunction { args -> args.toPattern(bandfMutation) }
+
+/** Adds a Band Pass Filter with the given cutoff frequency on a string. */
+@StrudelDsl
+val String.bandf by dslStringExtension { p, args ->
+    applyBandf(p, args)
+}
 
 /** Alias for [bandf] */
 @StrudelDsl
-val StrudelPattern.bpf by bandfModifier
+val StrudelPattern.bpf by dslPatternExtension { p, args -> applyBandf(p, args) }
 
 /** Alias for [bandf] */
 @StrudelDsl
-val bpf by bandfCreator
+val bpf by dslFunction { args -> args.toPattern(bandfMutation) }
 
-// Filters - Notch | inverse BandPass - notchf() ///////////////////////////////////////////////////////////////////////
+/** Alias for [bandf] on a string */
+@StrudelDsl
+val String.bpf by dslStringExtension { p, args -> applyBandf(p, args) }
 
-private val notchfMutation = voiceModifier<Number?> {
-    val cutoff = it?.toDouble()
+// -- notchf() ---------------------------------------------------------------------------------------------------------
+
+private val notchfMutation = voiceModifier {
+    val cutoff = it?.asDoubleOrNull()
     val filter = FilterDef.Notch(cutoffHz = cutoff ?: 1000.0, q = resonance)
 
     copy(
@@ -730,25 +1448,34 @@ private val notchfMutation = voiceModifier<Number?> {
     )
 }
 
-/** Adds a Notch Filter with the given cutoff frequency. */
-@StrudelDsl
-val StrudelPattern.notchf by dslPatternModifier(
-    modify = notchfMutation,
-    combine = { source, control ->
-        source
-            .copy(resonance = control.resonance ?: source.resonance)
-            .notchfMutation(control.filters.getByType<FilterDef.Notch>()?.cutoffHz)
+private fun applyNotchf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, notchfMutation) { src, ctrl ->
+        src
+            .copy(resonance = ctrl.resonance ?: src.resonance)
+            .notchfMutation(ctrl.filters.getByType<FilterDef.Notch>()?.cutoffHz)
     }
-)
+}
 
 /** Adds a Notch Filter with the given cutoff frequency. */
 @StrudelDsl
-val notchf: DslPatternCreator<Number> by dslPatternCreator(notchfMutation)
+val StrudelPattern.notchf by dslPatternExtension { p, args ->
+    applyNotchf(p, args)
+}
 
-// Filters - resonance() ///////////////////////////////////////////////////////////////////////////////////////////////
+/** Adds a Notch Filter with the given cutoff frequency. */
+@StrudelDsl
+val notchf by dslFunction { args -> args.toPattern(notchfMutation) }
 
-private val resonanceMutation = voiceModifier<Number?> {
-    val newQ = it?.toDouble() ?: 1.0
+/** Adds a Notch Filter with the given cutoff frequency on a string. */
+@StrudelDsl
+val String.notchf by dslStringExtension { p, args ->
+    applyNotchf(p, args)
+}
+
+// -- resonance() / res() ----------------------------------------------------------------------------------------------
+
+private val resonanceMutation = voiceModifier {
+    val newQ = it?.asDoubleOrNull() ?: 1.0
 
     val newFilters = filters.modifyAll { filter ->
         when (filter) {
@@ -762,405 +1489,766 @@ private val resonanceMutation = voiceModifier<Number?> {
     copy(resonance = newQ, filters = newFilters)
 }
 
-private val resonanceModifier = dslPatternModifier(
-    modify = resonanceMutation,
-    combine = { source, control -> source.resonanceMutation(control.resonance) }
-)
-
-private val resonanceCreator = dslPatternCreator(resonanceMutation)
-
-/** Sets the note envelope release */
-@StrudelDsl
-val StrudelPattern.resonance by resonanceModifier
-
-/** Sets the note envelope release */
-@StrudelDsl
-val resonance by resonanceCreator
-
-/** Alias for [resonance] */
-@StrudelDsl
-val StrudelPattern.res by resonanceModifier
-
-/** Alias for [resonance] */
-@StrudelDsl
-val res by resonanceCreator
-
-// distort() ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val distortMutation = voiceModifier<Number?> { copy(distort = it?.toDouble()) }
-
-/**
- * Applies distortion to the signal.
- * Range: usually 0.0 to 10.0 (or higher for extreme effects).
- * Useful for adding grit to synths or drums.
- */
-@StrudelDsl
-val StrudelPattern.distort by dslPatternModifier(
-    modify = distortMutation,
-    combine = { source, control -> source.distortMutation(control.distort) }
-)
-
-/**
- * Applies distortion to the signal.
- * Range: usually 0.0 to 10.0 (or higher for extreme effects).
- * Useful for adding grit to synths or drums.
- */
-@StrudelDsl
-val distort: DslPatternCreator<Number> by dslPatternCreator(distortMutation)
-
-// crush() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val crushMutation = voiceModifier<Number?> { copy(crush = it?.toDouble()) }
-
-/**
- * Reduces the bit depth (or similar degradation) of the signal.
- * Range: 1.0 to 16.0 (typically). Smaller values = more destruction.
- */
-@StrudelDsl
-val StrudelPattern.crush by dslPatternModifier(
-    modify = crushMutation,
-    combine = { source, control -> source.crushMutation(control.crush) }
-)
-
-/**
- * Reduces the bit depth (or similar degradation) of the signal.
- * Range: 1.0 to 16.0 (typically). Smaller values = more destruction.
- */
-@StrudelDsl
-val crush: DslPatternCreator<Number> by dslPatternCreator(crushMutation)
-
-// coarse() ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val coarseMutation = voiceModifier<Number?> { copy(coarse = it?.toDouble()) }
-
-/**
- * Reduces the sample rate (downsampling) of the signal.
- * The value represents the step size (e.g. 1 = normal, 2 = half rate).
- */
-@StrudelDsl
-val StrudelPattern.coarse by dslPatternModifier(
-    modify = coarseMutation,
-    combine = { source, control -> source.coarseMutation(control.coarse) }
-)
-
-/**
- * Reduces the sample rate (downsampling) of the signal.
- * The value represents the step size (e.g. 1 = normal, 2 = half rate).
- */
-@StrudelDsl
-val coarse: DslPatternCreator<Number> by dslPatternCreator(coarseMutation)
-
-// Reverb room() ///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val roomMutation = voiceModifier<Number?> { copy(room = it?.toDouble()) }
-
-/**
- * Sets the reverb mix level.
- * Range: 0.0 (dry) to 1.0 (wet).
- */
-@StrudelDsl
-val StrudelPattern.room by dslPatternModifier(
-    modify = roomMutation,
-    combine = { source, control -> source.roomMutation(control.room) }
-)
-
-/**
- * Sets the reverb mix level.
- * Range: 0.0 (dry) to 1.0 (wet).
- */
-@StrudelDsl
-val room by dslPatternCreator(roomMutation)
-
-// Reverb roomsize() ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val roomSizeMutation = voiceModifier<Number?> { copy(roomSize = it?.toDouble()) }
-
-private val roomSizeModifier = dslPatternModifier(
-    modify = roomSizeMutation,
-    combine = { source, control -> source.roomSizeMutation(control.roomSize) }
-)
-
-private val roomSizeCreator = dslPatternCreator(roomSizeMutation)
-
-/**
- * Sets the reverb mix level.
- * Range: 0.0 (dry) to 1.0 (wet).
- */
-@StrudelDsl
-val StrudelPattern.roomsize by roomSizeModifier
-
-/**
- * Sets the reverb mix level.
- * Range: 0.0 (dry) to 1.0 (wet).
- */
-@StrudelDsl
-val roomsize by roomSizeCreator
-
-/** Alias for [roomsize] */
-@StrudelDsl
-val StrudelPattern.rsize by roomSizeModifier
-
-/** Alias for [roomsize] */
-@StrudelDsl
-val rsize by roomSizeCreator
-
-// Delay delay() ///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val delayMutation = voiceModifier<Number?> { copy(delay = it?.toDouble()) }
-
-/**
- * Sets the delay mix level.
- * Range: 0.0 (dry) to 1.0 (wet).
- */
-@StrudelDsl
-val StrudelPattern.delay by dslPatternModifier(
-    modify = delayMutation,
-    combine = { source, control -> source.delayMutation(control.delay) }
-)
-
-/**
- * Sets the delay mix level.
- * Range: 0.0 (dry) to 1.0 (wet).
- */
-@StrudelDsl
-val delay by dslPatternCreator(delayMutation)
-
-// Delay delaytime() ///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val delayTimeMutation = voiceModifier<Number?> { copy(delayTime = it?.toDouble()) }
-
-/**
- * Sets the delay time in seconds (or cycles, depending on engine config).
- * Typically absolute seconds (e.g. 0.25 = 250ms).
- */
-@StrudelDsl
-val StrudelPattern.delaytime by dslPatternModifier(
-    modify = delayTimeMutation,
-    combine = { source, control -> source.delayTimeMutation(control.delayTime) }
-)
-
-/**
- * Sets the delay time in seconds (or cycles, depending on engine config).
- * Typically absolute seconds (e.g. 0.25 = 250ms).
- */
-@StrudelDsl
-val delaytime by dslPatternCreator(delayTimeMutation)
-
-// Delay delayfeedback() ///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val delayFeedbackMutation = voiceModifier<Number?> { copy(delayFeedback = it?.toDouble()) }
-
-/**
- * Sets the delay feedback amount.
- * Range: 0.0 (no repeats) to <1.0 (infinite repeats).
- * Higher values create longer echo tails.
- */
-@StrudelDsl
-val StrudelPattern.delayfeedback by dslPatternModifier(
-    modify = delayFeedbackMutation,
-    combine = { source, control -> source.delayFeedbackMutation(control.delayFeedback) }
-)
-
-/**
- * Sets the delay feedback amount.
- * Range: 0.0 (no repeats) to <1.0 (infinite repeats).
- * Higher values create longer echo tails.
- */
-@StrudelDsl
-val delayfeedback by dslPatternCreator(delayFeedbackMutation)
-
-// Routing orbit() /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val orbitMutation = voiceModifier<Number?> { copy(orbit = it?.toInt()) }
-
-/**
- * Routes the audio to a specific output bus or "orbit".
- * Used for multi-channel output or separating parts for different master effects.
- * Default is usually 0.
- */
-@StrudelDsl
-val StrudelPattern.orbit by dslPatternModifier(
-    modify = orbitMutation,
-    combine = { source, control -> source.orbitMutation(control.orbit) }
-)
-
-/**
- * Routes the audio to a specific output bus or "orbit".
- * Used for multi-channel output or separating parts for different master effects.
- * Default is usually 0.
- */
-@StrudelDsl
-val orbit by dslPatternCreator(orbitMutation)
-
-// Context scale() /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val scaleMutation = voiceModifier<String?> { scale ->
-    val newScale = scale?.cleanScaleName()
-    val currentN = soundIndex
-
-    if (currentN != null && !newScale.isNullOrEmpty()) {
-        // If the current note is a number, interpret it using the new scale
-        val noteName = Scale.steps(newScale).invoke(currentN)
-
-        copy(
-            scale = newScale,
-            note = noteName,
-            freqHz = Tones.noteToFreq(noteName),
-            soundIndex = null, // clear the sound index
-        )
-    } else {
-        copy(scale = newScale)
-    }
+private fun applyResonance(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, resonanceMutation) { src, ctrl -> src.resonanceMutation(ctrl.resonance) }
 }
 
-/**
- * Sets the musical scale for interpreting note numbers.
- * Example: "C4:minor", "pentatonic", "chromatic".
- * Affects how `n()` values are mapped to frequencies.
- */
+/** Sets the filter resonance. */
 @StrudelDsl
-val StrudelPattern.scale by dslPatternModifier(
-    modify = scaleMutation,
-    combine = { source, control -> source.scaleMutation(control.scale) }
-)
+val StrudelPattern.resonance by dslPatternExtension { p, args ->
+    applyResonance(p, args)
+}
 
-/**
- * Sets the musical scale for interpreting note numbers.
- * Example: "C4:minor", "pentatonic", "chromatic".
- * Affects how `n()` values are mapped to frequencies.
- */
+/** Sets the filter resonance. */
 @StrudelDsl
-val scale by dslPatternCreator(scaleMutation)
+val resonance by dslFunction { args -> args.toPattern(resonanceMutation) }
 
-// vibrato() ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val vibratoMutation = voiceModifier<Number?> { copy(vibrato = it?.toDouble()) }
-
-private val vibratoModifier = dslPatternModifier(
-    modify = vibratoMutation,
-    combine = { source, control -> source.vibratoMutation(control.vibrato) }
-)
-
-private val vibratoCreator = dslPatternCreator(vibratoMutation)
-
-/** Sets the vibrato frequency (speed) in Hz. */
+/** Sets the filter resonance on a string. */
 @StrudelDsl
-val StrudelPattern.vibrato by vibratoModifier
+val String.resonance by dslStringExtension { p, args ->
+    applyResonance(p, args)
+}
 
-/** Sets the vibrato frequency (speed) in Hz. */
+/** Alias for [resonance] */
 @StrudelDsl
-val vibrato by vibratoCreator
+val StrudelPattern.res by dslPatternExtension { p, args -> applyResonance(p, args) }
 
-/** Alias for [vibrato] */
+/** Alias for [resonance] */
 @StrudelDsl
-val StrudelPattern.vib by vibratoModifier
+val res by dslFunction { args -> args.toPattern(resonanceMutation) }
 
-/** Alias for [vibrato] */
+/** Alias for [resonance] on a string */
 @StrudelDsl
-val vib by vibratoCreator
+val String.res by dslStringExtension { p, args -> applyResonance(p, args) }
 
-// vibratoMod() ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Effects
+// ///
 
-private val vibratoModMutation = voiceModifier<Number?> { copy(vibratoMod = it?.toDouble()) }
+// -- distort() --------------------------------------------------------------------------------------------------------
 
-private val vibratoModModifier = dslPatternModifier(
-    modify = vibratoModMutation,
-    combine = { source, control -> source.vibratoModMutation(control.vibratoMod) }
-)
+private val distortMutation = voiceModifier {
+    copy(distort = it?.asDoubleOrNull())
+}
 
-private val vibratoModCreator = dslPatternCreator(vibratoModMutation)
+private fun applyDistort(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, distortMutation) { src, ctrl -> src.distortMutation(ctrl.distort) }
+}
 
-/** Sets the vibratoMod frequency (speed) in Hz. */
 @StrudelDsl
-val StrudelPattern.vibratoMod by vibratoModModifier
+val StrudelPattern.distort by dslPatternExtension { p, args ->
+    applyDistort(p, args)
+}
 
-/** Sets the vibratoMod frequency (speed) in Hz. */
 @StrudelDsl
-val vibratoMod: DslPatternCreator<Number> by vibratoModCreator
+val distort by dslFunction { args -> args.toPattern(distortMutation) }
 
-/** Alias for [vibratoMod] */
-val StrudelPattern.vibmod by vibratoModModifier
-
-/** Alias for [vibratoMod] */
-val vibmod by vibratoModCreator
-
-// add() ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * Adds the given amount to the pattern's value.
- *
- * This is commonly used to transpose note numbers or modify continuous signals.
- *
- * Example: n("0 2").add("5") -> n("5 7")
- */
 @StrudelDsl
-val StrudelPattern.add: DslMethod by dslMethod { source, args ->
-    val arg = args.firstOrNull() ?: return@dslMethod source
+val String.distort by dslStringExtension { p, args ->
+    applyDistort(p, args)
+}
 
-    // Create the control pattern from the argument
-    val controlPattern = when (arg) {
-        is StrudelPattern -> arg
-        is Number -> AtomicPattern(VoiceData.empty.copy(value = arg.toDouble()))
-        // Use parseMiniNotation with a factory that sets 'value'
-        else -> parseMiniNotation(arg.toString()) {
-            AtomicPattern(VoiceData.empty.copy(value = it.toDoubleOrNull() ?: 0.0))
-        }
-    }
+// -- crush() ----------------------------------------------------------------------------------------------------------
 
-    ControlPattern(
+private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
+
+private fun applyCrush(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, crushMutation) { src, ctrl -> src.crushMutation(ctrl.crush) }
+}
+
+@StrudelDsl
+val StrudelPattern.crush by dslPatternExtension { p, args ->
+    applyCrush(p, args)
+}
+
+@StrudelDsl
+val crush by dslFunction { args -> args.toPattern(crushMutation) }
+
+@StrudelDsl
+val String.crush by dslStringExtension { p, args ->
+    applyCrush(p, args)
+}
+
+// -- coarse() ---------------------------------------------------------------------------------------------------------
+
+private val coarseMutation = voiceModifier {
+    copy(coarse = it?.asDoubleOrNull())
+}
+
+private fun applyCoarse(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, coarseMutation) { src, ctrl -> src.coarseMutation(ctrl.coarse) }
+}
+
+@StrudelDsl
+val StrudelPattern.coarse by dslPatternExtension { p, args ->
+    applyCoarse(p, args)
+}
+
+@StrudelDsl
+val coarse by dslFunction { args -> args.toPattern(coarseMutation) }
+
+@StrudelDsl
+val String.coarse by dslStringExtension { p, args ->
+    applyCoarse(p, args)
+}
+
+// -- room() -----------------------------------------------------------------------------------------------------------
+
+private val roomMutation = voiceModifier {
+    copy(room = it?.asDoubleOrNull())
+}
+
+private fun applyRoom(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, roomMutation) { src, ctrl -> src.roomMutation(ctrl.room) }
+}
+
+@StrudelDsl
+val StrudelPattern.room by dslPatternExtension { p, args ->
+    applyRoom(p, args)
+}
+
+@StrudelDsl
+val room by dslFunction { args -> args.toPattern(roomMutation) }
+
+@StrudelDsl
+val String.room by dslStringExtension { p, args ->
+    applyRoom(p, args)
+}
+
+// -- roomsize() / rsize() ---------------------------------------------------------------------------------------------
+
+private val roomSizeMutation = voiceModifier {
+    copy(roomSize = it?.asDoubleOrNull())
+}
+
+private fun applyRoomSize(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, roomSizeMutation) { src, ctrl -> src.roomSizeMutation(ctrl.roomSize) }
+}
+
+@StrudelDsl
+val StrudelPattern.roomsize by dslPatternExtension { p, args ->
+    applyRoomSize(p, args)
+}
+
+@StrudelDsl
+val roomsize by dslFunction { args -> args.toPattern(roomSizeMutation) }
+
+@StrudelDsl
+val String.roomsize by dslStringExtension { p, args ->
+    applyRoomSize(p, args)
+}
+
+/** Alias for [roomsize] */
+@StrudelDsl
+val StrudelPattern.rsize by dslPatternExtension { p, args -> applyRoomSize(p, args) }
+
+/** Alias for [roomsize] */
+@StrudelDsl
+val rsize by dslFunction { args -> args.toPattern(roomSizeMutation) }
+
+/** Alias for [roomsize] on a string */
+@StrudelDsl
+val String.rsize by dslStringExtension { p, args -> applyRoomSize(p, args) }
+
+// -- delay() ----------------------------------------------------------------------------------------------------------
+
+private val delayMutation = voiceModifier {
+    copy(delay = it?.asDoubleOrNull())
+}
+
+private fun applyDelay(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, delayMutation) { src, ctrl -> src.delayMutation(ctrl.delay) }
+}
+
+@StrudelDsl
+val StrudelPattern.delay by dslPatternExtension { p, args ->
+    applyDelay(p, args)
+}
+
+@StrudelDsl
+val delay by dslFunction { args -> args.toPattern(delayMutation) }
+
+@StrudelDsl
+val String.delay by dslStringExtension { p, args ->
+    applyDelay(p, args)
+}
+
+// -- delaytime() ------------------------------------------------------------------------------------------------------
+
+private val delayTimeMutation = voiceModifier {
+    copy(delayTime = it?.asDoubleOrNull())
+}
+
+private fun applyDelayTime(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, delayTimeMutation) { src, ctrl -> src.delayTimeMutation(ctrl.delayTime) }
+}
+
+@StrudelDsl
+val StrudelPattern.delaytime by dslPatternExtension { p, args ->
+    applyDelayTime(p, args)
+}
+
+@StrudelDsl
+val delaytime by dslFunction { args -> args.toPattern(delayTimeMutation) }
+
+@StrudelDsl
+val String.delaytime by dslStringExtension { p, args ->
+    applyDelayTime(p, args)
+}
+
+// -- delayfeedback() --------------------------------------------------------------------------------------------------
+
+private val delayFeedbackMutation = voiceModifier {
+    copy(delayFeedback = it?.asDoubleOrNull())
+}
+
+private fun applyDelayFeedback(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, delayFeedbackMutation) { src, ctrl -> src.delayFeedbackMutation(ctrl.delayFeedback) }
+}
+
+@StrudelDsl
+val StrudelPattern.delayfeedback by dslPatternExtension { p, args ->
+    applyDelayFeedback(p, args)
+}
+
+@StrudelDsl
+val delayfeedback by dslFunction { args -> args.toPattern(delayFeedbackMutation) }
+
+@StrudelDsl
+val String.delayfeedback by dslStringExtension { p, args ->
+    applyDelayFeedback(p, args)
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Routing
+// ///
+
+// -- orbit() ----------------------------------------------------------------------------------------------------------
+
+private val orbitMutation = voiceModifier {
+    copy(orbit = it?.asIntOrNull())
+}
+
+private fun applyOrbit(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, orbitMutation) { src, ctrl -> src.orbitMutation(ctrl.orbit) }
+}
+
+@StrudelDsl
+val StrudelPattern.orbit by dslPatternExtension { p, args ->
+    applyOrbit(p, args)
+}
+
+@StrudelDsl
+val orbit by dslFunction { args -> args.toPattern(orbitMutation) }
+
+@StrudelDsl
+val String.orbit by dslStringExtension { p, args ->
+    applyOrbit(p, args)
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Arithmatic
+// ///
+
+private fun applyBinaryOp(
+    source: StrudelPattern,
+    args: List<Any?>,
+    op: (VoiceValue, VoiceValue) -> VoiceValue?,
+): StrudelPattern {
+    // We use defaultModifier for args because we just want the 'value'
+    val controlPattern = args.toPattern(defaultModifier)
+
+    return ControlPattern(
         source = source,
         control = controlPattern,
-        mapper = { it }, // No mapping needed for the control data itself
+        mapper = { it }, // No mapping needed
         combiner = { srcData, ctrlData ->
-            val amount = (ctrlData.value as? Number)?.toDouble() ?: 0.0
+            val amount = ctrlData.value ?: return@ControlPattern srcData
 
-            // Add to 'value' if present
-            val newValue = if (srcData.value is Number) {
-                (srcData.value as Number).toDouble() + amount
-            } else {
-                null
-            }
+            val srcValue = srcData.value
+                ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
+                ?: srcData.note?.asVoiceValue()
+                ?: return@ControlPattern srcData
 
-            // Add to 'soundIndex' if present
-            val newSoundIndex = if (srcData.soundIndex != null) {
-                srcData.soundIndex!! + amount.toInt()
-            } else {
-                // If we didn't have soundIndex but have a value (e.g. from n()), use that?
-                // Or if we only have 'value', maybe we shouldn't force soundIndex unless needed.
-                // But for <0 2 ...>, we set both.
-                null
-            }
-
-            // If we have a note string, we might want to transpose it?
-            // (Leaving note transposition for a dedicated 'transpose' function or future improvement)
+            val newValue = op(srcValue, amount)
 
             srcData.copy(
                 value = newValue ?: srcData.value,
-                soundIndex = newSoundIndex ?: srcData.soundIndex
+                // If we successfully modified the value, we clear the soundIndex
+                // because the value is now the source of truth (e.g. index 0 -> add 1 -> index 1)
+                soundIndex = if (newValue != null) null else srcData.soundIndex
             )
         }
     )
 }
 
-// accelerate() ////////////////////////////////////////////////////////////////////////////////////////////////////////
+private fun applyUnaryOp(
+    source: StrudelPattern,
+    op: (VoiceValue) -> VoiceValue?,
+): StrudelPattern {
+    // Unary ops (like log2) apply directly to the source values without a control pattern
+    return source.reinterpretVoice { srcData ->
+        val srcValue = srcData.value
+            ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
+            ?: srcData.note?.asVoiceValue()
+            ?: return@reinterpretVoice srcData
 
-private val accelerateMutation = voiceModifier<Number?> { copy(accelerate = it?.toDouble()) }
+        val newValue = op(srcValue)
+
+        srcData.copy(
+            value = newValue ?: srcData.value,
+            soundIndex = if (newValue != null) null else srcData.soundIndex
+        )
+    }
+}
+
+// -- add() ------------------------------------------------------------------------------------------------------------
 
 /**
- * Applies a pitch glide (accelerate) effect.
- * Positive values glide pitch up, negative values glide down.
- * The amount is usually frequency change per cycle or similar unit.
+ * Adds the given amount to the pattern's value.
+ * Example: n("0 2").add("5") -> n("5 7")
  */
 @StrudelDsl
-val StrudelPattern.accelerate by dslPatternModifier(
-    modify = accelerateMutation,
-    combine = { source, control -> source.accelerateMutation(control.accelerate) }
-)
+val StrudelPattern.add by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a + b }
+}
+
+/** Adds the given amount to the pattern's value on a string. */
+@StrudelDsl
+val String.add by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a + b }
+}
 
 /**
- * Applies a pitch glide (accelerate) effect.
- * Positive values glide pitch up, negative values glide down.
- * The amount is usually frequency change per cycle or similar unit.
+ * Top-level add function.
+ * Usage: add(amount, pattern) -> adds amount to pattern
+ * Usage: add(value) -> creates a pattern with that value
  */
 @StrudelDsl
-val accelerate: DslPatternCreator<Number> by dslPatternCreator(accelerateMutation)
+val add by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        val amountArgs = args.dropLast(1)
+        applyBinaryOp(source, amountArgs) { a, b -> a + b }
+    } else {
+        args.toPattern(defaultModifier)
+    }
+}
+
+// -- sub() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.sub by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a - b }
+}
+
+@StrudelDsl
+val String.sub by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a - b }
+}
+
+@StrudelDsl
+val sub by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a - b }
+    } else {
+        silence // sub() as a source doesn't make much sense without arguments
+    }
+}
+
+// -- mul() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.mul by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a * b }
+}
+
+@StrudelDsl
+val String.mul by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a * b }
+}
+
+@StrudelDsl
+val mul by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a * b }
+    } else {
+        silence
+    }
+}
+
+// -- div() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.div by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a / b }
+}
+
+@StrudelDsl
+val String.div by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a / b }
+}
+
+@StrudelDsl
+val div by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a / b }
+    } else {
+        silence
+    }
+}
+
+// -- mod() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.mod by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a % b }
+}
+
+@StrudelDsl
+val String.mod by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a % b }
+}
+
+@StrudelDsl
+val mod by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a % b }
+    } else {
+        silence
+    }
+}
+
+// -- pow() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.pow by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a pow b }
+}
+
+@StrudelDsl
+val String.pow by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a pow b }
+}
+
+@StrudelDsl
+val pow by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a pow b }
+    } else {
+        silence
+    }
+}
+
+// -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.band by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a band b }
+}
+
+@StrudelDsl
+val String.band by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a band b }
+}
+
+@StrudelDsl
+val band by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a band b }
+    } else {
+        silence
+    }
+}
+
+// -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.bor by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a bor b }
+}
+
+@StrudelDsl
+val String.bor by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a bor b }
+}
+
+@StrudelDsl
+val bor by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a bor b }
+    } else {
+        silence
+    }
+}
+
+// -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.bxor by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a bxor b }
+}
+
+@StrudelDsl
+val String.bxor by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a bxor b }
+}
+
+@StrudelDsl
+val bxor by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a bxor b }
+    } else {
+        silence
+    }
+}
+
+// -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.blshift by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a shl b }
+}
+
+@StrudelDsl
+val String.blshift by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a shl b }
+}
+
+@StrudelDsl
+val blshift by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a shl b }
+    } else {
+        silence
+    }
+}
+
+// -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.brshift by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a shr b }
+}
+
+@StrudelDsl
+val String.brshift by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a shr b }
+}
+
+@StrudelDsl
+val brshift by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a shr b }
+    } else {
+        silence
+    }
+}
+
+// -- log2() -----------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.log2 by dslPatternExtension { source, _ ->
+    applyUnaryOp(source) { it.log2() }
+}
+
+@StrudelDsl
+val String.log2 by dslStringExtension { source, _ ->
+    applyUnaryOp(source) { it.log2() }
+}
+
+@StrudelDsl
+val log2 by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (source != null) {
+        applyUnaryOp(source) { it.log2() }
+    } else {
+        silence
+    }
+}
+
+// -- lt() (Less Than) -------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.lt by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a lt b }
+}
+
+@StrudelDsl
+val String.lt by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a lt b }
+}
+
+@StrudelDsl
+val lt by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a lt b }
+    } else {
+        silence
+    }
+}
+
+// -- gt() (Greater Than) ----------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.gt by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a gt b }
+}
+
+@StrudelDsl
+val String.gt by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a gt b }
+}
+
+@StrudelDsl
+val gt by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a gt b }
+    } else {
+        silence
+    }
+}
+
+// -- lte() (Less Than or Equal) ---------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.lte by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a lte b }
+}
+
+@StrudelDsl
+val String.lte by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a lte b }
+}
+
+@StrudelDsl
+val lte by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a lte b }
+    } else {
+        silence
+    }
+}
+
+// -- gte() (Greater Than or Equal) ------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.gte by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a gte b }
+}
+
+@StrudelDsl
+val String.gte by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a gte b }
+}
+
+@StrudelDsl
+val gte by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a gte b }
+    } else {
+        silence
+    }
+}
+
+// -- eq() (Equal) -----------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.eq by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a eq b }
+}
+
+@StrudelDsl
+val String.eq by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a eq b }
+}
+
+@StrudelDsl
+val eq by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a eq b }
+    } else {
+        silence
+    }
+}
+
+// -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.ne by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a ne b }
+}
+
+@StrudelDsl
+val String.ne by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a ne b }
+}
+
+@StrudelDsl
+val ne by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a ne b }
+    } else {
+        silence
+    }
+}
+
+// -- and() (Logical AND) ----------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.and by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a and b }
+}
+
+@StrudelDsl
+val String.and by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a and b }
+}
+
+@StrudelDsl
+val and by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a and b }
+    } else {
+        silence
+    }
+}
+
+// -- or() (Logical OR) ------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.or by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a or b }
+}
+
+@StrudelDsl
+val String.or by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a or b }
+}
+
+@StrudelDsl
+val or by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a or b }
+    } else {
+        silence
+    }
+}
