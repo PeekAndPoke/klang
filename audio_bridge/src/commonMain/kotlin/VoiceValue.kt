@@ -10,6 +10,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
+import kotlin.math.pow
 
 /**
  * A value that can be either a number or a string.
@@ -31,16 +32,86 @@ sealed interface VoiceValue {
         // Note: "0" or "0.0" is handled by the numeric check above as they parse to 0.0
         return asString.isNotBlank() && asString != "false"
     }
-    
-    operator fun plus(amount: Double): VoiceValue? {
-        val current = asDouble ?: return null
-        return Num(current + amount)
-    }
 
     operator fun plus(other: VoiceValue?): VoiceValue? {
-        val current = asDouble ?: return null
-        val amount = other?.asDouble ?: return null
-        return Num(current + amount)
+        val d1 = asDouble
+        val d2 = other?.asDouble
+
+        // Numeric addition if both are numbers
+        if (d1 != null && d2 != null) {
+            return Num(d1 + d2)
+        }
+
+        // String concatenation otherwise
+        val s2 = other?.asString ?: return null
+        return Text(asString + s2)
+    }
+
+    operator fun minus(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        return Num(d1 - d2)
+    }
+
+    operator fun times(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        return Num(d1 * d2)
+    }
+
+    operator fun div(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        if (d2 == 0.0) return null // or Num(Double.POSITIVE_INFINITY)?
+        return Num(d1 / d2)
+    }
+
+    operator fun rem(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        if (d2 == 0.0) return null
+        return Num(d1 % d2)
+    }
+
+    infix fun pow(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        return Num(d1.pow(d2))
+    }
+
+    infix fun band(other: VoiceValue?): VoiceValue? {
+        val i1 = asInt ?: return null
+        val i2 = other?.asInt ?: return null
+        return Num((i1 and i2).toDouble())
+    }
+
+    infix fun bor(other: VoiceValue?): VoiceValue? {
+        val i1 = asInt ?: return null
+        val i2 = other?.asInt ?: return null
+        return Num((i1 or i2).toDouble())
+    }
+
+    infix fun bxor(other: VoiceValue?): VoiceValue? {
+        val i1 = asInt ?: return null
+        val i2 = other?.asInt ?: return null
+        return Num((i1 xor i2).toDouble())
+    }
+
+    infix fun shl(other: VoiceValue?): VoiceValue? {
+        val i1 = asInt ?: return null
+        val i2 = other?.asInt ?: return null
+        return Num((i1 shl i2).toDouble())
+    }
+
+    infix fun shr(other: VoiceValue?): VoiceValue? {
+        val i1 = asInt ?: return null
+        val i2 = other?.asInt ?: return null
+        return Num((i1 shr i2).toDouble())
+    }
+
+    fun log2(): VoiceValue? {
+        val d = asDouble ?: return null
+        return Num(kotlin.math.log2(d))
     }
 
     data class Num(val value: Double) : VoiceValue {

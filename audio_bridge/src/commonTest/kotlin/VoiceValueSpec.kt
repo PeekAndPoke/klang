@@ -41,17 +41,69 @@ class VoiceValueSpec : StringSpec({
         "foo".asVoiceValue().isTruthy() shouldBe true
     }
 
-    "VoiceValue math operations" {
+    "VoiceValue math operations: plus" {
         // Num + Double
-        (10.asVoiceValue()!! + 5.0)?.asDouble shouldBe 15.0
+        (10.asVoiceValue()!! + 5.0.asVoiceValue())?.asDouble shouldBe 15.0
 
         // Num + Num
         (10.asVoiceValue()!! + 5.asVoiceValue())?.asDouble shouldBe 15.0
 
         // Text(Numeric) + Double
-        ("10".asVoiceValue()!! + 5.0)?.asDouble shouldBe 15.0
+        ("10".asVoiceValue()!! + 5.0.asVoiceValue())?.asDouble shouldBe 15.0
 
-        // Text(Non-Numeric) + Double -> null
-        ("foo".asVoiceValue()!! + 5.0) shouldBe null
+        // Text + Text (concatenation)
+        ("a".asVoiceValue()!! + "b".asVoiceValue())?.asString shouldBe "ab"
+    }
+
+    "VoiceValue math operations: minus" {
+        (10.asVoiceValue()!! - 5.asVoiceValue())?.asDouble shouldBe 5.0
+        ("10".asVoiceValue()!! - "5".asVoiceValue())?.asDouble shouldBe 5.0
+    }
+
+    "VoiceValue math operations: times" {
+        (10.asVoiceValue()!! * 5.asVoiceValue())?.asDouble shouldBe 50.0
+        ("10".asVoiceValue()!! * "5".asVoiceValue())?.asDouble shouldBe 50.0
+    }
+
+    "VoiceValue math operations: div" {
+        (10.asVoiceValue()!! / 2.asVoiceValue())?.asDouble shouldBe 5.0
+        ("10".asVoiceValue()!! / "2".asVoiceValue())?.asDouble shouldBe 5.0
+        (10.asVoiceValue()!! / 0.asVoiceValue()) shouldBe null
+    }
+
+    "VoiceValue math operations: rem (mod)" {
+        (10.asVoiceValue()!! % 3.asVoiceValue())?.asDouble shouldBe 1.0
+        ("10".asVoiceValue()!! % "3".asVoiceValue())?.asDouble shouldBe 1.0
+        (10.asVoiceValue()!! % 0.asVoiceValue()) shouldBe null
+    }
+
+    "VoiceValue math operations: pow" {
+        (2.asVoiceValue()!! pow 3.asVoiceValue())?.asDouble shouldBe 8.0
+        ("2".asVoiceValue()!! pow "3".asVoiceValue())?.asDouble shouldBe 8.0
+    }
+
+    "VoiceValue bitwise operations: band" {
+        (3.asVoiceValue()!! band 1.asVoiceValue())?.asInt shouldBe 1
+        (3.asVoiceValue()!! band 0.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue bitwise operations: bor" {
+        (1.asVoiceValue()!! bor 2.asVoiceValue())?.asInt shouldBe 3
+        (1.asVoiceValue()!! bor 0.asVoiceValue())?.asInt shouldBe 1
+    }
+
+    "VoiceValue bitwise operations: bxor" {
+        (3.asVoiceValue()!! bxor 1.asVoiceValue())?.asInt shouldBe 2
+        (3.asVoiceValue()!! bxor 3.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue bitwise operations: shl" {
+        (1.asVoiceValue()!! shl 1.asVoiceValue())?.asInt shouldBe 2
+        (1.asVoiceValue()!! shl 2.asVoiceValue())?.asInt shouldBe 4
+    }
+
+    "VoiceValue bitwise operations: shr" {
+        (2.asVoiceValue()!! shr 1.asVoiceValue())?.asInt shouldBe 1
+        (4.asVoiceValue()!! shr 2.asVoiceValue())?.asInt shouldBe 1
     }
 })

@@ -90,6 +90,20 @@ object JsCompatTestData {
         // TODO: more complex tests for rev() an palindrome()
         Triple(true, "Reverse", """note("c e g").rev()"""),
         Triple(true, "Palindrome", """note("c e g").palindrome()"""),
+        // Arithmetic Operators
+        Triple(RUN_PROBLEMS, "Add", """n("0 1 2 3").add("2")"""),
+        Triple(RUN_PROBLEMS, "Sub", """n("10 20").sub("5")"""),
+        Triple(RUN_PROBLEMS, "Mul", """n("2 3").mul("4")"""),
+        Triple(RUN_PROBLEMS, "Div", """n("10 20").div("2")"""),
+        Triple(RUN_PROBLEMS, "Mod", """n("10 11").mod("3")"""),
+        Triple(RUN_PROBLEMS, "Pow", """n("2 3").pow("3")"""),
+        Triple(RUN_PROBLEMS, "Log2", """n("1 2 4 8").log2()"""),
+        // Bitwise Operators
+        Triple(RUN_PROBLEMS, "Band (AND)", """n("3 5").band("1")"""),
+        Triple(RUN_PROBLEMS, "Bor (OR)", """n("1 4").bor("2")"""),
+        Triple(RUN_PROBLEMS, "Bxor (XOR)", """n("3 5").bxor("1")"""),
+        Triple(RUN_PROBLEMS, "Blshift (Left Shift)", """n("1 2").blshift("1")"""),
+        Triple(RUN_PROBLEMS, "Brshift (Right Shift)", """n("2 4").brshift("1")"""),
     )
 
     val songs: List<Triple<Boolean, String, String>> = listOf(

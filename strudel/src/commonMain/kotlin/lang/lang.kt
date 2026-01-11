@@ -5,6 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
@@ -1749,9 +1750,11 @@ val String.orbit by dslStringExtension { p, args ->
 // Arithmatic
 // ///
 
-// -- add() ------------------------------------------------------------------------------------------------------------
-
-private fun applyAdd(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyBinaryOp(
+    source: StrudelPattern,
+    args: List<Any?>,
+    op: (VoiceValue, VoiceValue) -> VoiceValue?,
+): StrudelPattern {
     // We use defaultModifier for args because we just want the 'value'
     val controlPattern = args.toPattern(defaultModifier)
 
@@ -1760,21 +1763,46 @@ private fun applyAdd(source: StrudelPattern, args: List<Any?>): StrudelPattern {
         control = controlPattern,
         mapper = { it }, // No mapping needed
         combiner = { srcData, ctrlData ->
-            val amount = ctrlData.value
+            val amount = ctrlData.value ?: return@ControlPattern srcData
 
             val srcValue = srcData.value
                 ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
                 ?: srcData.note?.asVoiceValue()
+                ?: return@ControlPattern srcData
 
-            val newValue = srcValue?.plus(amount)
+            val newValue = op(srcValue, amount)
 
             srcData.copy(
                 value = newValue ?: srcData.value,
+                // If we successfully modified the value, we clear the soundIndex
+                // because the value is now the source of truth (e.g. index 0 -> add 1 -> index 1)
                 soundIndex = if (newValue != null) null else srcData.soundIndex
             )
         }
     )
 }
+
+private fun applyUnaryOp(
+    source: StrudelPattern,
+    op: (VoiceValue) -> VoiceValue?,
+): StrudelPattern {
+    // Unary ops (like log2) apply directly to the source values without a control pattern
+    return source.reinterpretVoice { srcData ->
+        val srcValue = srcData.value
+            ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
+            ?: srcData.note?.asVoiceValue()
+            ?: return@reinterpretVoice srcData
+
+        val newValue = op(srcValue)
+
+        srcData.copy(
+            value = newValue ?: srcData.value,
+            soundIndex = if (newValue != null) null else srcData.soundIndex
+        )
+    }
+}
+
+// -- add() ------------------------------------------------------------------------------------------------------------
 
 /**
  * Adds the given amount to the pattern's value.
@@ -1782,13 +1810,13 @@ private fun applyAdd(source: StrudelPattern, args: List<Any?>): StrudelPattern {
  */
 @StrudelDsl
 val StrudelPattern.add by dslPatternExtension { source, args ->
-    applyAdd(source, args)
+    applyBinaryOp(source, args) { a, b -> a + b }
 }
 
 /** Adds the given amount to the pattern's value on a string. */
 @StrudelDsl
 val String.add by dslStringExtension { source, args ->
-    applyAdd(source, args)
+    applyBinaryOp(source, args) { a, b -> a + b }
 }
 
 /**
@@ -1801,8 +1829,250 @@ val add by dslFunction { args ->
     val source = args.lastOrNull() as? StrudelPattern
     if (args.size >= 2 && source != null) {
         val amountArgs = args.dropLast(1)
-        applyAdd(source, amountArgs)
+        applyBinaryOp(source, amountArgs) { a, b -> a + b }
     } else {
         args.toPattern(defaultModifier)
+    }
+}
+
+// -- sub() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.sub by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a - b }
+}
+
+@StrudelDsl
+val String.sub by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a - b }
+}
+
+@StrudelDsl
+val sub by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a - b }
+    } else {
+        silence // sub() as a source doesn't make much sense without arguments
+    }
+}
+
+// -- mul() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.mul by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a * b }
+}
+
+@StrudelDsl
+val String.mul by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a * b }
+}
+
+@StrudelDsl
+val mul by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a * b }
+    } else {
+        silence
+    }
+}
+
+// -- div() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.div by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a / b }
+}
+
+@StrudelDsl
+val String.div by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a / b }
+}
+
+@StrudelDsl
+val div by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a / b }
+    } else {
+        silence
+    }
+}
+
+// -- mod() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.mod by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a % b }
+}
+
+@StrudelDsl
+val String.mod by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a % b }
+}
+
+@StrudelDsl
+val mod by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a % b }
+    } else {
+        silence
+    }
+}
+
+// -- pow() ------------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.pow by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a pow b }
+}
+
+@StrudelDsl
+val String.pow by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a pow b }
+}
+
+@StrudelDsl
+val pow by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a pow b }
+    } else {
+        silence
+    }
+}
+
+// -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.band by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a band b }
+}
+
+@StrudelDsl
+val String.band by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a band b }
+}
+
+@StrudelDsl
+val band by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a band b }
+    } else {
+        silence
+    }
+}
+
+// -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.bor by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a bor b }
+}
+
+@StrudelDsl
+val String.bor by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a bor b }
+}
+
+@StrudelDsl
+val bor by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a bor b }
+    } else {
+        silence
+    }
+}
+
+// -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.bxor by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a bxor b }
+}
+
+@StrudelDsl
+val String.bxor by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a bxor b }
+}
+
+@StrudelDsl
+val bxor by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a bxor b }
+    } else {
+        silence
+    }
+}
+
+// -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.blshift by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a shl b }
+}
+
+@StrudelDsl
+val String.blshift by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a shl b }
+}
+
+@StrudelDsl
+val blshift by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a shl b }
+    } else {
+        silence
+    }
+}
+
+// -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.brshift by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a shr b }
+}
+
+@StrudelDsl
+val String.brshift by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a shr b }
+}
+
+@StrudelDsl
+val brshift by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a shr b }
+    } else {
+        silence
+    }
+}
+
+// -- log2() -----------------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.log2 by dslPatternExtension { source, _ ->
+    applyUnaryOp(source) { it.log2() }
+}
+
+@StrudelDsl
+val String.log2 by dslStringExtension { source, _ ->
+    applyUnaryOp(source) { it.log2() }
+}
+
+@StrudelDsl
+val log2 by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (source != null) {
+        applyUnaryOp(source) { it.log2() }
+    } else {
+        silence
     }
 }
