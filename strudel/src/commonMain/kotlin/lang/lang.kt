@@ -13,7 +13,6 @@ import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinter
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.tones.scale.Scale
 import kotlin.math.PI
-import kotlin.math.max
 import kotlin.math.sin
 
 @DslMarker
@@ -485,55 +484,85 @@ val StrudelPattern.apply by dslPatternExtension { source, args ->
 
 // -- slow() -----------------------------------------------------------------------------------------------------------
 
+private fun applySlow(pattern: StrudelPattern, factorArg: Any?): StrudelPattern {
+    val factorPattern = when (factorArg) {
+        is StrudelPattern -> factorArg
+        is Number -> ContinuousPattern { factorArg.toDouble() }
+        is String -> parseMiniNotation(factorArg) { AtomicPattern(VoiceData.empty.copy(value = it.asVoiceValue())) }
+        else -> ContinuousPattern { 1.0 }
+    }
+    return TempoModifierPattern(pattern, factorPattern = factorPattern, invertPattern = false)
+}
+
 /** Slows down all inner patterns by the given factor */
 @StrudelDsl
 val slow by dslFunction { args ->
-    val factor = args.getOrNull(0)?.asDoubleOrNull() ?: 1.0
-    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
-        ?: return@dslFunction silence
+    val factor: Any?
+    val sourceParts: List<Any?>
 
-    TempoModifierPattern(pattern, max(1.0 / 128.0, factor))
+    // Heuristic: If >1 args, the first one is the factor, the rest is the source.
+    // If only 1 arg, it is treated as the source (with factor 1.0).
+    if (args.size > 1) {
+        factor = args[0]
+        sourceParts = args.drop(1)
+    } else {
+        factor = 1.0
+        sourceParts = args
+    }
+
+    val source = sourceParts.toPattern(defaultModifier)
+    applySlow(source, factor)
 }
 
 @StrudelDsl
 val StrudelPattern.slow by dslPatternExtension { p, args ->
-    val factor = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
-    TempoModifierPattern(p, max(1.0 / 128.0, factor))
+    applySlow(p, args.firstOrNull())
 }
 
 @StrudelDsl
 val String.slow by dslStringExtension { p, args ->
-    val factor = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
-    TempoModifierPattern(p, max(1.0 / 128.0, factor))
+    applySlow(p, args.firstOrNull())
 }
 
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
-private fun applyFast(pattern: StrudelPattern, factor: Double): StrudelPattern {
-    return TempoModifierPattern(pattern, 1.0 / max(1.0 / 128.0, factor))
+private fun applyFast(pattern: StrudelPattern, factorArg: Any?): StrudelPattern {
+    val factorPattern = when (factorArg) {
+        is StrudelPattern -> factorArg
+        is Number -> ContinuousPattern { factorArg.toDouble() }
+        is String -> parseMiniNotation(factorArg) { AtomicPattern(VoiceData.empty.copy(value = it.asVoiceValue())) }
+        else -> ContinuousPattern { 1.0 }
+    }
+    return TempoModifierPattern(pattern, factorPattern = factorPattern, invertPattern = true)
 }
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
 val fast by dslFunction { args ->
-    val factor = args.getOrNull(0)?.asDoubleOrNull() ?: 1.0
-    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
-        ?: return@dslFunction silence
+    val factor: Any?
+    val sourceParts: List<Any?>
 
-    applyFast(pattern, factor)
+    if (args.size > 1) {
+        factor = args[0]
+        sourceParts = args.drop(1)
+    } else {
+        factor = 1.0
+        sourceParts = args
+    }
+
+    val source = sourceParts.toPattern(defaultModifier)
+    applyFast(source, factor)
 }
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
 val StrudelPattern.fast by dslPatternExtension { p, args ->
-    val factor = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
-    applyFast(p, factor)
+    applyFast(p, args.firstOrNull())
 }
 
 @StrudelDsl
 val String.fast by dslStringExtension { p, args ->
-    val factor = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
-    applyFast(p, factor)
+    applyFast(p, args.firstOrNull())
 }
 
 // -- rev() ------------------------------------------------------------------------------------------------------------

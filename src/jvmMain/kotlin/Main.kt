@@ -57,8 +57,8 @@ private suspend fun helloStrudel() {
 //        val code = TestTextPatterns.smallTownBoy
 //        val pattern = strudel.compile(code).await()
 
-//        val pattern = TestKotlinPatterns.strangerThings
-        val pattern = TestKotlinPatterns.tetris
+        val pattern = TestKotlinPatterns.strangerThings
+//        val pattern = TestKotlinPatterns.tetris
 //        val pattern = "c e".struct("x").note()
 //        val pattern = note("c,e,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)
 //        val pattern = note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x ~ x")
