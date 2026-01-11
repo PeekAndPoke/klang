@@ -21,11 +21,14 @@ class LangMaskSpec : StringSpec({
     }
 
     "mask() works with boolean patterns" {
-        // note("c [eb,g] d [eb,g]").mask("<1 [0 1]>")
-        val p = note("c [eb,g] d [eb,g]").mask("<1 [0 1]>")
+        // note("c [eb,g]").mask("<1 [0 1]>")
+        // We use a shorter pattern to match the expectation of 5 events (3 in cycle 1, 2 in cycle 2)
+        val p = note("c [eb,g]").mask("<1 [0 1]>")
 
-        // Cycle 1: 1 (keeps c and [eb,g]) -> 3 events
-        // Cycle 2: [0 1] (keeps only second half: [eb,g]) -> 2 events
+        // Cycle 1 (Mask "1"): Keeps "c" (0.0-0.5) and "[eb,g]" (0.5-1.0) -> 3 events
+        // Cycle 2 (Mask "[0 1]"):
+        //   - First half "0": drops "c" (1.0-1.5)
+        //   - Second half "1": keeps "[eb,g]" (1.5-2.0) -> 2 events
         // Total should be 5 events
         val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
 
@@ -51,11 +54,13 @@ class LangMaskSpec : StringSpec({
     }
 
     "mask() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c [eb,g]").mask("<1 0>")""")
+        // We use "1 0" to strictly test half-cycle masking in a single cycle
+        val p = StrudelPattern.compile("""note("c [eb,g]").mask("1 0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
-        // "<1 0>" means keep first half, silence second half.
-        // note("c [eb,g]") has 'c' in first half.
+        // "1 0" means keep first half, silence second half.
+        // note("c [eb,g]") has 'c' in first half (0.0-0.5) and 'eb,g' in second half (0.5-1.0).
+        // Result: only 'c' remains.
         events.size shouldBe 1
         events[0].data.note shouldBe "c"
     }

@@ -105,8 +105,8 @@ class LangContinuousPatternsSpec : StringSpec({
             val patA = sine.slow(2.0).range(-0.5, 0.5)
             val patB = sine.range(-0.5, 0.5).slow(2.0)
 
-            val valA = patA.queryArc(t, t)[0].data.value?.asDouble
-            val valB = patB.queryArc(t, t)[0].data.value?.asDouble
+            val valA = patA.queryArc(t, t + EPSILON)[0].data.value?.asDouble
+            val valB = patB.queryArc(t, t + EPSILON)[0].data.value?.asDouble
 
             // phase 0.25 -> sine is 1.0 -> mapped to range -0.5..0.5 is 0.5
             valA shouldBe (0.5 plusOrMinus EPSILON)

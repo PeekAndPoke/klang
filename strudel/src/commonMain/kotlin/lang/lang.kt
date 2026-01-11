@@ -1,3 +1,5 @@
+@file:Suppress("DuplicatedCode")
+
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
@@ -534,7 +536,7 @@ val StrudelPattern.apply by dslPatternExtension { source, args ->
 
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Tempo / Time / Order modifiers
+// Tempo / Timing / Order modifiers
 // ///
 
 // -- slow() -----------------------------------------------------------------------------------------------------------
