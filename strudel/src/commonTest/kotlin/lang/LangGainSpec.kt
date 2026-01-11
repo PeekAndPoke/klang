@@ -32,6 +32,15 @@ class LangGainSpec : StringSpec({
         events.map { it.data.gain } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
     }
 
+    "gain() works as string extension" {
+        val p = "c3".gain("0.5")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.value?.asString shouldBe "c3"
+        events[0].data.gain shouldBe 0.5
+    }
+
     "gain() works within compiled code as top-level function" {
         val p = StrudelPattern.compile("""gain("0.5 1.0")""")
 

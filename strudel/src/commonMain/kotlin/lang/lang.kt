@@ -770,7 +770,7 @@ val String.n by dslStringExtension { p, args ->
     applyN(p, args)
 }
 
-// sound() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// -- sound() / s() ----------------------------------------------------------------------------------------------------
 
 private val soundMutation = voiceModifier {
     val split = it?.toString()?.split(":") ?: emptyList()
@@ -781,71 +781,128 @@ private val soundMutation = voiceModifier {
     )
 }
 
+private fun applySound(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return if (args.isEmpty()) {
+        source.reinterpretVoice { it.soundMutation(it.value?.asString) }
+    } else {
+        source.applyParam(args, soundMutation) { src, ctrl ->
+            src.copy(
+                sound = ctrl.sound ?: src.sound,
+                soundIndex = ctrl.soundIndex ?: src.soundIndex
+            )
+        }
+    }
+}
+
 /** Modifies the sounds of a pattern */
 @StrudelDsl
 val StrudelPattern.sound by dslPatternExtension { p, args ->
-    p.applyParam(args, soundMutation) { source, control -> source.soundMutation(control.sound) }
+    applySound(p, args)
 }
 
 /** Creates a pattern with sounds */
 @StrudelDsl
 val sound by dslFunction { args -> args.toPattern(soundMutation) }
 
+/** Modifies the sounds of a pattern defined by a string */
+@StrudelDsl
+val String.sound by dslStringExtension { p, args ->
+    applySound(p, args)
+}
+
 /** Alias for [sound] */
 @StrudelDsl
-val StrudelPattern.s by dslPatternExtension { p, args -> p.sound(args) }
+val StrudelPattern.s by dslPatternExtension { p, args -> applySound(p, args) }
 
 /** Alias for [sound] */
 @StrudelDsl
 val s by dslFunction { args -> args.toPattern(soundMutation) }
 
-// bank() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Alias for [sound] on a string */
+@StrudelDsl
+val String.s by dslStringExtension { p, args -> applySound(p, args) }
+
+// -- bank() -----------------------------------------------------------------------------------------------------------
 
 private val bankMutation = voiceModifier {
     copy(bank = it?.toString())
 }
 
+private fun applyBank(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, bankMutation) { src, ctrl -> src.bankMutation(ctrl.bank) }
+}
+
 /** Modifies the banks of a pattern */
 @StrudelDsl
 val StrudelPattern.bank by dslPatternExtension { p, args ->
-    p.applyParam(args, bankMutation) { source, control -> source.bankMutation(control.bank) }
+    applyBank(p, args)
 }
 
 /** Creates a pattern with banks */
 @StrudelDsl
 val bank by dslFunction { args -> args.toPattern(bankMutation) }
 
-// gain() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Modifies the banks of a pattern defined by a string */
+@StrudelDsl
+val String.bank by dslStringExtension { p, args ->
+    applyBank(p, args)
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Dynamics, Gain, Pan, Envelope ...
+// ///
+
+// -- gain() -----------------------------------------------------------------------------------------------------------
 
 private val gainMutation = voiceModifier {
     copy(gain = it?.toString()?.toDoubleOrNull())
 }
 
+private fun applyGain(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, gainMutation) { src, ctrl -> src.gainMutation(ctrl.gain) }
+}
+
 /** Modifies the gains of a pattern */
 @StrudelDsl
 val StrudelPattern.gain by dslPatternExtension { p, args ->
-    p.applyParam(args, gainMutation) { source, control -> source.gainMutation(control.gain) }
+    applyGain(p, args)
 }
 
 /** Creates a pattern with gains */
 @StrudelDsl
 val gain by dslFunction { args -> args.toPattern(gainMutation) }
 
-// pan() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Modifies the gains of a pattern defined by a string */
+@StrudelDsl
+val String.gain by dslStringExtension { p, args ->
+    applyGain(p, args)
+}
+
+// -- pan() ------------------------------------------------------------------------------------------------------------
 
 private val panMutation = voiceModifier {
     copy(pan = it?.toString()?.toDoubleOrNull())
 }
 
+private fun applyPan(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, panMutation) { src, ctrl -> src.panMutation(ctrl.pan) }
+}
+
 /** Modifies the pans of a pattern */
 @StrudelDsl
 val StrudelPattern.pan by dslPatternExtension { p, args ->
-    p.applyParam(args, panMutation) { source, control -> source.panMutation(control.pan) }
+    applyPan(p, args)
 }
 
 /** Creates a pattern with pans */
 @StrudelDsl
 val pan by dslFunction { args -> args.toPattern(panMutation) }
+
+/** Modifies the pans of a pattern defined by a string */
+@StrudelDsl
+val String.pan by dslStringExtension { p, args ->
+    applyPan(p, args)
+}
 
 // legato() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
