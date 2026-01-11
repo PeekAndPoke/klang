@@ -7,11 +7,15 @@ object JsCompatTestData {
     val simplePatterns: List<Triple<Boolean, String, String>> = listOf(
         // Chords
         Triple(true, "Chords #1", """note("c,eb,g").slow(2)"""),
-        // Scales
+        // Tone / Scale / Tonal
         Triple(true, "C-Major notes", """note("c3 d3 e3 f3 g3 a3 b3 c4")"""),
         Triple(true, "n() without scale", """n("0 1 2 3")"""),
         Triple(true, "C4:minor scale", """n("0 2 4").scale("C4:minor")"""),
         Triple(true, "C4:major scale", """n("0 2 4").scale("C4:major")"""),
+        Triple(true, "transpose positive", """note("c3 e3 g3").transpose(12)"""),
+        Triple(true, "transpose negative", """note("c4").transpose(-12)"""),
+        Triple(true, "transpose ex #1", """seq("[c2 c3]*4").transpose("<0 -2 5 3>").note()"""),
+        Triple(true, "transpose ex #2", """seq("[c2 c3]*4").transpose("<1P -2M 4P 3m>").note()"""),
         // Sequences
         Triple(RUN_PROBLEMS, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
         // Oscillators & Generators

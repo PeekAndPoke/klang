@@ -14,8 +14,12 @@ import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.tones.Tones
+import io.peekandpoke.klang.tones.distance.Distance
+import io.peekandpoke.klang.tones.interval.Interval
+import io.peekandpoke.klang.tones.midi.Midi
 import io.peekandpoke.klang.tones.scale.Scale
 import kotlin.math.PI
+import kotlin.math.pow
 import kotlin.math.sin
 
 @DslMarker
@@ -677,7 +681,7 @@ val String.palindrome by dslStringExtension { p, _ ->
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Note / Sound generation
+// Note / Sound / Tonal
 // ///
 
 // -- scale() ----------------------------------------------------------------------------------------------------------
@@ -984,6 +988,130 @@ val accelerate by dslFunction { args -> args.toPattern(accelerateMutation) }
 @StrudelDsl
 val String.accelerate by dslStringExtension { p, args ->
     applyAccelerate(p, args)
+}
+
+// -- transpose() ------------------------------------------------------------------------------------------------------
+
+/**
+ * Applies transposition logic to a VoiceData instance.
+ * Accepts either a numeric value (semitones) or a string (interval name).
+ */
+fun VoiceData.transpose(amount: Any?): VoiceData {
+    val semitones: Int
+    val intervalName: String
+
+    when (amount) {
+        is Number -> {
+            semitones = amount.toInt()
+            intervalName = ""
+        }
+
+        is String -> {
+            // Try to parse as number first
+            val d = amount.toDoubleOrNull()
+            if (d != null) {
+                semitones = d.toInt()
+                intervalName = ""
+            } else {
+                semitones = 0
+                intervalName = amount
+            }
+        }
+
+        is VoiceValue -> return transpose(amount.asDouble ?: amount.asString)
+        else -> return this
+    }
+
+//    if (semitones == 0 && intervalName.isEmpty()) return this
+
+    val currentNoteName = note ?: value?.asString ?: ""
+
+    // Strategy 1: Interval arithmetic (Music Theory)
+    // We prioritize this to preserve enharmonic correctness (e.g. C3 + 7 semitones -> G3)
+    if (currentNoteName.isNotEmpty()) {
+        val interval = intervalName.ifEmpty { Interval.fromSemitones(semitones) }
+        // Use Distance.transpose(String, String) directly to avoid import/type mismatch issues
+        val newNoteName = Distance.transpose(currentNoteName, interval)
+
+        if (newNoteName.isNotEmpty()) {
+            return copy(
+                note = newNoteName,
+                freqHz = Tones.noteToFreq(newNoteName),
+                value = null, // clear the value ... it was consumed
+            )
+        }
+    }
+
+    // Strategy 2: Frequency shifting (Physics)
+    // Fallback if we only have frequency or an invalid note name.
+    val currentFreq = freqHz ?: Tones.noteToFreq(currentNoteName)
+    if (currentFreq <= 0.0) {
+        return this.copy(value = null) // clear the value ... it was consumed
+    }
+
+    val effectiveSemitones = if (intervalName.isNotEmpty()) {
+        val i = Interval.get(intervalName)
+        if (!i.empty) i.semitones else 0
+    } else {
+        semitones
+    }
+
+    val newFreq = currentFreq * 2.0.pow(effectiveSemitones.toDouble() / 12.0)
+
+    // Best effort to name the note from the new frequency
+    val newMidi = Midi.freqToMidi(newFreq)
+    val newNote = Midi.midiToNoteName(newMidi, sharps = true)
+
+    return copy(
+        note = newNote,
+        freqHz = newFreq,
+        value = null, // clear the value ... it was consumed
+    )
+}
+
+private fun applyTranspose(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    // We use defaultModifier for args because we just want the 'value'
+    val controlPattern = args.toPattern(defaultModifier)
+
+    return ControlPattern(
+        source = source,
+        control = controlPattern,
+        mapper = { it }, // No mapping needed
+        combiner = { srcData, ctrlData ->
+            // Extract the raw value from control data
+            // This can be a Number (semitones), String (interval like "1P"), or VoiceValue
+            val amount = ctrlData.value ?: return@ControlPattern srcData
+
+            // Apply transpose with the raw amount
+            srcData.transpose(amount)
+        }
+    )
+}
+
+/** Transposes the pattern by a number of semitones */
+@StrudelDsl
+val StrudelPattern.transpose by dslPatternExtension { p, args ->
+    applyTranspose(p, args)
+}
+
+/** Transposes a pattern defined by a string */
+@StrudelDsl
+val String.transpose by dslStringExtension { p, args ->
+    applyTranspose(p, args)
+}
+
+/**
+ * Top-level transpose function.
+ */
+@StrudelDsl
+val transpose by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyTranspose(source, args.dropLast(1))
+    } else {
+        // When used as a source (e.g. transpose(12)), it creates a pattern of values
+        args.toPattern(defaultModifier)
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -59,4 +59,19 @@ class DistanceTest : StringSpec({
     "notes must be valid" {
         Distance.distance("one", "two") shouldBe ""
     }
+
+    "transpose with intervals from strudel test" {
+        // Test intervals used in LangTransposeSpec "complex interval transposition"
+        Distance.transpose("C2", "1P") shouldBe "C2"
+        Distance.transpose("C3", "1P") shouldBe "C3"
+
+        Distance.transpose("C2", "-2M") shouldBe "Bb1"
+        Distance.transpose("C3", "-2M") shouldBe "Bb2"
+
+        Distance.transpose("C2", "4P") shouldBe "F2"
+        Distance.transpose("C3", "4P") shouldBe "F3"
+
+        Distance.transpose("C2", "3m") shouldBe "Eb2"
+        Distance.transpose("C3", "3m") shouldBe "Eb3"
+    }
 })
