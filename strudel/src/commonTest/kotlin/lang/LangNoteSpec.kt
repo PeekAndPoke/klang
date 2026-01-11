@@ -23,6 +23,15 @@ class LangNoteSpec : StringSpec({
         events.map { it.data.note } shouldBe listOf("a4", "b4")
     }
 
+    "note() works as string extension" {
+        // "c3".note("e3") should parse "c3", then apply note "e3" -> result is "e3"
+        val p = "c3".note("e3")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe "e3"
+    }
+
     "note() re-interprets value/index + scale when called without args" {
         // seq("0").scale("C4:minor").note()
         // Should behave like n() with re-interpretation logic

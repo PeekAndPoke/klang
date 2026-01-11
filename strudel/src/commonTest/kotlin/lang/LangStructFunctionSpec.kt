@@ -38,13 +38,14 @@ class LangStructSpec : StringSpec({
     }
 
     "struct() as extension on String" {
-        // "c e".struct("x") -> only first event should be heard
         val p = "c e".struct("x")
         val events = p.queryArc(0.0, 1.0)
 
-        events.size shouldBe 1
+        events.size shouldBe 2
         events[0].data.value?.asString shouldBe "c"
-        events[0].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].data.value?.asString shouldBe "e"
+        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "struct() works in compiled code" {

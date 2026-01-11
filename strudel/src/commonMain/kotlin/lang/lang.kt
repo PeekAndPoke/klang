@@ -675,47 +675,100 @@ val String.palindrome by dslStringExtension { p, _ ->
     applyPalindrome(p)
 }
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Note / Sound generation
+// ///
 
-// note() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// -- scale() ----------------------------------------------------------------------------------------------------------
+
+private val scaleMutation = voiceModifier { scale ->
+    val newScale = scale?.toString()?.cleanScaleName()
+    copy(scale = newScale).resolveNote()
+}
+
+private fun applyScale(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    // If there is no argument, we might be reapplying scale logic or just doing nothing?
+    // But scale() usually takes an argument.
+    // If called as scale(), it should behave like other patterns.
+
+    return source.applyParam(args, scaleMutation) { src, ctrl ->
+        src.copy(scale = ctrl.scale).resolveNote()
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.scale by dslPatternExtension { p, args ->
+    applyScale(p, args)
+}
+
+@StrudelDsl
+val scale by dslFunction { args -> args.toPattern(scaleMutation) }
+
+@StrudelDsl
+val String.scale by dslStringExtension { p, args ->
+    applyScale(p, args)
+}
+
+// -- note() -----------------------------------------------------------------------------------------------------------
 
 private val noteMutation = voiceModifier { input ->
     val newNote = input?.toString()
     copy(note = newNote, freqHz = Tones.noteToFreq(newNote ?: ""))
 }
 
+private fun applyNote(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return if (args.isEmpty()) {
+        source.reinterpretVoice { it.resolveNote() }
+    } else {
+        source.applyParam(args, noteMutation) { src, ctrl -> src.noteMutation(ctrl.note) }
+    }
+}
+
 /** Modifies the notes of a pattern */
 @StrudelDsl
 val StrudelPattern.note by dslPatternExtension { p, args ->
-    if (args.isEmpty()) {
-        p.reinterpretVoice { it.resolveNote() }
-    } else {
-        p.applyParam(args, noteMutation) { source, control -> source.noteMutation(control.note) }
-    }
+    applyNote(p, args)
 }
 
 /** Creates a pattern with notes */
 @StrudelDsl
 val note by dslFunction { args -> args.toPattern(noteMutation) }
 
-// n() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Modifies the notes of a pattern defined by a string */
+@StrudelDsl
+val String.note by dslStringExtension { p, args ->
+    applyNote(p, args)
+}
+
+// -- n() --------------------------------------------------------------------------------------------------------------
 
 private val nMutation = voiceModifier {
     resolveNote(it?.asIntOrNull())
 }
 
-/** Sets the note number or sample index */
-@StrudelDsl
-val StrudelPattern.n by dslPatternExtension { p, args ->
-    if (args.isEmpty()) {
-        p.reinterpretVoice { it.resolveNote() }
+private fun applyN(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return if (args.isEmpty()) {
+        source.reinterpretVoice { it.resolveNote() }
     } else {
-        p.applyParam(args, nMutation) { source, control -> source.resolveNote(control.soundIndex) }
+        source.applyParam(args, nMutation) { src, ctrl -> src.resolveNote(ctrl.soundIndex) }
     }
 }
 
 /** Sets the note number or sample index */
 @StrudelDsl
+val StrudelPattern.n by dslPatternExtension { p, args ->
+    applyN(p, args)
+}
+
+/** Sets the note number or sample index */
+@StrudelDsl
 val n by dslFunction { args -> args.toPattern(nMutation) }
+
+/** Sets the note number or sample index on a string pattern */
+@StrudelDsl
+val String.n by dslStringExtension { p, args ->
+    applyN(p, args)
+}
 
 // sound() /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1266,21 +1319,6 @@ val StrudelPattern.orbit by dslPatternExtension { p, args ->
 
 @StrudelDsl
 val orbit by dslFunction { args -> args.toPattern(orbitMutation) }
-
-// Context scale() /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val scaleMutation = voiceModifier { scale ->
-    val newScale = scale?.toString()?.cleanScaleName()
-    copy(scale = newScale).resolveNote()
-}
-
-@StrudelDsl
-val StrudelPattern.scale by dslPatternExtension { p, args ->
-    p.applyParam(args, scaleMutation) { source, control -> source.scaleMutation(control.scale) }
-}
-
-@StrudelDsl
-val scale by dslFunction { args -> args.toPattern(scaleMutation) }
 
 // vibrato() ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 

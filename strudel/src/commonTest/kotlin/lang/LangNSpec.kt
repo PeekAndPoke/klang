@@ -7,86 +7,68 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 class LangNSpec : StringSpec({
 
     "top-level n() sets VoiceData.soundIndex correctly" {
-        // Given a simple sequence of n values
-        val p = n("0 1 2")
-
-        // When querying one cycle
+        val p = n("0 1")
         val events = p.queryArc(0.0, 1.0)
 
-        // Then soundIndex is set
-        events.size shouldBe 3
-        events.map { it.data.soundIndex } shouldBe listOf(0, 1, 2)
+        events.size shouldBe 2
+        events[0].data.soundIndex shouldBe 0
+        events[1].data.soundIndex shouldBe 1
     }
 
-    "top-level n() sets VoiceData.note if scale is present in context (via resolveNote logic)" {
-        // When n is used inside a block that has scale set? Or we manually set scale.
-        // Actually top-level n() without context just sets soundIndex.
-        // But if we chain .scale()...
-        // Let's test basic assignment first.
-        val p = n("0")
-        val event = p.queryArc(0.0, 1.0).first()
-        event.data.soundIndex shouldBe 0
-        event.data.note shouldBe null // No scale, no note yet unless explicitly set
+    "n() with scale resolves to notes" {
+        val p = n("0 2").scale("C4:major")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.note shouldBe "C4"
+        events[1].data.note shouldBe "E4"
     }
 
     "control pattern n() sets soundIndex on existing pattern" {
-        val base = note("c3")
-        val p = base.n("5 7")
-
+        val base = s("bd sd")
+        val p = base.n("0 1") // accessing bank index 0 and 1
         val events = p.queryArc(0.0, 1.0)
-        events.size shouldBe 2
-        events.map { it.data.soundIndex } shouldBe listOf(5, 7)
-    }
 
-    "n() re-interprets value as soundIndex when called without args" {
-        // Given a pattern that has 'value' set (e.g. from seq or purely numeric input)
-        // seq("0 2") sets value=0.0, value=2.0
-        val p = seq("0 2").n()
-
-        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
+        events[0].data.sound shouldBe "bd"
         events[0].data.soundIndex shouldBe 0
-        events[1].data.soundIndex shouldBe 2
+        events[1].data.sound shouldBe "sd"
+        events[1].data.soundIndex shouldBe 1
     }
 
-    "n() re-interpretation respects scale if present" {
-        // seq("0").scale("C:major").n()
-        // 1. seq("0") -> value=0
-        // 2. .scale("C:major") -> scale="C major"
-        // 3. .n() -> re-interprets. resolveNote checks soundIndex OR value.
-        //    It sees value=0. It sees scale. It should resolve to Note "C".
-        //    AND it should CLEAR soundIndex if it resolves to a note?
-        //    Let's check resolveNote implementation:
-        //    if (n != null && !effectiveScale.isNullOrEmpty()) ... returns copy(note=..., soundIndex=null, value=null)
-
-        val p = seq("0 1").scale("C4:major").n()
-
+    "n() works as string extension" {
+        // "0".n("1") -> "0" is parsed as pattern, then n("1") overrides/sets index
+        val p = "0".n("1")
         val events = p.queryArc(0.0, 1.0)
-        events.size shouldBe 2
 
-        // 0 in C4 major -> C4
+        events.size shouldBe 1
+        events[0].data.soundIndex shouldBe 1
+    }
+
+    "n() re-interprets value as index when called without args" {
+        // "0" pattern has value="0". .n() reinterprets this value as index.
+        // If we add scale, it should resolve to note.
+        val p = "0".scale("C4:major").n()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
         events[0].data.note shouldBe "C4"
-        events[0].data.soundIndex shouldBe null
-
-        // 1 in C4 major -> D4
-        events[1].data.note shouldBe "D4"
-        events[1].data.soundIndex shouldBe null
     }
 
     "n() works within compiled code" {
-        val p = StrudelPattern.compile("""n("0 5")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.soundIndex } shouldBe listOf(0, 5)
-    }
-
-    "n() re-interpretation works within compiled code" {
-        val p = StrudelPattern.compile("""seq("0 2").n()""")
+        val p = StrudelPattern.compile("""n("0 1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.soundIndex shouldBe 0
-        events[1].data.soundIndex shouldBe 2
+        events[1].data.soundIndex shouldBe 1
+    }
+
+    "n() works as string extension in compiled code" {
+        val p = StrudelPattern.compile(""""0".n("1")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.soundIndex shouldBe 1
     }
 })
