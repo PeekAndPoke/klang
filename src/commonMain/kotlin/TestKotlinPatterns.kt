@@ -26,8 +26,9 @@ object TestKotlinPatterns {
             .delay(0.25).delaytime(0.5).delayfeedback(0.5)
             .room(0.05).rsize(1.0)
             .clip(0.3)
-            .superimpose { x -> x.clip(0.1) },
-//            .rev(4).rev(3)
+            .superimpose { x -> x.clip(0.1) }
+//            .rev(4.1).rev(3)
+        ,
 
         note(
             """
@@ -47,38 +48,39 @@ object TestKotlinPatterns {
             .spread(0.5).unison(8).detune(0.3)
             .orbit(2).pan(0.0).gain(0.5)
 //            .adsr("0.05:2.0:0.0:1.0")
-            .room(0.05).rsize(1.0),
+            .room(0.05).rsize(1.0)
 //            .rev(4).rev(3)
+        ,
 
         sound(
             """
             <
-            [[bd:4, hh] hh sd hh] 
+            [[bd:2, hh] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd oh]
             [[bd, cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
-            [bd hh [lt lt, sd] [lt lt, oh]]
-            [[bd:4, hh] hh sd hh] 
+            [bd hh [mt mt, sd] [ht ht, oh]]
+            [[bd:2, hh] hh sd:3 hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd oh]
             [[bd, cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
-            [bd hh [lt lt, sd] [lt lt, oh]]
-            [[bd:4, hh] hh sd hh] 
+            [bd hh [ht ht, sd] [mt mt, oh]]
+            [[bd:2, hh] hh sd:3 hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd oh]
             [[bd, cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
-            [bd hh [lt lt, sd] [lt lt, oh]]
-            [[bd:4, cr] hh sd [sd, hh]] 
-            [bd hh [sd:4, cr] oh]
+            [bd hh [mt mt, sd] [ht ht, oh]]
+            [[bd:2, cr] hh sd [sd, hh]] 
+            [bd hh [sd:3, cr] oh]
             [bd hh sd hh] 
             [~ [bd, hh] sd oh]
             [[bd, cr] hh [sd, cr] [sd, cr]] 
@@ -94,6 +96,7 @@ object TestKotlinPatterns {
             .pan(-0.3).gain(0.5)
             .room(0.05).rsize(2.0)
 //            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
+            .adsr("0.01:0.2:0.5:0.5")
             .fast(2)
 //            .rev(4).rev(3),
     )
