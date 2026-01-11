@@ -114,6 +114,57 @@ sealed interface VoiceValue {
         return Num(kotlin.math.log2(d))
     }
 
+    infix fun lt(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        return Num(if (d1 < d2) 1.0 else 0.0)
+    }
+
+    infix fun gt(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        return Num(if (d1 > d2) 1.0 else 0.0)
+    }
+
+    infix fun lte(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        return Num(if (d1 <= d2) 1.0 else 0.0)
+    }
+
+    infix fun gte(other: VoiceValue?): VoiceValue? {
+        val d1 = asDouble ?: return null
+        val d2 = other?.asDouble ?: return null
+        return Num(if (d1 >= d2) 1.0 else 0.0)
+    }
+
+    infix fun eq(other: VoiceValue?): VoiceValue? {
+        // We try double comparison first
+        val d1 = asDouble
+        val d2 = other?.asDouble
+        if (d1 != null && d2 != null) {
+            return Num(if (d1 == d2) 1.0 else 0.0)
+        }
+        // Fallback to string comparison
+        return Num(if (asString == other?.asString) 1.0 else 0.0)
+    }
+
+    infix fun ne(other: VoiceValue?): VoiceValue? {
+        // reuse eq logic
+        val isEqual = eq(other)?.asDouble == 1.0
+        return Num(if (!isEqual) 1.0 else 0.0)
+    }
+
+    // Logical AND: if 'this' is truthy, return 'other', else return 'this'
+    infix fun and(other: VoiceValue?): VoiceValue? {
+        return if (isTruthy()) other else this
+    }
+
+    // Logical OR: if 'this' is truthy, return 'this', else return 'other'
+    infix fun or(other: VoiceValue?): VoiceValue? {
+        return if (isTruthy()) this else other
+    }
+
     data class Num(val value: Double) : VoiceValue {
         override val asString get() = value.toString()
         override val asDouble get() = value

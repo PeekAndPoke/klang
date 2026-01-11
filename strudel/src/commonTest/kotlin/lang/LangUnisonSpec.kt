@@ -30,8 +30,24 @@ class LangUnisonSpec : StringSpec({
         events[0].data.voices shouldBe 4.0
     }
 
+    "uni() works as pattern extension" {
+        val p = note("c").uni("4")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.voices shouldBe 4.0
+    }
+
     "unison() works as string extension" {
         val p = "c".unison("4")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.voices shouldBe 4.0
+    }
+
+    "uni() works as string extension" {
+        val p = "c".uni("4")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

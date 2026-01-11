@@ -2076,3 +2076,179 @@ val log2 by dslFunction { args ->
         silence
     }
 }
+
+// -- lt() (Less Than) -------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.lt by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a lt b }
+}
+
+@StrudelDsl
+val String.lt by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a lt b }
+}
+
+@StrudelDsl
+val lt by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a lt b }
+    } else {
+        silence
+    }
+}
+
+// -- gt() (Greater Than) ----------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.gt by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a gt b }
+}
+
+@StrudelDsl
+val String.gt by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a gt b }
+}
+
+@StrudelDsl
+val gt by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a gt b }
+    } else {
+        silence
+    }
+}
+
+// -- lte() (Less Than or Equal) ---------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.lte by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a lte b }
+}
+
+@StrudelDsl
+val String.lte by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a lte b }
+}
+
+@StrudelDsl
+val lte by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a lte b }
+    } else {
+        silence
+    }
+}
+
+// -- gte() (Greater Than or Equal) ------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.gte by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a gte b }
+}
+
+@StrudelDsl
+val String.gte by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a gte b }
+}
+
+@StrudelDsl
+val gte by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a gte b }
+    } else {
+        silence
+    }
+}
+
+// -- eq() (Equal) -----------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.eq by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a eq b }
+}
+
+@StrudelDsl
+val String.eq by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a eq b }
+}
+
+@StrudelDsl
+val eq by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a eq b }
+    } else {
+        silence
+    }
+}
+
+// -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.ne by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a ne b }
+}
+
+@StrudelDsl
+val String.ne by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a ne b }
+}
+
+@StrudelDsl
+val ne by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a ne b }
+    } else {
+        silence
+    }
+}
+
+// -- and() (Logical AND) ----------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.and by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a and b }
+}
+
+@StrudelDsl
+val String.and by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a and b }
+}
+
+@StrudelDsl
+val and by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a and b }
+    } else {
+        silence
+    }
+}
+
+// -- or() (Logical OR) ------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.or by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a or b }
+}
+
+@StrudelDsl
+val String.or by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a or b }
+}
+
+@StrudelDsl
+val or by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a or b }
+    } else {
+        silence
+    }
+}

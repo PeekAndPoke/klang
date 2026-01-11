@@ -49,37 +49,37 @@ class VoiceValueSpec : StringSpec({
         (10.asVoiceValue()!! + 5.asVoiceValue())?.asDouble shouldBe 15.0
 
         // Text(Numeric) + Double
-        ("10".asVoiceValue()!! + 5.0.asVoiceValue())?.asDouble shouldBe 15.0
+        ("10".asVoiceValue() + 5.0.asVoiceValue())?.asDouble shouldBe 15.0
 
         // Text + Text (concatenation)
-        ("a".asVoiceValue()!! + "b".asVoiceValue())?.asString shouldBe "ab"
+        ("a".asVoiceValue() + "b".asVoiceValue())?.asString shouldBe "ab"
     }
 
     "VoiceValue math operations: minus" {
         (10.asVoiceValue()!! - 5.asVoiceValue())?.asDouble shouldBe 5.0
-        ("10".asVoiceValue()!! - "5".asVoiceValue())?.asDouble shouldBe 5.0
+        ("10".asVoiceValue() - "5".asVoiceValue())?.asDouble shouldBe 5.0
     }
 
     "VoiceValue math operations: times" {
         (10.asVoiceValue()!! * 5.asVoiceValue())?.asDouble shouldBe 50.0
-        ("10".asVoiceValue()!! * "5".asVoiceValue())?.asDouble shouldBe 50.0
+        ("10".asVoiceValue() * "5".asVoiceValue())?.asDouble shouldBe 50.0
     }
 
     "VoiceValue math operations: div" {
         (10.asVoiceValue()!! / 2.asVoiceValue())?.asDouble shouldBe 5.0
-        ("10".asVoiceValue()!! / "2".asVoiceValue())?.asDouble shouldBe 5.0
+        ("10".asVoiceValue() / "2".asVoiceValue())?.asDouble shouldBe 5.0
         (10.asVoiceValue()!! / 0.asVoiceValue()) shouldBe null
     }
 
     "VoiceValue math operations: rem (mod)" {
         (10.asVoiceValue()!! % 3.asVoiceValue())?.asDouble shouldBe 1.0
-        ("10".asVoiceValue()!! % "3".asVoiceValue())?.asDouble shouldBe 1.0
+        ("10".asVoiceValue() % "3".asVoiceValue())?.asDouble shouldBe 1.0
         (10.asVoiceValue()!! % 0.asVoiceValue()) shouldBe null
     }
 
     "VoiceValue math operations: pow" {
         (2.asVoiceValue()!! pow 3.asVoiceValue())?.asDouble shouldBe 8.0
-        ("2".asVoiceValue()!! pow "3".asVoiceValue())?.asDouble shouldBe 8.0
+        ("2".asVoiceValue() pow "3".asVoiceValue())?.asDouble shouldBe 8.0
     }
 
     "VoiceValue bitwise operations: band" {
@@ -105,5 +105,53 @@ class VoiceValueSpec : StringSpec({
     "VoiceValue bitwise operations: shr" {
         (2.asVoiceValue()!! shr 1.asVoiceValue())?.asInt shouldBe 1
         (4.asVoiceValue()!! shr 2.asVoiceValue())?.asInt shouldBe 1
+    }
+
+    "VoiceValue comparison operations: lt" {
+        (1.asVoiceValue()!! lt 2.asVoiceValue())?.asInt shouldBe 1
+        (2.asVoiceValue()!! lt 1.asVoiceValue())?.asInt shouldBe 0
+        (1.asVoiceValue()!! lt 1.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue comparison operations: gt" {
+        (2.asVoiceValue()!! gt 1.asVoiceValue())?.asInt shouldBe 1
+        (1.asVoiceValue()!! gt 2.asVoiceValue())?.asInt shouldBe 0
+        (1.asVoiceValue()!! gt 1.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue comparison operations: lte" {
+        (1.asVoiceValue()!! lte 2.asVoiceValue())?.asInt shouldBe 1
+        (1.asVoiceValue()!! lte 1.asVoiceValue())?.asInt shouldBe 1
+        (2.asVoiceValue()!! lte 1.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue comparison operations: gte" {
+        (2.asVoiceValue()!! gte 1.asVoiceValue())?.asInt shouldBe 1
+        (1.asVoiceValue()!! gte 1.asVoiceValue())?.asInt shouldBe 1
+        (1.asVoiceValue()!! gte 2.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue comparison operations: eq" {
+        (1.asVoiceValue()!! eq 1.asVoiceValue())?.asInt shouldBe 1
+        (1.asVoiceValue()!! eq 2.asVoiceValue())?.asInt shouldBe 0
+        ("a".asVoiceValue() eq "a".asVoiceValue())?.asInt shouldBe 1
+        ("a".asVoiceValue() eq "b".asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue comparison operations: ne" {
+        (1.asVoiceValue()!! ne 2.asVoiceValue())?.asInt shouldBe 1
+        (1.asVoiceValue()!! ne 1.asVoiceValue())?.asInt shouldBe 0
+        ("a".asVoiceValue() ne "b".asVoiceValue())?.asInt shouldBe 1
+        ("a".asVoiceValue() ne "a".asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue logical operations: and" {
+        (1.asVoiceValue()!! and 5.asVoiceValue())?.asInt shouldBe 5
+        (0.asVoiceValue()!! and 5.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue logical operations: or" {
+        (1.asVoiceValue()!! or 5.asVoiceValue())?.asInt shouldBe 1
+        (0.asVoiceValue()!! or 5.asVoiceValue())?.asInt shouldBe 5
     }
 })

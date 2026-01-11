@@ -104,6 +104,18 @@ object JsCompatTestData {
         Triple(RUN_PROBLEMS, "Bxor (XOR)", """n("3 5").bxor("1")"""),
         Triple(RUN_PROBLEMS, "Blshift (Left Shift)", """n("1 2").blshift("1")"""),
         Triple(RUN_PROBLEMS, "Brshift (Right Shift)", """n("2 4").brshift("1")"""),
+        // Comparison
+        Triple(RUN_PROBLEMS, "Less Than", """n("1 2 3").lt("2")"""),
+        Triple(RUN_PROBLEMS, "Greater Than", """n("1 2 3").gt("2")"""),
+        Triple(RUN_PROBLEMS, "Less Equal", """n("1 2 3").lte("2")"""),
+        Triple(RUN_PROBLEMS, "Greater Equal", """n("1 2 3").gte("2")"""),
+        Triple(RUN_PROBLEMS, "Equal", """n("1 2 3").eq("2")"""),
+        Triple(RUN_PROBLEMS, "Not Equal", """n("1 2 3").ne("2")"""),
+        // Logical
+        Triple(RUN_PROBLEMS, "Logical And", """n("0 1").and("5")"""),
+        Triple(RUN_PROBLEMS, "Logical Or", """n("0 1").or("5")"""),
+        // Bitwise
+        Triple(RUN_PROBLEMS, "Band (AND)", """n("3 5").band("1")"""),
     )
 
     val songs: List<Triple<Boolean, String, String>> = listOf(
