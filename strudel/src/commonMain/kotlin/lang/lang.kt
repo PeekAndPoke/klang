@@ -540,13 +540,8 @@ val StrudelPattern.apply by dslPatternExtension { source, args ->
 // -- slow() -----------------------------------------------------------------------------------------------------------
 
 private fun applySlow(pattern: StrudelPattern, factorArg: Any?): StrudelPattern {
-    val factorPattern = when (factorArg) {
-        is StrudelPattern -> factorArg
-        is Number -> ContinuousPattern { factorArg.toDouble() }
-        is String -> parseMiniNotation(factorArg) { AtomicPattern(VoiceData.empty.copy(value = it.asVoiceValue())) }
-        else -> ContinuousPattern { 1.0 }
-    }
-    return TempoModifierPattern(pattern, factorPattern = factorPattern, invertPattern = false)
+    val factor = factorArg?.asDoubleOrNull() ?: 1.0
+    return TempoModifierPattern(pattern, factor = factor, invertPattern = false)
 }
 
 /** Slows down all inner patterns by the given factor */
@@ -582,13 +577,8 @@ val String.slow by dslStringExtension { p, args ->
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
 private fun applyFast(pattern: StrudelPattern, factorArg: Any?): StrudelPattern {
-    val factorPattern = when (factorArg) {
-        is StrudelPattern -> factorArg
-        is Number -> ContinuousPattern { factorArg.toDouble() }
-        is String -> parseMiniNotation(factorArg) { AtomicPattern(VoiceData.empty.copy(value = it.asVoiceValue())) }
-        else -> ContinuousPattern { 1.0 }
-    }
-    return TempoModifierPattern(pattern, factorPattern = factorPattern, invertPattern = true)
+    val factor = factorArg?.asDoubleOrNull() ?: 1.0
+    return TempoModifierPattern(pattern, factor = factor, invertPattern = true)
 }
 
 /** Speeds up all inner patterns by the given factor */
