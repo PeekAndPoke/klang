@@ -43,6 +43,9 @@ and category.
 ### Pattern Creation ⭐⭐⭐
 
 - [x] **`cat()`** - Concatenates patterns, each taking one full cycle
+- [x] **`seq()`** - Sequence patterns (same as JS `sequence`)
+- [x] **`stack()`** - Stack patterns (play simultaneously)
+- [x] **`arrange()`** - Arrange patterns with custom durations
 - [ ] **`polymeter()`** - Aligns steps of patterns creating polymeters
 - [ ] **`polymeterSteps()`** - Polymeter with step specification
 - [ ] **`fastcat()`** - Concatenates patterns, all in one cycle
@@ -55,6 +58,8 @@ and category.
 - [ ] **`binaryN(n, bits)`** - Binary pattern padded to n bits
 - [ ] **`sequenceP()`** - Pattern of patterns sequence
 - [ ] **`pure(value)`** - Creates atomic pattern with single value
+- [x] **`silence`** - Empty pattern
+- [x] **`rest`** - Alias for silence
 
 ### Time Modification ⭐⭐⭐
 
@@ -86,12 +91,15 @@ and category.
 - [x] **`rev()`** - Reverses pattern in each cycle
 - [ ] **`revv()`** - Reverses pattern vertically (pitch inversion)
 - [x] **`struct(pattern)`** - Structures pattern according to mask (uses 'x' markers)
+- [x] **`structAll(pattern)`** - Like struct but keeps all overlapping events
+- [x] **`mask(pattern)`** - Conditionally applies pattern elements (boolean masking)
+- [x] **`maskAll(pattern)`** - Like mask but keeps all overlapping events
+- [x] **`superimpose(function)`** - Layers modified pattern on top
+- [x] **`layer(function)`** - Layers multiple function results
+- [x] **`apply(function)`** - Alias for layer
 - [ ] **`jux(function)`** - Apply function to right channel only
 - [ ] **`juxBy(amount, function)`** - Jux with custom stereo width
 - [ ] **`off(time, function)`** - Copies, shifts, and modifies pattern
-- [x] **`superimpose(function)`** - Layers modified pattern on top
-- [x] **`mask(pattern)`** - Conditionally applies pattern elements (boolean masking)
-- [x] **`apply(function)`** - Alias for layer
 - [ ] **`applyN(n, func)`** - Apply function n times
 - [ ] **`when(condition, func)`** - Conditionally apply function
 - [ ] **`within(start, end, func)`** - Apply function within time range
@@ -100,6 +108,11 @@ and category.
 
 ### Tonal Functions ⭐⭐⭐
 
+- [x] **`note()`** - Set note values
+- [x] **`n()`** - Set note index or sample number
+- [x] **`scale()`** - Set scale for note resolution
+- [x] **`sound()` / `s()`** - Set sound/sample bank
+- [x] **`bank()`** - Set sample bank
 - [ ] **`transpose(semitones)`** - Transpose notes by semitones
 - [ ] **`scaleTranspose(steps)`** - Transpose within scale
 - [ ] **`chord()`** - Create chord patterns
@@ -139,6 +152,19 @@ and category.
 
 ### Audio Effects ⭐⭐⭐
 
+- [x] **`lpf()`** - Low pass filter
+- [x] **`hpf()`** - High pass filter
+- [x] **`bandf()` / `bpf()`** - Band pass filter
+- [x] **`notchf()`** - Notch filter
+- [x] **`resonance()` / `res()`** - Filter resonance/Q
+- [x] **`distort()`** - Distortion effect
+- [x] **`crush()`** - Bit crusher effect
+- [x] **`coarse()`** - Coarse pitch quantization
+- [x] **`room()`** - Reverb room size
+- [x] **`roomsize()` / `rsize()`** - Reverb room size
+- [x] **`delay()`** - Delay effect amount
+- [x] **`delaytime()`** - Delay time
+- [x] **`delayfeedback()`** - Delay feedback
 - [ ] **`lpq()`, `hpq()`, `bpq()`** - Dedicated Q/resonance for each filter
 - [ ] **Filter envelopes** - `lpattack`, `lpdecay`, `lpsustain`, `lprelease` (and hp/bp variants)
 - [ ] **`vowel(sound)`** - Vowel filter (a, e, i, o, u)
@@ -160,10 +186,16 @@ and category.
 
 ### Continuous Signals ⭐⭐
 
+- [x] **`sine`** - Sine wave oscillator (0 to 1)
+- [x] **`saw`** - Sawtooth wave (0 to 1)
+- [x] **`isaw`** - Inverse sawtooth (1 to 0)
+- [x] **`tri`** - Triangle wave (0 to 1 to 0)
+- [x] **`square`** - Square wave (0 or 1)
+- [x] **`perlin`** - Perlin noise
+- [x] **`range(min, max)`** - Scale continuous pattern to range
 - [ ] **`cosine`** / **`cosine2`** - Cosine wave oscillators
 - [ ] **`saw2`**, **`sine2`**, **`tri2`**, **`square2`** - Bipolar (-1 to 1) versions
 - [ ] **`rand`** / **`rand2`** - Random signals (unipolar/bipolar)
-- [x] **`perlin`** - Perlin noise
 - [ ] **`irand(n)`** - Random integers from 0 to n-1
 - [ ] **`brand`** - Binary random (0 or 1)
 - [ ] **`brandBy(probability)`** - Binary random with custom probability
@@ -171,7 +203,6 @@ and category.
 - [ ] **`.slow(factor)`** - Slow down continuous patterns
 - [ ] **`toBipolar()`** - Convert 0-1 range to -1-1
 - [ ] **`fromBipolar()`** - Convert -1-1 range to 0-1
-- [x] **`range(min, max)`** - Scale continuous pattern to range
 - [ ] **`rangex(min, max)`** - Exponential range scaling
 - [ ] **`range2(min, max)`** - Bipolar range scaling
 - [ ] **`ratio()`** - Get frequency ratio
@@ -241,6 +272,18 @@ and category.
 
 ### Synthesis Parameters
 
+- [x] **`gain()`** - Amplitude/volume
+- [x] **`pan()`** - Stereo panning
+- [x] **`legato()` / `clip()`** - Note length
+- [x] **`vibrato()` / `vib()`** - Vibrato frequency
+- [x] **`vibratoMod()` / `vibmod()`** - Vibrato depth
+- [x] **`accelerate()`** - Pitch/speed acceleration
+- [x] **`unison()` / `uni()`** - Number of voices
+- [x] **`detune()`** - Frequency spread
+- [x] **`spread()`** - Pan spread
+- [x] **`density()` / `d()`** - Voice density
+- [x] **`orbit()`** - Audio routing
+- [x] **ADSR envelope**: `attack()`, `decay()`, `sustain()`, `release()`, `adsr()`
 - [ ] **`velocity()`** - MIDI velocity
 - [ ] **`postgain()`** - Post-processing gain
 - [ ] **`partials(list)`** - Additive synthesis partials
@@ -391,29 +434,38 @@ and category.
 
 ### By Category:
 
-- **Mini-Notation**: 0 features missing ✅ (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, `(pulses,steps)`,
-  `(pulses,steps,rotation)`)
-- **Pattern Creation**: ~13 functions
-- **Time Modification**: ~23 functions
-- **Pattern Transformation**: ~15 functions
-- **Tonal Functions**: 5 functions
-- **Arithmetic & Math**: 0 missing ✅ (7 completed)
-- **Bitwise Operators**: 0 missing ✅ (5 completed)
-- **Comparison & Logic**: 2 functions (`eqt`, `net`)
-- **Audio Effects**: 15+ parameters
-- **Sample Manipulation**: 14 functions
-- **Continuous Signals**: ~15 signals/modifiers
-- **Synthesis**: 17+ parameters
-- **Step-Based Operations**: ~14 functions
-- **Conditional & Probabilistic**: ~10 functions
-- **Pattern Binding**: ~15 functions
-- **MIDI/OSC**: 15+ functions
-- **Visualization**: 6 tools
-- **System Functions**: ~13 functions
+- **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean)
+- **Pattern Creation**: ~8 missing (5 completed: `seq`, `stack`, `cat`, `arrange`, `silence`/`rest`)
+- **Time Modification**: ~21 missing (2 completed: `fast`, `slow`)
+- **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
+  `apply`)
+- **Tonal Functions**: ~5 missing (5 completed: `note`, `n`, `scale`, `sound`, `bank`)
+- **Arithmetic & Math**: ✅ 0 missing (7 completed)
+- **Bitwise Operators**: ✅ 0 missing (5 completed)
+- **Comparison & Logic**: 2 missing (8 completed)
+- **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
+- **Sample Manipulation**: ~8 missing (0 completed)
+- **Continuous Signals**: ~13 missing (7 completed: `sine`, `saw`, `tri`, `square`, `perlin`, `range`)
+- **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
+- **Step-Based Operations**: ~14 missing (0 completed)
+- **Conditional & Probabilistic**: ~10 missing (1 completed: `degradeBy`)
+- **Pattern Binding**: ~15 missing (0 completed)
+- **MIDI/OSC**: ~15 missing (0 completed)
+- **Visualization**: ~6 missing (0 completed)
+- **System Functions**: ~13 missing (0 completed)
 
-### Total Estimated: ~180 features remaining
+### Total Estimated: ~160 features remaining
 
-### Completed So Far: ~30 features (Mini-notation, arithmetic, bitwise, comparison, basic patterns)
+### Completed So Far: ~85 features! 🎉
+
+**Major achievements:**
+
+- ✅ Complete mini-notation support
+- ✅ All arithmetic, bitwise, and comparison operators
+- ✅ Core pattern creation and transformation
+- ✅ Comprehensive audio effects and synthesis parameters
+- ✅ Full ADSR envelope support
+- ✅ Continuous signal generators
 
 ---
 
