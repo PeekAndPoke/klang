@@ -45,34 +45,58 @@ and category.
 - [x] **`cat()`** - Concatenates patterns, each taking one full cycle
 - [ ] **`polymeter()`** - Aligns steps of patterns creating polymeters
 - [ ] **`polymeterSteps()`** - Polymeter with step specification
+- [ ] **`fastcat()`** - Concatenates patterns, all in one cycle
+- [ ] **`slowcat()`** - Alias for cat, each pattern takes one cycle
+- [ ] **`slowcatPrime()`** - Like slowcat but maintains relative timing
+- [ ] **`stackLeft()`** / **`stackRight()`** / **`stackCentre()`** - Aligned stack variants
+- [ ] **`stackBy(by, ...pats)`** - Stack with custom alignment (0=left, 0.5=center, 1=right)
 - [ ] **`run(n)`** - Creates discrete pattern of numbers 0 to n-1
 - [ ] **`binary(n)`** - Creates binary pattern from number
 - [ ] **`binaryN(n, bits)`** - Binary pattern padded to n bits
+- [ ] **`sequenceP()`** - Pattern of patterns sequence
+- [ ] **`pure(value)`** - Creates atomic pattern with single value
 
 ### Time Modification ⭐⭐⭐
 
-- [x] **`fast(factor)`** - Speeds up pattern
-- [x] **`slow(factor)`** - Slows down pattern
+- [x] **`fast(factor)`** - Speeds up pattern (alias: `density`)
+- [x] **`slow(factor)`** - Slows down pattern (alias: `sparsity`)
 - [ ] **`early(cycles)`** - Nudge pattern earlier in time
 - [ ] **`late(cycles)`** - Nudge pattern later in time
 - [ ] **`euclid(pulses, steps)`** - Euclidean rhythm function
 - [ ] **`euclidRot(pulses, steps, rotation)`** - Euclidean with rotation
 - [ ] **`euclidLegato(pulses, steps)`** - Holds pulses until next
 - [ ] **`compress(start, end)`** - Compresses pattern into timespan
+- [ ] **`compressSpan(span)`** - Compresses pattern into span
+- [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
+- [ ] **`focusSpan(span)`** - Focus with span parameter
+- [ ] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle
+- [ ] **`zoomArc(arc)`** - Zoom with arc parameter
 - [ ] **`fastGap(factor)`** - Speeds up with gaps between
 - [ ] **`swingBy(subdivision, offset)`** - Creates swing rhythm
 - [ ] **`swing(subdivision)`** - Swing with default 1/3 offset
 - [ ] **`ply(n)`** - Repeats each event n times
+- [ ] **`plyWith(n, func)`** - Repeats with function applied
+- [ ] **`plyForEach(n, func)`** - Repeats with function applied per repetition
+- [ ] **`hurry(factor)`** - Speeds up and shortens events
+- [ ] **`loopAt(cycles)`** - Fit sample to cycles
+- [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
 
 ### Pattern Transformation ⭐⭐⭐
 
 - [x] **`rev()`** - Reverses pattern in each cycle
+- [ ] **`revv()`** - Reverses pattern vertically (pitch inversion)
 - [x] **`struct(pattern)`** - Structures pattern according to mask (uses 'x' markers)
 - [ ] **`jux(function)`** - Apply function to right channel only
 - [ ] **`juxBy(amount, function)`** - Jux with custom stereo width
 - [ ] **`off(time, function)`** - Copies, shifts, and modifies pattern
 - [x] **`superimpose(function)`** - Layers modified pattern on top
 - [x] **`mask(pattern)`** - Conditionally applies pattern elements (boolean masking)
+- [x] **`apply(function)`** - Alias for layer
+- [ ] **`applyN(n, func)`** - Apply function n times
+- [ ] **`when(condition, func)`** - Conditionally apply function
+- [ ] **`within(start, end, func)`** - Apply function within time range
+- [ ] **`brak()`** - Make every other cycle syncopated
+- [ ] **`inv()` / `invert()`** - Invert pattern structure
 
 ### Tonal Functions ⭐⭐⭐
 
@@ -107,7 +131,9 @@ and category.
 - [x] **`lte()`** - Less than or equal comparison
 - [x] **`gte()`** - Greater than or equal comparison
 - [x] **`eq()`** - Equality comparison
+- [ ] **`eqt()`** - Truthiness equality comparison
 - [x] **`ne()`** - Not equal comparison
+- [ ] **`net()`** - Truthiness not equal comparison
 - [x] **`and()`** - Logical AND
 - [x] **`or()`** - Logical OR
 
@@ -141,8 +167,14 @@ and category.
 - [ ] **`irand(n)`** - Random integers from 0 to n-1
 - [ ] **`brand`** - Binary random (0 or 1)
 - [ ] **`brandBy(probability)`** - Binary random with custom probability
-- [ ] **`.segment(rate)`** - Sample continuous signal at rate
+- [ ] **`.segment(rate)`** - Sample continuous signal at rate (alias: `seg`)
 - [ ] **`.slow(factor)`** - Slow down continuous patterns
+- [ ] **`toBipolar()`** - Convert 0-1 range to -1-1
+- [ ] **`fromBipolar()`** - Convert -1-1 range to 0-1
+- [x] **`range(min, max)`** - Scale continuous pattern to range
+- [ ] **`rangex(min, max)`** - Exponential range scaling
+- [ ] **`range2(min, max)`** - Bipolar range scaling
+- [ ] **`ratio()`** - Get frequency ratio
 
 ---
 
@@ -152,24 +184,50 @@ and category.
 
 - [x] **`palindrome()`** - Alternates forward/backward playback
 - [ ] **`iter(subdivisions)`** - Plays pattern subdivisions in order
-- [ ] **`iterBack(subdivisions)`** - Plays subdivisions in reverse
-- [ ] **`zoom(start, end)`** - Plays portion of pattern
+- [ ] **`iterBack(subdivisions)`** - Plays subdivisions in reverse (alias: `iterback`)
 - [ ] **`linger(fraction)`** - Selects and repeats pattern fraction
-- [ ] **`segment(segments)`** - Samples pattern at rate
-- [ ] **`ribbon(offset, cycles)`** - Loops pattern section
+- [ ] **`ribbon(offset, cycles)`** - Loops pattern section (alias: `rib`)
 - [ ] **`inside(cycles, operation)`** - Applies operation within cycle
 - [ ] **`outside(cycles, operation)`** - Applies operation outside cycle
-- [ ] **`stepcat()`** - Concatenate patterns proportionally
-- [ ] **`layer(function)`** / **`apply(function)`** - Layers function result
-- [ ] **`echo(times, delay, decay)`** - Echo with velocity decay
-- [ ] **`echoWith(times, delay, function)`** / **`stutWith()`** - Echo with custom function
-- [ ] **`add(value)`** - Adds numbers or notes to pattern
+- [ ] **`stepcat(...timepats)`** - Concatenate patterns proportionally (aliases: `timecat`, `timeCat`, `s_cat`)
+- [ ] **`stepalt(...groups)`** - Alternate between pattern groups (alias: `s_alt`)
+- [ ] **`echo(times, delay, decay)`** - Echo with velocity decay (alias: `stut`)
+- [ ] **`echoWith(times, delay, function)`** - Echo with custom function (aliases: `echowith`, `stutWith`, `stutwith`)
+- [ ] **`press()`** - Press pattern (squash events)
+- [ ] **`pressBy(amount)`** - Press pattern by amount
+- [ ] **`chunk(n, func)`** - Apply function to chunks (aliases: `slowchunk`, `slowChunk`)
+- [ ] **`fastchunk(n, func)`** - Apply function to fast chunks (alias: `fastChunk`)
+- [ ] **`chunkinto(n, func)`** - Chunk into n sections (alias: `chunkInto`)
+- [ ] **`chunkbackinto(n, func)`** - Chunk backwards into n sections (alias: `chunkBackInto`)
+- [ ] **`chunkback(n, func)`** - Chunk backwards (alias: `chunkBack`)
 
 ### Conditional & Probabilistic
 
 - [ ] **`sometimes(function)`** - Randomly applies effects
 - [ ] **`rarely(function)`** - Infrequently applies variations
 - [x] **`degradeBy(amount)`** - Probabilistic event removal
+- [ ] **`firstOf(n, func)`** - Apply function on first of every n cycles (alias: `every`)
+- [ ] **`lastOf(n, func)`** - Apply function on last of every n cycles
+- [ ] **`filter(test)`** - Filter events by test function
+- [ ] **`filterWhen(test)`** - Filter events when test is true at start time
+- [ ] **`bypass()`** - Conditionally bypass pattern
+
+### Step-Based Pattern Operations ⭐⭐
+
+- [ ] **`pace(targetSteps)`** - Adjust pattern to target number of steps (alias: `steps`)
+- [ ] **`take(n)`** - Take first n steps (alias: `s_add`)
+- [ ] **`drop(n)`** - Drop first n steps (alias: `s_sub`)
+- [ ] **`extend(factor)`** - Extend pattern by factor (alias: `s_extend`)
+- [ ] **`replicate(factor)`** - Replicate pattern factor times
+- [ ] **`expand(factor)`** - Expand pattern by factor (alias: `s_expand`)
+- [ ] **`contract(factor)`** - Contract pattern by factor (alias: `s_contract`)
+- [ ] **`shrink(factor)`** - Shrink pattern by factor (alias: `s_taper`)
+- [ ] **`shrinklist(amounts)`** - Shrink with list of amounts (alias: `s_taperlist`)
+- [ ] **`grow(factor)`** - Grow pattern by factor
+- [ ] **`tour(...patterns)`** - Tour through patterns (alias: `s_tour`)
+- [ ] **`zip(...patterns)`** - Zip patterns together (alias: `s_zip`)
+- [ ] **`bite(n, index)`** - Extract nth slice from pattern
+- [ ] **`repeatCycles(n)`** - Repeat pattern for n cycles
 
 ### Sample Functions
 
@@ -178,18 +236,23 @@ and category.
 - [ ] **`splice(index)`** - Slice with speed adjustment
 - [ ] **`scrub()`** - Tape-like scrubbing
 - [ ] **`fit()`** - Match sample to event duration
+- [ ] **`chop(n)`** - Chop sample into n slices
+- [ ] **`slice(n, index)`** - Play slice index from n slices
 
 ### Synthesis Parameters
 
 - [ ] **`velocity()`** - MIDI velocity
 - [ ] **`postgain()`** - Post-processing gain
-- [ ] **Additive synthesis** - `partials`, `phases`
+- [ ] **`partials(list)`** - Additive synthesis partials
+- [ ] **`phases(list)`** - Additive synthesis phases
 - [ ] **FM synthesis parameters**:
     - `fmh()` - FM harmonicity ratio
     - `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`
 - [ ] **Pitch envelope** - `pattack`, `pdecay`, `prelease`, `penv`
 - [ ] **Wavetable synthesis** - `wt_` prefix support with loop points
 - [ ] **ZZFX synthesis** - Full parameter set (zrand, curve, slide, etc.)
+- [ ] **`arp()`** - Arpeggiator patterns
+- [ ] **`arpWith(func)`** - Arpeggiator with custom function
 
 ### Noise Generators
 
@@ -202,7 +265,13 @@ and category.
 
 - [ ] **`compressor()`** - Dynamic range compression
 - [ ] **`duck()`** - Ducking/sidechain effect
-- [ ] **`xfade()`** - Crossfade between patterns
+- [ ] **`xfade(pos, b)`** - Crossfade between patterns
+- [ ] **`morph(from, to, by)`** - Morph between patterns
+- [ ] **`hsla(h, s, l, a)`** - Create HSLA color pattern
+- [ ] **`hsl(h, s, l)`** - Create HSL color pattern
+- [ ] **`round()`** - Round values to integers
+- [ ] **`floor()`** - Floor values to integers
+- [ ] **`ceil()`** - Ceil values to integers
 
 ### Tempo Control
 
@@ -219,6 +288,28 @@ and category.
 - [ ] **`soundAlias()`** - Create custom sound aliases
 - [ ] **`initStrudel()`** - Initialize Strudel environment
 - [ ] **`hush()`** - Stop all playing patterns
+- [ ] **`isPattern(thing)`** - Check if value is a pattern
+- [ ] **`reify(thing)`** - Convert value to pattern
+- [ ] **`gap(steps)`** - Create gap with n steps
+- [ ] **`nothing`** - Empty pattern with 0 steps
+- [ ] **`pure(value)`** - Create atomic pattern with single value
+
+### Pattern Binding Functions
+
+- [ ] **`bind(func)`** - Bind function to pattern
+- [ ] **`innerBind(func)`** - Inner bind operation
+- [ ] **`outerBind(func)`** - Outer bind operation
+- [ ] **`squeezeBind(func)`** - Squeeze bind operation
+- [ ] **`stepBind(func)`** - Step-based bind operation
+- [ ] **`polyBind(func)`** - Poly bind operation
+- [ ] **`set(value)`** - Set value on pattern
+- [ ] **`keep(test)`** - Keep events matching test
+- [ ] **`keepif(test)`** - Keep if test passes
+- [ ] **`withValue(func)`** - Apply function to values
+- [ ] **`func(f)`** - Apply arbitrary function
+- [ ] **`collect()`** - Collect pattern events
+- [ ] **`tag(tag)`** - Tag pattern for identification
+- [ ] **`onTriggerTime(func)`** - Execute function on trigger time
 
 ### MIDI & OSC
 
@@ -300,20 +391,29 @@ and category.
 
 ### By Category:
 
-- **Mini-Notation**: 2 features missing (6 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`)
-- **Pattern Creation**: 6 functions
-- **Time Modification**: 10 functions
-- **Pattern Transformation**: 15 functions
+- **Mini-Notation**: 0 features missing ✅ (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, `(pulses,steps)`,
+  `(pulses,steps,rotation)`)
+- **Pattern Creation**: ~13 functions
+- **Time Modification**: ~23 functions
+- **Pattern Transformation**: ~15 functions
 - **Tonal Functions**: 5 functions
-- **Audio Effects**: 10+ parameters
-- **Sample Manipulation**: 12 functions
-- **Continuous Signals**: 11 signals/modifiers
-- **Synthesis**: 15+ parameters
+- **Arithmetic & Math**: 0 missing ✅ (7 completed)
+- **Bitwise Operators**: 0 missing ✅ (5 completed)
+- **Comparison & Logic**: 2 functions (`eqt`, `net`)
+- **Audio Effects**: 15+ parameters
+- **Sample Manipulation**: 14 functions
+- **Continuous Signals**: ~15 signals/modifiers
+- **Synthesis**: 17+ parameters
+- **Step-Based Operations**: ~14 functions
+- **Conditional & Probabilistic**: ~10 functions
+- **Pattern Binding**: ~15 functions
 - **MIDI/OSC**: 15+ functions
 - **Visualization**: 6 tools
-- **System Functions**: 4 functions
+- **System Functions**: ~13 functions
 
-### Total Missing: ~123 features (7 completed in Phase 1 & 2)
+### Total Estimated: ~180 features remaining
+
+### Completed So Far: ~30 features (Mini-notation, arithmetic, bitwise, comparison, basic patterns)
 
 ---
 
