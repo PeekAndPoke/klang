@@ -848,6 +848,44 @@ val String.bank by dslStringExtension { p, args ->
     applyBank(p, args)
 }
 
+// -- legato() / clip() ------------------------------------------------------------------------------------------------
+
+private val legatoMutation = voiceModifier {
+    copy(legato = it?.asDoubleOrNull())
+}
+
+private fun applyLegato(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, legatoMutation) { src, ctrl -> src.legatoMutation(ctrl.legato) }
+}
+
+/** Modifies the legatos of a pattern */
+@StrudelDsl
+val StrudelPattern.legato by dslPatternExtension { p, args ->
+    applyLegato(p, args)
+}
+
+/** Creates a pattern with legatos */
+@StrudelDsl
+val legato by dslFunction { args -> args.toPattern(legatoMutation) }
+
+/** Modifies the legatos of a pattern defined by a string */
+@StrudelDsl
+val String.legato by dslStringExtension { p, args ->
+    applyLegato(p, args)
+}
+
+/** Alias for [legato] */
+@StrudelDsl
+val StrudelPattern.clip by dslPatternExtension { p, args -> applyLegato(p, args) }
+
+/** Alias for [legato] */
+@StrudelDsl
+val clip by dslFunction { args -> args.toPattern(legatoMutation) }
+
+/** Alias for [legato] on a string */
+@StrudelDsl
+val String.clip by dslStringExtension { p, args -> applyLegato(p, args) }
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Dynamics, Gain, Pan, Envelope ...
 // ///
@@ -904,177 +942,241 @@ val String.pan by dslStringExtension { p, args ->
     applyPan(p, args)
 }
 
-// legato() //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-private val legatoMutation = voiceModifier {
-    copy(legato = it?.asDoubleOrNull())
-}
-
-/** Modifies the legatos of a pattern */
-@StrudelDsl
-val StrudelPattern.legato by dslPatternExtension { p, args ->
-    p.applyParam(args, legatoMutation) { source, control -> source.legatoMutation(control.legato) }
-}
-
-/** Creates a pattern with legatos */
-@StrudelDsl
-val legato by dslFunction { args -> args.toPattern(legatoMutation) }
-
-/** Alias for [legato] */
-@StrudelDsl
-val StrudelPattern.clip by dslPatternExtension { p, args -> p.legato(args) }
-
-/** Alias for [legato] */
-@StrudelDsl
-val clip by dslFunction { args -> args.toPattern(legatoMutation) }
-
-// unison //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// -- unison() ---------------------------------------------------------------------------------------------------------
 
 private val unisonMutation = voiceModifier {
     copy(voices = it?.asDoubleOrNull())
 }
 
+private fun applyUnison(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, unisonMutation) { src, ctrl -> src.unisonMutation(ctrl.voices) }
+}
+
 /** Modifies the voices of a pattern */
 @StrudelDsl
 val StrudelPattern.unison by dslPatternExtension { p, args ->
-    p.applyParam(args, unisonMutation) { source, control -> source.unisonMutation(control.voices) }
+    applyUnison(p, args)
 }
 
 /** Creates a pattern with unison */
 @StrudelDsl
 val unison by dslFunction { args -> args.toPattern(unisonMutation) }
 
+/** Modifies the voices of a pattern defined by a string */
+@StrudelDsl
+val String.unison by dslStringExtension { p, args ->
+    applyUnison(p, args)
+}
+
 /** Alias for [unison] */
 @StrudelDsl
-val StrudelPattern.uni by dslPatternExtension { p, args -> p.unison(args) }
+val StrudelPattern.uni by dslPatternExtension { p, args -> applyUnison(p, args) }
 
 /** Alias for [unison] */
 @StrudelDsl
 val uni by dslFunction { args -> args.toPattern(unisonMutation) }
 
-// detune //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Alias for [unison] on a string */
+@StrudelDsl
+val String.uni by dslStringExtension { p, args -> applyUnison(p, args) }
+
+// -- detune() ---------------------------------------------------------------------------------------------------------
 
 private val detuneMutation = voiceModifier {
     copy(freqSpread = it?.asDoubleOrNull())
 }
 
+private fun applyDetune(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, detuneMutation) { src, ctrl -> src.detuneMutation(ctrl.freqSpread) }
+}
+
 /** Sets the oscillator frequency spread (for supersaw) */
 @StrudelDsl
 val StrudelPattern.detune by dslPatternExtension { p, args ->
-    p.applyParam(args, detuneMutation) { source, control -> source.detuneMutation(control.freqSpread) }
+    applyDetune(p, args)
 }
 
 /** Sets the oscillator frequency spread (for supersaw) */
 @StrudelDsl
 val detune by dslFunction { args -> args.toPattern(detuneMutation) }
 
-// spread //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the oscillator frequency spread (for supersaw) on a string */
+@StrudelDsl
+val String.detune by dslStringExtension { p, args ->
+    applyDetune(p, args)
+}
+
+// -- spread() ---------------------------------------------------------------------------------------------------------
 
 private val spreadMutation = voiceModifier {
     copy(panSpread = it?.asDoubleOrNull())
 }
 
+private fun applySpread(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, spreadMutation) { src, ctrl -> src.spreadMutation(ctrl.panSpread) }
+}
+
 /** Sets the oscillator pan spread (for supersaw) */
 @StrudelDsl
 val StrudelPattern.spread by dslPatternExtension { p, args ->
-    p.applyParam(args, spreadMutation) { source, control -> source.spreadMutation(control.panSpread) }
+    applySpread(p, args)
 }
 
 /** Sets the oscillator pan spread (for supersaw) */
 @StrudelDsl
 val spread by dslFunction { args -> args.toPattern(spreadMutation) }
 
-// density /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the oscillator pan spread (for supersaw) on a string */
+@StrudelDsl
+val String.spread by dslStringExtension { p, args ->
+    applySpread(p, args)
+}
+
+// -- density() --------------------------------------------------------------------------------------------------------
 
 private val densityMutation = voiceModifier {
     copy(density = it?.asDoubleOrNull())
 }
 
+private fun applyDensity(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, densityMutation) { src, ctrl -> src.densityMutation(ctrl.density) }
+}
+
 /** Sets the oscillator density (for supersaw) */
 @StrudelDsl
 val StrudelPattern.density by dslPatternExtension { p, args ->
-    p.applyParam(args, densityMutation) { source, control -> source.densityMutation(control.density) }
+    applyDensity(p, args)
 }
 
 /** Sets the oscillator density (for supersaw) */
 @StrudelDsl
 val density by dslFunction { args -> args.toPattern(densityMutation) }
 
+/** Sets the oscillator density (for supersaw) on a string */
+@StrudelDsl
+val String.density by dslStringExtension { p, args ->
+    applyDensity(p, args)
+}
+
 /** Alias for [density] */
 @StrudelDsl
-val StrudelPattern.d by dslPatternExtension { p, args -> p.density(args) }
+val StrudelPattern.d by dslPatternExtension { p, args -> applyDensity(p, args) }
 
 /** Alias for [density] */
 @StrudelDsl
 val d by dslFunction { args -> args.toPattern(densityMutation) }
 
-// ADSR Attack /////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Alias for [density] on a string */
+@StrudelDsl
+val String.d by dslStringExtension { p, args -> applyDensity(p, args) }
+
+// -- ADSR attack() ----------------------------------------------------------------------------------------------------
 
 private val attackMutation = voiceModifier {
     copy(adsr = adsr.copy(attack = it?.asDoubleOrNull()))
 }
 
+private fun applyAttack(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, attackMutation) { src, ctrl -> src.attackMutation(ctrl.adsr.attack) }
+}
+
 /** Sets the note envelope attack */
 @StrudelDsl
 val StrudelPattern.attack by dslPatternExtension { p, args ->
-    p.applyParam(args, attackMutation) { source, control -> source.attackMutation(control.adsr.attack) }
+    applyAttack(p, args)
 }
 
 /** Sets the note envelope attack */
 @StrudelDsl
 val attack by dslFunction { args -> args.toPattern(attackMutation) }
 
-// ADSR Decay //////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope attack on a string */
+@StrudelDsl
+val String.attack by dslStringExtension { p, args ->
+    applyAttack(p, args)
+}
+
+// -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
 private val decayMutation = voiceModifier {
     copy(adsr = adsr.copy(decay = it?.asDoubleOrNull()))
 }
 
+private fun applyDecay(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, decayMutation) { src, ctrl -> src.decayMutation(ctrl.adsr.decay) }
+}
+
 /** Sets the note envelope decay */
 @StrudelDsl
 val StrudelPattern.decay by dslPatternExtension { p, args ->
-    p.applyParam(args, decayMutation) { source, control -> source.decayMutation(control.adsr.decay) }
+    applyDecay(p, args)
 }
 
 /** Sets the note envelope decay */
 @StrudelDsl
 val decay by dslFunction { args -> args.toPattern(decayMutation) }
 
-// ADSR Sustain ////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope decay on a string */
+@StrudelDsl
+val String.decay by dslStringExtension { p, args ->
+    applyDecay(p, args)
+}
+
+// -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
 private val sustainMutation = voiceModifier {
     copy(adsr = adsr.copy(sustain = it?.asDoubleOrNull()))
 }
 
+private fun applySustain(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, sustainMutation) { src, ctrl -> src.sustainMutation(ctrl.adsr.sustain) }
+}
+
 /** Sets the note envelope sustain */
 @StrudelDsl
 val StrudelPattern.sustain by dslPatternExtension { p, args ->
-    p.applyParam(args, sustainMutation) { source, control -> source.sustainMutation(control.adsr.sustain) }
+    applySustain(p, args)
 }
 
 /** Sets the note envelope sustain */
 @StrudelDsl
 val sustain by dslFunction { args -> args.toPattern(sustainMutation) }
 
-// ADSR Release ////////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope sustain on a string */
+@StrudelDsl
+val String.sustain by dslStringExtension { p, args ->
+    applySustain(p, args)
+}
+
+// -- ADSR release() ---------------------------------------------------------------------------------------------------
 
 private val releaseMutation = voiceModifier {
     copy(adsr = adsr.copy(release = it?.asDoubleOrNull()))
 }
 
+private fun applyRelease(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, releaseMutation) { src, ctrl -> src.releaseMutation(ctrl.adsr.release) }
+}
+
 /** Sets the note envelope release */
 @StrudelDsl
 val StrudelPattern.release by dslPatternExtension { p, args ->
-    p.applyParam(args, releaseMutation) { source, control -> source.releaseMutation(control.adsr.release) }
+    applyRelease(p, args)
 }
 
 /** Sets the note envelope release */
 @StrudelDsl
 val release by dslFunction { args -> args.toPattern(releaseMutation) }
 
-// ADSR Combined ///////////////////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope release on a string */
+@StrudelDsl
+val String.release by dslStringExtension { p, args ->
+    applyRelease(p, args)
+}
 
-val adsrMutation = voiceModifier {
+// -- ADSR adsr() ------------------------------------------------------------------------------------------------------
+
+private val adsrMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.mapNotNull { d -> d.toDoubleOrNull() } ?: emptyList()
 
@@ -1088,17 +1190,31 @@ val adsrMutation = voiceModifier {
     copy(adsr = newAdsr.mergeWith(adsr))
 }
 
-/** Sets the note envelope release */
-@StrudelDsl
-val StrudelPattern.adsr by dslPatternExtension { p, args ->
-    p.applyParam(args, adsrMutation) { source, control -> source.copy(adsr = control.adsr.mergeWith(source.adsr)) }
+private fun applyAdsr(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return source.applyParam(args, adsrMutation) { src, ctrl ->
+        src.copy(adsr = ctrl.adsr.mergeWith(src.adsr))
+    }
 }
 
-/** Sets the note envelope release */
+/** Sets the note envelope via string or pattern */
+@StrudelDsl
+val StrudelPattern.adsr by dslPatternExtension { p, args ->
+    applyAdsr(p, args)
+}
+
+/** Sets the note envelope via string or pattern */
 @StrudelDsl
 val adsr by dslFunction { args -> args.toPattern(adsrMutation) }
 
-// Filters - LowPass - lpf() ///////////////////////////////////////////////////////////////////////////////////////////
+/** Sets the note envelope via string or pattern on a string */
+@StrudelDsl
+val String.adsr by dslStringExtension { p, args ->
+    applyAdsr(p, args)
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Filters
+// ///
 
 private val lpfMutation = voiceModifier {
     val cutoff = it?.asDoubleOrNull()

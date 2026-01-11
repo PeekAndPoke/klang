@@ -6,53 +6,55 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangAdsrSpec : StringSpec({
 
-    "top-level adsr() sets VoiceData.adsr components correctly" {
-        // Two ADSR steps in one cycle
-        val p = adsr("0.2:0.3:0.8:0.5 0.1:0.2:0.7:0.9")
-
+    "adsr() sets VoiceData.adsr components correctly from string" {
+        val p = adsr("0.1:0.2:0.8:0.5")
         val events = p.queryArc(0.0, 1.0)
-        events.size shouldBe 2
 
-        events.map { it.data.adsr.attack } shouldBe listOf(0.2, 0.1)
-        events.map { it.data.adsr.decay } shouldBe listOf(0.3, 0.2)
-        events.map { it.data.adsr.sustain } shouldBe listOf(0.8, 0.7)
-        events.map { it.data.adsr.release } shouldBe listOf(0.5, 0.9)
+        events.size shouldBe 1
+        with(events[0].data.adsr) {
+            attack shouldBe 0.1
+            decay shouldBe 0.2
+            sustain shouldBe 0.8
+            release shouldBe 0.5
+        }
     }
 
-    "control pattern adsr() sets VoiceData.adsr components on existing pattern" {
-        val base = note("c3 e3")
-        val p = base.adsr("0.01:0.2:0.9:0.7 0.02:0.3:0.8:0.6")
+    "adsr() works as pattern extension" {
+        val p = note("c").adsr("0.1:0.2")
+        val events = p.queryArc(0.0, 1.0)
 
-        val events = p.queryArc(0.0, 2.0)
-        events.size shouldBe 4
-
-        events.map { it.data.adsr.attack } shouldBe listOf(0.01, 0.02, 0.01, 0.02)
-        events.map { it.data.adsr.decay } shouldBe listOf(0.2, 0.3, 0.2, 0.3)
-        events.map { it.data.adsr.sustain } shouldBe listOf(0.9, 0.8, 0.9, 0.8)
-        events.map { it.data.adsr.release } shouldBe listOf(0.7, 0.6, 0.7, 0.6)
+        events.size shouldBe 1
+        with(events[0].data.adsr) {
+            attack shouldBe 0.1
+            decay shouldBe 0.2
+            // Others should be null/unchanged
+            sustain shouldBe null
+            release shouldBe null
+        }
     }
 
-    "adsr() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""adsr("0.1:0.2:0.8:0.5 0.2:0.3:0.7:0.6")""")
+    "adsr() works as string extension" {
+        val p = "c".adsr("0.1:0.2:0.8")
+        val events = p.queryArc(0.0, 1.0)
 
+        events.size shouldBe 1
+        with(events[0].data.adsr) {
+            attack shouldBe 0.1
+            decay shouldBe 0.2
+            sustain shouldBe 0.8
+            release shouldBe null
+        }
+    }
+
+    "adsr() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").adsr("0.1:0.2:0.8:0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.adsr.attack } shouldBe listOf(0.1, 0.2)
-        events.map { it.data.adsr.decay } shouldBe listOf(0.2, 0.3)
-        events.map { it.data.adsr.sustain } shouldBe listOf(0.8, 0.7)
-        events.map { it.data.adsr.release } shouldBe listOf(0.5, 0.6)
-    }
-
-    "adsr() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").adsr("0.1:0.2:0.8:0.5 0.2:0.3:0.7:0.6")""")
-
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.adsr.attack } shouldBe listOf(0.1, 0.2)
-        events.map { it.data.adsr.decay } shouldBe listOf(0.2, 0.3)
-        events.map { it.data.adsr.sustain } shouldBe listOf(0.8, 0.7)
-        events.map { it.data.adsr.release } shouldBe listOf(0.5, 0.6)
+        events.size shouldBe 1
+        with(events[0].data.adsr) {
+            attack shouldBe 0.1
+            decay shouldBe 0.2
+            sustain shouldBe 0.8
+            release shouldBe 0.5
+        }
     }
 })

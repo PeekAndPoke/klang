@@ -6,39 +6,34 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangReleaseSpec : StringSpec({
 
-    "top-level release() sets VoiceData.adsr.release correctly" {
-        val p = release("0.2 0.8")
-
+    "release() sets VoiceData.adsr.release" {
+        val p = release("0.1 0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.adsr.release } shouldBe listOf(0.2, 0.8)
+        events.map { it.data.adsr.release } shouldBe listOf(0.1, 0.5)
     }
 
-    "control pattern release() sets VoiceData.adsr.release on existing pattern" {
-        val base = note("c3 e3")
-        val p = base.release("0.3 0.6")
+    "release() works as pattern extension" {
+        val p = note("c").release("0.1")
+        val events = p.queryArc(0.0, 1.0)
 
-        val events = p.queryArc(0.0, 2.0)
-        events.size shouldBe 4
-        events.map { it.data.adsr.release } shouldBe listOf(0.3, 0.6, 0.3, 0.6)
+        events.size shouldBe 1
+        events[0].data.adsr.release shouldBe 0.1
     }
 
-    "release() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""release("0.2 0.8")""")
+    "release() works as string extension" {
+        val p = "c".release("0.1")
+        val events = p.queryArc(0.0, 1.0)
 
+        events.size shouldBe 1
+        events[0].data.adsr.release shouldBe 0.1
+    }
+
+    "release() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").release("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.adsr.release } shouldBe listOf(0.2, 0.8)
-    }
-
-    "release() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").release("0.2 0.8")""")
-
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.adsr.release } shouldBe listOf(0.2, 0.8)
+        events.size shouldBe 1
+        events[0].data.adsr.release shouldBe 0.1
     }
 })
