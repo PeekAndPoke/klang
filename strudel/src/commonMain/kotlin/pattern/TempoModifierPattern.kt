@@ -14,7 +14,7 @@ internal class TempoModifierPattern(
     override val weight: Double get() = source.weight
 
     // 1/32 cycle grain for checking factor min/max
-    private val coarseGrain = Rational(1 / 4.0)
+    private val coarseGrain = Rational(1 / 8.0)
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         // 1. Analyze the factor pattern to find min and max speed in this window

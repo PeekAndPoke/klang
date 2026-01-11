@@ -53,7 +53,7 @@ suspend fun runStrudelDemo() {
     val playerOptions = KlangPlayer.Options(
         samples = samples,
         sampleRate = 48000,
-        cyclesPerSecond = 0.5,
+        cyclesPerSecond = 0.7,
     )
 
 //    val pattern = StrudelPattern.Static.fromJson(strangerThingsJson)

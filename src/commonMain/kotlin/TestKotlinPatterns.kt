@@ -100,7 +100,7 @@ object TestKotlinPatterns {
             .fast(2)
 //            .rev(4).rev(3),
     )
-    //.fast(sine.range(1.0, 10.0).slow(8))
+        .fast(sine.range(1.0, 10.0).slow(8))
 
     val smallTownBoy = stack(
         // melody

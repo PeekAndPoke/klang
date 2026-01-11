@@ -15,7 +15,7 @@ class TempoModifierPatternSpec : StringSpec({
 
     "TempoModifierPattern: Direct Instantiation (slow 2)" {
         val inner = AtomicPattern(VoiceData.empty.copy(note = "a"))
-        val pattern = TempoModifierPattern(inner, 2.0)
+        val pattern = TempoModifierPattern(inner, ContinuousPattern { 2.0 })
 
         // a normally is 0..1. slow(2) makes it 0..2.
         val events = pattern.queryArc(0.0, 2.0).sortedBy { it.begin }

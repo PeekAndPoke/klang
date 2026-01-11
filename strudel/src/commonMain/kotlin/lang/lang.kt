@@ -403,29 +403,84 @@ val StrudelPattern.structAll by dslPatternExtension { source, args ->
 val String.structAll by dslStringExtension { source, args ->
     applyStructAll(source, args.firstOrNull())
 }
-/**
- * Filters the pattern using a boolean mask.
- */
-@StrudelDsl
-val StrudelPattern.mask by dslPatternExtension { source, args ->
-    val maskPattern = when (val maskArg = args.firstOrNull()) {
+
+private fun applyMask(source: StrudelPattern, maskArg: Any?): StrudelPattern {
+    val maskPattern = when (maskArg) {
         is StrudelPattern -> maskArg
         is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
         else -> silence
     }
-    // Mode.In + filterByTruthiness = true corresponds to mask()
-    StructurePattern(source, maskPattern, StructurePattern.Mode.In, filterByTruthiness = true)
+
+    return StructurePattern(
+        source = source,
+        other = maskPattern,
+        mode = StructurePattern.Mode.In,
+        filterByTruthiness = true
+    )
 }
 
-// Alias for keep.in behavior (maskAll)
+/**
+ * Filters the pattern using a boolean mask.
+ * Only events from the source that overlap with "truthy" events in the mask are kept.
+ */
 @StrudelDsl
-val StrudelPattern.maskAll by dslPatternExtension { source, args ->
-    val maskPattern = when (val maskArg = args.firstOrNull()) {
+val mask by dslFunction { args ->
+    val maskArg = args.getOrNull(0)
+    val source = args.filterIsInstance<StrudelPattern>().let {
+        if (it.size >= 2 && maskArg is StrudelPattern) it[1] else it.firstOrNull()
+    } ?: return@dslFunction silence
+
+    applyMask(source, maskArg)
+}
+
+@StrudelDsl
+val StrudelPattern.mask by dslPatternExtension { source, args ->
+    applyMask(source, args.firstOrNull())
+}
+
+@StrudelDsl
+val String.mask by dslStringExtension { source, args ->
+    applyMask(source, args.firstOrNull())
+}
+
+// -- maskAll() --------------------------------------------------------------------------------------------------------
+
+private fun applyMaskAll(source: StrudelPattern, maskArg: Any?): StrudelPattern {
+    val maskPattern = when (maskArg) {
         is StrudelPattern -> maskArg
         is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
         else -> silence
     }
-    StructurePattern(source, maskPattern, StructurePattern.Mode.In, filterByTruthiness = false)
+
+    return StructurePattern(
+        source = source,
+        other = maskPattern,
+        mode = StructurePattern.Mode.In,
+        filterByTruthiness = false
+    )
+}
+
+/**
+ * Filters the pattern using a mask, keeping all source events that overlap with the mask's structure.
+ */
+@StrudelDsl
+val maskAll by dslFunction { args ->
+    val maskArg = args.getOrNull(0)
+    val source = args.filterIsInstance<StrudelPattern>().let {
+        if (it.size >= 2 && maskArg is StrudelPattern) it[1] else it.firstOrNull()
+    } ?: return@dslFunction silence
+
+    applyMaskAll(source, maskArg)
+}
+
+@StrudelDsl
+val StrudelPattern.maskAll by dslPatternExtension { source, args ->
+    applyMaskAll(source, args.firstOrNull())
+}
+
+@StrudelDsl
+val String.maskAll by dslStringExtension { source, args ->
+    applyMaskAll(source, args.firstOrNull())
 }
 
 /**
