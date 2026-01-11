@@ -2187,6 +2187,31 @@ val eq by dslFunction { args ->
     }
 }
 
+// -- eqt() (Truthiness Equal) -----------------------------------------------------------------------------------------
+
+/** Truthiness equality comparison */
+@StrudelDsl
+val StrudelPattern.eqt by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a eqt b }
+}
+
+/** Truthiness equality comparison on a string */
+@StrudelDsl
+val String.eqt by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a eqt b }
+}
+
+/** Truthiness equality comparison function */
+@StrudelDsl
+val eqt by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a eqt b }
+    } else {
+        silence
+    }
+}
+
 // -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
 
 @StrudelDsl
@@ -2204,6 +2229,31 @@ val ne by dslFunction { args ->
     val source = args.lastOrNull() as? StrudelPattern
     if (args.size >= 2 && source != null) {
         applyBinaryOp(source, args.dropLast(1)) { a, b -> a ne b }
+    } else {
+        silence
+    }
+}
+
+// -- net() (Truthiness Not Equal) -------------------------------------------------------------------------------------
+
+/** Truthiness inequality comparison */
+@StrudelDsl
+val StrudelPattern.net by dslPatternExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a net b }
+}
+
+/** Truthiness inequality comparison on a string */
+@StrudelDsl
+val String.net by dslStringExtension { source, args ->
+    applyBinaryOp(source, args) { a, b -> a net b }
+}
+
+/** Truthiness inequality comparison function */
+@StrudelDsl
+val net by dslFunction { args ->
+    val source = args.lastOrNull() as? StrudelPattern
+    if (args.size >= 2 && source != null) {
+        applyBinaryOp(source, args.dropLast(1)) { a, b -> a net b }
     } else {
         silence
     }

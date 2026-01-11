@@ -149,6 +149,18 @@ sealed interface VoiceValue {
         return Num(if (asString == other?.asString) 1.0 else 0.0)
     }
 
+    infix fun eqt(other: VoiceValue?): VoiceValue? {
+        val t1 = isTruthy()
+        val t2 = other?.isTruthy() ?: false
+        return Num(if (t1 == t2) 1.0 else 0.0)
+    }
+
+    infix fun net(other: VoiceValue?): VoiceValue? {
+        val t1 = isTruthy()
+        val t2 = other?.isTruthy() ?: false
+        return Num(if (t1 != t2) 1.0 else 0.0)
+    }
+
     infix fun ne(other: VoiceValue?): VoiceValue? {
         // reuse eq logic
         val isEqual = eq(other)?.asDouble == 1.0

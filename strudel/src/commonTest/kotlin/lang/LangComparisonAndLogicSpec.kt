@@ -5,7 +5,8 @@ import io.kotest.matchers.shouldBe
 
 class LangComparisonAndLogicSpec : StringSpec({
 
-    // -- Comparison --
+    // -- Comparison Operators --
+
     "lt() checks less than" {
         // 1 < 2 -> 1, 2 < 2 -> 0, 3 < 2 -> 0
         val p = n("1 2 3").lt("2")
@@ -52,6 +53,16 @@ class LangComparisonAndLogicSpec : StringSpec({
         events[2].data.value?.asInt shouldBe 0
     }
 
+    "eqt() checks truthiness equality" {
+        // 0 (falsy), 1 (truthy), 2 (truthy) vs 1 (truthy)
+        val p = n("0 1 2").eqt("1")
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 3
+        events[0].data.value?.asInt shouldBe 0 // falsy vs truthy -> 0
+        events[1].data.value?.asInt shouldBe 1 // truthy vs truthy -> 1
+        events[2].data.value?.asInt shouldBe 1 // truthy vs truthy -> 1
+    }
+
     "ne() checks inequality" {
         val p = n("1 2 3").ne("2")
         val events = p.queryArc(0.0, 1.0)
@@ -61,10 +72,21 @@ class LangComparisonAndLogicSpec : StringSpec({
         events[2].data.value?.asInt shouldBe 1
     }
 
-    // -- Logical --
+    "net() checks truthiness inequality" {
+        // 0 (falsy), 1 (truthy), 2 (truthy) vs 0 (falsy)
+        val p = n("0 1 2").net("0")
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 3
+        events[0].data.value?.asInt shouldBe 0 // falsy vs falsy -> 0
+        events[1].data.value?.asInt shouldBe 1 // truthy vs falsy -> 1
+        events[2].data.value?.asInt shouldBe 1 // truthy vs falsy -> 1
+    }
+
+    // -- Logical Operators --
+
     "and() performs logical AND" {
         // 0 and 5 -> 0 (falsy)
-        // 1 and 5 -> 5 (truthy -> other)
+        // 1 and 5 -> 5 (truthy -> returns other)
         val p = n("0 1").and("5")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -73,12 +95,26 @@ class LangComparisonAndLogicSpec : StringSpec({
     }
 
     "or() performs logical OR" {
-        // 0 or 5 -> 5 (falsy -> other)
-        // 1 or 5 -> 1 (truthy -> self)
+        // 0 or 5 -> 5 (falsy -> returns other)
+        // 1 or 5 -> 1 (truthy -> returns self)
         val p = n("0 1").or("5")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 5
         events[1].data.value?.asInt shouldBe 1
+    }
+
+    // -- Top Level Function Verification --
+
+    "top-level comparison functions work" {
+        val p = eq("2", n("1 2 3"))
+        val events = p.queryArc(0.0, 1.0)
+        events[1].data.value?.asInt shouldBe 1
+    }
+
+    "top-level logical functions work" {
+        val p = and("5", n("0 1"))
+        val events = p.queryArc(0.0, 1.0)
+        events[1].data.value?.asInt shouldBe 5
     }
 })

@@ -144,9 +144,9 @@ and category.
 - [x] **`lte()`** - Less than or equal comparison
 - [x] **`gte()`** - Greater than or equal comparison
 - [x] **`eq()`** - Equality comparison
-- [ ] **`eqt()`** - Truthiness equality comparison
+- [x] **`eqt()`** - Truthiness equality comparison
 - [x] **`ne()`** - Not equal comparison
-- [ ] **`net()`** - Truthiness not equal comparison
+- [x] **`net()`** - Truthiness not equal comparison
 - [x] **`and()`** - Logical AND
 - [x] **`or()`** - Logical OR
 
