@@ -57,8 +57,8 @@ private suspend fun helloStrudel() {
 //        val code = TestTextPatterns.smallTownBoy
 //        val pattern = strudel.compile(code).await()
 
-        val pattern = TestKotlinPatterns.strangerThings
-//        val pattern = TestKotlinPatterns.tetris
+//        val pattern = TestKotlinPatterns.strangerThings
+        val pattern = TestKotlinPatterns.tetris
 
 //        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
 

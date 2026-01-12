@@ -17,6 +17,24 @@ var strudelLangStructuralInit = false
 // Structural patterns
 // ///
 
+// -- hush() -----------------------------------------------------------------------------------------------------------
+
+/** Stops all playing patterns by returning silence, ignoring all arguments. */
+@StrudelDsl
+val hush by dslFunction { _ ->
+    silence
+}
+
+@StrudelDsl
+val StrudelPattern.hush by dslPatternExtension { _, _ ->
+    silence
+}
+
+@StrudelDsl
+val String.hush by dslStringExtension { _, _ ->
+    silence
+}
+
 // -- seq() ------------------------------------------------------------------------------------------------------------
 
 /** Creates a sequence pattern. */

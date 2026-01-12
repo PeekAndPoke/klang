@@ -106,6 +106,22 @@ and category.
 - [ ] **`brak()`** - Make every other cycle syncopated
 - [ ] **`inv()` / `invert()`** - Invert pattern structure
 
+### Pattern Picking & Selection ⭐⭐⭐
+
+- [ ] **`pick(lookup, pat)`** - Picks patterns/values from list (by index) or lookup table (by name)
+- [ ] **`pickmod(lookup, pat)`** - Like pick but wraps around when index exceeds list size
+- [ ] **`pickF(lookup, funcs, pat)`** - Use pattern of numbers to pick which function to apply
+- [ ] **`pickmodF(lookup, funcs, pat)`** - Like pickF but wraps around
+- [ ] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin
+- [ ] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around
+- [ ] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered
+- [ ] **`pickmodRestart(lookup, pat)`** - Like pickRestart but wraps around
+- [ ] **`pickReset(lookup, pat)`** - Like pick but resets chosen pattern when triggered
+- [ ] **`pickmodReset(lookup, pat)`** - Like pickReset but wraps around
+- [ ] **`inhabit(lookup, pat)`** / **`pickSqueeze(lookup, pat)`** - Picks and squeezes cycles into target pattern
+- [ ] **`inhabitmod(lookup, pat)`** / **`pickmodSqueeze(lookup, pat)`** - Like inhabit but wraps around
+- [ ] **`squeeze(pat, xs)`** - Pick from list via index, compress selected to fit event duration
+
 ### Tonal Functions ⭐⭐⭐
 
 - [x] **`note()`** - Set note values
@@ -329,10 +345,10 @@ and category.
 
 - [ ] **`samples()`** - Load custom sample maps (URLs, GitHub, local)
 - [ ] **`soundAlias()`** - Create custom sound aliases
-- [ ] **`initStrudel()`** - Initialize Strudel environment
-- [ ] **`hush()`** - Stop all playing patterns
-- [ ] **`isPattern(thing)`** - Check if value is a pattern
-- [ ] **`reify(thing)`** - Convert value to pattern
+- [/] **`initStrudel()`** - Initialize Strudel environment
+- [X] **`hush()`** - Stop all playing patterns
+- [/] **`isPattern(thing)`** - Check if value is a pattern
+- [/] **`reify(thing)`** - Convert value to pattern
 - [ ] **`gap(steps)`** - Create gap with n steps
 - [ ] **`nothing`** - Empty pattern with 0 steps
 - [ ] **`pure(value)`** - Create atomic pattern with single value

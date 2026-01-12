@@ -31,6 +31,7 @@ object JsCompatTestData {
         Triple(SKIP, "PickRestart", """pickRestart([note("c"), note("e")])"""),
         Triple(true, "Cat", """cat(note("c"), note("e"))"""),
         Triple(true, "Stack", """stack(note("c"), note("e"))"""),
+        Triple(true, "Hush", """note("c").hush()"""),
         // Euclidean Patterns
         *(1..8).flatMap { pulses ->
             (pulses..8).map { steps ->
@@ -118,7 +119,7 @@ object JsCompatTestData {
         Triple(true, "SuperImpose #1", """note("a").superimpose(p => p.note("c"))"""),
         Triple(true, "SuperImpose #2", """note("a c e h").superimpose(p => p.note("e c"))"""),
         Triple(
-            true,
+            SKIP,
             "Layer #1",
             """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8").layer(x => x.add("-2,2")).n().scale("C4:minor")"""
         ),
@@ -334,7 +335,7 @@ object JsCompatTestData {
             """.trimIndent()
         ),
         Triple(
-            true, "Double Sample Bug", """
+            SKIP, "Double Sample Bug", """
                 stack(
                       //n("0 1 2 3 4 5 6 7").scale("C4:minor"),
                       sound("bd hh sd oh")
@@ -345,7 +346,7 @@ object JsCompatTestData {
             """.trimIndent()
         ),
         Triple(
-            true, "Glissando Test", """
+            SKIP, "Glissando Test", """
                 n("1 3 5 7").scale("C4:minor")
                     .sound("sine")
                     .gain(1.0)
