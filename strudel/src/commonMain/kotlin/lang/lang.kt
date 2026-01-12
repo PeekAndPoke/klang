@@ -1147,7 +1147,7 @@ val String.gain by dslStringExtension { p, args ->
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
 private val panMutation = voiceModifier {
-    copy(pan = it?.toString()?.toDoubleOrNull())
+    copy(pan = it?.asDoubleOrNull())
 }
 
 private fun applyPan(source: StrudelPattern, args: List<Any?>): StrudelPattern {

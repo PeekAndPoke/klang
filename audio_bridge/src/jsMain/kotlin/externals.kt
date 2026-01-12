@@ -20,6 +20,7 @@ external class AudioContext(options: AudioContextOptions = definedExternally) {
 external interface AudioContextOptions {
     var sampleRate: Int?
 }
+
 external class AudioBuffer {
     val duration: Double
     val length: Int
@@ -37,8 +38,12 @@ open external class AudioNode {
     fun disconnect()
 }
 
-external class AudioWorkletNode(context: AudioContext, name: String) : AudioNode {
+external class AudioWorkletNode(context: AudioContext, name: String, options: dynamic = definedExternally) : AudioNode {
     val port: MessagePort
+}
+
+external interface AudioWorkletNodeOptions {
+    var outputChannelCount: Array<Int>?
 }
 
 /**

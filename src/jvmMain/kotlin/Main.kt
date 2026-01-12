@@ -5,8 +5,6 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.transpose
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -60,7 +58,7 @@ private suspend fun helloStrudel() {
 //        val pattern = strudel.compile(code).await()
 
 //        val pattern = TestKotlinPatterns.strangerThings
-//        val pattern = TestKotlinPatterns.tetris
+        val pattern = TestKotlinPatterns.tetris
 //        val pattern = "c e".struct("x").note()
 //        val pattern = note("c,e,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)
 //        val pattern = note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x ~ x")
@@ -71,7 +69,7 @@ private suspend fun helloStrudel() {
 //            """.trimIndent()
 //        ).await()!!
 
-        val pattern = "[c2 c3]*4".transpose("<1P -2M 4P 3m>").note()
+//        val pattern = "[c2 c3]*4".transpose("<1P -2M 4P 3m>").note()
 
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {

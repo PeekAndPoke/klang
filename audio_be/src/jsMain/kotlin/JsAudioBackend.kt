@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendCmd
 import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.AudioContextOptions
 import io.peekandpoke.klang.audio_bridge.AudioWorkletNode
+import io.peekandpoke.klang.audio_bridge.AudioWorkletNodeOptions
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangRingBuffer
 import kotlinx.browser.window
@@ -13,7 +14,6 @@ import kotlinx.coroutines.await
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.w3c.dom.MessageEvent
-import kotlin.js.json
 
 class JsAudioBackend(
     private val config: AudioBackend.Config,
@@ -24,8 +24,10 @@ class JsAudioBackend(
 
     override suspend fun run(scope: CoroutineScope) {
         // Init the audio context with the given sample rate
-        val options = json("sampleRate" to config.sampleRate).unsafeCast<AudioContextOptions>()
-        val ctx = AudioContext(options)
+        val contextOpts = jsObject<AudioContextOptions> {
+            sampleRate = config.sampleRate
+        }
+        val ctx = AudioContext(contextOpts)
 
         // 1. Resume Audio Context (Browser policy usually requires this on interaction)
         if (ctx.state == "suspended") {
@@ -40,7 +42,12 @@ class JsAudioBackend(
             ctx.audioWorklet.addModule("klang-worklet.js").await()
 
             // 2. Create the Node (this instantiates the Processor in the Audio Thread)
-            node = AudioWorkletNode(ctx, "klang-audio-processor")
+            // We need to explicitly request 2 output channels, otherwise it defaults to 1 (Mono)
+            val nodeOpts = jsObject<AudioWorkletNodeOptions> {
+                outputChannelCount = arrayOf(2)
+            }
+
+            node = AudioWorkletNode(ctx, "klang-audio-processor", nodeOpts)
             node.connect(ctx.destination)
 
             // 3. Send Command
