@@ -696,7 +696,7 @@ private fun applyScale(source: StrudelPattern, args: List<Any?>): StrudelPattern
     // But scale() usually takes an argument.
     // If called as scale(), it should behave like other patterns.
 
-    return source.applyParam(args, scaleMutation) { src, ctrl ->
+    return source.applyControlFromParams(args, scaleMutation) { src, ctrl ->
         src.copy(scale = ctrl.scale).resolveNote()
     }
 }
@@ -725,7 +725,7 @@ private fun applyNote(source: StrudelPattern, args: List<Any?>): StrudelPattern 
     return if (args.isEmpty()) {
         source.reinterpretVoice { it.resolveNote() }
     } else {
-        source.applyParam(args, noteMutation) { src, ctrl -> src.noteMutation(ctrl.note) }
+        source.applyControlFromParams(args, noteMutation) { src, ctrl -> src.noteMutation(ctrl.note) }
     }
 }
 
@@ -755,7 +755,7 @@ private fun applyN(source: StrudelPattern, args: List<Any?>): StrudelPattern {
     return if (args.isEmpty()) {
         source.reinterpretVoice { it.resolveNote() }
     } else {
-        source.applyParam(args, nMutation) { src, ctrl -> src.resolveNote(ctrl.soundIndex) }
+        source.applyControlFromParams(args, nMutation) { src, ctrl -> src.resolveNote(ctrl.soundIndex) }
     }
 }
 
@@ -793,7 +793,7 @@ private fun applySound(source: StrudelPattern, args: List<Any?>): StrudelPattern
     return if (args.isEmpty()) {
         source.reinterpretVoice { it.soundMutation(it.value?.asString) }
     } else {
-        source.applyParam(args, soundMutation) { src, ctrl ->
+        source.applyControlFromParams(args, soundMutation) { src, ctrl ->
             src.copy(
                 sound = ctrl.sound ?: src.sound,
                 soundIndex = ctrl.soundIndex ?: src.soundIndex,
@@ -838,7 +838,7 @@ private val bankMutation = voiceModifier {
 }
 
 private fun applyBank(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, bankMutation) { src, ctrl -> src.bankMutation(ctrl.bank) }
+    return source.applyControlFromParams(args, bankMutation) { src, ctrl -> src.bankMutation(ctrl.bank) }
 }
 
 /** Modifies the banks of a pattern */
@@ -864,7 +864,12 @@ private val legatoMutation = voiceModifier {
 }
 
 private fun applyLegato(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, legatoMutation) { src, ctrl -> src.legatoMutation(ctrl.legato) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = legatoMutation,
+        getValue = { legato },
+        setValue = { v, _ -> copy(legato = v) },
+    )
 }
 
 /** Modifies the legatos of a pattern */
@@ -902,7 +907,12 @@ private val vibratoMutation = voiceModifier {
 }
 
 private fun applyVibrato(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, vibratoMutation) { src, ctrl -> src.vibratoMutation(ctrl.vibrato) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = vibratoMutation,
+        getValue = { vibrato },
+        setValue = { v, _ -> copy(vibrato = v) },
+    )
 }
 
 /** Sets the vibrato frequency (speed) in Hz. */
@@ -940,7 +950,12 @@ private val vibratoModMutation = voiceModifier {
 }
 
 private fun applyVibratoMod(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, vibratoModMutation) { src, ctrl -> src.vibratoModMutation(ctrl.vibratoMod) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = vibratoModMutation,
+        getValue = { vibratoMod },
+        setValue = { v, _ -> copy(vibratoMod = v) },
+    )
 }
 
 /** Sets the vibratoMod depth (amplitude). */
@@ -978,7 +993,12 @@ private val accelerateMutation = voiceModifier {
 }
 
 private fun applyAccelerate(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, accelerateMutation) { src, ctrl -> src.accelerateMutation(ctrl.accelerate) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = accelerateMutation,
+        getValue = { accelerate },
+        setValue = { v, _ -> copy(accelerate = v) },
+    )
 }
 
 @StrudelDsl
@@ -1129,7 +1149,12 @@ private val gainMutation = voiceModifier {
 }
 
 private fun applyGain(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, gainMutation) { src, ctrl -> src.gainMutation(ctrl.gain) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = gainMutation,
+        getValue = { gain },
+        setValue = { v, _ -> copy(gain = v) },
+    )
 }
 
 /** Modifies the gains of a pattern */
@@ -1155,7 +1180,12 @@ private val panMutation = voiceModifier {
 }
 
 private fun applyPan(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, panMutation) { src, ctrl -> src.panMutation(ctrl.pan) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = panMutation,
+        getValue = { pan },
+        setValue = { v, _ -> copy(pan = v) },
+    )
 }
 
 /** Modifies the pans of a pattern */
@@ -1181,7 +1211,12 @@ private val unisonMutation = voiceModifier {
 }
 
 private fun applyUnison(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, unisonMutation) { src, ctrl -> src.unisonMutation(ctrl.voices) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = unisonMutation,
+        getValue = { voices },
+        setValue = { v, _ -> copy(voices = v) },
+    )
 }
 
 /** Modifies the voices of a pattern */
@@ -1219,7 +1254,12 @@ private val detuneMutation = voiceModifier {
 }
 
 private fun applyDetune(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, detuneMutation) { src, ctrl -> src.detuneMutation(ctrl.freqSpread) }
+    return source.applyNumericalParam(
+        args,
+        modify = detuneMutation,
+        getValue = { freqSpread },
+        setValue = { v, _ -> copy(freqSpread = v) },
+    )
 }
 
 /** Sets the oscillator frequency spread (for supersaw) */
@@ -1245,7 +1285,12 @@ private val spreadMutation = voiceModifier {
 }
 
 private fun applySpread(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, spreadMutation) { src, ctrl -> src.spreadMutation(ctrl.panSpread) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = spreadMutation,
+        getValue = { panSpread },
+        setValue = { v, _ -> copy(panSpread = v) },
+    )
 }
 
 /** Sets the oscillator pan spread (for supersaw) */
@@ -1271,7 +1316,12 @@ private val densityMutation = voiceModifier {
 }
 
 private fun applyDensity(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, densityMutation) { src, ctrl -> src.densityMutation(ctrl.density) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = densityMutation,
+        getValue = { density },
+        setValue = { v, _ -> copy(density = v) },
+    )
 }
 
 /** Sets the oscillator density (for supersaw) */
@@ -1309,7 +1359,12 @@ private val attackMutation = voiceModifier {
 }
 
 private fun applyAttack(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, attackMutation) { src, ctrl -> src.attackMutation(ctrl.adsr.attack) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = attackMutation,
+        getValue = { adsr.attack },
+        setValue = { v, _ -> copy(adsr = adsr.copy(attack = v)) },
+    )
 }
 
 /** Sets the note envelope attack */
@@ -1335,7 +1390,12 @@ private val decayMutation = voiceModifier {
 }
 
 private fun applyDecay(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, decayMutation) { src, ctrl -> src.decayMutation(ctrl.adsr.decay) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = decayMutation,
+        getValue = { adsr.decay },
+        setValue = { v, _ -> copy(adsr = adsr.copy(decay = v)) },
+    )
 }
 
 /** Sets the note envelope decay */
@@ -1361,7 +1421,12 @@ private val sustainMutation = voiceModifier {
 }
 
 private fun applySustain(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, sustainMutation) { src, ctrl -> src.sustainMutation(ctrl.adsr.sustain) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = sustainMutation,
+        getValue = { adsr.sustain },
+        setValue = { v, _ -> copy(adsr = adsr.copy(sustain = v)) },
+    )
 }
 
 /** Sets the note envelope sustain */
@@ -1387,7 +1452,12 @@ private val releaseMutation = voiceModifier {
 }
 
 private fun applyRelease(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, releaseMutation) { src, ctrl -> src.releaseMutation(ctrl.adsr.release) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = releaseMutation,
+        getValue = { adsr.release },
+        setValue = { v, _ -> copy(adsr = adsr.copy(release = v)) },
+    )
 }
 
 /** Sets the note envelope release */
@@ -1423,7 +1493,7 @@ private val adsrMutation = voiceModifier {
 }
 
 private fun applyAdsr(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, adsrMutation) { src, ctrl ->
+    return source.applyControlFromParams(args, adsrMutation) { src, ctrl ->
         src.copy(adsr = ctrl.adsr.mergeWith(src.adsr))
     }
 }
@@ -1461,11 +1531,12 @@ private val lpfMutation = voiceModifier {
 }
 
 private fun applyLpf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, lpfMutation) { src, ctrl ->
-        src
-            .copy(resonance = ctrl.resonance ?: src.resonance)
-            .lpfMutation(ctrl.filters.getByType<FilterDef.LowPass>()?.cutoffHz)
-    }
+    return source.applyNumericalParam(
+        args = args,
+        modify = lpfMutation,
+        getValue = { cutoff },
+        setValue = { v, ctrl -> copy(resonance = ctrl.resonance ?: resonance).lpfMutation(v) },
+    )
 }
 
 /** Adds a Low Pass Filter with the given cutoff frequency. */
@@ -1497,11 +1568,12 @@ private val hpfMutation = voiceModifier {
 }
 
 private fun applyHpf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, hpfMutation) { src, ctrl ->
-        src
-            .copy(resonance = ctrl.resonance ?: src.resonance)
-            .hpfMutation(ctrl.filters.getByType<FilterDef.HighPass>()?.cutoffHz)
-    }
+    return source.applyNumericalParam(
+        args = args,
+        modify = hpfMutation,
+        getValue = { hcutoff },
+        setValue = { v, ctrl -> copy(resonance = ctrl.resonance ?: resonance).hpfMutation(v) },
+    )
 }
 
 /** Adds a High Pass Filter with the given cutoff frequency. */
@@ -1533,11 +1605,12 @@ private val bandfMutation = voiceModifier {
 }
 
 private fun applyBandf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, bandfMutation) { src, ctrl ->
-        src
-            .copy(resonance = ctrl.resonance ?: src.resonance)
-            .bandfMutation(ctrl.filters.getByType<FilterDef.BandPass>()?.cutoffHz)
-    }
+    return source.applyNumericalParam(
+        args = args,
+        modify = bandfMutation,
+        getValue = { bandf },
+        setValue = { v, ctrl -> copy(resonance = ctrl.resonance ?: resonance).bandfMutation(v) },
+    )
 }
 
 /** Adds a Band Pass Filter with the given cutoff frequency. */
@@ -1581,11 +1654,12 @@ private val notchfMutation = voiceModifier {
 }
 
 private fun applyNotchf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, notchfMutation) { src, ctrl ->
-        src
-            .copy(resonance = ctrl.resonance ?: src.resonance)
-            .notchfMutation(ctrl.filters.getByType<FilterDef.Notch>()?.cutoffHz)
-    }
+    return source.applyNumericalParam(
+        args = args,
+        modify = notchfMutation,
+        getValue = { cutoff },
+        setValue = { v, ctrl -> copy(resonance = ctrl.resonance ?: resonance).notchfMutation(v) },
+    )
 }
 
 /** Adds a Notch Filter with the given cutoff frequency. */
@@ -1622,7 +1696,12 @@ private val resonanceMutation = voiceModifier {
 }
 
 private fun applyResonance(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, resonanceMutation) { src, ctrl -> src.resonanceMutation(ctrl.resonance) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = resonanceMutation,
+        getValue = { resonance },
+        setValue = { v, _ -> resonanceMutation(v) }
+    )
 }
 
 /** Sets the filter resonance. */
@@ -1664,7 +1743,12 @@ private val distortMutation = voiceModifier {
 }
 
 private fun applyDistort(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, distortMutation) { src, ctrl -> src.distortMutation(ctrl.distort) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = distortMutation,
+        getValue = { distort },
+        setValue = { v, _ -> copy(distort = v) },
+    )
 }
 
 @StrudelDsl
@@ -1685,7 +1769,12 @@ val String.distort by dslStringExtension { p, args ->
 private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
 
 private fun applyCrush(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, crushMutation) { src, ctrl -> src.crushMutation(ctrl.crush) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = crushMutation,
+        getValue = { crush },
+        setValue = { v, _ -> copy(crush = v) },
+    )
 }
 
 @StrudelDsl
@@ -1708,7 +1797,12 @@ private val coarseMutation = voiceModifier {
 }
 
 private fun applyCoarse(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, coarseMutation) { src, ctrl -> src.coarseMutation(ctrl.coarse) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = coarseMutation,
+        getValue = { coarse },
+        setValue = { v, _ -> copy(coarse = v) },
+    )
 }
 
 @StrudelDsl
@@ -1731,7 +1825,12 @@ private val roomMutation = voiceModifier {
 }
 
 private fun applyRoom(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, roomMutation) { src, ctrl -> src.roomMutation(ctrl.room) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = roomMutation,
+        getValue = { room },
+        setValue = { v, _ -> copy(room = v) },
+    )
 }
 
 @StrudelDsl
@@ -1754,7 +1853,12 @@ private val roomSizeMutation = voiceModifier {
 }
 
 private fun applyRoomSize(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, roomSizeMutation) { src, ctrl -> src.roomSizeMutation(ctrl.roomSize) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = roomSizeMutation,
+        getValue = { roomSize },
+        setValue = { v, _ -> copy(roomSize = v) },
+    )
 }
 
 @StrudelDsl
@@ -1789,7 +1893,12 @@ private val delayMutation = voiceModifier {
 }
 
 private fun applyDelay(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, delayMutation) { src, ctrl -> src.delayMutation(ctrl.delay) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = delayMutation,
+        getValue = { delay },
+        setValue = { v, _ -> copy(delay = v) },
+    )
 }
 
 @StrudelDsl
@@ -1812,7 +1921,12 @@ private val delayTimeMutation = voiceModifier {
 }
 
 private fun applyDelayTime(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, delayTimeMutation) { src, ctrl -> src.delayTimeMutation(ctrl.delayTime) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = delayTimeMutation,
+        getValue = { delayTime },
+        setValue = { v, _ -> copy(delayTime = v) },
+    )
 }
 
 @StrudelDsl
@@ -1835,7 +1949,12 @@ private val delayFeedbackMutation = voiceModifier {
 }
 
 private fun applyDelayFeedback(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, delayFeedbackMutation) { src, ctrl -> src.delayFeedbackMutation(ctrl.delayFeedback) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = delayFeedbackMutation,
+        getValue = { delayFeedback },
+        setValue = { v, _ -> copy(delayFeedback = v) },
+    )
 }
 
 @StrudelDsl
@@ -1862,7 +1981,12 @@ private val orbitMutation = voiceModifier {
 }
 
 private fun applyOrbit(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return source.applyParam(args, orbitMutation) { src, ctrl -> src.orbitMutation(ctrl.orbit) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = orbitMutation,
+        getValue = { orbit?.toDouble() },
+        setValue = { v, _ -> copy(orbit = v.toInt()) }
+    )
 }
 
 @StrudelDsl

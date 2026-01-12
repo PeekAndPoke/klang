@@ -85,7 +85,7 @@ object TestKotlinPatterns {
             [[bd, cr] hh [sd, cr] [sd, cr]] 
             [bd hh [sd cr] oh]
             [sd ht sd [mt, oh]] 
-            [[[sd bd], oh] [[bd bd], oh] [bd bd, oh] [bd bd, oh]]
+            [[sd, oh] [[lt], oh] [bd bd, oh] [bd bd, oh]]
             >            
         """.trimIndent()
 //            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
