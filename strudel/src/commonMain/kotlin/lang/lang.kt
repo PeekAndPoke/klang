@@ -718,7 +718,11 @@ val String.scale by dslStringExtension { p, args ->
 
 private val noteMutation = voiceModifier { input ->
     val newNote = input?.toString()
-    copy(note = newNote, freqHz = Tones.noteToFreq(newNote ?: ""))
+    copy(
+        note = newNote,
+        freqHz = Tones.noteToFreq(newNote ?: ""),
+        gain = gain ?: 1.0,
+    )
 }
 
 private fun applyNote(source: StrudelPattern, args: List<Any?>): StrudelPattern {
@@ -749,6 +753,7 @@ val String.note by dslStringExtension { p, args ->
 
 private val nMutation = voiceModifier {
     resolveNote(it?.asIntOrNull())
+        .copy(gain = gain ?: 1.0)
 }
 
 private fun applyN(source: StrudelPattern, args: List<Any?>): StrudelPattern {
@@ -785,7 +790,7 @@ private val soundMutation = voiceModifier {
         // Preserve existing index if the string doesn't specify one.
         soundIndex = split.getOrNull(1)?.toIntOrNull() ?: soundIndex,
         // Preserve existing gain if the string doesn't specify one.
-        gain = split.getOrNull(2)?.toDoubleOrNull() ?: gain,
+        gain = split.getOrNull(2)?.toDoubleOrNull() ?: gain ?: 1.0,
     )
 }
 
@@ -1062,6 +1067,7 @@ fun VoiceData.transpose(amount: Any?): VoiceData {
                 note = newNoteName,
                 freqHz = Tones.noteToFreq(newNoteName),
                 value = null, // clear the value ... it was consumed
+                gain = gain ?: 1.0,
             )
         }
     }
@@ -1070,7 +1076,10 @@ fun VoiceData.transpose(amount: Any?): VoiceData {
     // Fallback if we only have frequency or an invalid note name.
     val currentFreq = freqHz ?: Tones.noteToFreq(currentNoteName)
     if (currentFreq <= 0.0) {
-        return this.copy(value = null) // clear the value ... it was consumed
+        return this.copy(
+            value = null, // clear the value ... it was consumed
+            gain = gain ?: 1.0,
+        )
     }
 
     val effectiveSemitones = if (intervalName.isNotEmpty()) {
@@ -1090,6 +1099,7 @@ fun VoiceData.transpose(amount: Any?): VoiceData {
         note = newNote,
         freqHz = newFreq,
         value = null, // clear the value ... it was consumed
+        gain = gain ?: 1.0,
     )
 }
 

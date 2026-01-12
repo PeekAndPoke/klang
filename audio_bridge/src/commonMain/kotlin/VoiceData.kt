@@ -86,7 +86,7 @@ data class VoiceData(
             note = null,
             freqHz = null,
             scale = null,
-            gain = 1.0,
+            gain = null,
             legato = null,
             bank = null,
             sound = null,
