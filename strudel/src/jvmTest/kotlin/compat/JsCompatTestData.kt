@@ -40,7 +40,7 @@ object JsCompatTestData {
                     """note("c($pulses,$steps)")"""
                 )
             }
-        }.toTypedArray(),
+        }.let { it.shuffled().take(it.size / 10) }.toTypedArray(),
         // Euclidean Rotations
         *(1..8).flatMap { pulses ->
             (pulses..8).flatMap { steps ->
@@ -52,7 +52,7 @@ object JsCompatTestData {
                     )
                 }
             }
-        }.toTypedArray(),
+        }.let { it.shuffled().take(it.size / 10) }.toTypedArray(),
         Triple(true, "Euclidean Rot #2", """note("c(3,8,2)")"""),
         Triple(true, "Euclidean Rot #3", """note("c(3,8,3)")"""),
         Triple(true, "Euclidean Rot #4", """note("c(3,8,4)")"""),

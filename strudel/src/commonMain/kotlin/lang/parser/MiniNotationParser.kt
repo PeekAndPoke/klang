@@ -1,15 +1,14 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
 import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.degradeBy
-import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
-import io.peekandpoke.klang.strudel.pattern.SequencePattern
-import io.peekandpoke.klang.strudel.pattern.WeightedPattern
 
 /** Shortcut for parsing mini notation into patterns */
 fun parseMiniNotation(input: String, atomFactory: (String) -> StrudelPattern): StrudelPattern =
@@ -91,7 +90,45 @@ class MiniNotationParser(
 
             match(TokenType.LITERAL) -> {
                 val text = previous().text
-                atomFactory(text)
+                val parts = text.split(":")
+
+                // Check if it matches the pattern name:int[:double]
+                // If parts[1] is not an integer, we treat the whole thing as the atom name (e.g. scale "C4:minor")
+                val index = if (parts.size > 1) parts[1].toIntOrNull() else null
+
+                if (parts.size > 1 && index != null) {
+                    // It looks like name:index syntax
+                    // Always strip the suffix so the atom is clean (e.g. "bd" from "bd:1").
+                    // The index (and gain) will be applied via ControlPattern below.
+                    val atomText = parts[0]
+
+                    var p = atomFactory(atomText)
+
+                    // Apply index
+                    p = ControlPattern(
+                        source = p,
+                        control = AtomicPattern(VoiceData.empty.copy(soundIndex = index)),
+                        mapper = { it },
+                        combiner = { src, ctrl -> src.copy(soundIndex = ctrl.soundIndex ?: src.soundIndex) }
+                    )
+
+                    // Apply gain if present
+                    if (parts.size > 2) {
+                        val gain = parts[2].toDoubleOrNull()
+                        if (gain != null) {
+                            p = ControlPattern(
+                                source = p,
+                                control = AtomicPattern(VoiceData.empty.copy(gain = gain)),
+                                mapper = { it },
+                                combiner = { src, ctrl -> src.copy(gain = ctrl.gain ?: src.gain) }
+                            )
+                        }
+                    }
+                    p
+                } else {
+                    // Treat as single atom
+                    atomFactory(text)
+                }
             }
 
             else -> {

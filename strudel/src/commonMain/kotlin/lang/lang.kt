@@ -782,7 +782,10 @@ private val soundMutation = voiceModifier {
 
     copy(
         sound = split.getOrNull(0),
-        soundIndex = split.getOrNull(1)?.toIntOrNull(),
+        // Preserve existing index if the string doesn't specify one.
+        soundIndex = split.getOrNull(1)?.toIntOrNull() ?: soundIndex,
+        // Preserve existing gain if the string doesn't specify one.
+        gain = split.getOrNull(2)?.toDoubleOrNull() ?: gain,
     )
 }
 
@@ -793,7 +796,8 @@ private fun applySound(source: StrudelPattern, args: List<Any?>): StrudelPattern
         source.applyParam(args, soundMutation) { src, ctrl ->
             src.copy(
                 sound = ctrl.sound ?: src.sound,
-                soundIndex = ctrl.soundIndex ?: src.soundIndex
+                soundIndex = ctrl.soundIndex ?: src.soundIndex,
+                gain = ctrl.gain ?: src.gain,
             )
         }
     }

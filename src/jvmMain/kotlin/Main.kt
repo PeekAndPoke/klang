@@ -59,21 +59,8 @@ private suspend fun helloStrudel() {
 
 //        val pattern = TestKotlinPatterns.strangerThings
         val pattern = TestKotlinPatterns.tetris
-//        val pattern = "c e".struct("x").note()
-//        val pattern = note("c,e,g").struct("x ~ x ~ ~ x ~ x ~ ~ ~ x ~ x ~ ~").slow(2)
-//        val pattern = note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x ~ x")
 
-//        val pattern = strudel.compile(
-//            """
-//                note("c3 d3").adsr("0.01:0.2:0.0:0.0").fast(2).struct("x ~ x")
-//            """.trimIndent()
-//        ).await()!!
-
-//        val pattern = "[c2 c3]*4".transpose("<1P -2M 4P 3m>").note()
-
-//        val pattern = StrudelPattern.compile(
-//            """note("c").gain(0.5).pan("-1.0 1.0")"""
-//        )!!
+//        val pattern = sound("bd bd::0.1")
 
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {
