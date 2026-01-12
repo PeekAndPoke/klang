@@ -37,6 +37,8 @@ kotlin {
             dependencies {
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
+
+                implementation(project(":tones"))
             }
         }
 

@@ -1,11 +1,14 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
 import io.peekandpoke.klang.strudel.pattern.EmptyPattern
+import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.strudel.pattern.SequencePattern
 import kotlin.jvm.JvmName
 import kotlin.properties.ReadOnlyProperty
@@ -24,6 +27,35 @@ object StrudelRegistry {
 
 typealias VoiceDataModifier = VoiceData.(Any?) -> VoiceData
 typealias VoiceDataMerger = (source: VoiceData, control: VoiceData) -> VoiceData
+
+// --- Init Property ---
+
+/**
+ * Accessing this property forces the initialization of this file's class,
+ * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ */
+var strudelLangHelpersInit = false
+
+/** Default modifier for patterns that don't have a specific semantic yet (like sequence or stack items) */
+val defaultModifier: VoiceDataModifier = {
+    copy(value = it?.asVoiceValue())
+}
+
+// --- Value Conversion Helpers ---
+
+/** Safely convert any value to a double or null */
+internal fun Any.asDoubleOrNull(): Double? = when (this) {
+    is Number -> this.toDouble()
+    is String -> this.toDoubleOrNull()
+    else -> null
+}
+
+/** Safely convert any value to an int or null */
+internal fun Any.asIntOrNull(): Int? = when (this) {
+    is Number -> this.toInt()
+    is String -> this.toDoubleOrNull()?.toInt()
+    else -> null
+}
 
 // --- High Level Helpers ---
 
@@ -159,6 +191,66 @@ fun StrudelPattern.applyControl(
     mapper = mapper,
     combiner = combiner,
 )
+
+// --- Pattern Operation Helpers ---
+
+/**
+ * Helper for applying binary operations to patterns.
+ */
+internal fun applyBinaryOp(
+    source: StrudelPattern,
+    args: List<Any?>,
+    op: (VoiceValue, VoiceValue) -> VoiceValue?,
+): StrudelPattern {
+    // We use defaultModifier for args because we just want the 'value'
+    val controlPattern = args.toPattern(defaultModifier)
+
+    return ControlPattern(
+        source = source,
+        control = controlPattern,
+        mapper = { it }, // No mapping needed
+        combiner = { srcData, ctrlData ->
+            val amount = ctrlData.value ?: return@ControlPattern srcData
+
+            val srcValue = srcData.value
+                ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
+                ?: srcData.note?.asVoiceValue()
+                ?: return@ControlPattern srcData
+
+            val newValue = op(srcValue, amount)
+
+            srcData.copy(
+                value = newValue ?: srcData.value,
+                // If we successfully modified the value, we clear the soundIndex
+                // because the value is now the source of truth (e.g. index 0 -> add 1 -> index 1)
+                soundIndex = if (newValue != null) null else srcData.soundIndex
+            )
+        }
+    )
+}
+
+/**
+ * Helper for applying unary operations to patterns.
+ */
+internal fun applyUnaryOp(
+    source: StrudelPattern,
+    op: (VoiceValue) -> VoiceValue?,
+): StrudelPattern {
+    // Unary ops (like log2) apply directly to the source values without a control pattern
+    return source.reinterpretVoice { srcData ->
+        val srcValue = srcData.value
+            ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
+            ?: srcData.note?.asVoiceValue()
+            ?: return@reinterpretVoice srcData
+
+        val newValue = op(srcValue)
+
+        srcData.copy(
+            value = newValue ?: srcData.value,
+            soundIndex = if (newValue != null) null else srcData.soundIndex
+        )
+    }
+}
 
 // --- Generic Function Delegate (stack, arrange, etc.) ---
 

@@ -18,14 +18,14 @@ val strudelLib = klangScriptLibrary("strudel") {
  * Registers the Strudel DSL to the KlangScript environment.
  *
  * This bridge leverages the existing [StrudelRegistry] which is populated
- * by the property delegates in `lang.kt`. It iterates over all registered
- * functions and methods and exposes them to the KlangScript runtime.
+ * by the property delegates in `lang.kt` and all `lang_*.kt` files. It iterates
+ * over all registered functions and methods and exposes them to the KlangScript runtime.
  */
 fun KlangScriptExtensionBuilder.registerStrudelDsl() {
-    // 1. Ensure lang.kt is initialized
-    // Accessing this property forces the static initializers to run,
+    // 1. Ensure all lang_*.kt files are initialized
+    // This call forces the static initializers to run in all lang files,
     // populating StrudelRegistry with all the DSL definitions.
-    strudelLangInit = true
+    initStrudelLang()
 
     // 2. Register Global symbols / object
     StrudelRegistry.symbols.forEach { (name, instance) ->
