@@ -120,7 +120,7 @@ class MiniNotationParser(
                                 source = p,
                                 control = AtomicPattern(VoiceData.empty.copy(gain = gain)),
                                 mapper = { it },
-                                combiner = { src, ctrl -> src.copy(gain = ctrl.gain ?: src.gain) }
+                                combiner = { src, ctrl -> src.copy(gain = ctrl.gain) }
                             )
                         }
                     }

@@ -43,7 +43,7 @@ object TestKotlinPatterns {
                 >
             """.trimIndent()
         ).sound("supersaw")
-            .spread(0.5).unison(8).detune(0.5)
+            .spread(0.5).unison(8).detune(0.1)
             .orbit(2).pan(-0.33).gain(0.4)
 //            .adsr("0.05:2.0:0.0:1.0")
             .room(0.05).rsize(1.0)
