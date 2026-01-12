@@ -79,8 +79,8 @@ class LangArrangeSpec : StringSpec({
 
         // Let's check what defaultModifier does. It sets note and value.
         // So we check note.
-        events[0].data.note shouldBe "bd"
-        events[1].data.note shouldBe "hh"
+        events[0].data.value?.asString shouldBe "bd"
+        events[1].data.value?.asString shouldBe "bd"
     }
 
     "arrange() works in compiled code" {

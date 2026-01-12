@@ -1121,7 +1121,7 @@ val transpose by dslFunction { args ->
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
 private val gainMutation = voiceModifier {
-    copy(gain = it?.toString()?.toDoubleOrNull())
+    copy(gain = it?.asDoubleOrNull())
 }
 
 private fun applyGain(source: StrudelPattern, args: List<Any?>): StrudelPattern {

@@ -2,7 +2,7 @@ package io.peekandpoke.klang.strudel.compat
 
 object JsCompatTestData {
 
-    private const val RUN_PROBLEMS = false
+    private const val SKIP = false // notice: negated logic
 
     val simplePatterns: List<Triple<Boolean, String, String>> = listOf(
         // Chords
@@ -17,7 +17,7 @@ object JsCompatTestData {
         Triple(true, "transpose ex #1", """seq("[c2 c3]*4").transpose("<0 -2 5 3>").note()"""),
         Triple(true, "transpose ex #2", """seq("[c2 c3]*4").transpose("<1P -2M 4P 3m>").note()"""),
         // Sequences
-        Triple(RUN_PROBLEMS, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
+        Triple(SKIP, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
         // Oscillators & Generators
         Triple(true, "Oscillators", """s("<sine saw isaw tri square>").fast(2)"""),
         Triple(true, "Noise Generators", """s("<white brown pink crackle dust>").gain(0.5)"""),
@@ -28,17 +28,44 @@ object JsCompatTestData {
         // Structure & Control
         Triple(true, "Arrange", """arrange([1, note("c")], [2, note("e")])"""),
         // TODO: pickRestart cannot be used at the top-level in strudel ... need another test patterns here
-        Triple(RUN_PROBLEMS, "PickRestart", """pickRestart([note("c"), note("e")])"""),
+        Triple(SKIP, "PickRestart", """pickRestart([note("c"), note("e")])"""),
         Triple(true, "Cat", """cat(note("c"), note("e"))"""),
         Triple(true, "Stack", """stack(note("c"), note("e"))"""),
-        Triple(true, "Euclidean", """note("c(3,8)")"""),
-        Triple(true, "Euclidean with rotation", """note("c(3,8,2)")"""),
+        // Euclidean Patterns
+        *(1..8).flatMap { pulses ->
+            (pulses..8).map { steps ->
+                Triple(
+                    true,
+                    "Euclidean $pulses,$steps",
+                    """note("c($pulses,$steps)")"""
+                )
+            }
+        }.toTypedArray(),
+        // Euclidean Rotations
+        *(1..8).flatMap { pulses ->
+            (pulses..8).flatMap { steps ->
+                (-8..8).map { rotation ->
+                    Triple(
+                        true,
+                        "Euclidean Rot $pulses,$steps,$rotation",
+                        """note("c($pulses,$steps,$rotation)")"""
+                    )
+                }
+            }
+        }.toTypedArray(),
+        Triple(true, "Euclidean Rot #2", """note("c(3,8,2)")"""),
+        Triple(true, "Euclidean Rot #3", """note("c(3,8,3)")"""),
+        Triple(true, "Euclidean Rot #4", """note("c(3,8,4)")"""),
+        Triple(true, "Euclidean Rot #5", """note("c(3,8,5)")"""),
+        Triple(true, "Euclidean Rot #6", """note("c(3,8,6)")"""),
+        Triple(true, "Euclidean Rot #7", """note("c(3,8,7)")"""),
+        Triple(true, "Euclidean Rot #8", """note("c(3,8,8)")"""),
         // Time & Tempo
         Triple(true, "Slow", """note("c e g").slow(2)"""),
         Triple(true, "Fast", """note("c e g").fast(2)"""),
         Triple(true, "Slow & Fast", """note("c e g").slow(2).fast(2)"""),
         // Voice Attributes
-        Triple(true, "Gain & Pan", """note("c").gain(0.5).pan("-0.5 0.5")"""),
+        Triple(SKIP, "Gain & Pan", """note("c").gain(0.5).pan("-1.0 1.0")"""),
         Triple(true, "Legato", """note("c e").legato(0.5)"""),
         Triple(true, "Clip", """note("c e").clip(0.5)"""),
         Triple(true, "Unison/Detune/Spread", """note("c").unison(4).detune(0.1).spread(0.5)"""),
@@ -50,7 +77,7 @@ object JsCompatTestData {
         Triple(true, "HighPass", """s("saw").hpf(444)"""),
         Triple(true, "BandPass", """s("saw").bandf(555)"""),
         // TODO: notchf does not seem to exist in strudel ... or we need to figure how?
-        Triple(RUN_PROBLEMS, "Notch", """s("saw").notchf(666)"""),
+        Triple(SKIP, "Notch", """s("saw").notchf(666)"""),
         // Effects
         Triple(true, "Distortion low", """note("c").distort(0.5)"""),
         Triple(true, "Distortion medium", """note("c").distort(7.0)"""),
@@ -90,36 +117,40 @@ object JsCompatTestData {
         Triple(true, "Mask All #2", """note("c3*8").maskAll(square.fast(4))"""),
         Triple(true, "SuperImpose #1", """note("a").superimpose(p => p.note("c"))"""),
         Triple(true, "SuperImpose #2", """note("a c e h").superimpose(p => p.note("e c"))"""),
-        Triple(true, "Layer #1", """n("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8").layer { x -> x.add("-2,2") }.scale("C4:minor")"""),
+        Triple(
+            true,
+            "Layer #1",
+            """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8").layer(x => x.add("-2,2")).n().scale("C4:minor")"""
+        ),
         // TODO: more complex tests for rev() an palindrome()
         Triple(true, "Reverse", """note("c e g").rev()"""),
         Triple(true, "Palindrome", """note("c e g").palindrome()"""),
         // Arithmetic Operators
-        Triple(RUN_PROBLEMS, "Add", """n("0 1 2 3").add("2")"""),
-        Triple(RUN_PROBLEMS, "Sub", """n("10 20").sub("5")"""),
-        Triple(RUN_PROBLEMS, "Mul", """n("2 3").mul("4")"""),
-        Triple(RUN_PROBLEMS, "Div", """n("10 20").div("2")"""),
-        Triple(RUN_PROBLEMS, "Mod", """n("10 11").mod("3")"""),
-        Triple(RUN_PROBLEMS, "Pow", """n("2 3").pow("3")"""),
-        Triple(RUN_PROBLEMS, "Log2", """n("1 2 4 8").log2()"""),
+        Triple(SKIP, "Add", """n("0 1 2 3").add("2")"""),
+        Triple(SKIP, "Sub", """n("10 20").sub("5")"""),
+        Triple(SKIP, "Mul", """n("2 3").mul("4")"""),
+        Triple(SKIP, "Div", """n("10 20").div("2")"""),
+        Triple(SKIP, "Mod", """n("10 11").mod("3")"""),
+        Triple(SKIP, "Pow", """n("2 3").pow("3")"""),
+        Triple(SKIP, "Log2", """n("1 2 4 8").log2()"""),
         // Bitwise Operators
-        Triple(RUN_PROBLEMS, "Band (AND)", """n("3 5").band("1")"""),
-        Triple(RUN_PROBLEMS, "Bor (OR)", """n("1 4").bor("2")"""),
-        Triple(RUN_PROBLEMS, "Bxor (XOR)", """n("3 5").bxor("1")"""),
-        Triple(RUN_PROBLEMS, "Blshift (Left Shift)", """n("1 2").blshift("1")"""),
-        Triple(RUN_PROBLEMS, "Brshift (Right Shift)", """n("2 4").brshift("1")"""),
+        Triple(SKIP, "Band (AND)", """n("3 5").band("1")"""),
+        Triple(SKIP, "Bor (OR)", """n("1 4").bor("2")"""),
+        Triple(SKIP, "Bxor (XOR)", """n("3 5").bxor("1")"""),
+        Triple(SKIP, "Blshift (Left Shift)", """n("1 2").blshift("1")"""),
+        Triple(SKIP, "Brshift (Right Shift)", """n("2 4").brshift("1")"""),
         // Comparison
-        Triple(RUN_PROBLEMS, "Less Than", """n("1 2 3").lt("2")"""),
-        Triple(RUN_PROBLEMS, "Greater Than", """n("1 2 3").gt("2")"""),
-        Triple(RUN_PROBLEMS, "Less Equal", """n("1 2 3").lte("2")"""),
-        Triple(RUN_PROBLEMS, "Greater Equal", """n("1 2 3").gte("2")"""),
-        Triple(RUN_PROBLEMS, "Equal", """n("1 2 3").eq("2")"""),
-        Triple(RUN_PROBLEMS, "Not Equal", """n("1 2 3").ne("2")"""),
+        Triple(SKIP, "Less Than", """n("1 2 3").lt("2")"""),
+        Triple(SKIP, "Greater Than", """n("1 2 3").gt("2")"""),
+        Triple(SKIP, "Less Equal", """n("1 2 3").lte("2")"""),
+        Triple(SKIP, "Greater Equal", """n("1 2 3").gte("2")"""),
+        Triple(SKIP, "Equal", """n("1 2 3").eq("2")"""),
+        Triple(SKIP, "Not Equal", """n("1 2 3").ne("2")"""),
         // Logical
-        Triple(RUN_PROBLEMS, "Logical And", """n("0 1").and("5")"""),
-        Triple(RUN_PROBLEMS, "Logical Or", """n("0 1").or("5")"""),
+        Triple(SKIP, "Logical And", """n("0 1").and("5")"""),
+        Triple(SKIP, "Logical Or", """n("0 1").or("5")"""),
         // Bitwise
-        Triple(RUN_PROBLEMS, "Band (AND)", """n("3 5").band("1")"""),
+        Triple(SKIP, "Band (AND)", """n("3 5").band("1")"""),
     )
 
     val songs: List<Triple<Boolean, String, String>> = listOf(

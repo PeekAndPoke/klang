@@ -8,6 +8,7 @@ import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
 import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.degradeBy
 import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
+import io.peekandpoke.klang.strudel.pattern.SequencePattern
 import io.peekandpoke.klang.strudel.pattern.WeightedPattern
 
 /** Shortcut for parsing mini notation into patterns */
@@ -24,8 +25,10 @@ class MiniNotationParser(
     // Internal pattern to mark sequences that should be flattened into the parent
     private class SplittableSequencePattern(val patterns: List<StrudelPattern>) : StrudelPattern {
         // This pattern acts like a SequencePattern if used directly (fallback)
-        val inner = seq(*patterns.toTypedArray())
+        val inner = SequencePattern.create(patterns)
+
         override val weight: Double get() = inner.weight
+
         override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> =
             inner.queryArcContextual(from, to, ctx)
     }
@@ -149,7 +152,8 @@ class MiniNotationParser(
 
                 consume(TokenType.R_PAREN, "Expected ')' after Euclidean rhythm")
 
-                pattern = EuclideanPattern(pattern, pulses, steps, rotation)
+                pattern = EuclideanPattern
+                    .create(inner = pattern, pulses = pulses, steps = steps, rotation = rotation)
             }
         }
 

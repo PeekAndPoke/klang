@@ -119,8 +119,8 @@ class LangContinuousPatternsSpec : StringSpec({
             val patA = StrudelPattern.compile("sine.slow(2).range(0, 100)")!!
             val patB = StrudelPattern.compile("sine.range(0, 100).slow(2)")!!
 
-            val valA = patA.queryArc(t, t)[0].data.value?.asDouble
-            val valB = patB.queryArc(t, t)[0].data.value?.asDouble
+            val valA = patA.queryArc(t, t + EPSILON)[0].data.value?.asDouble
+            val valB = patB.queryArc(t, t + EPSILON)[0].data.value?.asDouble
 
             // phase 0.75 -> sine is 0.0 -> mapped to range 0..100 is 0.0
             valA shouldBe (0.0 plusOrMinus EPSILON)

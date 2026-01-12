@@ -3,8 +3,10 @@ package io.peekandpoke.klang.strudel.lang.parser
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.strudel.pattern.SequencePattern
 
 class MiniNotationBangSpec : StringSpec() {
 
@@ -48,21 +50,25 @@ class MiniNotationBangSpec : StringSpec() {
             // This means 'a' gets 1/3, 'b!2' gets 1/3 (so each b gets 1/6), 'c' gets 1/3.
 
             val pattern = parse("a b!2 c")
+
+            pattern.shouldBeInstanceOf<SequencePattern>()
+            pattern.patterns.size shouldBe 4
+
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
             events.size shouldBe 4 // a, b, b, c
 
             events[0].data.note shouldBe "a"
-            events[0].dur.toDouble() shouldBe (1.0 / 3.0)
+            events[0].dur.toDouble() shouldBe (1.0 / 4.0)
 
             // b!2 takes the middle third. so each b takes 1/6
             events[1].data.note shouldBe "b"
-            events[1].dur.toDouble() shouldBe (1.0 / 6.0)
+            events[1].dur.toDouble() shouldBe (1.0 / 4.0)
             events[2].data.note shouldBe "b"
-            events[2].dur.toDouble() shouldBe (1.0 / 6.0)
+            events[2].dur.toDouble() shouldBe (1.0 / 4.0)
 
             events[3].data.note shouldBe "c"
-            events[3].dur.toDouble() shouldBe (1.0 / 3.0)
+            events[3].dur.toDouble() shouldBe (1.0 / 4.0)
         }
 
         "Repetition of group '[a b]!2'" {
@@ -104,7 +110,7 @@ class MiniNotationBangSpec : StringSpec() {
             // So it should play 3 events per cycle.
 
             val pattern = parse("<a!3>")
-            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+            val events = pattern.queryArc(0.0, 3.0).sortedBy { it.begin }
 
             events.size shouldBe 3
             events.forEach { it.data.note shouldBe "a" }
@@ -116,18 +122,11 @@ class MiniNotationBangSpec : StringSpec() {
             // Cycle 2: 0 0 0
             val pattern = parse("<a b a!3>")
 
-            val c0 = pattern.queryArc(0.0, 1.0)
-            c0.size shouldBe 1
-            c0[0].data.note shouldBe "a"
-
-            val c1 = pattern.queryArc(1.0, 2.0)
-            c1.size shouldBe 1
-            c1[0].data.note shouldBe "b"
-
-            val c2 = pattern.queryArc(2.0, 3.0)
-            c2.size shouldBe 3
-            c2.forEach { it.data.note shouldBe "a" }
+            val events = pattern.queryArc(0.0, 5.0)
+            events.size shouldBe 5
+            events.map { it.data.note } shouldBe listOf("a", "b", "a", "a", "a")
         }
+
         "Complex Pattern: <0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8" {
             // New logic: ! expands the sequence.
             // Items:

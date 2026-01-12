@@ -10,23 +10,14 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.note
 
 /**
- * Ok there is something wrong with the implementation of the EuclideanPattern.
- *
- * When i play this pattern in strudel.cc:
- *
- * `note("[a b c d e f g]/8(3,8)")`
- *
- * then I hear each note in the 3/8 rhythm for the full cycle.
- *
- * In our implementation I only ever hear the first note "a" and it repeats.
+ * Tests for EuclideanPattern ensuring compatibility with Strudel JS logic.
  */
-
 class EuclideanPatternSpec : StringSpec({
 
     "EuclideanPattern: Direct Instantiation (3 pulses in 8 steps)" {
         val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
-        // bd(3,8) should result in beats at indices 0, 3, 6
-        val pattern = EuclideanPattern(inner, pulses = 3, steps = 8, rotation = 0)
+        // bd(3,8) should result in beats at indices 0, 3, 6 (steps: 1, 0, 0, 1, 0, 0, 1, 0)
+        val pattern = EuclideanPattern.create(inner, pulses = 3, steps = 8, rotation = 0)
 
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
@@ -37,46 +28,141 @@ class EuclideanPatternSpec : StringSpec({
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
-        // Pulse 2 at step 3 (0.375)
+        // Pulse 2 at step 3 (3 * 0.125 = 0.375)
         events[1].begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
         events[1].dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
-        // Pulse 3 at step 6 (0.75)
+        // Pulse 3 at step 6 (6 * 0.125 = 0.75)
         events[2].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         events[2].dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
     }
 
     "EuclideanPattern: Rotation 1 (3,8,1)" {
         val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
-        // (3,8) is [1, 0, 0, 1, 0, 0, 1, 0]
-        // Rotated 1 (Shift left): [0, 0, 1, 0, 0, 1, 0, 1]
-        // Pulses at steps 2, 5, 7
-        val pattern = EuclideanPattern(inner, pulses = 3, steps = 8, rotation = 1)
+        // (3,8) base is [1, 0, 0, 1, 0, 0, 1, 0]
+        // Rotation logic in JS: rotate(b, -1) -> JS slice logic
+        // slice(-1) gets last element [0], slice(0, -1) gets everything but last.
+        // Result: [0, 1, 0, 0, 1, 0, 0, 1] -> beats at 1, 4, 7
+        // Wait, checking JS output manually:
+        // bjorklund(3,8) -> [1,0,0,1,0,0,1,0]
+        // rotate(b, -1) -> b.slice(-1).concat(b.slice(0,-1)) -> [0].concat([1,0,0,1,0,0,1]) -> [0,1,0,0,1,0,0,1]
+        // Indices: 1, 4, 7
+
+        val pattern = EuclideanPattern.create(inner, pulses = 3, steps = 8, rotation = 1)
 
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 3
-        // Pulse 1: 2 * 0.125 = 0.25
-        events[0].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        // Pulse 2: 5 * 0.125 = 0.625
-        events[1].begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
-        // Pulse 3: 7 * 0.125 = 0.875
+        // Pulse 1 at step 1: 0.125
+        events[0].begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        // Pulse 2 at step 4: 0.5
+        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        // Pulse 3 at step 7: 0.875
         events[2].begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
     }
 
-    "EuclideanPattern: Rotation 2 (3,8,2)" {
+    "EuclideanPattern: Rotation equal to steps (1,2,2)" {
         val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
-        // (3,8) is [1, 0, 0, 1, 0, 0, 1, 0]
-        // Rotated 2 (Shift left): [0, 1, 0, 0, 1, 0, 1, 0]
-        // Pulses at steps 1, 4, 6
-        val pattern = EuclideanPattern(inner, pulses = 3, steps = 8, rotation = 2)
+        // (1,2) base is [1, 0]
+        // rotate(b, -2) -> slice(-2) is full array [1,0], slice(0, -2) is empty [].
+        // Result [1, 0] -> Index 0
+
+        val pattern = EuclideanPattern.create(inner, pulses = 1, steps = 2, rotation = 2)
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+        events.size shouldBe 1
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "EuclideanPattern: Rotation greater than steps (1,2,3)" {
+        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        // (1,2) base is [1, 0] (length 2)
+        // rotate(b, -3) -> slice(-3).concat(slice(0, -3))
+        // slice(-3): -3 < -2, clamps to 0. Returns slice(0) -> [1, 0]
+        // slice(0, -3): -3 clamps to 0. Returns slice(0, 0) -> []
+        // Result: [1, 0]. Matches Graal output from issue report.
+
+        val pattern = EuclideanPattern.create(inner, pulses = 1, steps = 2, rotation = 3)
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+        events.size shouldBe 1
+        // Should start at 0.0, NOT 0.5
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "EuclideanPattern: Rotation large odd number (1,2,7)" {
+        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        // (1,2) base is [1, 0]
+        // rotate(b, -7)
+        // slice(-7) -> clamps to 0 -> [1, 0]
+        // slice(0, -7) -> clamps to 0 -> []
+        // Result: [1, 0]
+
+        val pattern = EuclideanPattern.create(inner, pulses = 1, steps = 2, rotation = 7)
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+        events.size shouldBe 1
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "EuclideanPattern: Negative Rotation (3,8,-1)" {
+        // (3,8) base is [1, 0, 0, 1, 0, 0, 1, 0]
+        // rotate(b, --1) -> rotate(b, 1)
+        // slice(1) -> [0, 0, 1, 0, 0, 1, 0]
+        // slice(0, 1) -> [1]
+        // Result: [0, 0, 1, 0, 0, 1, 0, 1]
+        // Indices: 2, 5, 7 (Same as rotation=1 test earlier? No wait)
+        // Earlier rotation 1 was rotate(b, -1).
+        // This is rotate(b, 1).
+
+        // Strudel _euclidRot calls rotate(b, -rotation).
+        // So rotation=-1 calls rotate(b, 1).
+        // Result: [0,0,1,0,0,1,0] + [1] -> [0, 0, 1, 0, 0, 1, 0, 1]
+        // Indices: 2, 5, 7.
+
+        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val pattern = EuclideanPattern.create(inner, pulses = 3, steps = 8, rotation = -1)
 
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 3
+        events[0].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+        events[2].begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
+    }
+
+    "EuclideanPattern: Negative Pulses (Inversion) (-3, 8)" {
+        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        // bjorklund(3,8) -> [1, 0, 0, 1, 0, 0, 1, 0]
+        // Inverted: [0, 1, 1, 0, 1, 1, 0, 1]
+        // Indices: 1, 2, 4, 5, 7
+
+        val pattern = EuclideanPattern.create(inner, pulses = -3, steps = 8, rotation = 0)
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+        events.size shouldBe 5
         events[0].begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
-        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[2].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[1].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[3].begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+        events[4].begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
+    }
+
+    "EuclideanPattern: Zero Pulses (0, 8)" {
+        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val pattern = EuclideanPattern.create(inner, pulses = 0, steps = 8, rotation = 0)
+        val events = pattern.queryArc(0.0, 1.0)
+        events.size shouldBe 0
+    }
+
+    "EuclideanPattern: Full Pulses (8, 8)" {
+        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val pattern = EuclideanPattern.create(inner, pulses = 8, steps = 8, rotation = 0)
+        val events = pattern.queryArc(0.0, 1.0)
+        events.size shouldBe 8
     }
 
     "EuclideanPattern: Mini-notation with rotation (3,8,1)" {
@@ -85,9 +171,13 @@ class EuclideanPatternSpec : StringSpec({
 
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
+        // Same result as Rotation 1 test above: Indices 1, 4, 7
+        // (3,8) -> [1,0,0,1,0,0,1,0]
+        // rot 1 (calls rotate(-1)) -> [0,1,0,0,1,0,0,1]
+
         events.size shouldBe 3
-        events[0].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        events[1].begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+        events[0].begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[2].begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
     }
 
@@ -98,7 +188,8 @@ class EuclideanPatternSpec : StringSpec({
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         // (2,4) is [1, 0, 1, 0]
-        // Rotated 1: [0, 1, 0, 1] -> beats at 0.25 and 0.75
+        // rot 1 (calls rotate(-1)) -> [0].concat([1,0,1]) -> [0, 1, 0, 1]
+        // Beats at 1 (0.25) and 3 (0.75)
         events.size shouldBe 2
         events[0].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
         events[1].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
@@ -117,8 +208,19 @@ class EuclideanPatternSpec : StringSpec({
 
     "EuclideanPattern: weight preservation" {
         val inner = note("a@2")
-        val pattern = EuclideanPattern(inner, 3, 8, 0)
+        val pattern = EuclideanPattern.create(inner, 3, 8, 0)
 
         pattern.weight shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
+    "EuclideanPattern: Invalid Steps (3, 0)" {
+        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val pattern = EuclideanPattern.create(inner, pulses = 3, steps = 0, rotation = 0)
+
+        // Should fall back to inner pattern
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+        events.size shouldBe 1
+        events[0].data.note shouldBe "bd"
+        events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 })

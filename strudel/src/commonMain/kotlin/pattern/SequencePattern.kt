@@ -13,6 +13,14 @@ internal class SequencePattern(
     val patterns: List<StrudelPattern>,
 ) : StrudelPattern.FixedWeight {
 
+    companion object {
+        fun create(patterns: List<StrudelPattern>): StrudelPattern = when {
+            patterns.isEmpty() -> EmptyPattern
+            patterns.size == 1 -> patterns.first()
+            else -> SequencePattern(patterns)
+        }
+    }
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
 
