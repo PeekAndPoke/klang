@@ -38,22 +38,21 @@ class ContinuousPattern(
         val result = mutableListOf<StrudelPatternEvent>()
         var currentFrom = from
 
-        val isGreater = to > currentFrom
-
         while (to > currentFrom) {
             val nextFrom = minOf(to, currentFrom + granularity)
 
-            result.add(
-                StrudelPatternEvent(
-                    begin = currentFrom,
-                    end = nextFrom,
-                    dur = nextFrom - currentFrom,
-                    data = VoiceData.empty.copy(
-                        value = value,
-                    )
+            val event = StrudelPatternEvent(
+                begin = currentFrom,
+                end = nextFrom,
+                dur = nextFrom - currentFrom,
+                data = VoiceData.empty.copy(
+                    value = value,
                 )
             )
 
+            result.add(event)
+
+            // go ahead
             currentFrom = nextFrom
         }
 

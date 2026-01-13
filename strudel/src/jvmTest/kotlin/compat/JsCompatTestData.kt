@@ -128,74 +128,177 @@ object JsCompatTestData {
 
         // Continuous patterns Steady
         *listOf(
-            Example("Continuous | Steady pure", """steady(0.5)"""),
-            Example("Continuous | Steady", """note("a b c d").pan(steady(0.5))"""),
-            Example("Continuous | Steady range", """note("a b c d").pan(steady(0.5).range(-0.5, 0.5))"""),
+            Example(
+                "Continuous | Steady pure", """steady(0.5)"""
+            ),
+            Example(
+                "Continuous | Steady", """note("a b c d").pan(steady(0.5))"""
+            ),
+            Example(
+                "Continuous | Steady range", """note("a b c d").pan(steady(0.5).range(-0.5, 0.5))"""
+            ),
             // Continuous patterns Signal
-            Example("Continuous | Signal pure", """signal(t => t * 2)"""),
-            Example("Continuous | Signal", """note("a b c d").pan(signal(t => t * 0.5))"""),
+            Example(
+                "Continuous | Signal pure", """signal(t => t * 2)"""
+            ),
+            Example(
+                "Continuous | Signal", """note("a b c d").pan(signal(t => t * 0.5))"""
+            ),
             // Continuous patterns Time
-            Example("Continuous | Time pure", """time"""),
-            Example("Continuous | Time", """note("a b c d").pan(time)"""),
-            Example("Continuous | Time range", """note("a b c d").pan(time.range(0, 1))"""),
+            Example(
+                "Continuous | Time pure", """time"""
+            ),
+            Example(
+                "Continuous | Time", """note("a b c d").pan(time)"""
+            ),
+            Example(
+                "Continuous | Time range", """note("a b c d").pan(time.range(0, 1))"""
+            ),
             // Continuous patterns Sine
-            Example(SKIP, "Continuous | Sine pure", """sine"""), // IS OK, js impl is buggy
-            Example("Continuous | Sine range pure", """sine.range(-10, 10)"""),
-            Example("Continuous | Sine", """note("a b c d").pan(sine)"""),
-            Example("Continuous | Sine range", """note("a b c d").pan(sine.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Sine pure", """sine"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Sine range pure", """sine.range(-10, 10)"""
+            ),
+            Example(
+                "Continuous | Sine", """note("a b c d").pan(sine)"""
+            ),
+            Example(
+                SKIP, "Continuous | Sine range", """note("a b c d").pan(sine.range(-0.5, 0.5))"""
+            ), // probably ok
             // Continuous patterns Sine2
-            Example(SKIP, "Continuous | Sine2 pure", """sine2"""), // IS OK, js impl is buggy
-            Example("Continuous | Sine2", """note("a b c d").pan(sine2)"""),
-            Example("Continuous | Sine2 range", """note("a b c d").pan(sine2.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Sine2 pure", """sine2"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Sine2", """note("a b c d").pan(sine2)"""
+            ),
+            Example(
+                SKIP, "Continuous | Sine2 range", """note("a b c d").pan(sine2.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns Cosine
-            Example(SKIP, "Continuous | Cosine pure", """cosine"""), // IS OK, js impl is buggy
-            Example("Continuous | Cosine range pure", """cosine.range(-10, 10)"""),
-            Example("Continuous | Cosine", """note("a b c d").pan(cosine)"""),
-            Example("Continuous | Cosine range", """note("a b c d").pan(cosine.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Cosine pure", """cosine"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Cosine range pure", """cosine.range(-10, 10)"""
+            ),
+            Example(
+                "Continuous | Cosine", """note("a b c d").pan(cosine)"""
+            ),
+            Example(
+                "Continuous | Cosine range", """note("a b c d").pan(cosine.range(-0.5, 0.5))"""
+            ),
             // Continuous patterns Cosine2
-            Example(SKIP, "Continuous | Cosine2 pure", """cosine2"""), // IS OK, js impl is buggy
-            Example("Continuous | Cosine2", """note("a b c d").pan(cosine2)"""),
-            Example("Continuous | Cosine2 range", """note("a b c d").pan(cosine2.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Cosine2 pure", """cosine2"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Cosine2", """note("a b c d").pan(cosine2)"""
+            ),
+            Example(
+                SKIP, "Continuous | Cosine2 range", """note("a b c d").pan(cosine2.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns Saw
-            Example(SKIP, "Continuous | Saw pure", """saw"""), // IS OK, js impl is buggy
-            Example("Continuous | Saw", """note("a b c d").pan(saw)"""),
-            Example("Continuous | Saw range", """note("a b c d").pan(saw.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Saw pure", """saw"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Saw", """note("a b c d").pan(saw)"""
+            ),
+            Example(
+                SKIP, "Continuous | Saw range", """note("a b c d").pan(saw.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns Saw2
-            Example(SKIP, "Continuous | Saw2 pure", """saw2"""), // IS OK, js impl is buggy
-            Example("Continuous | Saw2", """note("a b c d").pan(saw2)"""),
-            Example("Continuous | Saw2 range", """note("a b c d").pan(saw2.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Saw2 pure", """saw2"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Saw2", """note("a b c d").pan(saw2)"""
+            ),
+            Example(
+                SKIP, "Continuous | Saw2 range", """note("a b c d").pan(saw2.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns ISaw
-            Example(SKIP, "Continuous | ISaw pure", """isaw"""), // IS OK, js impl is buggy
-            Example("Continuous | ISaw", """note("a b c d").pan(isaw)"""),
-            Example("Continuous | ISaw range", """note("a b c d").pan(isaw.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | ISaw pure", """isaw"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | ISaw", """note("a b c d").pan(isaw)"""
+            ),
+            Example(
+                SKIP, "Continuous | ISaw range", """note("a b c d").pan(isaw.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns ISaw2
-            Example(SKIP, "Continuous | ISaw2 pure", """isaw2"""), // IS OK, js impl is buggy
-            Example("Continuous | ISaw2", """note("a b c d").pan(isaw2)"""),
-            Example("Continuous | ISaw2 range", """note("a b c d").pan(isaw2.range(-0.5, 0.5))"""),
+            Example
+                (SKIP, "Continuous | ISaw2 pure", """isaw2"""), // IS OK, js impl is buggy
+            Example(
+                "Continuous | ISaw2", """note("a b c d").pan(isaw2)"""
+            ),
+            Example(
+                SKIP, "Continuous | ISaw2 range", """note("a b c d").pan(isaw2.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns Tri
-            Example(SKIP, "Continuous | Tri pure", """tri"""), // IS OK, js impl is buggy
-            Example("Continuous | Tri", """note("a b c d").pan(tri)"""),
-            Example("Continuous | Tri range", """note("a b c d").pan(tri.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Tri pure", """tri"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Tri", """note("a b c d").pan(tri)"""
+            ),
+            Example(
+                SKIP, "Continuous | Tri range", """note("a b c d").pan(tri.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns Tri2
-            Example(SKIP, "Continuous | Tri2 pure", """tri2"""), // IS OK, js impl is buggy
-            Example("Continuous | Tri2", """note("a b c d").pan(tri2)"""),
-            Example("Continuous | Tri2 range", """note("a b c d").pan(tri2.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Tri2 pure", """tri2"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Tri2", """note("a b c d").pan(tri2)"""
+            ),
+            Example(
+                SKIP, "Continuous | Tri2 range", """note("a b c d").pan(tri2.range(-0.5, 0.5))"""
+            ), // probably ok
             // Continuous patterns ITri
-            Example(SKIP, "Continuous | ITri pure", """itri"""), // IS OK, js impl is buggy
-            Example("Continuous | ITri", """note("a b c d").pan(itri)"""),
-            Example("Continuous | ITri range", """note("a b c d").pan(itri.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | ITri pure", """itri"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | ITri", """note("a b c d").pan(itri)"""
+            ),
+            Example(
+                SKIP, "Continuous | ITri range", """note("a b c d").pan(itri.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns ITri2
-            Example(SKIP, "Continuous | ITri2 pure", """itri2"""), // IS OK, js impl is buggy
-            Example("Continuous | ITri2", """note("a b c d").pan(itri2)"""),
-            Example("Continuous | ITri2 range", """note("a b c d").pan(itri2.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | ITri2 pure", """itri2"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | ITri2", """note("a b c d").pan(itri2)"""
+            ),
+            Example(
+                SKIP, "Continuous | ITri2 range", """note("a b c d").pan(itri2.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns Square
-            Example(SKIP, "Continuous | Square pure", """square"""), // IS OK, js impl is buggy
-            Example("Continuous | Square", """note("a b c d").pan(square)"""),
-            Example("Continuous | Square range", """note("a b c d").pan(square.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Square pure", """square"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Square", """note("a b c d").pan(square)"""
+            ),
+            Example(
+                SKIP, "Continuous | Square range", """note("a b c d").pan(square.range(-0.5, 0.5))"""
+            ),  // probably ok
             // Continuous patterns Square2
-            Example(SKIP, "Continuous | Square2 pure", """square2"""), // IS OK, js impl is buggy
-            Example("Continuous | Square2", """note("a b c d").pan(square2)"""),
-            Example("Continuous | Square2 range", """note("a b c d").pan(square2.range(-0.5, 0.5))"""),
+            Example(
+                SKIP, "Continuous | Square2 pure", """square2"""
+            ), // IS OK, js impl is buggy
+            Example(
+                "Continuous | Square2", """note("a b c d").pan(square2)"""
+            ),
+            Example(
+                SKIP, "Continuous | Square2 range", """note("a b c d").pan(square2.range(-0.5, 0.5))"""
+            ),  // probably ok
         ).map {
             it.ignore("data.gain")
                 .recover { graal, native ->
