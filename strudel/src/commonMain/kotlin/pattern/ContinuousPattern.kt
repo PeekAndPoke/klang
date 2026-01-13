@@ -16,7 +16,9 @@ class ContinuousPattern(
     companion object {
         val minKey = QueryContext.Key<Double>("rangeMin")
         val maxKey = QueryContext.Key<Double>("rangeMax")
-        val granularityKey = QueryContext.Key<Double>("granularity")
+        val granularityKey = QueryContext.Key<Rational>("granularity")
+
+        val minGranularity = Rational(1 / 16.0)
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
@@ -28,7 +30,10 @@ class ContinuousPattern(
         ).asVoiceValue()
 
         // Make sure we do not run into an infinite loop
-        val granularity = maxOf(1 / 8.0, ctx.getOrDefault(granularityKey, (to - from).toDouble()))
+        val granularity = maxOf(
+            minGranularity,
+            ctx.getOrDefault(granularityKey, (to - from))
+        )
 
         val result = mutableListOf<StrudelPatternEvent>()
         var currentFrom = from

@@ -4,6 +4,8 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.math.PerlinNoise
+import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
 import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.strudel.pattern.EmptyPattern
@@ -31,7 +33,7 @@ var strudelLangContinuousInit = false
 val StrudelPattern.range by dslPatternExtension { p, args ->
     val min = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
     val max = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
-    val granularity = args.getOrNull(2)?.asDoubleOrNull() ?: 1.0
+    val granularity = args.getOrNull(2)?.asDoubleOrNull()?.toRational() ?: Rational.ONE
 
     p.withContext {
         setIfAbsent(ContinuousPattern.minKey, min)

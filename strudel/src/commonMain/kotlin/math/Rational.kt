@@ -36,14 +36,13 @@ data class Rational private constructor(
         val NaN = Rational(0L, 0L)
 
         /**
-         * Computes the greatest common divisor.
-         * Handles Long.MIN_VALUE by treating it as Long.MAX_VALUE for simplicity,
-         * as strict absolute value logic fails on MIN_VALUE.
+         * Computes the greatest common divisor using the Euclidean algorithm.
+         * Works directly with negative numbers (returns potentially negative GCD),
+         * avoiding the need for abs(Long.MIN_VALUE).
          */
         private fun gcd(a: Long, b: Long): Long {
-            var x = if (a == Long.MIN_VALUE) Long.MAX_VALUE else abs(a)
-            var y = if (b == Long.MIN_VALUE) Long.MAX_VALUE else abs(b)
-
+            var x = a
+            var y = b
             while (y != 0L) {
                 val temp = y
                 y = x % y
@@ -60,19 +59,32 @@ data class Rational private constructor(
             if (den == 0L) return NaN
             if (num == 0L) return ZERO
 
-            // Check for MIN_VALUE to avoid abs() issues
-            if (den == Long.MIN_VALUE || num == Long.MIN_VALUE) {
-                return NaN
+            // Optimization for identity
+            if (den == 1L) return Rational(num, 1L)
+
+            // Simplify using GCD.
+            // Note: We don't use abs() here because abs(Long.MIN_VALUE) is negative.
+            // The Euclidean algorithm handles signs correctly for reduction purposes.
+            val g = gcd(num, den)
+            var sNum = num / g
+            var sDen = den / g
+
+            // Normalize sign: denominator must be positive
+            if (sDen < 0) {
+                // If sDen is MIN_VALUE, we cannot negate it (overflow).
+                // This implies the rational number cannot be represented with a positive denominator in Long.
+                // e.g. 1 / Long.MIN_VALUE is not representable as X/Y with Y > 0 and X, Y in Long.
+                if (sDen == Long.MIN_VALUE) return NaN
+
+                sDen = -sDen
+
+                // If sNum is MIN_VALUE, we cannot negate it (overflow).
+                if (sNum == Long.MIN_VALUE) return NaN
+
+                sNum = -sNum
             }
 
-            // Normalize sign: denominator is always positive
-            val sign = if ((num < 0) xor (den < 0)) -1L else 1L
-            val absNum = abs(num)
-            val absDen = abs(den)
-
-            val g = gcd(absNum, absDen)
-
-            return Rational(sign * (absNum / g), absDen / g)
+            return Rational(sNum, sDen)
         }
 
         /** Creates a Rational from a [Long] */
@@ -89,6 +101,9 @@ data class Rational private constructor(
             if (value.isNaN() || value.isInfinite()) return NaN
             if (value == 0.0) return ZERO
 
+            // Bounds check: if the value exceeds Long range, we can't represent it
+            if (value > Long.MAX_VALUE || value < Long.MIN_VALUE) return NaN
+
             // Handle exact integers quickly
             val longVal = value.toLong()
             if (value == longVal.toDouble()) {
@@ -101,9 +116,9 @@ data class Rational private constructor(
             // Maximum denominator we can support (safe margin below Long.MAX_VALUE)
             val maxDenominator = Long.MAX_VALUE / 2
 
-            var p0 = 0L
+            var p0 = 0L;
             var q0 = 1L
-            var p1 = 1L
+            var p1 = 1L;
             var q1 = 0L
             var x = absValue
 
@@ -179,12 +194,13 @@ data class Rational private constructor(
 
         // Simplify before multiply to avoid overflow
         // We can cancel gcd(a, d) and gcd(c, b)
-        val g1 = gcd(abs(numerator), other.denominator)
-        val g2Abs = gcd(abs(other.numerator), denominator)
+        // Use abs() for GCD checks to allow cancellation of signs properly, but fallback for MIN_VALUE
+        val g1 = gcd(if (numerator == Long.MIN_VALUE) numerator else abs(numerator), other.denominator)
+        val g2 = gcd(if (other.numerator == Long.MIN_VALUE) other.numerator else abs(other.numerator), denominator)
 
         val num1 = numerator / g1
-        val den1 = denominator / g2Abs
-        val num2 = other.numerator / g2Abs
+        val den1 = denominator / g2
+        val num2 = other.numerator / g2
         val den2 = other.denominator / g1
 
         return create(num1 * num2, den1 * den2)
@@ -194,7 +210,10 @@ data class Rational private constructor(
     operator fun div(other: Rational): Rational {
         if (isNaN || other.isNaN || other.numerator == 0L) return NaN
 
-        val g1 = gcd(abs(numerator), abs(other.numerator))
+        val g1 = gcd(
+            if (numerator == Long.MIN_VALUE) numerator else abs(numerator),
+            if (other.numerator == Long.MIN_VALUE) other.numerator else abs(other.numerator)
+        )
         val g2 = gcd(denominator, other.denominator)
 
         val num1 = numerator / g1
@@ -214,7 +233,7 @@ data class Rational private constructor(
     }
 
     /** Negates the rational number */
-    operator fun unaryMinus(): Rational = if (isNaN) NaN else Rational(-numerator, denominator)
+    operator fun unaryMinus(): Rational = if (isNaN) NaN else create(-numerator, denominator)
 
     // --- Number Interoperability ---
 
@@ -263,6 +282,7 @@ data class Rational private constructor(
         val quot = numerator / denominator
         val rem = numerator % denominator
 
+        // Correct floor for negative numbers with remainder
         val result = if (rem != 0L && numerator < 0) {
             quot - 1
         } else {

@@ -70,7 +70,7 @@ private suspend fun helloStrudel() {
 
         val pattern = square
 
-        pattern.queryArc(0.1, 0.6)
+        pattern.queryArc(0.1, 0.1 + 1e-7)
 
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {
