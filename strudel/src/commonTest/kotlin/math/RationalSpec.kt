@@ -113,6 +113,17 @@ class RationalSpec : StringSpec({
         (r(-1, 2) < r(1, 2)) shouldBe true
     }
 
+    "Subtracting neighbor numbers" {
+        (1..10_000_000).forEach { i ->
+            withClue("i = $i") {
+                val a = Rational(i)
+                val b = Rational(i + 1)
+                (b - a) shouldBe Rational.ONE
+                (a - b) shouldBe Rational.MINUS_ONE
+            }
+        }
+    }
+
     "Comparisons | Small differences" {
         // requested test case: 1.0 < 1.0 + 1e-7
         val a = 1.0.toRational()

@@ -11,6 +11,10 @@ class StrudelEventSource(private val pattern: StrudelPattern) : KlangEventSource
         val fromRational = Rational(from)
         val toRational = Rational(to)
 
+//        println("Querying " +
+//                "${fromRational.toDouble()} (${fromRational.numerator}/${fromRational.denominator}) to " +
+//                "${toRational.toDouble()} (${toRational.numerator}/${toRational.denominator})")
+
         return pattern.queryArcContextual(from = fromRational, to = toRational, QueryContext.empty)
             .filter { it.begin >= fromRational && it.begin < toRational }
             .sortedBy { it.begin }

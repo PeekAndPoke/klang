@@ -23,7 +23,7 @@ internal class ControlPattern(
 ) : StrudelPattern {
 
     companion object {
-        private val EPS = 1e-9.toRational()
+        private val EPS = 1e-5.toRational()
     }
 
     // Control patterns wrap a source pattern and should preserve its weight.
@@ -37,8 +37,7 @@ internal class ControlPattern(
         val result = mutableListOf<StrudelPatternEvent>()
 
         for (event in sourceEvents) {
-            val queryTime = event.begin
-            val controlEvents = control.queryArcContextual(queryTime, queryTime + EPS, ctx)
+            val controlEvents = control.queryArcContextual(event.begin, event.end, ctx)
             val match = controlEvents.firstOrNull()
 
             if (match != null) {
