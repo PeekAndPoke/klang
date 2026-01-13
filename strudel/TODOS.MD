@@ -65,8 +65,8 @@ and category.
 
 - [x] **`fast(factor)`** - Speeds up pattern (alias: `density`)
 - [x] **`slow(factor)`** - Slows down pattern (alias: `sparsity`)
-- [ ] **`early(cycles)`** - Nudge pattern earlier in time
-- [ ] **`late(cycles)`** - Nudge pattern later in time
+- [x] **`early(cycles)`** - Nudge pattern earlier in time
+- [x] **`late(cycles)`** - Nudge pattern later in time
 - [ ] **`euclid(pulses, steps)`** - Euclidean rhythm function
 - [ ] **`euclidRot(pulses, steps, rotation)`** - Euclidean with rotation
 - [ ] **`euclidLegato(pulses, steps)`** - Holds pulses until next
@@ -76,6 +76,7 @@ and category.
 - [ ] **`focusSpan(span)`** - Focus with span parameter
 - [ ] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle
 - [ ] **`zoomArc(arc)`** - Zoom with arc parameter
+- [X] **`gap(steps)`** - Create gap with n steps
 - [ ] **`fastGap(factor)`** - Speeds up with gaps between
 - [ ] **`swingBy(subdivision, offset)`** - Creates swing rhythm
 - [ ] **`swing(subdivision)`** - Swing with default 1/3 offset
@@ -349,7 +350,6 @@ and category.
 - [X] **`hush()`** - Stop all playing patterns
 - [/] **`isPattern(thing)`** - Check if value is a pattern
 - [/] **`reify(thing)`** - Convert value to pattern
-- [ ] **`gap(steps)`** - Create gap with n steps
 - [ ] **`nothing`** - Empty pattern with 0 steps
 - [ ] **`pure(value)`** - Create atomic pattern with single value
 

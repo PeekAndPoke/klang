@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
@@ -231,6 +232,12 @@ class GraalStrudelPattern(
                 // Reverb
                 room = room,
                 roomSize = roomSize,
+                // Value
+                value = when {
+                    value?.isString == true -> value.asString().asVoiceValue()
+                    value?.isNumber == true -> value.asDouble().asVoiceValue()
+                    else -> null
+                }
             ),
         )
     }

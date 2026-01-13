@@ -32,6 +32,13 @@ object JsCompatTestData {
         Triple(true, "Cat", """cat(note("c"), note("e"))"""),
         Triple(true, "Stack", """stack(note("c"), note("e"))"""),
         Triple(true, "Hush", """note("c").hush()"""),
+        Triple(true, "Gap", """gap(5)"""),
+        Triple(true, "Late 0.5", """note("a b c d").late(0.5)"""),
+        Triple(true, "Late [0.5 0.5]", """note("a b c d").late("0.5 0.5")"""),
+        Triple(true, "Late Sine", """note("a b c d").late(sine.range(-1, 1))"""),
+        Triple(true, "Early 0.5", """note("a b c d").early(0.5)"""),
+        Triple(true, "Early [0.5 0.5]", """note("a b c d").early("0.5 0.5")"""),
+        Triple(true, "Early Sine", """note("a b c d").early(sine.range(-1, 1))"""),
         // Euclidean Patterns
         *(1..8).flatMap { pulses ->
             (pulses..8).map { steps ->
@@ -88,9 +95,12 @@ object JsCompatTestData {
         Triple(true, "Reverb", """note("c").room(0.5).roomsize(2.0)"""),
         Triple(true, "Delay", """note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)"""),
         // Continuous patterns Sine
+        Triple(true, "Continuous | Sine pure", """sine"""),
+        Triple(true, "Continuous | Sine range pure", """sine.range(-10, 10)"""),
         Triple(true, "Continuous | Sine", """note("a b c d").pan(sine)"""),
         Triple(true, "Continuous | Sine range", """note("a b c d").pan(sine.range(-0.5, 0.5))"""),
         // Continuous patterns Saw
+        Triple(true, "Continuous | Saw pure", """saw"""),
         Triple(true, "Continuous | Saw", """note("a b c d").pan(saw)"""),
         Triple(true, "Continuous | Saw range", """note("a b c d").pan(saw.range(-0.5, 0.5))"""),
         // Continuous patterns ISaw

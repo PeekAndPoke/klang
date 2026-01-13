@@ -16,6 +16,7 @@ class ContinuousPattern(
     companion object {
         val minKey = QueryContext.Key<Double>("rangeMin")
         val maxKey = QueryContext.Key<Double>("rangeMax")
+        val granularityKey = QueryContext.Key<Double>("granularity")
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
@@ -26,12 +27,30 @@ class ContinuousPattern(
             t = from.toDouble(),
         ).asVoiceValue()
 
-        return listOf(
-            StrudelPatternEvent(
-                begin = from, end = to, dur = to - from,
-                data = VoiceData.empty.copy(value = value)
+        val granularity = ctx.getOrDefault(granularityKey, (to - from).toDouble())
+
+        val result = mutableListOf<StrudelPatternEvent>()
+        var currentFrom = from
+
+        while (currentFrom < to) {
+            val nextFrom = minOf(to, currentFrom + granularity)
+
+            result.add(
+                StrudelPatternEvent(
+                    begin = currentFrom,
+                    end = nextFrom,
+                    dur = nextFrom - currentFrom,
+                    data = VoiceData.empty.copy(
+                        value = value,
+//                    gain = 1.0, // strudel js compat
+                    )
+                )
             )
-        )
+
+            currentFrom = nextFrom
+        }
+
+        return result
     }
 
     /** Creates a new version of this pattern with a transformed value range */

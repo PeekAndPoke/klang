@@ -74,7 +74,14 @@ class JsCompatTests : StringSpec() {
                 ?: fail("Failed to compile song '$name' natively")
         }
 
-        fun List<StrudelPatternEvent>.sort() = sortedWith(compareBy({ it.begin }, { it.end }, { it.hashCode() }))
+        fun List<StrudelPatternEvent>.sort() = sortedWith(
+            compareBy(
+                { it.begin },
+                { it.end },
+                { it.data.note },
+                { it.hashCode() },
+            )
+        )
 
         val graalArc = graalPattern.queryArc(0.0, 64.0).sort()
         val nativeArc = nativePattern.queryArc(0.0, 64.0).sort()

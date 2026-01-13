@@ -3,14 +3,47 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.ReversePattern
 import io.peekandpoke.klang.strudel.pattern.TempoModifierPattern
+import io.peekandpoke.klang.strudel.pattern.TimeShiftPattern
+import io.peekandpoke.klang.strudel.pattern.TimeShiftPatternWithControl
 
 /**
  * Accessing this property forces the initialization of this file's class,
  * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
  */
 var strudelLangTempoInit = false
+
+// Helpers /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+fun applyTimeShift(
+    pattern: StrudelPattern,
+    args: List<Any?>,
+    factor: Rational = 1.0.toRational(),
+): StrudelPattern {
+    return when (args.size) {
+        0 -> pattern
+        1 if (args[0] is Number) -> applyTimeShift(
+            pattern = pattern,
+            offset = (args[0]?.asDoubleOrNull()?.toRational() ?: Rational.ZERO) * factor,
+        )
+
+        else -> applyTimeShift(
+            pattern = pattern,
+            control = args.toPattern(defaultModifier).mul(factor),
+        )
+    }
+}
+
+private fun applyTimeShift(pattern: StrudelPattern, offset: Rational): StrudelPattern {
+    return TimeShiftPattern(pattern, offset)
+}
+
+private fun applyTimeShift(pattern: StrudelPattern, control: StrudelPattern): StrudelPattern {
+    return TimeShiftPatternWithControl(pattern, control)
+}
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tempo / Timing / Order modifiers
@@ -150,4 +183,41 @@ val StrudelPattern.palindrome by dslPatternExtension { p, _ ->
 @StrudelDsl
 val String.palindrome by dslStringExtension { p, _ ->
     applyPalindrome(p)
+}
+
+// -- early() ----------------------------------------------------------------------------------------------------------
+
+/** Nudges the pattern to start earlier in time by the given number of cycles */
+@StrudelDsl
+val early by dslFunction {
+    silence
+}
+
+@StrudelDsl
+val StrudelPattern.early by dslPatternExtension { p, args ->
+    applyTimeShift(p, args, (-1.0).toRational())
+}
+
+@StrudelDsl
+val String.early by dslStringExtension { p, args ->
+    applyTimeShift(p, args, (-1.0).toRational())
+}
+
+// -- late() -----------------------------------------------------------------------------------------------------------
+
+
+/** Nudges the pattern to start later in time by the given number of cycles */
+@StrudelDsl
+val late by dslFunction {
+    silence
+}
+
+@StrudelDsl
+val StrudelPattern.late by dslPatternExtension { p, args ->
+    applyTimeShift(p, args, 1.0.toRational())
+}
+
+@StrudelDsl
+val String.late by dslStringExtension { p, args ->
+    applyTimeShift(p, args, 1.0.toRational())
 }

@@ -72,13 +72,13 @@ val perlin by dslObject {
  */
 @StrudelDsl
 val StrudelPattern.range by dslPatternExtension { p, args ->
-
-    // TODO: We must be able to provide these parameters from other patterns as well
     val min = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
     val max = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
+    val granularity = args.getOrNull(2)?.asDoubleOrNull() ?: 1.0
 
     p.withContext {
         setIfAbsent(ContinuousPattern.minKey, min)
         setIfAbsent(ContinuousPattern.maxKey, max)
+        setIfAbsent(ContinuousPattern.granularityKey, granularity)
     }
 }
