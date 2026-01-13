@@ -254,13 +254,34 @@ All arithmetic operations work on pattern values and can be applied as:
 
 ## Continuous Patterns (Oscillators)
 
+### Signal Generators ✅
+
+- `steady(value)` - Constant value continuous pattern
+- `signal(callback)` - Continuous pattern from callback function `(Double) -> Double`
+- `time` - Current time (in cycles) as continuous pattern
+
 ### Waveforms ✅
 
+**Unipolar (0 to 1):**
 - `sine` - Sine wave oscillator (0 to 1)
-- `saw` - Sawtooth oscillator (-1 to 1)
-- `isaw` - Inverse sawtooth (1 to -1)
-- `tri` - Triangle oscillator (-1 to 1)
+- `cosine` - Cosine wave oscillator (0 to 1)
+- `saw` - Sawtooth oscillator (0 to 1)
+- `isaw` - Inverse sawtooth (1 to 0)
+- `tri` - Triangle oscillator (0 to 1 to 0)
+- `itri` - Inverse triangle (1 to 0 to 1)
 - `square` - Square wave oscillator (0 or 1)
+
+**Bipolar (-1 to 1):**
+
+- `sine2` - Sine wave oscillator (-1 to 1)
+- `cosine2` - Cosine wave oscillator (-1 to 1)
+- `saw2` - Sawtooth oscillator (-1 to 1)
+- `isaw2` - Inverse sawtooth (1 to -1)
+- `tri2` - Triangle oscillator (-1 to 1 to -1)
+- `itri2` - Inverse triangle (-1 to 1 to -1)
+- `square2` - Square wave oscillator (-1 or 1)
+
+**Noise:**
 - `perlin` - Perlin noise generator (0 to 1, scaled from native -1 to 1 range)
 
 ### Signal Processing ✅
@@ -314,8 +335,8 @@ Comprehensive voice data structure supporting:
 - 100+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 13 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern, StructPattern,
   ContextModifierPattern)
-- 5 continuous oscillators (sine, saw, isaw, tri, square)
-- 1 noise generator (perlin)
+- 18 continuous oscillators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw, isaw2, tri, tri2,
+  itri, itri2, square, square2, perlin)
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
@@ -368,3 +389,17 @@ Comprehensive voice data structure supporting:
   `Any?` handling
 - ✅ **Transformation Order Independence** - `range()` now works correctly regardless of composition order with tempo
   modifiers
+
+**Recent Improvements (2026-01-13):**
+
+- ✅ **Extended Continuous Patterns** - Added 11 new continuous oscillators and signal generators:
+  - `steady(value)` - Constant value patterns
+  - `signal(callback)` - Custom callback-based patterns
+  - `time` - Current cycle time as pattern
+  - Bipolar oscillators: `sine2`, `cosine2`, `saw2`, `isaw2`, `tri2`, `itri2`, `square2`
+  - Unipolar additions: `cosine`, `itri`
+- ✅ **Bug Fixes** - Fixed `isaw2`, `tri2`, and `itri2` implementations, added missing `@StrudelDsl` annotation to
+  `itri2`
+- ✅ **Comprehensive Testing** - Added complete test coverage for all continuous patterns with `.range()` tests in
+  `LangContinuousPatternsSpec`
+- ✅ **JS Compatibility Tests** - Added example patterns for all new oscillators in `JsCompatTestData`

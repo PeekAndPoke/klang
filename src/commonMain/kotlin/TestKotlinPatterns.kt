@@ -91,7 +91,7 @@ object TestKotlinPatterns {
 //            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
 //            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
-            .orbit(3).pan(-0.0).gain(0.5)
+            .orbit(3).pan(-0.0).gain(0.6)
             .room(0.05).rsize(2.0)
 //            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
             .adsr("0.01:0.2:0.5:0.5")

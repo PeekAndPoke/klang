@@ -42,7 +42,6 @@ class ContinuousPattern(
                     dur = nextFrom - currentFrom,
                     data = VoiceData.empty.copy(
                         value = value,
-//                    gain = 1.0, // strudel js compat
                     )
                 )
             )

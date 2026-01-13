@@ -130,7 +130,7 @@ and category.
 - [x] **`scale()`** - Set scale for note resolution
 - [x] **`sound()` / `s()`** - Set sound/sample bank
 - [x] **`bank()`** - Set sample bank
-- [ ] **`transpose(semitones)`** - Transpose notes by semitones
+- [x] **`transpose(semitones)`** - Transpose notes by semitones
 - [ ] **`scaleTranspose(steps)`** - Transpose within scale
 - [ ] **`chord()`** - Create chord patterns
 - [ ] **`voicing()`** - Generate chord voicings with full parameters
@@ -203,15 +203,25 @@ and category.
 
 ### Continuous Signals ⭐⭐
 
+- [x] **`steady(value)`** - Constant value continuous pattern
+- [x] **`signal(callback)`** - Continuous pattern from callback function
+- [x] **`time`** - Current time (in cycles) as continuous pattern
 - [x] **`sine`** - Sine wave oscillator (0 to 1)
+- [x] **`sine2`** - Sine wave oscillator (-1 to 1)
+- [x] **`cosine`** - Cosine wave oscillator (0 to 1)
+- [x] **`cosine2`** - Cosine wave oscillator (-1 to 1)
 - [x] **`saw`** - Sawtooth wave (0 to 1)
+- [x] **`saw2`** - Sawtooth wave (-1 to 1)
 - [x] **`isaw`** - Inverse sawtooth (1 to 0)
+- [x] **`isaw2`** - Inverse sawtooth (1 to -1)
 - [x] **`tri`** - Triangle wave (0 to 1 to 0)
+- [x] **`tri2`** - Triangle wave (-1 to 1 to -1)
+- [x] **`itri`** - Inverse triangle wave (1 to 0 to 1)
+- [x] **`itri2`** - Inverse triangle wave (-1 to 1 to -1)
 - [x] **`square`** - Square wave (0 or 1)
+- [x] **`square2`** - Square wave (-1 or 1)
 - [x] **`perlin`** - Perlin noise
 - [x] **`range(min, max)`** - Scale continuous pattern to range
-- [ ] **`cosine`** / **`cosine2`** - Cosine wave oscillators
-- [ ] **`saw2`**, **`sine2`**, **`tri2`**, **`square2`** - Bipolar (-1 to 1) versions
 - [ ] **`rand`** / **`rand2`** - Random signals (unipolar/bipolar)
 - [ ] **`irand(n)`** - Random integers from 0 to n-1
 - [ ] **`brand`** - Binary random (0 or 1)
@@ -461,7 +471,8 @@ and category.
 - **Comparison & Logic**: 2 missing (8 completed)
 - **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
 - **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ~13 missing (7 completed: `sine`, `saw`, `tri`, `square`, `perlin`, `range`)
+- **Continuous Signals**: ~10 missing (18 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
+  `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `range`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
 - **Conditional & Probabilistic**: ~10 missing (1 completed: `degradeBy`)
@@ -470,9 +481,9 @@ and category.
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~13 missing (0 completed)
 
-### Total Estimated: ~160 features remaining
+### Total Estimated: ~150 features remaining
 
-### Completed So Far: ~85 features! 🎉
+### Completed So Far: ~96 features! 🎉
 
 **Major achievements:**
 

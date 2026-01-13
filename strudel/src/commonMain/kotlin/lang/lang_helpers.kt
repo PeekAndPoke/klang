@@ -257,11 +257,8 @@ internal fun applyUnaryOp(
 class DslFunction(val handler: (List<Any?>) -> StrudelPattern) {
     operator fun invoke() = handler(emptyList())
 
-    @JvmName("invokeBlock")
-    operator fun invoke(block: (StrudelPattern) -> StrudelPattern) = handler(listOf(block))
-
-    @JvmName("invokeBlocksVararg")
-    operator fun invoke(vararg block: (StrudelPattern) -> StrudelPattern) = handler(block.toList())
+    @JvmName("invokeFunction")
+    operator fun invoke(block: (Double) -> Double) = handler(listOf(block))
 
     @JvmName("invokeVararg")
     operator fun invoke(vararg args: Any?): StrudelPattern = handler(args.toList())
@@ -274,7 +271,6 @@ class DslFunction(val handler: (List<Any?>) -> StrudelPattern) {
 }
 
 // --- Generic Method Delegate (fast, slow, etc.) ---
-
 
 /**
  * A method bound to a specific [pattern] instance.

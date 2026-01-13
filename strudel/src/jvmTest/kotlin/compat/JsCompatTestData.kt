@@ -94,24 +94,74 @@ object JsCompatTestData {
         Triple(true, "Downsample", """note("c").coarse(4)"""),
         Triple(true, "Reverb", """note("c").room(0.5).roomsize(2.0)"""),
         Triple(true, "Delay", """note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)"""),
+        // Continuous patterns Steady
+        Triple(true, "Continuous | Steady pure", """steady(0.5)"""),
+        Triple(true, "Continuous | Steady", """note("a b c d").pan(steady(0.5))"""),
+        Triple(true, "Continuous | Steady range", """note("a b c d").pan(steady(0.5).range(-0.5, 0.5))"""),
+        // Continuous patterns Signal
+        Triple(true, "Continuous | Signal pure", """signal(t => t * 2)"""),
+        Triple(true, "Continuous | Signal", """note("a b c d").pan(signal(t => t * 0.5))"""),
+        // Continuous patterns Time
+        Triple(true, "Continuous | Time pure", """time"""),
+        Triple(true, "Continuous | Time", """note("a b c d").pan(time)"""),
+        Triple(true, "Continuous | Time range", """note("a b c d").pan(time.range(0, 1))"""),
         // Continuous patterns Sine
         Triple(true, "Continuous | Sine pure", """sine"""),
         Triple(true, "Continuous | Sine range pure", """sine.range(-10, 10)"""),
         Triple(true, "Continuous | Sine", """note("a b c d").pan(sine)"""),
         Triple(true, "Continuous | Sine range", """note("a b c d").pan(sine.range(-0.5, 0.5))"""),
+        // Continuous patterns Sine2
+        Triple(true, "Continuous | Sine2 pure", """sine2"""),
+        Triple(true, "Continuous | Sine2", """note("a b c d").pan(sine2)"""),
+        Triple(true, "Continuous | Sine2 range", """note("a b c d").pan(sine2.range(-0.5, 0.5))"""),
+        // Continuous patterns Cosine
+        Triple(true, "Continuous | Cosine pure", """cosine"""),
+        Triple(true, "Continuous | Cosine", """note("a b c d").pan(cosine)"""),
+        Triple(true, "Continuous | Cosine range", """note("a b c d").pan(cosine.range(-0.5, 0.5))"""),
+        // Continuous patterns Cosine2
+        Triple(true, "Continuous | Cosine2 pure", """cosine2"""),
+        Triple(true, "Continuous | Cosine2", """note("a b c d").pan(cosine2)"""),
+        Triple(true, "Continuous | Cosine2 range", """note("a b c d").pan(cosine2.range(-0.5, 0.5))"""),
         // Continuous patterns Saw
         Triple(true, "Continuous | Saw pure", """saw"""),
         Triple(true, "Continuous | Saw", """note("a b c d").pan(saw)"""),
         Triple(true, "Continuous | Saw range", """note("a b c d").pan(saw.range(-0.5, 0.5))"""),
+        // Continuous patterns Saw2
+        Triple(true, "Continuous | Saw2 pure", """saw2"""),
+        Triple(true, "Continuous | Saw2", """note("a b c d").pan(saw2)"""),
+        Triple(true, "Continuous | Saw2 range", """note("a b c d").pan(saw2.range(-0.5, 0.5))"""),
         // Continuous patterns ISaw
+        Triple(true, "Continuous | ISaw pure", """isaw"""),
         Triple(true, "Continuous | ISaw", """note("a b c d").pan(isaw)"""),
         Triple(true, "Continuous | ISaw range", """note("a b c d").pan(isaw.range(-0.5, 0.5))"""),
+        // Continuous patterns ISaw2
+        Triple(true, "Continuous | ISaw2 pure", """isaw2"""),
+        Triple(true, "Continuous | ISaw2", """note("a b c d").pan(isaw2)"""),
+        Triple(true, "Continuous | ISaw2 range", """note("a b c d").pan(isaw2.range(-0.5, 0.5))"""),
         // Continuous patterns Tri
+        Triple(true, "Continuous | Tri pure", """tri"""),
         Triple(true, "Continuous | Tri", """note("a b c d").pan(tri)"""),
         Triple(true, "Continuous | Tri range", """note("a b c d").pan(tri.range(-0.5, 0.5))"""),
+        // Continuous patterns Tri2
+        Triple(true, "Continuous | Tri2 pure", """tri2"""),
+        Triple(true, "Continuous | Tri2", """note("a b c d").pan(tri2)"""),
+        Triple(true, "Continuous | Tri2 range", """note("a b c d").pan(tri2.range(-0.5, 0.5))"""),
+        // Continuous patterns ITri
+        Triple(true, "Continuous | ITri pure", """itri"""),
+        Triple(true, "Continuous | ITri", """note("a b c d").pan(itri)"""),
+        Triple(true, "Continuous | ITri range", """note("a b c d").pan(itri.range(-0.5, 0.5))"""),
+        // Continuous patterns ITri2
+        Triple(true, "Continuous | ITri2 pure", """itri2"""),
+        Triple(true, "Continuous | ITri2", """note("a b c d").pan(itri2)"""),
+        Triple(true, "Continuous | ITri2 range", """note("a b c d").pan(itri2.range(-0.5, 0.5))"""),
         // Continuous patterns Square
+        Triple(true, "Continuous | Square pure", """square"""),
         Triple(true, "Continuous | Square", """note("a b c d").pan(square)"""),
         Triple(true, "Continuous | Square range", """note("a b c d").pan(square.range(-0.5, 0.5))"""),
+        // Continuous patterns Square2
+        Triple(true, "Continuous | Square2 pure", """square2"""),
+        Triple(true, "Continuous | Square2", """note("a b c d").pan(square2)"""),
+        Triple(true, "Continuous | Square2 range", """note("a b c d").pan(square2.range(-0.5, 0.5))"""),
         // Modulation
         Triple(true, "Vibrato", """note("c").vib(5).vibmod(0.1)"""),
         Triple(true, "Accelerate", """note("c").accelerate(1)"""),
