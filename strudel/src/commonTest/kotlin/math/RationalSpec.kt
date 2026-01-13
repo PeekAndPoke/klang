@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.math
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
@@ -115,7 +116,7 @@ class RationalSpec : StringSpec({
     "Comparisons | Small differences" {
         // requested test case: 1.0 < 1.0 + 1e-7
         val a = 1.0.toRational()
-        val b = (1.0 + 1e-7).toRational()
+        val b = (1.0).toRational() + (1e-7).toRational()
 
         (a < b) shouldBe true
         (b > a) shouldBe true
@@ -123,12 +124,32 @@ class RationalSpec : StringSpec({
     }
 
     "Comparisons | Very small numbers" {
-        val tiny = Rational(1e-15)
-        val tinier = Rational(1e-16)
+        val pairs = listOf(
+            1e-1 to 1e-2,
+            1e-2 to 1e-3,
+            1e-3 to 1e-4,
+            1e-4 to 1e-5,
+            1e-5 to 1e-6,
+            1e-6 to 1e-7,
+            1e-7 to 1e-8,
+            1e-8 to 1e-9, // Max precision we can achieve right now
+        )
 
-        (tiny > tinier) shouldBe true
-        (tiny > Rational.ZERO) shouldBe true
-        (tinier > Rational.ZERO) shouldBe true
+        assertSoftly {
+            pairs.forEach { (a, b) ->
+                withClue("a = $a | b = $b") {
+                    val tiny = Rational(a)
+                    val tinier = Rational(b)
+
+                    (tiny > tinier) shouldBe true
+                    (Rational.ONE < Rational.ONE + tiny) shouldBe true
+                    (Rational.ONE < Rational.ONE + tinier) shouldBe true
+
+                    (tiny > Rational.ZERO) shouldBe true
+                    (tinier > Rational.ZERO) shouldBe true
+                }
+            }
+        }
     }
 
     "Comparisons | Sorting" {

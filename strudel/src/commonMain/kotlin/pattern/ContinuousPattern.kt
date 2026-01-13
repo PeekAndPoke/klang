@@ -38,7 +38,9 @@ class ContinuousPattern(
         val result = mutableListOf<StrudelPatternEvent>()
         var currentFrom = from
 
-        while (currentFrom < to) {
+        val isGreater = to > currentFrom
+
+        while (to > currentFrom) {
             val nextFrom = minOf(to, currentFrom + granularity)
 
             result.add(

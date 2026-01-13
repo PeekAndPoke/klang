@@ -142,7 +142,7 @@ data class Rational private constructor(
                 p1 = p2; q1 = q2
 
                 // Break if we are close enough (epsilon)
-                if (rem < 1e-9) break
+                if (rem < 1e-10) break
 
                 x = 1.0 / rem
             }
@@ -250,10 +250,31 @@ data class Rational private constructor(
         if (isNaN) return 1
         if (other.isNaN) return -1
 
-        // Use subtraction to compare safely
-        val diff = this - other
-        if (diff.isNaN) return 0
-        return diff.numerator.compareTo(0L)
+        // Optimization for equal values
+        if (numerator == other.numerator && denominator == other.denominator) return 0
+
+        // Compare signs
+        val thisSign = numerator.compareTo(0L)
+        val otherSign = other.numerator.compareTo(0L)
+
+        if (thisSign != otherSign) {
+            return thisSign.compareTo(otherSign)
+        }
+
+        // If both are zero (should be handled by equality check, but safety)
+        if (thisSign == 0) return 0
+
+        // Compare absolute values safely to avoid overflow
+        // If both are positive: compare(abs(this), abs(other))
+        // If both are negative: compare(abs(other), abs(this)) i.e. reverse logic
+        val n1 = kotlin.math.abs(numerator)
+        val d1 = denominator
+        val n2 = kotlin.math.abs(other.numerator)
+        val d2 = other.denominator
+
+        val absCompare = compareAbs(n1, d1, n2, d2)
+
+        return if (thisSign > 0) absCompare else -absCompare
     }
 
     // --- Conversions ---
@@ -305,6 +326,59 @@ data class Rational private constructor(
     }
 
     override fun toString(): String = if (isNaN) "NaN" else toDouble().toString()
+
+    /**
+     * Compares n1/d1 with n2/d2 avoiding overflow using continued fraction expansion logic.
+     * Assumes all inputs are non-negative.
+     */
+    /**
+     * Compares n1/d1 with n2/d2 avoiding overflow using continued fraction expansion logic.
+     * Assumes all inputs are non-negative.
+     */
+    private fun compareAbs(n1: Long, d1: Long, n2: Long, d2: Long): Int {
+        var a = n1
+        var b = d1
+        var c = n2
+        var d = d2
+
+        while (true) {
+            // Compare integer parts
+            val q1 = a / b
+            val q2 = c / d
+
+            if (q1 != q2) {
+                return q1.compareTo(q2)
+            }
+
+            // Integer parts are equal, compare remainders
+            val r1 = a % b
+            val r2 = c % d
+
+            if (r1 == 0L) {
+                // a/b is exactly q1. c/d is q1 + r2/d.
+                // If c/d has remainder, it is larger.
+                return if (r2 == 0L) 0 else -1
+            }
+            if (r2 == 0L) {
+                // c/d is exactly q1. a/b is q1 + r1/b.
+                // a/b is larger.
+                return 1
+            }
+
+            // Compare fractional parts: r1/b vs r2/d
+            // Equivalent to comparing reciprocals: d/r2 vs b/r1 (swapping sides)
+            // Next iteration compares: d/r2 vs b/r1
+            // a = d2 (old d)
+            // b = r2
+            // c = d1 (old b)
+            // d = r1
+            val nextA = d
+            a = d
+            d = r1
+            c = b
+            b = r2
+        }
+    }
 }
 
 object RationalSerializer : KSerializer<Rational> {
