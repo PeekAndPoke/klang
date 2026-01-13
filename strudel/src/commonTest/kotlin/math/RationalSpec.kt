@@ -64,19 +64,19 @@ class RationalSpec : StringSpec({
     }
 
     "Arithmetic Operations" {
-        "addition" {
+        withClue("addition") {
             (r(1, 2) + r(1, 4)) shouldBe r(3, 4)
             (r(1, 3) + r(1, 3)) shouldBe r(2, 3)
             (r(1, 2) + r(-1, 2)) shouldBe Rational.ZERO
         }
 
-        "subtraction" {
+        withClue("subtraction") {
             (r(1, 2) - r(1, 4)) shouldBe r(1, 4)
             (r(1) - r(1)) shouldBe Rational.ZERO
             (r(0) - r(1, 2)) shouldBe r(-1, 2)
         }
 
-        "multiplication" {
+        withClue("multiplication") {
             (r(1, 2) * r(1, 2)) shouldBe r(1, 4)
             (r(2) * r(3)) shouldBe r(6)
             (r(-1) * r(1, 2)) shouldBe r(-1, 2)
@@ -84,20 +84,20 @@ class RationalSpec : StringSpec({
             (r(2, 3) * r(3, 4)) shouldBe r(1, 2) // 2/3 * 3/4 = 6/12 = 1/2
         }
 
-        "division" {
+        withClue("division") {
             (r(1) / r(2)) shouldBe r(1, 2)
             (r(1, 2) / r(1, 4)) shouldBe r(2) // 1/2 * 4/1 = 2
             (r(1) / r(3)) shouldBe r(1, 3)
         }
 
-        "modulo" {
+        withClue("modulo") {
             // 3.5 % 2.0 = 1.5
             (r(7, 2) % r(2)) shouldBe r(3, 2)
             // 5 % 3 = 2
             (r(5) % r(3)) shouldBe r(2)
         }
 
-        "unary minus" {
+        withClue("unary minus") {
             -r(1, 2) shouldBe r(-1, 2)
             -r(-3, 4) shouldBe r(3, 4)
             -Rational.ZERO shouldBe Rational.ZERO
@@ -105,19 +105,19 @@ class RationalSpec : StringSpec({
     }
 
     "Comparisons" {
-        "equality" {
+        withClue("equality") {
             r(1, 2) shouldBe r(2, 4)
             r(1, 3) shouldNotBe 0.3333.toRational() // 0.3333 is 3333/10000, not 1/3
         }
 
-        "ordering" {
+        withClue("ordering") {
             (r(1, 2) < r(3, 4)) shouldBe true
             (r(3, 4) > r(1, 2)) shouldBe true
             (r(1, 2) <= r(1, 2)) shouldBe true
             (r(-1, 2) < r(1, 2)) shouldBe true
         }
 
-        "sorting" {
+        withClue("sorting") {
             val list = listOf(r(1), r(0), r(-1), r(1, 2), Rational.NaN)
             val sorted = list.sorted()
 
@@ -131,20 +131,20 @@ class RationalSpec : StringSpec({
     }
 
     "Math Utilities" {
-        "abs" {
+        withClue("abs") {
             r(1, 2).abs() shouldBe r(1, 2)
             r(-1, 2).abs() shouldBe r(1, 2)
             Rational.ZERO.abs() shouldBe Rational.ZERO
         }
 
-        "floor" {
+        withClue("floor") {
             r(7, 2).floor() shouldBe r(3)   // 3.5 -> 3
             r(19, 10).floor() shouldBe r(1) // 1.9 -> 1
             r(-7, 2).floor() shouldBe r(-4) // -3.5 -> -4
             r(1, 2).floor() shouldBe r(0)   // 0.5 -> 0
         }
 
-        "ceil" {
+        withClue("ceil") {
             r(7, 2).ceil() shouldBe r(4)    // 3.5 -> 4
             r(11, 10).ceil() shouldBe r(2)  // 1.1 -> 2
             r(2).ceil() shouldBe r(2)       // 2.0 -> 2
@@ -152,7 +152,7 @@ class RationalSpec : StringSpec({
             r(1, 2).ceil() shouldBe r(1)    // 0.5 -> 1
         }
 
-        "frac" {
+        withClue("frac") {
             r(7, 2).frac() shouldBe r(1, 2) // 3.5 - 3 = 0.5
             r(5, 4).frac() shouldBe r(1, 4) // 1.25 - 1 = 0.25
             r(2).frac() shouldBe Rational.ZERO
@@ -160,18 +160,18 @@ class RationalSpec : StringSpec({
     }
 
     "Edge Cases & Safety" {
-        "Division by zero" {
+        withClue("Division by zero") {
             (r(1) / r(0)) shouldBe Rational.NaN
             Rational(1.0) / Rational(0.0) shouldBe Rational.NaN
         }
 
-        "Operations with NaN" {
+        withClue("Operations with NaN") {
             (r(1) + Rational.NaN) shouldBe Rational.NaN
             (Rational.NaN * r(5)) shouldBe Rational.NaN
             (Rational.NaN / Rational.NaN) shouldBe Rational.NaN
         }
 
-        "Long.MIN_VALUE safety" {
+        withClue("Long.MIN_VALUE safety") {
             // abs(Long.MIN_VALUE) fails in standard math, Rational should handle it
             val min = Rational(Long.MIN_VALUE)
             val one = Rational(1)
@@ -186,7 +186,7 @@ class RationalSpec : StringSpec({
             selfDiv shouldBe Rational.ONE
         }
 
-        "Accumulated precision (Euclidean pattern)" {
+        withClue("Accumulated precision (Euclidean pattern)") {
             // 1/8 step duration
             val stepDuration = r(1, 8)
 
@@ -197,7 +197,7 @@ class RationalSpec : StringSpec({
             total shouldBe Rational.ONE
         }
 
-        "Large number arithmetic (Overflow checks)" {
+        withClue("Large number arithmetic (Overflow checks)") {
             val million = Rational(1_000_000)
 
             // 1M * 1M = 1T (fits in Long)
@@ -210,13 +210,13 @@ class RationalSpec : StringSpec({
     }
 
     "Number Interop" {
-        "Number.toRational()" {
+        withClue("Number.toRational()") {
             5.toRational() shouldBe r(5)
             0.5.toRational() shouldBe r(1, 2)
             100L.toRational() shouldBe r(100)
         }
 
-        "rem(Number) operator" {
+        withClue("rem(Number) operator") {
             (r(7, 2) % 2) shouldBe r(3, 2)
         }
     }

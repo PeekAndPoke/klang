@@ -27,7 +27,8 @@ class ContinuousPattern(
             t = from.toDouble(),
         ).asVoiceValue()
 
-        val granularity = ctx.getOrDefault(granularityKey, (to - from).toDouble())
+        // Make sure we do not run into an infinite loop
+        val granularity = maxOf(1 / 8.0, ctx.getOrDefault(granularityKey, (to - from).toDouble()))
 
         val result = mutableListOf<StrudelPatternEvent>()
         var currentFrom = from
