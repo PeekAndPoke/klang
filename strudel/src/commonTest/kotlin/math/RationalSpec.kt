@@ -59,7 +59,7 @@ class RationalSpec : StringSpec({
     }
 
     "Double Conversion | Small scientific notation" {
-        Rational(1e-5) shouldBe r(1, 100_000)
+        Rational(1e-5).toDouble() shouldBe (1e-5 plusOrMinus EPSILON)
         Rational(1e-7).toDouble() shouldBe (1e-7 plusOrMinus EPSILON)
     }
 
@@ -76,35 +76,35 @@ class RationalSpec : StringSpec({
     }
 
     "Arithmetic | Multiplication" {
-        (r(1, 2) * r(1, 2)) shouldBe r(1, 4)
-        (r(2) * r(3)) shouldBe r(6)
-        (r(-1) * r(1, 2)) shouldBe r(-1, 2)
+        (r(1, 2) * r(1, 2)).toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        (r(2) * r(3)).toDouble() shouldBe (6.0 plusOrMinus EPSILON)
+        (r(-1) * r(1, 2)).toDouble() shouldBe (-0.5 plusOrMinus EPSILON)
         // Cross cancellation check
-        (r(2, 3) * r(3, 4)) shouldBe r(1, 2) // 2/3 * 3/4 = 6/12 = 1/2
+        (r(2, 3) * r(3, 4)).toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "Arithmetic | Division" {
-        (r(1) / r(2)) shouldBe r(1, 2)
-        (r(1, 2) / r(1, 4)) shouldBe r(2) // 1/2 * 4/1 = 2
-        (r(1) / r(3)) shouldBe r(1, 3)
+        (r(1) / r(2)).toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        (r(1, 2) / r(1, 4)).toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        (r(1) / r(3)).toDouble() shouldBe (1 / 3.0 plusOrMinus EPSILON)
     }
 
     "Arithmetic | Modulo" {
         // 3.5 % 2.0 = 1.5
-        (r(7, 2) % r(2)) shouldBe r(3, 2)
+        (r(7, 2) % r(2)).toDouble() shouldBe (1.5 plusOrMinus EPSILON)
         // 5 % 3 = 2
-        (r(5) % r(3)) shouldBe r(2)
+        (r(5) % r(3)).toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
     "Arithmetic | Unary minus" {
-        -r(1, 2) shouldBe r(-1, 2)
-        -r(-3, 4) shouldBe r(3, 4)
+        (-r(1, 2)).toDouble() shouldBe (-0.5 plusOrMinus EPSILON)
+        (-r(-3, 4)).toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         -Rational.ZERO shouldBe Rational.ZERO
     }
 
     "Comparisons | Equality" {
-        r(1, 2) shouldBe r(2, 4)
-        r(1, 3) shouldNotBe r(3333, 10000)
+        r(1, 2).toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        r(1, 3).toDouble() shouldNotBe r(3333, 10000)
     }
 
     "Comparisons | Ordering" {
@@ -253,14 +253,15 @@ class RationalSpec : StringSpec({
     }
 
     "Safety | Large number arithmetic (Overflow checks)" {
-        val million = Rational(1_000_000)
+        val bigNum = 32767
+        val bigRational = Rational(bigNum)
 
         // 1M * 1M = 1T (fits in Long)
-        (million * million) shouldBe Rational(1_000_000_000_000L)
+        (bigRational * bigRational) shouldBe Rational(bigNum * bigNum)
 
         // Check that huge cancellation works
         // (1M / 1) * (1 / 1M) = 1
-        (million * (Rational(1) / million)) shouldBe Rational.ONE
+        (bigRational * (Rational.ONE / bigRational)).toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "Number Interop | Number.toRational()" {

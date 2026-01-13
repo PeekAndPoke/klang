@@ -54,6 +54,8 @@ value class Rational private constructor(private val bits: Long) : Comparable<Ra
 
         /** Extension to convert any [Number] to a Rational */
         fun Number.toRational(): Rational = invoke(this.toDouble())
+
+        fun List<Rational>.sum(): Rational = fold(ZERO) { acc, r -> acc + r }
     }
 
     /** Returns true if this value represents NaN */
@@ -108,7 +110,13 @@ value class Rational private constructor(private val bits: Long) : Comparable<Ra
 
     // --- Comparison ---
 
-    override operator fun compareTo(other: Rational): Int = bits.compareTo(other.bits)
+    override operator fun compareTo(other: Rational): Int {
+        if (isNaN && other.isNaN) return 0
+        if (isNaN) return 1
+        if (other.isNaN) return -1
+
+        return bits.compareTo(other.bits)
+    }
 
     // --- Conversions ---
 

@@ -73,7 +73,9 @@ private suspend fun helloStrudel() {
 //            """s("<sine saw isaw tri square>")"""
 //        )!!
 
-        pattern.queryArc(0.0, 1.0)
+        (1..16).forEach {
+            pattern.queryArc(it.toDouble(), it.toDouble() + 1.0)
+        }
 
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {

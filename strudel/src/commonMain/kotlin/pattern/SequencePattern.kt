@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.sum
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
@@ -20,30 +21,29 @@ internal class SequencePattern(
             patterns.size == 1 -> patterns.first()
             else -> SequencePattern(patterns)
         }
+
+        private val MIN_QUERY_LENGTH = 1e-7.toRational()
+    }
+
+    // Calculate proportional offsets based on weights
+    private val weights = patterns.map { it.weight.toRational() }
+    private val totalWeight = weights.sum()
+    private val offsets = mutableListOf(Rational.ZERO)
+
+    init {
+        weights.forEach { w ->
+            offsets.add(offsets.last() + (w / totalWeight))
+        }
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
 
-        // println("from $from, to $to")
-
         val events = mutableListOf<StrudelPatternEvent>()
 
-        // Calculate proportional offsets based on weights
-        val weights = patterns.map { it.weight }
-        val totalWeight = weights.sum().toRational()
-        val offsets = mutableListOf(Rational.ZERO)
-
-        weights.forEach { w ->
-            offsets.add(offsets.last() + (w.toRational() / totalWeight))
-        }
-
         // Optimize: Iterate only over the cycles involved in the query
-        val start = from
-        val end = to
-
-        val startCycle = start.floor().toInt()
-        val endCycle = end.ceil().toInt()
+        val startCycle = from.floor().toInt()
+        val endCycle = to.ceil().toInt()
 
         for (cycle in startCycle until endCycle) {
             patterns.forEachIndexed { index, pattern ->
@@ -56,16 +56,19 @@ internal class SequencePattern(
                 val intersectStart = maxOf(from, stepStart)
                 val intersectEnd = minOf(to, stepEnd)
 
+                // Map the "outer" time to the "inner" pattern time.
+                // The inner pattern covers 0..1 logically for this step.
+                // Formula: t_inner = (t_outer - stepStart) / stepSize + cycle
+                val innerFrom = (intersectStart - stepStart) / stepSize + cycleOffset
+                // Clamp innerTo to the end of the cycle
+                val innerTo = minOf((intersectEnd - stepStart) / stepSize + cycleOffset, cycleOffset + Rational.ONE)
+
                 // Condition for when to take the event
-                val takeIt = intersectEnd > intersectStart
+                val takeIt = intersectEnd > intersectStart &&
+                        // IMPORTANT: Protection against floating point precision issues
+                        (innerTo - innerFrom > MIN_QUERY_LENGTH)
 
                 if (takeIt) {
-                    // Map the "outer" time to the "inner" pattern time.
-                    // The inner pattern covers 0..1 logically for this step.
-                    // Formula: t_inner = (t_outer - stepStart) / stepSize + cycle
-                    val innerFrom = (intersectStart - stepStart) / stepSize + cycleOffset
-                    // Clamp innerTo to the end of the cycle
-                    val innerTo = minOf((intersectEnd - stepStart) / stepSize + cycleOffset, cycleOffset + Rational.ONE)
 
                     val innerEvents = pattern.queryArcContextual(innerFrom, innerTo, ctx)
 
