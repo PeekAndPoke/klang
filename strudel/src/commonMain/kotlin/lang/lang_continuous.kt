@@ -6,11 +6,13 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.math.PerlinNoise
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
 import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.strudel.pattern.EmptyPattern
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.random.Random
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -146,5 +148,19 @@ val square2 by dslObject { square.range(-1.0, 1.0) }
 val perlin by dslObject { signal { t -> (PerlinNoise.noise(t) + 1.0) / 2.0 } }
 
 // TODO: berlin noise
+
+private fun applyRandom(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
+    val seed = args.getOrNull(0)?.asIntOrNull() ?: 0
+
+    return ContextModifierPattern(source = pattern) {
+        set(StrudelPattern.QueryContext.random, Random(seed))
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.seed by dslPatternExtension { pattern, args -> applyRandom(pattern, args) }
+
+@StrudelDsl
+val String.seed by dslStringExtension { pattern, args -> applyRandom(pattern, args) }
 
 // TODO: random functions

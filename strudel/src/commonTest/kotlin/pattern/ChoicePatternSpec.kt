@@ -8,18 +8,22 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.parser.MiniNotationParser
+import io.peekandpoke.klang.strudel.lang.seed
 
 class ChoicePatternSpec : StringSpec() {
 
     fun parse(input: String) = MiniNotationParser(input) { note(it) }.parse()
 
     init {
-        "Choice (|): Deterministic selection" {
+        "Choice (|): Deterministic selection when random seed is set" {
             // "a|b" picks one per cycle
-            val pattern = parse("a|b")
+            val pattern = parse("a|b").seed(1)
 
-            pattern.shouldBeInstanceOf<ChoicePattern>()
-            pattern.choices.size shouldBe 2
+            pattern.shouldBeInstanceOf<ContextModifierPattern>()
+
+            val choice = pattern.source
+            choice.shouldBeInstanceOf<ChoicePattern>()
+            choice.choices.size shouldBe 2
 
             // Cycle 0 should always pick the same one
             val run1 = pattern.queryArc(0.0, 1.0).first().data.note

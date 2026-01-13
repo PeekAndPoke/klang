@@ -10,6 +10,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.parser.MiniNotationParser
+import io.peekandpoke.klang.strudel.lang.seed
 
 class DegradePatternSpec : StringSpec() {
 
@@ -19,10 +20,13 @@ class DegradePatternSpec : StringSpec() {
         "Degrade (?): Deterministic behavior" {
             // "a?" should play roughly 50% of the time.
             // But crucially, for a specific cycle, it should ALWAYS be either present or absent.
-            val pattern = parse("a?")
+            val pattern = parse("a?").seed(2)
 
-            pattern.shouldBeInstanceOf<DegradePattern>()
-            pattern.probability shouldBe 0.5 plusOrMinus EPSILON
+            pattern.shouldBeInstanceOf<ContextModifierPattern>()
+
+            val degrade = pattern.source
+            degrade.shouldBeInstanceOf<DegradePattern>()
+            degrade.probability shouldBe 0.5 plusOrMinus EPSILON
 
             // Check cycle 0 repeatedly - should always be consistent
             val eventsCycle0_run1 = pattern.queryArc(0.0, 1.0)

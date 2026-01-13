@@ -6,6 +6,7 @@ import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.StaticStrudelPattern
+import kotlin.random.Random
 
 /**
  * Strudel pattern.
@@ -35,6 +36,8 @@ interface StrudelPattern {
      */
     class QueryContext(data: Map<Key<*>, Any?> = emptyMap()) {
         companion object {
+            val random = Key<Random>("random")
+
             val empty = QueryContext()
         }
 
@@ -113,6 +116,12 @@ interface StrudelPattern {
 
         /** Updates the context with the given block. */
         fun update(block: Updater.() -> Unit): QueryContext = Updater(this).runBlock(block)
+
+        /** Gets the random generator for this context. */
+        fun getRandom(): Random = getOrNull(random) ?: Random.Default
+
+        /** Gets a new random generator seeded with the context's random seed and the given seed. */
+        fun getSeededRandom(seed: Long): Random = Random(getRandom().nextLong() * seed)
 
         /** Makes a copy of the context. */
         private fun clone(): QueryContext = QueryContext(data)
