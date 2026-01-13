@@ -65,6 +65,8 @@ private suspend fun helloStrudel() {
 //            """note("a b c d").early(sine)"""
 //        ) ?: error("Failed to compile pattern")
 
+//        val pattern = note("c,eb,g").slow(2)
+
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {
                 println(it)
@@ -81,7 +83,7 @@ private suspend fun helloStrudel() {
         val playerOptions = KlangPlayer.Options(
             samples = samples,
             sampleRate = 48_000,
-            cyclesPerSecond = 0.625,
+            cyclesPerSecond = 0.65,
         )
 
         val audio1 = strudelPlayer(

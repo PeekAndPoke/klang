@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * Sequence Pattern: Squashes multiple patterns into a single cycle.
@@ -28,10 +29,11 @@ internal class SequencePattern(
 
         // Calculate proportional offsets based on weights
         val weights = patterns.map { it.weight }
-        val totalWeight = weights.sum()
+        val totalWeight = weights.sum().toRational()
         val offsets = mutableListOf(Rational.ZERO)
+
         weights.forEach { w ->
-            offsets.add(offsets.last() + (Rational(w) / Rational(totalWeight)))
+            offsets.add(offsets.last() + (w.toRational() / totalWeight))
         }
 
         // Optimize: Iterate only over the cycles involved in the query
@@ -49,7 +51,6 @@ internal class SequencePattern(
                 val intersectStart = maxOf(from, stepStart)
                 val intersectEnd = minOf(to, stepEnd)
 
-                // If there is an overlap
                 if (intersectEnd > intersectStart) {
                     // Map the "outer" time to the "inner" pattern time.
                     // The inner pattern covers 0..1 logically for this step.
@@ -60,13 +61,17 @@ internal class SequencePattern(
 
                     val innerEvents = pattern.queryArcContextual(innerFrom, innerTo, ctx)
 
-                    events.addAll(innerEvents.map { ev ->
+                    events.addAll(innerEvents.mapNotNull { ev ->
                         // Map back to outer time
                         val mappedBegin = (ev.begin - cycleOffset) * stepSize + stepStart
                         val mappedEnd = (ev.end - cycleOffset) * stepSize + stepStart
                         val mappedDur = mappedEnd - mappedBegin // Duration also scales
 
-                        ev.copy(begin = mappedBegin, end = mappedEnd, dur = mappedDur)
+                        if (mappedEnd > from) {
+                            ev.copy(begin = mappedBegin, end = mappedEnd, dur = mappedDur)
+                        } else {
+                            null
+                        }
                     })
                 }
             }

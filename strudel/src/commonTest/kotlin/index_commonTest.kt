@@ -4,7 +4,7 @@ import kotlin.math.max
 
 const val EPSILON = 1e-7
 
-fun List<List<Any?>>.printAsTable(lineBreak: String = "\n"): String {
+fun List<List<Any?>>.formatAsTable(lineBreak: String = "\n"): String {
 
     val maxLengths = mutableMapOf<Int, Int>()
 

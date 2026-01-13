@@ -81,15 +81,17 @@ object TestKotlinPatterns {
             [[bd:2, cr] hh sd [sd, hh]] 
             [bd hh [sd:3, cr] oh]
             [bd hh sd hh] 
-            [bd [hh, bd] sd oh]
+            [bd hh sd [bd, oh]]
             [[bd, cr] hh [sd, cr] [sd, cr]] 
             [bd hh [sd cr] oh]
             [sd ht sd [mt, oh]] 
             [[sd, oh] [[lt], oh] [bd bd, oh] [bd bd, oh]]
             >            
         """.trimIndent()
-//            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
-//            [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+//                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+//                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+//                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
+//                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
             .orbit(3).pan(-0.0).gain(0.6)
             .room(0.05).rsize(2.0)

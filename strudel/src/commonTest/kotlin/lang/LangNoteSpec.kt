@@ -56,7 +56,7 @@ class LangNoteSpec : StringSpec({
         val p = seq("a3").note()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "a3"
+        events[0].data.note shouldBe "A3"
     }
 
     "note().note() is idempotent (chained re-interpretation)" {

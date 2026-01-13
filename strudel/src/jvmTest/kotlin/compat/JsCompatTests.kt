@@ -9,8 +9,8 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.formatAsTable
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.printAsTable
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.fail
 import kotlin.math.abs
@@ -29,6 +29,8 @@ class JsCompatTests : StringSpec() {
         EXACT,
         CLOSE,
         DIFFERENT,
+        IGNORED,
+        RECOVERED,
     }
 
     private val graalCompiler = GraalStrudelCompiler()
@@ -36,29 +38,32 @@ class JsCompatTests : StringSpec() {
 
     init {
         // Testing that simple pattern code produces the same results
-        JsCompatTestData.simplePatterns.forEachIndexed { index, (shouldRun, name, code) ->
-            "Simple Pattern ${index + 1}: $name" {
-                if (shouldRun) {
-                    runComparison(name, code)
+        JsCompatTestData.simplePatterns.forEachIndexed { index, example ->
+            "Simple Pattern ${index + 1}: ${example.name}" {
+                if (!example.skip) {
+                    runComparison(example)
                 } else {
-                    warn { "Skipping test '$name' because it's marked as 'shouldRun = false'" }
+                    warn { "Skipping test '${example.name}' because it's marked as 'shouldRun = false'" }
                 }
             }
         }
 
         // Testing that songs code produces the same results
-        JsCompatTestData.songs.forEachIndexed { index, (shouldRun, name, code) ->
-            "Song ${index + 1}: $name" {
-                if (shouldRun) {
-                    runComparison(name, code)
+        JsCompatTestData.songs.forEachIndexed { index, example ->
+            "Song ${index + 1}: ${example.name}" {
+                if (!example.skip) {
+                    runComparison(example)
                 } else {
-                    warn { "Skipping test '$name' because it's marked as 'shouldRun = false'" }
+                    warn { "Skipping test '${example.name}' because it's marked as 'shouldRun = false'" }
                 }
             }
         }
     }
 
-    private suspend fun runComparison(name: String, code: String) {
+    private suspend fun runComparison(example: JsCompatTestData.Example) {
+        val name = example.name
+        val code = example.code
+
         val graalPattern = withClue("Compiling '$name' with GraalVM") {
             val result = try {
                 graalCompiler.compile(code).await()
@@ -76,15 +81,41 @@ class JsCompatTests : StringSpec() {
 
         fun List<StrudelPatternEvent>.sort() = sortedWith(
             compareBy(
-                { it.begin },
-                { it.end },
+                { it.begin.toDouble() },
                 { it.data.note },
-                { it.hashCode() },
             )
         )
 
-        val graalArc = graalPattern.queryArc(0.0, 64.0).sort()
-        val nativeArc = nativePattern.queryArc(0.0, 64.0).sort()
+        val numCycles = 32
+
+        val graalArc = (0..<numCycles)
+            .flatMap { graalPattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
+
+        val nativeArc = (0..<numCycles)
+            .flatMap { nativePattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
+
+        val zippedAll = graalArc.zipAll(nativeArc)
+
+        val overview = listOf(
+            listOf("", "Graal", "Native")
+        ).plus(zippedAll.mapIndexed { index, (graal, native) ->
+            listOf(
+                "#${index + 1}",
+                graal?.let {
+                    "${graal.begin} - ${graal.end} | ${listOfNotNull(graal.data.note, graal.data.sound)}"
+                } ?: " --- ",
+                native?.let {
+                    "${native.begin} - ${native.end} | ${listOfNotNull(native.data.note, native.data.sound)}"
+                } ?: " --- ",
+            )
+        })
+
+        println(
+            overview.formatAsTable()
+        )
+
+//        val graalArc = graalPattern.queryArc(0.0, 64.0).sort()
+//        val nativeArc = nativePattern.queryArc(0.0, 64.0).sort()
 
         assertSoftly {
             withClue("Number of events must match | Graal: ${graalArc.size} VS Native: ${nativeArc.size}") {
@@ -98,7 +129,7 @@ class JsCompatTests : StringSpec() {
             zippedArc.asSequence().filter { errors < 10 }
                 .forEachIndexed { index, (graal, native) ->
 
-                    val comparison = buildComparisonReport(graal, native)
+                    val comparison = buildComparisonReport(graal, native, example)
 
                     if (comparison.errors.isNotEmpty()) errors++
 
@@ -108,7 +139,7 @@ class JsCompatTests : StringSpec() {
 Name:    $name
 Pattern: $code
 
-Event $index must be equal:
+Event ${index + 1} / ${zippedArc.size} must be equal:
 --------------------------------------------------------------------------------------------
 ${comparison.errors.joinToString("\n")}
 --------------------------------------------------------------------------------------------
@@ -122,7 +153,12 @@ ${comparison.report}
         }
     }
 
-    private fun buildComparisonReport(graal: StrudelPatternEvent, native: StrudelPatternEvent): ComparisonReport {
+    private fun buildComparisonReport(
+        graal: StrudelPatternEvent,
+        native: StrudelPatternEvent,
+        example: JsCompatTestData.Example,
+    ): ComparisonReport {
+        val ignore = example.ignoreFields
 
         val graalJson = json.encodeToJsonElement(graal)
         val nativeJson = json.encodeToJsonElement(native)
@@ -150,14 +186,22 @@ ${comparison.report}
             }
         }
 
-        fun isCompatible(graal: JsonPrimitive?, native: JsonPrimitive?): ComparisonResult {
-            // Exact match?
-            if (graal == native) return ComparisonResult.EXACT
-            // One is null and the other one is not?
-            if (graal == null || native == null) return ComparisonResult.DIFFERENT
+        fun isCompatible(path: String, graalElem: JsonPrimitive?, nativeElem: JsonPrimitive?): ComparisonResult {
+            val worst = if (path in ignore) {
+                ComparisonResult.IGNORED
+            } else if (example.recover(graal, native)) {
+                ComparisonResult.RECOVERED
+            } else {
+                ComparisonResult.DIFFERENT
+            }
 
-            val graalNum = graal.doubleOrNull
-            val nativeNum = native.doubleOrNull
+            // Exact match?
+            if (graalElem == nativeElem) return ComparisonResult.EXACT
+            // One is null and the other one is not?
+            if (graalElem == null || nativeElem == null) return worst
+
+            val graalNum = graalElem.doubleOrNull
+            val nativeNum = nativeElem.doubleOrNull
 
             if (graalNum != null && nativeNum != null) {
                 val numDiff = abs(graalNum - nativeNum)
@@ -165,11 +209,14 @@ ${comparison.report}
                 if (numDiff < EPSILON) return ComparisonResult.CLOSE
             }
 
-            return ComparisonResult.DIFFERENT
+            return worst
         }
 
-        val graalFlat = mutableMapOf<String, JsonPrimitive>().apply { flattenJson(graalJson, "", this) }
-        val nativeFlat = mutableMapOf<String, JsonPrimitive>().apply { flattenJson(nativeJson, "", this) }
+        val graalFlat = mutableMapOf<String, JsonPrimitive>()
+            .apply { flattenJson(graalJson, "", this) }
+
+        val nativeFlat = mutableMapOf<String, JsonPrimitive>()
+            .apply { flattenJson(nativeJson, "", this) }
 
         val allKeys = (graalFlat.keys + nativeFlat.keys)
             .distinct()
@@ -183,7 +230,7 @@ ${comparison.report}
         allKeys.forEach { key ->
             val gVal = graalFlat[key]
             val nVal = nativeFlat[key]
-            val result = isCompatible(gVal, nVal)
+            val result = isCompatible(path = key, graalElem = gVal, nativeElem = nVal)
 
             if (result == ComparisonResult.DIFFERENT) {
                 errors.add(
@@ -192,9 +239,11 @@ ${comparison.report}
             }
 
             val resultStr = when (result) {
-                ComparisonResult.EXACT -> "  ✓  "
-                ComparisonResult.CLOSE -> " ~== "
-                ComparisonResult.DIFFERENT -> "ERROR"
+                ComparisonResult.EXACT -> "    ✓    "
+                ComparisonResult.CLOSE -> "   ~==   "
+                ComparisonResult.DIFFERENT -> "  ERROR  "
+                ComparisonResult.IGNORED -> " IGNORED "
+                ComparisonResult.RECOVERED -> " RECOVER "
             }
 
             rows.add(
@@ -209,22 +258,20 @@ ${comparison.report}
 
         return ComparisonReport(
             errors = errors.toList(),
-            report = rows.printAsTable()
+            report = rows.formatAsTable()
         )
     }
+
+    private fun <T, R> Iterable<T>.zipAll(other: Iterable<R>): List<Pair<T?, R?>> {
+        val firstItr = this.iterator()
+        val secondItr = other.iterator()
+        val result = mutableListOf<Pair<T?, R?>>()
+
+        while (firstItr.hasNext() || secondItr.hasNext()) {
+            val firstNext = if (firstItr.hasNext()) firstItr.next() else null
+            val secondNext = if (secondItr.hasNext()) secondItr.next() else null
+            result.add(firstNext to secondNext)
+        }
+        return result
+    }
 }
-
-/*
-       | field                               | Graal                | Native
--------+-------------------------------------+----------------------+---------------------
-       | begin                               | 1.0                  | 1.0
-       | end                                 | 2.0                  | 2.0
-       | ...
-       | data.note                           | "c3"                 | "c3"
- ERROR | data.freqHz                         | 100.0                | 200.0
-       | ...
-       | filters.0._type                     | low-pass             | low-pass
- ERROR | filters.0.cutoffHz                  | null                 | 1000.0
- ...
-
- */

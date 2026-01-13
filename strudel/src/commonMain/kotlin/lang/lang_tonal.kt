@@ -21,6 +21,9 @@ var strudelLangTonalInit = false
 /** Cleans up the scale name */
 fun String.cleanScaleName() = replace(":", " ")
 
+/** Capitalizes the first character of the string */
+fun String.ucFirst() = replaceFirstChar { it.uppercaseChar() }
+
 /**
  * Resolves the note and frequency based on the index and the current scale.
  *
@@ -42,8 +45,9 @@ fun VoiceData.resolveNote(newIndex: Int? = null): VoiceData {
         return copy(
             note = noteName,
             freqHz = Tones.noteToFreq(noteName),
-            soundIndex = null, // this clears the sound-index
-            value = null, // this also clears the value
+            gain = gain ?: 1.0,
+            soundIndex = null, // sound-index was consumed
+            value = null,
         )
     }
 
@@ -58,12 +62,13 @@ fun VoiceData.resolveNote(newIndex: Int? = null): VoiceData {
     // Case B: Reinterpretation or fallback.
     // If we derived an index 'n' (e.g. from value), we preserve it.
     // We also ensure 'note' is populated (e.g. from 'value' if 'note' is missing).
-    val fallbackNote = note ?: value?.asString
+    val fallbackNote = (note ?: value?.asString)?.ucFirst()
 
     return copy(
         note = fallbackNote,
         freqHz = Tones.noteToFreq(fallbackNote ?: ""),
-        soundIndex = n ?: soundIndex
+        gain = gain ?: 1.0,
+        soundIndex = n ?: soundIndex,
     )
 }
 
@@ -104,12 +109,13 @@ val String.scale by dslStringExtension { p, args ->
 // -- note() -----------------------------------------------------------------------------------------------------------
 
 private val noteMutation = voiceModifier { input ->
-    val newNote = input?.toString()
-    copy(
-        note = newNote,
-        freqHz = Tones.noteToFreq(newNote ?: ""),
-        gain = gain ?: 1.0,
-    )
+    input?.toString()?.let { newNote ->
+        copy(
+            note = newNote,
+            freqHz = Tones.noteToFreq(newNote),
+            gain = gain ?: 1.0,
+        )
+    } ?: this
 }
 
 private fun applyNote(source: StrudelPattern, args: List<Any?>): StrudelPattern {
