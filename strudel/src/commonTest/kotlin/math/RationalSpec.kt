@@ -1,193 +1,251 @@
 package io.peekandpoke.klang.strudel.math
 
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class RationalSpec : StringSpec({
 
-    "construction from integers" {
+    // Helper to construct exact fractions for testing since the constructor is private
+    fun r(n: Int, d: Int = 1): Rational = Rational(n) / Rational(d)
+
+    "Construction | Simplification" {
+        withClue("Should simplify fractions automatically") {
+            r(2, 4) shouldBe r(1, 2)
+            r(100, 20) shouldBe r(5)
+            r(-2, 4) shouldBe r(-1, 2)
+            r(2, -4) shouldBe r(-1, 2) // Sign normalization
+            r(-2, -4) shouldBe r(1, 2)
+        }
+    }
+
+    "Construction | Zero handling" {
+        r(0, 5) shouldBe Rational.ZERO
+        r(0, -100) shouldBe Rational.ZERO
+    }
+
+    "Construction | Integers" {
         Rational(5).toDouble() shouldBe 5.0
         Rational(5L).toDouble() shouldBe 5.0
         Rational(0) shouldBe Rational.ZERO
         Rational(-3).toDouble() shouldBe -3.0
     }
 
-    "construction from double" {
-        Rational(0.5).toDouble() shouldBeExactly 0.5
-        Rational(0.25).toDouble() shouldBeExactly 0.25
-        Rational(0.75).toDouble() shouldBeExactly 0.75
-        Rational(2.5).toDouble() shouldBeExactly 2.5
-        Rational(-1.5).toDouble() shouldBeExactly -1.5
+    "Double Conversion | Exact decimals" {
+        Rational(0.5) shouldBe r(1, 2)
+        Rational(0.25) shouldBe r(1, 4)
+        Rational(0.75) shouldBe r(3, 4)
+        Rational(0.125) shouldBe r(1, 8)
+        Rational(-1.5) shouldBe r(-3, 2)
+    }
 
-        // Test precision (16-bit fraction is ~0.000015 resolution)
+    "Double Conversion | Recurring decimals" {
+        // 1/3 is approx 0.3333333333333333
+        Rational(1.0 / 3.0) shouldBe r(1, 3)
+        Rational(2.0 / 3.0) shouldBe r(2, 3)
+        Rational(1.0 / 6.0) shouldBe r(1, 6)
+        Rational(1.0 / 7.0) shouldBe r(1, 7)
+        Rational(1.0 / 9.0) shouldBe r(1, 9)
+    }
+
+    "Double Conversion | Precision limits" {
         val pi = Rational(3.14159265359)
-        pi.toDouble() shouldBe (3.14159265359 plusOrMinus 0.0001)
+        pi.toDouble() shouldBe (3.14159265359 plusOrMinus 1e-10)
     }
 
-    "addition" {
-        (Rational(0.5) + Rational(0.25)) shouldBe Rational(0.75)
-        (Rational(1.0) + Rational(2.0)) shouldBe Rational(3.0)
-        (Rational(0.5) + Rational(-0.5)) shouldBe Rational.ZERO
+    "Double Conversion | Small scientific notation" {
+        Rational(1e-5) shouldBe r(1, 100_000)
+        Rational(1e-9).toDouble() shouldBe (1e-9 plusOrMinus 1e-15)
     }
 
-    "subtraction" {
-        (Rational(0.5) - Rational(0.25)) shouldBe Rational(0.25)
-        (Rational(1.0) - Rational(1.0)) shouldBe Rational.ZERO
-        (Rational(0.0) - Rational(0.5)) shouldBe Rational(-0.5)
+    "Arithmetic | Addition" {
+        (r(1, 2) + r(1, 4)) shouldBe r(3, 4)
+        (r(1, 3) + r(1, 3)) shouldBe r(2, 3)
+        (r(1, 2) + r(-1, 2)) shouldBe Rational.ZERO
     }
 
-    "multiplication" {
-        (Rational(0.5) * Rational(0.5)) shouldBe Rational(0.25)
-        (Rational(2.0) * Rational(3.0)) shouldBe Rational(6.0)
-        (Rational(-1.0) * Rational(0.5)) shouldBe Rational(-0.5)
+    "Arithmetic | Subtraction" {
+        (r(1, 2) - r(1, 4)) shouldBe r(1, 4)
+        (r(1) - r(1)) shouldBe Rational.ZERO
+        (r(0) - r(1, 2)) shouldBe r(-1, 2)
     }
 
-    "division" {
-        (Rational(1.0) / Rational(2.0)) shouldBe Rational(0.5)
-        (Rational(0.5) / Rational(0.25)) shouldBe Rational(2.0)
-        (Rational(1.0) / Rational(3.0)).toDouble() shouldBe (0.33333 plusOrMinus 0.0001)
+    "Arithmetic | Multiplication" {
+        (r(1, 2) * r(1, 2)) shouldBe r(1, 4)
+        (r(2) * r(3)) shouldBe r(6)
+        (r(-1) * r(1, 2)) shouldBe r(-1, 2)
+        // Cross cancellation check
+        (r(2, 3) * r(3, 4)) shouldBe r(1, 2) // 2/3 * 3/4 = 6/12 = 1/2
     }
 
-    "modulo" {
-        (Rational(3.5) % Rational(2.0)) shouldBe Rational(1.5)
-        (Rational(5.0) % Rational(3.0)) shouldBe Rational(2.0)
+    "Arithmetic | Division" {
+        (r(1) / r(2)) shouldBe r(1, 2)
+        (r(1, 2) / r(1, 4)) shouldBe r(2) // 1/2 * 4/1 = 2
+        (r(1) / r(3)) shouldBe r(1, 3)
     }
 
-    "unary minus" {
-        -Rational(0.5) shouldBe Rational(-0.5)
-        -Rational(-0.75) shouldBe Rational(0.75)
+    "Arithmetic | Modulo" {
+        // 3.5 % 2.0 = 1.5
+        (r(7, 2) % r(2)) shouldBe r(3, 2)
+        // 5 % 3 = 2
+        (r(5) % r(3)) shouldBe r(2)
+    }
+
+    "Arithmetic | Unary minus" {
+        -r(1, 2) shouldBe r(-1, 2)
+        -r(-3, 4) shouldBe r(3, 4)
         -Rational.ZERO shouldBe Rational.ZERO
     }
 
-    "comparison operators" {
-        (Rational(0.5) < Rational(0.75)) shouldBe true
-        (Rational(0.75) > Rational(0.5)) shouldBe true
-        (Rational(0.5) <= Rational(0.5)) shouldBe true
-        (Rational(-0.5) < Rational(0.5)) shouldBe true
+    "Comparisons | Equality" {
+        r(1, 2) shouldBe r(2, 4)
+        r(1, 3) shouldNotBe r(3333, 10000)
     }
 
-    "equals and hashCode" {
-        // In value classes, equality is based on the underlying 'bits'
-        Rational(0.5) shouldBe Rational(0.5)
-        Rational(0.5).hashCode() shouldBe Rational(0.5).hashCode()
-
-        Rational(0.5) shouldNotBe Rational(0.333)
+    "Comparisons | Ordering" {
+        (r(1, 2) < r(3, 4)) shouldBe true
+        (r(3, 4) > r(1, 2)) shouldBe true
+        (r(1, 2) <= r(1, 2)) shouldBe true
+        (r(-1, 2) < r(1, 2)) shouldBe true
     }
 
-    "absolute value" {
-        Rational(0.5).abs() shouldBe Rational(0.5)
-        Rational(-0.5).abs() shouldBe Rational(0.5)
+    "Comparisons | Small differences" {
+        // requested test case: 1.0 < 1.0 + 1e-7
+        val a = 1.0.toRational()
+        val b = (1.0).toRational() + (1e-7).toRational()
+
+        (a < b) shouldBe true
+        (b > a) shouldBe true
+        (b - a) shouldBe 1e-7.toRational()
+    }
+
+    "Comparisons | Very small numbers" {
+        val pairs = listOf(
+            1e-1 to 1e-2,
+            1e-2 to 1e-3,
+            1e-3 to 1e-4,
+            1e-4 to 1e-5,
+            1e-5 to 1e-6,
+            1e-6 to 1e-7,
+            1e-7 to 1e-8,
+            1e-8 to 1e-9, // Max precision we can achieve right now
+        )
+
+        assertSoftly {
+            pairs.forEach { (a, b) ->
+                withClue("a = $a | b = $b") {
+                    val tiny = Rational(a)
+                    val tinier = Rational(b)
+
+                    (tiny > tinier) shouldBe true
+                    (Rational.ONE < Rational.ONE + tiny) shouldBe true
+                    (Rational.ONE < Rational.ONE + tinier) shouldBe true
+
+                    (tiny > Rational.ZERO) shouldBe true
+                    (tinier > Rational.ZERO) shouldBe true
+                }
+            }
+        }
+    }
+
+    "Comparisons | Sorting" {
+        val list = listOf(r(1), r(0), r(-1), r(1, 2), Rational.NaN)
+        val sorted = list.sorted()
+
+        // Expected: -1, 0, 1/2, 1, NaN (NaN is usually largest in Kotlin CompareTo for doubles, implementation pushes it to end)
+        sorted[0] shouldBe r(-1)
+        sorted[1] shouldBe r(0)
+        sorted[2] shouldBe r(1, 2)
+        sorted[3] shouldBe r(1)
+        sorted[4].isNaN shouldBe true
+    }
+
+    "Math Utilities | abs" {
+        r(1, 2).abs() shouldBe r(1, 2)
+        r(-1, 2).abs() shouldBe r(1, 2)
         Rational.ZERO.abs() shouldBe Rational.ZERO
     }
 
-    "floor operation" {
-        Rational(3.5).floor() shouldBe Rational(3.0)
-        Rational(1.9).floor() shouldBe Rational(1.0)
-        Rational(-3.5).floor() shouldBe Rational(-4.0)
-        Rational(0.5).floor() shouldBe Rational(0.0)
+    "Math Utilities | floor" {
+        r(7, 2).floor() shouldBe r(3)   // 3.5 -> 3
+        r(19, 10).floor() shouldBe r(1) // 1.9 -> 1
+        r(-7, 2).floor() shouldBe r(-4) // -3.5 -> -4
+        r(1, 2).floor() shouldBe r(0)   // 0.5 -> 0
     }
 
-    "ceil operation" {
-        Rational(3.5).ceil() shouldBe Rational(4.0)
-        Rational(1.1).ceil() shouldBe Rational(2.0)
-        Rational(2.0).ceil() shouldBe Rational(2.0)
-        Rational(-3.5).ceil() shouldBe Rational(-3.0)
-        Rational(0.5).ceil() shouldBe Rational(1.0)
+    "Math Utilities | ceil" {
+        r(7, 2).ceil() shouldBe r(4)    // 3.5 -> 4
+        r(11, 10).ceil() shouldBe r(2)  // 1.1 -> 2
+        r(2).ceil() shouldBe r(2)       // 2.0 -> 2
+        r(-7, 2).ceil() shouldBe r(-3)  // -3.5 -> -3
+        r(1, 2).ceil() shouldBe r(1)    // 0.5 -> 1
     }
 
-    "fractional part" {
-        Rational(3.5).frac() shouldBe Rational(0.5)
-        Rational(1.25).frac() shouldBe Rational(0.25)
-        Rational(2.0).frac() shouldBe Rational.ZERO
+    "Math Utilities | frac" {
+        r(7, 2).frac() shouldBe r(1, 2) // 3.5 - 3 = 0.5
+        r(5, 4).frac() shouldBe r(1, 4) // 1.25 - 1 = 0.25
+        r(2).frac() shouldBe Rational.ZERO
     }
 
-    "conversion to primitives" {
-        Rational(0.5).toDouble() shouldBeExactly 0.5
-        Rational(3.5).toLong() shouldBe 3L
-        Rational(1.9).toInt() shouldBe 1
+    "Safety | Division by zero" {
+        (r(1) / r(0)) shouldBe Rational.NaN
+        Rational(1.0) / Rational(0.0) shouldBe Rational.NaN
     }
 
-    "euclidean pattern timing edge case" {
+    "Safety | Operations with NaN" {
+        (r(1) + Rational.NaN) shouldBe Rational.NaN
+        (Rational.NaN * r(5)) shouldBe Rational.NaN
+        (Rational.NaN / Rational.NaN) shouldBe Rational.NaN
+    }
+
+    "Safety | Long.MIN_VALUE safety" {
+        // abs(Long.MIN_VALUE) fails in standard math, Rational should handle it
+        val min = Rational(Long.MIN_VALUE)
+        val one = Rational(1)
+
+        // Should not crash
+        val res = min / one
+        res.numerator shouldBe Long.MIN_VALUE
+
+        // GCD involving MIN_VALUE
+        // MIN_VALUE / MIN_VALUE should simplify to 1
+        val selfDiv = Rational(Long.MIN_VALUE) / Rational(Long.MIN_VALUE)
+        selfDiv shouldBe Rational.ONE
+    }
+
+    "Safety | Accumulated precision (Euclidean pattern)" {
         // 1/8 step duration
-        val stepDuration = Rational(1.0) / Rational(8.0)
+        val stepDuration = r(1, 8)
 
-        // Summing 8 steps should equal exactly 1.0 within fixed-point resolution
+        // Summing 8 steps should equal exactly 1.0 (no floating point drift)
         var total = Rational.ZERO
         repeat(8) { total += stepDuration }
 
-        total.toDouble() shouldBe (1.0 plusOrMinus 0.0001)
+        total shouldBe Rational.ONE
     }
 
-    "weight-based timing calculations" {
-        val weights = listOf(1.0, 2.0, 1.0)
-        val totalWeight = weights.sum()
-
-        val offsets = mutableListOf(Rational.ZERO)
-        weights.forEach { w ->
-            val rational = Rational(w)
-            val proportion = rational / Rational(totalWeight)
-            offsets.add(offsets.last() + proportion)
-        }
-
-        offsets[0].toDouble() shouldBe 0.0
-        offsets[1].toDouble() shouldBe 0.25
-        offsets[2].toDouble() shouldBe 0.75
-        offsets[3].toDouble() shouldBe (1.0 plusOrMinus 0.0001)
-    }
-
-    "Number.toRational() extension function" {
-        5.toRational() shouldBe Rational(5.0)
-        0.5.toRational() shouldBe Rational(0.5)
-        100L.toRational() shouldBe Rational(100.0)
-    }
-
-    "rem(Number) operator convenience method" {
-        (Rational(3.5) % 2) shouldBe Rational(1.5)
-        (Rational(1.33) % 1.0).toDouble() shouldBe (0.33 plusOrMinus 0.001)
-    }
-
-    "large number arithmetic (32.32 safety checks)" {
-        // Test large integers (millions of cycles)
+    "Safety | Large number arithmetic (Overflow checks)" {
         val million = Rational(1_000_000)
-        val twoMillion = Rational(2_000_000)
 
-        // Addition
-        (million + million) shouldBe twoMillion
+        // 1M * 1M = 1T (fits in Long)
+        (million * million) shouldBe Rational(1_000_000_000_000L)
 
-        // Subtraction
-        (twoMillion - million) shouldBe million
-
-        // Multiplication with large numbers
-        // 1,000,000 * 2.5 = 2,500,000
-        (million * Rational(2.5)).toDouble() shouldBe (2_500_000.0 plusOrMinus EPSILON)
-
-        // Division with large numbers
-        // 2,500_000 / 1,000,000 = 2.5
-        (Rational(2_500_000.0) / million).toDouble() shouldBe (2.5 plusOrMinus EPSILON)
-
-        // Ensure we can handle values up to the reasonable limit of a 32-bit integer part
-        // 1 billion cycles
-        val billion = Rational(1_000_000_000L)
-        (billion + Rational.ONE).toLong() shouldBe 1_000_000_001L
-
-        // Test that very small numbers multiplied by large ones stay accurate
-        val small = Rational(1.0) / Rational(1_000_000)
-        (billion * small).toDouble() shouldBe (1000.0 plusOrMinus 0.3)
+        // Check that huge cancellation works
+        // (1M / 1) * (1 / 1M) = 1
+        (million * (Rational(1) / million)) shouldBe Rational.ONE
     }
 
-    "overflow safety: chained multiplication" {
-        var res = Rational(10.0)
-        // Repeatedly multiply and divide to ensure we don't accumulate junk or overflow Long
-        repeat(10) {
-            res *= Rational(1.5)
-            res /= Rational(1.2)
-        }
-        res.toDouble() shouldBe (res.toDouble() plusOrMinus EPSILON)
-        res.isNaN shouldBe false
+    "Number Interop | Number.toRational()" {
+        5.toRational() shouldBe r(5)
+        0.5.toRational() shouldBe r(1, 2)
+        100L.toRational() shouldBe r(100)
+    }
+
+    "Number Interop | rem(Number) operator" {
+        (r(7, 2) % 2) shouldBe r(3, 2)
     }
 })

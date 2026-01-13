@@ -22,6 +22,10 @@ internal class ControlPattern(
     val combiner: (VoiceData, VoiceData) -> VoiceData,
 ) : StrudelPattern {
 
+    companion object {
+        private val EPS = 1e-9.toRational()
+    }
+
     // Control patterns wrap a source pattern and should preserve its weight.
     // E.g. (bd@2).gain(0.5) should still have a weight of 2.
     override val weight: Double get() = source.weight
@@ -32,12 +36,9 @@ internal class ControlPattern(
 
         val result = mutableListOf<StrudelPatternEvent>()
 
-        // Tiny epsilon for querying control values at a specific point
-        val epsilon = 1e-5.toRational()
-
         for (event in sourceEvents) {
             val queryTime = event.begin
-            val controlEvents = control.queryArcContextual(queryTime, queryTime + epsilon, ctx)
+            val controlEvents = control.queryArcContextual(queryTime, queryTime + EPS, ctx)
             val match = controlEvents.firstOrNull()
 
             if (match != null) {
