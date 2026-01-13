@@ -4,28 +4,33 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
-import kotlin.math.max
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 internal class TempoModifierPattern(
     val source: StrudelPattern,
     val factor: Double,
     val invertPattern: Boolean = false,
 ) : StrudelPattern {
+    private val factorRat = factor.toRational()
+
+    private val scale = if (invertPattern) {
+        factorRat
+    } else {
+        (Rational.ONE / maxOf(0.001.toRational(), factorRat))
+    }
+
     override val weight: Double get() = source.weight
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        val scale = if (invertPattern) factor else (1.0 / max(0.001, factor))
-        val scaleRat = Rational(scale)
-
-        val innerFrom = from * scaleRat
-        val innerTo = to * scaleRat
+        val innerFrom = from * scale
+        val innerTo = to * scale
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
         return innerEvents.mapNotNull { ev ->
-            val mappedBegin = ev.begin / scaleRat
-            val mappedEnd = ev.end / scaleRat
-            val mappedDur = ev.dur / scaleRat
+            val mappedBegin = ev.begin / scale
+            val mappedEnd = ev.end / scale
+            val mappedDur = ev.dur / scale
 
             if (mappedEnd > from && mappedBegin < to) {
                 ev.copy(

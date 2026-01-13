@@ -7,11 +7,11 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-object RationalSerializer : KSerializer<Rational> {
+object Rational2Serializer : KSerializer<Rational2> {
     override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("Rational", PrimitiveKind.STRING)
+        PrimitiveSerialDescriptor("Rational2", PrimitiveKind.STRING)
 
-    override fun serialize(encoder: Encoder, value: Rational) {
+    override fun serialize(encoder: Encoder, value: Rational2) {
         if (value.isNaN) {
             encoder.encodeString("NaN")
         } else {
@@ -19,20 +19,20 @@ object RationalSerializer : KSerializer<Rational> {
         }
     }
 
-    override fun deserialize(decoder: Decoder): Rational {
+    override fun deserialize(decoder: Decoder): Rational2 {
         val string = decoder.decodeString()
-        if (string == "NaN") return Rational.NaN
+        if (string == "NaN") return Rational2.NaN
 
         val parts = string.split('/')
-        if (parts.size != 2) return Rational.NaN
+        if (parts.size != 2) return Rational2.NaN
 
         return try {
             val num = parts[0].toLong()
             val den = parts[1].toLong()
             // Construct safely via division which triggers simplification
-            Rational(num) / Rational(den)
+            Rational2(num) / Rational2(den)
         } catch (_: Exception) {
-            Rational.NaN
+            Rational2.NaN
         }
     }
 }

@@ -69,6 +69,10 @@ private suspend fun helloStrudel() {
 
 //        val pattern = note("a b c d").pan(sine2.range(-1.0, 1.0).slow(4))
 
+//        val pattern = StrudelPattern.compile(
+//            """s("<sine saw isaw tri square>")"""
+//        )!!
+
         pattern.queryArc(0.0, 1.0)
 
         pattern.queryArc(0.0, 8.0).let { arc ->

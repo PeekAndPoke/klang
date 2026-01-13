@@ -25,6 +25,8 @@ internal class SequencePattern(
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
 
+        // println("from $from, to $to")
+
         val events = mutableListOf<StrudelPatternEvent>()
 
         // Calculate proportional offsets based on weights
@@ -37,8 +39,11 @@ internal class SequencePattern(
         }
 
         // Optimize: Iterate only over the cycles involved in the query
-        val startCycle = from.floor().toInt()
-        val endCycle = to.ceil().toInt()
+        val start = from
+        val end = to
+
+        val startCycle = start.floor().toInt()
+        val endCycle = end.ceil().toInt()
 
         for (cycle in startCycle until endCycle) {
             patterns.forEachIndexed { index, pattern ->
@@ -51,7 +56,10 @@ internal class SequencePattern(
                 val intersectStart = maxOf(from, stepStart)
                 val intersectEnd = minOf(to, stepEnd)
 
-                if (intersectEnd > intersectStart) {
+                // Condition for when to take the event
+                val takeIt = intersectEnd > intersectStart
+
+                if (takeIt) {
                     // Map the "outer" time to the "inner" pattern time.
                     // The inner pattern covers 0..1 logically for this step.
                     // Formula: t_inner = (t_outer - stepStart) / stepSize + cycle
