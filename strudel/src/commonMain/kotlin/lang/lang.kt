@@ -12,6 +12,7 @@ annotation class StrudelDsl
 fun initStrudelLang() {
     // Access all init properties to force initialization
     strudelLangHelpersInit = true
+    strudelLangChoiceInit = true
     strudelLangContinuousInit = true
     strudelLangStructuralInit = true
     strudelLangTempoInit = true

@@ -64,6 +64,11 @@ class JsCompatTests : StringSpec() {
         val name = example.name
         val code = example.code
 
+        val nativePattern = withClue("Compiling '$name' natively") {
+            StrudelPattern.compile(code)
+                ?: fail("Failed to compile '$name' natively")
+        }
+
         val graalPattern = withClue("Compiling '$name' with GraalVM") {
             val result = try {
                 graalCompiler.compile(code).await()
@@ -72,11 +77,6 @@ class JsCompatTests : StringSpec() {
             }
 
             result.shouldNotBeNull()
-        }
-
-        val nativePattern = withClue("Compiling song '$name' natively") {
-            StrudelPattern.compile(code)
-                ?: fail("Failed to compile song '$name' natively")
         }
 
         fun List<StrudelPatternEvent>.sort() = sortedWith(

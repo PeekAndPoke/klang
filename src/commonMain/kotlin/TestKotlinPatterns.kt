@@ -39,53 +39,54 @@ object TestKotlinPatterns {
                     [[d2 d3]*4]
                     [[c2 c3]*4]
                     [[b1 b2]*2 [e3 e2]*2]
-                    [a3 a2 a1 a1 a1 [c1 e2] [a5 a4] [a3 a2]]
+                    [a3 a2 a1 a0 a1 [c1 e2] [a5 a4] [a3 a2]]
                 >
             """.trimIndent()
         ).sound("supersaw")
-            .spread(0.5).unison(8).detune(0.1)
-            .orbit(2).pan(-0.33).gain(0.4)
-//            .adsr("0.05:2.0:0.0:1.0")
+            .spread(0.5).unison(8).detune(0.3)
+            .orbit(2).pan(-0.33).gain(0.3)
+//            .adsr("0.05:0.2:0.0:1.0")
             .room(0.05).rsize(1.0)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
+            .struct("x*8")
 //            .rev(4).rev(3)
         ,
 
         sound(
             """
             <
-            [[bd:2, hh] hh sd hh] 
+            [[bd:2, cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
-            [bd hh sd oh]
+            [bd hh sd hh]
             [[bd, cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh [mt mt, sd] [ht ht, oh]]
-            [[bd:2, hh] hh sd:3 hh] 
+            [[bd:2, cr] hh [sd, cr] hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd oh]
-            [[bd, cr] hh sd hh] 
-            [bd hh sd oh]
+            [[bd, cr] oh sd oh] 
+            [bd hh sd hh]
             [bd hh sd hh] 
             [bd hh [sd sd] [[sd sd], oh]]
             [[bd:2, cr] hh sd [sd hh]] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd oh]
-            [[bd, cr] hh sd hh] 
+            [[bd, cr] hh sd [hh sd]] 
             [bd hh sd oh]
             [bd hh sd hh] 
-            [bd hh [mt mt, sd] [ht ht, oh]]
-            [[bd:2, cr] hh sd [sd, hh]] 
-            [bd hh [sd:3, cr] oh]
+            [bd hh [mt mt, sd sd] ~]
+            [[bd:2, cr] hh [sd, cr] [sd, hh]] 
+            [bd hh [sd:4 cr] oh]
             [bd hh sd hh] 
             [bd hh sd [bd, oh]]
-            [[bd, cr] hh [sd, cr] [sd, cr]] 
-            [bd hh [sd cr] oh]
-            [sd mt sd [mt, oh]] 
-            [[sd, oh] [[lt], oh] [bd bd, oh] [bd bd, oh]]
+            [[bd, cr] oh sd oh] 
+            [bd oh sd oh]
+            [[sd, cr] mt sd [mt, hh]] 
+            [sd lt [bd bd] [bd bd]]
             >            
         """.trimIndent()
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]

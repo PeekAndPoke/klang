@@ -20,31 +20,46 @@ import kotlin.random.Random
  */
 var strudelLangContinuousInit = false
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Continuous patterns
-// ///
+// -- Random -----------------------------------------------------------------------------------------------------------
 
-// Strudel JS compat methods
+private fun applyRandom(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
+    val seed = args.getOrNull(0)?.asIntOrNull() ?: 0
 
-// Continuous patterns settings
+    return ContextModifierPattern(source = pattern) {
+        set(StrudelPattern.QueryContext.random, Random(seed))
+    }
+}
 
-/**
- * Sets the range of a continuous pattern to a new minimum and maximum value.
- */
 @StrudelDsl
-val StrudelPattern.range by dslPatternExtension { p, args ->
+val StrudelPattern.seed by dslPatternExtension { pattern, args -> applyRandom(pattern, args) }
+
+@StrudelDsl
+val String.seed by dslStringExtension { pattern, args -> applyRandom(pattern, args) }
+
+// -- Continuous patterns settings -------------------------------------------------------------------------------------
+
+private fun applyRange(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
     val min = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
     val max = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
     val granularity = args.getOrNull(2)?.asDoubleOrNull()?.toRational() ?: Rational.ONE
 
-    p.withContext {
+    return pattern.withContext {
         setIfAbsent(ContinuousPattern.minKey, min)
         setIfAbsent(ContinuousPattern.maxKey, max)
         setIfAbsent(ContinuousPattern.granularityKey, granularity)
     }
 }
 
-// Continuous patterns
+/**
+ * Sets the range of a continuous pattern to a new minimum and maximum value.
+ */
+@StrudelDsl
+val StrudelPattern.range by dslPatternExtension { p, args -> applyRange(p, args) }
+
+@StrudelDsl
+val String.range by dslStringExtension { p, args -> applyRange(p, args) }
+
+// -- Continuous patterns ----------------------------------------------------------------------------------------------
 
 /** Empty pattern that does not produce any events */
 @StrudelDsl
@@ -76,6 +91,48 @@ val steady by dslFunction { args ->
 /** Continuous pattern that represents the current time (in cycles) */
 @StrudelDsl
 val time by dslObject { signal { t -> t } }
+
+/** Continuous pattern that produces a random value between 0 and 1 */
+@StrudelDsl
+val rand by dslObject { ContinuousPattern { _, _, ctx -> ctx.getRandom().nextDouble() } }
+
+/** Continuous pattern that produces a random value between -1 and 1 */
+@StrudelDsl
+val rand2 by dslObject { rand.range(-1.0, 1.0) }
+
+/**
+ * A continuous pattern of 0 or 1 (binary random), with a probability for the value being 1
+ *
+ * @name brandBy
+ * @param {number} probability - a number between 0 and 1
+ * @example
+ * s("hh*10").pan(brandBy(0.2))
+ */
+@StrudelDsl
+val brandBy by dslFunction { args ->
+    val probability = args.getOrNull(0)?.asDoubleOrNull()?.coerceIn(0.0, 1.0) ?: 0.5
+
+    ContinuousPattern { _, _, ctx -> if (ctx.getRandom().nextDouble() < probability) 1.0 else 0.0 }
+}
+
+/** A continuous pattern of 0 or 1 (50:50 random) */
+@StrudelDsl
+val brand by dslObject { brandBy(0.5) }
+
+/**
+ * A continuous pattern of random integers, between 0 and n-1.
+ *
+ * @param {number} n max value (exclusive)
+ * @example
+ * // randomly select scale notes from 0 - 7 (= C to C)
+ * n(irand(8)).struct("x x*2 x x*3").scale("C:minor")
+ *
+ */
+@StrudelDsl
+val irand by dslObject {
+    // TODO ... see signal.mjs
+    silence
+}
 
 /** Sine oscillator: 0 to 1, period of 1 cycle */
 @StrudelDsl
@@ -149,18 +206,6 @@ val perlin by dslObject { signal { t -> (PerlinNoise.noise(t) + 1.0) / 2.0 } }
 
 // TODO: berlin noise
 
-private fun applyRandom(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
-    val seed = args.getOrNull(0)?.asIntOrNull() ?: 0
-
-    return ContextModifierPattern(source = pattern) {
-        set(StrudelPattern.QueryContext.random, Random(seed))
-    }
-}
-
-@StrudelDsl
-val StrudelPattern.seed by dslPatternExtension { pattern, args -> applyRandom(pattern, args) }
-
-@StrudelDsl
-val String.seed by dslStringExtension { pattern, args -> applyRandom(pattern, args) }
 
 // TODO: random functions
+

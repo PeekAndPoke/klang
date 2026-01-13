@@ -10,8 +10,8 @@ import io.peekandpoke.klang.strudel.math.Rational
 /**
  * A pattern that generates a value based on continuous cycle time.
  */
-class ContinuousPattern(
-    val getValue: (Double) -> Double,
+class ContinuousPattern private constructor(
+    val getValue: (from: Double, to: Double, ctx: QueryContext) -> Double,
 ) : StrudelPattern.FixedWeight {
     companion object {
         val minKey = QueryContext.Key<Double>("rangeMin")
@@ -19,6 +19,12 @@ class ContinuousPattern(
         val granularityKey = QueryContext.Key<Rational>("granularity")
 
         val minGranularity = Rational(1 / 16.0)
+
+        operator fun invoke(getValue: (from: Double) -> Double) =
+            ContinuousPattern { from, _, _ -> getValue(from) }
+
+        operator fun invoke(getValue: (from: Double, to: Double, ctx: QueryContext) -> Double) =
+            ContinuousPattern(getValue)
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
@@ -26,7 +32,9 @@ class ContinuousPattern(
         val value = getValue(
             min = ctx.getOrDefault(minKey, 0.0),
             max = ctx.getOrDefault(maxKey, 1.0),
-            t = from.toDouble(),
+            from = from.toDouble(),
+            to = to.toDouble(),
+            ctx = ctx
         ).asVoiceValue()
 
         // Make sure we do not run into an infinite loop
@@ -60,8 +68,8 @@ class ContinuousPattern(
     }
 
     /** Creates a new version of this pattern with a transformed value range */
-    internal fun getValue(min: Double, max: Double, t: Double): Double {
-        val value = getValue(t)
+    internal fun getValue(min: Double, max: Double, from: Double, to: Double, ctx: QueryContext): Double {
+        val value = getValue(from, to, ctx)
         // The internal oscillators now produce 0.0 to 1.0.
         // We map this unipolar value to the target min..max range.
         return min + (value * (max - min))
