@@ -23,7 +23,7 @@ class KlangEventFetcher<T>(
         val prefetchCycles: Double,
     )
 
-    private val sampleSoundLookAheadCycles = 8.0
+    private val sampleSoundLookAheadCycles = 4.0
 
     private val secPerCycle = 1.0 / config.cps
     private var queryCursorCycles = 0.0

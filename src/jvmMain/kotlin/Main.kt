@@ -5,6 +5,8 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.strudel.lang.n
+import io.peekandpoke.klang.strudel.lang.scale
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -58,7 +60,7 @@ private suspend fun helloStrudel() {
 //        val pattern = strudel.compile(code).await()
 
 //        val pattern = TestKotlinPatterns.strangerThings
-        val pattern = TestKotlinPatterns.tetris
+//        val pattern = TestKotlinPatterns.tetris
 //        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
 
 //        val pattern = StrudelPattern.compile(
@@ -66,6 +68,8 @@ private suspend fun helloStrudel() {
 //        ) ?: error("Failed to compile pattern")
 
 //        val pattern = note("c,eb,g").slow(2)
+
+        val pattern = n("0 2 4").scale("C4:minor")
 
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {
