@@ -203,6 +203,7 @@ All arithmetic operations work on pattern values and can be applied as:
 
 ### Probabilistic Patterns ✅
 
+**Event Removal:**
 - `degradeBy(amount)` - Randomly removes events with given probability (pattern method, string extension, with pattern
   control)
 - `degrade()` - Randomly removes events with 50% probability (pattern method and string extension)
@@ -210,6 +211,19 @@ All arithmetic operations work on pattern values and can be applied as:
   control)
 - `undegrade()` - Inverse of degrade - randomly removes events with 50% probability (pattern method and string
   extension)
+
+**Conditional Transformations:**
+
+- `sometimesBy(probability, fn)` - Randomly applies transformation with custom probability
+- `sometimes(fn)` - Randomly applies transformation with 50% probability
+- `often(fn)` - Frequently applies transformation (75% probability)
+- `rarely(fn)` - Infrequently applies transformation (25% probability)
+- `almostAlways(fn)` - Almost always applies transformation (90% probability)
+- `almostNever(fn)` - Almost never applies transformation (10% probability)
+- `always(fn)` - Always applies transformation (100% probability)
+- `never(fn)` - Never applies transformation (0% probability)
+- `someCyclesBy(probability, fn)` - Cycle-based random application (placeholder: currently aliased to sometimesBy)
+- `someCycles(fn)` - Cycle-based random application with 50% (placeholder: currently aliased to sometimes)
 
 ## Audio Parameters
 
@@ -352,7 +366,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 110+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 118+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 15 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, DegradePatternWithControl,
   ReversePattern, StructPattern, ContextModifierPattern, TimeShiftPatternWithControl)
 - 24 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
@@ -457,11 +471,33 @@ Comprehensive voice data structure supporting:
   - Both support pattern control for dynamic probability
   - Enhanced `DegradePattern` and `DegradePatternWithControl` with inverted mode
   - Complementary behavior: `degradeBy(x)` and `undegradeBy(1-x)` partition events perfectly
+- ✅ **Conditional Transformation Functions**:
+  - `sometimesBy(probability, fn)` - Core function for probabilistic transformations
+  - `sometimes(fn)` - 50% probability shorthand
+  - `often(fn)` - 75% probability for frequent application
+  - `rarely(fn)` - 25% probability for rare application
+  - `almostAlways(fn)` - 90% probability
+  - `almostNever(fn)` - 10% probability
+  - `always(fn)` - 100% probability (always applies transformation)
+  - `never(fn)` - 0% probability (never applies transformation)
+  - Implementation uses `StackPattern` combining degraded and undegraded streams with function applied to undegraded
+    portion
+  - `someCyclesBy(probability, fn)` and `someCycles(fn)` - Placeholders for cycle-based randomness (currently aliased to
+    sometimesBy/sometimes)
+- ✅ **Random Seeding Improvements**:
+  - Changed `QueryContext.random` from `Key<Random>` to `randomSeed` as `Key<Long>` for better seed management
+  - Updated `getRandom()` to create Random instance from seed on demand
+  - Enhanced `seed()` function to accept Long values via new `asLongOrNull()` helper
+- ✅ **Helper Function Enhancements**:
+  - Added `asLongOrNull()` for safe Long conversion
+  - Enhanced `DslPatternMethod` with overload: `invoke(num: Number, block: (StrudelPattern) -> StrudelPattern)`
 - ✅ **Comprehensive Testing** - Added multiple test files:
     - `LangSeedSpec.kt` with 7 tests covering seed functionality
     - `LangRandomSpec.kt` with tests for random signal generators
     - `LangDegradeBySpecTest.kt` with tests for degradeBy/degrade functions
   - `LangUndegradeBySpec.kt` with 10 tests covering undegradeBy/undegrade including complementarity tests
+  - `LangSometimesBySpec.kt` with 11 tests covering all conditional transformation functions (sometimesBy, sometimes,
+    often, rarely, almostAlways, almostNever, always, never, someCyclesBy, someCycles)
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting
   - `PerlinNoiseSpec.kt` - Tests for Perlin noise implementation

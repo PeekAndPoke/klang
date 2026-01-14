@@ -57,6 +57,13 @@ internal fun Any.asIntOrNull(): Int? = when (this) {
     else -> null
 }
 
+/** Safely convert any value to a long or null */
+internal fun Any.asLongOrNull(): Long? = when (this) {
+    is Number -> this.toLong()
+    is String -> this.toDoubleOrNull()?.toLong()
+    else -> null
+}
+
 // --- High Level Helpers ---
 
 /** Creates a voice modifier */
@@ -280,22 +287,32 @@ class DslPatternMethod(
     val pattern: StrudelPattern,
     val handler: (StrudelPattern, List<Any?>) -> StrudelPattern,
 ) {
-    operator fun invoke() = handler(pattern, emptyList())
+    operator fun invoke() =
+        handler(pattern, emptyList())
 
     @JvmName("invokeBlock")
-    operator fun invoke(block: (StrudelPattern) -> StrudelPattern) = handler(pattern, listOf(block))
+    operator fun invoke(block: (StrudelPattern) -> StrudelPattern) =
+        handler(pattern, listOf(block))
+
+    @JvmName("invokeBlock")
+    operator fun invoke(num: Number, block: (StrudelPattern) -> StrudelPattern) =
+        handler(pattern, listOf(num.toDouble(), block))
 
     @JvmName("invokeBlocksVararg")
-    operator fun invoke(vararg block: (StrudelPattern) -> StrudelPattern) = handler(pattern, block.toList())
+    operator fun invoke(vararg block: (StrudelPattern) -> StrudelPattern) =
+        handler(pattern, block.toList())
 
     @JvmName("invokeVararg")
-    operator fun invoke(vararg args: Any?): StrudelPattern = handler(pattern, args.toList())
+    operator fun invoke(vararg args: Any?): StrudelPattern =
+        handler(pattern, args.toList())
 
     @JvmName("invokeArray")
-    operator fun invoke(args: Array<Any?>): StrudelPattern = handler(pattern, args.toList())
+    operator fun invoke(args: Array<Any?>): StrudelPattern =
+        handler(pattern, args.toList())
 
     @JvmName("invokeList")
-    operator fun invoke(args: List<Any?>): StrudelPattern = handler(pattern, args)
+    operator fun invoke(args: List<Any?>): StrudelPattern =
+        handler(pattern, args)
 }
 
 /**

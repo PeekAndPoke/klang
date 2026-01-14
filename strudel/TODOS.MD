@@ -268,14 +268,24 @@ and category.
 
 ### Conditional & Probabilistic
 
-- [ ] **`sometimes(function)`** - Randomly applies effects
-- [ ] **`rarely(function)`** - Infrequently applies variations
+- [x] **`sometimesBy(prob, fn)`** - Randomly applies transformation with given probability (pattern method, string
+  extension)
+- [x] **`sometimes(function)`** - Randomly applies effects (50% probability)
+- [x] **`often(function)`** - Frequently applies variations (75% probability)
+- [x] **`rarely(function)`** - Infrequently applies variations (25% probability)
+- [x] **`almostAlways(function)`** - Almost always applies variations (90% probability)
+- [x] **`almostNever(function)`** - Almost never applies variations (10% probability)
+- [x] **`always(function)`** - Always applies transformation (100% probability)
+- [x] **`never(function)`** - Never applies transformation (0% probability)
 - [x] **`degradeBy(amount)`** - Probabilistic event removal (pattern method, string extension, with pattern control)
 - [x] **`degrade()`** - Probabilistic event removal with 50% probability (pattern method and string extension)
 - [x] **`undegradeBy(amount)`** - Inverse of degradeBy - probabilistic event removal (pattern method, string extension,
   with pattern control)
 - [x] **`undegrade()`** - Inverse of degrade - probabilistic event removal with 50% probability (pattern method and
   string extension)
+- [/] **`someCyclesBy(prob, fn)`** - Cycle-based random application (currently aliased to sometimesBy - TODO: proper
+  cycle-locking)
+- [/] **`someCycles(fn)`** - Cycle-based random application with 50% probability (currently aliased to sometimes)
 - [ ] **`firstOf(n, func)`** - Apply function on first of every n cycles (alias: `every`)
 - [ ] **`lastOf(n, func)`** - Apply function on last of every n cycles
 - [ ] **`filter(test)`** - Filter events by test function
@@ -489,15 +499,17 @@ and category.
   `rand2`, `brand`, `brandBy`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
-- **Conditional & Probabilistic**: ~6 missing (4 completed: `degradeBy`, `degrade`, `undegradeBy`, `undegrade`)
+- **Conditional & Probabilistic**: ~3 missing (12 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
+  `almostAlways`, `almostNever`, `always`, `never`, `degradeBy`, `degrade`, `undegradeBy`, `undegrade`; 2 partial:
+  `someCyclesBy`, `someCycles`)
 - **Pattern Binding**: ~15 missing (0 completed)
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~13 missing (0 completed)
 
-### Total Estimated: ~140 features remaining
+### Total Estimated: ~132 features remaining
 
-### Completed So Far: ~106 features! 🎉
+### Completed So Far: ~114 features! 🎉
 
 **Major achievements:**
 

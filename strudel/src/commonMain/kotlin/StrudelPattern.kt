@@ -36,7 +36,7 @@ interface StrudelPattern {
      */
     class QueryContext(data: Map<Key<*>, Any?> = emptyMap()) {
         companion object {
-            val random = Key<Random>("random")
+            val randomSeed = Key<Long>("randomSeed")
 
             val empty = QueryContext()
         }
@@ -118,7 +118,7 @@ interface StrudelPattern {
         fun update(block: Updater.() -> Unit): QueryContext = Updater(this).runBlock(block)
 
         /** Gets the random generator for this context. */
-        fun getRandom(): Random = getOrNull(random) ?: Random.Default
+        fun getRandom(): Random = getOrNull(randomSeed)?.let { Random(it) } ?: Random.Default
 
         /** Gets a new random generator seeded with the context's random seed and the given seed. */
         fun getSeededRandom(seed: Any, vararg seeds: Any): Random {
