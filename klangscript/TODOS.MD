@@ -9,7 +9,7 @@ JavaScript-like scripting language for live coding
 - **Parser**: better-parse (combinator library)
 - **Runtime**: Tree-walking interpreter
 - **Platforms**: Kotlin Multiplatform (JVM + JS)
-- **Current Status**: 490 tests passing on both platforms (980 total: JVM + JS)
+- **Current Status**: 552 tests passing on both platforms (1104 total: JVM + JS)
 
 ---
 
@@ -17,7 +17,7 @@ JavaScript-like scripting language for live coding
 
 ### Core Principles
 
-1. **Arrow Functions**: Expression bodies only (`x => x + 1`). Block bodies deferred to Phase 6
+1. **Arrow Functions**: Both expression and block bodies supported (`x => x + 1` and `x => { return x + 1 }`)
 2. **Semicolons**: Optional, newlines as statement separators
 3. **No `undefined`**: Only `null` for absent values
 4. **Immutable After Build**: Builder pattern for configuration, immutable execution
@@ -43,7 +43,7 @@ JavaScript-like scripting language for live coding
 - [x] **1.5**: Arithmetic Expressions (operators, precedence, unary)
 - [x] **1.6**: Function Calls
 - [x] **1.7**: Method Chaining (dot notation)
-- [x] **1.8**: Arrow Functions (expression bodies only)
+- [x] **1.8**: Arrow Functions (expression and block bodies)
 - [x] **1.9**: Variables (`let`, `const`)
 - [x] **1.10**: Object Literals (`{ a: 1, b: {}, }`) including trailing commas
 - [x] **1.11**: Array Literals (`[1, 2, 3,]`) including trailing commas
@@ -57,7 +57,7 @@ JavaScript-like scripting language for live coding
 - [x] **2.1**: Runtime Value System (`NumberValue`, `StringValue`, `BooleanValue`, `NullValue`, `FunctionValue`,
   `ObjectValue`, `ArrayValue`)
 - [x] **2.2**: Environment & Scope Management (lexical scoping)
-- [x] **2.3**: Expression Evaluation (literals, identifiers, binary/unary ops)
+- [x] **2.3**: Expression Evaluation (literals, identifiers, binary/unary ops, comparison operators)
 - [x] **2.4**: Native Function Calls (registration API, type conversion)
 - [x] **2.5**: Script Functions (closures, first-class functions)
 - [x] **2.6**: Method Chaining & Member Access
@@ -71,6 +71,7 @@ JavaScript-like scripting language for live coding
   - [x] Source location tracking (file:line:column)
   - [x] Stack traces (JavaScript-style)
   - [x] Stack overflow protection (1000-frame limit)
+  - [x] Return statement support with `ReturnException` control flow
 - [x] **2.13**: Array, String, Object Methods ✅ **COMPLETE**
   - [x] **Array Methods**: `length()`, `push()`, `pop()`, `shift()`, `unshift()`, `slice()`, `concat()`, `join()`,
     `reverse()`, `indexOf()`, `includes()`
@@ -150,15 +151,19 @@ JavaScript-like scripting language for live coding
 ### Phase 6: Future Enhancements ⏳ OPTIONAL
 
 #### Advanced Language Features
-- [ ] Arrow function block bodies: `x => { return x; }`
-- [ ] Return statements
-- [ ] Block statements
+
+- [x] Arrow function block bodies: `x => { return x; }` ✅ **COMPLETE**
+- [x] Return statements ✅ **COMPLETE**
+- [x] Block statements ✅ **COMPLETE**
+- [x] Comparison operators: `==`, `!=`, `<`, `>`, `<=`, `>=` ✅ **COMPLETE**
+- [ ] Strict equality operators: `===`, `!==` - **NEEDED**
+  - Current `==` uses reference equality for objects/arrays
+  - Need to implement value-based deep equality for `===`
+- [ ] Logical operators: `&&`, `||`
+- [ ] Ternary operator: `x ? y : z`
 - [ ] Spread operator: `...args`
 - [ ] Destructuring: `let {a, b} = obj`
 - [ ] Template string interpolation: `` `hello ${name}` ``
-- [ ] Ternary operator: `x ? y : z`
-- [ ] Logical operators: `&&`, `||`
-- [ ] Comparison operators: `==`, `===`, `!=`, `!==`, `<`, `>`, `<=`, `>=`
 - [ ] Control flow: `if/else`, `while`, `for`
 - [ ] Trailing commas in all contexts
 
@@ -252,22 +257,24 @@ All methods support 0-5 parameters + vararg:
 ## Known Limitations
 
 1. **Array indexing**: Not yet implemented (requires `IndexAccess` AST node)
-2. **Block bodies**: Arrow functions are expression-only
-3. **Default exports**: Not implemented
-4. **Parser errors**: Limited error recovery
-5. **Native function errors**: Don't include source location (architectural constraint)
+2. **Default exports**: Not implemented
+3. **Parser errors**: Limited error recovery
+4. **Native function errors**: Don't include source location (architectural constraint)
+5. **Strict equality**: `===` and `!==` not yet implemented (only `==` and `!=`)
 
 ---
 
 ## Test Status
 
-- ✅ **490 tests passing** on both JVM and JS platforms (980 total)
+- ✅ **552 tests passing** on both JVM and JS platforms (1104 total)
 - ✅ Comprehensive coverage of all implemented features
 - ✅ Integration tests validate end-to-end scenarios
 - ✅ Error handling and stack trace tests
 - ✅ Array, String, and Object method tests
 - ✅ RuntimeValue helper function tests
 - ✅ Trailing comma support tests
+- ✅ Comparison operator tests (all 6 operators)
+- ✅ Arrow function block body tests (with return statements)
 - ✅ Multiplatform compatibility verified
 
 ---

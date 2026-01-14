@@ -207,3 +207,19 @@ class StackOverflowError(
     location: SourceLocation? = null,
     stackTrace: List<CallStackFrame> = emptyList(),
 ) : KlangScriptError(message, "StackOverflowError", location, stackTrace)
+
+/**
+ * ReturnException - Control flow exception for return statements
+ *
+ * This is NOT an error but a control flow mechanism used internally by the interpreter.
+ * When a return statement is encountered, this exception is thrown to immediately
+ * exit the current function and transfer control back to the caller.
+ *
+ * This exception carries the return value from the function.
+ *
+ * Implementation note: This uses the exception mechanism for control flow,
+ * which is a common pattern in interpreters for implementing early returns.
+ */
+internal class ReturnException(
+    val value: RuntimeValue,
+) : Exception("Return statement")

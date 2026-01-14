@@ -336,6 +336,12 @@ object JsCompatTestData {
         // Conditional
         Example("FirstOf", """note("[a b c d] [e f g a]").firstOf(4, (x) => x.rev())"""),
         Example("Every", """note("[a b c d] [e f g a]").every(4, (x) => x.rev())"""),
+        Example("LastOf", """note("[a b c d] [e f g a]").lastOf(4, (x) => x.rev())"""),
+        Example("Filter", """note("a b").filter((x) => { return x.data.note == "a" })"""),
+        Example("FilterWhen", """note("a b c d").filterWhen(x => x >= 0.5)"""),
+        Example("Bypass #1", """note("a b c d").bypass("true")"""),
+        Example("Bypass #2", """note("a b c d").bypass(true)"""),
+        Example("Bypass #3", """note("a b c d").bypass(false)"""),
 
         // Arithmetic Operators
         Example(SKIP, "Add", """n("0 1 2 3").add("2")"""),

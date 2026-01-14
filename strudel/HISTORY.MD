@@ -230,13 +230,21 @@ All arithmetic operations work on pattern values and can be applied as:
 
 - `firstOf(n, fn)` - Apply function on first cycle of every n cycles (pattern method, string extension)
 - `every(n, fn)` - Alias for `firstOf` (pattern method, string extension)
+- `lastOf(n, fn)` - Apply function on last cycle of every n cycles (pattern method, string extension)
+
+**Event Filtering:**
+
+- `filter(predicate)` - Filter events using predicate function (pattern method, string extension, standalone function)
+- `filterWhen(predicate)` - Filter events by begin time (pattern method, string extension, standalone function)
+- `bypass(condition)` - Returns silence when condition is true (pattern method, string extension, standalone function)
 
 ## Arithmetic Addons (Non-Strudel Extensions) ✅
 
 **These functions are NOT available in the original Strudel implementation**
 
-- `negateValue()` - Negates the value field of voice data (pattern method, string extension)
+- `flipSign()` - Flips the sign of numerical values (renamed from `negateValue`) (pattern method, string extension)
 - `oneMinusValue()` - Calculates 1.0 - value (pattern method, string extension)
+- `not()` - Boolean NOT operation on values (pattern method, string extension)
 
 ## Audio Parameters
 
@@ -380,7 +388,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 126+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 131+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 16 core pattern types (including EuclideanPattern, ChoicePattern, SometimesPattern, ReversePattern, StructPattern,
   ContextModifierPattern, TimeShiftPatternWithControl)
 - 25 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
@@ -506,8 +514,9 @@ Comprehensive voice data structure supporting:
   - Pattern control support for `degradeBy` and `undegradeBy` via mini-notation parsing
 - ✅ **Arithmetic Addon Functions** (Non-Strudel extensions):
   - Created new `lang_arithmetic_addons.kt` module in `lang/addons/` package
-  - `negateValue()` - Negates the value field (useful for inverting control signals)
+  - `flipSign()` - Flips the sign of numerical values (renamed from `negateValue`, useful for inverting control signals)
   - `oneMinusValue()` - Calculates 1.0 - value (used internally by `undegradeBy` for probability inversion)
+  - `not()` - Boolean NOT operation on values (used internally by `bypass()`)
   - Registered via `strudelLangArithmeticAddonsInit` in main init function
 - ✅ **Random Seeding Improvements**:
     - Changed `QueryContext.random` from `Key<Random>` to `randomSeed` as `Key<Long>` for better seed management
@@ -527,8 +536,16 @@ Comprehensive voice data structure supporting:
 - ✅ **Cycle-Based Conditional Functions**:
     - `firstOf(n, fn)` - Apply function on first cycle of every n cycles
     - `every(n, fn)` - Alias for `firstOf`
-    - Uses `ArrangementPattern` to create repeating n-cycle patterns (transformed, original, original, ...)
+  - `lastOf(n, fn)` - Apply function on last cycle of every n cycles
+  - Uses `ArrangementPattern` to create repeating n-cycle patterns
+  - Pattern: firstOf uses [transform, original, ...], lastOf uses [original, ..., transform]
     - Works as pattern method and string extension
+- ✅ **Event Filtering Functions**:
+    - `filter(predicate)` - Filter events using predicate function that tests StrudelPatternEvent
+    - `filterWhen(predicate)` - Filter events by their begin time (Double)
+    - `bypass(condition)` - Conditionally silence pattern based on condition (supports static values and patterns)
+    - All three work as pattern method, string extension, and standalone function
+    - `bypass()` uses `not()` and `StructPattern` for implementation
 - ✅ **Code Organization**:
     - Renamed `lang_choice.kt` to `lang_conditional.kt` for better categorization
     - Updated init function from `strudelLangChoiceInit` to `strudelLangConditionalInit`
@@ -547,6 +564,10 @@ Comprehensive voice data structure supporting:
     - `LangSomeCyclesBySpec.kt` with tests validating proper cycle-locking behavior (no mixed cycles within single cycle
       period)
     - `LangFirstOfSpec.kt` with 7 tests covering firstOf/every functionality
+    - `LangLastOfSpec.kt` with 5 tests covering lastOf functionality
+    - `LangFilterSpec.kt` with 4 tests covering filter functionality
+    - `LangFilterWhenSpec.kt` with tests covering filterWhen functionality
+    - `LangBypassSpec.kt` with 7 tests covering bypass functionality with static and pattern-based conditions
     - `LangArithmeticAddonsSpec.kt` with tests for negateValue and oneMinusValue
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting

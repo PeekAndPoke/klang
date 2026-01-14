@@ -90,8 +90,9 @@ class Interpreter(
      *
      * @param statement The statement to execute
      * @return The runtime value produced by the statement
+     * @throws ReturnException if a return statement is encountered
      */
-    private fun executeStatement(statement: Statement): RuntimeValue {
+    internal fun executeStatement(statement: Statement): RuntimeValue {
         return when (statement) {
             // Expression statement: evaluate the expression
             is ExpressionStatement -> evaluate(statement.expression)
@@ -119,6 +120,16 @@ class Interpreter(
 
             // Export statement: mark symbols for export
             is ExportStatement -> executeExport(statement)
+
+            // Return statement: throw ReturnException to exit function
+            is ReturnStatement -> {
+                val returnValue = if (statement.value != null) {
+                    evaluate(statement.value)
+                } else {
+                    NullValue
+                }
+                throw ReturnException(returnValue)
+            }
         }
     }
 
@@ -396,8 +407,27 @@ class Interpreter(
                     // Create temporary interpreter with function environment and shared call stack
                     val funcInterpreter = Interpreter(funcEnv, engine, callStack)
 
-                    // Evaluate function body in the new environment
-                    funcInterpreter.evaluate(callee.body)
+                    // Evaluate function body based on type
+                    when (val body = callee.body) {
+                        is ArrowFunctionBody.ExpressionBody -> {
+                            // Expression body: implicitly return the expression value
+                            funcInterpreter.evaluate(body.expression)
+                        }
+
+                        is ArrowFunctionBody.BlockBody -> {
+                            // Block body: execute statements, catch return exception
+                            try {
+                                for (stmt in body.statements) {
+                                    funcInterpreter.executeStatement(stmt)
+                                }
+                                // If no return statement was encountered, return NullValue
+                                NullValue
+                            } catch (e: ReturnException) {
+                                // Return statement was encountered, return its value
+                                e.value
+                            }
+                        }
+                    }
                 } finally {
                     callStack.pop()
                 }
@@ -494,69 +524,143 @@ class Interpreter(
     /**
      * Evaluate a binary operation expression
      *
-     * Binary operations perform arithmetic on two number operands.
-     * Both operands must be numbers; otherwise a TypeError is thrown.
+     * Binary operations perform arithmetic and comparison operations.
      *
      * Process:
      * 1. Evaluate the left operand
      * 2. Evaluate the right operand
-     * 3. Verify both are NumberValues
-     * 4. Apply the operator
-     * 5. Return the result as NumberValue
+     * 3. Apply the operator based on type
+     * 4. Return the result
      *
      * Supported operators:
-     * - ADD (+): Addition
-     * - SUBTRACT (-): Subtraction
-     * - MULTIPLY (*): Multiplication
-     * - DIVIDE (/): Division (throws TypeError on division by zero)
+     * - Arithmetic (+, -, *, /): Require number operands, return NumberValue
+     * - Comparison (<, <=, >, >=): Require number operands, return BooleanValue
+     * - Equality (==, !=): Work on all types, return BooleanValue
      *
      * @param binOp The binary operation AST node
-     * @return The runtime value after applying the operation
-     * @throws TypeError if operands are not numbers or division by zero
+     * @return NumberValue for arithmetic, BooleanValue for comparisons
+     * @throws TypeError if operands are invalid for the operation
      *
      * Examples:
      * - 5 + 3 → NumberValue(8.0)
      * - 10 - 4 → NumberValue(6.0)
      * - 3 * 7 → NumberValue(21.0)
      * - 20 / 4 → NumberValue(5.0)
+     * - 5 > 3 → BooleanValue(true)
+     * - 10 == 10 → BooleanValue(true)
+     * - "a" == "a" → BooleanValue(true)
      * - 1 / 0 → TypeError: "Division by zero"
-     * - "a" + 1 → TypeError: "Binary ADD operation requires numbers"
      */
     private fun evaluateBinaryOp(binOp: BinaryOperation): RuntimeValue {
         // Evaluate both operands
         val leftValue = evaluate(binOp.left)
         val rightValue = evaluate(binOp.right)
 
-        // Ensure both operands are numbers
-        if (leftValue !is NumberValue || rightValue !is NumberValue) {
-            throw TypeError(
-                "Binary ${binOp.operator} operation requires numbers, got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
-                operation = binOp.operator.toString(),
-                location = binOp.location,
-                stackTrace = getStackTrace()
-            )
-        }
+        // Handle comparison operators
+        when (binOp.operator) {
+            BinaryOperator.EQUAL -> {
+                return BooleanValue(valuesEqual(leftValue, rightValue))
+            }
 
-        // Perform the operation
-        val result = when (binOp.operator) {
-            BinaryOperator.ADD -> leftValue.value + rightValue.value
-            BinaryOperator.SUBTRACT -> leftValue.value - rightValue.value
-            BinaryOperator.MULTIPLY -> leftValue.value * rightValue.value
-            BinaryOperator.DIVIDE -> {
-                // Check for division by zero
-                if (rightValue.value == 0.0) {
+            BinaryOperator.NOT_EQUAL -> {
+                return BooleanValue(!valuesEqual(leftValue, rightValue))
+            }
+
+            BinaryOperator.LESS_THAN,
+            BinaryOperator.LESS_THAN_OR_EQUAL,
+            BinaryOperator.GREATER_THAN,
+            BinaryOperator.GREATER_THAN_OR_EQUAL,
+                -> {
+                // Numeric comparison operators require both operands to be numbers
+                if (leftValue !is NumberValue || rightValue !is NumberValue) {
                     throw TypeError(
-                        "Division by zero",
-                        operation = "division",
+                        "Binary ${binOp.operator} operation requires numbers, " +
+                                "got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
+                        operation = binOp.operator.toString(),
                         location = binOp.location,
                         stackTrace = getStackTrace()
                     )
                 }
-                leftValue.value / rightValue.value
+                val result = when (binOp.operator) {
+                    BinaryOperator.LESS_THAN -> leftValue.value < rightValue.value
+                    BinaryOperator.LESS_THAN_OR_EQUAL -> leftValue.value <= rightValue.value
+                    BinaryOperator.GREATER_THAN -> leftValue.value > rightValue.value
+                    BinaryOperator.GREATER_THAN_OR_EQUAL -> leftValue.value >= rightValue.value
+                    else -> error("Unexpected comparison operator: ${binOp.operator}")
+                }
+                return BooleanValue(result)
+            }
+
+            else -> {
+                // Arithmetic operators - ensure both operands are numbers
+                if (leftValue !is NumberValue || rightValue !is NumberValue) {
+                    throw TypeError(
+                        "Binary ${binOp.operator} operation requires numbers, " +
+                                "got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
+                        operation = binOp.operator.toString(),
+                        location = binOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+
+                // Perform the arithmetic operation
+                val result = when (binOp.operator) {
+                    BinaryOperator.ADD -> leftValue.value + rightValue.value
+                    BinaryOperator.SUBTRACT -> leftValue.value - rightValue.value
+                    BinaryOperator.MULTIPLY -> leftValue.value * rightValue.value
+                    BinaryOperator.DIVIDE -> {
+                        // Check for division by zero
+                        if (rightValue.value == 0.0) {
+                            throw TypeError(
+                                "Division by zero",
+                                operation = "division",
+                                location = binOp.location,
+                                stackTrace = getStackTrace()
+                            )
+                        }
+                        leftValue.value / rightValue.value
+                    }
+
+                    else -> error("Unexpected arithmetic operator: ${binOp.operator}")
+                }
+
+                return NumberValue(result)
             }
         }
+    }
 
-        return NumberValue(result)
+    /**
+     * Compare two runtime values for equality
+     *
+     * Implements value equality semantics:
+     * - Numbers: compare by value
+     * - Strings: compare by content
+     * - Booleans: compare by value
+     * - Null: null == null is true
+     * - Different types: always false
+     * - Objects/Arrays: compare by reference (same instance)
+     *
+     * @param left First value
+     * @param right Second value
+     * @return true if values are equal, false otherwise
+     */
+    private fun valuesEqual(left: RuntimeValue, right: RuntimeValue): Boolean {
+        return when {
+            // Both null
+            left is NullValue && right is NullValue -> true
+            // Both numbers
+            left is NumberValue && right is NumberValue -> left.value == right.value
+            // Both strings
+            left is StringValue && right is StringValue -> left.value == right.value
+            // Both booleans
+            left is BooleanValue && right is BooleanValue -> left.value == right.value
+            // Same object reference
+            left is ObjectValue && right is ObjectValue -> left === right
+            // Same array reference
+            left is ArrayValue && right is ArrayValue -> left === right
+            // Different types or values
+            else -> false
+        }
     }
 
     /**

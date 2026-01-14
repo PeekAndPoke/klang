@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.script.KlangScriptEngine
-import io.peekandpoke.klang.script.ast.Expression
+import io.peekandpoke.klang.script.ast.ArrowFunctionBody
 import io.peekandpoke.klang.script.getUniqueClassName
 import kotlin.reflect.KClass
 
@@ -184,20 +184,26 @@ data class NativeFunctionValue(
  * let x = 10
  * let addX = y => x + y
  * addX(5)  // Returns 15, accessing captured 'x'
+ *
+ * let complexFn = (x) => {
+ *   let result = x * 2
+ *   return result + 1
+ * }
  * ```
  *
  * **Usage in callbacks:**
  * ```javascript
- * note("a b c").superImpose(x => x.detune(0.5))
+ * note("a b c").filter(x => x.data.note == "a")
  * ```
  *
  * @param parameters List of parameter names
- * @param body Expression to evaluate when function is called
+ * @param body Function body (expression or block of statements)
  * @param closureEnv The environment captured at function definition time
+ * @param engine The script engine for creating interpreters
  */
 data class FunctionValue(
     val parameters: List<String>,
-    val body: Expression,
+    val body: ArrowFunctionBody,
     val closureEnv: Environment,
     val engine: KlangScriptEngine,
 ) : RuntimeValue {

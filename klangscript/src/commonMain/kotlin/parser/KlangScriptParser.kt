@@ -82,6 +82,7 @@ object KlangScriptParser : Grammar<Program>() {
     private val exportKeyword by literalToken("export")
     private val fromKeyword by literalToken("from")
     private val asKeyword by literalToken("as")
+    private val returnKeyword by literalToken("return")
 
     /** Identifiers: foo, myVar, _private */
     private val identifier by regexToken("[a-zA-Z_][a-zA-Z0-9_]*")
@@ -100,21 +101,29 @@ object KlangScriptParser : Grammar<Program>() {
     private val leftBracket by literalToken("[")
     private val rightBracket by literalToken("]")
 
+    /** Arrow function operator - must be before = to match => before = */
+    private val arrow by literalToken("=>")
+
+    /** Comparison operators - must be defined before single-char operators to match correctly */
+    private val doubleEquals by literalToken("==")
+    private val notEquals by literalToken("!=")
+    private val lessThanOrEqual by literalToken("<=")
+    private val greaterThanOrEqual by literalToken(">=")
+
+    /** Assignment operator */
+    private val equals by literalToken("=")
+
     /** Arithmetic operators */
     private val plus by literalToken("+")
     private val minus by literalToken("-")
     private val times by literalToken("*")
     private val divide by literalToken("/")
     private val exclamation by literalToken("!")
+    private val lessThan by literalToken("<")
+    private val greaterThan by literalToken(">")
 
     /** Member access operator */
     private val dot by literalToken(".")
-
-    /** Arrow function operator */
-    private val arrow by literalToken("=>")
-
-    /** Assignment operator */
-    private val equals by literalToken("=")
 
     // ============================================================
     // Grammar Rules
@@ -312,12 +321,63 @@ object KlangScriptParser : Grammar<Program>() {
     }
 
     /**
+     * Comparison expressions (lower precedence than arithmetic)
+     * Syntax: expr == expr, expr != expr, expr < expr, expr <= expr, expr > expr, expr >= expr
+     * Left-associative: a < b < c = (a < b) < c
+     *
+     * Comparison operators have lower precedence than arithmetic operators, allowing:
+     * - x + 1 == 5 parses as (x + 1) == 5
+     * - x * 2 > 10 parses as (x * 2) > 10
+     *
+     * Supported operators:
+     * - == : Equality
+     * - != : Inequality
+     * - < : Less than
+     * - <= : Less than or equal
+     * - > : Greater than
+     * - >= : Greater than or equal
+     */
+    private val comparisonExpr: Parser<Expression> by
+    leftAssociative(
+        additionExpr,
+        doubleEquals or notEquals or lessThanOrEqual or greaterThanOrEqual or lessThan or greaterThan
+    ) { left, op, right ->
+        val operator = when (op.text) {
+            "==" -> BinaryOperator.EQUAL
+            "!=" -> BinaryOperator.NOT_EQUAL
+            "<" -> BinaryOperator.LESS_THAN
+            "<=" -> BinaryOperator.LESS_THAN_OR_EQUAL
+            ">" -> BinaryOperator.GREATER_THAN
+            ">=" -> BinaryOperator.GREATER_THAN_OR_EQUAL
+            else -> error("Unexpected operator: $op")
+        }
+        BinaryOperation(left, operator, right, op.toLocation())
+    }
+
+    /**
+     * Arrow function body - either expression or block
+     * Syntax:
+     * - Expression: `expr` (implicit return)
+     * - Block: `{ statements }` (explicit return)
+     */
+    private val arrowFunctionBody: Parser<ArrowFunctionBody> by
+    // Try block body first (with braces)
+    (leftBrace and zeroOrMore(parser(this::statement)) and -rightBrace).map { (_, statements) ->
+        ArrowFunctionBody.BlockBody(statements)
+    } or
+            // Otherwise, parse expression body (right-associative to allow nested arrows)
+            parser(this::arrowExpr).map { expr ->
+                ArrowFunctionBody.ExpressionBody(expr)
+            }
+
+    /**
      * Arrow function expressions (lowest precedence)
      * Syntax:
      * - Single parameter: `x => expr`
      * - Multiple parameters: `(a, b) => expr`
      * - No parameters: `() => expr`
      * - Trailing commas allowed: `(a, b,) => expr`
+     * - Block body: `x => { statements }`
      *
      * Arrow functions have the lowest precedence to allow expressions in the body:
      * `x => x + 1` parses as `x => (x + 1)`, not `(x => x) + 1`
@@ -325,14 +385,16 @@ object KlangScriptParser : Grammar<Program>() {
      * Implementation strategy:
      * 1. Try to parse parameter list (single identifier OR parenthesized list)
      * 2. If we see `=>`, we have an arrow function
-     * 3. Otherwise, fall back to regular expression (additionExpr)
+     * 3. Parse body (expression or block)
+     * 4. Otherwise, fall back to regular expression (comparisonExpr)
      *
      * Examples:
-     * - `x => x + 1` - Single param, arithmetic body
-     * - `(a, b) => a * b` - Multi param
+     * - `x => x + 1` - Single param, expression body
+     * - `(a, b) => a * b` - Multi param, expression body
      * - `() => 42` - No params
      * - `x => y => x + y` - Nested (right-associative)
-     * - `x => x.method()` - Method chaining in body
+     * - `x => { return x + 1; }` - Block body
+     * - `x => { let y = x * 2; return y; }` - Block with multiple statements
      */
     private val arrowExpr: Parser<Expression> by
     // Try to parse arrow function first
@@ -349,10 +411,10 @@ object KlangScriptParser : Grammar<Program>() {
                             ) and optional(comma) and -rightParen).map { (params, _) ->
                                 params.map { it.text }
                             }
-                    ) and arrow and parser(this::arrowExpr)  // Right-associative for nested arrows
+                    ) and arrow and arrowFunctionBody
             ).map { (params, arrowToken, body) ->
             ArrowFunction(params, body, arrowToken.toLocation())
-        } or additionExpr  // Fall back to addition expression if not an arrow function
+        } or comparisonExpr  // Fall back to comparison expression if not an arrow function
 
     /**
      * Let declaration statement
@@ -419,35 +481,40 @@ object KlangScriptParser : Grammar<Program>() {
      * Namespace import: import * as name from "lib"
      */
     private val wildcardImport: Parser<Statement> by
-    (importKeyword and -times and optional(-asKeyword and identifier) and -fromKeyword and string).map { (importToken, namespaceOpt, libraryNameToken) ->
-        val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
-        val namespaceAlias = namespaceOpt?.text
-        ImportStatement(libraryName, imports = null, namespaceAlias = namespaceAlias, importToken.toLocation())
-    }
+    (importKeyword and -times and optional(-asKeyword and identifier) and -fromKeyword and string)
+        .map { (importToken, namespaceOpt, libraryNameToken) ->
+            val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
+            val namespaceAlias = namespaceOpt?.text
+            ImportStatement(
+                libraryName,
+                imports = null,
+                namespaceAlias = namespaceAlias,
+                location = importToken.toLocation()
+            )
+        }
 
     /**
      * Import specifier: either "name" or "name as alias"
      * Returns Pair(exportName, localAlias)
      */
     private val importSpecifier: Parser<Pair<String, String>> by
-    (identifier and optional(-asKeyword and identifier)).map { (name, aliasOpt) ->
-        val exportName = name.text
-        val localAlias = aliasOpt?.text ?: exportName
-        Pair(exportName, localAlias)
-    }
+    (identifier and optional(-asKeyword and identifier))
+        .map { (name, aliasOpt) ->
+            val exportName = name.text
+            val localAlias = aliasOpt?.text ?: exportName
+            Pair(exportName, localAlias)
+        }
 
     /**
      * Selective import: import { name1, name2 as alias2 } from "lib"
      */
     private val selectiveImport: Parser<Statement> by
-    (importKeyword and -leftBrace and separatedTerms(
-        importSpecifier,
-        comma,
-        acceptZero = false
-    ) and -rightBrace and -fromKeyword and string).map { (importToken, specifiers, libraryNameToken) ->
-        val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
-        ImportStatement(libraryName, specifiers, location = importToken.toLocation())
-    }
+    (importKeyword and -leftBrace and separatedTerms(term = importSpecifier, separator = comma, acceptZero = false)
+            and -rightBrace and -fromKeyword and string)
+        .map { (importToken, specifiers, libraryNameToken) ->
+            val libraryName = libraryNameToken.text.substring(1, libraryNameToken.text.length - 1)
+            ImportStatement(libraryName, specifiers, location = importToken.toLocation())
+        }
 
     /**
      * Import statement - wildcard, namespace, or selective
@@ -466,6 +533,23 @@ object KlangScriptParser : Grammar<Program>() {
     wildcardImport or selectiveImport
 
     /**
+     * Return statement
+     * Syntax: return expr OR return
+     *
+     * Returns a value from a function. If no expression is provided,
+     * returns NullValue.
+     *
+     * Examples:
+     * - return 42
+     * - return x + 1
+     * - return
+     */
+    private val returnStatement: Parser<Statement> by
+    (returnKeyword and optional(expression)).map { (returnToken, expr) ->
+        ReturnStatement(expr, returnToken.toLocation())
+    }
+
+    /**
      * Expression statements
      * Expressions used as statements: print("hello")
      */
@@ -478,10 +562,11 @@ object KlangScriptParser : Grammar<Program>() {
      * - Import statements
      * - Export statements
      * - Variable declarations (let, const)
+     * - Return statements
      * - Expression statements
      */
     private val statement: Parser<Statement> by
-    importStatement or exportStatement or letDeclaration or constDeclaration or expressionStatement
+    importStatement or exportStatement or letDeclaration or constDeclaration or returnStatement or expressionStatement
 
     /**
      * Program root

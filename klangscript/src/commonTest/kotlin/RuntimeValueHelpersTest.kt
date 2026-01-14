@@ -267,7 +267,7 @@ class RuntimeValueHelpersTest : StringSpec({
     "Boolean helpers return null for FunctionValue" {
         val value = FunctionValue(
             parameters = listOf(element = "x"),
-            body = NumberLiteral(1.0),
+            body = io.peekandpoke.klang.script.ast.ArrowFunctionBody.ExpressionBody(NumberLiteral(1.0)),
             closureEnv = Environment(),
             engine = klangScript(),
         )
@@ -379,7 +379,7 @@ class RuntimeValueHelpersTest : StringSpec({
     "isFunction() returns true for FunctionValue" {
         val value = FunctionValue(
             parameters = listOf("x"),
-            body = NumberLiteral(1.0),
+            body = io.peekandpoke.klang.script.ast.ArrowFunctionBody.ExpressionBody(NumberLiteral(1.0)),
             closureEnv = Environment(),
             engine = klangScript(),
         )

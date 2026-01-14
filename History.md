@@ -9,12 +9,20 @@
 - 06-01-2026: bought 50 more AI credits -> 59.90 EUR
 - 07-01-2026: bought 50 more AI credits -> 59.90 EUR
 - 11-01-2026: bought 50 more AI credits -> 59.90 EUR
+- 14-01-2026: bought 50 more AI credits -> 59.90 EUR
 
 ## Diary
+
+### (2026-01-14) KlangScript
+
+- comparison expressions
+- array functions with { ... return x } bodies
 
 ### (2026-01-14) Strudel - DSL
 
 - random functions and patterns
+- continuous patterns
+- filter functions
 
 ### (2026-01-13) Strudel - Fights with floating point numbers
 

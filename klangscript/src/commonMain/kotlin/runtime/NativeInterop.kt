@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.script.ast.ArrowFunctionBody
 import kotlin.reflect.KClass
 
 /**
@@ -151,8 +152,27 @@ private fun FunctionValue.callFunction(args: List<Any?>): Any? {
     }
     // 4. Create a new Interpreter instance
     val interpreter = Interpreter(env = callEnv, engine = engine)
-    // 5. Evaluate the body using the interpreter
-    val result = interpreter.evaluate(body)
+    // 5. Evaluate the body based on type
+    val result = when (val functionBody = body) {
+        is ArrowFunctionBody.ExpressionBody -> {
+            // Expression body: implicitly return the expression value
+            interpreter.evaluate(functionBody.expression)
+        }
+
+        is ArrowFunctionBody.BlockBody -> {
+            // Block body: execute statements, catch return exception
+            try {
+                for (stmt in functionBody.statements) {
+                    interpreter.executeStatement(stmt)
+                }
+                // If no return statement was encountered, return NullValue
+                NullValue
+            } catch (e: ReturnException) {
+                // Return statement was encountered, return its value
+                e.value
+            }
+        }
+    }
     // 6. Unwrap the result
     return result.value
 }

@@ -32,7 +32,9 @@ class NativeInteropFunctionCallsTest : StringSpec({
 
         return FunctionValue(
             parameters = parameters,
-            body = NumberLiteral(paramCount.toDouble()), // Return the param count as a check
+            body = io.peekandpoke.klang.script.ast.ArrowFunctionBody.ExpressionBody(
+                NumberLiteral(paramCount.toDouble()) // Return the param count as a check
+            ),
             closureEnv = Environment(),
             engine = klangScript()
         )

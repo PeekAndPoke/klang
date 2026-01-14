@@ -4,7 +4,11 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
 
 /**
@@ -357,6 +361,137 @@ val String.maskAll by dslStringExtension { source, args ->
     applyMaskAll(source, args.firstOrNull())
 }
 
+
+// -- filter() ---------------------------------------------------------------------------------------------------------
+
+private fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
+    return object : StrudelPattern {
+        override val weight: Double get() = source.weight
+
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            return source.queryArcContextual(from, to, ctx).filter(predicate)
+        }
+    }
+}
+
+/** Filters haps using the given function. */
+@StrudelDsl
+val filter by dslFunction { _ -> silence }
+
+@Suppress("unused")
+@StrudelDsl
+fun filter(ignored: (StrudelPatternEvent) -> Boolean): StrudelPattern = silence
+
+/** Filters haps using the given function. */
+@StrudelDsl
+val StrudelPattern.filter by dslPatternExtension { source, args ->
+    @Suppress("UNCHECKED_CAST")
+    val predicate = args.firstOrNull() as? (StrudelPatternEvent) -> Boolean
+
+    if (predicate != null) applyFilter(source, predicate) else source
+}
+
+/** Filters haps using the given function. */
+fun StrudelPattern.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern = applyFilter(this, predicate)
+
+/** Filters haps using the given function. */
+@StrudelDsl
+val String.filter by dslStringExtension { source, args ->
+    @Suppress("UNCHECKED_CAST")
+    val predicate = args.firstOrNull() as? (StrudelPatternEvent) -> Boolean
+
+    if (predicate != null) applyFilter(source, predicate) else source
+}
+
+/** Filters haps using the given function. */
+fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
+    val pattern = parseMiniNotation(this) {
+        AtomicPattern(VoiceData.empty.defaultModifier(it))
+    }
+
+    return pattern.filter(predicate)
+}
+
+// -- filterWhen() -----------------------------------------------------------------------------------------------------
+
+/**
+ * Filters haps by their begin time.
+ *
+ * @param predicate function to test the begin time (Double)
+ */
+@StrudelDsl
+val filterWhen by dslFunction { args ->
+    @Suppress("UNCHECKED_CAST")
+    val predicate = args.getOrNull(0) as? (Double) -> Boolean
+    val pat = args.getOrNull(1) as? StrudelPattern ?: silence
+
+    if (predicate != null) applyFilter(pat) { predicate(it.begin.toDouble()) } else pat
+}
+
+@Suppress("unused")
+@StrudelDsl
+fun filterWhen(predicate: (Double) -> Boolean): StrudelPattern = silence
+
+@StrudelDsl
+val StrudelPattern.filterWhen by dslPatternExtension { source, args ->
+    @Suppress("UNCHECKED_CAST")
+    val predicate = args.firstOrNull() as? (Double) -> Boolean
+
+    if (predicate != null) applyFilter(source) { predicate(it.begin.toDouble()) } else source
+}
+
+@StrudelDsl
+fun StrudelPattern.filterWhen(predicate: (Double) -> Boolean): StrudelPattern =
+    applyFilter(this) { predicate(it.begin.toDouble()) }
+
+@StrudelDsl
+val String.filterWhen by dslStringExtension { source, args ->
+    @Suppress("UNCHECKED_CAST")
+    val predicate = args.firstOrNull() as? (Double) -> Boolean
+
+    if (predicate != null) applyFilter(source) { predicate(it.begin.toDouble()) } else source
+}
+
+@StrudelDsl
+fun String.filterWhen(predicate: (Double) -> Boolean): StrudelPattern {
+    val pattern = parseMiniNotation(this) {
+        AtomicPattern(VoiceData.empty.defaultModifier(it))
+    }
+
+    return pattern.filterWhen(predicate)
+}
+
+// -- bypass() ---------------------------------------------------------------------------------------------------------
+
+private fun applyBypass(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    if (args.isEmpty()) return source
+
+    val condition = args.toPattern(defaultModifier).not()
+
+    return StructurePattern(
+        source = source,
+        other = condition,
+        mode = StructurePattern.Mode.In,
+        filterByTruthiness = true
+    )
+}
+
+/**
+ * Returns silence when the condition is true (bypasses the pattern).
+ * Supports both static values and patterns.
+ */
+@StrudelDsl
+val bypass by dslFunction { args -> applyBypass(silence, args) }
+
+@StrudelDsl
+val StrudelPattern.bypass by dslPatternExtension { source, args -> applyBypass(source, args) }
+
+@StrudelDsl
+val String.bypass by dslStringExtension { source, args -> applyBypass(source, args) }
+
+// -- superimpose() ----------------------------------------------------------------------------------------------------
+
+
 /**
  * Layers a modified version of the pattern on top of itself.
  *
@@ -368,6 +503,10 @@ val StrudelPattern.superimpose by dslPatternExtension { source, args ->
     val transform = args.firstOrNull() as? (StrudelPattern) -> StrudelPattern ?: { it }
     SuperimposePattern(source, transform)
 }
+
+// TODO: string extension
+
+// -- superimpose() ----------------------------------------------------------------------------------------------------
 
 /**
  * Applies multiple transformation functions to the pattern and stacks the results.
@@ -398,6 +537,8 @@ val StrudelPattern.layer by dslPatternExtension { source, args ->
     }
 }
 
+// TODO: string extension
+
 /**
  * Alias for [layer].
  */
@@ -405,6 +546,8 @@ val StrudelPattern.layer by dslPatternExtension { source, args ->
 val StrudelPattern.apply by dslPatternExtension { source, args ->
     source.layer(args)
 }
+
+// TODO: string extension
 
 // -- run() ------------------------------------------------------------------------------------------------------------
 

@@ -176,6 +176,7 @@ internal fun List<Any?>.toListOfPatterns(
         when (arg) {
             is String -> listOf(parseMiniNotation(arg, atomFactory))
             is Number -> listOf(atomFactory(arg.toString()))
+            is Boolean -> listOf(atomFactory(arg.toString()))
             is StrudelPattern -> listOf(arg)
             is List<*> -> arg.toListOfPatterns(modify)
             else -> emptyList()

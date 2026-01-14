@@ -18,6 +18,7 @@ import kotlin.math.pow
  */
 @Serializable(with = VoiceValueSerializer::class)
 sealed interface VoiceValue {
+    val asBoolean: Boolean
     val asString: String
     val asDouble: Double?
     val asInt: Int?
@@ -178,6 +179,7 @@ sealed interface VoiceValue {
     }
 
     data class Num(val value: Double) : VoiceValue {
+        override val asBoolean get() = isTruthy()
         override val asString get() = value.toString()
         override val asDouble get() = value
         override val asInt get() = value.toInt()
@@ -185,6 +187,7 @@ sealed interface VoiceValue {
     }
 
     data class Text(val value: String) : VoiceValue {
+        override val asBoolean get() = isTruthy()
         override val asString get() = value
         override val asDouble get() = value.toDoubleOrNull()
         override val asInt get() = value.toDoubleOrNull()?.toInt()

@@ -4,7 +4,9 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -56,6 +58,26 @@ private suspend fun helloStrudel() {
     strudel.use { strudel ->
 //        val code = TestTextPatterns.smallTownBoy
 //        val pattern = strudel.compile(code).await()
+
+        val engine = klangScript {
+            registerLibrary(strudelLib)
+        }
+
+        val result = engine.execute(
+            """
+            import * from "stdlib"
+            import * from "strudel"
+            
+            note("a b").filter(x => x + 1)
+            note("a b").filter(x => x.data.note == "a")
+            note("a b").filter((x) => { 
+                let note = x.data.note
+                return note == "a" 
+            })
+        """.trimIndent()
+        )
+
+        println(result)
 
 //        val pattern = TestKotlinPatterns.strangerThings
         val pattern = TestKotlinPatterns.tetris

@@ -368,24 +368,26 @@ val engine = klangScript {
 
 ---
 
-## Current Status (2026-01-07)
+## Current Status (2026-01-14)
 
-**Test Count**: 359+ tests passing on both JVM and JS platforms
+**Test Count**: 552 tests passing on both JVM and JS platforms (1104 total)
 
 **Completed Phases**:
 
 - ✅ Phase 1: Foundation & Parsing (Steps 1.1-1.12)
-- ✅ Phase 2: Interpreter (Steps 2.1-2.12)
+- ✅ Phase 2: Interpreter (Steps 2.1-2.13)
 - ✅ Phase 3: API & Integration (Steps 3.1-3.12)
+
+**Recently Completed (Phase 6 features pulled forward)**:
+
+- ✅ Comparison operators (`==`, `!=`, `<`, `<=`, `>`, `>=`)
+- ✅ Arrow function block bodies with return statements
 
 **Pending Phases**:
 
 - ⏳ Phase 4: Documentation & Examples
 - ⏳ Phase 5: Testing & Quality
-- ⏳ Phase 6: Future Enhancements
-
-**Next Logical Step**: Implement array methods (`Step 2.13`) - arrays exist but lack essential methods like `push()`,
-`map()`, `filter()`
+- ⏳ Phase 6: Future Enhancements (partially complete)
 
 ---
 
@@ -468,6 +470,168 @@ execution infrastructure (access to interpreter/libraryLoader from extension met
 
 **Key Technical Decision**: Used `registerExtensionMethod()` directly for methods needing `RuntimeValue` parameters (
 concat, join, indexOf, includes) instead of type-safe `registerMethod()`.
+
+---
+
+### Comparison Operators (Complete)
+
+**Implementation Date**: January 14, 2026
+
+**Goal**: Add comparison operators to enable filtering and conditional logic in scripts
+
+**Motivation**: User encountered ParseException when trying to use `==` operator in filter callback:
+
+```kotlin
+note("a b").filter((x) => x.data.note == "a")  // Failed: no token matched
+```
+
+**Operators Implemented** (6 operators):
+
+- `==` - Equality
+- `!=` - Inequality
+- `<` - Less than
+- `<=` - Less than or equal
+- `>` - Greater than
+- `>=` - Greater than or equal
+
+**Critical Token Ordering Fix**: Multi-character tokens (`==`, `!=`, `<=`, `>=`) must be defined BEFORE single-character
+tokens (`=`, `!`, `<`, `>`) in the lexer to ensure correct tokenization. Initial implementation failed because `!` was
+matching before `!=`.
+
+**Files Modified**:
+
+1. **`ast/Ast.kt`** - Extended `BinaryOperator` enum:
+   ```kotlin
+   enum class BinaryOperator {
+       ADD, SUBTRACT, MULTIPLY, DIVIDE,
+       EQUAL,                    // a == b
+       NOT_EQUAL,                // a != b
+       LESS_THAN,                // a < b
+       LESS_THAN_OR_EQUAL,       // a <= b
+       GREATER_THAN,             // a > b
+       GREATER_THAN_OR_EQUAL,    // a >= b
+   }
+   ```
+
+2. **`parser/KlangScriptParser.kt`**:
+    - Added comparison operator tokens (with correct ordering)
+    - Added `comparisonExpr` precedence level between `additionExpr` and `arrowExpr`
+    - Operator precedence:
+      `arrow => comparison (==, !=, <, <=, >, >=) => addition (+, -) => multiplication (*, /) => unary (-, !) => primary`
+
+3. **`runtime/Interpreter.kt`**:
+    - Extended `evaluateBinaryOp()` to handle comparison operators
+    - Returns `BooleanValue` for comparisons, `NumberValue` for arithmetic
+    - Added `valuesEqual()` helper for equality checks across all types
+    - Comparison operators require numeric operands (except `==` and `!=`)
+
+**Test Coverage**: Created `ComparisonOperatorsTest.kt` with 20 comprehensive tests:
+
+- All 6 comparison operators with numbers
+- Equality with different types (strings, booleans, null, objects, arrays)
+- Type error handling for non-numeric comparisons
+- Operator precedence verification
+- Usage in arrow functions and nested expressions
+
+**Test Results**: 532 tests passing (up from 512) on both JVM and JS platforms
+
+**Known Limitation**: Strict equality (`===`, `!==`) not implemented. Current `==` and `!=` use reference equality for
+objects/arrays.
+
+---
+
+### Arrow Function Block Bodies with Return Statements (Complete)
+
+**Implementation Date**: January 14, 2026
+
+**Goal**: Support multi-statement arrow function bodies with explicit return statements
+
+**Motivation**: User needed to write more complex filter logic:
+
+```kotlin
+note("a b").filter((x) => {
+    let note = x.data.note
+    return note == "a"
+})
+```
+
+**Syntax Supported**:
+
+- Expression bodies: `(x) => x + 1` (existing)
+- Block bodies: `(x) => { let y = x + 1; return y }` (new)
+- Block bodies with multiple statements
+- Early returns from block bodies
+
+**Architecture**:
+
+Created `ArrowFunctionBody` sealed class to represent both forms:
+
+```kotlin
+sealed class ArrowFunctionBody {
+    data class ExpressionBody(val expression: Expression) : ArrowFunctionBody()
+    data class BlockBody(val statements: List<Statement>) : ArrowFunctionBody()
+}
+```
+
+**Control Flow Mechanism**: Implemented exception-based control flow using `ReturnException`:
+
+- When `return` statement is encountered, throw `ReturnException(value)`
+- Function call evaluation catches `ReturnException` and uses its value
+- Common interpreter pattern for implementing early returns
+- Not an actual error, purely a control flow mechanism
+
+**Files Modified**:
+
+1. **`ast/Ast.kt`**:
+    - Added `ReturnStatement` AST node
+    - Created `ArrowFunctionBody` sealed class
+    - Updated `ArrowFunction` to use `ArrowFunctionBody` instead of `Expression`
+
+2. **`parser/KlangScriptParser.kt`**:
+    - Added `return` keyword token
+    - Added `returnStatement` parser
+    - Added `arrowFunctionBody` parser with forward reference using `parser(this::statement)`
+    - Updated `arrowExpr` to parse both body types
+
+3. **`runtime/Errors.kt`**:
+    - Added `ReturnException` class (not a KlangScriptError, just Exception)
+
+4. **`runtime/Interpreter.kt`**:
+    - Made `executeStatement()` internal (was private) for access from NativeInterop
+    - Added handling for `ReturnStatement` (throws `ReturnException`)
+    - Updated function call evaluation to handle both body types:
+        - ExpressionBody: evaluate expression directly
+        - BlockBody: execute statements sequentially, catch `ReturnException`
+
+5. **`runtime/RuntimeValue.kt`**:
+    - Updated `FunctionValue` to use `ArrowFunctionBody` instead of `Expression`
+
+6. **`runtime/NativeInterop.kt`**:
+    - Updated `FunctionValue.callFunction()` to handle both body types
+
+**Test Coverage**: Created `ArrowFunctionBlockBodyTest.kt` with 17 comprehensive tests:
+
+- Simple block bodies with single statement
+- Multiple statements with variable declarations
+- Early returns (unreachable code verification)
+- Closures with block bodies
+- Nested functions with different body types
+- Comparison operators in block bodies
+- User's exact example
+
+**Key Verification Tests**:
+
+- "should return specific value from block body and ignore unreachable code" - ensures early return works
+- "should return different values based on computation in block" - ensures correct value propagation
+
+**Test Results**: 552 tests passing (up from 532) on both JVM and JS platforms
+
+**Technical Challenges Solved**:
+
+1. Forward reference issue with `statement` parser
+2. Multiplatform Exception constructor compatibility (JS limitations)
+3. Private method visibility for cross-package access
+4. Updating existing tests using old `FunctionValue` constructor
 
 ---
 

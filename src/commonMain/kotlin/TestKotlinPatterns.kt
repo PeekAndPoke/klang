@@ -1,7 +1,7 @@
 package io.peekandpoke.klang
 
 import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.lang.addons.negateValue
+import io.peekandpoke.klang.strudel.lang.addons.flipSign
 
 object TestKotlinPatterns {
 
@@ -23,7 +23,7 @@ object TestKotlinPatterns {
         ).sound("tri")
 //            .struct("x(3,8,1)")
             .orbit(0).gain(0.25)
-            .pan(sine2.slow(16).range(-0.7, 0.7).negateValue())
+            .pan(sine2.slow(16).range(-0.7, 0.7).flipSign())
             .delay(0.25).delaytime(0.5).delayfeedback(0.5)
             .room(0.05).rsize(1.0)
             .clip(0.3)

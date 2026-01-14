@@ -2,6 +2,8 @@ package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.dslPatternExtension
+import io.peekandpoke.klang.strudel.lang.dslStringExtension
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
 
 /**
@@ -16,7 +18,7 @@ var strudelLangArithmeticAddonsInit = false
 
 // -- negateValue  -----------------------------------------------------------------------------------------------------
 
-private fun applyNegateValue(pattern: StrudelPattern): StrudelPattern {
+private fun applyFlipSign(pattern: StrudelPattern): StrudelPattern {
     return pattern.reinterpret { evt ->
         val current = evt.data.value?.asDouble ?: 0.0
         val negated = -current
@@ -25,21 +27,17 @@ private fun applyNegateValue(pattern: StrudelPattern): StrudelPattern {
     }
 }
 
-/** Negates the value of the event's voice data. */
+/** Flips the sign of numerical values of the event's voice data. */
 @io.peekandpoke.klang.strudel.lang.StrudelDsl
-val StrudelPattern.negateValue by _root_ide_package_.io.peekandpoke.klang.strudel.lang.dslPatternExtension { pattern, _ ->
-    applyNegateValue(
+val StrudelPattern.flipSign by dslPatternExtension { pattern, _ ->
+    applyFlipSign(
         pattern
     )
 }
 
-/** Negates the value of the event's voice data. */
+/** Flips the sign of numerical values of the event's voice data. */
 @io.peekandpoke.klang.strudel.lang.StrudelDsl
-val String.negateValue by _root_ide_package_.io.peekandpoke.klang.strudel.lang.dslStringExtension { pattern, _ ->
-    applyNegateValue(
-        pattern
-    )
-}
+val String.flipSign by dslStringExtension { pattern, _ -> applyFlipSign(pattern) }
 
 // -- oneMinus ---------------------------------------------------------------------------------------------------------
 
@@ -54,16 +52,27 @@ private fun applyOneMinusValue(pattern: StrudelPattern): StrudelPattern {
 
 /** Calculates 1.0 - value of the event's voice data. */
 @io.peekandpoke.klang.strudel.lang.StrudelDsl
-val StrudelPattern.oneMinusValue by _root_ide_package_.io.peekandpoke.klang.strudel.lang.dslPatternExtension { pattern, _ ->
-    applyOneMinusValue(
-        pattern
-    )
+val StrudelPattern.oneMinusValue by dslPatternExtension { pattern, _ -> applyOneMinusValue(pattern) }
+
+/** Calculates 1.0 - value of the event's voice data. */
+@io.peekandpoke.klang.strudel.lang.StrudelDsl
+val String.oneMinusValue by dslStringExtension { pattern, _ -> applyOneMinusValue(pattern) }
+
+// -- not --------------------------------------------------------------------------------------------------------------
+
+private fun applyNot(pattern: StrudelPattern): StrudelPattern {
+    return pattern.reinterpret { evt ->
+        val current = evt.data.value?.asBoolean ?: false
+        val withNot = !current
+
+        evt.copy(data = evt.data.copy(value = withNot.asVoiceValue()))
+    }
 }
 
 /** Calculates 1.0 - value of the event's voice data. */
 @io.peekandpoke.klang.strudel.lang.StrudelDsl
-val String.oneMinusValue by _root_ide_package_.io.peekandpoke.klang.strudel.lang.dslStringExtension { pattern, _ ->
-    applyOneMinusValue(
-        pattern
-    )
-}
+val StrudelPattern.not by dslPatternExtension { pattern, _ -> applyNot(pattern) }
+
+/** Calculates 1.0 - value of the event's voice data. */
+@io.peekandpoke.klang.strudel.lang.StrudelDsl
+val String.not by dslStringExtension { pattern, _ -> applyNot(pattern) }

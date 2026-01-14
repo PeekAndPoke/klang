@@ -255,6 +255,49 @@ data class ImportStatement(
     override val location: SourceLocation? = null,
 ) : Statement(location)
 
+/**
+ * A return statement for exiting from functions
+ *
+ * Returns a value from the current function and transfers control back to the caller.
+ * Return statements are used in arrow function block bodies and other functions.
+ *
+ * **Syntax:**
+ * - `return` - Return null/undefined
+ * - `return expression` - Return the value of the expression
+ *
+ * **Semantics:**
+ * - Evaluates the expression (if provided)
+ * - Immediately exits the current function
+ * - Returns control to the function caller with the value
+ *
+ * Examples:
+ * ```javascript
+ * // In arrow function block body
+ * x => {
+ *   let doubled = x * 2
+ *   return doubled + 1
+ * }
+ *
+ * // Early return
+ * x => {
+ *   if (x < 0) return 0
+ *   return x * 2
+ * }
+ *
+ * // Return null
+ * () => {
+ *   doSomething()
+ *   return
+ * }
+ * ```
+ *
+ * @param value Optional expression to return (null means return NullValue)
+ */
+data class ReturnStatement(
+    val value: Expression?,
+    override val location: SourceLocation? = null,
+) : Statement(location)
+
 // ============================================================
 // Expressions
 // ============================================================
@@ -359,6 +402,24 @@ enum class BinaryOperator {
 
     /** Division: a / b */
     DIVIDE,
+
+    /** Equality: a == b */
+    EQUAL,
+
+    /** Inequality: a != b */
+    NOT_EQUAL,
+
+    /** Less than: a < b */
+    LESS_THAN,
+
+    /** Less than or equal: a <= b */
+    LESS_THAN_OR_EQUAL,
+
+    /** Greater than: a > b */
+    GREATER_THAN,
+
+    /** Greater than or equal: a >= b */
+    GREATER_THAN_OR_EQUAL,
 }
 
 /**
@@ -463,15 +524,32 @@ data class MemberAccess(
 ) : Expression(location)
 
 /**
+ * Body of an arrow function - either an expression or a block of statements
+ */
+sealed class ArrowFunctionBody {
+    /**
+     * Expression body: `x => x + 1`
+     * The expression value is implicitly returned
+     */
+    data class ExpressionBody(val expression: Expression) : ArrowFunctionBody()
+
+    /**
+     * Block body: `x => { let y = x + 1; return y; }`
+     * Requires explicit return statement to return a value
+     */
+    data class BlockBody(val statements: List<Statement>) : ArrowFunctionBody()
+}
+
+/**
  * An arrow function expression (lambda/anonymous function)
  *
  * Represents JavaScript-style arrow functions for callbacks and functional programming.
  * Arrow functions are first-class values that can be passed as arguments, returned from
  * functions, and stored in variables.
  *
- * **Current implementation: Expression bodies only**
- * - Single expression after `=>`: `x => x + 1`
- * - Block bodies deferred to Phase 6: `x => { return x + 1; }`
+ * **Supported forms:**
+ * - Expression body: `x => x + 1` (implicit return)
+ * - Block body: `x => { return x + 1; }` (explicit return)
  *
  * **Parameter syntax:**
  * - Single parameter (no parens): `x => expr`
@@ -484,11 +562,21 @@ data class MemberAccess(
  *
  * Examples:
  * ```
- * // Single parameter, simple expression
+ * // Expression body (implicit return)
  * x => x + 1
- *
- * // Multiple parameters
  * (a, b) => a + b
+ *
+ * // Block body (explicit return)
+ * x => {
+ *   let doubled = x * 2
+ *   return doubled + 1
+ * }
+ *
+ * // Block body with early return
+ * x => {
+ *   if (x < 0) return 0
+ *   return x * 2
+ * }
  *
  * // No parameters
  * () => 42
@@ -497,7 +585,7 @@ data class MemberAccess(
  * x => y => x + y
  *
  * // As callback argument
- * note("a b c").superImpose(x => x.detune(0.5))
+ * note("a b c").filter(x => x.data.note == "a")
  *
  * // Returning object literal (wrapped in parens to avoid ambiguity)
  * x => ({ value: x, doubled: x * 2 })
@@ -508,15 +596,15 @@ data class MemberAccess(
  * ```
  *
  * AST structure:
- * - `x => x + 1` becomes ArrowFunction(["x"], BinaryOperation(...))
- * - `(a, b) => a * b` becomes ArrowFunction(["a", "b"], BinaryOperation(...))
+ * - `x => x + 1` becomes ArrowFunction(["x"], ExpressionBody(BinaryOperation(...)))
+ * - `x => { return x + 1; }` becomes ArrowFunction(["x"], BlockBody([ReturnStatement(...)]))
  *
  * @param parameters List of parameter names (identifiers)
- * @param body Expression to evaluate and return
+ * @param body Function body (expression or block)
  */
 data class ArrowFunction(
     val parameters: List<String>,
-    val body: Expression,
+    val body: ArrowFunctionBody,
     override val location: SourceLocation? = null,
 ) : Expression(location)
 

@@ -3,8 +3,6 @@ package io.peekandpoke.klang.script
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.script.ast.ExpressionStatement
-import io.peekandpoke.klang.script.ast.Program
 import io.peekandpoke.klang.script.runtime.*
 
 /**
@@ -80,11 +78,26 @@ class ArrowFunctionTest : StringSpec({
                 // Create interpreter with that environment and execute the body
                 val funcInterpreter = Interpreter(env = funcEnv, engine = engine)
 
-                // We need to execute a small program containing the function body
-                val bodyProgram = Program(
-                    listOf(ExpressionStatement(func.body))
-                )
-                funcInterpreter.execute(bodyProgram)
+                // Execute based on body type
+                when (val body = func.body) {
+                    is io.peekandpoke.klang.script.ast.ArrowFunctionBody.ExpressionBody -> {
+                        // Expression body: evaluate directly
+                        funcInterpreter.evaluate(body.expression)
+                    }
+
+                    is io.peekandpoke.klang.script.ast.ArrowFunctionBody.BlockBody -> {
+                        // Block body: execute statements
+                        try {
+                            var lastValue: RuntimeValue = NullValue
+                            for (stmt in body.statements) {
+                                lastValue = funcInterpreter.executeStatement(stmt)
+                            }
+                            NullValue
+                        } catch (e: io.peekandpoke.klang.script.runtime.ReturnException) {
+                            e.value
+                        }
+                    }
+                }
             }
         }
 

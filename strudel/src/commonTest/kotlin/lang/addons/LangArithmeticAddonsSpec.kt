@@ -9,7 +9,7 @@ import io.peekandpoke.klang.strudel.lang.seq
 class LangArithmeticAddonsSpec : StringSpec({
 
     "negateValue()" {
-        val p = seq(1.0, -0.5, 0.0).negateValue()
+        val p = seq(1.0, -0.5, 0.0).flipSign()
         val events = p.queryArc(0.0, 3.0)
 
         events.size shouldBe 9
@@ -28,7 +28,7 @@ class LangArithmeticAddonsSpec : StringSpec({
     }
 
     "negateValue() as string extension" {
-        val p = "1 -0.5".negateValue()
+        val p = "1 -0.5".flipSign()
         val events = p.queryArc(0.0, 2.0)
 
         events.size shouldBe 4
