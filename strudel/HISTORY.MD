@@ -201,6 +201,12 @@ All arithmetic operations work on pattern values and can be applied as:
 - `maskAll(pattern)` - Boolean masking for all events
 - `superimpose(function)` - Layers modified pattern on top of original
 
+### Probabilistic Patterns ✅
+
+- `degradeBy(amount)` - Randomly removes events with given probability (pattern method, string extension, with pattern
+  control)
+- `degrade()` - Randomly removes events with 50% probability (pattern method and string extension)
+
 ## Audio Parameters
 
 ### Amplitude & Dynamics ✅
@@ -259,6 +265,10 @@ All arithmetic operations work on pattern values and can be applied as:
 - `steady(value)` - Constant value continuous pattern
 - `signal(callback)` - Continuous pattern from callback function `(Double) -> Double`
 - `time` - Current time (in cycles) as continuous pattern
+- `rand` - Random signal (unipolar, 0 to 1)
+- `rand2` - Random signal (bipolar, -1 to 1)
+- `brand` - Binary random (0 or 1, 50:50 probability)
+- `brandBy(probability)` - Binary random with custom probability
 
 ### Waveforms ✅
 
@@ -300,6 +310,10 @@ All arithmetic operations work on pattern values and can be applied as:
 
 - `orbit()` - Output bus routing
 
+## Random & Seeding ✅
+
+- `seed(n)` - Set random seed for deterministic pattern generation (works as pattern method and string extension)
+
 ## Pattern Modifiers Architecture
 
 ### Modifier System ✅
@@ -332,18 +346,20 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 100+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
-- 13 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, ReversePattern, StructPattern,
-  ContextModifierPattern)
-- 18 continuous oscillators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw, isaw2, tri, tri2,
-  itri, itri2, square, square2, perlin)
+- 107+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 15 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, DegradePatternWithControl,
+  ReversePattern, StructPattern, ContextModifierPattern, TimeShiftPatternWithControl)
+- 23 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
+  isaw2, tri, tri2,
+  itri, itri2, square, square2, perlin, rand, rand2, brand, brandBy)
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
-- Control pattern system
+- Control pattern system with pattern-controlled degradation and time shifting
 - Comprehensive audio parameter support
 - **Rational number time system** for exact arithmetic
-- **Deterministic seeded randomness** for consistent pattern playback
+- **Deterministic seeded randomness** for consistent pattern playback via `seed()`
+- **Advanced random seeding** with improved hashing algorithm and varargs support
 
 **Architecture Highlights:**
 
@@ -403,3 +419,31 @@ Comprehensive voice data structure supporting:
 - ✅ **Comprehensive Testing** - Added complete test coverage for all continuous patterns with `.range()` tests in
   `LangContinuousPatternsSpec`
 - ✅ **JS Compatibility Tests** - Added example patterns for all new oscillators in `JsCompatTestData`
+
+**Recent Improvements (2026-01-14):**
+
+- ✅ **Random Signal Generators** - Added 4 new random continuous patterns:
+    - `rand` - Random signal (unipolar, 0 to 1) with improved seeding using `getSeededRandom()`
+    - `rand2` - Random signal (bipolar, -1 to 1)
+    - `brand` - Binary random (0 or 1, 50:50 probability) with improved seeding
+    - `brandBy(probability)` - Binary random with custom probability and improved seeding
+- ✅ **Random Seeding** - Moved `seed()` function from `lang_continuous.kt` to dedicated `lang_random.kt` file:
+    - `seed(n)` - Set random seed for deterministic pattern generation
+    - Works as pattern method and string extension
+    - Enables reproducible random patterns across queries
+- ✅ **Improved Random Seeding Architecture** - Enhanced `QueryContext.getSeededRandom()`:
+    - Now accepts varargs for better seed combination: `getSeededRandom(seed, vararg seeds)`
+    - Uses improved hashing algorithm for better random distribution
+    - Applied to `ChoicePattern`, `DegradePattern`, `rand`, and `brandBy`
+- ✅ **Probabilistic Pattern Enhancements**:
+    - `degradeBy()` - Now available as pattern method, string extension, AND with pattern control
+    - `degrade()` - New convenience function with 50% probability (pattern method and string extension)
+    - `DegradePatternWithControl` - New pattern type accepting a pattern as probability control
+- ✅ **Pattern Control Architecture** - New `TimeShiftPatternWithControl` pattern type for advanced time shifting
+- ✅ **Code Organization** - Created new `lang_random.kt` file for random-related DSL functions
+- ✅ **Comprehensive Testing** - Added multiple test files:
+    - `LangSeedSpec.kt` with 7 tests covering seed functionality
+    - `LangRandomSpec.kt` with tests for random signal generators
+    - `LangDegradeBySpecTest.kt` with tests for degradeBy/degrade functions
+    - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
+    - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting

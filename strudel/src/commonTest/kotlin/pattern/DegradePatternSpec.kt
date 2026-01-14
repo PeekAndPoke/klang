@@ -83,5 +83,15 @@ class DegradePatternSpec : StringSpec() {
             // Expect around 900. Range 850-950.
             count shouldBeInRange 850..950
         }
+
+        "Degrade with probability 0.0 should keep all events" {
+            val pattern = DegradePattern(note("a b c d"), 0.0)
+            pattern.queryArc(0.0, 1.0).size shouldBe 4
+        }
+
+        "Degrade with probability 1.0 should remove all events" {
+            val pattern = DegradePattern(note("a b c d"), 1.0)
+            pattern.queryArc(0.0, 1.0).size shouldBe 0
+        }
     }
 }

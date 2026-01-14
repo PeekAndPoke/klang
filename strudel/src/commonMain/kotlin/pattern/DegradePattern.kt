@@ -17,9 +17,7 @@ internal class DegradePattern(
     override val weight: Double get() = inner.weight
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        val random = ctx.getSeededRandom(
-            (from.hashCode().toLong() * 48271L) + 2147483647L
-        )
+        val random = ctx.getSeededRandom(from, "DegradePattern")
 
         return inner.queryArcContextual(from, to, ctx).filter {
             random.nextDouble() > probability

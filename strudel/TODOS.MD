@@ -222,10 +222,11 @@ and category.
 - [x] **`square2`** - Square wave (-1 or 1)
 - [x] **`perlin`** - Perlin noise
 - [x] **`range(min, max)`** - Scale continuous pattern to range
-- [ ] **`rand`** / **`rand2`** - Random signals (unipolar/bipolar)
-- [ ] **`irand(n)`** - Random integers from 0 to n-1
-- [ ] **`brand`** - Binary random (0 or 1)
-- [ ] **`brandBy(probability)`** - Binary random with custom probability
+- [x] **`rand`** - Random signal (unipolar, 0 to 1)
+- [x] **`rand2`** - Random signal (bipolar, -1 to 1)
+- [x] **`brand`** - Binary random (0 or 1, 50:50 probability)
+- [x] **`brandBy(probability)`** - Binary random with custom probability
+- [/] **`irand(n)`** - Random integers from 0 to n-1 (TODO: implementation pending)
 - [ ] **`.segment(rate)`** - Sample continuous signal at rate (alias: `seg`)
 - [ ] **`.slow(factor)`** - Slow down continuous patterns
 - [ ] **`toBipolar()`** - Convert 0-1 range to -1-1
@@ -233,6 +234,11 @@ and category.
 - [ ] **`rangex(min, max)`** - Exponential range scaling
 - [ ] **`range2(min, max)`** - Bipolar range scaling
 - [ ] **`ratio()`** - Get frequency ratio
+
+### Random & Seeding ⭐⭐⭐
+
+- [x] **`seed(n)`** - Set random seed for deterministic pattern generation (works as pattern method and string
+  extension)
 
 ---
 
@@ -263,7 +269,8 @@ and category.
 
 - [ ] **`sometimes(function)`** - Randomly applies effects
 - [ ] **`rarely(function)`** - Infrequently applies variations
-- [x] **`degradeBy(amount)`** - Probabilistic event removal
+- [x] **`degradeBy(amount)`** - Probabilistic event removal (pattern method, string extension, with pattern control)
+- [x] **`degrade()`** - Probabilistic event removal with 50% probability (pattern method and string extension)
 - [ ] **`firstOf(n, func)`** - Apply function on first of every n cycles (alias: `every`)
 - [ ] **`lastOf(n, func)`** - Apply function on last of every n cycles
 - [ ] **`filter(test)`** - Filter events by test function
@@ -471,19 +478,20 @@ and category.
 - **Comparison & Logic**: 2 missing (8 completed)
 - **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
 - **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ~10 missing (18 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
-  `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `range`)
+- **Continuous Signals**: ~5 missing (23 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
+  `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `range`, `rand`,
+  `rand2`, `brand`, `brandBy`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
-- **Conditional & Probabilistic**: ~10 missing (1 completed: `degradeBy`)
+- **Conditional & Probabilistic**: ~8 missing (2 completed: `degradeBy`, `degrade`)
 - **Pattern Binding**: ~15 missing (0 completed)
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~13 missing (0 completed)
 
-### Total Estimated: ~150 features remaining
+### Total Estimated: ~143 features remaining
 
-### Completed So Far: ~96 features! 🎉
+### Completed So Far: ~103 features! 🎉
 
 **Major achievements:**
 

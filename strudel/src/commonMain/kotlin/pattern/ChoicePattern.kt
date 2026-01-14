@@ -23,9 +23,7 @@ internal class ChoicePattern(
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (choices.isEmpty()) return emptyList()
 
-        val random = ctx.getSeededRandom(
-            (from.hashCode().toLong() * 6364136223846793005L) + 1442695040888963407L
-        )
+        val random = ctx.getSeededRandom(from, choices, "ChoicePattern")
 
         return choices.random(random).queryArcContextual(from, to, ctx)
     }

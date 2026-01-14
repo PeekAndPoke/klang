@@ -12,6 +12,24 @@
 
 ## Diary
 
+### (2026-01-14) Strudel - DSL
+
+- random functions and patterns
+
+### (2026-01-13) Strudel - Fights with floating point numbers
+
+- tried to use a full Rational implementation, but failed
+- switched back to the fix-point approach with a small hack in SequencePattern
+
+### (2026-01-12) Strudel - DSL
+
+- more strudel dsl functions
+- continuous patterns
+
+### (2026-01-11) Strudel - DSL
+
+- more strudel dsl functions
+
 ### (2026-01-10) Strudel - Cleanup and refactoring
 
 - streamlining the api surface of all strudel functions
