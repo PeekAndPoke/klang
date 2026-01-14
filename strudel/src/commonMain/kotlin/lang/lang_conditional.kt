@@ -1,4 +1,6 @@
 // strudel/src/commonMain/kotlin/lang/lang_conditional.kt
+@file:Suppress("DuplicatedCode")
+
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -72,3 +74,64 @@ val StrudelPattern.every by dslPatternExtension { source, args -> applyFirstOf(s
 /** Alias for [firstOf] */
 @StrudelDsl
 val String.every by dslStringExtension { source, args -> applyFirstOf(source, args) }
+
+// -- lastOf() ---------------------------------------------------------------------------------------------------------
+
+private fun applyLastOf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.getOrNull(1) as? (StrudelPattern) -> StrudelPattern ?: { it }
+
+    if (n <= 1) return transform(source)
+
+    // Construct a list of patterns: [source, source, ... (n-1 times), transform(source)]
+    // We use 1.0 duration for each pattern segment, so they play sequentially, one per cycle.
+    val patterns = ArrayList<Pair<Double, StrudelPattern>>(n)
+    repeat(n - 1) {
+        patterns.add(1.0 to source)
+    }
+    patterns.add(1.0 to transform(source))
+
+    return ArrangementPattern(patterns)
+}
+
+/**
+ * Applies the given function every n cycles, starting from the last cycle.
+ *
+ * It essentially says: "Every n cycles, do this special thing on the last one."
+ *
+ * If you call:
+ *
+ * note("a b c d").lastOf(4, { it.rev() })
+ *
+ * then:
+ * - Cycle 1: The pattern plays normally.
+ * - Cycle 2: The pattern plays normally.
+ * - Cycle 3: The pattern plays normally.
+ * - Cycle 4: The pattern plays in reverse again (loop restarts).
+ * - Cycle 5: The pattern plays normally.
+ *
+ * @param n - the number of cycles to repeat the function
+ * @param transform - the function to apply to the first cycle
+ */
+@StrudelDsl
+val lastOf by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 1
+
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.getOrNull(1) as? (StrudelPattern) -> StrudelPattern ?: { it }
+    val pat = args.getOrNull(2) as? StrudelPattern ?: silence
+
+    applyLastOf(pat, listOf(n, transform))
+}
+
+@StrudelDsl
+val StrudelPattern.lastOf by dslPatternExtension { source, args ->
+    applyLastOf(source, args)
+}
+
+@StrudelDsl
+val String.lastOf by dslStringExtension { source, args ->
+    applyLastOf(source, args)
+}

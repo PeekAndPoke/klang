@@ -290,7 +290,7 @@ and category.
 - [x] **`someCycles(fn)`** - Cycle-based random application with 50% probability (pattern method, string extension)
 - [x] **`firstOf(n, func)`** - Apply function on first of every n cycles (pattern method, string extension)
 - [x] **`every(n, func)`** - Alias for `firstOf` (pattern method, string extension)
-- [ ] **`lastOf(n, func)`** - Apply function on last of every n cycles
+- [x] **`lastOf(n, func)`** - Apply function on last of every n cycles (pattern method, string extension)
 - [ ] **`filter(test)`** - Filter events by test function
 - [ ] **`filterWhen(test)`** - Filter events when test is true at start time
 - [ ] **`bypass()`** - Conditionally bypass pattern
@@ -508,18 +508,18 @@ and category.
   `rand`, `rand2`, `irand`, `brand`, `brandBy`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
-- **Conditional & Probabilistic**: ~1 missing (16 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
+- **Conditional & Probabilistic**: ✅ 0 missing (17 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
   `almostAlways`, `almostNever`, `always`, `never`, `someCyclesBy`, `someCycles`, `degradeBy`, `degrade`, `undegradeBy`,
-  `undegrade`, `firstOf`, `every`)
+  `undegrade`, `firstOf`, `every`, `lastOf`)
 - **Arithmetic Addons (Non-Strudel)**: 0 missing (2 completed: `negateValue`, `oneMinusValue`)
 - **Pattern Binding**: ~15 missing (0 completed)
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~11 missing (2 completed: `hush`, `pure`; 3 partial)
 
-### Total Estimated: ~123 features remaining
+### Total Estimated: ~122 features remaining
 
-### Completed So Far: ~127 features! 🎉
+### Completed So Far: ~128 features! 🎉
 
 **Major achievements:**
 
