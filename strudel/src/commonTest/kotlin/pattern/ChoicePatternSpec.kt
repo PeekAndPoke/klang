@@ -96,12 +96,7 @@ class ChoicePatternSpec : StringSpec() {
 
             pattern.shouldBeInstanceOf<ChoicePattern>()
             pattern.choices.size shouldBe 2
-            pattern.choices[0].shouldBeInstanceOf<DegradePattern>().let { choice ->
-                choice.probability shouldBe 0.5
-                choice.inner.shouldBeInstanceOf<AtomicPattern>().let { inner ->
-                    inner.data.note shouldBe "a"
-                }
-            }
+            pattern.choices[0].shouldBeInstanceOf<SometimesPattern>()
             pattern.choices[1].shouldBeInstanceOf<AtomicPattern>().let { choice ->
                 choice.data.note shouldBe "b"
             }
