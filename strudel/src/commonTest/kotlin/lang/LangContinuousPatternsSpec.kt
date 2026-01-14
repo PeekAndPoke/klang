@@ -3,8 +3,10 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
@@ -519,5 +521,101 @@ class LangContinuousPatternsSpec : StringSpec({
             valA shouldBe (0.0 plusOrMinus EPSILON)
             valB shouldBe (valA!! plusOrMinus EPSILON)
         }
+    }
+
+    "perlin oscillator: same seed produces same values" {
+        val p1 = perlin.seed(42)
+        val p2 = perlin.seed(42)
+
+        val val1 = p1.queryArc(0.5, 0.6)[0].data.value?.asDouble
+        val val2 = p2.queryArc(0.5, 0.6)[0].data.value?.asDouble
+
+        val1 shouldBe val2
+    }
+
+    "perlin oscillator: different seeds produce different values" {
+        val p1 = perlin.seed(1)
+        val p2 = perlin.seed(2)
+
+        val val1 = p1.queryArc(0.1, 0.2)[0].data.value?.asDouble
+        val val2 = p2.queryArc(0.1, 0.2)[0].data.value?.asDouble
+
+        val1 shouldNotBe val2
+    }
+
+    "perlin oscillator: output range in DSL is 0.0 to 1.0" {
+        val p = perlin.seed(55)
+        var min = 1.0
+        var max = 0.0
+
+        for (i in 0..1000) {
+            val t = i * 0.1
+            val events = p.queryArc(t, t + EPSILON)
+            if (events.isNotEmpty()) {
+                val v = events[0].data.value?.asDouble ?: 0.5
+                // Should be strictly within 0..1 (unipolar)
+                v.shouldBeBetween(0.0, 1.0, 0.0001)
+
+                if (v < min) min = v
+                if (v > max) max = v
+            }
+        }
+
+        // Ensure it covers a good part of the range (it's not stuck at 0.5)
+        min.shouldBeBetween(0.0, 0.35, 0.0)
+        max.shouldBeBetween(0.65, 1.0, 0.0)
+    }
+
+    "berlin oscillator: same seed produces same values" {
+        val p1 = berlin.seed(99)
+        val p2 = berlin.seed(99)
+
+        val val1 = p1.queryArc(0.7, 0.8)[0].data.value?.asDouble
+        val val2 = p2.queryArc(0.7, 0.8)[0].data.value?.asDouble
+
+        val1 shouldBe val2
+    }
+
+    "berlin oscillator: different seeds produce different values" {
+        val p1 = berlin.seed(1)
+        val p2 = berlin.seed(2)
+
+        val val1 = p1.queryArc(0.1, 0.2)[0].data.value?.asDouble
+        val val2 = p2.queryArc(0.1, 0.2)[0].data.value?.asDouble
+
+        val1 shouldNotBe val2
+    }
+
+    "berlin oscillator: stability across multiple queries" {
+        val p = berlin.seed(123)
+
+        // Query same point twice in separate query cycles
+        val val1 = p.queryArc(1.5, 1.6)[0].data.value?.asDouble
+        val val2 = p.queryArc(1.5, 1.6)[0].data.value?.asDouble
+
+        val1 shouldBe val2
+    }
+
+    "berlin oscillator: output range in DSL is 0.0 to 1.0" {
+        val p = berlin.seed(66)
+        var min = 1.0
+        var max = 0.0
+
+        for (i in 0..1000) {
+            val t = i * 0.1
+            val events = p.queryArc(t, t + EPSILON)
+            if (events.isNotEmpty()) {
+                val v = events[0].data.value?.asDouble ?: 0.5
+                // Should be strictly within 0..1 (unipolar)
+                v.shouldBeBetween(0.0, 1.0, 0.0001)
+
+                if (v < min) min = v
+                if (v > max) max = v
+            }
+        }
+
+        // Ensure it covers a good part of the range
+        min.shouldBeBetween(0.0, 0.35, 0.0)
+        max.shouldBeBetween(0.65, 1.0, 0.0)
     }
 })

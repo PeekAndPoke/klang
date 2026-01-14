@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.math.BerlinNoise
 import io.peekandpoke.klang.strudel.math.PerlinNoise
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -141,11 +142,37 @@ val square by dslObject { signal { t -> if (t % 1.0 < 0.5) 0.0 else 1.0 } }
 @StrudelDsl
 val square2 by dslObject { square.range(-1.0, 1.0) }
 
-/** Square oscillator: 0 or 1, period of 1 cycle */
+/** Generates a continuous pattern of Perlin noise producing values between 0 and 1 */
 @StrudelDsl
-val perlin by dslObject { signal { t -> (PerlinNoise.noise(t) + 1.0) / 2.0 } }
+val perlin by dslObject {
+    val engines = mutableMapOf<Int, PerlinNoise>()
 
-// TODO: berlin noise
+    ContinuousPattern { from, _, ctx ->
+        val random = ctx.getSeededRandom("perlin")
+        val engine = engines.getOrPut(random.nextInt()) {
+            PerlinNoise(random)
+        }
 
+        (engine.noise(from) + 1.0) / 2.0
+    }
+}
 
+/**
+ * Generates a continuous pattern of Berlin noise producing values between 0 and 1
+ *
+ * Conceived by Jame Coyne and Jade Rowland as a joke but turned out to be surprisingly cool and useful,
+ * like perlin noise but with sawtooth waves,
+ */
+@StrudelDsl
+val berlin by dslObject {
+    val engines = mutableMapOf<Int, BerlinNoise>()
 
+    ContinuousPattern { from, _, ctx ->
+        val random = ctx.getSeededRandom("Berlin")
+        val engine = engines.getOrPut(random.nextInt()) {
+            BerlinNoise(random)
+        }
+
+        engine.noise(from)
+    }
+}

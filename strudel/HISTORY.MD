@@ -292,7 +292,9 @@ All arithmetic operations work on pattern values and can be applied as:
 - `square2` - Square wave oscillator (-1 or 1)
 
 **Noise:**
-- `perlin` - Perlin noise generator (0 to 1, scaled from native -1 to 1 range)
+
+- `perlin` - Perlin noise generator (0 to 1) with seeded permutation table for deterministic output
+- `berlin` - Berlin noise generator (0 to 1) - sawtooth-based noise, conceived as a joke but surprisingly useful
 
 ### Signal Processing ✅
 
@@ -346,12 +348,11 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 107+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 108+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 15 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, DegradePatternWithControl,
   ReversePattern, StructPattern, ContextModifierPattern, TimeShiftPatternWithControl)
-- 23 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
-  isaw2, tri, tri2,
-  itri, itri2, square, square2, perlin, rand, rand2, brand, brandBy)
+- 24 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
+  isaw2, tri, tri2, itri, itri2, square, square2, perlin, berlin, rand, rand2, brand, brandBy)
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
@@ -441,9 +442,18 @@ Comprehensive voice data structure supporting:
     - `DegradePatternWithControl` - New pattern type accepting a pattern as probability control
 - ✅ **Pattern Control Architecture** - New `TimeShiftPatternWithControl` pattern type for advanced time shifting
 - ✅ **Code Organization** - Created new `lang_random.kt` file for random-related DSL functions
+- ✅ **Noise Generators**:
+  - `perlin` - Enhanced with seeded permutation table for deterministic noise generation
+  - `berlin` - New sawtooth-based noise generator (0 to 1), conceived as a joke but surprisingly useful
+  - Both use `PerlinNoise` and `BerlinNoise` classes with runtime permutation generation
+  - Improved `PerlinNoise` with better gradient function and scaling
 - ✅ **Comprehensive Testing** - Added multiple test files:
     - `LangSeedSpec.kt` with 7 tests covering seed functionality
     - `LangRandomSpec.kt` with tests for random signal generators
     - `LangDegradeBySpecTest.kt` with tests for degradeBy/degrade functions
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting
+  - `PerlinNoiseSpec.kt` - Tests for Perlin noise implementation
+  - `BerlinNoiseSpec.kt` - Tests for Berlin noise implementation
+  - Enhanced `LangContinuousPatternsSpec.kt` with perlin/berlin tests covering seed consistency, range validation, and
+    stability

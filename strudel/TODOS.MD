@@ -220,7 +220,8 @@ and category.
 - [x] **`itri2`** - Inverse triangle wave (-1 to 1 to -1)
 - [x] **`square`** - Square wave (0 or 1)
 - [x] **`square2`** - Square wave (-1 or 1)
-- [x] **`perlin`** - Perlin noise
+- [x] **`perlin`** - Perlin noise with seeded permutation table
+- [x] **`berlin`** - Berlin noise (sawtooth-based noise, conceived as a joke but surprisingly useful)
 - [x] **`range(min, max)`** - Scale continuous pattern to range
 - [x] **`rand`** - Random signal (unipolar, 0 to 1)
 - [x] **`rand2`** - Random signal (bipolar, -1 to 1)
@@ -478,8 +479,9 @@ and category.
 - **Comparison & Logic**: 2 missing (8 completed)
 - **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
 - **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ~5 missing (23 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
-  `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `range`, `rand`,
+- **Continuous Signals**: ~4 missing (24 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
+  `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `berlin`, `range`,
+  `rand`,
   `rand2`, `brand`, `brandBy`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
@@ -489,9 +491,9 @@ and category.
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~13 missing (0 completed)
 
-### Total Estimated: ~143 features remaining
+### Total Estimated: ~142 features remaining
 
-### Completed So Far: ~103 features! 🎉
+### Completed So Far: ~104 features! 🎉
 
 **Major achievements:**
 
