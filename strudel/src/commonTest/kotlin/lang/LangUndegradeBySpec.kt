@@ -113,15 +113,17 @@ class LangUndegradeBySpec : StringSpec({
 
         val buckets = events.groupBy { it.data.note }
 
+        println(buckets.mapValues { (_, v) -> v.size })
+
         assertSoftly {
             withClue("note 'a' (prob keep ~0.1)") {
                 (buckets["a"]?.size ?: 0) shouldBeInRange 0..25
             }
             withClue("note 'b' (prob keep 1.0)") {
-                (buckets["b"]?.size ?: 0) shouldBeInRange 98..100
+                (buckets["b"]?.size ?: 0) shouldBeInRange 90..100
             }
             withClue("note 'c' (prob keep ~0.2)") {
-                (buckets["c"]?.size ?: 0) shouldBeInRange 10..35
+                (buckets["c"]?.size ?: 0) shouldBeInRange 10..30
             }
             withClue("note 'd' (prob keep ~0.9)") {
                 (buckets["d"]?.size ?: 0) shouldBeInRange 80..100

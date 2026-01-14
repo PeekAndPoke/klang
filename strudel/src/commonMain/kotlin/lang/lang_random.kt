@@ -1,12 +1,13 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.addons.oneMinusValue
+import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
-import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.applyDegradeBy
-import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.applyUndegradeBy
-import io.peekandpoke.klang.strudel.pattern.DegradePatternWithControl
-import io.peekandpoke.klang.strudel.pattern.StackPattern
+import io.peekandpoke.klang.strudel.pattern.SometimesPattern
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -85,12 +86,26 @@ val irand by dslObject {
 // -- degradeBy() ------------------------------------------------------------------------------------------------------
 
 private fun applyDegradeBy(pattern: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return when (val first = args.getOrNull(0)) {
-        is Number -> pattern.applyDegradeBy(first.toDouble())
-        is StrudelPattern -> DegradePatternWithControl(pattern, first)
-        is String -> DegradePatternWithControl(pattern, seq(first))
-        else -> pattern.applyDegradeBy(0.5)
+    val probArg = args.getOrNull(0)
+
+    val probPattern = when (probArg) {
+        is StrudelPattern -> probArg
+        is String -> parseMiniNotation(input = probArg) {
+            AtomicPattern(VoiceData.empty.defaultModifier(it))
+        }
+
+        else -> null
     }
+
+    if (probPattern != null) {
+        return SometimesPattern.discardOnMatch(source = pattern, probabilityPattern = probPattern)
+    }
+
+    if (probArg is Number) {
+        return SometimesPattern.discardOnMatch(source = pattern, probabilityValue = probArg.toDouble())
+    }
+
+    return SometimesPattern.discardOnMatch(source = pattern, probabilityValue = 0.5)
 }
 
 /**
@@ -128,13 +143,28 @@ val String.degrade by dslStringExtension { pattern, args -> applyDegradeBy(patte
 // -- undegradeBy() ----------------------------------------------------------------------------------------------------
 
 private fun applyUndegradeBy(pattern: StrudelPattern, args: List<Any?>): StrudelPattern {
-    return when (val first = args.getOrNull(0)) {
-        is Number -> pattern.applyUndegradeBy(first.toDouble())
-        is StrudelPattern -> DegradePatternWithControl(pattern, first, inverted = true)
-        is String -> DegradePatternWithControl(pattern, seq(first), inverted = true)
-        else -> pattern.applyUndegradeBy(0.5)
+    val probArg = args.getOrNull(0)
+
+    val probPattern = when (probArg) {
+        is StrudelPattern -> probArg
+        is String -> parseMiniNotation(input = probArg) {
+            AtomicPattern(VoiceData.empty.defaultModifier(it))
+        }
+
+        else -> null
+    }?.oneMinusValue()
+
+    if (probPattern != null) {
+        return SometimesPattern.discardOnMiss(source = pattern, probabilityPattern = probPattern)
     }
+
+    if (probArg is Number) {
+        return SometimesPattern.discardOnMiss(source = pattern, probabilityValue = 1.0 - probArg.toDouble())
+    }
+
+    return SometimesPattern.discardOnMiss(source = pattern, probabilityValue = 0.5)
 }
+
 
 /**
  * Inverse of `degradeBy`: Randomly removes events from the pattern by a given amount.
@@ -182,19 +212,23 @@ val String.undegrade by dslStringExtension { pattern, args -> applyUndegradeBy(p
 /**
  * Randomly applies the given function by the given probability.
  */
-private fun applySometimesBy(pattern: StrudelPattern, args: List<Any?>, defaultProb: Double? = null): StrudelPattern {
-    var probability = defaultProb
+private fun applySometimesBy(
+    pattern: StrudelPattern,
+    args: List<Any?>,
+    defaultProb: Double? = null,
+    seedByCycle: Boolean = false,
+): StrudelPattern {
+    var probArg: Any? = null
     var func: ((StrudelPattern) -> StrudelPattern)? = null
-
-    // Parse arguments
-    // Cases:
-    // 1. sometimesBy(0.5, { ... }) -> args[0] = 0.5, args[1] = func
-    // 2. sometimes({ ... }) -> args[0] = func (defaultProb set)
-    // 3. sometimesBy({ ... }) -> args[0] = func (defaultProb = 0.5 default)
 
     for (arg in args) {
         when (arg) {
-            is Number -> if (probability == null) probability = arg.toDouble()
+            is Number -> if (probArg == null) probArg = arg
+            is StrudelPattern -> if (probArg == null) probArg = arg
+            is String -> if (probArg == null) probArg = parseMiniNotation(input = arg) {
+                AtomicPattern(VoiceData.empty.defaultModifier(it))
+            }
+
             is Function1<*, *> -> {
                 if (func == null) {
                     @Suppress("UNCHECKED_CAST")
@@ -204,20 +238,26 @@ private fun applySometimesBy(pattern: StrudelPattern, args: List<Any?>, defaultP
         }
     }
 
-    val finalProb = probability ?: 0.5
+    val pVal: Double
+    val pPat: StrudelPattern?
+
+    if (probArg is StrudelPattern) {
+        pPat = probArg
+        pVal = 0.5
+    } else {
+        pPat = null
+        pVal = (probArg as? Number)?.toDouble() ?: defaultProb ?: 0.5
+    }
+
     if (func == null) return pattern
 
-    // Part A: Kept unmodified (probability of removal = finalProb, so kept = 1-finalProb)
-    // Wait. If sometimesBy(0.1) -> 10% applied. 90% kept.
-    // degradeBy(0.1) -> removes 10%. Keeps 90%. -> CORRECT.
-    val partA = pattern.applyDegradeBy(finalProb)
-
-    // Part B: Modified (probability of keeping = finalProb)
-    // undegradeBy(1 - 0.1) = undegradeBy(0.9).
-    // undegradeBy(0.9) keeps if r <= 0.1. (10% chance). -> CORRECT.
-    val partB = func(pattern.applyUndegradeBy(1.0 - finalProb))
-
-    return StackPattern(listOf(partA, partB))
+    return SometimesPattern.applyOnMatch(
+        source = pattern,
+        probabilityPattern = pPat,
+        probabilityValue = pVal,
+        seedStrategy = if (seedByCycle) { it -> it.begin.floor() } else { it -> it.begin },
+        onMatch = func
+    )
 }
 
 /**
@@ -328,11 +368,13 @@ private fun applySomeCyclesBy(
     args: List<Any?>,
     defaultProb: Double? = null,
 ): StrudelPattern {
-    // THIS IS A PLACEHOLDER.
-    // Ideally this should use cycle-based randomness.
-    // For now falling back to sometimesBy to allow compilation/basic usage,
-    // but noting it needs proper cycle-locking.
-    return applySometimesBy(pattern, args, defaultProb)
+    // Delegate to applySometimesBy with seedByCycle = true
+    return applySometimesBy(
+        pattern = pattern,
+        args = args,
+        defaultProb = defaultProb,
+        seedByCycle = true,
+    )
 }
 
 /**

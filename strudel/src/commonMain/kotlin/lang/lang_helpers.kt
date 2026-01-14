@@ -36,7 +36,7 @@ typealias VoiceDataMerger = (source: VoiceData, control: VoiceData) -> VoiceData
  */
 var strudelLangHelpersInit = false
 
-/** Default modifier for patterns that don't have a specific semantic yet (like sequence or stack items) */
+/** Default modifier for patterns that populates VoiceData.value */
 val defaultModifier: VoiceDataModifier = {
     copy(value = it?.asVoiceValue())
 }
@@ -295,8 +295,8 @@ class DslPatternMethod(
         handler(pattern, listOf(block))
 
     @JvmName("invokeBlock")
-    operator fun invoke(num: Number, block: (StrudelPattern) -> StrudelPattern) =
-        handler(pattern, listOf(num.toDouble(), block))
+    operator fun invoke(p1: Any, block: (StrudelPattern) -> StrudelPattern) =
+        handler(pattern, listOf(p1, block))
 
     @JvmName("invokeBlocksVararg")
     operator fun invoke(vararg block: (StrudelPattern) -> StrudelPattern) =

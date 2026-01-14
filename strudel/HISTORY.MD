@@ -222,8 +222,15 @@ All arithmetic operations work on pattern values and can be applied as:
 - `almostNever(fn)` - Almost never applies transformation (10% probability)
 - `always(fn)` - Always applies transformation (100% probability)
 - `never(fn)` - Never applies transformation (0% probability)
-- `someCyclesBy(probability, fn)` - Cycle-based random application (placeholder: currently aliased to sometimesBy)
-- `someCycles(fn)` - Cycle-based random application with 50% (placeholder: currently aliased to sometimes)
+- `someCyclesBy(probability, fn)` - Cycle-based random application with proper cycle-locking
+- `someCycles(fn)` - Cycle-based random application with 50% probability
+
+## Arithmetic Addons (Non-Strudel Extensions) ✅
+
+**These functions are NOT available in the original Strudel implementation**
+
+- `negateValue()` - Negates the value field of voice data (pattern method, string extension)
+- `oneMinusValue()` - Calculates 1.0 - value (pattern method, string extension)
 
 ## Audio Parameters
 
@@ -366,9 +373,9 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 118+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
-- 15 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, DegradePatternWithControl,
-  ReversePattern, StructPattern, ContextModifierPattern, TimeShiftPatternWithControl)
+- 122+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 16 core pattern types (including EuclideanPattern, ChoicePattern, SometimesPattern, ReversePattern, StructPattern,
+  ContextModifierPattern, TimeShiftPatternWithControl)
 - 24 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
   isaw2, tri, tri2, itri, itri2, square, square2, perlin, berlin, rand, rand2, brand, brandBy)
 - 4 filter types
@@ -480,24 +487,40 @@ Comprehensive voice data structure supporting:
   - `almostNever(fn)` - 10% probability
   - `always(fn)` - 100% probability (always applies transformation)
   - `never(fn)` - 0% probability (never applies transformation)
-  - Implementation uses `StackPattern` combining degraded and undegraded streams with function applied to undegraded
-    portion
-  - `someCyclesBy(probability, fn)` and `someCycles(fn)` - Placeholders for cycle-based randomness (currently aliased to
-    sometimesBy/sometimes)
+  - `someCyclesBy(probability, fn)` and `someCycles(fn)` - Cycle-based randomness with proper cycle-locking
+- ✅ **Major Refactoring - New `SometimesPattern` Architecture**:
+  - Unified pattern type replacing `DegradePattern`, `DegradePatternWithControl`, and `StackPattern`-based
+    implementation
+  - Three factory methods: `applyOnMatch`, `discardOnMatch`, `discardOnMiss`
+  - Supports both fixed probability values and dynamic probability patterns
+  - `seedStrategy` parameter allows per-event or per-cycle randomness
+  - Proper cycle-locking for `someCycles` family via `seedStrategy: { it.begin.floor() }`
+  - Eliminates need for separate degraded/undegraded streams - handles routing internally
+  - Pattern control support for `degradeBy` and `undegradeBy` via mini-notation parsing
+- ✅ **Arithmetic Addon Functions** (Non-Strudel extensions):
+  - Created new `lang_arithmetic_addons.kt` module in `lang/addons/` package
+  - `negateValue()` - Negates the value field (useful for inverting control signals)
+  - `oneMinusValue()` - Calculates 1.0 - value (used internally by `undegradeBy` for probability inversion)
+  - Registered via `strudelLangArithmeticAddonsInit` in main init function
 - ✅ **Random Seeding Improvements**:
   - Changed `QueryContext.random` from `Key<Random>` to `randomSeed` as `Key<Long>` for better seed management
   - Updated `getRandom()` to create Random instance from seed on demand
   - Enhanced `seed()` function to accept Long values via new `asLongOrNull()` helper
 - ✅ **Helper Function Enhancements**:
   - Added `asLongOrNull()` for safe Long conversion
-  - Enhanced `DslPatternMethod` with overload: `invoke(num: Number, block: (StrudelPattern) -> StrudelPattern)`
+  - Enhanced `DslPatternMethod` with overload: `invoke(p1: Any, block: (StrudelPattern) -> StrudelPattern)` - accepts
+    any type, not just Number
+  - Updated `defaultModifier` documentation to clarify it populates `VoiceData.value`
 - ✅ **Comprehensive Testing** - Added multiple test files:
     - `LangSeedSpec.kt` with 7 tests covering seed functionality
     - `LangRandomSpec.kt` with tests for random signal generators
     - `LangDegradeBySpecTest.kt` with tests for degradeBy/degrade functions
   - `LangUndegradeBySpec.kt` with 10 tests covering undegradeBy/undegrade including complementarity tests
-  - `LangSometimesBySpec.kt` with 11 tests covering all conditional transformation functions (sometimesBy, sometimes,
-    often, rarely, almostAlways, almostNever, always, never, someCyclesBy, someCycles)
+    - `LangSometimesBySpec.kt` with 11 tests covering all conditional transformation functions (sometimesBy, sometimes,
+      often, rarely, almostAlways, almostNever, always, never, someCyclesBy, someCycles)
+    - `LangSomeCyclesBySpec.kt` with tests validating proper cycle-locking behavior (no mixed cycles within single cycle
+      period)
+    - `LangArithmeticAddonsSpec.kt` with tests for negateValue and oneMinusValue
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting
   - `PerlinNoiseSpec.kt` - Tests for Perlin noise implementation

@@ -283,9 +283,9 @@ and category.
   with pattern control)
 - [x] **`undegrade()`** - Inverse of degrade - probabilistic event removal with 50% probability (pattern method and
   string extension)
-- [/] **`someCyclesBy(prob, fn)`** - Cycle-based random application (currently aliased to sometimesBy - TODO: proper
-  cycle-locking)
-- [/] **`someCycles(fn)`** - Cycle-based random application with 50% probability (currently aliased to sometimes)
+- [x] **`someCyclesBy(prob, fn)`** - Cycle-based random application with proper cycle-locking (pattern method, string
+  extension)
+- [x] **`someCycles(fn)`** - Cycle-based random application with 50% probability (pattern method, string extension)
 - [ ] **`firstOf(n, func)`** - Apply function on first of every n cycles (alias: `every`)
 - [ ] **`lastOf(n, func)`** - Apply function on last of every n cycles
 - [ ] **`filter(test)`** - Filter events by test function
@@ -402,6 +402,13 @@ and category.
 - [ ] **`tag(tag)`** - Tag pattern for identification
 - [ ] **`onTriggerTime(func)`** - Execute function on trigger time
 
+### Arithmetic Addons (Non-Strudel) ✅
+
+**These functions are NOT available in the original Strudel implementation**
+
+- [x] **`negateValue()`** - Negates the value field of voice data (pattern method, string extension)
+- [x] **`oneMinusValue()`** - Calculates 1.0 - value (pattern method, string extension)
+
 ### MIDI & OSC
 
 - [ ] **`midi(outputName, options)`** - MIDI output connection
@@ -499,9 +506,10 @@ and category.
   `rand2`, `brand`, `brandBy`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
-- **Conditional & Probabilistic**: ~3 missing (12 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
-  `almostAlways`, `almostNever`, `always`, `never`, `degradeBy`, `degrade`, `undegradeBy`, `undegrade`; 2 partial:
-  `someCyclesBy`, `someCycles`)
+- **Conditional & Probabilistic**: ~3 missing (14 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
+  `almostAlways`, `almostNever`, `always`, `never`, `someCyclesBy`, `someCycles`, `degradeBy`, `degrade`, `undegradeBy`,
+  `undegrade`)
+- **Arithmetic Addons (Non-Strudel)**: 0 missing (2 completed: `negateValue`, `oneMinusValue`)
 - **Pattern Binding**: ~15 missing (0 completed)
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
@@ -509,7 +517,7 @@ and category.
 
 ### Total Estimated: ~132 features remaining
 
-### Completed So Far: ~114 features! 🎉
+### Completed So Far: ~118 features! 🎉
 
 **Major achievements:**
 

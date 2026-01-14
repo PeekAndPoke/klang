@@ -2,6 +2,8 @@
 
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.strudel.lang.addons.strudelLangArithmeticAddonsInit
+
 @DslMarker
 annotation class StrudelDsl
 
@@ -12,6 +14,7 @@ annotation class StrudelDsl
 fun initStrudelLang() {
     // Access all init properties to force initialization
 
+    // Register core strudel functions
     strudelLangArithmeticInit = true
     strudelLangChoiceInit = true
     strudelLangContinuousInit = true
@@ -23,4 +26,7 @@ fun initStrudelLang() {
     strudelLangStructuralInit = true
     strudelLangTempoInit = true
     strudelLangTonalInit = true
+
+    // register non-strudel addon functions
+    strudelLangArithmeticAddonsInit = true
 }

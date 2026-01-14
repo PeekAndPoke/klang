@@ -85,6 +85,8 @@ class LangDegradeBySpec : StringSpec({
 
         val buckets = events.groupBy { it.data.note }
 
+        println(buckets.keys)
+
         assertSoftly {
             withClue("note 'a'") {
                 (buckets["a"]?.size ?: 0) shouldBeInRange 80..100
