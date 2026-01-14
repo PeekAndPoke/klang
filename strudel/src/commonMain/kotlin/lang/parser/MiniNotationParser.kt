@@ -8,7 +8,7 @@ import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
-import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.degradeBy
+import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.applyDegradeBy
 
 /** Shortcut for parsing mini notation into patterns */
 fun parseMiniNotation(input: String, atomFactory: (String) -> StrudelPattern): StrudelPattern =
@@ -163,7 +163,7 @@ class MiniNotationParser(
                     consume(TokenType.LITERAL, "").text
                 } else null
                 val probability = probStr?.toDoubleOrNull() ?: 0.5
-                pattern = pattern.degradeBy(probability)
+                pattern = pattern.applyDegradeBy(probability)
             } else if (match(TokenType.PIPE)) {
                 val right = parseStep()
                 pattern = pattern.choice(right)

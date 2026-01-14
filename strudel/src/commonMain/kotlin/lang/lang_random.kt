@@ -3,7 +3,8 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
-import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.degradeBy
+import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.applyDegradeBy
+import io.peekandpoke.klang.strudel.pattern.DegradePattern.Companion.applyUndegradeBy
 import io.peekandpoke.klang.strudel.pattern.DegradePatternWithControl
 import kotlin.random.Random
 
@@ -81,23 +82,23 @@ val irand by dslObject {
     silence
 }
 
-
 // -- degradeBy() ------------------------------------------------------------------------------------------------------
 
 private fun applyDegradeBy(pattern: StrudelPattern, args: List<Any?>): StrudelPattern {
     return when (val first = args.getOrNull(0)) {
-        is Number -> pattern.degradeBy(first.toDouble())
+        is Number -> pattern.applyDegradeBy(first.toDouble())
         is StrudelPattern -> DegradePatternWithControl(pattern, first)
         is String -> DegradePatternWithControl(pattern, seq(first))
-        else -> pattern.degradeBy(0.5)
+        else -> pattern.applyDegradeBy(0.5)
     }
 }
 
 /**
- * Randomly removes events from the pattern with the given probability.
+ * Randomly removes events from the pattern by a given amount.
+ * 0 = 0% chance of removal
+ * 1 = 100% chance of removal
  *
- * @name degradeBy
- * @param {number} probability - a number between 0 and 1. 0 means no events are removed, 1 means all events are removed.
+ * @param [Number] probability
  * @example
  * s("bd sn").degradeBy(0.5)
  */
@@ -122,6 +123,56 @@ val StrudelPattern.degrade by dslPatternExtension { pattern, args -> applyDegrad
  * Randomly removes events from the pattern with a 50% probability.
  */
 @StrudelDsl
-val String.degrade by dslStringExtension { pattern, _ ->
-    note(pattern).degradeBy(0.5)
+val String.degrade by dslStringExtension { pattern, args -> applyDegradeBy(pattern, args) }
+
+// -- undegradeBy() ----------------------------------------------------------------------------------------------------
+
+private fun applyUndegradeBy(pattern: StrudelPattern, args: List<Any?>): StrudelPattern {
+    return when (val first = args.getOrNull(0)) {
+        is Number -> pattern.applyUndegradeBy(first.toDouble())
+        is StrudelPattern -> DegradePatternWithControl(pattern, first, inverted = true)
+        is String -> DegradePatternWithControl(pattern, seq(first), inverted = true)
+        else -> pattern.applyUndegradeBy(0.5)
+    }
 }
+
+/**
+ * Inverse of `degradeBy`: Randomly removes events from the pattern by a given amount.
+ * 0 = 100% chance of removal
+ * 1 = 0% chance of removal
+ * Events that would be removed by degradeBy are let through by undegradeBy and vice versa (see second example).
+ *
+ * @name undegradeBy
+ * @memberof Pattern
+ * @param {number} amount - a number between 0 and 1
+ * @returns Pattern
+ * @example
+ * s("hh*8").undegradeBy(0.2)
+ * @example
+ * s("hh*10").layer(
+ *   x => x.degradeBy(0.2).pan(0),
+ *   x => x.undegradeBy(0.8).pan(1)
+ * )
+ */
+@StrudelDsl
+val StrudelPattern.undegradeBy by dslPatternExtension { pattern, args -> applyUndegradeBy(pattern, args) }
+
+/**
+ * Inverse of `degradeBy`: Randomly removes events from the pattern by a given amount.
+ */
+@StrudelDsl
+val String.undegradeBy by dslStringExtension { pattern, args -> applyUndegradeBy(pattern, args) }
+
+// -- undegrade() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Randomly removes events from the pattern with a 50% probability.
+ */
+@StrudelDsl
+val StrudelPattern.undegrade by dslPatternExtension { pattern, args -> applyUndegradeBy(pattern, args) }
+
+/**
+ * Randomly removes events from the pattern with a 50% probability.
+ */
+@StrudelDsl
+val String.undegrade by dslStringExtension { pattern, args -> applyUndegradeBy(pattern, args) }

@@ -37,8 +37,10 @@ internal class ControlPattern(
         val result = mutableListOf<StrudelPatternEvent>()
 
         for (event in sourceEvents) {
-            val controlEvents = control.queryArcContextual(event.begin, event.end, ctx)
-            val match = controlEvents.firstOrNull()
+            val controlEvents: List<StrudelPatternEvent> =
+                control.queryArcContextual(from = event.begin, to = event.begin + EPS, ctx = ctx)
+
+            val match: StrudelPatternEvent? = controlEvents.firstOrNull()
 
             if (match != null) {
                 // Apply the mapper to the control data BEFORE combining

@@ -272,6 +272,10 @@ and category.
 - [ ] **`rarely(function)`** - Infrequently applies variations
 - [x] **`degradeBy(amount)`** - Probabilistic event removal (pattern method, string extension, with pattern control)
 - [x] **`degrade()`** - Probabilistic event removal with 50% probability (pattern method and string extension)
+- [x] **`undegradeBy(amount)`** - Inverse of degradeBy - probabilistic event removal (pattern method, string extension,
+  with pattern control)
+- [x] **`undegrade()`** - Inverse of degrade - probabilistic event removal with 50% probability (pattern method and
+  string extension)
 - [ ] **`firstOf(n, func)`** - Apply function on first of every n cycles (alias: `every`)
 - [ ] **`lastOf(n, func)`** - Apply function on last of every n cycles
 - [ ] **`filter(test)`** - Filter events by test function
@@ -485,15 +489,15 @@ and category.
   `rand2`, `brand`, `brandBy`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
-- **Conditional & Probabilistic**: ~8 missing (2 completed: `degradeBy`, `degrade`)
+- **Conditional & Probabilistic**: ~6 missing (4 completed: `degradeBy`, `degrade`, `undegradeBy`, `undegrade`)
 - **Pattern Binding**: ~15 missing (0 completed)
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~13 missing (0 completed)
 
-### Total Estimated: ~142 features remaining
+### Total Estimated: ~140 features remaining
 
-### Completed So Far: ~104 features! 🎉
+### Completed So Far: ~106 features! 🎉
 
 **Major achievements:**
 

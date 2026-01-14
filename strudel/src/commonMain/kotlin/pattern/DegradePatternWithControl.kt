@@ -9,6 +9,7 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 internal class DegradePatternWithControl(
     val source: StrudelPattern,
     val probabilityPattern: StrudelPattern,
+    val inverted: Boolean = false,
 ) : StrudelPattern {
     override val weight: Double get() = source.weight
 
@@ -20,9 +21,14 @@ internal class DegradePatternWithControl(
             val probEvents = probabilityPattern.queryArcContextual(event.begin, event.begin + epsilon, ctx)
             val probability = probEvents.firstOrNull()?.data?.value?.asDouble ?: 0.5
 
+            val threshold = if (inverted) 1.0 - probability else probability
             val random = ctx.getSeededRandom(event.begin, event.end, "DegradePatternWithControl")
 
-            random.nextDouble() > probability
+            if (inverted) {
+                random.nextDouble() <= threshold
+            } else {
+                random.nextDouble() > threshold
+            }
         }
     }
 }

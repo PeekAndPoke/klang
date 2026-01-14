@@ -206,6 +206,10 @@ All arithmetic operations work on pattern values and can be applied as:
 - `degradeBy(amount)` - Randomly removes events with given probability (pattern method, string extension, with pattern
   control)
 - `degrade()` - Randomly removes events with 50% probability (pattern method and string extension)
+- `undegradeBy(amount)` - Inverse of degradeBy - randomly removes events (pattern method, string extension, with pattern
+  control)
+- `undegrade()` - Inverse of degrade - randomly removes events with 50% probability (pattern method and string
+  extension)
 
 ## Audio Parameters
 
@@ -348,7 +352,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 108+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 110+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 15 core pattern types (including EuclideanPattern, ChoicePattern, DegradePattern, DegradePatternWithControl,
   ReversePattern, StructPattern, ContextModifierPattern, TimeShiftPatternWithControl)
 - 24 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
@@ -447,10 +451,17 @@ Comprehensive voice data structure supporting:
   - `berlin` - New sawtooth-based noise generator (0 to 1), conceived as a joke but surprisingly useful
   - Both use `PerlinNoise` and `BerlinNoise` classes with runtime permutation generation
   - Improved `PerlinNoise` with better gradient function and scaling
+- ✅ **Inverse Degradation Functions**:
+  - `undegradeBy(amount)` - Inverse of degradeBy, keeps events that degradeBy would remove
+  - `undegrade()` - Convenience function with 50% probability
+  - Both support pattern control for dynamic probability
+  - Enhanced `DegradePattern` and `DegradePatternWithControl` with inverted mode
+  - Complementary behavior: `degradeBy(x)` and `undegradeBy(1-x)` partition events perfectly
 - ✅ **Comprehensive Testing** - Added multiple test files:
     - `LangSeedSpec.kt` with 7 tests covering seed functionality
     - `LangRandomSpec.kt` with tests for random signal generators
     - `LangDegradeBySpecTest.kt` with tests for degradeBy/degrade functions
+  - `LangUndegradeBySpec.kt` with 10 tests covering undegradeBy/undegrade including complementarity tests
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting
   - `PerlinNoiseSpec.kt` - Tests for Perlin noise implementation
