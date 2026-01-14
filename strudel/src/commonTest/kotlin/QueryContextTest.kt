@@ -158,6 +158,37 @@ class QueryContextTest : StringSpec({
         ctx.getOrNull(key2) shouldBe "set"
     }
 
+    "remove removes the key" {
+        val key = StrudelPattern.QueryContext.Key<String>("key")
+        val ctx = StrudelPattern.QueryContext()
+            .update { set(key, "value") }
+            .update { remove(key) }
+
+        ctx.has(key) shouldBe false
+        ctx.getOrNull(key) shouldBe null
+    }
+
+    "remove creates new context when key exists" {
+        val key = StrudelPattern.QueryContext.Key<String>("key")
+        val original = StrudelPattern.QueryContext()
+            .update { set(key, "value") }
+
+        val updated = original.update { remove(key) }
+
+        original shouldNotBe updated
+        original.has(key) shouldBe true
+        updated.has(key) shouldBe false
+    }
+
+    "remove returns same context when key does not exist (copy-on-write)" {
+        val key = StrudelPattern.QueryContext.Key<String>("key")
+        val original = StrudelPattern.QueryContext()
+
+        val updated = original.update { remove(key) }
+
+        original shouldBe updated
+    }
+
     "multiple updates in single block - only one copy when needed" {
         val key1 = StrudelPattern.QueryContext.Key<String>("key1")
         val key2 = StrudelPattern.QueryContext.Key<String>("key2")

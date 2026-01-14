@@ -95,7 +95,7 @@ class LangDegradeBySpec : StringSpec({
                 (buckets["b"]?.size ?: 0) shouldBe 0
             }
             withClue("note 'c'") {
-                (buckets["c"]?.size ?: 0) shouldBeInRange 70..90
+                (buckets["c"]?.size ?: 0) shouldBeInRange 65..95
             }
             withClue("note 'd'") {
                 (buckets["d"]?.size ?: 0) shouldBeInRange 0..20

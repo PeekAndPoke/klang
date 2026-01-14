@@ -77,6 +77,14 @@ interface StrudelPattern {
             }
 
             /**
+             * Removes the value for the given key.
+             */
+            fun <T> remove(key: Key<T>) {
+                cloneOriginalCtxWhen { ctx.has(key) }
+                ctx.data.remove(key)
+            }
+
+            /**
              * Sets a new value for the given key if it is not already set.
              */
             fun <T> setIfAbsent(key: Key<T>, value: T) {

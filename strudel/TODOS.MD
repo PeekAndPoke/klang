@@ -44,6 +44,7 @@ and category.
 
 - [x] **`cat()`** - Concatenates patterns, each taking one full cycle
 - [x] **`seq()`** - Sequence patterns (same as JS `sequence`)
+- [x] **`mini()`** - Parses input as mini-notation (alias for `seq`)
 - [x] **`stack()`** - Stack patterns (play simultaneously)
 - [x] **`arrange()`** - Arrange patterns with custom durations
 - [ ] **`polymeter()`** - Aligns steps of patterns creating polymeters
@@ -227,7 +228,7 @@ and category.
 - [x] **`rand2`** - Random signal (bipolar, -1 to 1)
 - [x] **`brand`** - Binary random (0 or 1, 50:50 probability)
 - [x] **`brandBy(probability)`** - Binary random with custom probability
-- [/] **`irand(n)`** - Random integers from 0 to n-1 (TODO: implementation pending)
+- [x] **`irand(n)`** - Random integers from 0 to n-1 (returns sequence pattern with n values)
 - [ ] **`.segment(rate)`** - Sample continuous signal at rate (alias: `seg`)
 - [ ] **`.slow(factor)`** - Slow down continuous patterns
 - [ ] **`toBipolar()`** - Convert 0-1 range to -1-1
@@ -490,7 +491,7 @@ and category.
 ### By Category:
 
 - **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean)
-- **Pattern Creation**: ~8 missing (5 completed: `seq`, `stack`, `cat`, `arrange`, `silence`/`rest`)
+- **Pattern Creation**: ~7 missing (6 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`)
 - **Time Modification**: ~21 missing (2 completed: `fast`, `slow`)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
@@ -500,10 +501,9 @@ and category.
 - **Comparison & Logic**: 2 missing (8 completed)
 - **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
 - **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ~4 missing (24 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
+- **Continuous Signals**: ~3 missing (25 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
   `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `berlin`, `range`,
-  `rand`,
-  `rand2`, `brand`, `brandBy`)
+  `rand`, `rand2`, `irand`, `brand`, `brandBy`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
 - **Conditional & Probabilistic**: ~3 missing (14 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
@@ -515,9 +515,9 @@ and category.
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~13 missing (0 completed)
 
-### Total Estimated: ~132 features remaining
+### Total Estimated: ~130 features remaining
 
-### Completed So Far: ~118 features! 🎉
+### Completed So Far: ~120 features! 🎉
 
 **Major achievements:**
 

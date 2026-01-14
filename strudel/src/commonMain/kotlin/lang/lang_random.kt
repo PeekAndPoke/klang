@@ -1,13 +1,13 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.lang.addons.oneMinusValue
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern
-import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
-import io.peekandpoke.klang.strudel.pattern.SometimesPattern
+import io.peekandpoke.klang.strudel.pattern.*
+import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -18,10 +18,14 @@ var strudelLangRandomInit = false
 // -- Random -----------------------------------------------------------------------------------------------------------
 
 private fun applyRandom(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
-    val seed = args.getOrNull(0)?.asLongOrNull() ?: 0L
+    val seed = args.getOrNull(0)?.asLongOrNull()
 
     return ContextModifierPattern(source = pattern) {
-        set(StrudelPattern.QueryContext.randomSeed, seed)
+        if (seed != null) {
+            set(QueryContext.randomSeed, seed)
+        } else {
+            remove(QueryContext.randomSeed)
+        }
     }
 }
 
@@ -78,9 +82,28 @@ val brand by dslObject { brandBy(0.5) }
  *
  */
 @StrudelDsl
-val irand by dslObject {
-    // TODO ... see signal.mjs
-    silence
+val irand by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+
+    if (n < 1) {
+        silence
+    } else {
+        val atom = AtomicPattern.pure
+
+        val events = (0..<n).map {
+            atom.reinterpret { evt, ctx ->
+
+                val fraction = evt.begin - evt.begin.floor()
+                val seed = (fraction * n * 10).toInt()
+
+                val random = ctx.getSeededRandom(seed, it, "irand")
+                val value = random.nextInt(0, 8).asVoiceValue()
+                evt.copy(data = evt.data.copy(value = value))
+            }
+        }
+
+        SequencePattern(events)
+    }
 }
 
 // -- degradeBy() ------------------------------------------------------------------------------------------------------

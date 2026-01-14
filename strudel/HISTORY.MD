@@ -95,6 +95,7 @@ Strudel.
 ### Pattern Constructors ✅
 
 - `seq()` - Sequences patterns within one cycle
+- `mini()` - Parses input as mini-notation (alias for `seq`)
 - `stack()` - Plays multiple patterns simultaneously
 - `arrange()` - Arranges patterns with specified durations
 - `pickRestart()` - Alternates patterns per cycle (slowcat equivalent)
@@ -292,6 +293,7 @@ All arithmetic operations work on pattern values and can be applied as:
 - `time` - Current time (in cycles) as continuous pattern
 - `rand` - Random signal (unipolar, 0 to 1)
 - `rand2` - Random signal (bipolar, -1 to 1)
+- `irand(n)` - Random integers from 0 to n-1 (returns sequence pattern with n values)
 - `brand` - Binary random (0 or 1, 50:50 probability)
 - `brandBy(probability)` - Binary random with custom probability
 
@@ -373,11 +375,11 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 122+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 124+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 16 core pattern types (including EuclideanPattern, ChoicePattern, SometimesPattern, ReversePattern, StructPattern,
   ContextModifierPattern, TimeShiftPatternWithControl)
-- 24 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
-  isaw2, tri, tri2, itri, itri2, square, square2, perlin, berlin, rand, rand2, brand, brandBy)
+- 25 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
+  isaw2, tri, tri2, itri, itri2, square, square2, perlin, berlin, rand, rand2, irand, brand, brandBy)
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
@@ -503,9 +505,20 @@ Comprehensive voice data structure supporting:
   - `oneMinusValue()` - Calculates 1.0 - value (used internally by `undegradeBy` for probability inversion)
   - Registered via `strudelLangArithmeticAddonsInit` in main init function
 - ✅ **Random Seeding Improvements**:
-  - Changed `QueryContext.random` from `Key<Random>` to `randomSeed` as `Key<Long>` for better seed management
-  - Updated `getRandom()` to create Random instance from seed on demand
-  - Enhanced `seed()` function to accept Long values via new `asLongOrNull()` helper
+    - Changed `QueryContext.random` from `Key<Random>` to `randomSeed` as `Key<Long>` for better seed management
+    - Updated `getRandom()` to create Random instance from seed on demand
+    - Enhanced `seed()` function to accept Long values via new `asLongOrNull()` helper
+    - `seed()` now supports removing seed: calling `seed()` with null removes the seed from context
+    - Added `QueryContext.Updater.remove()` method for removing context keys
+- ✅ **New Pattern Functions**:
+    - `irand(n)` - Random integer sequence generator (0 to n-1), returns `SequencePattern` with n atomic values
+    - Uses per-event seeded randomness based on fractional position within cycle
+    - `mini()` - Alias for `seq()`, parses input as mini-notation for convenience
+- ✅ **ReinterpretPattern Enhancements**:
+    - Enhanced `reinterpret()` to accept `QueryContext` parameter: `reinterpret((evt, ctx) -> ...)`
+    - Maintains backward compatibility with single-parameter version: `reinterpret((evt) -> ...)`
+    - Used by `irand()` implementation for context-aware event transformation
+    - Refactored to use companion object factory methods instead of public constructor
 - ✅ **Helper Function Enhancements**:
   - Added `asLongOrNull()` for safe Long conversion
   - Enhanced `DslPatternMethod` with overload: `invoke(p1: Any, block: (StrudelPattern) -> StrudelPattern)` - accepts

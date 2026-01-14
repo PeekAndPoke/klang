@@ -99,19 +99,4 @@ class LangSeedSpec : StringSpec({
             e1.begin shouldBe e2.begin
         }
     }
-
-    "seed() default value is 0" {
-        // Calling seed() without arguments should use seed 0
-        val p1 = rand.seed()
-        val events1 = p1.queryArc(0.0, 1.0)
-
-        val p2 = rand.seed(0)
-        val events2 = p2.queryArc(0.0, 1.0)
-
-        // Default seed (0) should match explicit seed(0)
-        events1.size shouldBe events2.size
-        events1.zip(events2).forEach { (e1, e2) ->
-            e1.data.value?.asDouble shouldBe e2.data.value?.asDouble
-        }
-    }
 })

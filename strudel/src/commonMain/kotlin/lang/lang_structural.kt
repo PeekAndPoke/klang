@@ -84,6 +84,13 @@ val String.seq by dslStringExtension { p, args ->
     applySeq(patterns)
 }
 
+// -- mini() -----------------------------------------------------------------------------------------------------------
+
+/** Parses input as mini-notation. Effectively an alias for `seq`. */
+val mini by dslFunction { args ->
+    args.toPattern(defaultModifier)
+}
+
 // -- stack() ----------------------------------------------------------------------------------------------------------
 
 private fun applyStack(patterns: List<StrudelPattern>): StrudelPattern {

@@ -2,7 +2,7 @@ package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern
+import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
 
 /**
  * ADDONS: function that are NOT available in the original strudel impl
@@ -17,7 +17,7 @@ var strudelLangArithmeticAddonsInit = false
 // -- negateValue  -----------------------------------------------------------------------------------------------------
 
 private fun applyNegateValue(pattern: StrudelPattern): StrudelPattern {
-    return ReinterpretPattern(pattern) { evt ->
+    return pattern.reinterpret { evt ->
         val current = evt.data.value?.asDouble ?: 0.0
         val negated = -current
 
@@ -44,7 +44,7 @@ val String.negateValue by _root_ide_package_.io.peekandpoke.klang.strudel.lang.d
 // -- oneMinus ---------------------------------------------------------------------------------------------------------
 
 private fun applyOneMinusValue(pattern: StrudelPattern): StrudelPattern {
-    return ReinterpretPattern(pattern) { evt ->
+    return pattern.reinterpret { evt ->
         val current = evt.data.value?.asDouble ?: 0.0
         val oneMinusCurrent = 1.0 - current
 
