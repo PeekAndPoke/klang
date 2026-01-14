@@ -76,7 +76,7 @@ private suspend fun helloStrudel() {
 //        val pattern = note("[a b c d]").degradeBy("[0.1 1.0 0.2 0.9]")
 //        val pattern = note("a b c d").undegradeBy(steady(1.0))
 
-//        val pattern = n(irand(16).seed(4)).scale("C4:major")
+//        val pattern = note("[a b c d] [e f g a]").firstOf(4, { it.rev() })
 
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {

@@ -226,6 +226,11 @@ All arithmetic operations work on pattern values and can be applied as:
 - `someCyclesBy(probability, fn)` - Cycle-based random application with proper cycle-locking
 - `someCycles(fn)` - Cycle-based random application with 50% probability
 
+**Cycle-Based Conditional:**
+
+- `firstOf(n, fn)` - Apply function on first cycle of every n cycles (pattern method, string extension)
+- `every(n, fn)` - Alias for `firstOf` (pattern method, string extension)
+
 ## Arithmetic Addons (Non-Strudel Extensions) ✅
 
 **These functions are NOT available in the original Strudel implementation**
@@ -375,7 +380,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 124+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 126+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 16 core pattern types (including EuclideanPattern, ChoicePattern, SometimesPattern, ReversePattern, StructPattern,
   ContextModifierPattern, TimeShiftPatternWithControl)
 - 25 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
@@ -519,6 +524,14 @@ Comprehensive voice data structure supporting:
     - Maintains backward compatibility with single-parameter version: `reinterpret((evt) -> ...)`
     - Used by `irand()` implementation for context-aware event transformation
     - Refactored to use companion object factory methods instead of public constructor
+- ✅ **Cycle-Based Conditional Functions**:
+    - `firstOf(n, fn)` - Apply function on first cycle of every n cycles
+    - `every(n, fn)` - Alias for `firstOf`
+    - Uses `ArrangementPattern` to create repeating n-cycle patterns (transformed, original, original, ...)
+    - Works as pattern method and string extension
+- ✅ **Code Organization**:
+    - Renamed `lang_choice.kt` to `lang_conditional.kt` for better categorization
+    - Updated init function from `strudelLangChoiceInit` to `strudelLangConditionalInit`
 - ✅ **Helper Function Enhancements**:
   - Added `asLongOrNull()` for safe Long conversion
   - Enhanced `DslPatternMethod` with overload: `invoke(p1: Any, block: (StrudelPattern) -> StrudelPattern)` - accepts
@@ -533,6 +546,7 @@ Comprehensive voice data structure supporting:
       often, rarely, almostAlways, almostNever, always, never, someCyclesBy, someCycles)
     - `LangSomeCyclesBySpec.kt` with tests validating proper cycle-locking behavior (no mixed cycles within single cycle
       period)
+    - `LangFirstOfSpec.kt` with 7 tests covering firstOf/every functionality
     - `LangArithmeticAddonsSpec.kt` with tests for negateValue and oneMinusValue
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting

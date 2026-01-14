@@ -333,6 +333,10 @@ object JsCompatTestData {
         Example("Reverse", """note("c e g").rev()"""),
         Example("Palindrome", """note("c e g").palindrome()"""),
 
+        // Conditional
+        Example("FirstOf", """note("[a b c d] [e f g a]").firstOf(4, (x) => x.rev())"""),
+        Example("Every", """note("[a b c d] [e f g a]").every(4, (x) => x.rev())"""),
+
         // Arithmetic Operators
         Example(SKIP, "Add", """n("0 1 2 3").add("2")"""),
         Example(SKIP, "Sub", """n("10 20").sub("5")"""),

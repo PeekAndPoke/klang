@@ -1,6 +1,7 @@
 package io.peekandpoke.klang
 
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.lang.addons.negateValue
 
 object TestKotlinPatterns {
 
@@ -21,7 +22,8 @@ object TestKotlinPatterns {
                 """.trimIndent()
         ).sound("tri")
 //            .struct("x(3,8,1)")
-            .orbit(0).pan(0.33).gain(0.25)
+            .orbit(0).gain(0.25)
+            .pan(sine2.slow(16).range(-0.7, 0.7).negateValue())
             .delay(0.25).delaytime(0.5).delayfeedback(0.5)
             .room(0.05).rsize(1.0)
             .clip(0.3)
@@ -44,7 +46,8 @@ object TestKotlinPatterns {
             """.trimIndent()
         ).sound("supersaw")
             .spread(0.5).unison(8).detune(0.3)
-            .orbit(2).pan(-0.33).gain(0.3)
+            .orbit(2).gain(0.4)
+            .pan(sine2.slow(16).range(-0.7, 0.7))
 //            .adsr("0.05:0.2:0.0:1.0")
             .room(0.05).rsize(1.0)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }

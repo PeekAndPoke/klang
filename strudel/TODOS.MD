@@ -8,6 +8,7 @@ and category.
 ## Things to check
 
 - [ ] check https://larkob.github.io/strudel/tutorial/ and produce new todos
+- [ ] Review and validate all "missing" counts in the summary section
 
 ## 🔴 HIGH PRIORITY - Common Use Cases
 
@@ -68,9 +69,9 @@ and category.
 - [x] **`slow(factor)`** - Slows down pattern (alias: `sparsity`)
 - [x] **`early(cycles)`** - Nudge pattern earlier in time
 - [x] **`late(cycles)`** - Nudge pattern later in time
-- [ ] **`euclid(pulses, steps)`** - Euclidean rhythm function
-- [ ] **`euclidRot(pulses, steps, rotation)`** - Euclidean with rotation
-- [ ] **`euclidLegato(pulses, steps)`** - Holds pulses until next
+- [ ] **`euclid(pulses, steps)`** - Euclidean rhythm function (for use outside mini-notation)
+- [ ] **`euclidRot(pulses, steps, rotation)`** - Euclidean with rotation (for use outside mini-notation)
+- [ ] **`euclidLegato(pulses, steps)`** - Holds pulses until next (for use outside mini-notation)
 - [ ] **`compress(start, end)`** - Compresses pattern into timespan
 - [ ] **`compressSpan(span)`** - Compresses pattern into span
 - [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
@@ -287,7 +288,8 @@ and category.
 - [x] **`someCyclesBy(prob, fn)`** - Cycle-based random application with proper cycle-locking (pattern method, string
   extension)
 - [x] **`someCycles(fn)`** - Cycle-based random application with 50% probability (pattern method, string extension)
-- [ ] **`firstOf(n, func)`** - Apply function on first of every n cycles (alias: `every`)
+- [x] **`firstOf(n, func)`** - Apply function on first of every n cycles (pattern method, string extension)
+- [x] **`every(n, func)`** - Alias for `firstOf` (pattern method, string extension)
 - [ ] **`lastOf(n, func)`** - Apply function on last of every n cycles
 - [ ] **`filter(test)`** - Filter events by test function
 - [ ] **`filterWhen(test)`** - Filter events when test is true at start time
@@ -379,12 +381,13 @@ and category.
 
 - [ ] **`samples()`** - Load custom sample maps (URLs, GitHub, local)
 - [ ] **`soundAlias()`** - Create custom sound aliases
-- [/] **`initStrudel()`** - Initialize Strudel environment
+- [/] **`initStrudel()`** - Initialize Strudel environment (partially done via `initStrudelLang()`)
 - [X] **`hush()`** - Stop all playing patterns
-- [/] **`isPattern(thing)`** - Check if value is a pattern
-- [/] **`reify(thing)`** - Convert value to pattern
-- [ ] **`nothing`** - Empty pattern with 0 steps
-- [ ] **`pure(value)`** - Create atomic pattern with single value
+- [/] **`isPattern(thing)`** - Check if value is a pattern (can check with `is StrudelPattern` but no dedicated
+  function)
+- [/] **`reify(thing)`** - Convert value to pattern (partially via `toPattern()` helper)
+- [ ] **`nothing`** - Empty pattern with 0 steps (different from `silence` which has implied duration)
+- [x] **`pure(value)`** - Create atomic pattern with single value (via `AtomicPattern.pure`)
 
 ### Pattern Binding Functions
 
@@ -454,7 +457,6 @@ and category.
 
 - [x] **Rational number time coordinates** - ✅ **IMPLEMENTED** - Replaces Double with exact rational arithmetic for all
   time calculations, eliminating floating-point drift and timing bugs
-- [ ] **Negative time querying** - Support for `early()` functionality
 - [ ] **Pattern queryArc optimization** - Cache/memoization for repeated queries
 - [ ] **Event metadata** - Track event IDs, origins for debugging
 
@@ -492,10 +494,10 @@ and category.
 
 - **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean)
 - **Pattern Creation**: ~7 missing (6 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`)
-- **Time Modification**: ~21 missing (2 completed: `fast`, `slow`)
+- **Time Modification**: ~19 missing (4 completed: `fast`, `slow`, `early`, `late`, `gap`)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
-- **Tonal Functions**: ~5 missing (5 completed: `note`, `n`, `scale`, `sound`, `bank`)
+- **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
@@ -506,18 +508,18 @@ and category.
   `rand`, `rand2`, `irand`, `brand`, `brandBy`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~14 missing (0 completed)
-- **Conditional & Probabilistic**: ~3 missing (14 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
+- **Conditional & Probabilistic**: ~1 missing (16 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
   `almostAlways`, `almostNever`, `always`, `never`, `someCyclesBy`, `someCycles`, `degradeBy`, `degrade`, `undegradeBy`,
-  `undegrade`)
+  `undegrade`, `firstOf`, `every`)
 - **Arithmetic Addons (Non-Strudel)**: 0 missing (2 completed: `negateValue`, `oneMinusValue`)
 - **Pattern Binding**: ~15 missing (0 completed)
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
-- **System Functions**: ~13 missing (0 completed)
+- **System Functions**: ~11 missing (2 completed: `hush`, `pure`; 3 partial)
 
-### Total Estimated: ~130 features remaining
+### Total Estimated: ~123 features remaining
 
-### Completed So Far: ~120 features! 🎉
+### Completed So Far: ~127 features! 🎉
 
 **Major achievements:**
 

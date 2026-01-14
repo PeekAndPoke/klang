@@ -16,7 +16,7 @@ fun initStrudelLang() {
 
     // Register core strudel functions
     strudelLangArithmeticInit = true
-    strudelLangChoiceInit = true
+    strudelLangConditionalInit = true
     strudelLangContinuousInit = true
     strudelLangDynamicsInit = true
     strudelLangEffectsInit = true

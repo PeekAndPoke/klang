@@ -420,3 +420,9 @@ val StrudelPattern.someCycles by dslPatternExtension { pattern, args -> applySom
 
 @StrudelDsl
 val String.someCycles by dslStringExtension { pattern, args -> applySomeCyclesBy(pattern, args, 0.5) }
+
+// TODO: see signals.mjs: randL, randrun, shuffle, scramble,
+
+// TODO: see signals.mjs: run, binary, binaryN, binaryL, binaryNL (put into lang_structural.kt),
+
+// TODO: see signals.mjs: chooseInWith, choose, ...
