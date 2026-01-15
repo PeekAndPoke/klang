@@ -1,3 +1,5 @@
+@file:Suppress("DuplicatedCode")
+
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -395,10 +397,6 @@ val String.always by dslStringExtension { pattern, args -> applyAlways(note(patt
 
 // -- someCyclesBy() ---------------------------------------------------------------------------------------------------
 
-// TODO: Implement someCyclesBy when we have logic for per-cycle randomness
-// For now, we can alias it to sometimesBy but it's not semantically correct.
-// Or we can implement it using ContextModifierPattern that sets a seeded random based on cycle number?
-
 private fun applySomeCyclesBy(pattern: StrudelPattern, args: List<Any?>, defaultProb: Double? = null): StrudelPattern {
     // Delegate to applySometimesBy with seedByCycle = true
     return applySometimesBy(
@@ -560,4 +558,309 @@ val String.scramble by dslStringExtension { p, args ->
     p.bite(n, indices)
 }
 
-// TODO: see signals.mjs: chooseInWith, choose, ...
+// -- chooseWith() -----------------------------------------------------------------------------------------------------
+
+/**
+ * Choose from the list of values (or patterns of values) using the given
+ * pattern of numbers, which should be in the range of 0..1.
+ *
+ * @example
+ * note("c2 g2!2 d2 f1").s(chooseWith(sine.fast(2), ["sawtooth", "triangle", "bd:6"]))
+ *
+ * @param {pat} Selector pattern (values 0..1)
+ * @param {xs}  List of choices (values or patterns)
+ */
+@StrudelDsl
+val chooseWith: DslFunction by dslFunction { args ->
+    when (val first = args.getOrNull(0)) {
+        is StrudelPattern -> first.chooseWith(args.drop(1))
+        else -> AtomicPattern.pure.chooseWith(args)
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.chooseWith by dslPatternExtension { p, args ->
+    val xs = if (args.size == 1 && args[0] is List<*>) {
+        args[0] as List<*>
+    } else {
+        args
+    }
+
+    ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.Out)
+}
+
+@StrudelDsl
+val String.chooseWith by dslStringExtension { p, args -> p.chooseWith(args) }
+
+// -- chooseInWith() ---------------------------------------------------------------------------------------------------
+
+/**
+ * As with {chooseWith}, but the structure comes from the chosen values, rather
+ * than the pattern you're using to choose with.
+ *
+ * @param {pat} Selector pattern (values 0..1)
+ * @param {xs}  List of choices
+ */
+@StrudelDsl
+val chooseInWith by dslFunction { args ->
+    when (val first = args.getOrNull(0)) {
+        is StrudelPattern -> first.chooseInWith(args.drop(1))
+        else -> AtomicPattern.pure.chooseInWith(args)
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.chooseInWith by dslPatternExtension { p, args ->
+    val xs = if (args.size == 1 && args[0] is List<*>) {
+        args[0] as List<*>
+    } else {
+        args
+    }
+
+    ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.In)
+}
+
+@StrudelDsl
+val String.chooseInWith by dslStringExtension { p, args -> p.chooseInWith(args) }
+
+// -- choose() ---------------------------------------------------------------------------------------------------------
+
+/**
+ * Chooses randomly from the given list of elements.
+ *
+ * @example
+ * note("c2 g2!2 d2 f1").s(choose("sine", "triangle", "bd:6"))
+ *
+ * @param {xs}  values / patterns to choose from.
+ */
+@StrudelDsl
+val choose by dslFunction { args ->
+    when (val first = args.getOrNull(0)) {
+        is StrudelPattern -> first.choose(args.drop(1))
+        else -> AtomicPattern.pure.choose(args)
+    }
+}
+
+/**
+ * Chooses from the given list of values (or patterns of values), according
+ * to the pattern that the method is called on. The pattern should be in
+ * the range 0 .. 1.
+ */
+@StrudelDsl
+val StrudelPattern.choose by dslPatternExtension { p, args ->
+    val xs = if (args.size == 1 && args[0] is List<*>) {
+        args[0] as List<*>
+    } else {
+        args
+    }
+
+    ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.Out)
+}
+
+val String.choose by dslStringExtension { p, args -> p.choose(args) }
+
+/** Alias for [choose] */
+@StrudelDsl
+val chooseOut by dslFunction { args -> choose(args) }
+
+/** Alias for [choose] */
+@StrudelDsl
+val StrudelPattern.chooseOut by dslPatternExtension { p, args -> p.choose(args) }
+
+/** Alias for [choose] */
+@StrudelDsl
+val String.chooseOut by dslStringExtension { p, args -> p.choose(args) }
+
+// -- chooseIn() -------------------------------------------------------------------------------------------------------
+
+/**
+ * Chooses randomly from the given list of elements.
+ *
+ * @param {xs} values / patterns to choose from.
+ */
+/**
+ * Chooses randomly from the given list of elements.
+ *
+ * @param xs values / patterns to choose from.
+ */
+@StrudelDsl
+val chooseIn by dslFunction { args ->
+    when (val first = args.getOrNull(0)) {
+        is StrudelPattern -> first.chooseIn(args.drop(1))
+        else -> AtomicPattern.pure.chooseIn(args)
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.chooseIn by dslPatternExtension { p, args ->
+    val xs = if (args.size == 1 && args[0] is List<*>) {
+        args[0] as List<*>
+    } else {
+        args
+    }
+
+    ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.In)
+}
+
+@StrudelDsl
+val String.chooseIn by dslStringExtension { p, args -> p.chooseIn(args) }
+
+// -- choose2() --------------------------------------------------------------------------------------------------------
+
+/**
+ * As with choose, but the pattern that this method is called on should be
+ * in the range -1 .. 1.
+ */
+@StrudelDsl
+val StrudelPattern.choose2 by dslPatternExtension { p, args ->
+    val xs = if (args.size == 1 && args[0] is List<*>) {
+        args[0] as List<*>
+    } else {
+        args
+    }
+
+    ChoicePattern.createFromRaw(p.fromBipolar(), xs, mode = StructurePattern.Mode.Out)
+}
+
+@StrudelDsl
+val String.choose2 by dslStringExtension { p, args -> p.choose2(args) }
+
+// -- chooseCycles() ---------------------------------------------------------------------------------------------------
+
+/**
+ * Picks one of the elements at random each cycle.
+ *
+ * @param xs values / patterns to choose from.
+ * @example
+ * chooseCycles("bd", "hh", "sd").s().fast(8)
+ * @example
+ * s("bd | hh | sd").fast(8)
+ */
+@StrudelDsl
+val chooseCycles by dslFunction { args ->
+    when (val first = args.getOrNull(0)) {
+        is StrudelPattern -> first.chooseCycles(args.drop(1))
+        else -> AtomicPattern.pure.chooseCycles(args)
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.chooseCycles by dslPatternExtension { p, args ->
+    val xs = listOf(p) + args
+    ChoicePattern.createFromRaw(rand.segment(1), xs, mode = StructurePattern.Mode.In)
+}
+
+@StrudelDsl
+val String.chooseCycles by dslStringExtension { p, args ->
+    val xs = listOf(p) + args
+    ChoicePattern.createFromRaw(rand.segment(1), xs, mode = StructurePattern.Mode.In)
+}
+
+/** Alias for [chooseCycles] */
+@StrudelDsl
+val randcat by dslFunction { args -> chooseCycles(args) }
+
+/** Alias for [chooseCycles] */
+@StrudelDsl
+val StrudelPattern.randcat by dslPatternExtension { p, args -> p.chooseCycles(args) }
+
+/** Alias for [chooseCycles] */
+@StrudelDsl
+val String.randcat by dslStringExtension { p, args -> p.chooseCycles(args) }
+
+// -- wchoose() --------------------------------------------------------------------------------------------------------
+
+private fun extractWeightedPairs(args: List<Any?>): Pair<List<Any?>, List<Any?>> {
+    val items = mutableListOf<Any?>()
+    val weights = mutableListOf<Any?>()
+
+    val inputs = if (args.size == 1 && args[0] is List<*> && (args[0] as List<*>).all { it is List<*> }) {
+        args[0] as List<*>
+    } else {
+        args
+    }
+
+    inputs.forEach { item ->
+        if (item is List<*> && item.size >= 2) {
+            items.add(item[0])
+            weights.add(item[1])
+        }
+    }
+    return items to weights
+}
+
+/**
+ * Chooses randomly from the given list of elements by giving a probability to each element.
+ *
+ * @param pairs arrays of [value, weight]
+ * @example
+ * note("c2 g2!2 d2 f1").s(wchoose(listOf("sine", 10), listOf("triangle", 1)))
+ */
+@StrudelDsl
+val wchoose by dslFunction { args ->
+    when (val first = args.getOrNull(0)) {
+        is StrudelPattern -> first.wchoose(args.drop(1))
+        else -> AtomicPattern.pure.wchoose(args)
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.wchoose by dslPatternExtension { p, args ->
+    val (items, weights) = extractWeightedPairs(args)
+
+    ChoicePattern.createFromRaw(
+        selector = p,
+        choices = items,
+        weights = weights,
+        mode = StructurePattern.Mode.Out,
+    )
+}
+
+@StrudelDsl
+val String.wchoose by dslStringExtension { p, args -> p.wchoose(args) }
+
+// -- wchooseCycles() --------------------------------------------------------------------------------------------------
+
+/**
+ * Picks one of the elements at random each cycle by giving a probability to each element.
+ *
+ * @param pairs arrays of [value, weight]
+ * @example
+ * wchooseCycles(listOf("bd", 10), listOf("hh", 1)).s().fast(8)
+ */
+@StrudelDsl
+val wchooseCycles by dslFunction { args ->
+    when (val first = args.getOrNull(0)) {
+        is StrudelPattern -> first.wchooseCycles(args.drop(1))
+        else -> AtomicPattern.pure.wchooseCycles(args)
+    }
+}
+
+@StrudelDsl
+val StrudelPattern.wchooseCycles by dslPatternExtension { p, args ->
+    val (items, weights) = extractWeightedPairs(args)
+    val allItems = listOf(p) + items
+    val allWeights = listOf(1.0) + weights
+
+    ChoicePattern.createFromRaw(
+        selector = rand.segment(1),
+        choices = allItems,
+        weights = allWeights,
+        mode = StructurePattern.Mode.In,
+    )
+}
+
+@StrudelDsl
+val String.wchooseCycles by dslStringExtension { p, args -> p.wchooseCycles(args) }
+
+/** Alias for [wchooseCycles] */
+@StrudelDsl
+val wrandcat by dslFunction { args -> wchooseCycles(args) }
+
+/** Alias for [wchooseCycles] */
+@StrudelDsl
+val StrudelPattern.wrandcat by dslPatternExtension { p, args -> p.wchooseCycles(args) }
+
+/** Alias for [wchooseCycles] */
+@StrudelDsl
+val String.wrandcat by dslStringExtension { p, args -> p.wchooseCycles(args) }

@@ -112,6 +112,19 @@ and category.
 
 ### Pattern Picking & Selection ⭐⭐⭐
 
+- [x] **`chooseWith(selector, choices)`** - Choose based on selector pattern (standalone, pattern method, string
+  extension)
+- [x] **`chooseInWith(selector, choices)`** - Choose with inner structure preserved (standalone, pattern method, string
+  extension)
+- [x] **`choose(...choices)`** - Random choice from list (standalone, pattern method, string extension)
+- [x] **`chooseOut(...choices)`** - Alias for choose (standalone, pattern method, string extension)
+- [x] **`chooseIn(...choices)`** - Random choice with inner structure (standalone, pattern method, string extension)
+- [x] **`choose2(...choices)`** - Choice with bipolar selector -1..1 (pattern method, string extension)
+- [x] **`chooseCycles(...choices)`** - Pick one per cycle (standalone, pattern method, string extension)
+- [x] **`randcat(...choices)`** - Alias for chooseCycles (standalone, pattern method, string extension)
+- [x] **`wchoose(...[value, weight])`** - Weighted random choice (standalone, pattern method, string extension)
+- [x] **`wchooseCycles(...[value, weight])`** - Weighted choice per cycle (standalone, pattern method, string extension)
+- [x] **`wrandcat(...[value, weight])`** - Alias for wchooseCycles (standalone, pattern method, string extension)
 - [ ] **`pick(lookup, pat)`** - Picks patterns/values from list (by index) or lookup table (by name)
 - [ ] **`pickmod(lookup, pat)`** - Like pick but wraps around when index exceeds list size
 - [ ] **`pickF(lookup, funcs, pat)`** - Use pattern of numbers to pick which function to apply
@@ -235,8 +248,10 @@ and category.
 - [x] **`.segment(rate)`** - Sample continuous signal at rate (pattern method, string extension, typed function, alias:
   `seg`)
 - [ ] **`.slow(factor)`** - Slow down continuous patterns
-- [ ] **`toBipolar()`** - Convert 0-1 range to -1-1
-- [ ] **`fromBipolar()`** - Convert -1-1 range to 0-1
+- [x] **`toBipolar()`** - Convert 0-1 range to -1..1 (pattern method, string extension)
+- [x] **`fromBipolar()`** - Convert -1..1 range to 0-1 (pattern method, string extension)
+- [x] **`perlin2`** - Bipolar Perlin noise (-1 to 1)
+- [x] **`berlin2`** - Bipolar Berlin noise (-1 to 1)
 - [ ] **`rangex(min, max)`** - Exponential range scaling
 - [ ] **`range2(min, max)`** - Bipolar range scaling
 - [ ] **`ratio()`** - Get frequency ratio
@@ -513,9 +528,10 @@ and category.
 - **Comparison & Logic**: 2 missing (8 completed)
 - **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
 - **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ~1 missing (28 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
-  `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `berlin`, `range`,
-  `rand`, `rand2`, `irand`, `randL`, `brand`, `brandBy`, `segment`, `seg`)
+- **Continuous Signals**: ✅ 0 missing (34 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
+  `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `perlin2`, `berlin`,
+  `berlin2`, `range`,
+  `rand`, `rand2`, `irand`, `randL`, `brand`, `brandBy`, `segment`, `seg`, `toBipolar`, `fromBipolar`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~13 missing (1 completed: `bite`)
 - **Conditional & Probabilistic**: ✅ 0 missing (20 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
@@ -527,9 +543,12 @@ and category.
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~11 missing (2 completed: `hush`, `pure`; 3 partial)
 
-### Total Estimated: ~114 features remaining
+- **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
+  `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Completed So Far: ~139 features! 🎉
+### Total Estimated: ~101 features remaining
+
+### Completed So Far: ~156 features! 🎉
 
 **Major achievements:**
 

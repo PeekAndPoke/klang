@@ -53,9 +53,7 @@ class ContinuousPattern private constructor(
                 begin = currentFrom,
                 end = nextFrom,
                 dur = nextFrom - currentFrom,
-                data = VoiceData.empty.copy(
-                    value = value,
-                )
+                data = VoiceData.empty.copy(value = value)
             )
 
             result.add(event)

@@ -339,13 +339,17 @@ All arithmetic operations work on pattern values and can be applied as:
 **Noise:**
 
 - `perlin` - Perlin noise generator (0 to 1) with seeded permutation table for deterministic output
+- `perlin2` - Bipolar Perlin noise (-1 to 1)
 - `berlin` - Berlin noise generator (0 to 1) - sawtooth-based noise, conceived as a joke but surprisingly useful
+- `berlin2` - Bipolar Berlin noise (-1 to 1)
 
 ### Signal Processing ✅
 
 - `range(min, max)` - Rescale continuous pattern values (transformation order independent via QueryContext)
 - `segment(n)` / `seg(n)` - Sample continuous signal n times per cycle (pattern method, string extension, typed
   function)
+- `toBipolar()` - Convert 0-1 range to -1..1 (pattern method, string extension)
+- `fromBipolar()` - Convert -1..1 range to 0-1 (pattern method, string extension)
 
 ## Context & Routing
 
@@ -364,6 +368,29 @@ All arithmetic operations work on pattern values and can be applied as:
 - `seed(n)` / `withSeed(n)` - Set random seed for deterministic pattern generation (pattern method, string extension)
 - `shuffle(n)` - Slices pattern into n parts, plays in random order (pattern method, string extension)
 - `scramble(n)` - Slices pattern into n parts, plays at random with repetition (pattern method, string extension)
+
+## Pattern Picking & Selection ✅
+
+**Choose Functions:**
+
+- `chooseWith(selector, choices)` - Choose based on selector pattern 0..1 (standalone, pattern method, string extension)
+- `chooseInWith(selector, choices)` - Choose with inner structure preserved (standalone, pattern method, string
+  extension)
+- `choose(...choices)` - Random choice from list (standalone, pattern method, string extension)
+- `chooseOut(...choices)` - Alias for `choose` (standalone, pattern method, string extension)
+- `chooseIn(...choices)` - Random choice with inner structure (standalone, pattern method, string extension)
+- `choose2(...choices)` - Choice with bipolar selector -1..1 (pattern method, string extension)
+
+**Cycle-Based Choice:**
+
+- `chooseCycles(...choices)` - Pick one per cycle randomly (standalone, pattern method, string extension)
+- `randcat(...choices)` - Alias for `chooseCycles` (standalone, pattern method, string extension)
+
+**Weighted Choice:**
+
+- `wchoose(...[value, weight])` - Weighted random choice (standalone, pattern method, string extension)
+- `wchooseCycles(...[value, weight])` - Weighted choice per cycle (standalone, pattern method, string extension)
+- `wrandcat(...[value, weight])` - Alias for `wchooseCycles` (standalone, pattern method, string extension)
 
 ## Pattern Modifiers Architecture
 
@@ -397,12 +424,14 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 139+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
-- 16 core pattern types (including EuclideanPattern, ChoicePattern, SometimesPattern, ReversePattern, StructPattern,
+- 156+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 16 core pattern types (including EuclideanPattern, ChoicePattern with selector/weights support, SometimesPattern,
+  ReversePattern, StructPattern,
   ContextModifierPattern, TimeShiftPatternWithControl)
-- 28 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
-  isaw2, tri, tri2, itri, itri2, square, square2, perlin, berlin, rand, rand2, irand, randL, randrun, brand, brandBy,
-  segment, seg)
+- 34 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
+  isaw2, tri, tri2, itri, itri2, square, square2, perlin, perlin2, berlin, berlin2, rand, rand2, irand, randL, randrun,
+  brand, brandBy,
+  segment, seg, toBipolar, fromBipolar)
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
@@ -570,6 +599,29 @@ Comprehensive voice data structure supporting:
     - `shuffle(n)` - Slices pattern into n parts, plays in random order (uses `bite(n, randrun(n))`)
     - `scramble(n)` - Slices pattern into n parts, plays at random with repetition (uses `bite(n, irand(n).segment(n))`)
     - `withSeed(n)` - Alias for `seed(n)` for random seeding
+- ✅ **Pattern Picking & Selection Functions**:
+  - `chooseWith(selector, choices)` - Choose based on selector pattern (0..1 range)
+  - `chooseInWith(selector, choices)` - Choose with inner structure preserved
+  - `choose(...choices)` - Random choice from list (uses `rand.segment(1)` as selector)
+  - `chooseOut(...choices)` / `chooseIn(...choices)` - Aliases with explicit structure mode
+  - `choose2(...choices)` - Choice with bipolar selector (-1..1, uses `fromBipolar()` internally)
+  - `chooseCycles(...choices)` / `randcat(...choices)` - Pick one per cycle randomly
+  - `wchoose(...[value, weight])` - Weighted random choice with probability weights
+  - `wchooseCycles(...[value, weight])` / `wrandcat(...[value, weight])` - Weighted choice per cycle
+  - All work as standalone function, pattern method, and string extension
+- ✅ **Major ChoicePattern Refactor**:
+  - Refactored from simple random choice to selector-based pattern
+  - Now accepts `selector` pattern (0..1 values), `choices` list, optional `weights` list, and `mode` (In/Out)
+  - Supports weighted selection: maps selector value through cumulative weight distribution
+  - Maintains backward compatibility with `|` operator via `isSimpleRandom` check for flattening
+  - Bipolar oscillators now use `toBipolar()` internally for consistency
+- ✅ **Signal Conversion Functions**:
+  - `toBipolar()` - Converts 0-1 range to -1..1 via `(v * 2.0 - 1.0)`
+  - `fromBipolar()` - Converts -1..1 range to 0-1 via `((v + 1.0) / 2.0)`
+  - `perlin2` / `berlin2` - Bipolar noise generators using `toBipolar()`
+  - All bipolar oscillators (`sine2`, `cosine2`, `saw2`, etc.) refactored to use `toBipolar()` instead of
+    `.range(-1, 1)`
+  - `range()` now uses `set()` instead of `setIfAbsent()` for QueryContext, ensuring range is always applied
 - ✅ **Code Organization**:
     - Renamed `lang_choice.kt` to `lang_conditional.kt` for better categorization
     - Updated init function from `strudelLangChoiceInit` to `strudelLangConditionalInit`
@@ -599,6 +651,13 @@ Comprehensive voice data structure supporting:
     - `LangShuffleSpec.kt` with tests for shuffle functionality
     - `LangScrambleSpec.kt` with tests for scramble functionality
     - Enhanced `LangRandomSpec.kt` with tests for irand, randL, and randrun
+    - `LangChooseWithSpec.kt` with 3 tests for chooseWith functionality
+    - `LangChooseInWithSpec.kt` with 3 tests for chooseInWith functionality
+    - `LangChooseSpec.kt` with tests for choose/chooseOut functionality
+    - `LangChooseInSpec.kt` with 3 tests for chooseIn functionality
+    - `LangChoose2Spec.kt` with 2 tests for bipolar selector choice
+    - `LangChooseCyclesSpec.kt` with 3 tests for cycle-based choice
+    - `LangWChooseSpec.kt` with 3 tests for weighted choice functionality
     - `LangArithmeticAddonsSpec.kt` with tests for negateValue and oneMinusValue
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting

@@ -69,10 +69,10 @@ class LangSeedSpec : StringSpec({
     }
 
     "withSeed() works as string extension" {
-        val p1 = "0 1 2 3".degradeBy(0.5).withSeed(42)
+        val p1 = "0 1 2 3".withSeed(42).degradeBy(0.5).withSeed(42)
         val events1 = p1.queryArc(0.0, 1.0)
 
-        val p2 = "0 1 2 3".degradeBy(0.5).withSeed(43)
+        val p2 = "0 1 2 3".withSeed(42).degradeBy(0.5).withSeed(43)
         val events2 = p2.queryArc(0.0, 1.0)
 
         // Same seed should produce identical degradation patterns

@@ -2,6 +2,7 @@
 
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.math.BerlinNoise
 import io.peekandpoke.klang.strudel.math.PerlinNoise
@@ -20,6 +21,37 @@ import kotlin.math.sin
  */
 var strudelLangContinuousInit = false
 
+// -- Helpers ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Maps a pattern in the range 0..1 to -1..1.
+ */
+@StrudelDsl
+val StrudelPattern.toBipolar by dslPatternExtension { p, _ ->
+    applyUnaryOp(p) { v ->
+        val d = v.asDouble
+        if (d != null) (d * 2.0 - 1.0).asVoiceValue() else v
+    }
+}
+
+@StrudelDsl
+val String.toBipolar by dslStringExtension { p, _ -> p.toBipolar() }
+
+/**
+ * Maps a pattern in the range -1..1 to 0..1.
+ * Useful for converting LFOs like sine2/tri2 to probabilities or selectors.
+ */
+@StrudelDsl
+val StrudelPattern.fromBipolar by dslPatternExtension { p, _ ->
+    applyUnaryOp(p) { v ->
+        val d = v.asDouble
+        if (d != null) ((d + 1.0) / 2.0).asVoiceValue() else v
+    }
+}
+
+@StrudelDsl
+val String.fromBipolar by dslStringExtension { p, _ -> p.fromBipolar() }
+
 // -- Continuous patterns settings -------------------------------------------------------------------------------------
 
 private fun applyRange(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
@@ -28,9 +60,9 @@ private fun applyRange(pattern: StrudelPattern, args: List<Any?>): ContextModifi
     val granularity = args.getOrNull(2)?.asDoubleOrNull()?.toRational() ?: Rational.ONE
 
     return pattern.withContext {
-        setIfAbsent(ContinuousPattern.minKey, min)
-        setIfAbsent(ContinuousPattern.maxKey, max)
-        setIfAbsent(ContinuousPattern.granularityKey, granularity)
+        set(ContinuousPattern.minKey, min)
+        set(ContinuousPattern.maxKey, max)
+        set(ContinuousPattern.granularityKey, granularity)
     }
 }
 
@@ -82,7 +114,7 @@ val sine by dslObject { signal { t -> (sin(t * 2.0 * PI) + 1.0) / 2.0 } }
 
 /** Sine oscillator: -1 to 1, period of 1 cycle */
 @StrudelDsl
-val sine2 by dslObject { sine.range(-1.0, 1.0) }
+val sine2 by dslObject { sine.toBipolar() }
 
 /** Cosine oscillator: 0 to 1, period of 1 cycle */
 @StrudelDsl
@@ -90,7 +122,7 @@ val cosine by dslObject { signal { t -> (sin(t * 2.0 * PI + PI / 2.0) + 1.0) / 2
 
 /** Cosine oscillator: -1 to 1, period of 1 cycle */
 @StrudelDsl
-val cosine2 by dslObject { cosine.range(-1.0, 1.0) }
+val cosine2 by dslObject { cosine.toBipolar() }
 
 /** Sawtooth oscillator: 0 to 1, period of 1 cycle */
 @StrudelDsl
@@ -98,7 +130,7 @@ val saw by dslObject { signal { t -> t % 1.0 } }
 
 /** Sawtooth oscillator: -1 to 1, period of 1 cycle */
 @StrudelDsl
-val saw2 by dslObject { saw.range(-1.0, 1.0) }
+val saw2 by dslObject { saw.toBipolar() }
 
 /** Inverse Sawtooth oscillator: 1 to 0, period of 1 cycle */
 @StrudelDsl
@@ -106,7 +138,7 @@ val isaw by dslObject { signal { t -> 1.0 - (t % 1.0) } }
 
 /** Inverse Sawtooth oscillator: 1 to -1, period of 1 cycle */
 @StrudelDsl
-val isaw2 by dslObject { isaw.range(-1.0, 1.0) }
+val isaw2 by dslObject { isaw.toBipolar() }
 
 /** Triangle oscillator: 0 to 1 to 0, period of 1 cycle */
 @StrudelDsl
@@ -119,7 +151,7 @@ val tri by dslObject {
 
 /** Triangle oscillator: -1 to 1 to -1, period of 1 cycle */
 @StrudelDsl
-val tri2 by dslObject { tri.range(-1.0, 1.0) }
+val tri2 by dslObject { tri.toBipolar() }
 
 /** Inverse Triangle oscillator: 1 to 0 to 1, period of 1 cycle */
 @StrudelDsl
@@ -132,7 +164,7 @@ val itri by dslObject {
 
 /** Inverse Triangle oscillator: 1 to -1 to 1, period of 1 cycle */
 @StrudelDsl
-val itri2 by dslObject { itri.range(-1.0, 1.0) }
+val itri2 by dslObject { itri.toBipolar() }
 
 /** Square oscillator: 0 or 1, period of 1 cycle */
 @StrudelDsl
@@ -140,7 +172,7 @@ val square by dslObject { signal { t -> if (t % 1.0 < 0.5) 0.0 else 1.0 } }
 
 /** Square oscillator: -1 or 1, period of 1 cycle */
 @StrudelDsl
-val square2 by dslObject { square.range(-1.0, 1.0) }
+val square2 by dslObject { square.toBipolar() }
 
 /** Generates a continuous pattern of Perlin noise producing values between 0 and 1 */
 @StrudelDsl
@@ -156,6 +188,9 @@ val perlin by dslObject {
         (engine.noise(from) + 1.0) / 2.0
     }
 }
+
+@StrudelDsl
+val perlin2 by dslObject { perlin.toBipolar() }
 
 /**
  * Generates a continuous pattern of Berlin noise producing values between 0 and 1
@@ -176,3 +211,6 @@ val berlin by dslObject {
         engine.noise(from)
     }
 }
+
+@StrudelDsl
+val berlin2 by dslObject { berlin.toBipolar() }
