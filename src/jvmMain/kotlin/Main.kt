@@ -6,6 +6,8 @@ import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.strudel.lang.add
+import io.peekandpoke.klang.strudel.lang.seq
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
@@ -80,7 +82,7 @@ private suspend fun helloStrudel() {
         println(result)
 
 //        val pattern = TestKotlinPatterns.strangerThings
-        val pattern = TestKotlinPatterns.tetris
+//        val pattern = TestKotlinPatterns.tetris
 //        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
 
 //        val pattern = StrudelPattern.compile(
@@ -92,13 +94,15 @@ private suspend fun helloStrudel() {
 //        val pattern = note("a b c d").pan(sine2.range(-1.0, 1.0).slow(4))
 
 //        val pattern = StrudelPattern.compile(
-//            """s("<sine saw isaw tri square>")"""
+//            """note("a b c d").bypass(true)"""
 //        )!!
 
 //        val pattern = note("[a b c d]").degradeBy("[0.1 1.0 0.2 0.9]")
 //        val pattern = note("a b c d").undegradeBy(steady(1.0))
 
 //        val pattern = note("[a b c d] [e f g a]").firstOf(4, { it.rev() })
+
+        val pattern = seq("1 1 1 1").add("3 4")
 
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {

@@ -1,11 +1,12 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 
 class LangLog2Spec : StringSpec({
     "log2() calculates base-2 logarithm" {
-        val p = n("1 2 4 8").log2()
+        val p = seq("1 2 4 8").log2()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 4
         events[0].data.value?.asInt shouldBe 0 // log2(1) = 0
@@ -15,10 +16,8 @@ class LangLog2Spec : StringSpec({
     }
 
     "log2() works as top-level function" {
-        val p = log2(n("4"))
-        val events = p.queryArc(0.0, 1.0)
-        events.size shouldBe 1
-        events[0].data.value?.asInt shouldBe 2
+        val p = log2(seq("4"))
+        p.queryArc(0.0, 1.0).shouldBeEmpty()
     }
 
     "log2() works as string extension" {

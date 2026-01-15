@@ -3,7 +3,6 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.pattern.EmptyPattern
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -35,20 +34,10 @@ val String.add by dslStringExtension { source, args ->
 }
 
 /**
- * Top-level add function.
- * Usage: add(amount, pattern) -> adds amount to pattern
- * Usage: add(value) -> creates a pattern with that value
+ * Top-level add function. Produces silence
  */
 @StrudelDsl
-val add by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        val amountArgs = args.dropLast(1)
-        applyBinaryOp(source, amountArgs) { a, b -> a + b }
-    } else {
-        args.toPattern(defaultModifier)
-    }
-}
+val add by dslFunction { _ -> silence }
 
 // -- sub() ------------------------------------------------------------------------------------------------------------
 
@@ -63,14 +52,7 @@ val String.sub by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val sub by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a - b }
-    } else {
-        EmptyPattern // sub() as a source doesn't make much sense without arguments
-    }
-}
+val sub by dslFunction { _ -> silence }
 
 // -- mul() ------------------------------------------------------------------------------------------------------------
 
@@ -85,14 +67,7 @@ val String.mul by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val mul by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a * b }
-    } else {
-        EmptyPattern
-    }
-}
+val mul by dslFunction { _ -> silence }
 
 // -- div() ------------------------------------------------------------------------------------------------------------
 
@@ -107,14 +82,7 @@ val String.div by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val div by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a / b }
-    } else {
-        EmptyPattern
-    }
-}
+val div by dslFunction { _ -> silence }
 
 // -- mod() ------------------------------------------------------------------------------------------------------------
 
@@ -129,14 +97,7 @@ val String.mod by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val mod by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a % b }
-    } else {
-        EmptyPattern
-    }
-}
+val mod by dslFunction { _ -> silence }
 
 // -- pow() ------------------------------------------------------------------------------------------------------------
 
@@ -151,14 +112,7 @@ val String.pow by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val pow by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a pow b }
-    } else {
-        EmptyPattern
-    }
-}
+val pow by dslFunction { _ -> silence }
 
 // -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
 
@@ -173,14 +127,7 @@ val String.band by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val band by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a band b }
-    } else {
-        EmptyPattern
-    }
-}
+val band by dslFunction { _ -> silence }
 
 // -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
 
@@ -195,14 +142,7 @@ val String.bor by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val bor by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a bor b }
-    } else {
-        EmptyPattern
-    }
-}
+val bor by dslFunction { _ -> silence }
 
 // -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
 
@@ -217,14 +157,7 @@ val String.bxor by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val bxor by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a bxor b }
-    } else {
-        EmptyPattern
-    }
-}
+val bxor by dslFunction { _ -> silence }
 
 // -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
 
@@ -239,14 +172,7 @@ val String.blshift by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val blshift by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a shl b }
-    } else {
-        EmptyPattern
-    }
-}
+val blshift by dslFunction { _ -> silence }
 
 // -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
 
@@ -261,14 +187,7 @@ val String.brshift by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val brshift by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a shr b }
-    } else {
-        EmptyPattern
-    }
-}
+val brshift by dslFunction { _ -> silence }
 
 // -- log2() -----------------------------------------------------------------------------------------------------------
 
@@ -283,14 +202,7 @@ val String.log2 by dslStringExtension { source, _ ->
 }
 
 @StrudelDsl
-val log2 by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (source != null) {
-        applyUnaryOp(source) { it.log2() }
-    } else {
-        EmptyPattern
-    }
-}
+val log2 by dslFunction { _ -> silence }
 
 // -- lt() (Less Than) -------------------------------------------------------------------------------------------------
 
@@ -305,14 +217,7 @@ val String.lt by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val lt by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a lt b }
-    } else {
-        EmptyPattern
-    }
-}
+val lt by dslFunction { _ -> silence }
 
 // -- gt() (Greater Than) ----------------------------------------------------------------------------------------------
 
@@ -327,14 +232,7 @@ val String.gt by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val gt by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a gt b }
-    } else {
-        EmptyPattern
-    }
-}
+val gt by dslFunction { _ -> silence }
 
 // -- lte() (Less Than or Equal) ---------------------------------------------------------------------------------------
 
@@ -349,14 +247,7 @@ val String.lte by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val lte by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a lte b }
-    } else {
-        EmptyPattern
-    }
-}
+val lte by dslFunction { _ -> silence }
 
 // -- gte() (Greater Than or Equal) ------------------------------------------------------------------------------------
 
@@ -371,14 +262,7 @@ val String.gte by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val gte by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a gte b }
-    } else {
-        EmptyPattern
-    }
-}
+val gte by dslFunction { _ -> silence }
 
 // -- eq() (Equal) -----------------------------------------------------------------------------------------------------
 
@@ -393,14 +277,7 @@ val String.eq by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val eq by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a eq b }
-    } else {
-        EmptyPattern
-    }
-}
+val eq by dslFunction { _ -> silence }
 
 // -- eqt() (Truthiness Equal) -----------------------------------------------------------------------------------------
 
@@ -418,14 +295,7 @@ val String.eqt by dslStringExtension { source, args ->
 
 /** Truthiness equality comparison function */
 @StrudelDsl
-val eqt by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a eqt b }
-    } else {
-        EmptyPattern
-    }
-}
+val eqt by dslFunction { _ -> silence }
 
 // -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
 
@@ -440,14 +310,7 @@ val String.ne by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val ne by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a ne b }
-    } else {
-        EmptyPattern
-    }
-}
+val ne by dslFunction { _ -> silence }
 
 // -- net() (Truthiness Not Equal) -------------------------------------------------------------------------------------
 
@@ -465,14 +328,7 @@ val String.net by dslStringExtension { source, args ->
 
 /** Truthiness inequality comparison function */
 @StrudelDsl
-val net by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a net b }
-    } else {
-        EmptyPattern
-    }
-}
+val net by dslFunction { _ -> silence }
 
 // -- and() (Logical AND) ----------------------------------------------------------------------------------------------
 
@@ -487,14 +343,7 @@ val String.and by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val and by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a and b }
-    } else {
-        EmptyPattern
-    }
-}
+val and by dslFunction { _ -> silence }
 
 // -- or() (Logical OR) ------------------------------------------------------------------------------------------------
 
@@ -509,11 +358,4 @@ val String.or by dslStringExtension { source, args ->
 }
 
 @StrudelDsl
-val or by dslFunction { args ->
-    val source = args.lastOrNull() as? StrudelPattern
-    if (args.size >= 2 && source != null) {
-        applyBinaryOp(source, args.dropLast(1)) { a, b -> a or b }
-    } else {
-        EmptyPattern
-    }
-}
+val or by dslFunction { _ -> silence }

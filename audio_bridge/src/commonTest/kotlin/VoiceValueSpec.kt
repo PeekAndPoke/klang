@@ -154,4 +154,155 @@ class VoiceValueSpec : StringSpec({
         (1.asVoiceValue()!! or 5.asVoiceValue())?.asInt shouldBe 1
         (0.asVoiceValue()!! or 5.asVoiceValue())?.asInt shouldBe 5
     }
+
+    // Tests for VoiceValue.Bool
+    "VoiceValue.Bool: true is truthy" {
+        true.asVoiceValue().isTruthy() shouldBe true
+    }
+
+    "VoiceValue.Bool: false is falsy" {
+        false.asVoiceValue().isTruthy() shouldBe false
+    }
+
+    "VoiceValue.Bool: asBoolean returns the boolean value" {
+        true.asVoiceValue().asBoolean shouldBe true
+        false.asVoiceValue().asBoolean shouldBe false
+    }
+
+    "VoiceValue.Bool: asString returns string representation" {
+        true.asVoiceValue().asString shouldBe "true"
+        false.asVoiceValue().asString shouldBe "false"
+    }
+
+    "VoiceValue.Bool: asDouble returns 1.0 for true, 0.0 for false" {
+        true.asVoiceValue().asDouble shouldBe 1.0
+        false.asVoiceValue().asDouble shouldBe 0.0
+    }
+
+    "VoiceValue.Bool: asInt returns 1 for true, 0 for false" {
+        true.asVoiceValue().asInt shouldBe 1
+        false.asVoiceValue().asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: math operations - plus with number" {
+        (true.asVoiceValue() + 5.asVoiceValue())?.asDouble shouldBe 6.0
+        (false.asVoiceValue() + 5.asVoiceValue())?.asDouble shouldBe 5.0
+    }
+
+    "VoiceValue.Bool: math operations - plus with text (concatenation)" {
+        (true.asVoiceValue() + "x".asVoiceValue())?.asString shouldBe "truex"
+        (false.asVoiceValue() + "x".asVoiceValue())?.asString shouldBe "falsex"
+    }
+
+    "VoiceValue.Bool: math operations - minus" {
+        (true.asVoiceValue() - false.asVoiceValue())?.asDouble shouldBe 1.0
+        (false.asVoiceValue() - true.asVoiceValue())?.asDouble shouldBe -1.0
+    }
+
+    "VoiceValue.Bool: math operations - times" {
+        (true.asVoiceValue() * 5.asVoiceValue())?.asDouble shouldBe 5.0
+        (false.asVoiceValue() * 5.asVoiceValue())?.asDouble shouldBe 0.0
+    }
+
+    "VoiceValue.Bool: math operations - div" {
+        (true.asVoiceValue() / 1.asVoiceValue())?.asDouble shouldBe 1.0
+        (false.asVoiceValue() / 1.asVoiceValue())?.asDouble shouldBe 0.0
+    }
+
+    "VoiceValue.Bool: math operations - rem" {
+        (true.asVoiceValue() % 1.asVoiceValue())?.asDouble shouldBe 0.0
+    }
+
+    "VoiceValue.Bool: math operations - pow" {
+        (true.asVoiceValue() pow 5.asVoiceValue())?.asDouble shouldBe 1.0
+        (false.asVoiceValue() pow 5.asVoiceValue())?.asDouble shouldBe 0.0
+    }
+
+    "VoiceValue.Bool: bitwise operations - band" {
+        (true.asVoiceValue() band true.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() band false.asVoiceValue())?.asInt shouldBe 0
+        (false.asVoiceValue() band false.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: bitwise operations - bor" {
+        (true.asVoiceValue() bor true.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() bor false.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() bor false.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: bitwise operations - bxor" {
+        (true.asVoiceValue() bxor true.asVoiceValue())?.asInt shouldBe 0
+        (true.asVoiceValue() bxor false.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() bxor false.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: bitwise operations - shl" {
+        (true.asVoiceValue() shl 1.asVoiceValue())?.asInt shouldBe 2
+        (false.asVoiceValue() shl 1.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: bitwise operations - shr" {
+        (true.asVoiceValue() shr 1.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: comparison operations - lt" {
+        (false.asVoiceValue() lt true.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() lt false.asVoiceValue())?.asInt shouldBe 0
+        (true.asVoiceValue() lt true.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: comparison operations - gt" {
+        (true.asVoiceValue() gt false.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() gt true.asVoiceValue())?.asInt shouldBe 0
+        (true.asVoiceValue() gt true.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: comparison operations - lte" {
+        (false.asVoiceValue() lte true.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() lte true.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() lte false.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: comparison operations - gte" {
+        (true.asVoiceValue() gte false.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() gte true.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() gte true.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: comparison operations - eq" {
+        (true.asVoiceValue() eq true.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() eq false.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() eq false.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: comparison operations - ne" {
+        (true.asVoiceValue() ne false.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() ne true.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: comparison operations - eqt" {
+        (true.asVoiceValue() eqt true.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() eqt false.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() eqt false.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: comparison operations - net" {
+        (true.asVoiceValue() net false.asVoiceValue())?.asInt shouldBe 1
+        (true.asVoiceValue() net true.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: logical operations - and" {
+        (true.asVoiceValue() and 5.asVoiceValue())?.asInt shouldBe 5
+        (false.asVoiceValue() and 5.asVoiceValue())?.asInt shouldBe 0
+    }
+
+    "VoiceValue.Bool: logical operations - or" {
+        (true.asVoiceValue() or 5.asVoiceValue())?.asInt shouldBe 1
+        (false.asVoiceValue() or 5.asVoiceValue())?.asInt shouldBe 5
+    }
+
+    "VoiceValue.Bool: from() converts Boolean to Bool" {
+        VoiceValue.from(true) shouldBe VoiceValue.Bool(true)
+        VoiceValue.from(false) shouldBe VoiceValue.Bool(false)
+    }
 })

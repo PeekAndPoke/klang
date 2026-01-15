@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
@@ -73,7 +74,12 @@ private fun applySeq(patterns: List<StrudelPattern>): StrudelPattern {
 @StrudelDsl
 val seq by dslFunction { args ->
     // specialized modifier for seq to prioritize value
-    args.toPattern(defaultModifier)
+    args.toPattern {
+        copy(
+            value = it?.asVoiceValue(),
+            gain = 1.0,
+        )
+    }
 }
 
 @StrudelDsl
@@ -466,11 +472,12 @@ fun String.filterWhen(predicate: (Double) -> Boolean): StrudelPattern {
 private fun applyBypass(source: StrudelPattern, args: List<Any?>): StrudelPattern {
     if (args.isEmpty()) return source
 
-    val condition = args.toPattern(defaultModifier).not()
+    val condition = args.toPattern(defaultModifier)
+    val conditionNot = condition.not()
 
     return StructurePattern(
         source = source,
-        other = condition,
+        other = conditionNot,
         mode = StructurePattern.Mode.In,
         filterByTruthiness = true
     )

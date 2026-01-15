@@ -11,6 +11,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.formatAsTable
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.fail
 import kotlin.math.abs
@@ -99,20 +100,34 @@ class JsCompatTests : StringSpec() {
         val overview = listOf(
             listOf("", "Graal", "Native")
         ).plus(zippedAll.mapIndexed { index, (graal, native) ->
+
+            fun Double.rounded(): Double {
+                return kotlin.math.floor(this * 100.0) / 100.0
+            }
+
+            fun Rational.rounded(): Double {
+                return toDouble().rounded()
+            }
+
+            fun format(p: StrudelPatternEvent?) = p?.let {
+                val d = p.data
+
+                "${p.begin.rounded()} - ${p.end.rounded()} | " +
+                        "${listOf(d.note, d.sound)} | " +
+                        "${listOf(d.value?.asString, d.gain?.rounded(), d.pan?.rounded())}"
+            } ?: " --- "
+
             listOf(
                 "#${index + 1}",
-                graal?.let {
-                    "${graal.begin} - ${graal.end} | ${listOfNotNull(graal.data.note, graal.data.sound)}"
-                } ?: " --- ",
-                native?.let {
-                    "${native.begin} - ${native.end} | ${listOfNotNull(native.data.note, native.data.sound)}"
-                } ?: " --- ",
+                format(graal),
+                format(native),
             )
         })
 
-        println(
-            overview.formatAsTable()
-        )
+        println("Graal: ${graalArc.size} events | Native: ${nativeArc.size} events")
+        println()
+        println(overview.formatAsTable())
+        println()
 
 //        val graalArc = graalPattern.queryArc(0.0, 64.0).sort()
 //        val nativeArc = nativePattern.queryArc(0.0, 64.0).sort()

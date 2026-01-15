@@ -145,8 +145,10 @@ val String.note by dslStringExtension { p, args ->
 // -- n() --------------------------------------------------------------------------------------------------------------
 
 private val nMutation = voiceModifier {
-    resolveNote(it?.asIntOrNull())
-        .copy(gain = gain ?: 1.0)
+    copy(
+        soundIndex = it?.asIntOrNull() ?: soundIndex,
+        gain = gain ?: 1.0,
+    )
 }
 
 private fun applyN(source: StrudelPattern, args: List<Any?>): StrudelPattern {

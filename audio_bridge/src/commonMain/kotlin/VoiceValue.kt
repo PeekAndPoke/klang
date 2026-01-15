@@ -194,10 +194,20 @@ sealed interface VoiceValue {
         override fun toString() = asString
     }
 
+    data class Bool(val value: Boolean) : VoiceValue {
+        override val asBoolean get() = value
+        override val asString get() = value.toString()
+        override val asDouble get() = if (value) 1.0 else 0.0
+        override val asInt get() = if (value) 1 else 0
+        override fun toString() = asString
+    }
+
     companion object {
         fun Double.asVoiceValue() = Num(this)
 
         fun String.asVoiceValue() = Text(this)
+
+        fun Boolean.asVoiceValue() = Bool(this)
 
         fun Any.asVoiceValue(): VoiceValue? = from(this)
 
@@ -205,7 +215,7 @@ sealed interface VoiceValue {
             is VoiceValue -> value
             is Number -> Num(value.toDouble())
             is String -> Text(value)
-            is Boolean -> Text(value.toString())
+            is Boolean -> Bool(value)
             else -> null
         }
     }
@@ -223,6 +233,7 @@ object VoiceValueSerializer : KSerializer<VoiceValue> {
         when (value) {
             is VoiceValue.Num -> encoder.encodeDouble(value.value)
             is VoiceValue.Text -> encoder.encodeString(value.value)
+            is VoiceValue.Bool -> encoder.encodeBoolean(value.value)
         }
     }
 
@@ -231,12 +242,16 @@ object VoiceValueSerializer : KSerializer<VoiceValue> {
         if (decoder is JsonDecoder) {
             val element = decoder.decodeJsonElement()
             return if (element is JsonPrimitive) {
-                if (element.isString) {
-                    VoiceValue.Text(element.content)
-                } else {
-                    // It's a number or boolean
-                    val d = element.doubleOrNull
-                    if (d != null) VoiceValue.Num(d) else VoiceValue.Text(element.content)
+                when {
+                    element.isString -> VoiceValue.Text(element.content)
+                    element.content == "true" || element.content == "false" ->
+                        VoiceValue.Bool(element.content.toBoolean())
+
+                    else -> {
+                        // It's a number
+                        val d = element.doubleOrNull
+                        if (d != null) VoiceValue.Num(d) else VoiceValue.Text(element.content)
+                    }
                 }
             } else {
                 VoiceValue.Text(element.toString())
@@ -256,7 +271,13 @@ object VoiceValueSerializer : KSerializer<VoiceValue> {
                 val d = decoder.decodeDouble()
                 return VoiceValue.Num(d)
             } catch (_: Exception) {
-                throw e // Giving up
+                // Maybe it's a boolean?
+                try {
+                    val b = decoder.decodeBoolean()
+                    return VoiceValue.Bool(b)
+                } catch (_: Exception) {
+                    throw e // Giving up
+                }
             }
         }
     }

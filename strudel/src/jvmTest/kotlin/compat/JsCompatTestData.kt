@@ -337,39 +337,78 @@ object JsCompatTestData {
         Example("FirstOf", """note("[a b c d] [e f g a]").firstOf(4, (x) => x.rev())"""),
         Example("Every", """note("[a b c d] [e f g a]").every(4, (x) => x.rev())"""),
         Example("LastOf", """note("[a b c d] [e f g a]").lastOf(4, (x) => x.rev())"""),
-        Example("Filter", """note("a b").filter((x) => { return x.data.note == "a" })"""),
+        // TODO: we need to change the data model to match the JS model ...
+        //       we also need to expose the Event / Hap model to KlangScript otherwise:
+        //       ERROR: Native type 'StrudelPatternEvent' has no method 'data'.
+        Example(SKIP, "Filter", """note("a b").filter((x) => { return x.data.note == "a" })"""),
         Example("FilterWhen", """note("a b c d").filterWhen(x => x >= 0.5)"""),
-        Example("Bypass #1", """note("a b c d").bypass("true")"""),
-        Example("Bypass #2", """note("a b c d").bypass(true)"""),
-        Example("Bypass #3", """note("a b c d").bypass(false)"""),
+        Example(SKIP, "Bypass #1", """note("a b c d").bypass()"""), // js impl seems to be broken
+        Example("Bypass #2", """note("a b c d").bypass(1)"""),
+        Example("Bypass #3", """note("a b c d").bypass(0)"""),
+        Example("Bypass #4", """note("a b c d").bypass(false)"""),
 
         // Arithmetic Operators
-        Example(SKIP, "Add", """n("0 1 2 3").add("2")"""),
-        Example(SKIP, "Sub", """n("10 20").sub("5")"""),
-        Example(SKIP, "Mul", """n("2 3").mul("4")"""),
-        Example(SKIP, "Div", """n("10 20").div("2")"""),
-        Example(SKIP, "Mod", """n("10 11").mod("3")"""),
-        Example(SKIP, "Pow", """n("2 3").pow("3")"""),
-        Example(SKIP, "Log2", """n("1 2 4 8").log2()"""),
+        *listOf(
+            Example("Add #1", """seq("0 1 2 3").add("2")"""),
+            Example("Add #2", """seq("0 1 2 3").add("2 3")"""),
+            Example("Add #3", """n("0 1 2 3").add("2")"""),
 
-        // Bitwise Operators
-        Example(SKIP, "Band (AND)", """n("3 5").band("1")"""),
-        Example(SKIP, "Bor (OR)", """n("1 4").bor("2")"""),
-        Example(SKIP, "Bxor (XOR)", """n("3 5").bxor("1")"""),
-        Example(SKIP, "Blshift (Left Shift)", """n("1 2").blshift("1")"""),
-        Example(SKIP, "Brshift (Right Shift)", """n("2 4").brshift("1")"""),
+            Example("Sub #1", """seq("10 20").sub("5")"""),
+            Example("Sub #2", """seq("10 20 30 40").sub("5 6")"""),
+            Example("Sub #3", """n("10 20").sub("5")"""),
 
-        // Comparison
-        Example(SKIP, "Less Than", """n("1 2 3").lt("2")"""),
-        Example(SKIP, "Greater Than", """n("1 2 3").gt("2")"""),
-        Example(SKIP, "Less Equal", """n("1 2 3").lte("2")"""),
-        Example(SKIP, "Greater Equal", """n("1 2 3").gte("2")"""),
-        Example(SKIP, "Equal", """n("1 2 3").eq("2")"""),
-        Example(SKIP, "Not Equal", """n("1 2 3").ne("2")"""),
+            Example("Mul #1", """seq("2 3").mul("4")"""),
+            Example("Mul #2", """seq("2 3 4 5").mul("4 5")"""),
+            Example("Mul #3", """n("2 3").mul("4")"""),
 
-        // Logical
-        Example(SKIP, "Logical And", """n("0 1").and("5")"""),
-        Example(SKIP, "Logical Or", """n("0 1").or("5")"""),
+            Example("Div #1", """seq("10 20").div("2")"""),
+            Example("Div #2", """seq("10 20 30 40").div("2 5")"""),
+            Example("Div #3", """n("10 20").div("2")"""),
+
+            Example("Mod #1", """seq("10 11").mod("3")"""),
+            Example("Mod #2", """seq("10 11 12 13").mod("3 4")"""),
+            Example("Mod #3", """n("10 11").mod("3")"""),
+
+            Example("Pow #1", """seq("2 3").pow("3")"""),
+            Example("Pow #2", """seq("2 3 4 5").pow("3 4")"""),
+            Example("Pow #3", """n("2 3").pow("3")"""),
+
+            Example(SKIP, "Log2 #1", """seq("1 2 4 8").log2()"""), // Js produce no events
+            Example(SKIP, "Log2 #2", """n("1 2 4 8").log2()"""), // Js produce no events
+
+            // Bitwise Operators
+            Example("Band (AND) #1", """seq("3 5").band("1")"""),
+            Example("Band (AND) #2", """n("3 5").band("1")"""),
+            Example("Bor (OR) #1", """seq("1 4").bor("2")"""),
+            Example("Bor (OR) #2", """n("1 4").bor("2")"""),
+            Example("Bxor (XOR) #1", """seq("3 5").bxor("1")"""),
+            Example("Bxor (XOR) #2", """n("3 5").bxor("1")"""),
+            Example("Blshift (Left Shift) #1", """seq("1 2").blshift("1")"""),
+            Example("Blshift (Left Shift) #2", """n("1 2").blshift("1")"""),
+            Example("Brshift (Right Shift) #1", """seq("2 4").brshift("1")"""),
+            Example("Brshift (Right Shift) #2", """n("2 4").brshift("1")"""),
+
+            // Comparison
+            Example(SKIP, "Less Than #1", """seq("1 2 3").lt(2)"""),
+            Example("Less Than #2", """n("1 2 3").lt("2")"""),
+            Example(SKIP, "Greater Than #1", """seq("1 2 3").gt("2")"""),
+            Example("Greater Than #2", """n("1 2 3").gt("2")"""),
+            Example(SKIP, "Less Equal #1", """seq("1 2 3").lte("2")"""),
+            Example("Less Equal #2", """n("1 2 3").lte("2")"""),
+            Example(SKIP, "Greater Equal #1", """seq("1 2 3").gte("2")"""),
+            Example("Greater Equal #2", """n("1 2 3").gte("2")"""),
+            Example(SKIP, "Equal #1", """seq("1 2 3").eq("2")"""),
+            Example("Equal #2", """n("1 2 3").eq("2")"""),
+            Example(SKIP, "Not Equal #1", """seq("1 2 3").ne("2")"""),
+            Example("Not Equal #2", """n("1 2 3").ne("2")"""),
+
+            // Logical
+            Example("Logical And #1", """seq("0 1").and("5")"""),
+            Example("Logical And #2", """n("0 1").and("5")"""),
+            Example("Logical Or #1", """seq("0 1").or("5")"""),
+            Example("Logical Or #2", """n("0 1").or("5")"""),
+        )//.map { it.ignore("data.gain") }
+            .toTypedArray()
     )
 
     val songs: List<Example> = listOf(

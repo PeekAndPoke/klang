@@ -23,9 +23,9 @@ object TestKotlinPatterns {
         ).sound("tri")
 //            .struct("x(3,8,1)")
             .orbit(0).gain(0.25)
-            .pan(sine2.slow(32).range(-0.6, 0.6).flipSign())
+            .pan(sine2.slow(48).range(-0.6, 0.6).flipSign())
             .delay(0.25).delaytime(0.5).delayfeedback(0.5)
-            .room(0.05).rsize(1.0)
+            .room(0.05).rsize(cosine.range(5.0, 0.5).early(1.5).slow(16))
             .clip(0.3)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
 //            .rev(4.1).rev(3)
@@ -45,9 +45,10 @@ object TestKotlinPatterns {
                 >
             """.trimIndent()
         ).sound("supersaw")
-            .spread(0.5).unison(8).detune(0.3)
+            .spread(0.5).unison(8)
+            .detune(sine.range(0.01, 0.6).early(1.5).slow(16))
             .orbit(2).gain(0.4)
-            .pan(sine2.slow(32).range(-0.6, 0.6))
+            .pan(sine2.slow(48).range(-0.6, 0.6))
 //            .adsr("0.05:0.2:0.0:1.0")
             .room(0.05).rsize(1.0)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }

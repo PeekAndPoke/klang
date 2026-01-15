@@ -218,21 +218,15 @@ internal fun applyBinaryOp(
         control = controlPattern,
         mapper = { it }, // No mapping needed
         combiner = { srcData, ctrlData ->
-            val amount = ctrlData.value ?: return@ControlPattern srcData
-
+            val amount = ctrlData.value
             val srcValue = srcData.value
-                ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
-                ?: srcData.note?.asVoiceValue()
-                ?: return@ControlPattern srcData
 
-            val newValue = op(srcValue, amount)
-
-            srcData.copy(
-                value = newValue ?: srcData.value,
-                // If we successfully modified the value, we clear the soundIndex
-                // because the value is now the source of truth (e.g. index 0 -> add 1 -> index 1)
-                soundIndex = if (newValue != null) null else srcData.soundIndex
-            )
+            if (amount == null || srcValue == null) {
+                srcData
+            } else {
+                val newValue = op(srcValue, amount)
+                srcData.copy(value = newValue)
+            }
         }
     )
 }
@@ -247,16 +241,13 @@ internal fun applyUnaryOp(
     // Unary ops (like log2) apply directly to the source values without a control pattern
     return source.reinterpretVoice { srcData ->
         val srcValue = srcData.value
-            ?: srcData.soundIndex?.toDouble()?.asVoiceValue()
-            ?: srcData.note?.asVoiceValue()
-            ?: return@reinterpretVoice srcData
 
-        val newValue = op(srcValue)
-
-        srcData.copy(
-            value = newValue ?: srcData.value,
-            soundIndex = if (newValue != null) null else srcData.soundIndex
-        )
+        if (srcValue == null) {
+            srcData
+        } else {
+            val newValue = op(srcValue)
+            srcData.copy(value = newValue)
+        }
     }
 }
 
