@@ -13,6 +13,10 @@
 
 ## Diary
 
+### (2026-01-15) Strudel - DSL
+
+- random choice functions
+
 ### (2026-01-14) KlangScript
 
 - comparison expressions

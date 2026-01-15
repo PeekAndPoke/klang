@@ -162,6 +162,17 @@ Strudel.
 - `zoom(start, end)` - Plays portion of pattern stretched to cycle (pattern method, string extension, typed function)
 - TimeModifierPattern implementation with cycle scaling
 
+### Euclidean Rhythms ✅
+
+- `euclid(pulses, steps)` - Euclidean rhythm function (standalone, pattern method, string extension)
+- `euclidRot(pulses, steps, rotation)` / `euclidrot` - Euclidean with rotation (standalone, pattern method, string
+  extension)
+- `bjork([pulses, steps, rotation])` - Euclidean with list parameters (standalone, pattern method, string extension)
+- `euclidLegato(pulses, steps)` - Legato Euclidean, holds pulses until next (standalone, pattern method, string
+  extension)
+- `euclidLegatoRot(pulses, steps, rotation)` - Legato Euclidean with rotation (standalone, pattern method, string
+  extension)
+
 ### Arithmetic Operations ✅
 
 - `add()` - Addition (pattern method, string extension, standalone function)
@@ -424,10 +435,10 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 156+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
-- 16 core pattern types (including EuclideanPattern, ChoicePattern with selector/weights support, SometimesPattern,
-  ReversePattern, StructPattern,
-  ContextModifierPattern, TimeShiftPatternWithControl)
+- 161+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 16 core pattern types (including EuclideanPattern with legato support, ChoicePattern with selector/weights support,
+  SometimesPattern,
+  ReversePattern, StructPattern, ContextModifierPattern, TimeShiftPatternWithControl)
 - 34 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
   isaw2, tri, tri2, itri, itri2, square, square2, perlin, perlin2, berlin, berlin2, rand, rand2, irand, randL, randrun,
   brand, brandBy,
@@ -622,6 +633,23 @@ Comprehensive voice data structure supporting:
   - All bipolar oscillators (`sine2`, `cosine2`, `saw2`, etc.) refactored to use `toBipolar()` instead of
     `.range(-1, 1)`
   - `range()` now uses `set()` instead of `setIfAbsent()` for QueryContext, ensuring range is always applied
+  - **Enhanced `toBipolar()` / `fromBipolar()`**: Now properly handle `range()` context via `mapRangeContext()` helper
+    - When converting 0-1 to -1..1, adjusts min/max range context: `(r + 1.0) / 2.0`
+    - When converting -1..1 to 0-1, adjusts min/max range context: `r * 2.0 - 1.0`
+    - Ensures chaining like `sine.range(0.2, 0.8).toBipolar()` produces correct output range
+- ✅ **Euclidean Rhythm Functions** (for use outside mini-notation):
+  - `euclid(pulses, steps)` - Standard Euclidean rhythm (standalone, pattern method, string extension)
+  - `euclidRot(pulses, steps, rotation)` / `euclidrot` - With rotation support (standalone, pattern method, string
+    extension)
+  - `bjork([pulses, steps, rotation])` - List parameter variant (standalone, pattern method, string extension)
+  - `euclidLegato(pulses, steps)` - Legato variant, holds pulses until next (standalone, pattern method, string
+    extension)
+  - `euclidLegatoRot(pulses, steps, rotation)` - Legato with rotation (standalone, pattern method, string extension)
+  - **Legato Implementation**: Uses new approach with `fillAtom` pattern that returns single event filling queried
+    duration
+    - Eliminates granularity issues and cycle repetitions
+    - Creates perfectly legato gates without gaps
+    - Calculates durations from onset positions and wraps to next cycle
 - ✅ **Code Organization**:
     - Renamed `lang_choice.kt` to `lang_conditional.kt` for better categorization
     - Updated init function from `strudelLangChoiceInit` to `strudelLangConditionalInit`
@@ -658,6 +686,12 @@ Comprehensive voice data structure supporting:
     - `LangChoose2Spec.kt` with 2 tests for bipolar selector choice
     - `LangChooseCyclesSpec.kt` with 3 tests for cycle-based choice
     - `LangWChooseSpec.kt` with 3 tests for weighted choice functionality
+    - `LangEuclidSpec.kt` with 3 tests for euclid functionality
+    - `LangEuclidRotSpec.kt` with 3 tests for euclidRot functionality
+    - `LangBjorkSpec.kt` with 3 tests for bjork functionality
+    - `LangEuclidLegatoSpec.kt` with 3 tests for euclidLegato functionality
+    - `LangEuclidLegatoRotSpec.kt` with 3 tests for euclidLegatoRot functionality
+    - Enhanced `LangContinuousPatternsSpec.kt` with tests for perlin2 and berlin2
     - `LangArithmeticAddonsSpec.kt` with tests for negateValue and oneMinusValue
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting

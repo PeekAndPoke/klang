@@ -367,7 +367,6 @@ val String.maskAll by dslStringExtension { source, args ->
     applyMaskAll(source, args.firstOrNull())
 }
 
-
 // -- filter() ---------------------------------------------------------------------------------------------------------
 
 private fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
@@ -423,7 +422,7 @@ fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
 /**
  * Filters haps by their begin time.
  *
- * @param predicate function to test the begin time (Double)
+ * @param {predicate} function to test the begin time (Double)
  */
 @StrudelDsl
 val filterWhen by dslFunction { args ->
@@ -497,7 +496,6 @@ val StrudelPattern.bypass by dslPatternExtension { source, args -> applyBypass(s
 val String.bypass by dslStringExtension { source, args -> applyBypass(source, args) }
 
 // -- superimpose() ----------------------------------------------------------------------------------------------------
-
 
 /**
  * Layers a modified version of the pattern on top of itself.
@@ -576,8 +574,8 @@ private fun applyZoom(source: StrudelPattern, args: List<Any?>): StrudelPattern 
  * s("bd*2 hh*3 [sd bd]*2 perc").zoom(0.25, 0.75)
  * // s("hh*3 [sd bd]*2") // equivalent
  *
- * @param start start of the zoom window (0.0 to 1.0)
- * @param end end of the zoom window (0.0 to 1.0)
+ * @param {start} start of the zoom window (0.0 to 1.0)
+ * @param {end}   end of the zoom window (0.0 to 1.0)
  */
 @StrudelDsl
 val StrudelPattern.zoom by dslPatternExtension { p, args -> applyZoom(p, args) }
@@ -746,6 +744,170 @@ val String.seg by dslStringExtension { p, args -> applySegment(p, args) }
 /** Alias for [segment] */
 @StrudelDsl
 fun String.seg(n: Int) = this.seg(n as Any)
+
+// -- euclid() ---------------------------------------------------------------------------------------------------------
+
+private fun applyEuclid(source: StrudelPattern, pulses: Int, steps: Int, rotation: Int): StrudelPattern {
+    return EuclideanPattern.create(
+        inner = source,
+        pulses = pulses,
+        steps = steps,
+        rotation = rotation,
+    )
+}
+
+/**
+ * Changes the structure of the pattern to form an Euclidean rhythm.
+ * Euclidean rhythms are rhythms obtained using the greatest common
+ * divisor of two numbers.
+ *
+ * @param {pulses}   the number of onsets/beats
+ * @param {steps}    the number of steps to fill
+ * @param {pattern}  the pattern to apply the euclid to
+ */
+@StrudelDsl
+val euclid by dslFunction { args ->
+    val pattern = args.drop(2).toPattern(defaultModifier)
+
+    pattern.euclid(args)
+}
+
+@StrudelDsl
+val StrudelPattern.euclid by dslPatternExtension { p, args ->
+    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
+
+    applyEuclid(source = p, pulses = pulses, steps = steps, rotation = 0)
+}
+
+@StrudelDsl
+val String.euclid by dslStringExtension { p, args -> p.euclid(args) }
+
+// -- euclidRot() ------------------------------------------------------------------------------------------------------
+
+/**
+ * Like `euclid`, but has an additional parameter for 'rotating' the resulting sequence.
+ *
+ * @param {pulses}   the number of onsets/beats
+ * @param {steps}    the number of steps to fill
+ * @param {rotation} offset in steps
+ * @param {pattern}  the pattern to apply the euclid to
+ */
+@StrudelDsl
+val euclidRot by dslFunction { args ->
+    val pattern = args.drop(3).toPattern(defaultModifier)
+
+    pattern.euclidRot(args)
+}
+
+@StrudelDsl
+val StrudelPattern.euclidRot by dslPatternExtension { p, args ->
+    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
+    val rotation = args.getOrNull(2)?.asIntOrNull() ?: 0
+
+    applyEuclid(source = p, pulses = pulses, steps = steps, rotation = rotation)
+}
+
+@StrudelDsl
+val String.euclidRot by dslStringExtension { p, args -> p.euclidRot(args) }
+
+/** Alias for [euclidRot] */
+@StrudelDsl
+val euclidrot by dslFunction { args -> euclidRot(args) }
+
+/** Alias for [euclidRot] */
+@StrudelDsl
+val StrudelPattern.euclidrot by dslPatternExtension { p, args -> p.euclidRot(args) }
+
+/** Alias for [euclidRot] */
+@StrudelDsl
+val String.euclidrot by dslStringExtension { p, args -> p.euclidRot(args) }
+
+// -- bjork() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Euclidean rhythm specifying parameters as a list.
+ *
+ * @param {list}    List with [pulses, steps, rotation]
+ * @param {pattern} the pattern to apply the euclid to
+ */
+@StrudelDsl
+val bjork by dslFunction { args ->
+    val pattern = args.drop(1).toPattern(defaultModifier)
+
+    pattern.bjork(args)
+}
+
+@StrudelDsl
+val StrudelPattern.bjork by dslPatternExtension { p, args ->
+    val list = args.getOrNull(0) as? List<*> ?: args
+    val pulses = list.getOrNull(0)?.asIntOrNull() ?: 0
+    val steps = list.getOrNull(1)?.asIntOrNull() ?: 0
+    val rotation = list.getOrNull(2)?.asIntOrNull() ?: 0
+
+    applyEuclid(source = p, pulses = pulses, steps = steps, rotation = rotation)
+}
+
+@StrudelDsl
+val String.bjork by dslStringExtension { p, args -> p.bjork(args) }
+
+// -- euclidLegato() ---------------------------------------------------------------------------------------------------
+
+/**
+ * Similar to `euclid`, but each pulse is held until the next pulse, so there will be no gaps.
+ *
+ * @param {pulses}   the number of onsets/beats
+ * @param {steps}    the number of steps to fill
+ * @param {pattern}  the pattern to apply the euclid to
+ */
+@StrudelDsl
+val euclidLegato by dslFunction { args ->
+    val pattern = args.drop(2).toPattern(defaultModifier)
+
+    pattern.euclidLegato(args)
+}
+
+@StrudelDsl
+val StrudelPattern.euclidLegato by dslPatternExtension { p, args ->
+    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
+
+    EuclideanPattern.createLegato(inner = p, pulses = pulses, steps = steps, rotation = 0)
+}
+
+@StrudelDsl
+val String.euclidLegato by dslStringExtension { p, args -> p.euclidLegato(args) }
+
+// -- euclidLegatoRot() ------------------------------------------------------------------------------------------------
+
+/**
+ * Similar to `euclid`, but each pulse is held until the next pulse,
+ * so there will be no gaps, and has an additional parameter for 'rotating' the resulting sequence
+ *
+ * @param {pulses}   the number of onsets/beats
+ * @param {steps}    the number of steps to fill
+ * @param {rotation} offset in steps
+ * @param {pattern}  the pattern to apply the euclid to
+ */
+@StrudelDsl
+val euclidLegatoRot by dslFunction { args ->
+    val pattern = args.drop(3).toPattern(defaultModifier)
+
+    pattern.euclidLegatoRot(args)
+}
+
+@StrudelDsl
+val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args ->
+    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
+    val rotation = args.getOrNull(2)?.asIntOrNull() ?: 0
+
+    EuclideanPattern.createLegato(inner = p, pulses = pulses, steps = steps, rotation = rotation)
+}
+
+@StrudelDsl
+val String.euclidLegatoRot by dslStringExtension { p, args -> p.euclidLegatoRot(args) }
 
 // -- run() ------------------------------------------------------------------------------------------------------------
 

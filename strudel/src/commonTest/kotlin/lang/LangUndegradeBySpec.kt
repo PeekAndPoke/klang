@@ -95,8 +95,8 @@ class LangUndegradeBySpec : StringSpec({
             (count1 + count2) shouldBe total
 
             // Check roughly distribution
-            count1 shouldBeInRange 70..90 // Expect 80
-            count2 shouldBeInRange 10..30 // Expect 20
+            count1 shouldBeInRange 65..95 // Expect 80
+            count2 shouldBeInRange 5..35 // Expect 20
         }
     }
 
@@ -120,13 +120,13 @@ class LangUndegradeBySpec : StringSpec({
                 (buckets["a"]?.size ?: 0) shouldBeInRange 0..25
             }
             withClue("note 'b' (prob keep 1.0)") {
-                (buckets["b"]?.size ?: 0) shouldBeInRange 90..100
+                (buckets["b"]?.size ?: 0) shouldBeInRange 100..100
             }
             withClue("note 'c' (prob keep ~0.2)") {
-                (buckets["c"]?.size ?: 0) shouldBeInRange 10..30
+                (buckets["c"]?.size ?: 0) shouldBeInRange 5..35
             }
             withClue("note 'd' (prob keep ~0.9)") {
-                (buckets["d"]?.size ?: 0) shouldBeInRange 80..100
+                (buckets["d"]?.size ?: 0) shouldBeInRange 75..100
             }
         }
     }

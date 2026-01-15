@@ -4,6 +4,8 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.BerlinNoise
 import io.peekandpoke.klang.strudel.math.PerlinNoise
 import io.peekandpoke.klang.strudel.math.Rational
@@ -23,12 +25,43 @@ var strudelLangContinuousInit = false
 
 // -- Helpers ----------------------------------------------------------------------------------------------------------
 
+private fun StrudelPattern.mapRangeContext(
+    transformMin: (Double) -> Double,
+    transformMax: (Double) -> Double,
+): StrudelPattern {
+    return object : StrudelPattern {
+        override val weight: Double get() = this@mapRangeContext.weight
+
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            val min = ctx.getOrNull(ContinuousPattern.minKey)
+            val max = ctx.getOrNull(ContinuousPattern.maxKey)
+
+            val newCtx = if (min != null && max != null) {
+                ctx.update {
+                    set(ContinuousPattern.minKey, transformMin(min))
+                    set(ContinuousPattern.maxKey, transformMax(max))
+                }
+            } else {
+                ctx
+            }
+            return this@mapRangeContext.queryArcContextual(from, to, newCtx)
+        }
+    }
+}
+
+/**
+ * Maps a pattern in the range 0..1 to -1..1.
+ */
 /**
  * Maps a pattern in the range 0..1 to -1..1.
  */
 @StrudelDsl
 val StrudelPattern.toBipolar by dslPatternExtension { p, _ ->
-    applyUnaryOp(p) { v ->
+    val contextAware = p.mapRangeContext(
+        transformMin = { (it + 1.0) / 2.0 },
+        transformMax = { (it + 1.0) / 2.0 }
+    )
+    applyUnaryOp(contextAware) { v ->
         val d = v.asDouble
         if (d != null) (d * 2.0 - 1.0).asVoiceValue() else v
     }
@@ -43,7 +76,11 @@ val String.toBipolar by dslStringExtension { p, _ -> p.toBipolar() }
  */
 @StrudelDsl
 val StrudelPattern.fromBipolar by dslPatternExtension { p, _ ->
-    applyUnaryOp(p) { v ->
+    val contextAware = p.mapRangeContext(
+        transformMin = { it * 2.0 - 1.0 },
+        transformMax = { it * 2.0 - 1.0 }
+    )
+    applyUnaryOp(contextAware) { v ->
         val d = v.asDouble
         if (d != null) ((d + 1.0) / 2.0).asVoiceValue() else v
     }

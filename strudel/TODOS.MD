@@ -69,9 +69,14 @@ and category.
 - [x] **`slow(factor)`** - Slows down pattern (alias: `sparsity`)
 - [x] **`early(cycles)`** - Nudge pattern earlier in time
 - [x] **`late(cycles)`** - Nudge pattern later in time
-- [ ] **`euclid(pulses, steps)`** - Euclidean rhythm function (for use outside mini-notation)
-- [ ] **`euclidRot(pulses, steps, rotation)`** - Euclidean with rotation (for use outside mini-notation)
-- [ ] **`euclidLegato(pulses, steps)`** - Holds pulses until next (for use outside mini-notation)
+- [x] **`euclid(pulses, steps)`** - Euclidean rhythm function (standalone, pattern method, string extension)
+- [x] **`euclidRot(pulses, steps, rotation)`** / **`euclidrot`** - Euclidean with rotation (standalone, pattern method,
+  string extension)
+- [x] **`bjork([pulses, steps, rotation])`** - Euclidean with list parameters (standalone, pattern method, string
+  extension)
+- [x] **`euclidLegato(pulses, steps)`** - Holds pulses until next (standalone, pattern method, string extension)
+- [x] **`euclidLegatoRot(pulses, steps, rotation)`** - Legato Euclidean with rotation (standalone, pattern method,
+  string extension)
 - [ ] **`compress(start, end)`** - Compresses pattern into timespan
 - [ ] **`compressSpan(span)`** - Compresses pattern into span
 - [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
@@ -519,7 +524,8 @@ and category.
 
 - **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean)
 - **Pattern Creation**: ~7 missing (6 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`)
-- **Time Modification**: ~18 missing (5 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`)
+- **Time Modification**: ~13 missing (10 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `euclid`,
+  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
 - **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
@@ -546,9 +552,9 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~101 features remaining
+### Total Estimated: ~96 features remaining
 
-### Completed So Far: ~156 features! 🎉
+### Completed So Far: ~161 features! 🎉
 
 **Major achievements:**
 

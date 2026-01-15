@@ -566,6 +566,49 @@ class LangContinuousPatternsSpec : StringSpec({
         max.shouldBeBetween(0.65, 1.0, 0.0)
     }
 
+    "perlin2 oscillator: same seed produces same values" {
+        val p1 = perlin2.seed(42)
+        val p2 = perlin2.seed(42)
+
+        val val1 = p1.queryArc(0.5, 0.6)[0].data.value?.asDouble
+        val val2 = p2.queryArc(0.5, 0.6)[0].data.value?.asDouble
+
+        val1 shouldBe val2
+    }
+
+    "perlin2 oscillator: different seeds produce different values" {
+        val p1 = perlin2.seed(1)
+        val p2 = perlin2.seed(2)
+
+        val val1 = p1.queryArc(0.1, 0.2)[0].data.value?.asDouble
+        val val2 = p2.queryArc(0.1, 0.2)[0].data.value?.asDouble
+
+        val1 shouldNotBe val2
+    }
+
+    "perlin2 oscillator: output range in DSL is -1.0 to 1.0" {
+        val p = perlin2.seed(55)
+        var min = 1.0
+        var max = -1.0
+
+        for (i in 0..1000) {
+            val t = i * 0.1
+            val events = p.queryArc(t, t + EPSILON)
+            if (events.isNotEmpty()) {
+                val v = events[0].data.value?.asDouble ?: 0.0
+                // Should be strictly within -1..1 (bipolar)
+                v.shouldBeBetween(-1.0, 1.0, 0.0001)
+
+                if (v < min) min = v
+                if (v > max) max = v
+            }
+        }
+
+        // Ensure it covers a good part of the range
+        min.shouldBeBetween(-1.0, -0.3, 0.0)
+        max.shouldBeBetween(0.3, 1.0, 0.0)
+    }
+
     "berlin oscillator: same seed produces same values" {
         val p1 = berlin.seed(99)
         val p2 = berlin.seed(99)
@@ -617,5 +660,48 @@ class LangContinuousPatternsSpec : StringSpec({
         // Ensure it covers a good part of the range
         min.shouldBeBetween(0.0, 0.35, 0.0)
         max.shouldBeBetween(0.65, 1.0, 0.0)
+    }
+
+    "berlin2 oscillator: same seed produces same values" {
+        val p1 = berlin2.seed(99)
+        val p2 = berlin2.seed(99)
+
+        val val1 = p1.queryArc(0.7, 0.8)[0].data.value?.asDouble
+        val val2 = p2.queryArc(0.7, 0.8)[0].data.value?.asDouble
+
+        val1 shouldBe val2
+    }
+
+    "berlin2 oscillator: different seeds produce different values" {
+        val p1 = berlin2.seed(1)
+        val p2 = berlin2.seed(2)
+
+        val val1 = p1.queryArc(0.1, 0.2)[0].data.value?.asDouble
+        val val2 = p2.queryArc(0.1, 0.2)[0].data.value?.asDouble
+
+        val1 shouldNotBe val2
+    }
+
+    "berlin2 oscillator: output range in DSL is -1.0 to 1.0" {
+        val p = berlin2.seed(66)
+        var min = 1.0
+        var max = -1.0
+
+        for (i in 0..1000) {
+            val t = i * 0.1
+            val events = p.queryArc(t, t + EPSILON)
+            if (events.isNotEmpty()) {
+                val v = events[0].data.value?.asDouble ?: 0.0
+                // Should be strictly within -1..1 (bipolar)
+                v.shouldBeBetween(-1.0, 1.0, 0.0001)
+
+                if (v < min) min = v
+                if (v > max) max = v
+            }
+        }
+
+        // Ensure it covers a good part of the range
+        min.shouldBeBetween(-1.0, -0.3, 0.0)
+        max.shouldBeBetween(0.3, 1.0, 0.0)
     }
 })

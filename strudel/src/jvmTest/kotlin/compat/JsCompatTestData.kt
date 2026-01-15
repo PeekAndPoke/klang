@@ -66,7 +66,7 @@ object JsCompatTestData {
         Example("Hush", """note("c").hush()"""),
         Example("Gap", """gap(5)"""),
 
-        // Euclidean Patterns
+        // Euclidean Patterns from mini notation
         *(1..8).flatMap { pulses ->
             (pulses..8).map { steps ->
                 Example(
@@ -77,7 +77,7 @@ object JsCompatTestData {
             }
         }.let { it.shuffled().take(it.size / 10) }.toTypedArray(),
 
-        // Euclidean Patterns with Rotation
+        // Euclidean Patterns with Rotation mini notation
         *(1..8).flatMap { pulses ->
             (pulses..8).flatMap { steps ->
                 (-8..8).map { rotation ->
@@ -88,6 +88,37 @@ object JsCompatTestData {
                 }
             }
         }.let { it.shuffled().take(it.size / 10) }.toTypedArray(),
+
+        // Euclidean Functions
+        Example("Euclid Function #1", """euclid(3, 8, note("bd"))"""),
+        Example("Euclid Function #2", """note("bd").euclid(3, 8)"""),
+        // does not work in js-impl: TypeError: pattern.queryArc is not a function
+        Example(SKIP, "Euclid Function #3", """euclid(3, 8)"""),
+
+        Example("EuclidRot Function #1", """euclidRot(3, 8, 1, note("bd"))"""),
+        Example("EuclidRot Function #2", """note("bd").euclidRot(3, 8, 1)"""),
+
+        // Fails to run in js: Invalid array length
+        // Manually checked: seems OK
+        Example(SKIP, "Bjork Function #1", """bjork([3, 8], sound("bd"))"""),
+        // Fails to run in js: .bjork() is not a function
+        // Manually checked: seems OK
+        Example(SKIP, "Bjork Function #2", """sound("bd").bjork([3, 8])"""),
+        // Fails to run in js: .bjork() is not a function
+        // Manually checked: seems OK
+        Example(SKIP, "Bjork Function #3", """sound("bd").bjork([3, 8, 1])"""),
+
+        // Does not compile in js: euclidLegato is not a function
+        // Manually checked: seems OK
+        Example(SKIP, "EuclidLegato Function #1", """euclidLegato(3, 8, note("bd"))"""),
+        Example("EuclidLegato Function #2", """note("bd").euclidLegato(3, 8)"""),
+
+        // Does not compile in js: euclidLegatoRot is not a function
+        // Manually checked: seems OK
+        Example(SKIP, "EuclidLegatoRot Function #1", """euclidLegatoRot(3, 8, 1, note("bd"))"""),
+        Example("EuclidLegatoRot Function #2", """note("bd").euclidLegatoRot(3, 8, 1)"""),
+        Example("EuclidLegatoRot Function #3", """note("bd").euclidLegatoRot(3, 8, 2)"""),
+        Example("EuclidLegatoRot Function #4", """note("bd").euclidLegatoRot(3, 8, 9)"""),
 
         // Timing & Tempo
         Example(SKIP, "Slow", """note("c e g").slow(2)"""), // Our implementation is better
