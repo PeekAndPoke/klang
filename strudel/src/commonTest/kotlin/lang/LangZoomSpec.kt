@@ -1,0 +1,57 @@
+package io.peekandpoke.klang.strudel.lang
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+
+class LangZoomSpec : StringSpec({
+
+    "zoom() selects a portion of the pattern" {
+        // "0 1 2 3" -> 0 at 0.0-0.25, 1 at 0.25-0.5, 2 at 0.5-0.75, 3 at 0.75-1.0
+        // zoom(0.5, 1.0) selects "2 3" (the second half) and stretches it to fill the cycle 0.0-1.0
+        val p = n("0 1 2 3").zoom(0.5, 1.0)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+
+        // First event should be "2", stretched to fill 0.0-0.5
+        with(events[0]) {
+            data.soundIndex shouldBe 2
+            begin.toDouble() shouldBe 0.0
+            end.toDouble() shouldBe 0.5
+        }
+
+        // Second event should be "3", stretched to fill 0.5-1.0
+        with(events[1]) {
+            data.soundIndex shouldBe 3
+            begin.toDouble() shouldBe 0.5
+            end.toDouble() shouldBe 1.0
+        }
+    }
+
+    "zoom() works with string extension" {
+        val p = "0 1 2 3".zoom(0.0, 0.5)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 0
+        events[1].data.value?.asInt shouldBe 1
+    }
+
+    "zoom() returns silence if start >= end" {
+        val p = n("0 1").zoom(0.5, 0.5)
+        p.queryArc(0.0, 1.0).size shouldBe 0
+    }
+
+    "zoom() works with smaller slices" {
+        // Select 25% of the pattern (the "1") and stretch it to fill 100%
+        val p = n("0 1 2 3").zoom(0.25, 0.5)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0]) {
+            data.soundIndex shouldBe 1
+            begin.toDouble() shouldBe 0.0
+            end.toDouble() shouldBe 1.0
+        }
+    }
+})

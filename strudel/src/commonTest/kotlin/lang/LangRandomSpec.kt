@@ -246,8 +246,8 @@ class LangRandomSpec : StringSpec({
         }
     }
 
-    "irand oscillator" {
-        withClue("irand(4) produces integers in [0, 3] and changes over time") {
+    "randL oscillator" {
+        withClue("randL(4) produces integers in [0, 3] and changes over time") {
             val n = 4
             // Without explicit seed, it should be random but deterministic per run if context is not seeded?
             // Wait, StrudelPattern.queryArc uses empty context which has no seed.
@@ -256,11 +256,11 @@ class LangRandomSpec : StringSpec({
             // fun getRandom(): Random = getOrNull(randomSeed)?.let { Random(it) } ?: Random.Default
             // If randomSeed is not set, it uses Random.Default which IS random.
 
-            val pattern = irand(n)
+            val pattern = randL(n)
             val events1 = pattern.queryArc(0.0, 1.0)
             val events2 = pattern.queryArc(1.0, 2.0)
 
-            // Check structure: irand(n) creates a sequence of n events per cycle
+            // Check structure: randL(n) creates a sequence of n events per cycle
             events1.size shouldBe n
             events2.size shouldBe n
 
@@ -268,19 +268,6 @@ class LangRandomSpec : StringSpec({
             events1.forEach {
                 val v = it.data.value?.asDouble!!
                 (v >= 0 && v < 8) shouldBe true // The impl uses random.nextInt(0, 8), is that correct for n argument?
-                // Ah, the revised implementation has hardcoded `random.nextInt(0, 8)`.
-                // The instruction said "keep the code as is!".
-                // But the doc says "between 0 and n-1".
-                // The user provided code uses `random.nextInt(0, 8)` regardless of `n`.
-                // Wait, `n` is used for `(0..<n).map`. So it creates `n` events per cycle.
-                // But the value is `random.nextInt(0, 8)`.
-                // So `irand(4)` creates 4 events, each with value 0..7.
-                // The doc example says `n(irand(8))` implying 8 events? No, `n` usually takes a pattern of values.
-                // If `irand` returns a pattern, `n(pattern)` sets note values.
-                // If `irand(8)` creates 8 events per cycle with values 0..7, then `n(irand(8))` sets 8 notes per cycle.
-                // But `irand(4)` in the test description says "This pattern produces an ever changing sequence".
-                // Let's assume the hardcoded 8 is intentional for now or a mistake in the snippet I was told to keep.
-                // I will test against the actual behavior of the provided code (0..7 values).
             }
 
             // Check that it changes (highly likely)
@@ -289,9 +276,9 @@ class LangRandomSpec : StringSpec({
             values1 shouldNotBe values2
         }
 
-        withClue("irand(4).seed(1) produces consistent results") {
+        withClue("randL(4).seed(1) produces consistent results") {
             val n = 4
-            val pattern = irand(n).seed(1)
+            val pattern = randL(n).seed(1)
 
             val events1 = pattern.queryArc(0.0, 1.0)
             val events2 = pattern.queryArc(1.0, 2.0) // Next cycle
@@ -311,18 +298,120 @@ class LangRandomSpec : StringSpec({
             values1 shouldBe values2
         }
 
-        withClue("irand with different seeds produces different results") {
+        withClue("randL with different seeds produces different results") {
             val n = 4
-            val p1 = irand(n).seed(123)
+            val p1 = randL(n).seed(123)
             val events1 = p1.queryArc(0.0, 1.0)
 
-            val p2 = irand(n).seed(456)
+            val p2 = randL(n).seed(456)
             val events2 = p2.queryArc(0.0, 1.0)
 
             val values1 = events1.map { it.data.value?.asDouble }
             val values2 = events2.map { it.data.value?.asDouble }
 
             values1 shouldNotBe values2
+        }
+    }
+
+    "randrun oscillator" {
+        withClue("randrun(4) produces a permutation of 0..3 per cycle") {
+            val n = 4
+            val pattern = randrun(n)
+            val events = pattern.queryArc(0.0, 1.0)
+
+            events.size shouldBe n
+            val values = events.mapNotNull { it.data.value?.asInt }.sorted()
+            values shouldBe (0 until n).toList()
+        }
+
+        withClue("randrun(4) changes permutation every cycle") {
+            val n = 4
+            val pattern = randrun(n)
+
+            // Query cycle 0 and cycle 1
+            val events1 = pattern.queryArc(0.0, 1.0)
+            val events2 = pattern.queryArc(1.0, 2.0)
+
+            val values1 = events1.mapNotNull { it.data.value?.asInt }
+            val values2 = events2.mapNotNull { it.data.value?.asInt }
+
+            // The sorted values should be the same (0..3)
+            values1.sorted() shouldBe (0 until n).toList()
+            values2.sorted() shouldBe (0 until n).toList()
+
+            // The permutations should (likely) be different
+            if (values1 == values2) {
+                // Try another cycle just in case
+                val events3 = pattern.queryArc(2.0, 3.0)
+                val values3 = events3.mapNotNull { it.data.value?.asInt }
+                values1 shouldNotBe values3
+            } else {
+                values1 shouldNotBe values2
+            }
+        }
+
+        withClue("randrun(4).seed(123) produces consistent results for the same cycle") {
+            val n = 4
+            val pattern = randrun(n).seed(123)
+
+            val eventsA = pattern.queryArc(0.0, 1.0)
+            val eventsB = pattern.queryArc(0.0, 1.0)
+
+            val valuesA = eventsA.mapNotNull { it.data.value?.asInt }
+            val valuesB = eventsB.mapNotNull { it.data.value?.asInt }
+
+            valuesA shouldBe valuesB
+        }
+    }
+
+    "irand oscillator" {
+        withClue("irand(4) produces integers in [0, 4) and changes over time") {
+            val n = 4
+            val pattern = irand(n)
+
+            // Sample at different times
+            val events = (0..20).map { i ->
+                val t = i / 20.0
+                pattern.queryArc(t, t + EPSILON).firstOrNull()
+            }.filterNotNull()
+
+            events.forEach {
+                val v = it.data.value?.asDouble!!
+                // Check it's an integer
+                (v % 1.0) shouldBe 0.0
+                // Check range. New impl is 0..n-1 (since nextInt(0, n) is exclusive of n)
+                (v >= 0 && v < n) shouldBe true
+            }
+
+            // Check that we got different values
+            val values = events.map { it.data.value?.asDouble }.distinct()
+            (values.size > 1) shouldBe true
+        }
+
+        withClue("irand(4).seed(1) produces consistent results") {
+            val n = 4
+            val pattern = irand(n).seed(1)
+
+            val t = 0.5
+            val v1 = pattern.queryArc(t, t + EPSILON)[0].data.value?.asDouble
+            val v2 = pattern.queryArc(t, t + EPSILON)[0].data.value?.asDouble
+
+            v1 shouldBe v2
+        }
+
+        withClue("irand(4) with different seeds produces different results") {
+            val n = 100
+            val p1 = irand(n).seed(100)
+            val p2 = irand(n).seed(200)
+
+            val diff = (0..10).any { i ->
+                val t = i / 10.0
+                val e1 = p1.queryArc(t, t + EPSILON).firstOrNull()
+                val e2 = p2.queryArc(t, t + EPSILON).firstOrNull()
+                e1?.data?.value?.asDouble != e2?.data?.value?.asDouble
+            }
+
+            diff shouldBe true
         }
     }
 })

@@ -159,6 +159,7 @@ Strudel.
 
 - `fast(factor)` - Speed up patterns (works as pattern method, string extension, and standalone function)
 - `slow(factor)` - Slow down patterns (works as pattern method, string extension, and standalone function)
+- `zoom(start, end)` - Plays portion of pattern stretched to cycle (pattern method, string extension, typed function)
 - TimeModifierPattern implementation with cycle scaling
 
 ### Arithmetic Operations ✅
@@ -201,6 +202,8 @@ All arithmetic operations work on pattern values and can be applied as:
 - `mask(pattern)` - Conditionally applies pattern elements (boolean masking)
 - `maskAll(pattern)` - Boolean masking for all events
 - `superimpose(function)` - Layers modified pattern on top of original
+- `bite(n, indices)` - Slices pattern into n parts and plays according to index pattern (pattern method, string
+  extension)
 
 ### Probabilistic Patterns ✅
 
@@ -306,7 +309,9 @@ All arithmetic operations work on pattern values and can be applied as:
 - `time` - Current time (in cycles) as continuous pattern
 - `rand` - Random signal (unipolar, 0 to 1)
 - `rand2` - Random signal (bipolar, -1 to 1)
-- `irand(n)` - Random integers from 0 to n-1 (returns sequence pattern with n values)
+- `irand(n)` - Random integers from 0 to n-1 (continuous pattern)
+- `randL(n)` - Creates list of random numbers of length n (sequence pattern)
+- `randrun(n)` - Creates shuffled sequence 0..n-1 (changes per cycle)
 - `brand` - Binary random (0 or 1, 50:50 probability)
 - `brandBy(probability)` - Binary random with custom probability
 
@@ -339,6 +344,8 @@ All arithmetic operations work on pattern values and can be applied as:
 ### Signal Processing ✅
 
 - `range(min, max)` - Rescale continuous pattern values (transformation order independent via QueryContext)
+- `segment(n)` / `seg(n)` - Sample continuous signal n times per cycle (pattern method, string extension, typed
+  function)
 
 ## Context & Routing
 
@@ -354,7 +361,9 @@ All arithmetic operations work on pattern values and can be applied as:
 
 ## Random & Seeding ✅
 
-- `seed(n)` - Set random seed for deterministic pattern generation (works as pattern method and string extension)
+- `seed(n)` / `withSeed(n)` - Set random seed for deterministic pattern generation (pattern method, string extension)
+- `shuffle(n)` - Slices pattern into n parts, plays in random order (pattern method, string extension)
+- `scramble(n)` - Slices pattern into n parts, plays at random with repetition (pattern method, string extension)
 
 ## Pattern Modifiers Architecture
 
@@ -388,11 +397,12 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 131+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 139+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 16 core pattern types (including EuclideanPattern, ChoicePattern, SometimesPattern, ReversePattern, StructPattern,
   ContextModifierPattern, TimeShiftPatternWithControl)
-- 25 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
-  isaw2, tri, tri2, itri, itri2, square, square2, perlin, berlin, rand, rand2, irand, brand, brandBy)
+- 28 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
+  isaw2, tri, tri2, itri, itri2, square, square2, perlin, berlin, rand, rand2, irand, randL, randrun, brand, brandBy,
+  segment, seg)
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
@@ -546,6 +556,20 @@ Comprehensive voice data structure supporting:
     - `bypass(condition)` - Conditionally silence pattern based on condition (supports static values and patterns)
     - All three work as pattern method, string extension, and standalone function
     - `bypass()` uses `not()` and `StructPattern` for implementation
+- ✅ **Pattern Slicing & Rearrangement**:
+    - `bite(n, indices)` - Slices pattern into n parts and plays according to index pattern
+    - `zoom(start, end)` - Plays portion of pattern stretched to full cycle (implemented as
+      `.early(start).fast(end - start)`)
+    - `segment(n)` / `seg(n)` - Samples continuous pattern n times per cycle (implemented as
+      `struct(seq("true").fast(n))`)
+    - All work as pattern method and string extension
+- ✅ **Random Pattern Functions**:
+    - `irand(n)` - Changed from sequence to continuous pattern, returns random integers 0 to n-1
+    - `randL(n)` - New function with old `irand` behavior, creates sequence of n random values
+    - `randrun(n)` - Creates shuffled sequence 0..n-1, permutation changes each cycle
+    - `shuffle(n)` - Slices pattern into n parts, plays in random order (uses `bite(n, randrun(n))`)
+    - `scramble(n)` - Slices pattern into n parts, plays at random with repetition (uses `bite(n, irand(n).segment(n))`)
+    - `withSeed(n)` - Alias for `seed(n)` for random seeding
 - ✅ **Code Organization**:
     - Renamed `lang_choice.kt` to `lang_conditional.kt` for better categorization
     - Updated init function from `strudelLangChoiceInit` to `strudelLangConditionalInit`
@@ -554,6 +578,7 @@ Comprehensive voice data structure supporting:
   - Enhanced `DslPatternMethod` with overload: `invoke(p1: Any, block: (StrudelPattern) -> StrudelPattern)` - accepts
     any type, not just Number
   - Updated `defaultModifier` documentation to clarify it populates `VoiceData.value`
+  - Added Boolean support to `toListOfPatterns()` helper for boolean pattern values
 - ✅ **Comprehensive Testing** - Added multiple test files:
     - `LangSeedSpec.kt` with 7 tests covering seed functionality
     - `LangRandomSpec.kt` with tests for random signal generators
@@ -568,6 +593,12 @@ Comprehensive voice data structure supporting:
     - `LangFilterSpec.kt` with 4 tests covering filter functionality
     - `LangFilterWhenSpec.kt` with tests covering filterWhen functionality
     - `LangBypassSpec.kt` with 7 tests covering bypass functionality with static and pattern-based conditions
+    - `LangBiteSpec.kt` with 5 tests covering bite functionality including wrapping and negative indices
+    - `LangZoomSpec.kt` with 4 tests covering zoom functionality
+    - `LangSegmentSpec.kt` with 5 tests covering segment/seg functionality
+    - `LangShuffleSpec.kt` with tests for shuffle functionality
+    - `LangScrambleSpec.kt` with tests for scramble functionality
+    - Enhanced `LangRandomSpec.kt` with tests for irand, randL, and randrun
     - `LangArithmeticAddonsSpec.kt` with tests for negateValue and oneMinusValue
     - `DegradePatternWithControlSpec.kt` for pattern-controlled degradation
     - `TimeShiftPatternWithControlSpec.kt` for pattern-controlled time shifting

@@ -8,6 +8,7 @@ import io.peekandpoke.klang.strudel.lang.addons.oneMinusValue
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
+import kotlin.math.floor
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -15,9 +16,9 @@ import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinter
  */
 var strudelLangRandomInit = false
 
-// -- Random -----------------------------------------------------------------------------------------------------------
+// -- Helpers ----------------------------------------------------------------------------------------------------------
 
-private fun applyRandom(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
+private fun applyRandomSeed(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
     val seed = args.getOrNull(0)?.asLongOrNull()
 
     return ContextModifierPattern(source = pattern) {
@@ -29,11 +30,25 @@ private fun applyRandom(pattern: StrudelPattern, args: List<Any?>): ContextModif
     }
 }
 
-@StrudelDsl
-val StrudelPattern.seed by dslPatternExtension { pattern, args -> applyRandom(pattern, args) }
+// -- seed() -----------------------------------------------------------------------------------------------------------
 
+/** Sets the random seed */
 @StrudelDsl
-val String.seed by dslStringExtension { pattern, args -> applyRandom(pattern, args) }
+val StrudelPattern.seed by dslPatternExtension { pattern, args -> applyRandomSeed(pattern, args) }
+
+/** Sets the random seed */
+@StrudelDsl
+val StrudelPattern.withSeed by dslPatternExtension { pattern, args -> applyRandomSeed(pattern, args) }
+
+/** Sets the random seed */
+@StrudelDsl
+val String.seed by dslStringExtension { pattern, args -> applyRandomSeed(pattern, args) }
+
+/** Sets the random seed */
+@StrudelDsl
+val String.withSeed by dslStringExtension { pattern, args -> applyRandomSeed(pattern, args) }
+
+// -- rand() / rand2() -------------------------------------------------------------------------------------------------
 
 /** Continuous pattern that produces a random value between 0 and 1 */
 @StrudelDsl
@@ -48,6 +63,8 @@ val rand by dslObject {
 /** Continuous pattern that produces a random value between -1 and 1 */
 @StrudelDsl
 val rand2 by dslObject { rand.range(-1.0, 1.0) }
+
+// -- brand() / brandBy() ----------------------------------------------------------------------------------------------
 
 /**
  * A continuous pattern of 0 or 1 (binary random), with a probability for the value being 1
@@ -72,6 +89,8 @@ val brandBy by dslFunction { args ->
 @StrudelDsl
 val brand by dslObject { brandBy(0.5) }
 
+// -- irand() ----------------------------------------------------------------------------------------------------------
+
 /**
  * A continuous pattern of random integers, between 0 and n-1.
  *
@@ -85,24 +104,18 @@ val brand by dslObject { brandBy(0.5) }
 val irand by dslFunction { args ->
     val n = args.getOrNull(0)?.asIntOrNull() ?: 0
 
-    if (n < 1) {
+    if (n < 0) {
         silence
+    } else if (n == 1) {
+        signal { 0.0 }
     } else {
-        val atom = AtomicPattern.pure
+        ContinuousPattern { from, _, ctx ->
+            val fraction = from - floor(from)
+            val seed = (fraction * n * 10).toInt()
+            val random = ctx.getSeededRandom(seed, "irand")
 
-        val events = (0..<n).map {
-            atom.reinterpret { evt, ctx ->
-
-                val fraction = evt.begin - evt.begin.floor()
-                val seed = (fraction * n * 10).toInt()
-
-                val random = ctx.getSeededRandom(seed, it, "irand")
-                val value = random.nextInt(0, 8).asVoiceValue()
-                evt.copy(data = evt.data.copy(value = value))
-            }
+            random.nextInt(0, n).toDouble()
         }
-
-        SequencePattern(events)
     }
 }
 
@@ -386,11 +399,7 @@ val String.always by dslStringExtension { pattern, args -> applyAlways(note(patt
 // For now, we can alias it to sometimesBy but it's not semantically correct.
 // Or we can implement it using ContextModifierPattern that sets a seeded random based on cycle number?
 
-private fun applySomeCyclesBy(
-    pattern: StrudelPattern,
-    args: List<Any?>,
-    defaultProb: Double? = null,
-): StrudelPattern {
+private fun applySomeCyclesBy(pattern: StrudelPattern, args: List<Any?>, defaultProb: Double? = null): StrudelPattern {
     // Delegate to applySometimesBy with seedByCycle = true
     return applySometimesBy(
         pattern = pattern,
@@ -421,8 +430,134 @@ val StrudelPattern.someCycles by dslPatternExtension { pattern, args -> applySom
 @StrudelDsl
 val String.someCycles by dslStringExtension { pattern, args -> applySomeCyclesBy(pattern, args, 0.5) }
 
-// TODO: see signals.mjs: randL, randrun, shuffle, scramble,
+// -- randL() ----------------------------------------------------------------------------------------------------------
 
-// TODO: see signals.mjs: run, binary, binaryN, binaryL, binaryNL (put into lang_structural.kt),
+/**
+ * Creates a list of random numbers of the given length.
+ *
+ * @name randL
+ * @param {number} n Number of random numbers to sample
+ * @example
+ * s("saw").seg(16).n(irand(12)).scale("F1:minor")
+ *   .partials(randL(8))
+ */
+@StrudelDsl
+val randL by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+
+    if (n < 1) {
+        silence
+    } else {
+        val atom = AtomicPattern.pure
+
+        val events = (0..<n).map {
+            atom.reinterpret { evt, ctx ->
+
+                val fraction = evt.begin - evt.begin.floor()
+                val seed = (fraction * n * 10).toInt()
+
+                val random = ctx.getSeededRandom(seed, it, "randL")
+                val value = random.nextInt(0, 8).asVoiceValue()
+                evt.copy(data = evt.data.copy(value = value))
+            }
+        }
+
+        SequencePattern(events)
+    }
+}
+
+// -- randrun() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Creates a pattern of random integers of length n, which is a shuffled version of 0..n-1.
+ * The shuffle changes every cycle.
+ *
+ * @name randrun
+ * @param {number} n Length of the run / max number (exclusive)
+ */
+@StrudelDsl
+val randrun by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+
+    if (n < 1) {
+        silence
+    } else {
+        val atom = AtomicPattern.pure
+
+        val events = (0..<n).map { index ->
+            atom.reinterpret { evt, ctx ->
+                // Make sure we have a seeded random and not the default one
+                val ctx = ctx.update {
+                    setIfAbsent(QueryContext.randomSeed, 0)
+                }
+
+                val cycle = evt.begin.floor()
+                val random = ctx.getSeededRandom(cycle, "randrun")
+
+                val permutation = (0 until n).toMutableList()
+                permutation.shuffle(random)
+
+                val value = permutation[index].asVoiceValue()
+                evt.copy(data = evt.data.copy(value = value))
+            }
+        }
+
+        SequencePattern(events)
+    }
+}
+
+// -- shuffle() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Slices a pattern into the given number of parts, then plays those parts in random order.
+ * Each part will be played exactly once per cycle.
+ *
+ * @example
+ * note("c d e f").sound("piano").shuffle(4)
+ * @example
+ * seq("c d e f".shuffle(4), "g").note().sound("piano")
+ *
+ * @param n number of slices
+ */
+@StrudelDsl
+val StrudelPattern.shuffle by dslPatternExtension { p, args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
+    val indices = randrun(n)
+    p.bite(n, indices)
+}
+
+@StrudelDsl
+val String.shuffle by dslStringExtension { p, args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
+    val indices = randrun(n)
+    p.bite(n, indices)
+}
+
+// -- scramble() -------------------------------------------------------------------------------------------------------
+
+/**
+ * Slices a pattern into the given number of parts, then plays those parts at random.
+ * Similar to `shuffle`, but parts might be played more than once, or not at all, per cycle.
+ *
+ * @example
+ * note("c d e f").sound("piano").scramble(4)
+ * @example
+ * seq("c d e f".scramble(4), "g").note().sound("piano")
+ *
+ * @param n number of slices
+ */
+@StrudelDsl
+val StrudelPattern.scramble by dslPatternExtension { p, args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
+    val indices = irand(n).segment(n)
+    p.bite(n, indices)
+}
+
+@StrudelDsl
+val String.scramble by dslStringExtension { p, args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
+    val indices = irand(n).segment(n)
+    p.bite(n, indices)
+}
 
 // TODO: see signals.mjs: chooseInWith, choose, ...

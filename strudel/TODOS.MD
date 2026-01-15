@@ -76,7 +76,8 @@ and category.
 - [ ] **`compressSpan(span)`** - Compresses pattern into span
 - [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
 - [ ] **`focusSpan(span)`** - Focus with span parameter
-- [ ] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle
+- [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle (pattern method, string extension, typed
+  function)
 - [ ] **`zoomArc(arc)`** - Zoom with arc parameter
 - [X] **`gap(steps)`** - Create gap with n steps
 - [ ] **`fastGap(factor)`** - Speeds up with gaps between
@@ -229,8 +230,10 @@ and category.
 - [x] **`rand2`** - Random signal (bipolar, -1 to 1)
 - [x] **`brand`** - Binary random (0 or 1, 50:50 probability)
 - [x] **`brandBy(probability)`** - Binary random with custom probability
-- [x] **`irand(n)`** - Random integers from 0 to n-1 (returns sequence pattern with n values)
-- [ ] **`.segment(rate)`** - Sample continuous signal at rate (alias: `seg`)
+- [x] **`irand(n)`** - Random integers from 0 to n-1 (continuous pattern)
+- [x] **`randL(n)`** - Creates list of random numbers of length n (sequence pattern)
+- [x] **`.segment(rate)`** - Sample continuous signal at rate (pattern method, string extension, typed function, alias:
+  `seg`)
 - [ ] **`.slow(factor)`** - Slow down continuous patterns
 - [ ] **`toBipolar()`** - Convert 0-1 range to -1-1
 - [ ] **`fromBipolar()`** - Convert -1-1 range to 0-1
@@ -240,7 +243,11 @@ and category.
 
 ### Random & Seeding ⭐⭐⭐
 
-- [x] **`seed(n)`** - Set random seed for deterministic pattern generation (works as pattern method and string
+- [x] **`seed(n)`** / **`withSeed(n)`** - Set random seed for deterministic pattern generation (pattern method, string
+  extension)
+- [x] **`randrun(n)`** - Creates shuffled sequence 0..n-1 (changes per cycle)
+- [x] **`shuffle(n)`** - Slices pattern into n parts, plays in random order (pattern method, string extension)
+- [x] **`scramble(n)`** - Slices pattern into n parts, plays at random with repetition (pattern method, string
   extension)
 
 ---
@@ -310,7 +317,7 @@ and category.
 - [ ] **`grow(factor)`** - Grow pattern by factor
 - [ ] **`tour(...patterns)`** - Tour through patterns (alias: `s_tour`)
 - [ ] **`zip(...patterns)`** - Zip patterns together (alias: `s_zip`)
-- [ ] **`bite(n, index)`** - Extract nth slice from pattern
+- [x] **`bite(n, indices)`** - Slices pattern and plays according to index pattern (pattern method, string extension)
 - [ ] **`repeatCycles(n)`** - Repeat pattern for n cycles
 
 ### Sample Functions
@@ -497,7 +504,7 @@ and category.
 
 - **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean)
 - **Pattern Creation**: ~7 missing (6 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`)
-- **Time Modification**: ~19 missing (4 completed: `fast`, `slow`, `early`, `late`, `gap`)
+- **Time Modification**: ~18 missing (5 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
 - **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
@@ -506,11 +513,11 @@ and category.
 - **Comparison & Logic**: 2 missing (8 completed)
 - **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
 - **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ~3 missing (25 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
+- **Continuous Signals**: ~1 missing (28 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
   `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `berlin`, `range`,
-  `rand`, `rand2`, `irand`, `brand`, `brandBy`)
+  `rand`, `rand2`, `irand`, `randL`, `brand`, `brandBy`, `segment`, `seg`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
-- **Step-Based Operations**: ~14 missing (0 completed)
+- **Step-Based Operations**: ~13 missing (1 completed: `bite`)
 - **Conditional & Probabilistic**: ✅ 0 missing (20 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
   `almostAlways`, `almostNever`, `always`, `never`, `someCyclesBy`, `someCycles`, `degradeBy`, `degrade`, `undegradeBy`,
   `undegrade`, `firstOf`, `every`, `lastOf`, `filter`, `filterWhen`, `bypass`)
@@ -520,9 +527,9 @@ and category.
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~11 missing (2 completed: `hush`, `pure`; 3 partial)
 
-### Total Estimated: ~119 features remaining
+### Total Estimated: ~114 features remaining
 
-### Completed So Far: ~131 features! 🎉
+### Completed So Far: ~139 features! 🎉
 
 **Major achievements:**
 

@@ -21,9 +21,10 @@ object TestKotlinPatterns {
                 >
                 """.trimIndent()
         ).sound("tri")
+            .filterWhen { it >= 32 }
 //            .struct("x(3,8,1)")
-            .orbit(0).gain(0.25)
-            .pan(sine2.slow(48).range(-0.6, 0.6).flipSign())
+            .orbit(0).gain(0.225)
+            .pan(sine2.slow(48).range(-0.3, 0.3).flipSign())
             .delay(0.25).delaytime(0.5).delayfeedback(0.5)
             .room(0.05).rsize(cosine.range(5.0, 0.5).early(1.5).slow(16))
             .clip(0.3)
@@ -40,16 +41,17 @@ object TestKotlinPatterns {
                     [a3 a2 a1 a1 a1 a2 [a2 a3] [a4 a5]]
                     [[d2 d3]*4]
                     [[c2 c3]*4]
-                    [[b1 b2]*2 [e3 e2]*2]
+                    [[b1 b1 b2 b2] [e2 e2 e3 e3]]
                     [a3 a2 a1 a0 a1 [c1 e2] [a5 a4] [a3 a2]]
                 >
             """.trimIndent()
         ).sound("supersaw")
+            .filterWhen { it >= 16 }
             .spread(0.5).unison(8)
-            .detune(sine.range(0.01, 0.6).early(1.5).slow(16))
+            .detune(sine.range(0.01, 0.5).early(1.5).slow(16))
             .orbit(2).gain(0.4)
             .pan(sine2.slow(48).range(-0.6, 0.6))
-//            .adsr("0.05:0.2:0.0:1.0")
+//            .adsr("0.025:0.8:0.5:0.0")
             .room(0.05).rsize(1.0)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
             .struct("x*8")
@@ -59,7 +61,7 @@ object TestKotlinPatterns {
         sound(
             """
             <
-            [[bd:2, cr] hh sd hh] 
+            [[bd:2, cr, cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd hh]
@@ -67,24 +69,24 @@ object TestKotlinPatterns {
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh [mt mt, sd] [ht ht, oh]]
-            [[bd:2, cr] hh [sd, cr] hh] 
+            [[bd:2, cr] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd oh]
             [[bd, cr] oh sd oh] 
-            [bd hh sd hh]
-            [bd hh sd oh] 
-            [bd hh [sd sd] [[sd sd], oh]]
-            [[bd:2, cr] hh sd [sd hh]] 
             [bd hh sd oh]
             [bd hh sd hh] 
+            [bd hh [sd sd] [[sd sd], oh]]
+            [[bd:2, cr, cr] hh sd [sd hh]] 
             [bd hh sd oh]
+            [bd hh sd hh] 
+            [bd hh sd hh]
             [[bd, cr] hh sd [hh sd]] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh [lt lt, sd sd] ~]
             [[bd:2, cr] hh [sd, cr] [sd, hh]] 
-            [bd hh [sd:4 cr] oh]
+            [bd hh [sd, cr] oh]
             [bd hh sd hh] 
             [bd hh sd [bd, oh]]
             [[bd, cr] oh sd oh] 

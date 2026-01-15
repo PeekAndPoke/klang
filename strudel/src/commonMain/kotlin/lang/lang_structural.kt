@@ -556,6 +556,197 @@ val StrudelPattern.apply by dslPatternExtension { source, args ->
 
 // TODO: string extension
 
+// -- zoom() -----------------------------------------------------------------------------------------------------------
+
+private fun applyZoom(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    val start = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
+    val end = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
+    val duration = end - start
+
+    if (duration <= 0.0) return silence
+
+    return source.early(start).fast(duration)
+}
+
+/**
+ * Plays a portion of a pattern, specified by the beginning and end of a time span.
+ * The new resulting pattern is played over the time period of the original pattern.
+ *
+ * @example
+ * s("bd*2 hh*3 [sd bd]*2 perc").zoom(0.25, 0.75)
+ * // s("hh*3 [sd bd]*2") // equivalent
+ *
+ * @param start start of the zoom window (0.0 to 1.0)
+ * @param end end of the zoom window (0.0 to 1.0)
+ */
+@StrudelDsl
+val StrudelPattern.zoom by dslPatternExtension { p, args -> applyZoom(p, args) }
+
+/**
+ * Plays a portion of a pattern, specified by the beginning and end of a time span.
+ */
+fun StrudelPattern.zoom(start: Double, end: Double): StrudelPattern = applyZoom(this, listOf(start, end))
+
+@StrudelDsl
+val String.zoom by dslStringExtension { p, args -> applyZoom(p, args) }
+
+@StrudelDsl
+fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, end)
+
+// -- bite() -----------------------------------------------------------------------------------------------------------
+
+private fun applyBite(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
+    val indicesArg = args.getOrNull(1)
+
+    val indices = when (indicesArg) {
+        is StrudelPattern -> indicesArg
+        is String -> parseMiniNotation(input = indicesArg) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> return silence
+    }
+
+    return object : StrudelPattern {
+        override val weight: Double get() = source.weight
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: QueryContext,
+        ): List<StrudelPatternEvent> {
+            val indexEvents = indices.queryArcContextual(from, to, ctx)
+
+            return indexEvents.flatMap { ev ->
+                val idx = ev.data.value?.asInt ?: 0
+
+                // Handle wrapping like JS .mod(1)
+                val normalizedIdx = idx.mod(n)
+                val safeIdx = if (normalizedIdx < 0) normalizedIdx + n else normalizedIdx
+
+                val start = safeIdx.toDouble() / n
+                val end = (safeIdx + 1.0) / n
+
+                val slice = source.zoom(start, end)
+
+                val dur = ev.dur.toDouble()
+                if (dur <= 0.0) return@flatMap emptyList()
+
+                val fitted = slice.fast(1.0 / dur).late(ev.begin.toDouble())
+
+                fitted.queryArcContextual(ev.begin, ev.end, ctx)
+            }
+        }
+    }
+}
+
+/**
+ * Splits a pattern into the given number of slices, and plays them according to a pattern of slice numbers.
+ *
+ * `bite(n, indices)` is a function for slicing and rearranging a pattern.
+ *
+ * Here is the conceptual breakdown:
+ *
+ * **1. Slice the Source**:
+ *
+ * It takes the **source pattern** (the one you call `.bite()` on) and conceptually cuts each cycle into
+ * `n` **equal slices**.
+ * - If `n` is 4, slice 0 is `0.0 - 0.25`, slice 1 is `0.25 - 0.5`, etc.
+ *
+ * **2. Read the Indices**:
+ *
+ * It looks at the `indices` **pattern**. This pattern tells `bite` which slice to play at what time.
+ *
+ * **3. Playback**:
+ *
+ * For each event in the `indices` pattern:
+ * - It takes the value (an integer) as the **slice index**.
+ * - It grabs that specific slice from the **source pattern**.
+ * - It plays that slice **fitting exactly into the duration** of the index event.
+ *
+ * **Example:**
+ * `n("0 1 2 3").bite(4, "0 1 2 3")`
+ * - **Source**: `n("0 1 2 3")` has "0" at the first quarter, "1" at the second, etc.
+ * - **Slices (n=4)**:
+ *     - Slice 0 contains "0"
+ *     - Slice 1 contains "1"
+ *     - Slice 2 contains "2"
+ *     - Slice 3 contains "3"
+ *
+ * - **Indices**: `"0 1 2 3"` creates 4 events, each 1/4 cycle long.
+ *     - Event 1 (0.0-0.25): Play Slice 0.
+ *     - Event 2 (0.25-0.5): Play Slice 1.
+ *     - ...
+ *
+ * - **Result**: The original pattern is reconstructed exactly.
+ *
+ * **Example 2 (Reordering):**
+ * `n("0 1 2 3").bite(4, "3 2 1 0")`
+ * - Event 1 (0.0-0.25): Play Slice 3 (which contains "3").
+ * - Event 2 (0.25-0.5): Play Slice 2 (which contains "2").
+ * - **Result**: "3 2 1 0" (The pattern is reversed).
+ *
+ * **Example 3 (Rhythmic variation):**
+ * `n("0 1 2 3").bite(4, "0*2 1")`
+ * - Event 1 (0.0-0.125): Play Slice 0 (compressed to fit 1/8th cycle).
+ * - Event 2 (0.125-0.25): Play Slice 0 (compressed to fit 1/8th cycle).
+ * - Event 3 (0.25-0.5): Play Slice 1 (fits 1/4 cycle).
+ * - **Result**: "0" played twice quickly, then "1".
+ *
+ * @param n number of slices
+ * @param indices pattern of slice indices
+ */
+@StrudelDsl
+val StrudelPattern.bite by dslPatternExtension { p, args -> applyBite(p, args) }
+
+@StrudelDsl
+val String.bite by dslStringExtension { p, args -> applyBite(p, args) }
+
+// -- segment() --------------------------------------------------------------------------------------------------------
+
+private fun applySegment(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 1
+    // segment(n) = struct(seq("true").fast(n))
+    val structPat = parseMiniNotation("true") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    return source.struct(structPat.fast(n))
+}
+
+/**
+ * Samples the pattern at a rate of n events per cycle. Useful for turning a continuous pattern into a discrete one.
+ *
+ * @example
+ * note(saw.range(40,52).segment(24))
+ *
+ * @name segment
+ * @synonyms seg
+ * @param {number} segments number of segments per cycle
+ */
+@StrudelDsl
+val StrudelPattern.segment by dslPatternExtension { p, args -> applySegment(p, args) }
+
+@StrudelDsl
+fun StrudelPattern.segment(n: Int) = this.segment(n as Any)
+
+@StrudelDsl
+val String.segment by dslStringExtension { p, args -> applySegment(p, args) }
+
+@StrudelDsl
+fun String.segment(n: Int) = this.segment(n as Any)
+
+/** Alias for [segment] */
+@StrudelDsl
+val StrudelPattern.seg by dslPatternExtension { p, args -> applySegment(p, args) } // Alias
+
+/** Alias for [segment] */
+@StrudelDsl
+fun StrudelPattern.seg(n: Int) = this.segment(n as Any)
+
+/** Alias for [segment] */
+@StrudelDsl
+val String.seg by dslStringExtension { p, args -> applySegment(p, args) }
+
+/** Alias for [segment] */
+@StrudelDsl
+fun String.seg(n: Int) = this.seg(n as Any)
+
 // -- run() ------------------------------------------------------------------------------------------------------------
 
 // TODO: run -> see signal.mjs
