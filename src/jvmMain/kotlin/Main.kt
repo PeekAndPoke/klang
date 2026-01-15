@@ -6,8 +6,6 @@ import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.lang.euclidLegatoRot
-import io.peekandpoke.klang.strudel.lang.sound
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.strudelPlayer
@@ -82,7 +80,7 @@ private suspend fun helloStrudel() {
         println(result)
 
 //        val pattern = TestKotlinPatterns.strangerThings
-//        val pattern = TestKotlinPatterns.tetris
+        val pattern = TestKotlinPatterns.tetris
 //        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
 
 //        val pattern = StrudelPattern.compile(
@@ -110,7 +108,7 @@ private suspend fun helloStrudel() {
 //            """.trimIndent()
 //        )  !!
 
-        val pattern = euclidLegatoRot(3, 8, 1, sound("bd"))
+//        val pattern = euclidLegatoRot(3, 8, 1, sound("bd"))
 
 //        val pattern = bjork(listOf(3, 8, 2), sound("bd"))
 

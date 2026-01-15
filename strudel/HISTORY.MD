@@ -33,6 +33,8 @@ Strudel.
 - **SequencePattern** - Sequential pattern execution (`seq()`)
 - **StackPattern** - Parallel pattern layering (`stack()`)
 - **EuclideanPattern** - Euclidean rhythm gating (e.g., `bd(3,8)`, or with rotation `bd(3,8,1)`)
+- **EuclideanMorphPattern** - Morphing Euclidean rhythm that interpolates between standard Euclidean and evenly
+  distributed pulses based on groove parameter
 - **ChoicePattern** - Random selection between pattern alternatives (e.g., `"bd|hh"`)
 - **DegradePattern** - Probabilistic event removal (e.g., `"bd?"` or `"bd?0.5"`)
 - **ReversePattern** - Reverses pattern within each cycle (`rev()`)
@@ -101,6 +103,11 @@ Strudel.
 - `pickRestart()` - Alternates patterns per cycle (slowcat equivalent)
 - `silence` - Empty/silent pattern
 - `rest` - Rest event (alias for silence)
+- `run(n)` - Creates discrete pattern of numbers 0 to n-1
+- `binary(n)` - Creates binary pattern from number (auto-calculates bit length)
+- `binaryN(n, bits)` - Creates binary pattern padded to specific bit length
+- `binaryL(n)` - Creates binary list pattern from number (returns single event with list value)
+- `binaryNL(n, bits)` - Creates binary list pattern padded to specific bit length
 
 ### DSL Architecture ✅
 
@@ -171,6 +178,9 @@ Strudel.
 - `euclidLegato(pulses, steps)` - Legato Euclidean, holds pulses until next (standalone, pattern method, string
   extension)
 - `euclidLegatoRot(pulses, steps, rotation)` - Legato Euclidean with rotation (standalone, pattern method, string
+  extension)
+- `euclidish(pulses, steps, groove)` / `eish` - Morphing Euclidean rhythm that interpolates between Euclidean pattern (
+  groove=0) and evenly distributed pulses (groove=1), groove can be a pattern (standalone, pattern method, string
   extension)
 
 ### Arithmetic Operations ✅
@@ -435,8 +445,9 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 161+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
-- 16 core pattern types (including EuclideanPattern with legato support, ChoicePattern with selector/weights support,
+- 169+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 17 core pattern types (including EuclideanPattern with legato support, EuclideanMorphPattern, ChoicePattern with
+  selector/weights support,
   SometimesPattern,
   ReversePattern, StructPattern, ContextModifierPattern, TimeShiftPatternWithControl)
 - 34 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
@@ -465,6 +476,22 @@ Comprehensive voice data structure supporting:
 - Extensible voice data mutation system
 - Parser with proper tokenization
 - Immutable pattern design
+
+**Recent Improvements (2026-01-15):**
+
+- ✅ **Euclidean Morph Pattern** - New `euclidish()` / `eish()` function for morphing between Euclidean and evenly
+  distributed rhythms
+- ✅ **EuclideanMorphPattern** - New pattern type that interpolates pulse positions based on groove parameter
+- ✅ **Bjorklund Algorithm** - Extracted to shared `math/bjorklund.kt` for reuse across pattern types
+- ✅ **Binary Pattern Functions** - Complete set of binary conversion functions:
+  - `run(n)` - Generate discrete sequence 0 to n-1
+  - `binary(n)` - Convert number to binary pattern (auto bit length)
+  - `binaryN(n, bits)` - Convert with specific bit padding
+  - `binaryL(n)` - Binary as single list event
+  - `binaryNL(n, bits)` - Binary list with bit padding
+- ✅ **VoiceValue.Seq Support** - Enhanced GraalVM bridge to handle sequence values for list-based patterns
+- ✅ **Comprehensive Testing** - Added test suites for all new features: `LangEuclidishSpec`, `LangRunSpec`,
+  `LangBinarySpec`, `EuclideanMorphPatternSpec`
 
 **Recent Major Improvements (2026-01-08 to 2026-01-11):**
 

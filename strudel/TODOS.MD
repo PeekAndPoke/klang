@@ -40,6 +40,7 @@ and category.
 - [x] **`(pulses, steps)` notation** - Euclidean rhythm in mini-notation (e.g., `"bd(3,8)"`) ✅ **FIXED WITH RATIONAL
   ARITHMETIC**
 - [x] **`(pulses, steps, rotation)`** - With rotation parameter
+- [x] **`euclidish(pulses, steps, groove)`** - Morphing Euclidean rhythm with groove parameter (0=euclidean, 1=even)
 
 ### Pattern Creation ⭐⭐⭐
 
@@ -55,9 +56,11 @@ and category.
 - [ ] **`slowcatPrime()`** - Like slowcat but maintains relative timing
 - [ ] **`stackLeft()`** / **`stackRight()`** / **`stackCentre()`** - Aligned stack variants
 - [ ] **`stackBy(by, ...pats)`** - Stack with custom alignment (0=left, 0.5=center, 1=right)
-- [ ] **`run(n)`** - Creates discrete pattern of numbers 0 to n-1
-- [ ] **`binary(n)`** - Creates binary pattern from number
-- [ ] **`binaryN(n, bits)`** - Binary pattern padded to n bits
+- [x] **`run(n)`** - Creates discrete pattern of numbers 0 to n-1
+- [x] **`binary(n)`** - Creates binary pattern from number
+- [x] **`binaryN(n, bits)`** - Binary pattern padded to n bits
+- [x] **`binaryL(n)`** - Creates binary list pattern from number
+- [x] **`binaryNL(n, bits)`** - Binary list pattern padded to n bits
 - [ ] **`sequenceP()`** - Pattern of patterns sequence
 - [ ] **`pure(value)`** - Creates atomic pattern with single value
 - [x] **`silence`** - Empty pattern
@@ -523,9 +526,10 @@ and category.
 ### By Category:
 
 - **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean)
-- **Pattern Creation**: ~7 missing (6 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`)
-- **Time Modification**: ~13 missing (10 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `euclid`,
-  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`)
+- **Pattern Creation**: ~3 missing (10 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`, `run`,
+  `binary`, `binaryN`, `binaryL`, `binaryNL`)
+- **Time Modification**: ~12 missing (11 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `euclid`,
+  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
 - **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
@@ -552,9 +556,9 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~96 features remaining
+### Total Estimated: ~88 features remaining
 
-### Completed So Far: ~161 features! 🎉
+### Completed So Far: ~169 features! 🎉
 
 **Major achievements:**
 

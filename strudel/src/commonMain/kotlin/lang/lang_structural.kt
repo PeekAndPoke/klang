@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
@@ -11,6 +12,9 @@ import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
+import kotlin.math.abs
+import kotlin.math.floor
+import kotlin.math.log2
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -909,39 +913,202 @@ val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args ->
 @StrudelDsl
 val String.euclidLegatoRot by dslStringExtension { p, args -> p.euclidLegatoRot(args) }
 
+// -- euclidish() ------------------------------------------------------------------------------------------------------
+
+private fun applyEuclidish(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
+    val grooveArg = args.getOrNull(2)
+
+    // groove defaults to 0 (straight euclid)
+    val groovePattern = when (grooveArg) {
+        is StrudelPattern -> grooveArg
+        else -> {
+            val g = grooveArg ?: 0
+            // Use parse to handle string numbers or mini-notation if passed
+            parseMiniNotation(g.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        }
+    }
+
+    if (pulses <= 0 || steps <= 0) return silence
+
+    val structPattern = EuclideanMorphPattern(pulses, steps, groovePattern)
+    return source.struct(structPattern)
+}
+
+/**
+ * A 'euclid' variant with an additional parameter that morphs the resulting
+ * rhythm from 0 (no morphing) to 1 (completely 'even').
+ *
+ * @param {pulses} number of onsets
+ * @param {steps}  number of steps to fill
+ * @param {groove} morph factor (0..1), can be a pattern
+ * @param {pattern} source pattern
+ */
+@StrudelDsl
+val euclidish by dslFunction { args ->
+    // euclidish(pulses, steps, groove, pat)
+    val pattern = args.drop(3).toPattern(defaultModifier)
+    applyEuclidish(pattern, args.take(3))
+}
+
+@StrudelDsl
+val StrudelPattern.euclidish by dslPatternExtension { p, args ->
+    applyEuclidish(p, args)
+}
+
+@StrudelDsl
+val String.euclidish by dslStringExtension { p, args -> p.euclidish(args) }
+
+/** Alias for [euclidish] */
+@StrudelDsl
+val eish by dslFunction { args -> euclidish(args) }
+
+/** Alias for [euclidish] */
+@StrudelDsl
+val StrudelPattern.eish by dslPatternExtension { p, args -> p.euclidish(args) }
+
+/** Alias for [euclidish] */
+@StrudelDsl
+val String.eish by dslStringExtension { p, args -> p.euclidish(args) }
+
+
 // -- run() ------------------------------------------------------------------------------------------------------------
 
-// TODO: run -> see signal.mjs
+private fun applyRun(n: Int): StrudelPattern {
+    if (n <= 0) return silence
+    // "0 1 2 ... n-1"
+    // equivalent to saw.range(0, n).round().segment(n) in JS
+    // But we can just create a sequence directly.
+    val items = (0 until n).map {
+        AtomicPattern(VoiceData.empty.copy(value = it.asVoiceValue()))
+    }
+    return SequencePattern(items)
+}
 
-// -- binary() ---------------------------------------------------------------------------------------------------------
-
-// TODO: binary -> see signal.mjs
+/**
+ * A discrete pattern of numbers from 0 to n-1.
+ *
+ * @param n number of steps
+ * @example
+ * n(run(4)).scale("C4:pentatonic")
+ * // n("0 1 2 3").scale("C4:pentatonic")
+ */
+@StrudelDsl
+val run by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+    applyRun(n)
+}
 
 // -- binaryN() --------------------------------------------------------------------------------------------------------
 
-// TODO: binaryN -> see signal.mjs
+private fun applyBinaryN(n: Int, bits: Int): StrudelPattern {
+    if (bits <= 0) return silence
 
-// -- binaryL() --------------------------------------------------------------------------------------------------------
+    val items = (0 until bits).map { i ->
+        // JS: const bitPos = run(nBits).mul(-1).add(nBits.sub(1));
+        // This effectively iterates bits from MSB to LSB?
+        // "1 1 0 1" for 5 (101) with 4 bits -> 0101?
+        // JS example: binaryN(55532, 16) -> "1 1 0 1 1 0 0 0 1 1 1 0 1 1 0 0"
+        // This order is MSB first (big-endian).
 
-// TODO: binaryL -> see signal.mjs
+        // Shift: bits - 1 - i
+        val shift = bits - 1 - i
+        val bit = (n shr shift) and 1
+        AtomicPattern(VoiceData.empty.copy(value = bit.asVoiceValue()))
+    }
+    return SequencePattern(items)
+}
+
+/**
+ * Creates a binary pattern from a number, padded to n bits long.
+ *
+ * @name binaryN
+ * @param {number} n - input number to convert to binary
+ * @param {number} bits - pattern length
+ * @example
+ * "hh".s().struct(binaryN(5, 4))
+ * // "hh".s().struct("0 1 0 1")
+ */
+@StrudelDsl
+val binaryN by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val bits = args.getOrNull(1)?.asIntOrNull() ?: 16
+    applyBinaryN(n, bits)
+}
+
+// -- binary() ---------------------------------------------------------------------------------------------------------
+
+/**
+ * Creates a binary pattern from a number.
+ * The number of bits is automatically calculated.
+ *
+ * @name binary
+ * @param {number} n - input number to convert to binary
+ * @example
+ * "hh".s().struct(binary(5))
+ * // "hh".s().struct("1 0 1")
+ */
+@StrudelDsl
+val binary by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+    if (n == 0) {
+        applyBinaryN(0, 1)
+    } else {
+        // Calculate bits: floor(log2(n)) + 1
+        val bits = floor(log2(abs(n).toDouble())).toInt() + 1
+        applyBinaryN(n, bits)
+    }
+}
 
 // -- binaryNL() -------------------------------------------------------------------------------------------------------
 
-// TODO: binaryNL -> see signal.mjs
+private fun applyBinaryNL(n: Int, bits: Int): StrudelPattern {
+    if (bits <= 0) return silence
 
-// -- randL() ----------------------------------------------------------------------------------------------------------
+    val bitList = (0 until bits).mapNotNull { i ->
+        // Shift: bits - 1 - i (MSB first)
+        val shift = bits - 1 - i
+        val bit = (n shr shift) and 1
+        bit.asVoiceValue()
+    }
 
-// TODO: randL -> see signal.mjs
+    // Returns a single event containing the list of bits as a Seq value
+    return AtomicPattern(
+        VoiceData.empty.copy(value = VoiceValue.Seq(bitList))
+    )
+}
 
-// -- randrun() --------------------------------------------------------------------------------------------------------
+/**
+ * Creates a binary list pattern from a number, padded to n bits long.
+ *
+ * @name binaryNL
+ * @param {number} n - input number to convert to binary
+ * @param {number} bits - pattern length, defaults to 16
+ */
+@StrudelDsl
+val binaryNL by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val bits = args.getOrNull(1)?.asIntOrNull() ?: 16
+    applyBinaryNL(n, bits)
+}
 
-// TODO: randrun -> see signal.mjs
+// -- binaryL() --------------------------------------------------------------------------------------------------------
 
-// -- shuffle() --------------------------------------------------------------------------------------------------------
-
-// TODO: shuffle -> see signal.mjs
-
-// -- scramble() -------------------------------------------------------------------------------------------------------
-
-// TODO: scramble -> see signal.mjs
-
+/**
+ * Creates a binary list pattern from a number.
+ *
+ * @name binaryL
+ * @param {number} n - input number to convert to binary
+ */
+@StrudelDsl
+val binaryL by dslFunction { args ->
+    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+    if (n == 0) {
+        applyBinaryNL(0, 1)
+    } else {
+        // Calculate bits: floor(log2(n)) + 1
+        val bits = floor(log2(abs(n).toDouble())).toInt() + 1
+        applyBinaryNL(n, bits)
+    }
+}

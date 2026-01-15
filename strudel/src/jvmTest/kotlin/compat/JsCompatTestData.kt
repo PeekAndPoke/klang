@@ -131,6 +131,27 @@ object JsCompatTestData {
         Example("Early [0.5 0.5]", """note("a b c d").early("0.5 0.5")"""),
         Example("Early Sine", """note("a b c d").early(sine.range(-1, 1))"""),
 
+        // Euclidish
+        Example("Euclidish Function #1", """euclidish(3, 8, 0, note("bd"))"""),
+        Example("Euclidish Function #2", """note("bd").euclidish(3, 8, 0)"""),
+        Example("Euclidish Function #3", """note("bd").euclidish(3, 8, 1)"""),
+        Example("Euclidish Pattern Groove", """note("bd").euclidish(3, 8, "<0 1>")"""),
+        Example("Eish Alias", """note("bd").eish(3, 8, 0.5)"""),
+
+        // Run
+        Example("Run Function", """n(run(4))"""),
+
+        // Binary
+        Example("Binary Function", """binary(5)""")
+            .ignore("data.gain"),
+        Example("BinaryN Function", """binaryN(5, 4)""")
+            .ignore("data.gain"),
+        Example("Binary Struct", """sound("hh").struct(binary(170))"""), // 170 = 10101010
+        // Does not compile in js
+        Example(SKIP, "BinaryL Function", """binaryL(5)"""),
+        // Does not compile in js
+        Example(SKIP, "BinaryNL Function", """binaryNL(5, 4)"""),
+
         // Voice Attributes
         Example(SKIP, "Gain & Pan", """note("c").gain(0.5).pan("-1.0 1.0")"""),
         Example("Legato", """note("c e").legato(0.5)"""),

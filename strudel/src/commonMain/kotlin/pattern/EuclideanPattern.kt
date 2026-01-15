@@ -9,6 +9,8 @@ import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.struct
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.bjorklund
+import io.peekandpoke.klang.strudel.math.recursiveBjorklund
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -161,53 +163,6 @@ internal class EuclideanPattern private constructor(
                 basePattern.map { 1 - it }
             } else {
                 basePattern
-            }
-        }
-
-        private fun bjorklund(pulses: Int, steps: Int): List<Int> {
-            val k = abs(pulses)
-
-            if (steps <= 0) return emptyList()
-
-            // Calculate base pattern
-            val basePattern = if (k >= steps) {
-                List(steps) { 1 }
-            } else {
-                val offs = steps - k
-                val ones = List(k) { listOf(1) }
-                val zeros = List(offs) { listOf(0) }
-                val result = recursiveBjorklund(k, offs, ones, zeros)
-
-                result.first.flatten() + result.second.flatten()
-            }
-
-            return if (pulses < 0) basePattern.map { 1 - it } else basePattern
-        }
-
-        private fun recursiveBjorklund(
-            ons: Int,
-            offs: Int,
-            xs: List<List<Int>>,
-            ys: List<List<Int>>,
-        ): Pair<List<List<Int>>, List<List<Int>>> {
-            // JS logic: Math.min(ons, offs) <= 1 ? [n, x] ...
-            // Note: The JS source uses Math.min(ons, offs) <= 1.
-            if (min(ons, offs) <= 1) return xs to ys
-
-            if (ons > offs) {
-                val offsCount = offs
-                val xsPrefix = xs.take(offsCount)
-                val xsSuffix = xs.drop(offsCount)
-                val newXs = xsPrefix.zip(ys) { a, b -> a + b }
-                val newYs = xsSuffix
-                return recursiveBjorklund(offs, ons - offs, newXs, newYs)
-            } else {
-                val onsCount = ons
-                val ysPrefix = ys.take(onsCount)
-                val ysSuffix = ys.drop(onsCount)
-                val newXs = xs.zip(ysPrefix) { a, b -> a + b }
-                val newYs = ysSuffix
-                return recursiveBjorklund(ons, offs - ons, newXs, newYs)
             }
         }
     }

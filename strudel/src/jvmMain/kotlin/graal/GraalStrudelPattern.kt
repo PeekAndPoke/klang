@@ -234,8 +234,17 @@ class GraalStrudelPattern(
                 roomSize = roomSize,
                 // Value
                 value = when {
-                    value?.isString == true -> value.asString().asVoiceValue()
-                    value?.isNumber == true -> value.asDouble().asVoiceValue()
+                    value?.isString == true ->
+                        value.asString().asVoiceValue()
+
+                    value?.isNumber == true ->
+                        value.asDouble().asVoiceValue()
+
+                    value?.hasArrayElements() == true ->
+                        value.`as`(List::class.java).mapNotNull {
+                            it?.asVoiceValue()
+                        }.asVoiceValue()
+
                     else -> null
                 }
             ),

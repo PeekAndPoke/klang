@@ -153,9 +153,19 @@ private val nMutation = voiceModifier {
 
 private fun applyN(source: StrudelPattern, args: List<Any?>): StrudelPattern {
     return if (args.isEmpty()) {
-        source.reinterpretVoice { it.resolveNote() }
+        source.reinterpretVoice {
+            it.copy(
+                soundIndex = it.soundIndex ?: it.value?.asInt,
+                gain = it.gain ?: 1.0,
+                value = null,
+            )
+        }
     } else {
-        source.applyControlFromParams(args, nMutation) { src, ctrl -> src.resolveNote(ctrl.soundIndex) }
+        source.applyControlFromParams(args, nMutation) { src, ctrl ->
+            src.nMutation(
+                ctrl.soundIndex ?: ctrl.value?.asInt
+            )
+        }
     }
 }
 
@@ -167,7 +177,7 @@ val StrudelPattern.n by dslPatternExtension { p, args ->
 
 /** Sets the note number or sample index */
 @StrudelDsl
-val n by dslFunction { args -> args.toPattern(nMutation) }
+val n by dslFunction { args -> args.toPattern(defaultModifier).n() }
 
 /** Sets the note number or sample index on a string pattern */
 @StrudelDsl

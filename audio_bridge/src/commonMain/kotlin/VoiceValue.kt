@@ -23,16 +23,7 @@ sealed interface VoiceValue {
     val asDouble: Double?
     val asInt: Int?
 
-    fun isTruthy(): Boolean {
-        // If it can be interpreted as a number, use numerical truthiness (non-zero)
-        val d = asDouble
-        if (d != null) {
-            return d != 0.0
-        }
-        // Otherwise use string truthiness (not blank, not "false")
-        // Note: "0" or "0.0" is handled by the numeric check above as they parse to 0.0
-        return asString.isNotBlank() && asString != "false"
-    }
+    fun isTruthy(): Boolean
 
     operator fun plus(other: VoiceValue?): VoiceValue? {
         val d1 = asDouble
@@ -183,6 +174,7 @@ sealed interface VoiceValue {
         override val asString get() = value.toString()
         override val asDouble get() = value
         override val asInt get() = value.toInt()
+        override fun isTruthy() = value != 0.0
         override fun toString() = asString
     }
 
@@ -191,6 +183,15 @@ sealed interface VoiceValue {
         override val asString get() = value
         override val asDouble get() = value.toDoubleOrNull()
         override val asInt get() = value.toDoubleOrNull()?.toInt()
+        override fun isTruthy(): Boolean {
+            // If it can be interpreted as a number, use numerical truthiness (non-zero)
+            val d = asDouble
+            if (d != null) {
+                return d != 0.0
+            }
+            // Otherwise use string truthiness (not blank, not "false")
+            return value.isNotBlank() && value != "false"
+        }
         override fun toString() = asString
     }
 
@@ -199,7 +200,17 @@ sealed interface VoiceValue {
         override val asString get() = value.toString()
         override val asDouble get() = if (value) 1.0 else 0.0
         override val asInt get() = if (value) 1 else 0
+        override fun isTruthy() = value
         override fun toString() = asString
+    }
+
+    data class Seq(val value: List<VoiceValue>) : VoiceValue {
+        override val asBoolean get() = value.isNotEmpty()
+        override val asString get() = value.joinToString(", ") { it.asString }
+        override val asDouble get() = value.firstOrNull()?.asDouble
+        override val asInt get() = value.firstOrNull()?.asInt
+        override fun isTruthy() = value.isNotEmpty()
+        override fun toString() = "[${asString}]"
     }
 
     companion object {
@@ -234,6 +245,10 @@ object VoiceValueSerializer : KSerializer<VoiceValue> {
             is VoiceValue.Num -> encoder.encodeDouble(value.value)
             is VoiceValue.Text -> encoder.encodeString(value.value)
             is VoiceValue.Bool -> encoder.encodeBoolean(value.value)
+            is VoiceValue.Seq -> encoder.encodeSerializableValue(
+                kotlinx.serialization.builtins.ListSerializer(VoiceValueSerializer),
+                value.value
+            )
         }
     }
 
@@ -253,6 +268,12 @@ object VoiceValueSerializer : KSerializer<VoiceValue> {
                         if (d != null) VoiceValue.Num(d) else VoiceValue.Text(element.content)
                     }
                 }
+            } else if (element is kotlinx.serialization.json.JsonArray) {
+                // It's an array
+                val items = element.map {
+                    kotlinx.serialization.json.Json.decodeFromJsonElement(VoiceValueSerializer, it)
+                }
+                VoiceValue.Seq(items)
             } else {
                 VoiceValue.Text(element.toString())
             }
