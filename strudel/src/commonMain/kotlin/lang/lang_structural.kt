@@ -620,45 +620,62 @@ fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, e
 // -- bite() -----------------------------------------------------------------------------------------------------------
 
 private fun applyBite(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
+    val nArg = args.getOrNull(0)
     val indicesArg = args.getOrNull(1)
 
+    // Parse the n argument into a pattern
+    val nPattern = when (nArg) {
+        is StrudelPattern -> nArg
+        null -> parseMiniNotation("4") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    // Parse the indices argument into a pattern
     val indices = when (indicesArg) {
         is StrudelPattern -> indicesArg
         is String -> parseMiniNotation(input = indicesArg) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
         else -> return silence
     }
 
-    return object : StrudelPattern {
-        override val weight: Double get() = source.weight
+    // Check if we have a static value for n for optimization
+    val staticN = nArg?.asIntOrNull()
 
-        override fun queryArcContextual(
-            from: Rational,
-            to: Rational,
-            ctx: QueryContext,
-        ): List<StrudelPatternEvent> {
-            val indexEvents = indices.queryArcContextual(from, to, ctx)
+    return if (staticN != null) {
+        // Static path: use the original inline implementation
+        object : StrudelPattern {
+            override val weight: Double get() = source.weight
 
-            return indexEvents.flatMap { ev ->
-                val idx = ev.data.value?.asInt ?: 0
+            override fun queryArcContextual(
+                from: Rational,
+                to: Rational,
+                ctx: QueryContext,
+            ): List<StrudelPatternEvent> {
+                val indexEvents = indices.queryArcContextual(from, to, ctx)
 
-                // Handle wrapping like JS .mod(1)
-                val normalizedIdx = idx.mod(n)
-                val safeIdx = if (normalizedIdx < 0) normalizedIdx + n else normalizedIdx
+                return indexEvents.flatMap { ev ->
+                    val idx = ev.data.value?.asInt ?: 0
 
-                val start = safeIdx.toDouble() / n
-                val end = (safeIdx + 1.0) / n
+                    // Handle wrapping like JS .mod(1)
+                    val normalizedIdx = idx.mod(staticN)
+                    val safeIdx = if (normalizedIdx < 0) normalizedIdx + staticN else normalizedIdx
 
-                val slice = source.zoom(start, end)
+                    val start = safeIdx.toDouble() / staticN
+                    val end = (safeIdx + 1.0) / staticN
 
-                val dur = ev.dur.toDouble()
-                if (dur <= 0.0) return@flatMap emptyList()
+                    val slice = source.zoom(start, end)
 
-                val fitted = slice.fast(1.0 / dur).late(ev.begin.toDouble())
+                    val dur = ev.dur.toDouble()
+                    if (dur <= 0.0) return@flatMap emptyList()
 
-                fitted.queryArcContextual(ev.begin, ev.end, ctx)
+                    val fitted = slice.fast(1.0 / dur).late(ev.begin.toDouble())
+
+                    fitted.queryArcContextual(ev.begin, ev.end, ctx)
+                }
             }
         }
+    } else {
+        // Dynamic path: use pattern-controlled bite
+        BitePatternWithControl(source, nPattern, indices)
     }
 }
 

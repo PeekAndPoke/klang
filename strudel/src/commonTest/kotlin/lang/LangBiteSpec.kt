@@ -55,4 +55,35 @@ class LangBiteSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
         events.map { it.data.value?.asInt } shouldBe listOf(3, 2, 1, 0)
     }
+
+    "bite() with pattern control for n" {
+        // n varies between 2 and 4 slices
+        val p = n("0 1 2 3").bite("2 4", "0 1")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Should have events from pattern-controlled slicing
+        events.isNotEmpty() shouldBe true
+    }
+
+    "bite() with steady pattern for n produces same result as static" {
+        val p1 = n("0 1 2 3").bite(4, "0 1 2 3")
+        val p2 = n("0 1 2 3").bite(steady(4), "0 1 2 3")
+
+        val events1 = p1.queryArc(0.0, 1.0)
+        val events2 = p2.queryArc(0.0, 1.0)
+
+        events1.size shouldBe events2.size
+        events1.zip(events2).forEach { (e1, e2) ->
+            e1.data.soundIndex shouldBe e2.data.soundIndex
+        }
+    }
+
+    "bite() with continuous pattern control" {
+        // Use a continuous pattern for n
+        val p = n("0 1 2 3").bite(sine.range(2, 4).segment(2), "0 1")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Should have events with varying slice counts
+        events.isNotEmpty() shouldBe true
+    }
 })

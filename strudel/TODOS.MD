@@ -18,8 +18,8 @@ and category.
    ✅ rev() - **COMPLETED** - Now accepts control patterns for dynamic reversal
 2. Structural Functions (lang_structural.kt)
    ✅ gap() - **COMPLETED** - Automatically supports control patterns via slow()
-   ✅ zoom() - **COMPLETED** - Now accepts control patterns for both start and end parameters  
-   ❌ bite() - Lines 600-703 - First parameter (n) is plain integer  
+   ✅ zoom() - **COMPLETED** - Now accepts control patterns for both start and end parameters
+   ✅ bite() - **COMPLETED** - Now accepts control patterns for n parameter  
    ❌ segment() / seg() - Lines 707-750 - Accepts integer n  
    ❌ euclid() - Lines 772-788 - Accepts pulses, steps integers  
    ❌ euclidRot() / euclidrot() - Lines 799-824 - Accepts pulses, steps, rotation integers  
