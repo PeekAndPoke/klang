@@ -5,6 +5,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangUndegradeBySpec : StringSpec({
@@ -13,14 +14,14 @@ class LangUndegradeBySpec : StringSpec({
         val p = note("a").undegradeBy(0.0) // 0.0 probability of removal means it stays
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "undegradeBy() works as string extension" {
         val p = "a".undegradeBy(0.0).note()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "A"
+        events[0].data.note shouldBeEqualIgnoringCase "A"
     }
 
     "undegradeBy(1.0) removes all events" {
@@ -33,7 +34,7 @@ class LangUndegradeBySpec : StringSpec({
         val p = StrudelPattern.compile("""note("a").undegradeBy(0.0)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "undegradeBy() statistical check" {
@@ -111,7 +112,7 @@ class LangUndegradeBySpec : StringSpec({
             p.queryArc(it.toDouble(), it + 1.0)
         }
 
-        val buckets = events.groupBy { it.data.note }
+        val buckets = events.groupBy { it.data.note?.lowercase() }
 
         println(buckets.mapValues { (_, v) -> v.size })
 

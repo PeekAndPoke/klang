@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -32,7 +33,7 @@ class SequencePatternWeightSpec : StringSpec({
             var lastEnd = from
 
             events.forEachIndexed { index, event ->
-                event.data.note shouldBe expectedNotes[index]
+                event.data.note shouldBeEqualIgnoringCase expectedNotes[index]
                 event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
                 event.dur.toDouble() shouldBe (expectedDurations[index] plusOrMinus EPSILON)
                 lastEnd = event.end
@@ -56,7 +57,7 @@ class SequencePatternWeightSpec : StringSpec({
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
-                event.data.note shouldBe expectedNotes[i]
+                event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
                 event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
                 event.dur.toDouble() shouldBe (expectedDur plusOrMinus EPSILON)
                 lastEnd = event.end
@@ -81,7 +82,7 @@ class SequencePatternWeightSpec : StringSpec({
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
-                event.data.note shouldBe expectedNotes[i]
+                event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
                 event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
                 event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
@@ -105,7 +106,7 @@ class SequencePatternWeightSpec : StringSpec({
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
-                event.data.note shouldBe expectedNotes[i]
+                event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
                 event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
                 event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
@@ -129,7 +130,7 @@ class SequencePatternWeightSpec : StringSpec({
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
-                event.data.note shouldBe expectedNotes[i]
+                event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
                 event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
                 event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
                 lastEnd = event.end
@@ -151,10 +152,10 @@ class SequencePatternWeightSpec : StringSpec({
 
             events.size shouldBe 4 // a, b, c, d
 
-            val a = events.find { it.data.note == "a" }!!
-            val b = events.find { it.data.note == "b" }!!
-            val c = events.find { it.data.note == "c" }!!
-            val d = events.find { it.data.note == "d" }!!
+            val a = events.find { it.data.note?.lowercase() == "a" }!!
+            val b = events.find { it.data.note?.lowercase() == "b" }!!
+            val c = events.find { it.data.note?.lowercase() == "c" }!!
+            val d = events.find { it.data.note?.lowercase() == "d" }!!
 
             // Layer 1 (a@3 b -> 3/4, 1/4)
             a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
@@ -183,11 +184,11 @@ class SequencePatternWeightSpec : StringSpec({
             val a = events[0]
             val b = events[1]
 
-            a.data.note shouldBe "a"
+            a.data.note shouldBeEqualIgnoringCase "a"
             a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
             a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
-            b.data.note shouldBe "b"
+            b.data.note shouldBeEqualIgnoringCase "b"
             b.dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
             b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
@@ -205,11 +206,11 @@ class SequencePatternWeightSpec : StringSpec({
             val a = events[0]
             val b = events[1]
 
-            a.data.note shouldBe "a"
+            a.data.note shouldBeEqualIgnoringCase "a"
             a.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
             a.dur.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
 
-            b.data.note shouldBe "b"
+            b.data.note shouldBeEqualIgnoringCase "b"
             b.begin.toDouble() shouldBe (from + 1.5 plusOrMinus EPSILON)
             b.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         }
@@ -230,14 +231,14 @@ class SequencePatternWeightSpec : StringSpec({
             val a2 = events[2]
             val b2 = events[3]
 
-            a1.data.note shouldBe "a"
+            a1.data.note shouldBeEqualIgnoringCase "a"
             a1.dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
-            b1.data.note shouldBe "b"
+            b1.data.note shouldBeEqualIgnoringCase "b"
             b1.dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
-            a2.data.note shouldBe "a"
+            a2.data.note shouldBeEqualIgnoringCase "a"
             a2.dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
-            b2.data.note shouldBe "b"
+            b2.data.note shouldBeEqualIgnoringCase "b"
             b2.dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
         }
     }
@@ -254,11 +255,11 @@ class SequencePatternWeightSpec : StringSpec({
             val a = events[0]
             val b = events[1]
 
-            a.data.note shouldBe "a"
+            a.data.note shouldBeEqualIgnoringCase "a"
             a.dur.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
             a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
-            b.data.note shouldBe "b"
+            b.data.note shouldBeEqualIgnoringCase "b"
             b.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
             b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
@@ -275,7 +276,7 @@ class SequencePatternWeightSpec : StringSpec({
             events.size shouldBe 1
             val a = events[0]
 
-            a.data.note shouldBe "a"
+            a.data.note shouldBeEqualIgnoringCase "a"
             a.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
             a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         }

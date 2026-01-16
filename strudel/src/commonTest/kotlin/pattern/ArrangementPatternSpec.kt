@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -42,9 +43,9 @@ class ArrangementPatternSpec : StringSpec({
         val events = pattern.queryArc(0.0, 3.0).sortedBy { it.begin }
 
         events.size shouldBe 3
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "a"
-        events[2].data.note shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "a"
+        events[2].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "ArrangementPattern: Compiled Code" {
@@ -54,8 +55,8 @@ class ArrangementPatternSpec : StringSpec({
         val events = pattern.queryArc(0.0, 3.0).sortedBy { it.begin }
 
         events.size shouldBe 3
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "a"
-        events[2].data.note shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "a"
+        events[2].data.note shouldBeEqualIgnoringCase "b"
     }
 })

@@ -4,17 +4,18 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 
 class LangFilterSpec : StringSpec({
 
     "filter() works as pattern extension" {
         // filter(predicate)
         // Keep events where note is "a"
-        val p = note("a b").filter { it.data.note == "a" }
+        val p = note("a b").filter { it.data.note?.lowercase() == "a" }
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "filter() works as string extension" {
@@ -22,12 +23,12 @@ class LangFilterSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "B"
+        events[0].data.note shouldBeEqualIgnoringCase "B"
     }
 
     "filter() works as top-level function" {
         // filter(predicate, pattern)
-        val p = filter { it.data.note == "a" }
+        val p = filter { it.data.note?.lowercase() == "a" }
 
         p.queryArc(0.0, 1.0).shouldBeEmpty()
     }
@@ -38,7 +39,7 @@ class LangFilterSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
         events[0].data.gain shouldBe 0.8
     }
 })

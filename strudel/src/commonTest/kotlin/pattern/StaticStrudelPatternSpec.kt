@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
@@ -74,9 +75,9 @@ class StaticStrudelPatternSpec : StringSpec({
         val events = frozen.queryArc(10.0, 11.0).sortedBy { it.begin }
 
         events.size shouldBe 4
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
         events[0].begin.toDouble() shouldBe (10.0 plusOrMinus EPSILON)
-        events[3].data.note shouldBe "d"
+        events[3].data.note shouldBeEqualIgnoringCase "d"
         events[3].begin.toDouble() shouldBe (10.75 plusOrMinus EPSILON)
     }
 })

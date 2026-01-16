@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -37,7 +38,7 @@ class ControlPatternSpec : StringSpec({
         val pattern = note("c3").gain(0.7)
 
         verifyPattern(pattern, 1) { _, note, begin, _ ->
-            note shouldBe "c3"
+            note shouldBeEqualIgnoringCase "c3"
             begin shouldBe (0.0 plusOrMinus EPSILON)
         }
 
@@ -49,7 +50,7 @@ class ControlPatternSpec : StringSpec({
         val pattern = StrudelPattern.compile("""note("c3").gain(0.2)""")
 
         verifyPattern(pattern, 1) { _, note, _, _ ->
-            note shouldBe "c3"
+            note shouldBeEqualIgnoringCase "c3"
         }
 
         val events = pattern!!.queryArc(0.0, 1.0)

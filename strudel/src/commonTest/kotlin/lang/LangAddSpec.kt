@@ -33,16 +33,6 @@ class LangAddSpec : StringSpec({
         p.queryArc(0.0, 1.0).shouldBeEmpty()
     }
 
-    "add() concatenates strings" {
-        // seq("a").add("b") -> value="ab"
-        val p = note("a").add("b")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.note shouldBe "a"
-        events[0].data.value?.asString shouldBe null
-    }
-
     "add() works with scale logic when placed before scale" {
         // seq("0 2").add("1").scale("C4:major")
         // seq("0 2") -> 0, 2

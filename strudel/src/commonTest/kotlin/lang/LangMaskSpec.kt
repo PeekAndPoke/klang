@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
@@ -15,7 +16,7 @@ class LangMaskSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 1
-        events[0].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
@@ -42,7 +43,7 @@ class LangMaskSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "mask() as string extension works" {
@@ -62,7 +63,7 @@ class LangMaskSpec : StringSpec({
         // note("c [eb,g]") has 'c' in first half (0.0-0.5) and 'eb,g' in second half (0.5-1.0).
         // Result: only 'c' remains.
         events.size shouldBe 1
-        events[0].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "mask() with continuous pattern" {

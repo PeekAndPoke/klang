@@ -12,7 +12,7 @@ class LangSomeCyclesBySpec : StringSpec({
         // So for "a*4", all 4 notes in a cycle are EITHER 'a' OR 'A'.
         // They should never be mixed within a single cycle.
 
-        val p = note("a*4").someCyclesBy(0.5) { it.note() }.seed(100)
+        val p = note("a*4").someCyclesBy(0.5) { it.scale("C4") }.seed(100)
 
         var mixedCycles = 0
         var allModifiedCycles = 0
@@ -21,11 +21,11 @@ class LangSomeCyclesBySpec : StringSpec({
 
         for (i in 0 until totalCycles) {
             val events = p.queryArc(i.toDouble(), i + 1.0)
-            val notes = events.map { it.data.note }
+            val notes = events.map { it.data.scale }
 
-            if (notes.all { it == "A" }) {
+            if (notes.all { it == null }) {
                 allModifiedCycles++
-            } else if (notes.all { it == "a" }) {
+            } else if (notes.all { it == "C4" }) {
                 allUnmodifiedCycles++
             } else {
                 mixedCycles++

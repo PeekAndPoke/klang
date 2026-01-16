@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.VoiceData
@@ -21,7 +22,7 @@ class StackPatternSpec : StringSpec({
         verifyPattern(pattern, 2) { _, note, begin, dur ->
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
-            listOf("a", "b").contains(note) shouldBe true
+            listOf("a", "b") shouldContain note
         }
     }
 
@@ -31,7 +32,7 @@ class StackPatternSpec : StringSpec({
         verifyPattern(pattern, 2) { _, note, begin, dur ->
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
-            listOf("a", "b").contains(note) shouldBe true
+            listOf("A", "B") shouldContain note
         }
     }
 
@@ -42,7 +43,7 @@ class StackPatternSpec : StringSpec({
         verifyPattern(pattern, 2) { _, note, begin, dur ->
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
-            listOf("a", "b").contains(note) shouldBe true
+            listOf("A", "B") shouldContain note
         }
     }
 
@@ -52,7 +53,7 @@ class StackPatternSpec : StringSpec({
         verifyPattern(pattern, 2) { _, note, begin, dur ->
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
-            listOf("a", "b").contains(note) shouldBe true
+            listOf("A", "B") shouldContain note
         }
     }
 })

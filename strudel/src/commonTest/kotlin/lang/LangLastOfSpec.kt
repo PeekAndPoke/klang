@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangLastOfSpec : StringSpec({
@@ -16,15 +17,15 @@ class LangLastOfSpec : StringSpec({
 
         val c0 = p.queryArc(0.0, 1.0)
         c0.size shouldBe 1
-        c0[0].data.note shouldBe "a"
+        c0[0].data.note shouldBeEqualIgnoringCase "a"
 
         val c1 = p.queryArc(1.0, 2.0)
         c1.size shouldBe 1
-        c1[0].data.note shouldBe "b"
+        c1[0].data.note shouldBeEqualIgnoringCase "b"
 
         val c2 = p.queryArc(2.0, 3.0)
         c2.size shouldBe 1
-        c2[0].data.note shouldBe "a"
+        c2[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "lastOf(3) applies transform on 3rd cycle" {
@@ -35,31 +36,31 @@ class LangLastOfSpec : StringSpec({
         // 3 -> original
         val p = note("a").lastOf(3) { it.note("b") }
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "a"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "a"
-        p.queryArc(2.0, 3.0)[0].data.note shouldBe "b"
-        p.queryArc(3.0, 4.0)[0].data.note shouldBe "a"
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(2.0, 3.0)[0].data.note shouldBeEqualIgnoringCase "b"
+        p.queryArc(3.0, 4.0)[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "lastOf() works as string extension" {
         val p = "a".lastOf(2) { it.note("b") }.note()
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "A"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "B"
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "A"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "B"
     }
 
     "lastOf() works as top-level function" {
         // lastOf(n, transform, pattern)
         val p = lastOf(2, { it: StrudelPattern -> it.note("b") }, note("a"))
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "a"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "b"
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "lastOf(1) always applies transform" {
         val p = note("a").lastOf(1) { it.note("b") }
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "b"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "b"
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "b"
     }
 })

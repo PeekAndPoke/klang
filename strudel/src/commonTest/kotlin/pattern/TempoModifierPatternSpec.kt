@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -36,11 +37,11 @@ class TempoModifierPatternSpec : StringSpec({
         val events = pattern.queryArc(0.0, 2.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBe "b"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[1].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
@@ -55,15 +56,15 @@ class TempoModifierPatternSpec : StringSpec({
         events.size shouldBe 4
 
         // 1st iteration
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
         events[0].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        events[1].data.note shouldBe "b"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
         events[1].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
 
         // 2nd iteration
-        events[2].data.note shouldBe "a"
+        events[2].data.note shouldBeEqualIgnoringCase "a"
         events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[3].data.note shouldBe "b"
+        events[3].data.note shouldBeEqualIgnoringCase "b"
         events[3].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
     }
 

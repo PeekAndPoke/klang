@@ -18,8 +18,8 @@ class SuperimposePatternSpec : StringSpec({
 
         // Should have 2 events at the same time
         events.size shouldBe 2
-        events.any { it.data.note == "a" } shouldBe true
-        events.any { it.data.note == "b" } shouldBe true
+        events.any { it.data.note?.lowercase() == "a" } shouldBe true
+        events.any { it.data.note?.lowercase() == "b" } shouldBe true
 
         events.forEach {
             it.begin.toDouble() shouldBe 0.0
@@ -53,7 +53,7 @@ class SuperimposePatternSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.any { it.data.note == "a" } shouldBe true
-        events.any { it.data.note == "b" } shouldBe true
+        events.any { it.data.note?.lowercase() == "a" } shouldBe true
+        events.any { it.data.note?.lowercase() == "b" } shouldBe true
     }
 })

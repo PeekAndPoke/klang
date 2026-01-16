@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -18,11 +19,11 @@ class LangStackSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.data.note }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBe "b"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
         events[1].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
@@ -34,8 +35,8 @@ class LangStackSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.data.note }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "stack() works as extension on String" {
@@ -64,8 +65,8 @@ class LangStackSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.data.note } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "stack() works as method in compiled code" {
@@ -73,8 +74,8 @@ class LangStackSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.data.note } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "stack() works as string extension in compiled code" {

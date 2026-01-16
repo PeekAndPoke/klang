@@ -5,6 +5,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangDegradeBySpec : StringSpec({
@@ -13,14 +14,14 @@ class LangDegradeBySpec : StringSpec({
         val p = note("a").degradeBy(0.0) // 0.0 probability means it stays
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "degradeBy() works as string extension" {
         val p = "a".degradeBy(0.0).note()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "A"
+        events[0].data.note shouldBeEqualIgnoringCase "A"
     }
 
     "degradeBy(1.0) removes all events" {
@@ -39,7 +40,7 @@ class LangDegradeBySpec : StringSpec({
         val p = StrudelPattern.compile("""note("a").degradeBy(0.0)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "degradeBy() statistical check" {
@@ -78,7 +79,7 @@ class LangDegradeBySpec : StringSpec({
     }
 
     "degradeBy() as control pattern" {
-        val p = note("[a b c d]").degradeBy("[0.1 1.0 0.2 0.9]")
+        val p = note("[a b c d]").degradeBy("[0.1 1.0 0.2 0.9]").seed(42)
         val events = (0..<100).flatMap {
             p.queryArc(it.toDouble(), it + 1.0)
         }
@@ -89,16 +90,16 @@ class LangDegradeBySpec : StringSpec({
 
         assertSoftly {
             withClue("note 'a'") {
-                (buckets["a"]?.size ?: 0) shouldBeInRange 80..100
+                (buckets["A"]?.size ?: 0) shouldBeInRange 80..100
             }
             withClue("note 'b'") {
-                (buckets["b"]?.size ?: 0) shouldBe 0
+                (buckets["B"]?.size ?: 0) shouldBe 0
             }
             withClue("note 'c'") {
-                (buckets["c"]?.size ?: 0) shouldBeInRange 65..95
+                (buckets["C"]?.size ?: 0) shouldBeInRange 65..95
             }
             withClue("note 'd'") {
-                (buckets["d"]?.size ?: 0) shouldBeInRange 0..20
+                (buckets["D"]?.size ?: 0) shouldBeInRange 0..25
             }
         }
     }

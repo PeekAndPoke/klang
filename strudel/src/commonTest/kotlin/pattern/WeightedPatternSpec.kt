@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -20,7 +21,7 @@ class WeightedPatternSpec : StringSpec({
 
         // Verify that events are passed through from the inner pattern without modification
         verifyPattern(pattern, 1) { _, note, begin, dur ->
-            note shouldBe "a"
+            note shouldBeEqualIgnoringCase "a"
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
         }
@@ -33,7 +34,7 @@ class WeightedPatternSpec : StringSpec({
         pattern.weight shouldBe (2.0 plusOrMinus EPSILON)
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
-            note shouldBe "a"
+            note shouldBeEqualIgnoringCase "a"
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
         }
@@ -46,7 +47,7 @@ class WeightedPatternSpec : StringSpec({
         pattern.weight shouldBe (5.0 plusOrMinus EPSILON)
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
-            note shouldBe "a"
+            note shouldBeEqualIgnoringCase "a"
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
         }

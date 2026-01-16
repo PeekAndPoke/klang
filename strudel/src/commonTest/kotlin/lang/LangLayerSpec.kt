@@ -15,8 +15,8 @@ class LangLayerSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events.any { it.data.note == "a" } shouldBe true
-        events.any { it.data.note == "b" } shouldBe true
+        events.any { it.data.note?.lowercase() == "a" } shouldBe true
+        events.any { it.data.note?.lowercase() == "b" } shouldBe true
     }
 
     "layer() works with compiled code" {

@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 
 class LangBypassSpec : StringSpec({
 
@@ -20,14 +21,14 @@ class LangBypassSpec : StringSpec({
         val p = note("a").bypass("false")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "bypass() with 0 keeps the pattern" {
         val p = note("a").bypass(0)
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "bypass() with control pattern" {
@@ -36,7 +37,7 @@ class LangBypassSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "bypass() works as string extension" {

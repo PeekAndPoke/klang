@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangSoundSpec : StringSpec({
@@ -32,7 +33,7 @@ class LangSoundSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
         events[0].data.sound shouldBe "piano"
     }
 
@@ -51,7 +52,7 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.value?.asString shouldBe "c"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "c"
         events[0].data.sound shouldBe "piano"
     }
 

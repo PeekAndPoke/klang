@@ -4,6 +4,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 
 class LangFilterWhenSpec : StringSpec({
 
@@ -14,8 +15,8 @@ class LangFilterWhenSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.note shouldBe "c"
-        events[1].data.note shouldBe "d"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
+        events[1].data.note shouldBeEqualIgnoringCase "d"
     }
 
     "filterWhen() works as string extension" {
@@ -25,8 +26,8 @@ class LangFilterWhenSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.note shouldBe "A"
-        events[1].data.note shouldBe "B"
+        events[0].data.note shouldBeEqualIgnoringCase "A"
+        events[1].data.note shouldBeEqualIgnoringCase "B"
     }
 
     "filterWhen() works as top-level function" {

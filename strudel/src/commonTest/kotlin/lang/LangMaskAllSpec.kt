@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangMaskAllSpec : StringSpec({
@@ -13,8 +14,8 @@ class LangMaskAllSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "c"
-        events[1].data.note shouldBe "e"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
+        events[1].data.note shouldBeEqualIgnoringCase "e"
     }
 
     "maskAll() filters if there is silence (no event) in the mask" {
@@ -22,7 +23,7 @@ class LangMaskAllSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "maskAll() top-level function works" {
@@ -37,7 +38,7 @@ class LangMaskAllSpec : StringSpec({
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.value?.asString shouldBe "c"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "c"
     }
 
     "maskAll() works in compiled code" {

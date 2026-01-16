@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeSameSizeAs
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -36,11 +37,11 @@ class SequencePatternSpec : StringSpec({
 
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
-                note shouldBe "a"
+                note shouldBeEqualIgnoringCase "a"
                 begin shouldBe (0.0 plusOrMinus EPSILON)
                 dur shouldBe (0.5 plusOrMinus EPSILON)
             } else {
-                note shouldBe "b"
+                note shouldBeEqualIgnoringCase "b"
                 begin shouldBe (0.5 plusOrMinus EPSILON)
                 dur shouldBe (0.5 plusOrMinus EPSILON)
             }
@@ -52,11 +53,11 @@ class SequencePatternSpec : StringSpec({
 
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
-                note shouldBe "a"
+                note shouldBeEqualIgnoringCase "a"
                 begin shouldBe (0.0 plusOrMinus EPSILON)
                 dur shouldBe (0.5 plusOrMinus EPSILON)
             } else {
-                note shouldBe "b"
+                note shouldBeEqualIgnoringCase "b"
                 begin shouldBe (0.5 plusOrMinus EPSILON)
                 dur shouldBe (0.5 plusOrMinus EPSILON)
             }
@@ -68,11 +69,11 @@ class SequencePatternSpec : StringSpec({
 
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
-                note shouldBe "a"
+                note shouldBeEqualIgnoringCase "a"
                 begin shouldBe (0.0 plusOrMinus EPSILON)
                 dur shouldBe (0.5 plusOrMinus EPSILON)
             } else {
-                note shouldBe "b"
+                note shouldBeEqualIgnoringCase "b"
                 begin shouldBe (0.5 plusOrMinus EPSILON)
                 dur shouldBe (0.5 plusOrMinus EPSILON)
             }

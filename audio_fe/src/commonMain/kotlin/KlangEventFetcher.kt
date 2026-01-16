@@ -23,7 +23,8 @@ class KlangEventFetcher<T>(
         val prefetchCycles: Double,
     )
 
-    private val sampleSoundLookAheadCycles = 4.0
+    private val sampleSoundLookAheadCycles = 8.0
+    private var sampleSoundLookAheadPointer = 0.0
 
     private val secPerCycle = 1.0 / config.cps
     private var queryCursorCycles = 0.0
@@ -44,9 +45,11 @@ class KlangEventFetcher<T>(
 
     suspend fun run(scope: CoroutineScope) {
 
+        lookAheadForSampleSounds(0.0, sampleSoundLookAheadCycles)
+
         while (scope.isActive) {
             // Look ahead for sample sound
-            lookAheadForSampleSounds()
+            lookAheadForSampleSounds(queryCursorCycles + sampleSoundLookAheadCycles, 1.0)
 
             // Request the next cycles from the source
             requestNextCyclesAndAdvanceCursor()
@@ -61,9 +64,17 @@ class KlangEventFetcher<T>(
         println("KlangPlayerBackend stopped")
     }
 
-    private fun lookAheadForSampleSounds() {
-        val from = queryCursorCycles
-        val events = config.source.query(from, from + sampleSoundLookAheadCycles)
+    private fun lookAheadForSampleSounds(from: Double, dur: Double = from + 1.0) {
+        val to = from + dur
+
+        if (to <= sampleSoundLookAheadPointer) return
+
+        sampleSoundLookAheadPointer = to
+
+        println("Sample Look ahead $from - $to")
+
+        // Lookup events
+        val events = config.source.query(from, to)
 
         // Figure out which samples we need to send to the backend
         val newSamples = events

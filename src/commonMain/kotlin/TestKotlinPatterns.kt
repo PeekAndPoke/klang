@@ -23,7 +23,7 @@ object TestKotlinPatterns {
         ).sound("tri")
             .filterWhen { it >= 32 }
 //            .struct("x(5,8,2)")
-            .orbit(0).gain(0.2)
+            .orbit(0).gain(0.375)
             .pan(sine2.slow(48).range(-0.7, 0.7).flipSign())
             .delay(0.2).delaytime(0.4).delayfeedback(0.10)
             .room(0.2).rsize(0.1)
@@ -40,10 +40,10 @@ object TestKotlinPatterns {
                     [[e2 e3]*4]
                     [[a2 a3]*4]
                     [[g#2 g#3]*2 [e2 e3]*2]
-                    [a3 a2 a2 a1 a1 a1 [a2 a3] [a4 a5]]
+                    [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
                     [[d2 d3]*4]
                     [[c2 c3]*4]
-                    [[b1 b1 b1 b2] [e2 e2 e2 e3]]
+                    [[b1 b2 b1 b2] [e2 e3 e2 e3]]
                     [a3 a2 a2 a1 a1 [c1 e2] [a5 a4] [a3 a2]]
                 >
             """.trimIndent()
@@ -52,7 +52,7 @@ object TestKotlinPatterns {
 //            .struct("<x*2>")
             .spread(0.5).unison(sine.range(8, 10).slow(32))
             .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
-            .orbit(2).gain(0.4)
+            .orbit(2).gain(0.725)
             .pan(sine2.slow(48).range(-0.7, 0.7))
             .adsr("0.01:0.3:0.6:0.3")
 //            .room(0.02).rsize(0.5)
@@ -93,8 +93,8 @@ object TestKotlinPatterns {
             [bd hh sd [bd, oh]]
             [[bd, cr] oh sd oh] 
             [cr hh cr hh]
-            [[sd, oh] mt sd [mt, hh]] 
-            [sd ht [bd bd] [bd bd]]
+            [[sd, cr:2] mt sd [mt, hh]] 
+            [sd lt [bd bd] [bd bd]]
             >            
         """.trimIndent()
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
@@ -102,7 +102,7 @@ object TestKotlinPatterns {
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
-            .orbit(3).pan(-0.0).gain(0.6)
+            .orbit(3).pan(-0.0).gain(1.0)
             .room(0.02).rsize(0.5)
 //            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
             .adsr("0.01:0.2:0.8:0.5")

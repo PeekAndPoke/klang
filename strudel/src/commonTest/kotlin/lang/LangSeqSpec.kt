@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
@@ -46,8 +47,8 @@ class LangSeqSpec : StringSpec({
         // Let's check what they produce.
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
-        events[1].data.value?.asString shouldBe "b" // "b" string arg goes to value by defaultModifier in seq
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b" // "b" string arg goes to value by defaultModifier in seq
     }
 
     "seq() works as extension on String" {
@@ -57,8 +58,8 @@ class LangSeqSpec : StringSpec({
 
         events.size shouldBe 2
         // "a" parsed via seq default modifier -> value="a"
-        events[0].data.value?.asString shouldBe "a"
-        events[1].data.value?.asString shouldBe "b"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
     }
 
     "seq() works in compiled code" {
@@ -66,8 +67,8 @@ class LangSeqSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.value?.asString shouldBe "a"
-        events[1].data.value?.asString shouldBe "b"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
     }
 
     "seq() works as method in compiled code" {
@@ -76,8 +77,8 @@ class LangSeqSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
-        events[1].data.value?.asString shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
     }
 
     "seq() works as string extension in compiled code" {
@@ -86,7 +87,7 @@ class LangSeqSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.value?.asString shouldBe "a"
-        events[1].data.value?.asString shouldBe "b"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
     }
 })

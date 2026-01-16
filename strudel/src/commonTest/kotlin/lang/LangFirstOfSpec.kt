@@ -4,6 +4,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangFirstOfSpec : StringSpec({
@@ -16,15 +17,15 @@ class LangFirstOfSpec : StringSpec({
 
         val c0 = p.queryArc(0.0, 1.0)
         c0.size shouldBe 1
-        c0[0].data.note shouldBe "b"
+        c0[0].data.note shouldBeEqualIgnoringCase "b"
 
         val c1 = p.queryArc(1.0, 2.0)
         c1.size shouldBe 1
-        c1[0].data.note shouldBe "a"
+        c1[0].data.note shouldBeEqualIgnoringCase "a"
 
         val c2 = p.queryArc(2.0, 3.0)
         c2.size shouldBe 1
-        c2[0].data.note shouldBe "b"
+        c2[0].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "firstOf(3) applies transform on 1st cycle, original on 2nd and 3rd" {
@@ -35,17 +36,17 @@ class LangFirstOfSpec : StringSpec({
         // 3 -> transform
         val p = note("a").firstOf(3) { it.note("b") }
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "b"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "a"
-        p.queryArc(2.0, 3.0)[0].data.note shouldBe "a"
-        p.queryArc(3.0, 4.0)[0].data.note shouldBe "b"
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(2.0, 3.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(3.0, 4.0)[0].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "firstOf() works as string extension" {
         val p = "a".firstOf(2) { it.note("b") }.note()
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "B"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "A" // "a" parses to note "A" by default
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "B"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "A" // "a" parses to note "A" by default
     }
 
     "firstOf() works as top-level function" {
@@ -58,21 +59,21 @@ class LangFirstOfSpec : StringSpec({
     "firstOf(1) always applies transform" {
         val p = note("a").firstOf(1) { it.note("b") }
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "b"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "b"
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "every() is an alias for firstOf()" {
         val p = note("a").every(2) { it.note("b") }
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "b"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "a"
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "every() works as string extension" {
         val p = "a".every(2) { it.note("b") }.note()
 
-        p.queryArc(0.0, 1.0)[0].data.note shouldBe "B"
-        p.queryArc(1.0, 2.0)[0].data.note shouldBe "A"
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "B"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "A"
     }
 })

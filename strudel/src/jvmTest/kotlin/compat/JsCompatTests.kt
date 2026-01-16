@@ -124,10 +124,10 @@ class JsCompatTests : StringSpec() {
             )
         })
 
-        println("Graal: ${graalArc.size} events | Native: ${nativeArc.size} events")
-        println()
-        println(overview.formatAsTable())
-        println()
+//        println("Graal: ${graalArc.size} events | Native: ${nativeArc.size} events")
+//        println()
+//        println(overview.formatAsTable())
+//        println()
 
 //        val graalArc = graalPattern.queryArc(0.0, 64.0).sort()
 //        val nativeArc = nativePattern.queryArc(0.0, 64.0).sort()

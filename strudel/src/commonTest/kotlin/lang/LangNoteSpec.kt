@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangNoteSpec : StringSpec({
@@ -11,7 +12,7 @@ class LangNoteSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.note } shouldBe listOf("c3", "g3")
+        events.map { it.data.note?.lowercase() } shouldBe listOf("c3", "g3")
     }
 
     "control pattern note() sets note on existing pattern" {
@@ -20,7 +21,7 @@ class LangNoteSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.note } shouldBe listOf("a4", "b4")
+        events.map { it.data.note?.lowercase() } shouldBe listOf("a4", "b4")
     }
 
     "note() works as string extension" {
@@ -29,7 +30,7 @@ class LangNoteSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.note shouldBe "e3"
+        events[0].data.note shouldBeEqualIgnoringCase "e3"
     }
 
     "note() re-interprets value/index + scale when called without args" {
@@ -40,9 +41,9 @@ class LangNoteSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         // 0 -> C4
-        events[0].data.note shouldBe "C4"
+        events[0].data.note shouldBeEqualIgnoringCase "C4"
         // 2 -> Eb4 (minor third)
-        events[1].data.note shouldBe "Eb4"
+        events[1].data.note shouldBeEqualIgnoringCase "Eb4"
     }
 
     "note() re-interpretation uses existing note/value as fallback if no scale" {
@@ -56,7 +57,7 @@ class LangNoteSpec : StringSpec({
         val p = seq("a3").note()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.note shouldBe "A3"
+        events[0].data.note shouldBeEqualIgnoringCase "A3"
     }
 
     "note().note() is idempotent (chained re-interpretation)" {
@@ -74,8 +75,8 @@ class LangNoteSpec : StringSpec({
 
         events1.size shouldBe 1
         events2.size shouldBe 1
-        events1[0].data.note shouldBe "C4"
-        events2[0].data.note shouldBe "C4"
+        events1[0].data.note shouldBeEqualIgnoringCase "C4"
+        events2[0].data.note shouldBeEqualIgnoringCase "C4"
     }
 
     "note() works within compiled code" {
@@ -83,7 +84,7 @@ class LangNoteSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.note } shouldBe listOf("c3", "e3")
+        events.map { it.data.note?.lowercase() } shouldBe listOf("c3", "e3")
     }
 
     "note() re-interpretation works within compiled code" {
@@ -91,7 +92,7 @@ class LangNoteSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "C4"
-        events[1].data.note shouldBe "Eb4"
+        events[0].data.note shouldBeEqualIgnoringCase "C4"
+        events[1].data.note shouldBeEqualIgnoringCase "Eb4"
     }
 })

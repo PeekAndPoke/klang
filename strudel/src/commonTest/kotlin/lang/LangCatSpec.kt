@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
@@ -22,12 +23,12 @@ class LangCatSpec : StringSpec({
         events.size shouldBe 2
 
         // First cycle: a
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
         // Second cycle: b
-        events[1].data.note shouldBe "b"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[1].end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
@@ -45,14 +46,14 @@ class LangCatSpec : StringSpec({
         events.size shouldBe 3
 
         // Cycle 1: a b (still takes 1 full cycle, but each note is 0.5)
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
         events[0].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].data.note shouldBe "b"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
         events[1].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
         // Cycle 2: c
-        events[2].data.note shouldBe "c"
+        events[2].data.note shouldBeEqualIgnoringCase "c"
         events[2].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[2].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
@@ -68,13 +69,13 @@ class LangCatSpec : StringSpec({
         val events = p.queryArc(0.0, 3.0).sortedBy { it.begin }
 
         events.size shouldBe 3
-        events[0].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBe "b"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
-        events[2].data.note shouldBe "c"
+        events[2].data.note shouldBeEqualIgnoringCase "c"
         events[2].begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
@@ -102,8 +103,8 @@ class LangCatSpec : StringSpec({
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
@@ -113,8 +114,8 @@ class LangCatSpec : StringSpec({
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
@@ -124,8 +125,8 @@ class LangCatSpec : StringSpec({
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.value?.asString shouldBe "a"
-        events[1].data.value?.asString shouldBe "b"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
         events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 })

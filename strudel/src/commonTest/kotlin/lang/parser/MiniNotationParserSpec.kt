@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang.parser
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.lang.note
 
 class MiniNotationParserSpec : StringSpec() {
@@ -17,7 +18,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             events.size shouldBe 1
             with(events[0]) {
-                data.note shouldBe "bd"
+                data.note shouldBeEqualIgnoringCase "bd"
                 data.soundIndex shouldBe 1
             }
         }
@@ -28,7 +29,7 @@ class MiniNotationParserSpec : StringSpec() {
 
             events.size shouldBe 1
             with(events[0]) {
-                data.note shouldBe "bd"
+                data.note shouldBeEqualIgnoringCase "bd"
                 data.soundIndex shouldBe 1
                 data.gain shouldBe 0.5
             }
@@ -40,12 +41,12 @@ class MiniNotationParserSpec : StringSpec() {
 
             events.size shouldBe 2
             with(events[0]) {
-                data.note shouldBe "bd"
+                data.note shouldBeEqualIgnoringCase "bd"
                 data.soundIndex shouldBe 1
                 data.gain shouldBe 0.5
             }
             with(events[1]) {
-                data.note shouldBe "bd"
+                data.note shouldBeEqualIgnoringCase "bd"
                 data.soundIndex shouldBe 1
                 data.gain shouldBe 0.5
             }
@@ -81,8 +82,8 @@ class MiniNotationParserSpec : StringSpec() {
             val events1 = pattern1.queryArc(0.0, 1.0)
             val events2 = pattern2.queryArc(0.0, 1.0)
 
-            events1[1].data.note shouldBe "hh"
-            events2[1].data.note shouldBe "sd"
+            events1[1].data.note shouldBeEqualIgnoringCase "hh"
+            events2[1].data.note shouldBeEqualIgnoringCase "sd"
         }
 
         "clearCache() resets the cache" {

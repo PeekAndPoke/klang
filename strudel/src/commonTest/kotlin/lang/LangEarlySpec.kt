@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
@@ -32,11 +33,11 @@ class LangEarlySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "d"
+        events[0].data.note shouldBeEqualIgnoringCase "d"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBe "c"
+        events[1].data.note shouldBeEqualIgnoringCase "c"
         events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
@@ -49,8 +50,8 @@ class LangEarlySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "c"
-        events[1].data.note shouldBe "d"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
+        events[1].data.note shouldBeEqualIgnoringCase "d"
     }
 
     "early(1) query at shifted time shows previous cycle" {
@@ -58,11 +59,11 @@ class LangEarlySpec : StringSpec({
         val events = p.queryArc(-1.0, 0.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
         events[0].begin.toDouble() shouldBe (-1.0 plusOrMinus EPSILON)
         events[0].end.toDouble() shouldBe (-0.5 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBe "d"
+        events[1].data.note shouldBeEqualIgnoringCase "d"
         events[1].begin.toDouble() shouldBe (-0.5 plusOrMinus EPSILON)
         events[1].end.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
     }
@@ -82,8 +83,8 @@ class LangEarlySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.value?.asString shouldBe "d"
-        events[1].data.value?.asString shouldBe "c"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "d"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "c"
     }
 
     "early() works in compiled code" {
@@ -91,8 +92,8 @@ class LangEarlySpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "d"
-        events[1].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "d"
+        events[1].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "early() works as method in compiled code" {
@@ -102,10 +103,10 @@ class LangEarlySpec : StringSpec({
         // Original: c(0-0.25), d(0.25-0.5), e(0.5-0.75), f(0.75-1.0)
         // After early(0.5): shifts everything back, so we see second half of cycle 0 + first half of cycle 1
         events.size shouldBe 4
-        events[0].data.note shouldBe "e"
-        events[1].data.note shouldBe "f"
-        events[2].data.note shouldBe "c"
-        events[3].data.note shouldBe "d"
+        events[0].data.note shouldBeEqualIgnoringCase "e"
+        events[1].data.note shouldBeEqualIgnoringCase "f"
+        events[2].data.note shouldBeEqualIgnoringCase "c"
+        events[3].data.note shouldBeEqualIgnoringCase "d"
     }
 
     "early() works as string extension in compiled code" {
@@ -122,10 +123,10 @@ class LangEarlySpec : StringSpec({
         // Original: c(0-0.25), d(0.25-0.5), e(0.5-0.75), f(0.75-1)
         // After early(0.25): c(-0.25-0), d(0-0.25), e(0.25-0.5), f(0.5-0.75), next c(0.75-1)
         events.size shouldBe 4
-        events[0].data.note shouldBe "d"
-        events[1].data.note shouldBe "e"
-        events[2].data.note shouldBe "f"
-        events[3].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "d"
+        events[1].data.note shouldBeEqualIgnoringCase "e"
+        events[2].data.note shouldBeEqualIgnoringCase "f"
+        events[3].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "early() with pattern parameter" {

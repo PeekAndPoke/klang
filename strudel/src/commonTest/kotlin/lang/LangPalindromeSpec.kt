@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
@@ -17,12 +18,12 @@ class LangPalindromeSpec : StringSpec({
         events.size shouldBe 4
 
         // Cycle 0: Forward (a then b)
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "b"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
 
         // Cycle 1: Backward (b then a)
-        events[2].data.note shouldBe "b"
-        events[3].data.note shouldBe "a"
+        events[2].data.note shouldBeEqualIgnoringCase "b"
+        events[3].data.note shouldBeEqualIgnoringCase "a"
 
         events[2].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
@@ -36,7 +37,7 @@ class LangPalindromeSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
 
         events.size shouldBe 4
-        events.map { it.data.note } shouldBe listOf("a", "b", "d", "c")
+        events.map { it.data.note?.lowercase() } shouldBe listOf("a", "b", "d", "c")
     }
 
     "palindrome() works as a standalone function" {
@@ -44,7 +45,7 @@ class LangPalindromeSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
 
         events.size shouldBe 4
-        events.map { it.data.note } shouldBe listOf("a", "b", "b", "a")
+        events.map { it.data.note?.lowercase() } shouldBe listOf("a", "b", "b", "a")
     }
 
     "palindrome() works as extension on String" {
@@ -60,6 +61,6 @@ class LangPalindromeSpec : StringSpec({
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 4
-        events.map { it.data.note } shouldBe listOf("a", "b", "b", "a")
+        events.map { it.data.note?.lowercase() } shouldBe listOf("a", "b", "b", "a")
     }
 })

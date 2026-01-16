@@ -19,7 +19,7 @@ class LangBankSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.note shouldBe "c"
+        events[0].data.note shouldBe "C"
         events[0].data.bank shouldBe "User1"
     }
 

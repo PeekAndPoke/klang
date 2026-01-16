@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
@@ -31,11 +32,11 @@ class LangLateSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "d"
+        events[0].data.note shouldBeEqualIgnoringCase "d"
         events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBe "c"
+        events[1].data.note shouldBeEqualIgnoringCase "c"
         events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
@@ -48,8 +49,8 @@ class LangLateSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "c"
-        events[1].data.note shouldBe "d"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
+        events[1].data.note shouldBeEqualIgnoringCase "d"
     }
 
     "late(1) query at shifted time shows next cycle" {
@@ -57,11 +58,11 @@ class LangLateSpec : StringSpec({
         val events = p.queryArc(1.0, 2.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
         events[0].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[0].end.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBe "d"
+        events[1].data.note shouldBeEqualIgnoringCase "d"
         events[1].begin.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
         events[1].end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
@@ -81,8 +82,8 @@ class LangLateSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
         events.size shouldBe 2
-        events[0].data.value?.asString shouldBe "d"
-        events[1].data.value?.asString shouldBe "c"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "d"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "c"
     }
 
     "late() works in compiled code" {
@@ -90,8 +91,8 @@ class LangLateSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.note shouldBe "d"
-        events[1].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "d"
+        events[1].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "late() works as method in compiled code" {
@@ -101,10 +102,10 @@ class LangLateSpec : StringSpec({
         // Original: c(0-0.25), d(0.25-0.5), e(0.5-0.75), f(0.75-1.0)
         // After late(0.5): shifts everything forward, so we see second half of cycle -1 + first half of cycle 0
         events.size shouldBe 4
-        events[0].data.note shouldBe "e"
-        events[1].data.note shouldBe "f"
-        events[2].data.note shouldBe "c"
-        events[3].data.note shouldBe "d"
+        events[0].data.note shouldBeEqualIgnoringCase "e"
+        events[1].data.note shouldBeEqualIgnoringCase "f"
+        events[2].data.note shouldBeEqualIgnoringCase "c"
+        events[3].data.note shouldBeEqualIgnoringCase "d"
     }
 
     "late() works as string extension in compiled code" {
@@ -121,10 +122,10 @@ class LangLateSpec : StringSpec({
         // Original: c(0-0.25), d(0.25-0.5), e(0.5-0.75), f(0.75-1)
         // After late(0.25): c(0.25-0.5), d(0.5-0.75), e(0.75-1), prev f(-0.25-0), so f(0-0.25) in next cycle iteration
         events.size shouldBe 4
-        events[0].data.note shouldBe "f"
-        events[1].data.note shouldBe "c"
-        events[2].data.note shouldBe "d"
-        events[3].data.note shouldBe "e"
+        events[0].data.note shouldBeEqualIgnoringCase "f"
+        events[1].data.note shouldBeEqualIgnoringCase "c"
+        events[2].data.note shouldBeEqualIgnoringCase "d"
+        events[3].data.note shouldBeEqualIgnoringCase "e"
     }
 
     "late() and early() are inverse operations" {

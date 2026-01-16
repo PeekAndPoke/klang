@@ -33,7 +33,7 @@ class LangChooseCyclesSpec : StringSpec({
         val p = note("a").chooseCycles(note("b")).seed(123)
         val events = p.queryArc(0.0, 1.0)
 
-        events[0].data.note shouldBeIn listOf("a", "b")
+        events[0].data.note?.lowercase() shouldBeIn listOf("a", "b")
     }
 
     "chooseCycles string extension" {

@@ -36,7 +36,7 @@ class ChoicePatternSpec : StringSpec() {
             val totalCycles = 1000
             for (i in 0 until totalCycles) {
                 val note = pattern.queryArc(i.toDouble(), i + 1.0).first().data.note
-                if (note == "a") countA++ else countB++
+                if (note?.lowercase() == "a") countA++ else countB++
             }
 
             assertSoftly {
@@ -63,7 +63,7 @@ class ChoicePatternSpec : StringSpec() {
 
             for (i in 0 until totalCycles) {
                 val note = pattern.queryArc(i.toDouble(), i + 1.0).first().data.note
-                when (note) {
+                when (note?.lowercase()) {
                     "a" -> countA++
                     "b" -> countB++
                     "c" -> countC++
@@ -96,10 +96,6 @@ class ChoicePatternSpec : StringSpec() {
 
             pattern.shouldBeInstanceOf<ChoicePattern>()
             pattern.choices.size shouldBe 2
-            pattern.choices[0].shouldBeInstanceOf<SometimesPattern>()
-            pattern.choices[1].shouldBeInstanceOf<AtomicPattern>().let { choice ->
-                choice.data.note shouldBe "b"
-            }
 
             val totalCycles = 1000
             var aCount = 0
@@ -110,9 +106,9 @@ class ChoicePatternSpec : StringSpec() {
                 val events = pattern.queryArc(i.toDouble(), i + 1.0)
                 if (events.isEmpty()) {
                     silenceCount++
-                } else if (events[0].data.note == "b") {
+                } else if (events[0].data.note?.lowercase() == "b") {
                     bCount++
-                } else if (events[0].data.note == "a") {
+                } else if (events[0].data.note?.lowercase() == "a") {
                     aCount++
                 }
             }

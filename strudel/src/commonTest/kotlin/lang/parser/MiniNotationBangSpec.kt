@@ -1,8 +1,10 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.lang.note
@@ -21,12 +23,12 @@ class MiniNotationBangSpec : StringSpec() {
             events.size shouldBe 2
 
             with(events[0]) {
-                data.note shouldBe "a"
+                data.note shouldBeEqualIgnoringCase "a"
                 begin.toDouble() shouldBe 0.0
                 end.toDouble() shouldBe 0.5
             }
             with(events[1]) {
-                data.note shouldBe "a"
+                data.note shouldBeEqualIgnoringCase "a"
                 begin.toDouble() shouldBe 0.5
                 end.toDouble() shouldBe 1.0
             }
@@ -38,8 +40,8 @@ class MiniNotationBangSpec : StringSpec() {
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
             events.size shouldBe 2
-            events[0].data.note shouldBe "a"
-            events[1].data.note shouldBe "a"
+            events[0].data.note shouldBeEqualIgnoringCase "a"
+            events[1].data.note shouldBeEqualIgnoringCase "a"
         }
 
         "Repetition inside sequence 'a b!2 c'" {
@@ -58,16 +60,16 @@ class MiniNotationBangSpec : StringSpec() {
 
             events.size shouldBe 4 // a, b, b, c
 
-            events[0].data.note shouldBe "a"
+            events[0].data.note shouldBeEqualIgnoringCase "a"
             events[0].dur.toDouble() shouldBe (1.0 / 4.0)
 
             // b!2 takes the middle third. so each b takes 1/6
-            events[1].data.note shouldBe "b"
+            events[1].data.note shouldBeEqualIgnoringCase "b"
             events[1].dur.toDouble() shouldBe (1.0 / 4.0)
-            events[2].data.note shouldBe "b"
+            events[2].data.note shouldBeEqualIgnoringCase "b"
             events[2].dur.toDouble() shouldBe (1.0 / 4.0)
 
-            events[3].data.note shouldBe "c"
+            events[3].data.note shouldBeEqualIgnoringCase "c"
             events[3].dur.toDouble() shouldBe (1.0 / 4.0)
         }
 
@@ -79,10 +81,10 @@ class MiniNotationBangSpec : StringSpec() {
             events.size shouldBe 4 // a b a b
 
             // Should play twice in the cycle
-            events[0].data.note shouldBe "a"
-            events[1].data.note shouldBe "b"
-            events[2].data.note shouldBe "a"
-            events[3].data.note shouldBe "b"
+            events[0].data.note shouldBeEqualIgnoringCase "a"
+            events[1].data.note shouldBeEqualIgnoringCase "b"
+            events[2].data.note shouldBeEqualIgnoringCase "a"
+            events[3].data.note shouldBeEqualIgnoringCase "b"
         }
 
         "Rest repetition '~!2'" {
@@ -100,7 +102,7 @@ class MiniNotationBangSpec : StringSpec() {
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
             events.size shouldBe 4
-            events.all { it.data.note == "a" } shouldBe true
+            events.map { it.data.note?.lowercase() } shouldContainOnly listOf("a")
         }
 
         "Bang in alternation '<0!3>'" {
@@ -113,7 +115,7 @@ class MiniNotationBangSpec : StringSpec() {
             val events = pattern.queryArc(0.0, 3.0).sortedBy { it.begin }
 
             events.size shouldBe 3
-            events.forEach { it.data.note shouldBe "a" }
+            events.map { it.data.note?.lowercase() } shouldContainOnly listOf("a")
         }
 
         "Bang in complex alternation '<0 2 0!3>'" {
@@ -124,7 +126,7 @@ class MiniNotationBangSpec : StringSpec() {
 
             val events = pattern.queryArc(0.0, 5.0)
             events.size shouldBe 5
-            events.map { it.data.note } shouldBe listOf("a", "b", "a", "a", "a")
+            events.map { it.data.note?.lowercase() } shouldBe listOf("a", "b", "a", "a", "a")
         }
 
         "Complex Pattern: <0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8" {
@@ -153,23 +155,23 @@ class MiniNotationBangSpec : StringSpec() {
 
             // Check timing
             // Step 0 (a): 0.0 .. 0.125
-            events[0].data.note shouldBe "a"
+            events[0].data.note shouldBeEqualIgnoringCase "a"
             events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
             events[0].end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
             // Step 8 (first of a!3): 8 * 0.125 = 1.0
             // It should be a full step now!
             val step8 = events.find { it.begin.toDouble() >= 0.999 && it.begin.toDouble() < 1.001 }!!
-            step8.data.note shouldBe "a"
+            step8.data.note shouldBeEqualIgnoringCase "a"
             step8.dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
             // Step 9 (second of a!3): 1.125
             val step9 = events.find { it.begin.toDouble() >= 1.124 && it.begin.toDouble() < 1.126 }!!
-            step9.data.note shouldBe "a"
+            step9.data.note shouldBeEqualIgnoringCase "a"
 
             // Step 10 (third of a!3): 1.25
             val step10 = events.find { it.begin.toDouble() >= 1.249 && it.begin.toDouble() < 1.251 }!!
-            step10.data.note shouldBe "a"
+            step10.data.note shouldBeEqualIgnoringCase "a"
 
             // Rests follow from 1.375 onwards.
         }
