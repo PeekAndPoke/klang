@@ -12,10 +12,10 @@ and category.
 
 ### Functions That Accept Numerical Arguments But Don't Support Control Patterns
 
-1. Tempo Modifiers (lang_tempo.kt)  
-   ❌ slow() - Lines 54-77 - Only accepts a single number factor  
-   ❌ fast() - Lines 91-123 - Only accepts a single number factor  
-   ❌ rev() - Lines 127-159 - Accepts optional integer n parameter
+1. Tempo Modifiers (lang_tempo.kt)
+   ❌ slow() - Lines 54-77 - Only accepts a single number factor
+   ❌ fast() - Lines 91-123 - Only accepts a single number factor
+   ✅ rev() - **COMPLETED** - Now accepts control patterns for dynamic reversal
 2. Structural Functions (lang_structural.kt)  
    ❌ gap() - Lines 51-66 - Accepts number of steps  
    ❌ zoom() - Lines 563-596 - Accepts start/end doubles  
@@ -102,6 +102,7 @@ and category.
 - [x] **`slow(factor)`** - Slows down pattern (alias: `sparsity`)
 - [x] **`early(cycles)`** - Nudge pattern earlier in time
 - [x] **`late(cycles)`** - Nudge pattern later in time
+- [x] **`rev(n)`** - Reverses pattern, now supports control patterns for dynamic reversal
 - [x] **`euclid(pulses, steps)`** - Euclidean rhythm function (standalone, pattern method, string extension)
 - [x] **`euclidRot(pulses, steps, rotation)`** / **`euclidrot`** - Euclidean with rotation (standalone, pattern method,
   string extension)
@@ -130,7 +131,7 @@ and category.
 
 ### Pattern Transformation ⭐⭐⭐
 
-- [x] **`rev()`** - Reverses pattern in each cycle
+- [x] **`rev(n)`** - Reverses pattern in each cycle, supports control patterns for dynamic reversal
 - [ ] **`revv()`** - Reverses pattern vertically (pitch inversion)
 - [x] **`struct(pattern)`** - Structures pattern according to mask (uses 'x' markers)
 - [x] **`structAll(pattern)`** - Like struct but keeps all overlapping events
