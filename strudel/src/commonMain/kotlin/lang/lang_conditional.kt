@@ -3,8 +3,13 @@
 
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.ArrangementPattern
+import io.peekandpoke.klang.strudel.pattern.AtomicPattern
+import io.peekandpoke.klang.strudel.pattern.FirstOfWithControlPattern
+import io.peekandpoke.klang.strudel.pattern.LastOfWithControlPattern
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -15,22 +20,36 @@ var strudelLangConditionalInit = false
 // -- firstOf() --------------------------------------------------------------------------------------------------------
 
 private fun applyFirstOf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+    val nArg = args.firstOrNull()
 
     @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1) as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    if (n <= 1) return transform(source)
-
-    // Construct a list of patterns: [transform(source), source, source, ... (n-1 times)]
-    // We use 1.0 duration for each pattern segment, so they play sequentially, one per cycle.
-    val patterns = ArrayList<Pair<Double, StrudelPattern>>(n)
-    patterns.add(1.0 to transform(source))
-    repeat(n - 1) {
-        patterns.add(1.0 to source)
+    // Parse n as a pattern
+    val nPattern = when (nArg) {
+        is StrudelPattern -> nArg
+        null -> parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
     }
 
-    return ArrangementPattern(patterns)
+    val staticN = nArg?.asIntOrNull()
+
+    if (staticN != null) {
+        // Static path
+        if (staticN <= 1) return transform(source)
+
+        // Construct a list of patterns: [transform(source), source, source, ... (n-1 times)]
+        val patterns = ArrayList<Pair<Double, StrudelPattern>>(staticN)
+        patterns.add(1.0 to transform(source))
+        repeat(staticN - 1) {
+            patterns.add(1.0 to source)
+        }
+
+        return ArrangementPattern(patterns)
+    } else {
+        // Dynamic path: Use FirstOfWithControl
+        return FirstOfWithControlPattern(source, nPattern, transform)
+    }
 }
 
 /**
@@ -49,8 +68,8 @@ private fun applyFirstOf(source: StrudelPattern, args: List<Any?>): StrudelPatte
  * - Cycle 4: The pattern plays normally.
  * - Cycle 5: The pattern plays in reverse again (loop restarts).
  *
- * @param n - the number of cycles to repeat the function
- * @param transform - the function to apply to the first cycle
+ * @param {n} - the number of cycles to repeat the function
+ * @param {transform} - the function to apply to the first cycle
  */
 @StrudelDsl
 val firstOf by dslFunction { _ -> silence }
@@ -78,22 +97,42 @@ val String.every by dslStringExtension { source, args -> applyFirstOf(source, ar
 // -- lastOf() ---------------------------------------------------------------------------------------------------------
 
 private fun applyLastOf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    val n = args.firstOrNull()?.asIntOrNull() ?: 1
+    val nArg = args.firstOrNull()
 
     @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1) as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    if (n <= 1) return transform(source)
+    // Parse n as a pattern
+    val nPattern = when (nArg) {
+        is StrudelPattern -> nArg
 
-    // Construct a list of patterns: [source, source, ... (n-1 times), transform(source)]
-    // We use 1.0 duration for each pattern segment, so they play sequentially, one per cycle.
-    val patterns = ArrayList<Pair<Double, StrudelPattern>>(n)
-    repeat(n - 1) {
-        patterns.add(1.0 to source)
+        null -> parseMiniNotation("1") {
+            AtomicPattern(VoiceData.empty.defaultModifier(it))
+        }
+
+        else -> parseMiniNotation(nArg.toString()) {
+            AtomicPattern(VoiceData.empty.defaultModifier(it))
+        }
     }
-    patterns.add(1.0 to transform(source))
 
-    return ArrangementPattern(patterns)
+    val staticN = nArg?.asIntOrNull()
+
+    if (staticN != null) {
+        // Static path
+        if (staticN <= 1) return transform(source)
+
+        // Construct a list of patterns: [source, source, ... (n-1 times), transform(source)]
+        val patterns = ArrayList<Pair<Double, StrudelPattern>>(staticN)
+        repeat(staticN - 1) {
+            patterns.add(1.0 to source)
+        }
+        patterns.add(1.0 to transform(source))
+
+        return ArrangementPattern(patterns)
+    } else {
+        // Dynamic path: Use LastOfWithControl
+        return LastOfWithControlPattern(source, nPattern, transform)
+    }
 }
 
 /**
@@ -112,8 +151,8 @@ private fun applyLastOf(source: StrudelPattern, args: List<Any?>): StrudelPatter
  * - Cycle 4: The pattern plays in reverse again (loop restarts).
  * - Cycle 5: The pattern plays normally.
  *
- * @param n - the number of cycles to repeat the function
- * @param transform - the function to apply to the first cycle
+ * @param {n} - the number of cycles to repeat the function
+ * @param {transform} - the function to apply to the first cycle
  */
 @StrudelDsl
 val lastOf by dslFunction { args ->

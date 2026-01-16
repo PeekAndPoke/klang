@@ -10,45 +10,6 @@ and category.
 - [ ] check https://larkob.github.io/strudel/tutorial/ and produce new todos
 - [ ] Review and validate all "missing" counts in the summary section
 
-### Functions That Accept Numerical Arguments But Don't Support Control Patterns
-
-1. Tempo Modifiers (lang_tempo.kt)
-   ✅ slow() - **COMPLETED** - Now accepts control patterns for dynamic slowing
-   ✅ fast() - **COMPLETED** - Now accepts control patterns for dynamic speeding
-   ✅ rev() - **COMPLETED** - Now accepts control patterns for dynamic reversal
-2. Structural Functions (lang_structural.kt)
-   ✅ gap() - **COMPLETED** - Automatically supports control patterns via slow()
-   ✅ zoom() - **COMPLETED** - Now accepts control patterns for both start and end parameters (requires
-   ZoomPatternWithControl)
-   ✅ bite() - **COMPLETED** - Now accepts control patterns for n parameter (requires BitePatternWithControl)
-   ✅ segment() / seg() - **COMPLETED** - Now accepts control patterns for n parameter (requires
-   SegmentPatternWithControl to properly slice timespans)
-   ✅ euclid() - **COMPLETED** - Now accepts control patterns for pulses and steps (uses EuclideanPatternWithControl)
-   ✅ euclidRot() / euclidrot() - **COMPLETED** - Now accepts control patterns for pulses, steps, and rotation (uses
-   EuclideanPatternWithControl)
-   ✅ bjork() - **COMPLETED** - Now accepts control patterns for [pulses, steps, rotation] list (uses
-   EuclideanPatternWithControl)
-   ✅ euclidLegato() - **COMPLETED** - Now accepts control patterns for pulses and steps (uses
-   EuclideanPatternWithControl with legato=true)
-   ✅ euclidLegatoRot() - **COMPLETED** - Now accepts control patterns for pulses, steps, and rotation (uses
-   EuclideanPatternWithControl with legato=true)
-   ✅ euclidish() / eish() - **COMPLETED** - Now accepts control patterns for pulses and steps (uses
-   EuclideanMorphPatternWithControl; groove already supported patterns)
-3. Random/Continuous Functions (lang_continuous.kt, lang_random.kt)
-   🚫 range() - **WON'T FIX** - Context-modifying operation; use pattern arithmetic (mul/add) for dynamic scaling
-   🚫 steady() - **WON'T FIX** - Creates constant continuous pattern; use signal() with control patterns if needed
-   ✅ brandBy() - **COMPLETED** - Now accepts control patterns for probability parameter (uses ControlPattern with seeded
-   random)
-   ✅ irand() - **COMPLETED** - Now accepts control patterns for n parameter (uses ControlPattern with seeded random)
-   ✅ randL() - **COMPLETED** - Now accepts control patterns for n parameter (creates varying-length random lists)
-   ✅ randrun() - **COMPLETED** - Now accepts control patterns for n parameter (uses RandrunWithControlPattern to
-   generate varying-length shuffled sequences)
-   ✅ shuffle() - **COMPLETED** - Now accepts control patterns via randrun() (slices pattern and plays in random order)
-   ✅ scramble() - **COMPLETED** - Now accepts control patterns via irand() (slices pattern and plays at random with
-   repetition)
-4. Conditional Functions (lang_conditional.kt)  
-   ❌ firstOf() / every() - Lines 17-73 - Accepts integer n  
-   ❌ lastOf() - Lines 80-134 - Accepts integer n
 
 ## 🔴 HIGH PRIORITY - Common Use Cases
 
