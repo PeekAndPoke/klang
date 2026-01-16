@@ -32,7 +32,8 @@ and category.
    EuclideanPatternWithControl with legato=true)
    ✅ euclidLegatoRot() - **COMPLETED** - Now accepts control patterns for pulses, steps, and rotation (uses
    EuclideanPatternWithControl with legato=true)
-   ❌ euclidish() / eish() - Lines 918-978 - Accepts pulses, steps integers (groove already supports patterns)
+   ✅ euclidish() / eish() - **COMPLETED** - Now accepts control patterns for pulses and steps (uses
+   EuclideanMorphPatternWithControl; groove already supported patterns)
 3. Random/Continuous Functions (lang_continuous.kt, lang_random.kt)  
    ❌ range() - Lines 94-107 (lang_continuous.kt) - Accepts min, max, granularity doubles  
    ❌ steady() - Lines 139-142 (lang_continuous.kt) - Accepts single double value  

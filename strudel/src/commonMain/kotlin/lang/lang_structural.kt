@@ -1085,24 +1085,47 @@ val String.euclidLegatoRot by dslStringExtension { p, args -> p.euclidLegatoRot(
 // -- euclidish() ------------------------------------------------------------------------------------------------------
 
 private fun applyEuclidish(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
-    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
+    val pulsesArg = args.getOrNull(0)
+    val stepsArg = args.getOrNull(1)
     val grooveArg = args.getOrNull(2)
+
+    val pulsesPattern = when (pulsesArg) {
+        is StrudelPattern -> pulsesArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val stepsPattern = when (stepsArg) {
+        is StrudelPattern -> stepsArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
 
     // groove defaults to 0 (straight euclid)
     val groovePattern = when (grooveArg) {
         is StrudelPattern -> grooveArg
         else -> {
             val g = grooveArg ?: 0
-            // Use parse to handle string numbers or mini-notation if passed
             parseMiniNotation(g.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
         }
     }
 
-    if (pulses <= 0 || steps <= 0) return silence
+    val staticPulses = pulsesArg?.asIntOrNull()
+    val staticSteps = stepsArg?.asIntOrNull()
 
-    val structPattern = EuclideanMorphPattern(pulses, steps, groovePattern)
-    return source.struct(structPattern)
+    return if (staticPulses != null && staticSteps != null) {
+        // Static path: use original EuclideanMorphPattern
+        if (staticPulses <= 0 || staticSteps <= 0) {
+            silence
+        } else {
+            val structPattern = EuclideanMorphPattern(staticPulses, staticSteps, groovePattern)
+            source.struct(structPattern)
+        }
+    } else {
+        // Dynamic path: use EuclideanMorphPatternWithControl
+        val structPattern = EuclideanMorphPatternWithControl(pulsesPattern, stepsPattern, groovePattern)
+        source.struct(structPattern)
+    }
 }
 
 /**
