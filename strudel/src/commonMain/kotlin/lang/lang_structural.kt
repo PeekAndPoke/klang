@@ -831,10 +831,29 @@ val euclid by dslFunction { args ->
 
 @StrudelDsl
 val StrudelPattern.euclid by dslPatternExtension { p, args ->
-    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
-    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
+    val pulsesArg = args.getOrNull(0)
+    val stepsArg = args.getOrNull(1)
 
-    applyEuclid(source = p, pulses = pulses, steps = steps, rotation = 0)
+    val pulsesPattern = when (pulsesArg) {
+        is StrudelPattern -> pulsesArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val stepsPattern = when (stepsArg) {
+        is StrudelPattern -> stepsArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val staticPulses = pulsesArg?.asIntOrNull()
+    val staticSteps = stepsArg?.asIntOrNull()
+
+    if (staticPulses != null && staticSteps != null) {
+        applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = 0)
+    } else {
+        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = false)
+    }
 }
 
 @StrudelDsl
@@ -859,11 +878,37 @@ val euclidRot by dslFunction { args ->
 
 @StrudelDsl
 val StrudelPattern.euclidRot by dslPatternExtension { p, args ->
-    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
-    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
-    val rotation = args.getOrNull(2)?.asIntOrNull() ?: 0
+    val pulsesArg = args.getOrNull(0)
+    val stepsArg = args.getOrNull(1)
+    val rotationArg = args.getOrNull(2)
 
-    applyEuclid(source = p, pulses = pulses, steps = steps, rotation = rotation)
+    val pulsesPattern = when (pulsesArg) {
+        is StrudelPattern -> pulsesArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val stepsPattern = when (stepsArg) {
+        is StrudelPattern -> stepsArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val rotationPattern = when (rotationArg) {
+        is StrudelPattern -> rotationArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(rotationArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val staticPulses = pulsesArg?.asIntOrNull()
+    val staticSteps = stepsArg?.asIntOrNull()
+    val staticRotation = rotationArg?.asIntOrNull()
+
+    if (staticPulses != null && staticSteps != null && staticRotation != null) {
+        applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
+    } else {
+        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern, legato = false)
+    }
 }
 
 @StrudelDsl
@@ -899,11 +944,37 @@ val bjork by dslFunction { args ->
 @StrudelDsl
 val StrudelPattern.bjork by dslPatternExtension { p, args ->
     val list = args.getOrNull(0) as? List<*> ?: args
-    val pulses = list.getOrNull(0)?.asIntOrNull() ?: 0
-    val steps = list.getOrNull(1)?.asIntOrNull() ?: 0
-    val rotation = list.getOrNull(2)?.asIntOrNull() ?: 0
+    val pulsesArg = list.getOrNull(0)
+    val stepsArg = list.getOrNull(1)
+    val rotationArg = list.getOrNull(2)
 
-    applyEuclid(source = p, pulses = pulses, steps = steps, rotation = rotation)
+    val pulsesPattern = when (pulsesArg) {
+        is StrudelPattern -> pulsesArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val stepsPattern = when (stepsArg) {
+        is StrudelPattern -> stepsArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val rotationPattern = when (rotationArg) {
+        is StrudelPattern -> rotationArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(rotationArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val staticPulses = pulsesArg?.asIntOrNull()
+    val staticSteps = stepsArg?.asIntOrNull()
+    val staticRotation = rotationArg?.asIntOrNull()
+
+    if (staticPulses != null && staticSteps != null && staticRotation != null) {
+        applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
+    } else {
+        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern, legato = false)
+    }
 }
 
 @StrudelDsl
@@ -927,10 +998,29 @@ val euclidLegato by dslFunction { args ->
 
 @StrudelDsl
 val StrudelPattern.euclidLegato by dslPatternExtension { p, args ->
-    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
-    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
+    val pulsesArg = args.getOrNull(0)
+    val stepsArg = args.getOrNull(1)
 
-    EuclideanPattern.createLegato(inner = p, pulses = pulses, steps = steps, rotation = 0)
+    val pulsesPattern = when (pulsesArg) {
+        is StrudelPattern -> pulsesArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val stepsPattern = when (stepsArg) {
+        is StrudelPattern -> stepsArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val staticPulses = pulsesArg?.asIntOrNull()
+    val staticSteps = stepsArg?.asIntOrNull()
+
+    if (staticPulses != null && staticSteps != null) {
+        EuclideanPattern.createLegato(inner = p, pulses = staticPulses, steps = staticSteps, rotation = 0)
+    } else {
+        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = true)
+    }
 }
 
 @StrudelDsl
@@ -956,11 +1046,37 @@ val euclidLegatoRot by dslFunction { args ->
 
 @StrudelDsl
 val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args ->
-    val pulses = args.getOrNull(0)?.asIntOrNull() ?: 0
-    val steps = args.getOrNull(1)?.asIntOrNull() ?: 0
-    val rotation = args.getOrNull(2)?.asIntOrNull() ?: 0
+    val pulsesArg = args.getOrNull(0)
+    val stepsArg = args.getOrNull(1)
+    val rotationArg = args.getOrNull(2)
 
-    EuclideanPattern.createLegato(inner = p, pulses = pulses, steps = steps, rotation = rotation)
+    val pulsesPattern = when (pulsesArg) {
+        is StrudelPattern -> pulsesArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val stepsPattern = when (stepsArg) {
+        is StrudelPattern -> stepsArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val rotationPattern = when (rotationArg) {
+        is StrudelPattern -> rotationArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(rotationArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val staticPulses = pulsesArg?.asIntOrNull()
+    val staticSteps = stepsArg?.asIntOrNull()
+    val staticRotation = rotationArg?.asIntOrNull()
+
+    if (staticPulses != null && staticSteps != null && staticRotation != null) {
+        EuclideanPattern.createLegato(inner = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
+    } else {
+        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern, legato = true)
+    }
 }
 
 @StrudelDsl

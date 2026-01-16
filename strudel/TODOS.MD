@@ -22,13 +22,17 @@ and category.
    ZoomPatternWithControl)
    ✅ bite() - **COMPLETED** - Now accepts control patterns for n parameter (requires BitePatternWithControl)
    ✅ segment() / seg() - **COMPLETED** - Now accepts control patterns for n parameter (requires
-   SegmentPatternWithControl to properly slice timespans)  
-   ❌ euclid() - Lines 772-788 - Accepts pulses, steps integers  
-   ❌ euclidRot() / euclidrot() - Lines 799-824 - Accepts pulses, steps, rotation integers  
-   ❌ bjork() - Lines 834-868 - Accepts list of [pulses, steps, rotation] integers  
-   ❌ euclidLegato() - Lines 877-893 - Accepts pulses, steps integers  
-   ❌ euclidLegatoRot() - Lines 895-911 - Accepts pulses, steps, rotation integers  
-   ❌ euclidish() / eish() - Lines 918-978 - Accepts pulses, steps, groove (though groove can be pattern)
+   SegmentPatternWithControl to properly slice timespans)
+   ✅ euclid() - **COMPLETED** - Now accepts control patterns for pulses and steps (uses EuclideanPatternWithControl)
+   ✅ euclidRot() / euclidrot() - **COMPLETED** - Now accepts control patterns for pulses, steps, and rotation (uses
+   EuclideanPatternWithControl)
+   ✅ bjork() - **COMPLETED** - Now accepts control patterns for [pulses, steps, rotation] list (uses
+   EuclideanPatternWithControl)
+   ✅ euclidLegato() - **COMPLETED** - Now accepts control patterns for pulses and steps (uses
+   EuclideanPatternWithControl with legato=true)
+   ✅ euclidLegatoRot() - **COMPLETED** - Now accepts control patterns for pulses, steps, and rotation (uses
+   EuclideanPatternWithControl with legato=true)
+   ❌ euclidish() / eish() - Lines 918-978 - Accepts pulses, steps integers (groove already supports patterns)
 3. Random/Continuous Functions (lang_continuous.kt, lang_random.kt)  
    ❌ range() - Lines 94-107 (lang_continuous.kt) - Accepts min, max, granularity doubles  
    ❌ steady() - Lines 139-142 (lang_continuous.kt) - Accepts single double value  
