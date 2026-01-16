@@ -11,6 +11,8 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.strudel.math.lcm
 import io.peekandpoke.klang.strudel.pattern.*
 import kotlin.math.abs
 import kotlin.math.floor
@@ -47,20 +49,29 @@ val String.hush by dslStringExtension { _, _ ->
 // -- gap() ------------------------------------------------------------------------------------------------------------
 
 /** Creates silence with a specific duration in steps (metrical steps). */
-@StrudelDsl
-val gap by dslFunction { args ->
-    silence.slow(args)
+private fun applyGap(args: List<Any?>): StrudelPattern {
+    val stepsArg = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
+    val stepsRat = stepsArg.toRational()
+
+    return object : StrudelPattern {
+        override val weight: Double = 1.0
+        override val steps: Rational = stepsRat
+
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            return emptyList()
+        }
+    }
 }
 
+/** Creates silence with a specific duration in steps (metrical steps). */
 @StrudelDsl
-val StrudelPattern.gap by dslPatternExtension { _, args ->
-    silence.slow(args)
-}
+val gap by dslFunction { args -> applyGap(args) }
 
 @StrudelDsl
-val String.gap by dslStringExtension { _, args ->
-    silence.slow(args)
-}
+val StrudelPattern.gap by dslPatternExtension { _, args -> applyGap(args) }
+
+@StrudelDsl
+val String.gap by dslStringExtension { _, args -> applyGap(args) }
 
 // -- seq() ------------------------------------------------------------------------------------------------------------
 
@@ -204,6 +215,178 @@ val StrudelPattern.cat by dslPatternExtension { p, args ->
 @StrudelDsl
 val String.cat by dslStringExtension { p, args ->
     applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+// -- fastcat() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Concatenates patterns, squashing them all into one cycle.
+ * Effectively an alias for `seq`.
+ *
+ * @param {patterns} patterns to concatenate
+ * @example
+ * fastcat("bd", "sd")
+ * // same as seq("bd", "sd") or "bd sd"
+ */
+@StrudelDsl
+val fastcat by dslFunction { args ->
+    applySeq(args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val StrudelPattern.fastcat by dslPatternExtension { p, args ->
+    applySeq(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val String.fastcat by dslStringExtension { p, args ->
+    applySeq(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+// -- slowcat() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Concatenates patterns, each taking one full cycle.
+ * Alias for `cat`.
+ *
+ * Note: In the JS implementation, `slowcat` ensures that internal cycles of patterns are preserved
+ * (not skipped) when switching. In this implementation, it behaves like `slowcatPrime` / `cat`,
+ * maintaining absolute time (which means cycles of inner patterns might be "skipped" while they are not playing).
+ *
+ * @param {patterns} patterns to concatenate
+ * @example
+ * slowcat("bd", "sd")
+ * // Cycle 0: "bd"
+ * // Cycle 1: "sd"
+ */
+@StrudelDsl
+val slowcat by dslFunction { args ->
+    applyCat(args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val StrudelPattern.slowcat by dslPatternExtension { p, args ->
+    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val String.slowcat by dslStringExtension { p, args ->
+    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+// -- slowcatPrime() ---------------------------------------------------------------------------------------------------
+
+/**
+ * Like slowcat but maintains relative timing.
+ * In this implementation, `cat` already maintains relative timing (using absolute time), so this is an alias.
+ *
+ * @param {patterns} patterns to concatenate
+ */
+@StrudelDsl
+val slowcatPrime by dslFunction { args ->
+    applyCat(args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val StrudelPattern.slowcatPrime by dslPatternExtension { p, args ->
+    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val String.slowcatPrime by dslStringExtension { p, args ->
+    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+// -- polymeter() ------------------------------------------------------------------------------------------------------
+
+private fun StrudelPattern.estimateSteps(): Int {
+    return when (this) {
+        is SequencePattern -> patterns.size
+        is AtomicPattern -> 1
+        is EuclideanPattern -> nSteps
+        // Fallback for patterns where step count is dynamic or unknown.
+        // A value of 1 is safe as it won't cause time distortion, treating it as a 1-cycle pattern.
+        else -> 1
+    }
+}
+
+
+private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = null): StrudelPattern {
+    if (patterns.isEmpty()) return silence
+
+    // Filter for patterns that have steps defined
+    val validPatterns = patterns.filter { it.steps != null }
+    if (validPatterns.isEmpty()) return silence
+
+    val patternSteps = validPatterns.mapNotNull { it.steps?.toInt() }
+    val targetSteps = baseSteps ?: lcm(patternSteps).takeIf { it > 0 } ?: 4
+
+    val adjustedPatterns = validPatterns.map { pat ->
+        val steps = pat.steps!!.toInt()
+        if (steps == targetSteps) pat
+        else pat.fast(targetSteps.toDouble() / steps)
+    }
+
+    return StackPattern(adjustedPatterns).let { stack ->
+        object : StrudelPattern by stack {
+            override val steps: Rational = targetSteps.toRational()
+        }
+    }
+}
+
+/**
+ * Aligns the steps of the patterns, creating polymeters.
+ * The patterns are repeated until they all fit the cycle.
+ *
+ * For example, `polymeter("a b", "a b c")` will align the 2-step and 3-step patterns
+ * to a 6-step cycle, effectively speeding them up to fit.
+ *
+ * @param {patterns} patterns to align
+ */
+@StrudelDsl
+val polymeter by dslFunction { args ->
+    applyPolymeter(args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val StrudelPattern.polymeter by dslPatternExtension { p, args ->
+    applyPolymeter(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val String.polymeter by dslStringExtension { p, args ->
+    applyPolymeter(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+// -- polymeterSteps() -------------------------------------------------------------------------------------------------
+
+/**
+ * Polymeter with explicit step specification.
+ * Speeds up or slows down patterns to fit the specified number of steps per cycle.
+ *
+ * @param {steps} The number of steps per cycle to align to.
+ * @param {patterns} The patterns to align.
+ */
+@StrudelDsl
+val polymeterSteps by dslFunction { args ->
+    val steps = args.getOrNull(0)?.asIntOrNull() ?: 4
+    // Remaining args are patterns
+    val patterns = args.drop(1).toListOfPatterns(defaultModifier)
+    applyPolymeter(patterns, baseSteps = steps)
+}
+
+// -- pure() -----------------------------------------------------------------------------------------------------------
+
+/**
+ * Creates an atomic pattern containing a single value.
+ * The pattern repeats this value every cycle.
+ *
+ * @param {value} The value to wrap in a pattern.
+ */
+@StrudelDsl
+val pure by dslFunction { args ->
+    val value = args.getOrNull(0)
+    AtomicPattern(VoiceData.empty.copy(value = value?.asVoiceValue()))
 }
 
 // -- struct() ---------------------------------------------------------------------------------------------------------
@@ -373,6 +556,7 @@ val String.maskAll by dslStringExtension { source, args ->
 private fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
     return object : StrudelPattern {
         override val weight: Double get() = source.weight
+        override val steps: Rational? get() = source.steps
 
         override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
             return source.queryArcContextual(from, to, ctx).filter(predicate)
@@ -644,6 +828,7 @@ private fun applyBite(source: StrudelPattern, args: List<Any?>): StrudelPattern 
         // Static path: use the original inline implementation
         object : StrudelPattern {
             override val weight: Double get() = source.weight
+            override val steps: Rational? get() = source.steps
 
             override fun queryArcContextual(
                 from: Rational,

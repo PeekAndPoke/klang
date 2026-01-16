@@ -32,6 +32,8 @@ private fun StrudelPattern.mapRangeContext(
     return object : StrudelPattern {
         override val weight: Double get() = this@mapRangeContext.weight
 
+        override val steps: Rational = Rational.ONE
+
         override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
             val min = ctx.getOrNull(ContinuousPattern.minKey)
             val max = ctx.getOrNull(ContinuousPattern.maxKey)

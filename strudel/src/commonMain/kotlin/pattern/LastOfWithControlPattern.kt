@@ -25,6 +25,7 @@ internal class LastOfWithControlPattern(
     val transform: (StrudelPattern) -> StrudelPattern,
 ) : StrudelPattern {
     override val weight = source.weight
+    override val steps: Rational? get() = source.steps
 
     override fun queryArcContextual(
         from: Rational,

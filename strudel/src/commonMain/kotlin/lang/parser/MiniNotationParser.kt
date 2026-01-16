@@ -37,6 +37,8 @@ class MiniNotationParser(
 
         override val weight: Double get() = inner.weight
 
+        override val steps: Rational? get() = inner.steps
+
         override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> =
             inner.queryArcContextual(from, to, ctx)
     }

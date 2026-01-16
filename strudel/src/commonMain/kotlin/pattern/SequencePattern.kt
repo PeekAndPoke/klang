@@ -25,6 +25,8 @@ internal class SequencePattern(
         private val MIN_QUERY_LENGTH = 1e-7.toRational()
     }
 
+    override val steps: Rational get() = patterns.size.toRational()
+
     // Calculate proportional offsets based on weights
     private val weights = patterns.map { it.weight.toRational() }
     private val totalWeight = weights.sum()

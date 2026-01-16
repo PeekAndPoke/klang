@@ -13,6 +13,8 @@ internal class WeightedPattern(
     private val inner: StrudelPattern,
     override val weight: Double,
 ) : StrudelPattern {
+    override val steps: Rational? get() = inner.steps
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         return inner.queryArcContextual(from, to, ctx)
     }

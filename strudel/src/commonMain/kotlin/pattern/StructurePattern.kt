@@ -27,6 +27,12 @@ internal class StructurePattern(
 
     override val weight: Double = if (mode == Mode.In) source.weight else other.weight
 
+    override val steps: Rational?
+        get() = when (mode) {
+            Mode.In -> source.steps
+            Mode.Out -> other.steps
+        }
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         return when (mode) {
             Mode.In -> queryIn(from, to, ctx)

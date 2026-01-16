@@ -24,6 +24,8 @@ class GraalStrudelPattern(
     // Graal patterns are treated as opaque units from the JS side, so we default to weight 1.0.
     override val weight: Double = 1.0
 
+    override val steps: Rational = Rational.ONE
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val arc = graal.queryPattern(value, from.toDouble(), to.toDouble())
             ?: return emptyList()

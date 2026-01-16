@@ -1,8 +1,10 @@
 package io.peekandpoke.klang.audio_bridge
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
+import kotlinx.serialization.json.Json
 
 class VoiceValueSpec : StringSpec({
 
@@ -328,7 +330,10 @@ class VoiceValueSpec : StringSpec({
                 2.0.asVoiceValue(),
                 3.0.asVoiceValue()
             )
-        ).asString shouldBe "1.0, 2.0, 3.0"
+        ).asString shouldBeIn listOf(
+            "1.0, 2.0, 3.0",
+            "1, 2, 3", // js behaves differently
+        )
         VoiceValue.Seq(listOf("a".asVoiceValue(), "b".asVoiceValue())).asString shouldBe "a, b"
         VoiceValue.Seq(emptyList()).asString shouldBe ""
     }
@@ -346,7 +351,13 @@ class VoiceValueSpec : StringSpec({
     }
 
     "VoiceValue.Seq: toString formats as [values]" {
-        VoiceValue.Seq(listOf(1.0.asVoiceValue(), 2.0.asVoiceValue())).toString() shouldBe "[1.0, 2.0]"
+        VoiceValue.Seq(
+            listOf(1.0.asVoiceValue(), 2.0.asVoiceValue())
+        ).toString() shouldBeIn listOf(
+            "[1.0, 2.0]",
+            "[1, 2]" // js exception
+        )
+
         VoiceValue.Seq(emptyList()).toString() shouldBe "[]"
     }
 
@@ -357,7 +368,10 @@ class VoiceValueSpec : StringSpec({
 
     "VoiceValue.Seq: math operations - plus with text (concatenation)" {
         val seq = VoiceValue.Seq(listOf(5.0.asVoiceValue(), 10.0.asVoiceValue()))
-        (seq + "x".asVoiceValue())?.asString shouldBe "5.0, 10.0x"
+        (seq + "x".asVoiceValue())?.asString shouldBeIn listOf(
+            "5.0, 10.0x",
+            "5, 10x", // js exception
+        )
     }
 
     "VoiceValue.Seq: math operations - minus" {
@@ -389,88 +403,88 @@ class VoiceValueSpec : StringSpec({
     // Serialization tests
     "VoiceValue.Num: serialization and deserialization" {
         val original = VoiceValue.Num(42.5)
-        val json = kotlinx.serialization.json.Json.encodeToString(VoiceValueSerializer, original)
+        val json = Json.encodeToString(VoiceValueSerializer, original)
         json shouldBe "42.5"
-        val deserialized = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, json)
+        val deserialized = Json.decodeFromString(VoiceValueSerializer, json)
         deserialized shouldBe original
     }
 
     "VoiceValue.Text: serialization and deserialization" {
         val original = VoiceValue.Text("hello")
-        val json = kotlinx.serialization.json.Json.encodeToString(VoiceValueSerializer, original)
+        val json = Json.encodeToString(VoiceValueSerializer, original)
         json shouldBe "\"hello\""
-        val deserialized = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, json)
+        val deserialized = Json.decodeFromString(VoiceValueSerializer, json)
         deserialized shouldBe original
     }
 
     "VoiceValue.Bool: serialization and deserialization" {
         val originalTrue = VoiceValue.Bool(true)
-        val jsonTrue = kotlinx.serialization.json.Json.encodeToString(VoiceValueSerializer, originalTrue)
+        val jsonTrue = Json.encodeToString(VoiceValueSerializer, originalTrue)
         jsonTrue shouldBe "true"
-        val deserializedTrue = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, jsonTrue)
+        val deserializedTrue = Json.decodeFromString(VoiceValueSerializer, jsonTrue)
         deserializedTrue shouldBe originalTrue
 
         val originalFalse = VoiceValue.Bool(false)
-        val jsonFalse = kotlinx.serialization.json.Json.encodeToString(VoiceValueSerializer, originalFalse)
+        val jsonFalse = Json.encodeToString(VoiceValueSerializer, originalFalse)
         jsonFalse shouldBe "false"
-        val deserializedFalse = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, jsonFalse)
+        val deserializedFalse = Json.decodeFromString(VoiceValueSerializer, jsonFalse)
         deserializedFalse shouldBe originalFalse
     }
 
     "VoiceValue.Seq: serialization and deserialization" {
         val original = VoiceValue.Seq(
             listOf(
-                VoiceValue.Num(1.0),
+                VoiceValue.Num(1.1),
                 VoiceValue.Text("test"),
                 VoiceValue.Bool(true)
             )
         )
-        val json = kotlinx.serialization.json.Json.encodeToString(VoiceValueSerializer, original)
-        json shouldBe "[1.0,\"test\",true]"
-        val deserialized = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, json)
+        val json = Json.encodeToString(VoiceValueSerializer, original)
+        json shouldBe "[1.1,\"test\",true]"
+        val deserialized = Json.decodeFromString(VoiceValueSerializer, json)
         deserialized shouldBe original
     }
 
     "VoiceValue.Seq: empty list serialization" {
         val original = VoiceValue.Seq(emptyList())
-        val json = kotlinx.serialization.json.Json.encodeToString(VoiceValueSerializer, original)
+        val json = Json.encodeToString(VoiceValueSerializer, original)
         json shouldBe "[]"
-        val deserialized = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, json)
+        val deserialized = Json.decodeFromString(VoiceValueSerializer, json)
         deserialized shouldBe original
     }
 
     "VoiceValue.Seq: nested sequences" {
         val original = VoiceValue.Seq(
             listOf(
-                VoiceValue.Num(1.0),
+                VoiceValue.Num(1.1),
                 VoiceValue.Seq(
                     listOf(
-                        VoiceValue.Num(2.0),
-                        VoiceValue.Num(3.0)
+                        VoiceValue.Num(2.2),
+                        VoiceValue.Num(3.3)
                     )
                 )
             )
         )
-        val json = kotlinx.serialization.json.Json.encodeToString(VoiceValueSerializer, original)
-        json shouldBe "[1.0,[2.0,3.0]]"
-        val deserialized = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, json)
+        val json = Json.encodeToString(VoiceValueSerializer, original)
+        json shouldBe "[1.1,[2.2,3.3]]"
+        val deserialized = Json.decodeFromString(VoiceValueSerializer, json)
         deserialized shouldBe original
     }
 
     "VoiceValue: deserialization of numeric string" {
         val json = "\"123\""
-        val deserialized = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, json)
+        val deserialized = Json.decodeFromString(VoiceValueSerializer, json)
         deserialized shouldBe VoiceValue.Text("123")
         deserialized.asDouble shouldBe 123.0
     }
 
     "VoiceValue: deserialization of boolean strings" {
         val jsonTrue = "\"true\""
-        val deserializedTrue = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, jsonTrue)
+        val deserializedTrue = Json.decodeFromString(VoiceValueSerializer, jsonTrue)
         deserializedTrue shouldBe VoiceValue.Text("true")
 
         val jsonFalse = "\"false\""
-        val deserializedFalse = kotlinx.serialization.json.Json.decodeFromString(VoiceValueSerializer, jsonFalse)
+        val deserializedFalse = Json.decodeFromString(VoiceValueSerializer, jsonFalse)
         deserializedFalse shouldBe VoiceValue.Text("false")
     }
 })

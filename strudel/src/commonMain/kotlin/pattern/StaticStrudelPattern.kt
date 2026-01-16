@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -19,6 +20,8 @@ class StaticStrudelPattern(
 
         fun fromJson(json: String): StaticStrudelPattern = codec.decodeFromString(serializer(), json)
     }
+
+    override val steps: Rational = events.size.toRational()
 
     private val totalCycles = maxOf(Rational.ONE, events.maxOfOrNull { it.end } ?: Rational.ZERO).ceil()
 

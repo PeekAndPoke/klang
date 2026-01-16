@@ -25,6 +25,7 @@ internal class FirstOfWithControlPattern(
     val transform: (StrudelPattern) -> StrudelPattern,
 ) : StrudelPattern {
     override val weight = source.weight
+    override val steps: Rational? get() = source.steps
 
     override fun queryArcContextual(
         from: Rational,
@@ -64,7 +65,22 @@ internal class FirstOfWithControlPattern(
 
                 val patternToUse = if (shouldTransform) transform(source) else source
                 val events = patternToUse.queryArcContextual(cycleStart, cycleEnd, ctx)
-                result.addAll(events)
+
+                // Clip events to the valid window for this 'n' and this cycle
+                for (event in events) {
+                    val clippedBegin = maxOf(event.begin, cycleStart)
+                    val clippedEnd = minOf(event.end, cycleEnd)
+
+                    if (clippedEnd > clippedBegin) {
+                        result.add(
+                            event.copy(
+                                begin = clippedBegin,
+                                end = clippedEnd,
+                                dur = clippedEnd - clippedBegin
+                            )
+                        )
+                    }
+                }
             }
         }
 

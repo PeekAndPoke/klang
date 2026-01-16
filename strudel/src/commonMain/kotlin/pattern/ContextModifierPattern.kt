@@ -21,6 +21,8 @@ internal class ContextModifierPattern(
 
     override val weight: Double get() = source.weight
 
+    override val steps: Rational? get() = source.steps
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val updated = ctx.update(modifier)
 

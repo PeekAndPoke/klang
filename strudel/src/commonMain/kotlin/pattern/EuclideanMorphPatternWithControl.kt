@@ -22,6 +22,8 @@ internal class EuclideanMorphPatternWithControl(
 ) : StrudelPattern {
     override val weight: Double get() = groovePattern.weight
 
+    override val steps: Rational? get() = stepsPattern.steps
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val pulsesEvents = pulsesPattern.queryArcContextual(from, to, ctx)
         val stepsEvents = stepsPattern.queryArcContextual(from, to, ctx)
@@ -59,6 +61,7 @@ internal class EuclideanMorphPatternWithControl(
                     // Create a sub-groove pattern that only covers this overlap
                     val subGroovePattern = object : StrudelPattern {
                         override val weight = groovePattern.weight
+                        override val steps: Rational = Rational.ONE
 
                         override fun queryArcContextual(
                             from: Rational,

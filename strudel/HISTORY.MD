@@ -101,6 +101,12 @@ Strudel.
 - `stack()` - Plays multiple patterns simultaneously
 - `arrange()` - Arranges patterns with specified durations
 - `pickRestart()` - Alternates patterns per cycle (slowcat equivalent)
+- `fastcat()` - Concatenates patterns into one cycle (standalone, pattern method, string extension)
+- `slowcat()` - Alias for cat, plays patterns sequentially per cycle (standalone, pattern method, string extension)
+- `slowcatPrime()` - Like slowcat but maintains relative timing (standalone, pattern method, string extension)
+- `polymeter()` - Aligns steps of patterns creating polymeters (standalone, pattern method, string extension)
+- `polymeterSteps()` - Polymeter with step specification (standalone function)
+- `pure()` - Creates atomic pattern with single value (standalone function)
 - `silence` - Empty/silent pattern
 - `rest` - Rest event (alias for silence)
 - `run(n)` - Creates discrete pattern of numbers 0 to n-1
@@ -447,19 +453,27 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 169+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
-- 17 core pattern types (including EuclideanPattern with legato support, EuclideanMorphPattern, ChoicePattern with
-  selector/weights support,
-  SometimesPattern,
-  ReversePattern, StructPattern, ContextModifierPattern, TimeShiftPatternWithControl)
+- 175+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 27 core pattern types including:
+    - Basic: AtomicPattern, SequencePattern, StackPattern, ArrangementPattern
+    - Euclidean: EuclideanPattern, EuclideanPatternWithControl, EuclideanMorphPattern, EuclideanMorphPatternWithControl
+    - Choice & Probabilistic: ChoicePattern, SometimesPattern, DegradePattern (deprecated)
+    - Transformation: ReversePattern, ReversePatternWithControl, StructPattern, ContextModifierPattern
+    - Time: TimeModifierPattern, SlowWithControlPattern, FastWithControlPattern, TimeShiftPatternWithControl,
+      ZoomPatternWithControl
+    - Structural: BitePatternWithControl, SegmentPatternWithControl
+    - Random: RandrunWithControlPattern
+    - Conditional: FirstOfWithControlPattern, LastOfWithControlPattern
+    - Continuous: ContinuousPattern
+    - Control: ControlPattern, ReinterpretPattern
 - 34 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
   isaw2, tri, tri2, itri, itri2, square, square2, perlin, perlin2, berlin, berlin2, rand, rand2, irand, randL, randrun,
   brand, brandBy,
-  segment, seg, toBipolar, fromBipolar)
+  segment, seg, toBipolar, fromBipolar) - many with control pattern support
 - 4 filter types
 - Complete ADSR envelope system
-- Full mini-notation parser with 13 operators/features (including Euclidean rhythms, probabilistic patterns)
-- Control pattern system with pattern-controlled degradation and time shifting
+- Full mini-notation parser with 13 operators/features and caching (including Euclidean rhythms, probabilistic patterns)
+- Control pattern system supporting dynamic parameters for tempo, structure, randomness, and conditionals
 - Comprehensive audio parameter support
 - **Rational number time system** for exact arithmetic
 - **Deterministic seeded randomness** for consistent pattern playback via `seed()`
@@ -473,10 +487,13 @@ Comprehensive voice data structure supporting:
   features
 - **Rational number time coordinates** - Exact arithmetic eliminates floating-point drift
 - **Unified DSL patterns** - Triple-mode functions work as pattern methods, string extensions, and standalone functions
+- **Control pattern support** - Dual-path optimization for dynamic parameters (static path for constants, dynamic path
+  for patterns)
+- **Mini-notation parser cache** - Avoids re-parsing identical input strings for better performance
 - Property delegation for clean DSL
 - Type-safe pattern construction
 - Extensible voice data mutation system
-- Parser with proper tokenization
+- Parser with proper tokenization and caching
 - Immutable pattern design
 
 **Recent Improvements (2026-01-15):**
@@ -728,3 +745,91 @@ Comprehensive voice data structure supporting:
   - `BerlinNoiseSpec.kt` - Tests for Berlin noise implementation
   - Enhanced `LangContinuousPatternsSpec.kt` with perlin/berlin tests covering seed consistency, range validation, and
     stability
+
+**Recent Improvements (2026-01-16):**
+
+- ✅ **New Pattern Creation Functions:**
+    - `fastcat()` - Concatenates patterns into one cycle (works as standalone, pattern method, and string extension)
+    - `slowcat()` - Alias for cat, plays patterns sequentially per cycle (triple-mode: standalone/method/extension)
+    - `slowcatPrime()` - Like slowcat but maintains relative timing (triple-mode: standalone/method/extension)
+    - `polymeter()` - Aligns steps of patterns creating polymeters (triple-mode: standalone/method/extension)
+    - `polymeterSteps()` - Polymeter with step specification (standalone function)
+    - `pure()` - Creates atomic pattern with single value (standalone function)
+
+- ✅ **Control Pattern Support for All Numerical Functions** - Completed major initiative to add control pattern support
+  to all functions that accept numerical parameters:
+
+  **1. Tempo Modifiers (lang_tempo.kt):**
+    - `slow(factor)` - Now accepts control patterns for dynamic slowing (uses `SlowWithControlPattern`)
+    - `fast(factor)` - Now accepts control patterns for dynamic speeding (uses `FastWithControlPattern`)
+    - `rev(n)` - Now accepts control patterns for dynamic reversal (uses `ReversePatternWithControl`)
+
+  **2. Structural Functions (lang_structural.kt):**
+    - `gap(steps)` - Automatically supports control patterns via slow()
+    - `zoom(start, end)` - Now accepts control patterns for both parameters (uses `ZoomPatternWithControl`)
+    - `bite(n, indices)` - Now accepts control patterns for n parameter (uses `BitePatternWithControl`)
+    - `segment(n)` / `seg(n)` - Now accepts control patterns for n parameter (uses `SegmentPatternWithControl`)
+    - `euclid(pulses, steps)` - Now accepts control patterns (uses `EuclideanPatternWithControl`)
+    - `euclidRot(pulses, steps, rotation)` / `euclidrot` - Now accepts control patterns (uses
+      `EuclideanPatternWithControl`)
+    - `bjork([pulses, steps, rotation])` - Now accepts control patterns (uses `EuclideanPatternWithControl`)
+    - `euclidLegato(pulses, steps)` - Now accepts control patterns (uses `EuclideanPatternWithControl` with legato=true)
+    - `euclidLegatoRot(pulses, steps, rotation)` - Now accepts control patterns (uses `EuclideanPatternWithControl` with
+      legato=true)
+    - `euclidish(pulses, steps, groove)` / `eish` - Now accepts control patterns (uses
+      `EuclideanMorphPatternWithControl`)
+
+  **3. Random/Continuous Functions (lang_random.kt):**
+    - `brandBy(probability)` - Now accepts control patterns (uses `ControlPattern` with seeded random)
+    - `irand(n)` - Now accepts control patterns (uses `ControlPattern` with seeded random)
+    - `randL(n)` - Now accepts control patterns (creates varying-length random lists)
+    - `randrun(n)` - Now accepts control patterns (uses `RandrunWithControlPattern` for varying-length shuffled
+      sequences)
+    - `shuffle(n)` - Now accepts control patterns via randrun()
+    - `scramble(n)` - Now accepts control patterns via irand()
+
+  **4. Conditional Functions (lang_conditional.kt):**
+    - `firstOf(n, fn)` / `every(n, fn)` - Now accepts control patterns (uses `FirstOfWithControlPattern`)
+    - `lastOf(n, fn)` - Now accepts control patterns (uses `LastOfWithControlPattern`)
+
+- ✅ **New Pattern Classes for Control Pattern Support:**
+    - `FirstOfWithControlPattern` - Applies transformation on first cycle of each n-cycle group where n can vary
+    - `LastOfWithControlPattern` - Applies transformation on last cycle of each n-cycle group where n can vary
+    - `RandrunWithControlPattern` - Creates shuffled sequences with varying length per cycle
+    - `BitePatternWithControl` - Slices pattern with varying slice count
+    - `SegmentPatternWithControl` - Samples continuous patterns with varying rate
+    - `ZoomPatternWithControl` - Zooms with varying start/end positions
+    - `EuclideanPatternWithControl` - Euclidean rhythms with varying parameters
+    - `EuclideanMorphPatternWithControl` - Morphing Euclidean rhythms with varying groove
+    - `SlowWithControlPattern` / `FastWithControlPattern` - Tempo modification with varying factors
+    - `ReversePatternWithControl` - Reversal with varying cycle count
+    - All use dual-path optimization (static path for plain numbers, dynamic path for patterns)
+    - All handle negative/edge cases correctly with proper modulo arithmetic
+
+- ✅ **Mini-Notation Parser Cache:**
+    - Added simple caching mechanism to avoid re-parsing identical input strings
+    - Cache based on input string and atom factory hash
+    - Significant performance improvement for repeated pattern parsing
+
+- ✅ **Comprehensive Testing:**
+    - `FirstOfWithControlPatternSpec.kt` - 8 tests covering static/dynamic n, varying n patterns, edge cases
+    - `LastOfWithControlPatternSpec.kt` - 8 tests covering static/dynamic n, varying n patterns, negative cycles
+    - Additional test files for all new pattern types (RandrunWithControlPattern, BitePatternWithControl, etc.)
+    - `LangFastcatSpec.kt`, `LangSlowcatSpec.kt`, `LangPureSpec.kt`, `LangPolymeterSpec.kt` - Tests for upcoming
+      features
+
+**Architecture:**
+
+- All control pattern implementations use dual-path optimization: fast static path for plain numbers, dynamic path for
+  control patterns
+- Consistent pattern: parse argument as pattern, extract static value if possible, choose implementation path
+- Query nPattern per timespan to get dynamic parameter values
+- Use modulo arithmetic for cycle position calculations: `(cycle % n + n) % n`
+- Parser cache improves performance for repeated mini-notation parsing
+
+**Impact:**
+
+- 🎯 **Major milestone**: Most numerical parameters now support control patterns for dynamic behavior
+- 🚀 **Performance**: Parser cache significantly reduces overhead for repeated pattern parsing
+- 🎨 **Expressiveness**: Users can create much more dynamic and evolving patterns
+- 🏗️ **Architecture**: Established clear patterns for implementing control pattern support

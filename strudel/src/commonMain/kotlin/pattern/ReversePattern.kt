@@ -11,6 +11,7 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
  */
 internal class ReversePattern(val inner: StrudelPattern) : StrudelPattern {
     override val weight: Double get() = inner.weight
+    override val steps: Rational? get() = inner.steps
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val startCycle = from.floor()

@@ -17,6 +17,8 @@ class ContextModifierPatternSpec : StringSpec({
     "ContextModifierPattern: Direct Instantiation" {
         // A pattern that returns its context's 'test_key' value as the note name
         val contextAwarePattern = object : StrudelPattern.FixedWeight {
+            override val steps: Rational = Rational.ONE
+
             override fun queryArcContextual(
                 from: Rational,
                 to: Rational,
@@ -45,6 +47,8 @@ class ContextModifierPatternSpec : StringSpec({
         var capturedValue: String? = null
 
         val inspector = object : StrudelPattern.FixedWeight {
+            override val steps: Rational = Rational.ONE
+
             override fun queryArcContextual(
                 from: Rational,
                 to: Rational,

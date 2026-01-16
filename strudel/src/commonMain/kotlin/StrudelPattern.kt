@@ -153,6 +153,12 @@ interface StrudelPattern {
     val weight: Double
 
     /**
+     * The number of steps per cycle for this pattern, if defined.
+     * Used for aligning patterns in polymeter.
+     */
+    val steps: Rational?
+
+    /**
      * Queries events from [from] and [to] cycles with an empty [QueryContext].
      */
     fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> =

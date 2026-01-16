@@ -535,6 +535,7 @@ val randL by dslFunction { args ->
         // Dynamic path: Create a pattern that varies the sequence length
         object : StrudelPattern {
             override val weight = 1.0
+            override val steps: Rational = Rational.ONE
 
             override fun queryArcContextual(
                 from: Rational,

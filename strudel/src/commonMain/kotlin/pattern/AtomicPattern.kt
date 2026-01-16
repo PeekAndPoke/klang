@@ -24,6 +24,8 @@ internal class AtomicPattern(val data: VoiceData) : StrudelPattern.FixedWeight {
         fun value(value: Any?) = AtomicPattern(VoiceData.empty.copy(value = value?.asVoiceValue()))
     }
 
+    override val steps: Rational = Rational.ONE
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val startCycle = from.floor().toInt()
         val endCycle = to.ceil().toInt()

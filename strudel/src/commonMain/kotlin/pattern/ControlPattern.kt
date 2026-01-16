@@ -30,6 +30,8 @@ internal class ControlPattern(
     // E.g. (bd@2).gain(0.5) should still have a weight of 2.
     override val weight: Double get() = source.weight
 
+    override val steps: Rational? get() = source.steps
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val sourceEvents = source.queryArcContextual(from, to, ctx)
         if (sourceEvents.isEmpty()) return emptyList()

@@ -41,7 +41,8 @@ and category.
 - [x] **`(pulses, steps)` notation** - Euclidean rhythm in mini-notation (e.g., `"bd(3,8)"`) ✅ **FIXED WITH RATIONAL
   ARITHMETIC**
 - [x] **`(pulses, steps, rotation)`** - With rotation parameter
-- [x] **`euclidish(pulses, steps, groove)`** - Morphing Euclidean rhythm with groove parameter (0=euclidean, 1=even)
+- [x] **`euclidish(pulses, steps, groove)`** / **`eish`** - Morphing Euclidean rhythm with groove parameter (
+  0=euclidean, 1=even), now supports control patterns
 
 ### Pattern Creation ⭐⭐⭐
 
@@ -50,20 +51,21 @@ and category.
 - [x] **`mini()`** - Parses input as mini-notation (alias for `seq`)
 - [x] **`stack()`** - Stack patterns (play simultaneously)
 - [x] **`arrange()`** - Arrange patterns with custom durations
-- [ ] **`polymeter()`** - Aligns steps of patterns creating polymeters
-- [ ] **`polymeterSteps()`** - Polymeter with step specification
-- [ ] **`fastcat()`** - Concatenates patterns, all in one cycle
-- [ ] **`slowcat()`** - Alias for cat, each pattern takes one cycle
-- [ ] **`slowcatPrime()`** - Like slowcat but maintains relative timing
+- [ ] **`polyrhythm()`** - Aligns steps of patterns creating polymeters
+- [x] **`polymeter()`** - Aligns steps of patterns creating polymeters ✅ **IMPLEMENTED**
+- [x] **`polymeterSteps()`** - Polymeter with step specification ✅ **IMPLEMENTED**
+- [x] **`fastcat()`** - Concatenates patterns, all in one cycle ✅ **IMPLEMENTED**
+- [x] **`slowcat()`** - Alias for cat, each pattern takes one cycle ✅ **IMPLEMENTED**
+- [x] **`slowcatPrime()`** - Like slowcat but maintains relative timing ✅ **IMPLEMENTED**
 - [ ] **`stackLeft()`** / **`stackRight()`** / **`stackCentre()`** - Aligned stack variants
 - [ ] **`stackBy(by, ...pats)`** - Stack with custom alignment (0=left, 0.5=center, 1=right)
-- [x] **`run(n)`** - Creates discrete pattern of numbers 0 to n-1
+- [x] **`run(n)`** - Creates discrete pattern of numbers 0 to n-1, now supports control patterns
 - [x] **`binary(n)`** - Creates binary pattern from number
 - [x] **`binaryN(n, bits)`** - Binary pattern padded to n bits
 - [x] **`binaryL(n)`** - Creates binary list pattern from number
 - [x] **`binaryNL(n, bits)`** - Binary list pattern padded to n bits
 - [ ] **`sequenceP()`** - Pattern of patterns sequence
-- [ ] **`pure(value)`** - Creates atomic pattern with single value
+- [x] **`pure(value)`** - Creates atomic pattern with single value ✅ **IMPLEMENTED**
 - [x] **`silence`** - Empty pattern
 - [x] **`rest`** - Alias for silence
 
@@ -74,13 +76,18 @@ and category.
 - [x] **`early(cycles)`** - Nudge pattern earlier in time
 - [x] **`late(cycles)`** - Nudge pattern later in time
 - [x] **`rev(n)`** - Reverses pattern, now supports control patterns for dynamic reversal
-- [x] **`euclid(pulses, steps)`** - Euclidean rhythm function (standalone, pattern method, string extension)
-- [x] **`euclidRot(pulses, steps, rotation)`** / **`euclidrot`** - Euclidean with rotation (standalone, pattern method,
+- [x] **`euclid(pulses, steps)`** - Euclidean rhythm function, now supports control patterns (standalone, pattern
+  method, string extension)
+- [x] **`euclidRot(pulses, steps, rotation)`** / **`euclidrot`** - Euclidean with rotation, now supports control
+  patterns (standalone, pattern method,
   string extension)
-- [x] **`bjork([pulses, steps, rotation])`** - Euclidean with list parameters (standalone, pattern method, string
+- [x] **`bjork([pulses, steps, rotation])`** - Euclidean with list parameters, now supports control patterns (
+  standalone, pattern method, string
   extension)
-- [x] **`euclidLegato(pulses, steps)`** - Holds pulses until next (standalone, pattern method, string extension)
-- [x] **`euclidLegatoRot(pulses, steps, rotation)`** - Legato Euclidean with rotation (standalone, pattern method,
+- [x] **`euclidLegato(pulses, steps)`** - Holds pulses until next, now supports control patterns (standalone, pattern
+  method, string extension)
+- [x] **`euclidLegatoRot(pulses, steps, rotation)`** - Legato Euclidean with rotation, now supports control patterns (
+  standalone, pattern method,
   string extension)
 - [ ] **`compress(start, end)`** - Compresses pattern into timespan
 - [ ] **`compressSpan(span)`** - Compresses pattern into span
@@ -253,10 +260,11 @@ and category.
 - [x] **`rand`** - Random signal (unipolar, 0 to 1)
 - [x] **`rand2`** - Random signal (bipolar, -1 to 1)
 - [x] **`brand`** - Binary random (0 or 1, 50:50 probability)
-- [x] **`brandBy(probability)`** - Binary random with custom probability
-- [x] **`irand(n)`** - Random integers from 0 to n-1 (continuous pattern)
-- [x] **`randL(n)`** - Creates list of random numbers of length n (sequence pattern)
-- [x] **`.segment(rate)`** - Sample continuous signal at rate (pattern method, string extension, typed function, alias:
+- [x] **`brandBy(probability)`** - Binary random with custom probability, now supports control patterns
+- [x] **`irand(n)`** - Random integers from 0 to n-1 (continuous pattern), now supports control patterns
+- [x] **`randL(n)`** - Creates list of random numbers of length n (sequence pattern), now supports control patterns
+- [x] **`.segment(rate)`** - Sample continuous signal at rate, now supports control patterns (pattern method, string
+  extension, typed function, alias:
   `seg`)
 - [x] **`.slow(factor)`** - Slow down patterns, now supports control patterns for dynamic slowing
 - [x] **`toBipolar()`** - Convert 0-1 range to -1..1 (pattern method, string extension)
@@ -271,9 +279,11 @@ and category.
 
 - [x] **`seed(n)`** / **`withSeed(n)`** - Set random seed for deterministic pattern generation (pattern method, string
   extension)
-- [x] **`randrun(n)`** - Creates shuffled sequence 0..n-1 (changes per cycle)
-- [x] **`shuffle(n)`** - Slices pattern into n parts, plays in random order (pattern method, string extension)
-- [x] **`scramble(n)`** - Slices pattern into n parts, plays at random with repetition (pattern method, string
+- [x] **`randrun(n)`** - Creates shuffled sequence 0..n-1 (changes per cycle), now supports control patterns
+- [x] **`shuffle(n)`** - Slices pattern into n parts, plays in random order, now supports control patterns (pattern
+  method, string extension)
+- [x] **`scramble(n)`** - Slices pattern into n parts, plays at random with repetition, now supports control patterns (
+  pattern method, string
   extension)
 
 ---
@@ -321,9 +331,11 @@ and category.
 - [x] **`someCyclesBy(prob, fn)`** - Cycle-based random application with proper cycle-locking (pattern method, string
   extension)
 - [x] **`someCycles(fn)`** - Cycle-based random application with 50% probability (pattern method, string extension)
-- [x] **`firstOf(n, func)`** - Apply function on first of every n cycles (pattern method, string extension)
-- [x] **`every(n, func)`** - Alias for `firstOf` (pattern method, string extension)
-- [x] **`lastOf(n, func)`** - Apply function on last of every n cycles (pattern method, string extension)
+- [x] **`firstOf(n, func)`** - Apply function on first of every n cycles, now supports control patterns (pattern method,
+  string extension)
+- [x] **`every(n, func)`** - Alias for `firstOf`, now supports control patterns (pattern method, string extension)
+- [x] **`lastOf(n, func)`** - Apply function on last of every n cycles, now supports control patterns (pattern method,
+  string extension)
 - [x] **`filter(test)`** - Filter events by test function (pattern method, string extension, standalone function)
 - [x] **`filterWhen(test)`** - Filter events when test is true at start time (pattern method, string extension,
   standalone function)
@@ -343,7 +355,8 @@ and category.
 - [ ] **`grow(factor)`** - Grow pattern by factor
 - [ ] **`tour(...patterns)`** - Tour through patterns (alias: `s_tour`)
 - [ ] **`zip(...patterns)`** - Zip patterns together (alias: `s_zip`)
-- [x] **`bite(n, indices)`** - Slices pattern and plays according to index pattern (pattern method, string extension)
+- [x] **`bite(n, indices)`** - Slices pattern and plays according to index pattern, now supports control patterns (
+  pattern method, string extension)
 - [ ] **`repeatCycles(n)`** - Repeat pattern for n cycles
 
 ### Sample Functions
@@ -496,9 +509,9 @@ and category.
 - [ ] **Pattern queryArc optimization** - Cache/memoization for repeated queries
 - [ ] **Event metadata** - Track event IDs, origins for debugging
 
-### Mini-Notation Parser
+### Mini-Notation Parser ✅
 
-- [x] **Simple cache** - Cache parsed patterns to avoid re-parsing identical input
+- [x] **Simple cache** - Cache parsed patterns to avoid re-parsing identical input ✅ **IMPLEMENTED**
 - [ ] **Better error messages** - Show position and context
 - [ ] **Nested modifier support** - Multiple `*` and `/` operators
 - [ ] **Whitespace flexibility** - Handle tabs, newlines better
@@ -529,10 +542,12 @@ and category.
 
 ### By Category:
 
-- **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean)
-- **Pattern Creation**: ~3 missing (10 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`, `run`,
-  `binary`, `binaryN`, `binaryL`, `binaryNL`)
-- **Time Modification**: ~12 missing (11 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `euclid`,
+- **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean, cache)
+- **Pattern Creation**: ~1 missing (16 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`, `run`,
+  `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
+  `pure`)
+- **Time Modification**: ~12 missing (12 completed with control pattern support: `fast`, `slow`, `early`, `late`, `gap`,
+  `zoom`, `euclid`,
   `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
@@ -542,15 +557,19 @@ and category.
 - **Comparison & Logic**: 2 missing (8 completed)
 - **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
 - **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ✅ 0 missing (34 completed: `steady`, `signal`, `time`, `sine`, `sine2`, `cosine`, `cosine2`,
+- **Continuous Signals**: ✅ 0 missing (34 completed, many with control pattern support: `steady`, `signal`, `time`,
+  `sine`, `sine2`, `cosine`, `cosine2`,
   `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `perlin2`, `berlin`,
   `berlin2`, `range`,
-  `rand`, `rand2`, `irand`, `randL`, `brand`, `brandBy`, `segment`, `seg`, `toBipolar`, `fromBipolar`)
+  `rand`, `rand2`, `irand` (control patterns), `randL` (control patterns), `brand`, `brandBy` (control patterns),
+  `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
-- **Step-Based Operations**: ~13 missing (1 completed: `bite`)
-- **Conditional & Probabilistic**: ✅ 0 missing (20 completed: `sometimesBy`, `sometimes`, `often`, `rarely`,
+- **Step-Based Operations**: ~13 missing (1 completed with control pattern support: `bite`)
+- **Conditional & Probabilistic**: ✅ 0 missing (20 completed, with control pattern support: `sometimesBy`, `sometimes`,
+  `often`, `rarely`,
   `almostAlways`, `almostNever`, `always`, `never`, `someCyclesBy`, `someCycles`, `degradeBy`, `degrade`, `undegradeBy`,
-  `undegrade`, `firstOf`, `every`, `lastOf`, `filter`, `filterWhen`, `bypass`)
+  `undegrade`, `firstOf` (control patterns), `every` (control patterns), `lastOf` (control patterns), `filter`,
+  `filterWhen`, `bypass`)
 - **Arithmetic Addons (Non-Strudel)**: 0 missing (3 completed: `flipSign`, `oneMinusValue`, `not`)
 - **Pattern Binding**: ~15 missing (0 completed)
 - **MIDI/OSC**: ~15 missing (0 completed)
@@ -560,18 +579,19 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~88 features remaining
+### Total Estimated: ~83 features remaining
 
-### Completed So Far: ~169 features! 🎉
+### Completed So Far: ~175 features! 🎉
 
 **Major achievements:**
 
-- ✅ Complete mini-notation support
+- ✅ Complete mini-notation support with parser cache
 - ✅ All arithmetic, bitwise, and comparison operators
 - ✅ Core pattern creation and transformation
 - ✅ Comprehensive audio effects and synthesis parameters
 - ✅ Full ADSR envelope support
 - ✅ Continuous signal generators
+- ✅ **Control pattern support for numerical functions** - Major initiative completed!
 
 ---
 

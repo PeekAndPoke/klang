@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * Plays a list of (duration, pattern) segments sequentially, looping the total duration.
@@ -14,6 +15,8 @@ internal class ArrangementPattern(
 
     private val segmentsRational = segments.map { (dur, pat) -> Rational(dur) to pat }
     private val totalDuration = segmentsRational.fold(Rational.ZERO) { acc, (dur, _) -> acc + dur }
+
+    override val steps: Rational get() = segments.size.toRational()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (totalDuration == Rational.ZERO) return emptyList()

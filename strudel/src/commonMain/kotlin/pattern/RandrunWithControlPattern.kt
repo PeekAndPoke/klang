@@ -20,6 +20,7 @@ internal class RandrunWithControlPattern(
     val nPattern: StrudelPattern,
 ) : StrudelPattern {
     override val weight = 1.0
+    override val steps: Rational? = null
 
     override fun queryArcContextual(
         from: Rational,

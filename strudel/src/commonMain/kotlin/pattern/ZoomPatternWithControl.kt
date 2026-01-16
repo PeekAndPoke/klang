@@ -23,6 +23,8 @@ internal class ZoomPatternWithControl(
 ) : StrudelPattern {
     override val weight: Double get() = inner.weight
 
+    override val steps: Rational? get() = inner.steps
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val startEvents = startPattern.queryArcContextual(from, to, ctx)
         val endEvents = endPattern.queryArcContextual(from, to, ctx)

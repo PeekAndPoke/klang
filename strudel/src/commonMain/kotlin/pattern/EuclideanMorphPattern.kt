@@ -10,8 +10,8 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.math.bjorklund
 
 internal class EuclideanMorphPattern(
-    val pulses: Int,
-    val steps: Int,
+    val nPulses: Int,
+    val nSteps: Int,
     val groove: StrudelPattern,
 ) : StrudelPattern {
 
@@ -61,6 +61,8 @@ internal class EuclideanMorphPattern(
 
     override val weight: Double get() = groove.weight
 
+    override val steps: Rational get() = nSteps.toRational()
+
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
@@ -74,7 +76,7 @@ internal class EuclideanMorphPattern(
             val perc = ev.data.value?.asDouble ?: 0.0
 
             // 2. For each groove event, generate the morphed rhythm arcs
-            val arcs = calculateMorphedArcs(pulses, steps, perc)
+            val arcs = calculateMorphedArcs(nPulses, nSteps, perc)
 
             // 3. Generate events from arcs that intersect with the current cycle and the groove event
             // Note: The arcs are within a single cycle (0..1). We need to repeat them for the duration of the groove event.

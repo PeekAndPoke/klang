@@ -9,6 +9,7 @@ import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.struct
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.math.bjorklund
 import io.peekandpoke.klang.strudel.math.recursiveBjorklund
 import kotlin.math.abs
@@ -25,16 +26,18 @@ import kotlin.math.min
  */
 internal class EuclideanPattern private constructor(
     val inner: StrudelPattern,
-    val pulses: Int,
-    val steps: Int,
-    val rotation: Int,
+    val nPulses: Int,
+    val nSteps: Int,
+    val nRotation: Int,
 ) : StrudelPattern {
 
     override val weight: Double get() = inner.weight
 
+    override val steps: Rational get() = nSteps.toRational()
+
     // JS Implementation calls: rotate(bjorklund(...), -rotation)
     // We must replicate JS rotate behavior which relies on Array.slice behavior for out-of-bounds indices
-    private val rhythm = rotateJs(bjorklundStrudel(pulses, steps), -rotation)
+    private val rhythm = rotateJs(bjorklundStrudel(nPulses, nSteps), -nRotation)
 
     companion object {
         /**
@@ -75,6 +78,8 @@ internal class EuclideanPattern private constructor(
             // This ensures perfectly legato gates without granularity issues or cycle repetitions.
             val fillAtom = object : StrudelPattern {
                 override val weight = 1.0
+                override val steps: Rational = Rational.ONE
+
                 override fun queryArcContextual(
                     from: Rational,
                     to: Rational,
@@ -174,7 +179,7 @@ internal class EuclideanPattern private constructor(
         val endCycle = to.ceil().toInt()
 
         // EXACT step duration using rational arithmetic
-        val stepDuration = Rational.ONE / Rational(steps)
+        val stepDuration = Rational.ONE / Rational(nSteps)
 
         for (cycle in startCycle until endCycle) {
             val cycleOffset = Rational(cycle)

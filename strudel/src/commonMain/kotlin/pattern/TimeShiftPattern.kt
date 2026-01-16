@@ -16,6 +16,8 @@ internal class TimeShiftPattern(
 ) : StrudelPattern {
     override val weight: Double get() = source.weight
 
+    override val steps: Rational? get() = source.steps
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         // To shift the pattern by 'offset', we query the source at (from - offset, to - offset)
         // and then shift all resulting events forward by 'offset'

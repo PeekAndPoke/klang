@@ -25,6 +25,8 @@ internal class BitePatternWithControl(
 ) : StrudelPattern {
     override val weight: Double get() = source.weight
 
+    override val steps: Rational? get() = source.steps
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
         val indexEvents = indices.queryArcContextual(from, to, ctx)
