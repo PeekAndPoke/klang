@@ -62,5 +62,37 @@ class MiniNotationParserSpec : StringSpec() {
                 data.gain shouldBe 1.0
             }
         }
+
+        "Cache returns same pattern for identical input" {
+            MiniNotationParser.clearCache()
+
+            val pattern1 = parse("bd hh sd")
+            val pattern2 = parse("bd hh sd")
+
+            pattern1 shouldBe pattern2
+        }
+
+        "Cache differentiates between different inputs" {
+            MiniNotationParser.clearCache()
+
+            val pattern1 = parse("bd hh")
+            val pattern2 = parse("bd sd")
+
+            val events1 = pattern1.queryArc(0.0, 1.0)
+            val events2 = pattern2.queryArc(0.0, 1.0)
+
+            events1[1].data.note shouldBe "hh"
+            events2[1].data.note shouldBe "sd"
+        }
+
+        "clearCache() resets the cache" {
+            val pattern1 = parse("bd cp")
+            MiniNotationParser.clearCache()
+            val pattern2 = parse("bd cp")
+
+            // Both should work correctly even after clearing
+            pattern1.queryArc(0.0, 1.0).size shouldBe 2
+            pattern2.queryArc(0.0, 1.0).size shouldBe 2
+        }
     }
 }

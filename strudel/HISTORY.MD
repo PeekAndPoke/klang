@@ -144,6 +144,8 @@ Strudel.
 - Expression composition (stack/sequence/alternation)
 - Modifier application (fast/slow)
 - Custom atom factories for extensibility
+- **Simple cache** - Caches parsed patterns based on input string and atom factory hash to avoid re-parsing identical
+  input
 
 ## Sound & Sample Control
 

@@ -495,6 +495,7 @@ and category.
 
 ### Mini-Notation Parser
 
+- [x] **Simple cache** - Cache parsed patterns to avoid re-parsing identical input
 - [ ] **Better error messages** - Show position and context
 - [ ] **Nested modifier support** - Multiple `*` and `/` operators
 - [ ] **Whitespace flexibility** - Handle tabs, newlines better
