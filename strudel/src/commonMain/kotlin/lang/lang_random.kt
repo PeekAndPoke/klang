@@ -6,8 +6,10 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.lang.addons.oneMinusValue
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
 import kotlin.math.floor
@@ -78,12 +80,39 @@ val rand2 by dslObject { rand.range(-1.0, 1.0) }
  */
 @StrudelDsl
 val brandBy by dslFunction { args ->
-    val probability = args.getOrNull(0)?.asDoubleOrNull()?.coerceIn(0.0, 1.0) ?: 0.5
+    val probArg = args.getOrNull(0)
 
-    ContinuousPattern { from, _, ctx ->
-        val rand = ctx.getSeededRandom(from, "brandBy")
+    val probPattern = when (probArg) {
+        is StrudelPattern -> probArg
+        null -> parseMiniNotation("0.5") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(probArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
 
-        if (rand.nextDouble() < probability) 1.0 else 0.0
+    val staticProb = probArg?.asDoubleOrNull()
+
+    if (staticProb != null) {
+        // Static path
+        val probability = staticProb.coerceIn(0.0, 1.0)
+        ContinuousPattern { from, _, ctx ->
+            val rand = ctx.getSeededRandom(from, "brandBy")
+            if (rand.nextDouble() < probability) 1.0 else 0.0
+        }
+    } else {
+        // Dynamic path: use ControlPattern to apply varying probability
+        ControlPattern(
+            source = ContinuousPattern { from, _, ctx ->
+                val rand = ctx.getSeededRandom(from, "brandBy")
+                rand.nextDouble()
+            },
+            control = probPattern,
+            mapper = { it },
+            combiner = { sourceData, controlData ->
+                val randomValue = sourceData.value?.asDouble ?: 0.5
+                val prob = (controlData.value?.asDouble ?: 0.5).coerceIn(0.0, 1.0)
+                val result = if (randomValue < prob) 1.0 else 0.0
+                sourceData.copy(value = result.asVoiceValue())
+            }
+        )
     }
 }
 
@@ -104,20 +133,54 @@ val brand by dslObject { brandBy(0.5) }
  */
 @StrudelDsl
 val irand by dslFunction { args ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val nArg = args.getOrNull(0)
 
-    if (n < 0) {
-        silence
-    } else if (n == 1) {
-        signal { 0.0 }
-    } else {
-        ContinuousPattern { from, _, ctx ->
-            val fraction = from - floor(from)
-            val seed = (fraction * n * 10).toInt()
-            val random = ctx.getSeededRandom(seed, "irand")
+    val nPattern = when (nArg) {
+        is StrudelPattern -> nArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
 
-            random.nextInt(0, n).toDouble()
+    val staticN = nArg?.asIntOrNull()
+
+    if (staticN != null) {
+        // Static path
+        if (staticN < 0) {
+            silence
+        } else if (staticN == 1) {
+            signal { 0.0 }
+        } else {
+            ContinuousPattern { from, _, ctx ->
+                val fraction = from - floor(from)
+                val seed = (fraction * staticN * 10).toInt()
+                val random = ctx.getSeededRandom(seed, "irand")
+                random.nextInt(0, staticN).toDouble()
+            }
         }
+    } else {
+        // Dynamic path: use ControlPattern
+        ControlPattern(
+            source = ContinuousPattern { from, _, ctx ->
+                val fraction = from - floor(from)
+                val seed = (fraction * 100).toInt()
+                val random = ctx.getSeededRandom(seed, "irand")
+                random.nextDouble()
+            },
+            control = nPattern,
+            mapper = { it },
+            combiner = { sourceData, controlData ->
+                val randomValue = sourceData.value?.asDouble ?: 0.0
+                val n = controlData.value?.asInt ?: 0
+                val result = if (n <= 0) {
+                    0.0
+                } else if (n == 1) {
+                    0.0
+                } else {
+                    (randomValue * n).toInt().toDouble()
+                }
+                sourceData.copy(value = result.asVoiceValue())
+            }
+        )
     }
 }
 
@@ -441,26 +504,73 @@ val String.someCycles by dslStringExtension { pattern, args -> applySomeCyclesBy
  */
 @StrudelDsl
 val randL by dslFunction { args ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+    val nArg = args.getOrNull(0)
 
-    if (n < 1) {
-        silence
+    val nPattern = when (nArg) {
+        is StrudelPattern -> nArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val staticN = nArg?.asIntOrNull()
+
+    if (staticN != null) {
+        // Static path
+        if (staticN < 1) {
+            silence
+        } else {
+            val atom = AtomicPattern.pure
+            val events = (0..<staticN).map {
+                atom.reinterpret { evt, ctx ->
+                    val fraction = evt.begin - evt.begin.floor()
+                    val seed = (fraction * staticN * 10).toInt()
+                    val random = ctx.getSeededRandom(seed, it, "randL")
+                    val value = random.nextInt(0, 8).asVoiceValue()
+                    evt.copy(data = evt.data.copy(value = value))
+                }
+            }
+            SequencePattern(events)
+        }
     } else {
-        val atom = AtomicPattern.pure
+        // Dynamic path: Create a pattern that varies the sequence length
+        object : StrudelPattern {
+            override val weight = 1.0
 
-        val events = (0..<n).map {
-            atom.reinterpret { evt, ctx ->
+            override fun queryArcContextual(
+                from: Rational,
+                to: Rational,
+                ctx: QueryContext,
+            ): List<StrudelPatternEvent> {
+                val nEvents = nPattern.queryArcContextual(from, to, ctx)
+                if (nEvents.isEmpty()) return emptyList()
 
-                val fraction = evt.begin - evt.begin.floor()
-                val seed = (fraction * n * 10).toInt()
+                val result = mutableListOf<StrudelPatternEvent>()
 
-                val random = ctx.getSeededRandom(seed, it, "randL")
-                val value = random.nextInt(0, 8).asVoiceValue()
-                evt.copy(data = evt.data.copy(value = value))
+                for (nEvent in nEvents) {
+                    val n = nEvent.data.value?.asInt ?: 0
+                    if (n < 1) continue
+
+                    // Create randL(n) for this timespan
+                    val atom = AtomicPattern.pure
+                    val events = (0..<n).map { index ->
+                        atom.reinterpret { evt, ctx ->
+                            val fraction = evt.begin - evt.begin.floor()
+                            val seed = (fraction * n * 10).toInt()
+                            val random = ctx.getSeededRandom(seed, index, "randL")
+                            val value = random.nextInt(0, 8).asVoiceValue()
+                            evt.copy(data = evt.data.copy(value = value))
+                        }
+                    }
+                    val seqPattern = SequencePattern(events)
+
+                    // Query and clip to nEvent timespan
+                    val seqEvents = seqPattern.queryArcContextual(nEvent.begin, nEvent.end, ctx)
+                    result.addAll(seqEvents)
+                }
+
+                return result
             }
         }
-
-        SequencePattern(events)
     }
 }
 
@@ -474,33 +584,41 @@ val randL by dslFunction { args ->
  * @param {number} n Length of the run / max number (exclusive)
  */
 @StrudelDsl
-val randrun by dslFunction { args ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+val randrun: DslFunction by dslFunction { args ->
+    val nArg = args.getOrNull(0)
 
-    if (n < 1) {
-        silence
-    } else {
-        val atom = AtomicPattern.pure
+    val nPattern = when (nArg) {
+        is StrudelPattern -> nArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
 
-        val events = (0..<n).map { index ->
-            atom.reinterpret { evt, ctx ->
-                // Make sure we have a seeded random and not the default one
-                val ctx = ctx.update {
-                    setIfAbsent(QueryContext.randomSeed, 0)
+    val staticN = nArg?.asIntOrNull()
+
+    if (staticN != null) {
+        // Static path
+        if (staticN < 1) {
+            silence
+        } else {
+            val atom = AtomicPattern.pure
+            val events = (0..<staticN).map { index ->
+                atom.reinterpret { evt, ctx ->
+                    val ctx = ctx.update {
+                        setIfAbsent(QueryContext.randomSeed, 0)
+                    }
+                    val cycle = evt.begin.floor()
+                    val random = ctx.getSeededRandom(cycle, "randrun")
+                    val permutation = (0 until staticN).toMutableList()
+                    permutation.shuffle(random)
+                    val value = permutation[index].asVoiceValue()
+                    evt.copy(data = evt.data.copy(value = value))
                 }
-
-                val cycle = evt.begin.floor()
-                val random = ctx.getSeededRandom(cycle, "randrun")
-
-                val permutation = (0 until n).toMutableList()
-                permutation.shuffle(random)
-
-                val value = permutation[index].asVoiceValue()
-                evt.copy(data = evt.data.copy(value = value))
             }
+            SequencePattern(events)
         }
-
-        SequencePattern(events)
+    } else {
+        // Dynamic path: Create a pattern that varies the sequence length
+        RandrunWithControlPattern(nPattern)
     }
 }
 
@@ -518,18 +636,15 @@ val randrun by dslFunction { args ->
  * @param n number of slices
  */
 @StrudelDsl
-val StrudelPattern.shuffle by dslPatternExtension { p, args ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
-    val indices = randrun(n)
-    p.bite(n, indices)
+val StrudelPattern.shuffle: DslPatternMethod by dslPatternExtension { p, args ->
+    val nArg: Any = args.getOrNull(0) ?: 4
+    val newArgs = listOf(nArg)
+    val indices = randrun(args = newArgs)
+    p.bite(nArg, indices)
 }
 
 @StrudelDsl
-val String.shuffle by dslStringExtension { p, args ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
-    val indices = randrun(n)
-    p.bite(n, indices)
-}
+val String.shuffle by dslStringExtension { p, args -> p.shuffle(args) }
 
 // -- scramble() -------------------------------------------------------------------------------------------------------
 
@@ -546,16 +661,16 @@ val String.shuffle by dslStringExtension { p, args ->
  */
 @StrudelDsl
 val StrudelPattern.scramble by dslPatternExtension { p, args ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
-    val indices = irand(n).segment(n)
-    p.bite(n, indices)
+    val nArg = args.getOrNull(0) ?: 4
+    val indices = irand(listOf(nArg)).segment(nArg)
+    p.bite(nArg, indices)
 }
 
 @StrudelDsl
 val String.scramble by dslStringExtension { p, args ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 4
-    val indices = irand(n).segment(n)
-    p.bite(n, indices)
+    val nArg = args.getOrNull(0) ?: 4
+    val indices = irand(listOf(nArg)).segment(nArg)
+    p.bite(nArg, indices)
 }
 
 // -- chooseWith() -----------------------------------------------------------------------------------------------------
@@ -681,7 +796,7 @@ val String.chooseOut by dslStringExtension { p, args -> p.choose(args) }
 /**
  * Chooses randomly from the given list of elements.
  *
- * @param xs values / patterns to choose from.
+ * @param {xs} values / patterns to choose from.
  */
 @StrudelDsl
 val chooseIn by dslFunction { args ->
@@ -730,7 +845,7 @@ val String.choose2 by dslStringExtension { p, args -> p.choose2(args) }
 /**
  * Picks one of the elements at random each cycle.
  *
- * @param xs values / patterns to choose from.
+ * @param {xs} values / patterns to choose from.
  * @example
  * chooseCycles("bd", "hh", "sd").s().fast(8)
  * @example
@@ -792,7 +907,7 @@ private fun extractWeightedPairs(args: List<Any?>): Pair<List<Any?>, List<Any?>>
 /**
  * Chooses randomly from the given list of elements by giving a probability to each element.
  *
- * @param pairs arrays of [value, weight]
+ * @param {pairs} arrays of [value, weight]
  * @example
  * note("c2 g2!2 d2 f1").s(wchoose(listOf("sine", 10), listOf("triangle", 1)))
  */
@@ -824,7 +939,7 @@ val String.wchoose by dslStringExtension { p, args -> p.wchoose(args) }
 /**
  * Picks one of the elements at random each cycle by giving a probability to each element.
  *
- * @param pairs arrays of [value, weight]
+ * @param {pairs} arrays of [value, weight]
  * @example
  * wchooseCycles(listOf("bd", 10), listOf("hh", 1)).s().fast(8)
  */

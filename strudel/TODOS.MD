@@ -34,15 +34,18 @@ and category.
    EuclideanPatternWithControl with legato=true)
    ✅ euclidish() / eish() - **COMPLETED** - Now accepts control patterns for pulses and steps (uses
    EuclideanMorphPatternWithControl; groove already supported patterns)
-3. Random/Continuous Functions (lang_continuous.kt, lang_random.kt)  
-   ❌ range() - Lines 94-107 (lang_continuous.kt) - Accepts min, max, granularity doubles  
-   ❌ steady() - Lines 139-142 (lang_continuous.kt) - Accepts single double value  
-   ❌ brandBy() - Lines 80-92 (lang_random.kt) - Accepts probability double  
-   ❌ irand() - Lines 106-123 (lang_random.kt) - Accepts integer n  
-   ❌ randL() - Lines 443-461 (lang_random.kt) - Accepts integer n  
-   ❌ randrun() - Lines 477-506 (lang_random.kt) - Accepts integer n  
-   ❌ shuffle() - Lines 520-532 (lang_random.kt) - Accepts integer n  
-   ❌ scramble() - Lines 548-559 (lang_random.kt) - Accepts integer n
+3. Random/Continuous Functions (lang_continuous.kt, lang_random.kt)
+   🚫 range() - **WON'T FIX** - Context-modifying operation; use pattern arithmetic (mul/add) for dynamic scaling
+   🚫 steady() - **WON'T FIX** - Creates constant continuous pattern; use signal() with control patterns if needed
+   ✅ brandBy() - **COMPLETED** - Now accepts control patterns for probability parameter (uses ControlPattern with seeded
+   random)
+   ✅ irand() - **COMPLETED** - Now accepts control patterns for n parameter (uses ControlPattern with seeded random)
+   ✅ randL() - **COMPLETED** - Now accepts control patterns for n parameter (creates varying-length random lists)
+   ✅ randrun() - **COMPLETED** - Now accepts control patterns for n parameter (uses RandrunWithControlPattern to
+   generate varying-length shuffled sequences)
+   ✅ shuffle() - **COMPLETED** - Now accepts control patterns via randrun() (slices pattern and plays in random order)
+   ✅ scramble() - **COMPLETED** - Now accepts control patterns via irand() (slices pattern and plays at random with
+   repetition)
 4. Conditional Functions (lang_conditional.kt)  
    ❌ firstOf() / every() - Lines 17-73 - Accepts integer n  
    ❌ lastOf() - Lines 80-134 - Accepts integer n
