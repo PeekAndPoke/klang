@@ -536,6 +536,7 @@ val randL by dslFunction { args ->
         object : StrudelPattern {
             override val weight = 1.0
             override val steps: Rational = Rational.ONE
+            override fun estimateCycleDuration(): Rational = Rational.ONE
 
             override fun queryArcContextual(
                 from: Rational,

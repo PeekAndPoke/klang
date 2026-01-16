@@ -18,6 +18,8 @@ internal class TimeShiftPattern(
 
     override val steps: Rational? get() = source.steps
 
+    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         // To shift the pattern by 'offset', we query the source at (from - offset, to - offset)
         // and then shift all resulting events forward by 'offset'

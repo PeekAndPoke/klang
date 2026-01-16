@@ -29,6 +29,8 @@ class ContinuousPattern private constructor(
 
     override val steps: Rational = Rational.ONE
 
+    override fun estimateCycleDuration(): Rational = Rational.ONE
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
 
         val value = getValue(

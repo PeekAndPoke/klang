@@ -89,6 +89,8 @@ internal class ChoicePattern(
 
     override val steps: Rational? get() = selector.steps
 
+    override fun estimateCycleDuration(): Rational = selector.estimateCycleDuration()
+
     override fun queryArcContextual(
         from: Rational,
         to: Rational,

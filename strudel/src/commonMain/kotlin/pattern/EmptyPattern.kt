@@ -12,6 +12,8 @@ import io.peekandpoke.klang.strudel.math.Rational
 object EmptyPattern : StrudelPattern.FixedWeight {
     override val steps: Rational = Rational.ONE
 
+    override fun estimateCycleDuration(): Rational = Rational.ONE
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         return emptyList()
     }

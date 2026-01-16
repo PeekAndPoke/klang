@@ -26,6 +26,8 @@ class GraalStrudelPattern(
 
     override val steps: Rational = Rational.ONE
 
+    override fun estimateCycleDuration(): Rational = Rational.ONE
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val arc = graal.queryPattern(value, from.toDouble(), to.toDouble())
             ?: return emptyList()

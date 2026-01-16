@@ -23,6 +23,11 @@ internal class TempoModifierPattern(
 
     override val steps: Rational? get() = source.steps
 
+    override fun estimateCycleDuration(): Rational {
+        val sourceDur = source.estimateCycleDuration()
+        return sourceDur / scale
+    }
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val innerFrom = from * scale
         val innerTo = to * scale

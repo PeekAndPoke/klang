@@ -63,6 +63,8 @@ internal class EuclideanMorphPattern(
 
     override val steps: Rational get() = nSteps.toRational()
 
+    override fun estimateCycleDuration(): Rational = Rational.ONE
+
     override fun queryArcContextual(
         from: Rational,
         to: Rational,

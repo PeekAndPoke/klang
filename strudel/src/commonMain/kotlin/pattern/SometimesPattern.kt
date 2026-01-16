@@ -85,6 +85,8 @@ internal class SometimesPattern private constructor(
 
     override val steps: Rational? get() = source.steps
 
+    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val sourceEvents = source.queryArcContextual(from, to, ctx)
         if (sourceEvents.isEmpty()) return emptyList()
@@ -151,6 +153,8 @@ internal class SometimesPattern private constructor(
         val tempPattern = object : StrudelPattern {
             override val weight = 1.0
             override val steps: Rational = Rational.ONE
+
+            override fun estimateCycleDuration(): Rational = Rational.ONE
 
             override fun queryArcContextual(
                 from: Rational,

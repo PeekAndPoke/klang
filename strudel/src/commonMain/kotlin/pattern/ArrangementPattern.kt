@@ -18,6 +18,8 @@ internal class ArrangementPattern(
 
     override val steps: Rational get() = segments.size.toRational()
 
+    override fun estimateCycleDuration(): Rational = totalDuration
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (totalDuration == Rational.ZERO) return emptyList()
 

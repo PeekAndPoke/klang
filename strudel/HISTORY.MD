@@ -106,6 +106,12 @@ Strudel.
 - `slowcatPrime()` - Like slowcat but maintains relative timing (standalone, pattern method, string extension)
 - `polymeter()` - Aligns steps of patterns creating polymeters (standalone, pattern method, string extension)
 - `polymeterSteps()` - Polymeter with step specification (standalone function)
+- `polyrhythm()` - Alias for stack, creates polyrhythms by playing patterns simultaneously (standalone function)
+- `stackBy(by, ...pats)` - Stack with custom alignment (0=left, 0.5=center, 1=right) (standalone function)
+- `stackLeft()` - Stack patterns aligned to the left/start (standalone function)
+- `stackRight()` - Stack patterns aligned to the right/end (standalone function)
+- `stackCentre()` - Stack patterns aligned to the center (standalone function)
+- `sequenceP()` - Pattern of patterns sequence, alias for seq (standalone function)
 - `pure()` - Creates atomic pattern with single value (standalone function)
 - `silence` - Empty/silent pattern
 - `rest` - Rest event (alias for silence)
@@ -453,7 +459,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 175+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 180+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 27 core pattern types including:
     - Basic: AtomicPattern, SequencePattern, StackPattern, ArrangementPattern
     - Euclidean: EuclideanPattern, EuclideanPatternWithControl, EuclideanMorphPattern, EuclideanMorphPatternWithControl
@@ -749,12 +755,18 @@ Comprehensive voice data structure supporting:
 **Recent Improvements (2026-01-16):**
 
 - ✅ **New Pattern Creation Functions:**
-    - `fastcat()` - Concatenates patterns into one cycle (works as standalone, pattern method, and string extension)
-    - `slowcat()` - Alias for cat, plays patterns sequentially per cycle (triple-mode: standalone/method/extension)
-    - `slowcatPrime()` - Like slowcat but maintains relative timing (triple-mode: standalone/method/extension)
-    - `polymeter()` - Aligns steps of patterns creating polymeters (triple-mode: standalone/method/extension)
-    - `polymeterSteps()` - Polymeter with step specification (standalone function)
-    - `pure()` - Creates atomic pattern with single value (standalone function)
+  - `fastcat()` - Concatenates patterns into one cycle (works as standalone, pattern method, and string extension)
+  - `slowcat()` - Alias for cat, plays patterns sequentially per cycle (triple-mode: standalone/method/extension)
+  - `slowcatPrime()` - Like slowcat but maintains relative timing (triple-mode: standalone/method/extension)
+  - `polymeter()` - Aligns steps of patterns creating polymeters (triple-mode: standalone/method/extension)
+  - `polymeterSteps()` - Polymeter with step specification (standalone function)
+  - `polyrhythm()` - Alias for stack, creates polyrhythms (standalone function)
+  - `stackBy(by, ...pats)` - Stack with custom alignment (0=left, 0.5=center, 1=right) (standalone function)
+  - `stackLeft()` - Stack patterns aligned to the left/start (standalone function)
+  - `stackRight()` - Stack patterns aligned to the right/end (standalone function)
+  - `stackCentre()` - Stack patterns aligned to the center (standalone function)
+  - `sequenceP()` - Pattern of patterns sequence, alias for seq (standalone function)
+  - `pure()` - Creates atomic pattern with single value (standalone function)
 
 - ✅ **Control Pattern Support for All Numerical Functions** - Completed major initiative to add control pattern support
   to all functions that accept numerical parameters:

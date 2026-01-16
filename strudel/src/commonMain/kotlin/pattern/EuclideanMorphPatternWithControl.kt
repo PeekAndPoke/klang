@@ -24,6 +24,8 @@ internal class EuclideanMorphPatternWithControl(
 
     override val steps: Rational? get() = stepsPattern.steps
 
+    override fun estimateCycleDuration(): Rational = Rational.ONE
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val pulsesEvents = pulsesPattern.queryArcContextual(from, to, ctx)
         val stepsEvents = stepsPattern.queryArcContextual(from, to, ctx)

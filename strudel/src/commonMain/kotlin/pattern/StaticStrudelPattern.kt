@@ -18,12 +18,21 @@ class StaticStrudelPattern(
             explicitNulls = false
         }
 
-        fun fromJson(json: String): StaticStrudelPattern = codec.decodeFromString(serializer(), json)
+        fun fromJson(json: String): StaticStrudelPattern =
+            codec.decodeFromString(serializer(), json)
     }
 
-    override val steps: Rational = events.size.toRational()
+    private val totalCycles: Rational = maxOf(
+        Rational.ONE,
+        events.maxOfOrNull { it.end } ?: Rational.ZERO
+    ).ceil()
 
-    private val totalCycles = maxOf(Rational.ONE, events.maxOfOrNull { it.end } ?: Rational.ZERO).ceil()
+    override val steps: Rational = when (totalCycles) {
+        Rational.ZERO -> Rational.ZERO
+        else -> (events.size.toRational() / totalCycles)
+    }
+
+    override fun estimateCycleDuration(): Rational = totalCycles
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (events.isEmpty()) return emptyList()

@@ -25,7 +25,10 @@ internal class FirstOfWithControlPattern(
     val transform: (StrudelPattern) -> StrudelPattern,
 ) : StrudelPattern {
     override val weight = source.weight
+
     override val steps: Rational? get() = source.steps
+
+    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(
         from: Rational,

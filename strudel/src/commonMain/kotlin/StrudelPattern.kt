@@ -159,6 +159,13 @@ interface StrudelPattern {
     val steps: Rational?
 
     /**
+     * Estimates the duration of a cycle for this pattern.
+     * Used for alignment in stacking operations.
+     * Defaults to 1.0 (Rational.ONE).
+     */
+    fun estimateCycleDuration(): Rational = Rational.ONE
+
+    /**
      * Queries events from [from] and [to] cycles with an empty [QueryContext].
      */
     fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> =

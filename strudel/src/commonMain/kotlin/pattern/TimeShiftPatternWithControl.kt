@@ -17,6 +17,8 @@ internal class TimeShiftPatternWithControl(
 
     override val steps: Rational? get() = source.steps
 
+    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+
     override fun queryArcContextual(
         from: Rational,
         to: Rational,

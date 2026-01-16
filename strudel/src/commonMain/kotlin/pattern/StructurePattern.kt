@@ -33,6 +33,13 @@ internal class StructurePattern(
             Mode.Out -> other.steps
         }
 
+    override fun estimateCycleDuration(): Rational {
+        return when (mode) {
+            Mode.In -> source.estimateCycleDuration()
+            Mode.Out -> other.estimateCycleDuration()
+        }
+    }
+
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         return when (mode) {
             Mode.In -> queryIn(from, to, ctx)

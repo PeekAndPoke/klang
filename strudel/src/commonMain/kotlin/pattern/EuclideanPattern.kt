@@ -35,6 +35,8 @@ internal class EuclideanPattern private constructor(
 
     override val steps: Rational get() = nSteps.toRational()
 
+    override fun estimateCycleDuration(): Rational = Rational.ONE
+
     // JS Implementation calls: rotate(bjorklund(...), -rotation)
     // We must replicate JS rotate behavior which relies on Array.slice behavior for out-of-bounds indices
     private val rhythm = rotateJs(bjorklundStrudel(nPulses, nSteps), -nRotation)
@@ -78,7 +80,10 @@ internal class EuclideanPattern private constructor(
             // This ensures perfectly legato gates without granularity issues or cycle repetitions.
             val fillAtom = object : StrudelPattern {
                 override val weight = 1.0
+
                 override val steps: Rational = Rational.ONE
+
+                override fun estimateCycleDuration(): Rational = Rational.ONE
 
                 override fun queryArcContextual(
                     from: Rational,

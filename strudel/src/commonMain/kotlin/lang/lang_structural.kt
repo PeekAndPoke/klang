@@ -56,6 +56,7 @@ private fun applyGap(args: List<Any?>): StrudelPattern {
     return object : StrudelPattern {
         override val weight: Double = 1.0
         override val steps: Rational = stepsRat
+        override fun estimateCycleDuration(): Rational = Rational.ONE
 
         override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
             return emptyList()
@@ -176,6 +177,142 @@ val StrudelPattern.arrange by dslPatternExtension { p, args ->
 @StrudelDsl
 val String.arrange by dslStringExtension { p, args ->
     applyArrange(listOf(p) + args)
+}
+
+// -- stackBy() --------------------------------------------------------------------------------------------------------
+
+private fun applyStackBy(patterns: List<StrudelPattern>, alignment: Double): StrudelPattern {
+    if (patterns.isEmpty()) return silence
+
+    // Get duration for each pattern
+    val durations = patterns.map { it.estimateCycleDuration() }
+    val maxDur = durations.maxOrNull() ?: Rational.ONE
+
+    // Align patterns by time-shifting them
+    val alignedPatterns = patterns.zip(durations).map { (pat, dur) ->
+        if (dur == maxDur) {
+            pat
+        } else {
+            val totalGap = maxDur - dur
+            val timeShift = totalGap * alignment.toRational()
+
+            // Create a pattern that queries at original time then shifts results
+            object : StrudelPattern {
+                override val weight: Double = pat.weight
+                override val steps: Rational? = pat.steps
+
+                override fun estimateCycleDuration(): Rational = maxDur
+
+                override fun queryArcContextual(
+                    from: Rational,
+                    to: Rational,
+                    ctx: QueryContext,
+                ): List<StrudelPatternEvent> {
+                    val results = mutableListOf<StrudelPatternEvent>()
+
+                    // Determine which cycles of the aligned pattern we need to check
+                    val startCycle = (from / maxDur).floor().toInt()
+                    val endCycle = (to / maxDur).ceil().toInt()
+
+                    for (cycle in startCycle until endCycle) {
+                        val cycleOffset = Rational(cycle) * maxDur
+                        val patternStart = cycleOffset + timeShift
+                        val patternEnd = patternStart + dur
+
+                        // Check if this cycle's pattern window overlaps with the query range
+                        if (patternEnd > from && patternStart < to) {
+                            // Query the pattern at its ORIGINAL time coordinates (0 to dur)
+                            // Get events from cycle 0 of the original pattern
+                            val originalStart = Rational(cycle) * dur
+                            val originalEnd = originalStart + dur
+
+                            val events = pat.queryArcContextual(originalStart, originalEnd, ctx)
+
+                            // Shift the events to the aligned position
+                            results.addAll(events.map { event ->
+                                event.copy(
+                                    begin = event.begin - originalStart + patternStart,
+                                    end = event.end - originalStart + patternStart
+                                )
+                            }.filter { event ->
+                                // Only include events that overlap with the query range
+                                event.end > from && event.begin < to
+                            })
+                        }
+                    }
+
+                    return results
+                }
+            }
+        }
+    }
+
+    return StackPattern(alignedPatterns)
+}
+
+/**
+ * Stack patterns with alignment.
+ * 0 = left, 0.5 = center, 1 = right.
+ */
+@StrudelDsl
+val stackBy by dslFunction { args ->
+    val by = args.firstOrNull()?.asDoubleOrNull() ?: 0.0
+    val patterns = args.drop(1).toListOfPatterns(defaultModifier)
+    applyStackBy(patterns, by)
+}
+
+// -- stackLeft() ------------------------------------------------------------------------------------------------------
+
+/** Stack patterns aligned to the left (start). */
+@StrudelDsl
+val stackLeft by dslFunction { args ->
+    applyStackBy(args.toListOfPatterns(defaultModifier), 0.0)
+}
+
+// -- stackRight() -----------------------------------------------------------------------------------------------------
+
+/** Stack patterns aligned to the right (end). */
+@StrudelDsl
+val stackRight by dslFunction { args ->
+    applyStackBy(args.toListOfPatterns(defaultModifier), 1.0)
+}
+
+// -- stackCentre() ----------------------------------------------------------------------------------------------------
+
+/** Stack patterns aligned to the center. */
+@StrudelDsl
+val stackCentre by dslFunction { args ->
+    applyStackBy(args.toListOfPatterns(defaultModifier), 0.5)
+}
+
+// -- polyrhythm() -----------------------------------------------------------------------------------------------------
+
+/**
+ * Alias for stack. Creates polyrhythms by playing patterns simultaneously.
+ */
+@StrudelDsl
+val polyrhythm by dslFunction { args ->
+    applyStack(args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val StrudelPattern.polyrhythm by dslPatternExtension { p, args ->
+    applyStack(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+@StrudelDsl
+val String.polyrhythm by dslStringExtension { p, args ->
+    applyStack(listOf(p) + args.toListOfPatterns(defaultModifier))
+}
+
+// -- sequenceP() ------------------------------------------------------------------------------------------------------
+
+/**
+ * Pattern of patterns sequence. Alias for seq.
+ */
+@StrudelDsl
+val sequenceP by dslFunction { args ->
+    applySeq(args.toListOfPatterns(defaultModifier))
 }
 
 // -- pickRestart() ----------------------------------------------------------------------------------------------------
@@ -299,18 +436,6 @@ val String.slowcatPrime by dslStringExtension { p, args ->
 
 // -- polymeter() ------------------------------------------------------------------------------------------------------
 
-private fun StrudelPattern.estimateSteps(): Int {
-    return when (this) {
-        is SequencePattern -> patterns.size
-        is AtomicPattern -> 1
-        is EuclideanPattern -> nSteps
-        // Fallback for patterns where step count is dynamic or unknown.
-        // A value of 1 is safe as it won't cause time distortion, treating it as a 1-cycle pattern.
-        else -> 1
-    }
-}
-
-
 private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = null): StrudelPattern {
     if (patterns.isEmpty()) return silence
 
@@ -330,6 +455,7 @@ private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = nul
     return StackPattern(adjustedPatterns).let { stack ->
         object : StrudelPattern by stack {
             override val steps: Rational = targetSteps.toRational()
+            override fun estimateCycleDuration(): Rational = stack.estimateCycleDuration()
         }
     }
 }
@@ -557,6 +683,8 @@ private fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent)
     return object : StrudelPattern {
         override val weight: Double get() = source.weight
         override val steps: Rational? get() = source.steps
+
+        override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
         override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
             return source.queryArcContextual(from, to, ctx).filter(predicate)
@@ -829,6 +957,7 @@ private fun applyBite(source: StrudelPattern, args: List<Any?>): StrudelPattern 
         object : StrudelPattern {
             override val weight: Double get() = source.weight
             override val steps: Rational? get() = source.steps
+            override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
             override fun queryArcContextual(
                 from: Rational,

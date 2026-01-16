@@ -27,6 +27,8 @@ internal class SequencePattern(
 
     override val steps: Rational get() = patterns.size.toRational()
 
+    override fun estimateCycleDuration(): Rational = Rational.ONE
+
     // Calculate proportional offsets based on weights
     private val weights = patterns.map { it.weight.toRational() }
     private val totalWeight = weights.sum()

@@ -51,20 +51,20 @@ and category.
 - [x] **`mini()`** - Parses input as mini-notation (alias for `seq`)
 - [x] **`stack()`** - Stack patterns (play simultaneously)
 - [x] **`arrange()`** - Arrange patterns with custom durations
-- [ ] **`polyrhythm()`** - Aligns steps of patterns creating polymeters
+- [x] **`polyrhythm()`** - Alias for stack, creates polyrhythms by playing patterns simultaneously ✅ **IMPLEMENTED**
 - [x] **`polymeter()`** - Aligns steps of patterns creating polymeters ✅ **IMPLEMENTED**
 - [x] **`polymeterSteps()`** - Polymeter with step specification ✅ **IMPLEMENTED**
 - [x] **`fastcat()`** - Concatenates patterns, all in one cycle ✅ **IMPLEMENTED**
 - [x] **`slowcat()`** - Alias for cat, each pattern takes one cycle ✅ **IMPLEMENTED**
 - [x] **`slowcatPrime()`** - Like slowcat but maintains relative timing ✅ **IMPLEMENTED**
-- [ ] **`stackLeft()`** / **`stackRight()`** / **`stackCentre()`** - Aligned stack variants
-- [ ] **`stackBy(by, ...pats)`** - Stack with custom alignment (0=left, 0.5=center, 1=right)
+- [x] **`stackLeft()`** / **`stackRight()`** / **`stackCentre()`** - Aligned stack variants ✅ **IMPLEMENTED**
+- [x] **`stackBy(by, ...pats)`** - Stack with custom alignment (0=left, 0.5=center, 1=right) ✅ **IMPLEMENTED**
 - [x] **`run(n)`** - Creates discrete pattern of numbers 0 to n-1, now supports control patterns
 - [x] **`binary(n)`** - Creates binary pattern from number
 - [x] **`binaryN(n, bits)`** - Binary pattern padded to n bits
 - [x] **`binaryL(n)`** - Creates binary list pattern from number
 - [x] **`binaryNL(n, bits)`** - Binary list pattern padded to n bits
-- [ ] **`sequenceP()`** - Pattern of patterns sequence
+- [x] **`sequenceP()`** - Pattern of patterns sequence (alias for seq) ✅ **IMPLEMENTED**
 - [x] **`pure(value)`** - Creates atomic pattern with single value ✅ **IMPLEMENTED**
 - [x] **`silence`** - Empty pattern
 - [x] **`rest`** - Alias for silence
@@ -543,9 +543,11 @@ and category.
 ### By Category:
 
 - **Mini-Notation**: ✅ 0 missing (8 completed: `:n`, `-`, `@n`, `!n`, `?`, `|`, euclidean, cache)
-- **Pattern Creation**: ~1 missing (16 completed: `seq`, `mini`, `stack`, `cat`, `arrange`, `silence`/`rest`, `run`,
+- **Pattern Creation**: ✅ 0 missing (21 completed: `seq`, `mini`, `sequenceP`, `stack`, `cat`, `arrange`, `silence`/
+  `rest`, `run`,
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
-  `pure`)
+  `polyrhythm`,
+  `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
 - **Time Modification**: ~12 missing (12 completed with control pattern support: `fast`, `slow`, `early`, `late`, `gap`,
   `zoom`, `euclid`,
   `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`)
@@ -579,9 +581,9 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~83 features remaining
+### Total Estimated: ~78 features remaining
 
-### Completed So Far: ~175 features! 🎉
+### Completed So Far: ~180 features! 🎉
 
 **Major achievements:**
 
