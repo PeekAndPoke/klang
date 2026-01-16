@@ -49,20 +49,17 @@ val String.hush by dslStringExtension { _, _ ->
 /** Creates silence with a specific duration in steps (metrical steps). */
 @StrudelDsl
 val gap by dslFunction { args ->
-    val steps = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
-    silence.slow(steps)
+    silence.slow(args)
 }
 
 @StrudelDsl
 val StrudelPattern.gap by dslPatternExtension { _, args ->
-    val steps = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
-    silence.slow(steps)
+    silence.slow(args)
 }
 
 @StrudelDsl
 val String.gap by dslStringExtension { _, args ->
-    val steps = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
-    silence.slow(steps)
+    silence.slow(args)
 }
 
 // -- seq() ------------------------------------------------------------------------------------------------------------

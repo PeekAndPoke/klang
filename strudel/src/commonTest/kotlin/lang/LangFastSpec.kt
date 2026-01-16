@@ -69,4 +69,47 @@ class LangFastSpec : StringSpec({
         events[0].data.sound shouldBe "bd"
         events[0].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
+
+    "fast() with discrete pattern control" {
+        // sound("bd hh").fast("2 4") - pattern-controlled fast
+        val p = sound("bd hh").fast("2 4")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+        // With "2 4" control pattern: first half fast by 2, second half by 4
+        // First half: bd hh played twice (4 events) in 0.5 cycle
+        // Second half: bd hh played 4 times (8 events) in 0.5 cycle
+        events.size shouldBe 6
+    }
+
+    "fast() with continuous pattern control (sine)" {
+        // sound("bd hh").fast(sine.range(1, 3).segment(2))
+        val p = sound("bd hh").fast(sine.range(1, 3).segment(2))
+        val events = p.queryArc(0.0, 1.0)
+
+        // Should have events with varying fast factors
+        events.size shouldBe 4
+    }
+
+    "fast() with control pattern works in compiled code" {
+        val p = StrudelPattern.compile("""sound("bd hh").fast("2 4")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        // Should work with pattern control
+        events.isNotEmpty() shouldBe true
+    }
+
+    "fast() with steady pattern produces same result as static value" {
+        val p1 = sound("bd hh").fast(2)
+        val p2 = sound("bd hh").fast(steady(2))
+
+        val events1 = p1.queryArc(0.0, 0.5).sortedBy { it.begin }
+        val events2 = p2.queryArc(0.0, 0.5).sortedBy { it.begin }
+
+        events1.size shouldBe events2.size
+        events1.zip(events2).forEach { (e1, e2) ->
+            e1.begin shouldBe e2.begin
+            e1.end shouldBe e2.end
+            e1.data.sound shouldBe e2.data.sound
+        }
+    }
 })

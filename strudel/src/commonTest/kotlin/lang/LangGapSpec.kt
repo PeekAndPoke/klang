@@ -82,4 +82,45 @@ class LangGapSpec : StringSpec({
 
         events.size shouldBe 0
     }
+
+    "gap() with discrete pattern control" {
+        // gap("1 2 1 2") - pattern-controlled silence duration
+        val p = gap("1 2 1 2")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Gap always produces silence regardless of control pattern
+        events.size shouldBe 0
+    }
+
+    "gap() with continuous pattern control (irand)" {
+        // gap(irand(4).segment(4)) - continuous pattern control
+        val p = gap(irand(4).segment(4))
+        val events = p.queryArc(0.0, 1.0)
+
+        // Gap always produces silence regardless of control pattern
+        events.size shouldBe 0
+    }
+
+    "gap() with control pattern works in compiled code" {
+        val p = StrudelPattern.compile("""gap("1 2")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 0
+    }
+
+    "gap() as method with control pattern" {
+        // note("c d").gap("2 3") - method with pattern control
+        val p = note("c d").gap("2 3")
+        val events = p.queryArc(0.0, 3.0)
+
+        events.size shouldBe 0
+    }
+
+    "gap() with steady pattern produces same result as static value" {
+        val p1 = gap(2)
+        val p2 = gap(steady(2))
+
+        p1.queryArc(0.0, 2.0).size shouldBe p2.queryArc(0.0, 2.0).size
+        p1.queryArc(0.0, 2.0).size shouldBe 0
+    }
 })

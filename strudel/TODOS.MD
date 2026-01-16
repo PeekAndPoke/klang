@@ -13,11 +13,11 @@ and category.
 ### Functions That Accept Numerical Arguments But Don't Support Control Patterns
 
 1. Tempo Modifiers (lang_tempo.kt)
-   ❌ slow() - Lines 54-77 - Only accepts a single number factor
-   ❌ fast() - Lines 91-123 - Only accepts a single number factor
+   ✅ slow() - **COMPLETED** - Now accepts control patterns for dynamic slowing
+   ✅ fast() - **COMPLETED** - Now accepts control patterns for dynamic speeding
    ✅ rev() - **COMPLETED** - Now accepts control patterns for dynamic reversal
-2. Structural Functions (lang_structural.kt)  
-   ❌ gap() - Lines 51-66 - Accepts number of steps  
+2. Structural Functions (lang_structural.kt)
+   ✅ gap() - **COMPLETED** - Automatically supports control patterns via slow()
    ❌ zoom() - Lines 563-596 - Accepts start/end doubles  
    ❌ bite() - Lines 600-703 - First parameter (n) is plain integer  
    ❌ segment() / seg() - Lines 707-750 - Accepts integer n  
@@ -98,8 +98,8 @@ and category.
 
 ### Time Modification ⭐⭐⭐
 
-- [x] **`fast(factor)`** - Speeds up pattern (alias: `density`)
-- [x] **`slow(factor)`** - Slows down pattern (alias: `sparsity`)
+- [x] **`fast(factor)`** - Speeds up pattern, now supports control patterns for dynamic speeding (alias: `density`)
+- [x] **`slow(factor)`** - Slows down pattern, now supports control patterns for dynamic slowing (alias: `sparsity`)
 - [x] **`early(cycles)`** - Nudge pattern earlier in time
 - [x] **`late(cycles)`** - Nudge pattern later in time
 - [x] **`rev(n)`** - Reverses pattern, now supports control patterns for dynamic reversal
@@ -118,7 +118,7 @@ and category.
 - [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle (pattern method, string extension, typed
   function)
 - [ ] **`zoomArc(arc)`** - Zoom with arc parameter
-- [X] **`gap(steps)`** - Create gap with n steps
+- [x] **`gap(steps)`** - Create gap with n steps, now supports control patterns via slow()
 - [ ] **`fastGap(factor)`** - Speeds up with gaps between
 - [ ] **`swingBy(subdivision, offset)`** - Creates swing rhythm
 - [ ] **`swing(subdivision)`** - Swing with default 1/3 offset
@@ -286,7 +286,7 @@ and category.
 - [x] **`randL(n)`** - Creates list of random numbers of length n (sequence pattern)
 - [x] **`.segment(rate)`** - Sample continuous signal at rate (pattern method, string extension, typed function, alias:
   `seg`)
-- [ ] **`.slow(factor)`** - Slow down continuous patterns
+- [x] **`.slow(factor)`** - Slow down patterns, now supports control patterns for dynamic slowing
 - [x] **`toBipolar()`** - Convert 0-1 range to -1..1 (pattern method, string extension)
 - [x] **`fromBipolar()`** - Convert -1..1 range to 0-1 (pattern method, string extension)
 - [x] **`perlin2`** - Bipolar Perlin noise (-1 to 1)

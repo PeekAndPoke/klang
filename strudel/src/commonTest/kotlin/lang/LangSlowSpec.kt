@@ -129,4 +129,46 @@ class LangSlowSpec : StringSpec({
         events.size shouldBe 2
         events[0].dur.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
+
+    "slow() with discrete pattern control" {
+        // sound("bd hh").slow("1 2") - pattern-controlled slow
+        val p = sound("bd hh").slow("1 2")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+        // With "1 2" control pattern, first half slowed by 1, second half by 2
+        // Control pattern creates 2 events, each applying different slow factor
+        events.size shouldBe 2
+    }
+
+    "slow() with continuous pattern control (sine)" {
+        // sound("bd hh").slow(sine.range(1, 3).segment(2))
+        val p = sound("bd hh").slow(sine.range(1, 3).segment(2))
+        val events = p.queryArc(0.0, 1.0)
+
+        // Should have events with varying slow factors
+        events.size shouldBe 2
+    }
+
+    "slow() with control pattern works in compiled code" {
+        val p = StrudelPattern.compile("""sound("bd hh").slow("1 2")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        // Should work with pattern control
+        events.isNotEmpty() shouldBe true
+    }
+
+    "slow() with steady pattern produces same result as static value" {
+        val p1 = sound("bd hh").slow(2)
+        val p2 = sound("bd hh").slow(steady(2))
+
+        val events1 = p1.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events2 = p2.queryArc(0.0, 2.0).sortedBy { it.begin }
+
+        events1.size shouldBe events2.size
+        events1.zip(events2).forEach { (e1, e2) ->
+            e1.begin shouldBe e2.begin
+            e1.end shouldBe e2.end
+            e1.data.sound shouldBe e2.data.sound
+        }
+    }
 })

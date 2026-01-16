@@ -10,6 +10,7 @@
 - 07-01-2026: bought 50 more AI credits -> 59.90 EUR
 - 11-01-2026: bought 50 more AI credits -> 59.90 EUR
 - 14-01-2026: bought 50 more AI credits -> 59.90 EUR
+- 16-01-2026: bought 50 more AI credits -> 59.90 EUR
 
 ## Diary
 
