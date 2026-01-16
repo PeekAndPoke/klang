@@ -756,7 +756,7 @@ private fun applySegment(source: StrudelPattern, args: List<Any?>): StrudelPatte
 
     return if (staticN != null) {
         // Static path: use original implementation with struct + fast
-        val structPat = parseMiniNotation("true") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        val structPat = parseMiniNotation("x") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
         source.struct(structPat.fast(staticN))
     } else {
         // Dynamic path: use SegmentPatternWithControl which properly slices each timespan
