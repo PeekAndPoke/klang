@@ -54,4 +54,44 @@ class LangZoomSpec : StringSpec({
             end.toDouble() shouldBe 1.0
         }
     }
+
+    "zoom() with discrete pattern control for start" {
+        // Use pattern control for start parameter
+        val p = n("0 1 2 3").zoom("0 0.5", 1.0)
+        val events = p.queryArc(0.0, 1.0)
+
+        // Should have events from both zoom windows
+        events.isNotEmpty() shouldBe true
+    }
+
+    "zoom() with discrete pattern control for end" {
+        // Use pattern control for end parameter
+        val p = n("0 1 2 3").zoom(0.0, "0.5 1.0")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Should have events from both zoom windows
+        events.isNotEmpty() shouldBe true
+    }
+
+    "zoom() with pattern control for both start and end" {
+        // Use pattern control for both parameters
+        val p = n("0 1 2 3").zoom("0 0.25", "0.5 0.75")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Should have events from pattern-controlled zoom
+        events.isNotEmpty() shouldBe true
+    }
+
+    "zoom() with steady pattern produces same result as static value" {
+        val p1 = n("0 1 2 3").zoom(0.25, 0.75)
+        val p2 = n("0 1 2 3").zoom(steady(0.25), steady(0.75))
+
+        val events1 = p1.queryArc(0.0, 1.0)
+        val events2 = p2.queryArc(0.0, 1.0)
+
+        events1.size shouldBe events2.size
+        events1.zip(events2).forEach { (e1, e2) ->
+            e1.data.soundIndex shouldBe e2.data.soundIndex
+        }
+    }
 })

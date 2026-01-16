@@ -558,13 +558,38 @@ val StrudelPattern.apply by dslPatternExtension { source, args ->
 // -- zoom() -----------------------------------------------------------------------------------------------------------
 
 private fun applyZoom(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    val start = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
-    val end = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
-    val duration = end - start
+    val startArg = args.getOrNull(0)
+    val endArg = args.getOrNull(1)
 
-    if (duration <= 0.0) return silence
+    // Parse the start argument into a pattern
+    val startPattern = when (startArg) {
+        is StrudelPattern -> startArg
+        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(startArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
 
-    return source.early(start).fast(duration)
+    // Parse the end argument into a pattern
+    val endPattern = when (endArg) {
+        is StrudelPattern -> endArg
+        null -> parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(endArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    // Check if we have static values for optimization
+    val staticStart = startArg?.asDoubleOrNull()
+    val staticEnd = endArg?.asDoubleOrNull()
+
+    return if (staticStart != null && staticEnd != null) {
+        // Static path: use the simple early/fast approach
+        val duration = staticEnd - staticStart
+        if (duration <= 0.0) silence
+        else source.early(staticStart).fast(duration)
+    } else {
+        // Dynamic path: ZoomPatternWithControl is necessary because we need to
+        // pair up start/end events together, not just use pattern arithmetic.
+        // endPattern.sub(startPattern) would use endPattern's structure which isn't correct.
+        ZoomPatternWithControl(source, startPattern, endPattern)
+    }
 }
 
 /**

@@ -18,7 +18,7 @@ and category.
    ✅ rev() - **COMPLETED** - Now accepts control patterns for dynamic reversal
 2. Structural Functions (lang_structural.kt)
    ✅ gap() - **COMPLETED** - Automatically supports control patterns via slow()
-   ❌ zoom() - Lines 563-596 - Accepts start/end doubles  
+   ✅ zoom() - **COMPLETED** - Now accepts control patterns for both start and end parameters  
    ❌ bite() - Lines 600-703 - First parameter (n) is plain integer  
    ❌ segment() / seg() - Lines 707-750 - Accepts integer n  
    ❌ euclid() - Lines 772-788 - Accepts pulses, steps integers  
@@ -115,7 +115,8 @@ and category.
 - [ ] **`compressSpan(span)`** - Compresses pattern into span
 - [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
 - [ ] **`focusSpan(span)`** - Focus with span parameter
-- [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle (pattern method, string extension, typed
+- [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle, now supports control patterns for both
+  parameters (pattern method, string extension, typed
   function)
 - [ ] **`zoomArc(arc)`** - Zoom with arc parameter
 - [x] **`gap(steps)`** - Create gap with n steps, now supports control patterns via slow()
