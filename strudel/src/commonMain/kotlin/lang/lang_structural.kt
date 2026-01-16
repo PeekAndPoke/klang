@@ -744,10 +744,24 @@ val String.bite by dslStringExtension { p, args -> applyBite(p, args) }
 // -- segment() --------------------------------------------------------------------------------------------------------
 
 private fun applySegment(source: StrudelPattern, args: List<Any?>): StrudelPattern {
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 1
-    // segment(n) = struct(seq("true").fast(n))
-    val structPat = parseMiniNotation("true") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-    return source.struct(structPat.fast(n))
+    val nArg = args.firstOrNull()
+
+    val nPattern = when (nArg) {
+        is StrudelPattern -> nArg
+        null -> parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+    }
+
+    val staticN = nArg?.asIntOrNull()
+
+    return if (staticN != null) {
+        // Static path: use original implementation with struct + fast
+        val structPat = parseMiniNotation("true") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        source.struct(structPat.fast(staticN))
+    } else {
+        // Dynamic path: use SegmentPatternWithControl which properly slices each timespan
+        SegmentPatternWithControl(source, nPattern)
+    }
 }
 
 /**
