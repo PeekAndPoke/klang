@@ -2,13 +2,12 @@
 
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.pattern.ReversePattern
-import io.peekandpoke.klang.strudel.pattern.TempoModifierPattern
-import io.peekandpoke.klang.strudel.pattern.TimeShiftPattern
-import io.peekandpoke.klang.strudel.pattern.TimeShiftPatternWithControl
+import io.peekandpoke.klang.strudel.pattern.*
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -124,44 +123,65 @@ val String.fast by dslStringExtension { p, args ->
 
 // -- rev() ------------------------------------------------------------------------------------------------------------
 
-private fun applyRev(pattern: StrudelPattern, n: Int): StrudelPattern {
-    // TODO: Make this parameter available through a pattern as well (e.g. sine)
-    return if (n <= 1) {
-        ReversePattern(pattern)
+private fun applyRev(pattern: StrudelPattern, args: List<Any?>): StrudelPattern {
+    val nArg = args.firstOrNull()
+
+    // Parse the argument to detect if it's a plain number or a pattern
+    val nPattern = when (nArg) {
+        is StrudelPattern -> nArg
+        null -> {
+            // Default to 1
+            parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        }
+
+        else -> {
+            // Parse as mini-notation (handles numbers and strings)
+            parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        }
+    }
+
+    // Try to extract a static integer value for optimization
+    val staticN = nArg?.asIntOrNull()
+
+    return if (staticN != null) {
+        // Static value optimization
+        if (staticN <= 1) {
+            ReversePattern(pattern)
+        } else {
+            // Reverses every n-th cycle by speeding up, reversing, then slowing back down
+            pattern.fast(staticN).rev().slow(staticN)
+        }
     } else {
-        // Reverses every n-th cycle by speeding up, reversing, then slowing back down
-        pattern.fast(n).rev().slow(n)
+        // Use pattern-controlled reversal
+        ReversePatternWithControl(pattern, nPattern)
     }
 }
 
 /** Reverses the pattern */
 @StrudelDsl
 val rev by dslFunction { args ->
-    val n = args.firstOrNull()?.asIntOrNull() ?: 1
     val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
         ?: return@dslFunction silence
 
-    applyRev(pattern, n)
+    applyRev(pattern, args.take(1))
 }
 
 /** Reverses the pattern */
 @StrudelDsl
 val StrudelPattern.rev by dslPatternExtension { p, args ->
-    val n = args.firstOrNull()?.asIntOrNull() ?: 1
-    applyRev(p, n)
+    applyRev(p, args)
 }
 
 /** Reverses the pattern */
 @StrudelDsl
 val String.rev by dslStringExtension { p, args ->
-    val n = args.firstOrNull()?.asIntOrNull() ?: 1
-    applyRev(p, n)
+    applyRev(p, args)
 }
 
 // -- palindrome() -----------------------------------------------------------------------------------------------------
 
 private fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
-    return applyCat(listOf(pattern, applyRev(pattern, 1)))
+    return applyCat(listOf(pattern, applyRev(pattern, listOf(1))))
 }
 
 /** Plays the pattern forward then backward over two cycles */

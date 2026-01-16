@@ -50,7 +50,7 @@ object TestKotlinPatterns {
         ).sound("supersaw")
             .filterWhen { it >= 16 }
 //            .struct("<x*2>")
-            .spread(0.5).unison(9)
+            .spread(0.5).unison(sine.range(8, 10).slow(32))
             .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
             .orbit(2).gain(0.4)
             .pan(sine2.slow(48).range(-0.7, 0.7))

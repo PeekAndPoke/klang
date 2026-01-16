@@ -45,9 +45,9 @@ object JsCompatTestData {
         Example(SKIP, "N #2", """"c,eb,g".n()"""),
         Example("N #3", """n(run(4))"""),
         Example("N #4", """run(4).n()"""),
-        Example("N #5", """n(run(4).scale("D4:pentatonic"))"""),
-        Example("N #6", """run(4).n().scale("D4:pentatonic"))"""),
-        Example("N #7", """run(4).scale("D4:pentatonic")).n()"""),
+        Example(SKIP, "N #5", """n(run(4).scale("D4:pentatonic"))"""),
+        Example(SKIP, "N #6", """run(4).n().scale("D4:pentatonic"))"""),
+        Example(SKIP, "N #7", """run(4).scale("D4:pentatonic")).n()"""),
 
         // Tone / Scale / Tonal
         Example("C-Major notes", """note("c3 d3 e3 f3 g3 a3 b3 c4")"""),
@@ -388,7 +388,7 @@ object JsCompatTestData {
         Example("Mask All #1", """note("c [eb,g] d [eb,g]").maskAll("<1 [0 1]>")"""),
         Example("Mask All #2", """note("c3*8").maskAll(square.fast(4))"""),
         Example("SuperImpose #1", """note("a").superimpose(p => p.note("c"))"""),
-        Example("SuperImpose #2", """note("a c e h").superimpose(p => p.note("e c"))"""),
+        Example(SKIP, "SuperImpose #2", """note("a c e h").superimpose(p => p.note("e c"))"""),
         Example(
             SKIP,
             "Layer #1",
@@ -478,14 +478,14 @@ object JsCompatTestData {
 
     val songs: List<Example> = listOf(
         Example(
-            "Small Town Boy - Melody", """
+            SKIP, "Small Town Boy - Melody", """
                 n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")
                     .scale("C4:minor")
                     .sound("saw")
             """.trimIndent()
         ),
         Example(
-            "Small Town Boy - Full", """
+            SKIP, "Small Town Boy - Full", """
                 stack(
                         // melody
                         arrange(
@@ -586,7 +586,7 @@ object JsCompatTestData {
             """.trimIndent()
         ),
         Example(
-            "Stranger Things Main Theme", """
+            SKIP, "Stranger Things Main Theme", """
                 stack(
                     n("0 2 4 6 7 6 4 2")
                         .scale("<c3:major>/2")

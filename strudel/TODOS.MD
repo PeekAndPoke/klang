@@ -10,6 +10,36 @@ and category.
 - [ ] check https://larkob.github.io/strudel/tutorial/ and produce new todos
 - [ ] Review and validate all "missing" counts in the summary section
 
+### Functions That Accept Numerical Arguments But Don't Support Control Patterns
+
+1. Tempo Modifiers (lang_tempo.kt)  
+   ❌ slow() - Lines 54-77 - Only accepts a single number factor  
+   ❌ fast() - Lines 91-123 - Only accepts a single number factor  
+   ❌ rev() - Lines 127-159 - Accepts optional integer n parameter
+2. Structural Functions (lang_structural.kt)  
+   ❌ gap() - Lines 51-66 - Accepts number of steps  
+   ❌ zoom() - Lines 563-596 - Accepts start/end doubles  
+   ❌ bite() - Lines 600-703 - First parameter (n) is plain integer  
+   ❌ segment() / seg() - Lines 707-750 - Accepts integer n  
+   ❌ euclid() - Lines 772-788 - Accepts pulses, steps integers  
+   ❌ euclidRot() / euclidrot() - Lines 799-824 - Accepts pulses, steps, rotation integers  
+   ❌ bjork() - Lines 834-868 - Accepts list of [pulses, steps, rotation] integers  
+   ❌ euclidLegato() - Lines 877-893 - Accepts pulses, steps integers  
+   ❌ euclidLegatoRot() - Lines 895-911 - Accepts pulses, steps, rotation integers  
+   ❌ euclidish() / eish() - Lines 918-978 - Accepts pulses, steps, groove (though groove can be pattern)
+3. Random/Continuous Functions (lang_continuous.kt, lang_random.kt)  
+   ❌ range() - Lines 94-107 (lang_continuous.kt) - Accepts min, max, granularity doubles  
+   ❌ steady() - Lines 139-142 (lang_continuous.kt) - Accepts single double value  
+   ❌ brandBy() - Lines 80-92 (lang_random.kt) - Accepts probability double  
+   ❌ irand() - Lines 106-123 (lang_random.kt) - Accepts integer n  
+   ❌ randL() - Lines 443-461 (lang_random.kt) - Accepts integer n  
+   ❌ randrun() - Lines 477-506 (lang_random.kt) - Accepts integer n  
+   ❌ shuffle() - Lines 520-532 (lang_random.kt) - Accepts integer n  
+   ❌ scramble() - Lines 548-559 (lang_random.kt) - Accepts integer n
+4. Conditional Functions (lang_conditional.kt)  
+   ❌ firstOf() / every() - Lines 17-73 - Accepts integer n  
+   ❌ lastOf() - Lines 80-134 - Accepts integer n
+
 ## 🔴 HIGH PRIORITY - Common Use Cases
 
 ### Mini-Notation Extensions

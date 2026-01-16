@@ -77,4 +77,46 @@ class LangRevSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.sound shouldBe "b"
     }
+
+    "rev() with discrete pattern control" {
+        // Using a pattern "1 2 1 2" to control reversal
+        // The control pattern "1 2 1 2" creates 4 events (quarters)
+        // For each quarter, we apply reversal with the corresponding n value
+        val p = sound("bd hh").rev("1 2 1 2")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+
+        // Should have events from the reversed pattern
+        // With 4 control events, we get events for each quarter
+        events.size shouldBe 4
+    }
+
+    "rev() with continuous pattern control (irand)" {
+        // Using irand(4) which generates random integers 0-3
+        // This will vary the reversal dynamically
+        val p = sound("bd hh sd cp").rev(irand(4).segment(4))
+        val events = p.queryArc(0.0, 1.0)
+
+        // Should have 4 events (one per quarter)
+        events.size shouldBe 4
+    }
+
+    "rev() with control pattern works in compiled code" {
+        val p = StrudelPattern.compile("""sound("bd hh").rev("1 2")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        // Should produce events
+        events.size shouldBe 2
+    }
+
+    "rev() with continuous pattern produces correct reversal" {
+        // Test with steady(2) - should behave like rev(2)
+        val p1 = sound("a b c d").rev(2)
+        val p2 = sound("a b c d").rev(steady(2))
+
+        val events1 = p1.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events2 = p2.queryArc(0.0, 2.0).sortedBy { it.begin }
+
+        // Both should have same number of events
+        events1.size shouldBe events2.size
+    }
 })
