@@ -79,6 +79,8 @@ private suspend fun helloStrudel() {
 
         println(result)
 
+//        val pattern = strudel.compile(TestTextPatterns.smallTownBoy).await()
+
 //        val pattern = TestKotlinPatterns.strangerThings
         val pattern = TestKotlinPatterns.tetris
 //        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
@@ -128,7 +130,7 @@ private suspend fun helloStrudel() {
         val playerOptions = KlangPlayer.Options(
             samples = samples,
             sampleRate = 48_000,
-            cyclesPerSecond = 0.65,
+            cyclesPerSecond = 0.615,
         )
 
         val audio1 = strudelPlayer(

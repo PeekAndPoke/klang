@@ -32,6 +32,9 @@ importers:
       '@strudel/transpiler':
         specifier: 1.2.5
         version: 1.2.5
+      '@strudel/webaudio':
+        specifier: 1.2.6
+        version: 1.2.6
       '@tonaljs/tonal':
         specifier: 4.10.0
         version: 4.10.0
@@ -271,6 +274,9 @@ packages:
 
   '@strudel/webaudio@1.2.5':
     resolution: {integrity: sha512-ilcyBsuwkH6Ghz0egaqIJ5DZi0xFBZwVWvZb0vnfU7kVESroD2j6yptyFMysJFZhQ5pfRiZs2ZeF6yTsviUjng==}
+
+  '@strudel/webaudio@1.2.6':
+    resolution: {integrity: sha512-4LnyNvyeAXYNmXQGGw2f0chIkDr9Rbwo+SK6Y0p8C3W8juDiOfKq2ihSVph95yaBBPRYFJ5Kttj1kLknRHYsog==}
 
   '@tonaljs/abc-notation@4.9.1':
     resolution: {integrity: sha512-2fDUdPsFDdgZgyIiZCTYGKy30QiwIQxSXCSN2thGrSMXbQKCp8iTC8haStYcrA+25MPWhWlmvC/pz3tGcTNAqQ==}
@@ -566,9 +572,15 @@ packages:
   superdough@1.2.5:
     resolution: {integrity: sha512-QVkMGGZjWzaRxYKXoZYMfsRHVk5vwNiqAaDOseccSTgqPPwFRTY2fmHAm5OmwwS8XqFOenZjn+XU3LEaCZMdJw==}
 
+  superdough@1.2.6:
+    resolution: {integrity: sha512-zHEFfG+N4zhxJ9lUDf8p4Oj4sdGGQ5SrOPksdc0cKv5Yn0hzlNlMehEa5TkeIfDCiR27Y4H81ks7S8/CGSByhQ==}
+
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
+
+  supradough@1.2.4:
+    resolution: {integrity: sha512-/v3cL9fq05QCQVwbttLHNZcjyyFFz5wdKvg3j6V6moRXpDlQG89l8dQtUIpQvHsxYI5sXNod9rh5bf+Y4NMGeA==}
 
   wav@1.0.2:
     resolution: {integrity: sha512-viHtz3cDd/Tcr/HbNqzQCofKdF6kWUymH9LGDdskfWFoIy/HJ+RTihgjEcHfnsy1PO4e9B+y4HwgTwMrByquhg==}
@@ -743,6 +755,13 @@ snapshots:
       '@strudel/core': 1.2.4
       '@strudel/draw': 1.2.4
       superdough: 1.2.5
+
+  '@strudel/webaudio@1.2.6':
+    dependencies:
+      '@strudel/core': 1.2.5
+      '@strudel/draw': 1.2.5
+      superdough: 1.2.6
+      supradough: 1.2.4
 
   '@tonaljs/abc-notation@4.9.1':
     dependencies:
@@ -1146,7 +1165,13 @@ snapshots:
     dependencies:
       nanostores: 0.11.4
 
+  superdough@1.2.6:
+    dependencies:
+      nanostores: 0.11.4
+
   supports-preserve-symlinks-flag@1.0.0: {}
+
+  supradough@1.2.4: {}
 
   wav@1.0.2:
     dependencies:

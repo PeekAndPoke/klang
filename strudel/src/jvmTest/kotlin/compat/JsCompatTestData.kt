@@ -33,8 +33,21 @@ object JsCompatTestData {
     private const val SKIP = true
 
     val simplePatterns: List<Example> = listOf(
-        // Chords
-        Example("Chords #1", """note("c,eb,g")"""),
+        // Note and Sound Generation
+        Example("Note #1", """note("c,eb,g")"""),
+        // Does not compile in Graal
+        Example(SKIP, "Note #2", """"c,eb,g".note()"""),
+        Example("Note #3", """note(run(4))"""),
+        Example("Note #4", """run(4).note()"""),
+
+        Example("N #1", """n("c,eb,g")"""),
+        // Does not compile in Graal
+        Example(SKIP, "N #2", """"c,eb,g".n()"""),
+        Example("N #3", """n(run(4))"""),
+        Example("N #4", """run(4).n()"""),
+        Example("N #5", """n(run(4).scale("D4:pentatonic"))"""),
+        Example("N #6", """run(4).n().scale("D4:pentatonic"))"""),
+        Example("N #7", """run(4).scale("D4:pentatonic")).n()"""),
 
         // Tone / Scale / Tonal
         Example("C-Major notes", """note("c3 d3 e3 f3 g3 a3 b3 c4")"""),

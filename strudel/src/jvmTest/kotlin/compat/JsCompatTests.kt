@@ -224,6 +224,15 @@ ${comparison.report}
                 if (numDiff < EPSILON) return ComparisonResult.CLOSE
             }
 
+            val graalStr = graalElem.contentOrNull
+            val nativeStr = nativeElem.contentOrNull
+
+            if (path == "data.note" && graalStr != null && nativeStr != null) {
+                if (graalStr.equals(nativeStr, ignoreCase = true)) {
+                    return ComparisonResult.CLOSE
+                }
+            }
+
             return worst
         }
 

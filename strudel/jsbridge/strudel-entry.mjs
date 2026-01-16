@@ -15,6 +15,7 @@ await evalScope(
     import('@strudel/core'),
     import('@strudel/mini'),
     import('@strudel/tonal'),
+    import('@strudel/webaudio'),
 );
 
 register(

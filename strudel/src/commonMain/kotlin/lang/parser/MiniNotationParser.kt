@@ -14,11 +14,21 @@ fun parseMiniNotation(input: String, atomFactory: (String) -> StrudelPattern): S
     MiniNotationParser(input, atomFactory).parse()
 
 class MiniNotationParser(
-    input: String,
+    private val input: String,
     private val atomFactory: (String) -> StrudelPattern,
 ) {
     private val tokens = tokenize(input)
     private var pos = 0
+
+    companion object {
+        private data class CacheKey(val input: String, val factoryHash: Int)
+
+        private val cache = mutableMapOf<CacheKey, StrudelPattern>()
+
+        fun clearCache() {
+            cache.clear()
+        }
+    }
 
     // Internal pattern to mark sequences that should be flattened into the parent
     private class SplittableSequencePattern(val patterns: List<StrudelPattern>) : StrudelPattern {
@@ -32,6 +42,14 @@ class MiniNotationParser(
     }
 
     fun parse(): StrudelPattern {
+        val cacheKey = CacheKey(input, atomFactory.hashCode())
+
+        return cache.getOrPut(cacheKey) {
+            parseInternal()
+        }
+    }
+
+    private fun parseInternal(): StrudelPattern {
         if (tokens.isEmpty()) return silence
 
         val result = parseExpression()

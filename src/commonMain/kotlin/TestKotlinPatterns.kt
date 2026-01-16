@@ -22,12 +22,14 @@ object TestKotlinPatterns {
                 """.trimIndent()
         ).sound("tri")
             .filterWhen { it >= 32 }
-//            .struct("x(3,8,1)")
-            .orbit(0).gain(0.225)
-            .pan(sine2.slow(48).range(-0.5, 0.5).flipSign())
-            .delay(0.25).delaytime(0.5).delayfeedback(0.5)
-            .room(0.05).rsize(cosine.range(0.5, 5.0).early(1.5).slow(16))
+//            .struct("x(5,8,2)")
+            .orbit(0).gain(0.2)
+            .pan(sine2.slow(48).range(-0.7, 0.7).flipSign())
+            .delay(0.2).delaytime(0.4).delayfeedback(0.10)
+            .room(0.2).rsize(0.1)
             .clip(0.3)
+            .hpf(800)
+//            .adsr("0.025:0.2:0.5:0.0")
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
 //            .rev(4.1).rev(3)
         ,
@@ -47,14 +49,14 @@ object TestKotlinPatterns {
             """.trimIndent()
         ).sound("supersaw")
             .filterWhen { it >= 16 }
-            .spread(0.5).unison(8)
-            .detune(sine.range(0.05, 0.35).early(1.5).slow(16))
+//            .struct("<x*2>")
+            .spread(0.5).unison(9)
+            .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
             .orbit(2).gain(0.4)
-            .pan(sine2.slow(48).range(-0.5, 0.5))
-//            .adsr("0.025:0.8:0.5:0.0")
-            .room(0.05).rsize(1.0)
+            .pan(sine2.slow(48).range(-0.7, 0.7))
+            .adsr("0.01:0.3:0.6:0.3")
+//            .room(0.02).rsize(0.5)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
-            .struct("x*8")
 //            .rev(4).rev(3)
         ,
 
@@ -86,13 +88,13 @@ object TestKotlinPatterns {
             [bd hh sd hh] 
             [bd hh [lt lt, sd sd] ~]
             [[bd:2, cr] hh [sd, cr] [sd, hh]] 
-            [bd hh [sd:3, cr] oh]
+            [bd hh [sd:8, cr] oh]
             [bd hh sd hh] 
             [bd hh sd [bd, oh]]
             [[bd, cr] oh sd oh] 
-            [bd oh sd oh]
-            [[sd, cr] mt sd [mt, hh]] 
-            [sd lt [bd bd] [bd bd]]
+            [cr hh cr hh]
+            [[sd, oh] mt sd [mt, hh]] 
+            [sd ht [bd bd] [bd bd]]
             >            
         """.trimIndent()
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
@@ -101,9 +103,9 @@ object TestKotlinPatterns {
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
         )
             .orbit(3).pan(-0.0).gain(0.6)
-            .room(0.05).rsize(2.0)
+            .room(0.02).rsize(0.5)
 //            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
-            .adsr("0.01:0.2:0.5:0.5")
+            .adsr("0.01:0.2:0.8:0.5")
             .fast(2)
 //            .rev(4).rev(3),
     )

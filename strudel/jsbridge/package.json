@@ -18,6 +18,7 @@
     "@strudel/hydra": "1.2.5",
     "@strudel/soundfonts": "1.2.5",
     "@strudel/transpiler": "1.2.5",
+    "@strudel/webaudio": "1.2.6",
     "@tonaljs/tonal": "4.10.0",
     "sfumato": "0.1.2",
     "soundfont2": "0.5.0",

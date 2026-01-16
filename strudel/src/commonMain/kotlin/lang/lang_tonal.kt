@@ -120,9 +120,18 @@ private val noteMutation = voiceModifier { input ->
 
 private fun applyNote(source: StrudelPattern, args: List<Any?>): StrudelPattern {
     return if (args.isEmpty()) {
-        source.reinterpretVoice { it.resolveNote() }
+        source.reinterpretVoice {
+            it.resolveNote().copy(
+                soundIndex = null,
+                value = null,
+            )
+        }
     } else {
-        source.applyControlFromParams(args, noteMutation) { src, ctrl -> src.noteMutation(ctrl.note) }
+        source.applyControlFromParams(args, noteMutation) { src, ctrl ->
+            src.noteMutation(
+                ctrl.note ?: ctrl.value?.asString
+            )
+        }
     }
 }
 
@@ -134,7 +143,7 @@ val StrudelPattern.note by dslPatternExtension { p, args ->
 
 /** Creates a pattern with notes */
 @StrudelDsl
-val note by dslFunction { args -> args.toPattern(noteMutation) }
+val note by dslFunction { args -> args.toPattern(noteMutation).note() }
 
 /** Modifies the notes of a pattern defined by a string */
 @StrudelDsl
@@ -177,7 +186,7 @@ val StrudelPattern.n by dslPatternExtension { p, args ->
 
 /** Sets the note number or sample index */
 @StrudelDsl
-val n by dslFunction { args -> args.toPattern(defaultModifier).n() }
+val n by dslFunction { args -> args.toPattern(nMutation).n() }
 
 /** Sets the note number or sample index on a string pattern */
 @StrudelDsl
