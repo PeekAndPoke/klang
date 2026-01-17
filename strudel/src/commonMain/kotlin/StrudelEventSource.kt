@@ -1,15 +1,15 @@
 package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_fe.KlangEventSource
+import io.peekandpoke.klang.audio_fe.CpsAwareEventSource
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
 
 class StrudelEventSource(
     private val pattern: StrudelPattern,
-    private val cyclesPerSecond: Double,
+    override var cyclesPerSecond: Double,
     private val sampleRate: Int,
-) : KlangEventSource {
+) : CpsAwareEventSource {
 
     override fun query(from: Double, to: Double): List<ScheduledVoice> {
         // Convert Double time to Rational for exact pattern arithmetic

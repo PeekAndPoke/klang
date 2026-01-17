@@ -10,11 +10,13 @@ fun strudelPlayer(
     return klangPlayer(options = options)
 }
 
-fun KlangPlayer.playStrudel(pattern: StrudelPattern): KlangPlayback {
+fun KlangPlayer.playStrudel(
+    pattern: StrudelPattern,
+): KlangPlayback {
     return play(
         source = StrudelEventSource(
             pattern = pattern,
-            cyclesPerSecond = options.cyclesPerSecond,
+            cyclesPerSecond = 0.5, // Default, can be changed via start(options)
             sampleRate = options.sampleRate,
         )
     )

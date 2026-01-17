@@ -1,5 +1,6 @@
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.audio_engine.KlangPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
@@ -57,7 +58,6 @@ suspend fun runStrudelDemo() {
     val playerOptions = KlangPlayer.Options(
         samples = samples,
         sampleRate = 48000,
-        cyclesPerSecond = 0.6,
     )
 
     val pattern1 = TestKotlinPatterns.strangerThings.pan(-1.0)
@@ -75,12 +75,20 @@ suspend fun runStrudelDemo() {
 
     // 5. Start playback
     val playback1 = player.playStrudel(pattern1)
-    playback1.start()
+    playback1.start(
+        KlangPlayback.Options(
+            cyclesPerSecond = 0.6,
+        )
+    )
 
     delay(5_000.milliseconds)
 
     val playback2 = player.playStrudel(pattern2)
-    playback2.start()
+    playback2.start(
+        KlangPlayback.Options(
+            cyclesPerSecond = 0.6,
+        )
+    )
 
     println("Strudel Player started!")
 }

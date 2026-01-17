@@ -1,12 +1,13 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.AudioBackend
-import io.peekandpoke.klang.audio_bridge.infra.*
-import io.peekandpoke.klang.audio_fe.KlangEventFetcher
+import io.peekandpoke.klang.audio_bridge.infra.KlangAtomicInt
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.infra.KlangLock
+import io.peekandpoke.klang.audio_bridge.infra.withLock
 import io.peekandpoke.klang.audio_fe.KlangEventSource
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import kotlinx.coroutines.*
-import kotlin.math.ceil
 
 class KlangPlayer(
     /** The player config */
@@ -31,12 +32,6 @@ class KlangPlayer(
         val sampleRate: Int = 48_000,
         /** The audio rendering block size */
         val blockSize: Int = 512,
-        /** Amount of time to look ahead in the [KlangEventSource] */
-        val lookaheadSec: Double = 1.0,
-        // TODO: use BPM instead and let strudel do the conversion to CPS
-        val cyclesPerSecond: Double = 0.5,
-        /** Initial cycles prefetch, so that the audio starts flawlessly */
-        val prefetchCycles: Int = ceil(maxOf(2.0, cyclesPerSecond * 2)).toInt(),
     )
 
     // Shared communication link and backend
@@ -77,7 +72,7 @@ class KlangPlayer(
         val playback = KlangPlayback(
             playbackId = generatePlaybackId(),
             source = source,
-            options = options,
+            playerOptions = options,
             commLink = commLink,
             scope = scope,
             fetcherDispatcher = fetcherDispatcher,
@@ -107,79 +102,3 @@ class KlangPlayer(
     }
 }
 
-class KlangPlayback internal constructor(
-    /** Unique identifier for this playback */
-    private val playbackId: String,
-    /** Sound event source */
-    private val source: KlangEventSource,
-    /** The player config */
-    private val options: KlangPlayer.Options,
-    /** Shared communication link to the backend */
-    private val commLink: KlangCommLink,
-    /** The coroutines scope on which the player runs */
-    private val scope: CoroutineScope,
-    /** The dispatcher used for the event fetcher */
-    private val fetcherDispatcher: CoroutineDispatcher,
-    /** Callback invoked when this playback is stopped */
-    private val onStopped: (KlangPlayback) -> Unit = {},
-) {
-    // Thread-safe state management
-    private val running = KlangAtomicBool(false)
-    private val jobLock = KlangLock()
-    private var fetcherJob: Job? = null
-
-    fun start() {
-        // Atomically transition from stopped to running
-        if (!running.compareAndSet(expect = false, update = true)) {
-            // Already running
-            return
-        }
-
-        // Tell backend to start this playback
-        commLink.frontend.control.send(
-            KlangCommLink.Cmd.StartPlayback(playbackId = playbackId)
-        )
-
-        // Start the fetcher job
-        jobLock.withLock {
-            fetcherJob = scope.launch(fetcherDispatcher.limitedParallelism(1)) {
-                val fetcher = KlangEventFetcher(
-                    config = KlangEventFetcher.Config(
-                        playbackId = playbackId,
-                        samples = options.samples,
-                        source = source,
-                        commLink = commLink.frontend,
-                        sampleRate = options.sampleRate,
-                        cps = options.cyclesPerSecond,
-                        lookaheadSec = options.lookaheadSec,
-                        prefetchCycles = options.prefetchCycles.toDouble()
-                    ),
-                )
-
-                fetcher.run(this)
-            }
-        }
-    }
-
-    fun stop() {
-        // Atomically transition from running to stopped
-        if (!running.compareAndSet(expect = true, update = false)) {
-            // Already stopped
-            return
-        }
-
-        // Cancel the fetcher job
-        jobLock.withLock {
-            fetcherJob?.cancel()
-            fetcherJob = null
-        }
-
-        // Tell backend to stop this playback
-        commLink.frontend.control.send(
-            KlangCommLink.Cmd.StopPlayback(playbackId = playbackId)
-        )
-
-        // Notify the player that this playback has stopped (outside lock to avoid deadlock)
-        onStopped(this)
-    }
-}
