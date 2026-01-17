@@ -21,13 +21,45 @@ class SampleVoice(
     override val distort: Voice.Distort,
     override val crush: Voice.Crush,
     override val coarse: Voice.Coarse,
+    val samplePlayback: SamplePlayback,
     val sample: MonoSamplePcm,
     val rate: Double,
     var playhead: Double,
 ) : Voice {
+
+    class SamplePlayback(
+        val cut: Int?,
+        val explicitLooping: Boolean,
+        val explicitLoopStart: Double,
+        val explicitLoopEnd: Double,
+        val stopFrame: Double,
+    ) {
+        companion object {
+            val default = SamplePlayback(
+                cut = null,
+                explicitLooping = false,
+                explicitLoopStart = -1.0,
+                explicitLoopEnd = -1.0,
+                stopFrame = Double.MAX_VALUE
+            )
+        }
+    }
+
     // Pre-calculate loop points
-    private val loopStart = sample.meta.loop?.start?.toDouble() ?: -1.0
-    private val loopEnd = sample.meta.loop?.end?.toDouble() ?: -1.0
+    // If explicit loop is requested (via .loop() or .loopAt()), use those points.
+    // Otherwise fallback to sample metadata loop points (sustained samples).
+    private val loopStart = if (samplePlayback.explicitLooping) {
+        samplePlayback.explicitLoopStart
+    } else {
+        sample.meta.loop?.start?.toDouble() ?: -1.0
+    }
+
+    private val loopEnd = if (samplePlayback.explicitLooping) {
+        samplePlayback.explicitLoopEnd
+    } else {
+        sample.meta.loop?.end?.toDouble() ?: -1.0
+    }
+
     private val isLooping = loopStart >= 0.0 && loopEnd > loopStart
 
     override fun render(ctx: Voice.RenderContext): Boolean {
@@ -58,29 +90,32 @@ class SampleVoice(
                 ph = loopStart + (ph - loopEnd)
             }
 
-            // Read Sample
-            val base = ph.toInt()
+            // Check strict end (for .end() or sample end)
+            if (ph >= samplePlayback.stopFrame) {
+                out[idxOut] = 0.0
+                // We let the loop continue to fill the rest of the buffer with silence
+                // playhead keeps advancing (potentially past stopFrame) but output is silenced
+            } else {
+                // Read Sample
+                val base = ph.toInt()
 
-            if (base >= pcmMax) {
-                // End of sample reached (and not looping, or loop points are broken)
-                out[idxOut] = 0.0 // Clear output
-            } else if (base >= 0) {
-                val frac = ph - base.toDouble()
-                val a = pcm[base]
-                val b = pcm[base + 1]
-                val sampleValue = a + (b - a) * frac
+                if (base >= pcmMax) {
+                    // End of sample reached (and not looping, or loop points are broken)
+                    out[idxOut] = 0.0 // Clear output
+                } else if (base >= 0) {
+                    val frac = ph - base.toDouble()
+                    val a = pcm[base]
+                    val b = pcm[base + 1]
+                    val sampleValue = a + (b - a) * frac
 
-                // Add to buffer (Note: mixing is done later via mixToOrbit usually,
-                // but here you seem to write to 'out' directly.
-                // Wait, the previous code wrote directly to 'out' inside the loop?
-                // Standard ScheduledVoice/SynthVoice writes to 'out' then mixes.
-                // Let's stick to writing raw sample value to 'out' here.)
-                out[idxOut] = sampleValue
+                    out[idxOut] = sampleValue
+                }
             }
 
             // Advance Playhead
             ph += if (modBuffer != null) rate * modBuffer[idxOut] else rate
         }
+
         playhead = ph
 
         // Filter

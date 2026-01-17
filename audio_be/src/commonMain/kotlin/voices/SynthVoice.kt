@@ -24,6 +24,7 @@ class SynthVoice(
     val phaseInc: Double,
     var phase: Double = 0.0,
 ) : Voice {
+
     override fun render(ctx: Voice.RenderContext): Boolean {
         val blockEnd = ctx.blockStart + ctx.blockFrames
         // Lifecycle check

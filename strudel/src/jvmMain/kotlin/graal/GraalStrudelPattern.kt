@@ -8,6 +8,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeBooleanOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeGetMember
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
@@ -183,6 +184,15 @@ class GraalStrudelPattern(
             ?: value.safeGetMember("notch").safeNumberOrNull()
         notchf?.let { filters.add(FilterDef.Notch(cutoffHz = it, q = resonance)) }
 
+        // ///////////////////////////////////////////////////////////////////////////////////
+        // Sample Manipulation
+        val sampleBegin = value.safeGetMember("begin").safeNumberOrNull()
+        val sampleEndPos = value.safeGetMember("end").safeNumberOrNull()
+        val sampleSpeed = value.safeGetMember("speed").safeNumberOrNull()
+        val sampleLoop = value.safeGetMember("loop").safeBooleanOrNull()
+        val sampleLoopAt = value.safeGetMember("loopAt").safeNumberOrNull()
+        val sampleCut = value.safeGetMember("cut").safeNumberOrNull()?.toInt()
+
         // add event
         return StrudelPatternEvent(
             // Strudel Timing
@@ -236,6 +246,13 @@ class GraalStrudelPattern(
                 // Reverb
                 room = room,
                 roomSize = roomSize,
+                // Sample manipulation
+                begin = sampleBegin,
+                end = sampleEndPos,
+                speed = sampleSpeed,
+                loop = sampleLoop,
+                loopAt = sampleLoopAt,
+                cut = sampleCut,
                 // Value
                 value = when {
                     value?.isString == true ->

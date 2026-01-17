@@ -78,6 +78,14 @@ data class VoiceData(
     val room: Double?,
     val roomSize: Double?,
 
+    // Sample manipulation
+    val begin: Double?,
+    val end: Double?,
+    val speed: Double?,
+    val loop: Boolean?,
+    val loopAt: Double?,
+    val cut: Int?,
+
     // Custom value
     val value: VoiceValue? = null,
 ) {
@@ -114,6 +122,12 @@ data class VoiceData(
             delayFeedback = null,
             room = null,
             roomSize = null,
+            begin = null,
+            end = null,
+            speed = null,
+            loop = null,
+            loopAt = null,
+            cut = null,
             value = null,
         )
     }

@@ -87,10 +87,6 @@ object GraalJsHelpers {
         }
     }
 
-    fun Value?.safeString(default: String): String {
-        return safeStringOrNull() ?: default
-    }
-
     fun Value?.safeToStringOrNull(): String? {
         if (this == null) return null
 
@@ -102,7 +98,14 @@ object GraalJsHelpers {
         }
     }
 
-    fun Value?.safeToString(default: String): String {
-        return safeToStringOrNull() ?: default
+    fun Value?.safeBooleanOrNull(): Boolean? {
+        if (this == null) return null
+
+        return when {
+            isBoolean -> asBoolean()
+            isString -> asString().toBooleanStrictOrNull()
+            isNumber -> asDouble() != 0.0
+            else -> null
+        }
     }
 }

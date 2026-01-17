@@ -348,17 +348,61 @@ class VoiceScheduler(
                 val targetPitchHz = data.freqHz ?: baseSamplePitchHz
                 // We allow 5 octaves up and down pitch 1/32 .. 32
                 val pitchRatio = (targetPitchHz / baseSamplePitchHz).coerceIn(1.0 / 32.0, 32.0)
-                val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio
+
+                // Speed modifier
+                val speed = data.speed ?: 1.0
+                val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio * speed
+
+                val pcmSize = sample.pcm.size.toDouble()
+
+                // Begin/End Logic
+                val beginRatio = data.begin ?: 0.0
+                val startSample = beginRatio * pcmSize
+
+                val endRatio = data.end ?: 1.0
+                val endSample = endRatio * pcmSize
+
+                // Loop Logic
+                val explicitLoop = data.loop == true
+                // If begin/end are set but loop is NOT set, we disable meta-looping to play just the slice.
+                // If begin/end are NOT set, we fall back to meta-looping.
+                val useMetaLoop = !explicitLoop && data.begin == null && data.end == null
+
+                val samplePlayback = SampleVoice.SamplePlayback(
+                    cut = data.cut,
+                    explicitLooping = explicitLoop,
+                    explicitLoopStart = startSample,
+                    explicitLoopEnd = endSample,
+                    stopFrame = endSample
+                )
+
+                // Handle Cut / Choke Groups logic before creating the new voice fully
+                // (Actually we do it here, effectively "choking" previous voices)
+                if (samplePlayback.cut != null) {
+                    val iterator = active.iterator()
+                    while (iterator.hasNext()) {
+                        val activeVoice = iterator.next()
+                        if (activeVoice is SampleVoice && activeVoice.samplePlayback.cut == samplePlayback.cut) {
+                            // Kill the active voice in the same cut group
+                            // TODO: Use a fade out / release phase instead of hard cut?
+                            iterator.remove()
+                        }
+                    }
+                }
 
                 // Start Position Logic:
-                // If we have a sustained loop (loop != null), start AT the loop start to skip slow attacks.
-                // If it's percussive (loop == null), start at the anchor (usually near 0) to hear the hit.
-                val startOffsetSamples = sample.meta.loop?.start?.toDouble()
-                    ?: (sample.meta.anchor * sample.sampleRate)
+                // If begin is set, use it.
+                // Else, if we use meta loop, start at loop start (for pads).
+                // Else start at anchor.
+                val sampleMetaLoop = sample.meta.loop
 
-                // Initial playhead calculation (Simplified: removed lateFrames logic)
-                // We assume playback starts exactly at the intended offset.
-                val playhead0 = startOffsetSamples
+                val playhead0 = if (data.begin != null) {
+                    startSample
+                } else if (useMetaLoop && sampleMetaLoop != null) {
+                    sampleMetaLoop.start.toDouble()
+                } else {
+                    sample.meta.anchor * sample.sampleRate
+                }
 
                 if (sample.pcm.size <= 1) return null
 
@@ -378,6 +422,7 @@ class VoiceScheduler(
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
+                    samplePlayback = samplePlayback,
                     sample = sample,
                     rate = rate,
                     playhead = playhead0,

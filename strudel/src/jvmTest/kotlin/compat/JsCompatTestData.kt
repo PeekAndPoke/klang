@@ -191,6 +191,16 @@ object JsCompatTestData {
         Example("Reverb", """note("c").room(0.5).roomsize(2.0)"""),
         Example("Delay", """note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)"""),
 
+        // Sample Manipulation
+        Example("Sample Begin", """s("bd").begin(0.5)"""),
+        Example("Sample End", """s("bd").end(0.5)"""),
+        Example("Sample Speed", """s("bd").speed(2)"""),
+        Example("Sample Speed Negative", """s("bd").speed(-1)"""),
+        Example("Sample Loop", """s("bd").loop()"""),
+        Example("Sample LoopAt", """s("bd").loopAt(2)"""),
+        Example("Sample Cut", """s("bd").cut(1)"""),
+        Example("Sample Slice", """s("bd").slice(4, 1)"""),
+
         // Continuous patterns Steady
         *listOf(
             Example(

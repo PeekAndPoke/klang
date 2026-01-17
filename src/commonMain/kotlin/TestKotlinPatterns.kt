@@ -50,12 +50,13 @@ object TestKotlinPatterns {
         ).sound("supersaw")
             .filterWhen { it >= 16 }
 //            .struct("<x*2>")
-            .spread(0.5).unison(sine.range(8, 10).slow(32))
+            .spread(0.5).unison(sine.range(4, 12).slow(32))
             .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
-            .orbit(2).gain(0.725)
+            .orbit(2).gain(0.675)
             .pan(sine2.slow(48).range(-0.7, 0.7))
-            .adsr("0.01:0.3:0.6:0.3")
-//            .room(0.02).rsize(0.5)
+            .adsr("0.01:0.3:0.6:0.35")
+//            .lpf(4000)
+            .room(0.02).rsize(0.5)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
 //            .rev(4).rev(3)
         ,
@@ -67,7 +68,7 @@ object TestKotlinPatterns {
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd hh]
-            [[bd, cr] hh sd hh] 
+            [[bd, hh] hh sd hh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh [mt mt, sd] [ht ht, oh]]
@@ -75,7 +76,7 @@ object TestKotlinPatterns {
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd oh]
-            [[bd, cr] oh sd oh] 
+            [[bd, hh] oh sd oh] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh [sd sd] [[sd sd], oh]]
@@ -83,17 +84,17 @@ object TestKotlinPatterns {
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh sd hh]
-            [[bd, cr] hh sd [hh sd]] 
+            [[bd, hh] hh sd [hh sd]] 
             [bd hh sd oh]
             [bd hh sd hh] 
             [bd hh [lt lt, sd sd] ~]
             [[bd:2, cr] hh [sd, cr] [sd, hh]] 
-            [bd hh [sd:8, cr] oh]
+            [bd hh sd:8 oh]
             [bd hh sd hh] 
             [bd hh sd [bd, oh]]
             [[bd, cr] oh sd oh] 
             [cr hh cr hh]
-            [[sd, cr:2] mt sd [mt, hh]] 
+            [[sd, cr:4] mt sd [mt, hh]] 
             [sd lt [bd bd] [bd bd]]
             >            
         """.trimIndent()
