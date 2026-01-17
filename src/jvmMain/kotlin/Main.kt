@@ -6,8 +6,8 @@ import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.strudel.lang.pan
 import io.peekandpoke.klang.strudel.lang.strudelLib
-import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -95,23 +95,23 @@ private suspend fun helloStrudel() {
 
 //        val pattern = StrudelPattern.compile(code)!!
 
-//        val pattern = TestKotlinPatterns.strangerThings
-        val pattern = TestKotlinPatterns.tetris
+        val pattern1 = TestKotlinPatterns.strangerThings.pan(1.0)
+        val pattern2 = TestKotlinPatterns.tetris.pan(-1.0)
 //        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
 
 //        val pattern = sound("bd").loop()
 
-        pattern.queryArc(0.0, 8.0).let { arc ->
-            arc.forEach {
-                println(it)
-            }
-        }
-
-        println("=======================================================================")
-        println(
-            pattern.makeStatic(0.0, 8.0).toJson()
-        )
-        println("=======================================================================")
+//        pattern.queryArc(0.0, 8.0).let { arc ->
+//            arc.forEach {
+//                println(it)
+//            }
+//        }
+//
+//        println("=======================================================================")
+//        println(
+//            pattern.makeStatic(0.0, 8.0).toJson()
+//        )
+//        println("=======================================================================")
 
         val samples = Samples.create(catalogue = SampleCatalogue.default)
         val playerOptions = KlangPlayer.Options(
@@ -125,12 +125,18 @@ private suspend fun helloStrudel() {
         )
 
         println("start 1 ...")
-        val playback = player.playStrudel(pattern)
-        playback.start()
+        val playback1 = player.playStrudel(pattern1)
+        playback1.start()
+
+        delay(10_000)
+        val playback2 = player.playStrudel(pattern2)
+        playback2.start()
 
         delay(600_000)
-        playback.stop()
-//        audio2.stop()
+        playback1.stop()
+        playback2.stop()
+
+        player.shutdown()
         println("Done")
     }
 }

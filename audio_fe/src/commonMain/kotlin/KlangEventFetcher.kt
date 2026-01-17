@@ -12,6 +12,7 @@ class KlangEventFetcher(
     private val config: Config,
 ) {
     data class Config(
+        val playbackId: String,
         val source: KlangEventSource,
         val samples: Samples,
         val commLink: KlangCommLink.FrontendEndpoint,
@@ -109,7 +110,12 @@ class KlangEventFetcher(
 
                 for (voice in events) {
                     // Schedule the voice
-                    control.send(KlangCommLink.Cmd.ScheduleVoice(voice))
+                    control.send(
+                        KlangCommLink.Cmd.ScheduleVoice(
+                            playbackId = config.playbackId,
+                            voice = voice,
+                        )
+                    )
                 }
 
                 queryCursorCycles = to
@@ -124,6 +130,11 @@ class KlangEventFetcher(
     private fun processFeedbackEvents() {
         while (true) {
             val evt = feedback.receive() ?: break
+
+            // Only process feedback for this playback
+            if (evt.playbackId != config.playbackId) {
+                continue
+            }
 
             when (evt) {
                 is KlangCommLink.Feedback.UpdateCursorFrame -> {
@@ -143,9 +154,13 @@ class KlangEventFetcher(
             val pcm = result?.pcm
 
             val cmd = if (sample == null || pcm == null) {
-                KlangCommLink.Cmd.Sample.NotFound(req)
+                KlangCommLink.Cmd.Sample.NotFound(
+                    playbackId = config.playbackId,
+                    req = req,
+                )
             } else {
                 KlangCommLink.Cmd.Sample.Complete(
+                    playbackId = config.playbackId,
                     req = req,
                     note = sample.note,
                     pitchHz = sample.pitchHz,

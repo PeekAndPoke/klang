@@ -11,7 +11,12 @@ class KlangCommLink(capacity: Int = 8192) {
 
     /** Sent from the frontend to the backend */
     sealed interface Cmd {
-        data class ScheduleVoice(val voice: ScheduledVoice) : Cmd {
+        val playbackId: String
+
+        data class ScheduleVoice(
+            override val playbackId: String,
+            val voice: ScheduledVoice,
+        ) : Cmd {
             companion object {
                 const val SERIAL_NAME = "schedule-voice"
             }
@@ -19,6 +24,7 @@ class KlangCommLink(capacity: Int = 8192) {
 
         sealed interface Sample : Cmd {
             data class NotFound(
+                override val playbackId: String,
                 override val req: SampleRequest,
             ) : Sample {
                 companion object {
@@ -27,6 +33,7 @@ class KlangCommLink(capacity: Int = 8192) {
             }
 
             data class Complete(
+                override val playbackId: String,
                 override val req: SampleRequest,
                 val note: String?,
                 val pitchHz: Double,
@@ -44,6 +51,7 @@ class KlangCommLink(capacity: Int = 8192) {
                         val endByte = minOf(sample.pcm.size, (i + 1) * chunkSizeBytes)
 
                         Chunk(
+                            playbackId = playbackId,
                             req = req,
                             note = note,
                             pitchHz = pitchHz,
@@ -59,6 +67,7 @@ class KlangCommLink(capacity: Int = 8192) {
             }
 
             data class Chunk(
+                override val playbackId: String,
                 override val req: SampleRequest,
                 val note: String?,
                 val pitchHz: Double,
@@ -81,13 +90,19 @@ class KlangCommLink(capacity: Int = 8192) {
     /** Send from the backend to the frontend */
     @Serializable
     sealed interface Feedback {
+        val playbackId: String
+
         @Serializable
         @SerialName("update-cursor-frame")
-        data class UpdateCursorFrame(val frame: Long) : Feedback
+        data class UpdateCursorFrame(
+            override val playbackId: String,
+            val frame: Long,
+        ) : Feedback
 
         @Serializable
         @SerialName("request-sample")
         data class RequestSample(
+            override val playbackId: String,
             val req: SampleRequest,
         ) : Feedback
     }

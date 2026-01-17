@@ -3,14 +3,15 @@
 ## AI cost
 
 - 300 EUR / year for JetBrains AI Ultimate
-- 23-12-2025: bought 10 more AI credits -> 11.90 EUR
-- 26-12-2025: bought 50 more AI credits -> 59.90 EUR
-- 05-01-2026: bought 50 more AI credits -> 59.90 EUR
-- 06-01-2026: bought 50 more AI credits -> 59.90 EUR
-- 07-01-2026: bought 50 more AI credits -> 59.90 EUR
-- 11-01-2026: bought 50 more AI credits -> 59.90 EUR
-- 14-01-2026: bought 50 more AI credits -> 59.90 EUR
-- 16-01-2026: bought 50 more AI credits -> 59.90 EUR
+- 23-12-2025: bought 10 more AI credits at JetBrains -> 11.90 EUR
+- 26-12-2025: bought 50 more AI credits at JetBrains -> 59.90 EUR
+- 05-01-2026: bought 50 more AI credits at JetBrains -> 59.90 EUR
+- 06-01-2026: bought 50 more AI credits at JetBrains -> 59.90 EUR
+- 07-01-2026: bought 50 more AI credits at JetBrains -> 59.90 EUR
+- 11-01-2026: bought 50 more AI credits at JetBrains -> 59.90 EUR
+- 14-01-2026: bought 50 more AI credits at JetBrains -> 59.90 EUR
+- 16-01-2026: bought 50 more AI credits at JetBrains -> 59.90 EUR
+- 17-01-2026: bought AI credits at Anthropic -> 50.00 USD
 
 ## Diary
 

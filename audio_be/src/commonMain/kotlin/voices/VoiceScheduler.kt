@@ -148,7 +148,7 @@ class VoiceScheduler(
         return samples[req] as? SampleEntry.Complete
     }
 
-    fun scheduleVoice(voice: ScheduledVoice) {
+    fun scheduleVoice(playbackId: String, voice: ScheduledVoice) {
         scheduled.push(voice)
 
         // Prefetch sound samples
@@ -161,7 +161,10 @@ class VoiceScheduler(
 
                 // println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
                 options.commLink.feedback.send(
-                    KlangCommLink.Feedback.RequestSample(voice.data.asSampleRequest())
+                    KlangCommLink.Feedback.RequestSample(
+                        playbackId = playbackId,
+                        req = voice.data.asSampleRequest(),
+                    )
                 )
             }
         }
