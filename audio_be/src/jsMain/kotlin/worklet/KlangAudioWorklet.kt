@@ -45,9 +45,6 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         var cursorFrame = 0L
 
         var isPlaying = true
-
-        // Track active playbacks
-        val activePlaybacks = mutableSetOf<String>()
     }
 
     private var ctx: Ctx? = null
@@ -76,14 +73,22 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                 WorkletContract.decodeCmd(message).also { cmd ->
                     // console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
 
-                    // Track active playbacks
-                    ctx.activePlaybacks.add(cmd.playbackId)
-
                     when (cmd) {
-                        is KlangCommLink.Cmd.ScheduleVoice -> ctx.voices.scheduleVoice(
-                            playbackId = cmd.playbackId,
-                            voice = cmd.voice,
-                        )
+                        is KlangCommLink.Cmd.StartPlayback -> {
+                            ctx.voices.startPlayback(cmd.playbackId, ctx.cursorFrame)
+                        }
+
+                        is KlangCommLink.Cmd.StopPlayback -> {
+                            ctx.voices.stopPlayback(cmd.playbackId)
+                        }
+
+                        is KlangCommLink.Cmd.ScheduleVoice -> {
+                            ctx.voices.scheduleVoice(
+                                playbackId = cmd.playbackId,
+                                voice = cmd.voice,
+                            )
+                        }
+
                         is KlangCommLink.Cmd.Sample -> ctx.voices.addSample(msg = cmd)
                     }
                 }
@@ -130,17 +135,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
 
         cursorFrame += blockFrames
 
-        // Tell each active playback about the cursor update
-        for (playbackId in activePlaybacks) {
-            port.sendFeed(
-                KlangCommLink.Feedback.UpdateCursorFrame(
-                    playbackId = playbackId,
-                    frame = cursorFrame,
-                )
-            )
-        }
-
-        // also forward all feedback messages
+        // Forward all feedback messages
         while (true) {
             val feed = commLink.frontend.feedback.receive() ?: break
             port.sendFeed(feed)

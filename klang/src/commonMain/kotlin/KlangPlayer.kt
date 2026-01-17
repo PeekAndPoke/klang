@@ -135,6 +135,11 @@ class KlangPlayback internal constructor(
             return
         }
 
+        // Tell backend to start this playback
+        commLink.frontend.control.send(
+            KlangCommLink.Cmd.StartPlayback(playbackId = playbackId)
+        )
+
         // Start the fetcher job
         jobLock.withLock {
             fetcherJob = scope.launch(fetcherDispatcher.limitedParallelism(1)) {
@@ -168,6 +173,11 @@ class KlangPlayback internal constructor(
             fetcherJob?.cancel()
             fetcherJob = null
         }
+
+        // Tell backend to stop this playback
+        commLink.frontend.control.send(
+            KlangCommLink.Cmd.StopPlayback(playbackId = playbackId)
+        )
 
         // Notify the player that this playback has stopped (outside lock to avoid deadlock)
         onStopped(this)

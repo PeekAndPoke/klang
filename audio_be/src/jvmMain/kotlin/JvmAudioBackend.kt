@@ -45,9 +45,6 @@ class JvmAudioBackend(
     override suspend fun run(scope: CoroutineScope) {
         var currentFrame = 0L
 
-        // Track active playbacks
-        val activePlaybacks = mutableSetOf<String>()
-
         // Stereo
         val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
         // Audio line
@@ -71,14 +68,22 @@ class JvmAudioBackend(
                 while (true) {
                     val cmd = commLink.control.receive() ?: break
 
-                    // Track active playbacks
-                    activePlaybacks.add(cmd.playbackId)
-
                     when (cmd) {
-                        is KlangCommLink.Cmd.ScheduleVoice -> voices.scheduleVoice(
-                            playbackId = cmd.playbackId,
-                            voice = cmd.voice,
-                        )
+                        is KlangCommLink.Cmd.StartPlayback -> {
+                            voices.startPlayback(cmd.playbackId, currentFrame)
+                        }
+
+                        is KlangCommLink.Cmd.StopPlayback -> {
+                            voices.stopPlayback(cmd.playbackId)
+                        }
+
+                        is KlangCommLink.Cmd.ScheduleVoice -> {
+                            voices.scheduleVoice(
+                                playbackId = cmd.playbackId,
+                                voice = cmd.voice,
+                            )
+                        }
+
                         is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
                     }
                 }
@@ -89,16 +94,6 @@ class JvmAudioBackend(
 
                 // Advance Cursor (State Write)
                 currentFrame += blockSize
-
-                // Tell each active playback about the cursor update
-                for (playbackId in activePlaybacks) {
-                    commLink.feedback.send(
-                        KlangCommLink.Feedback.UpdateCursorFrame(
-                            playbackId = playbackId,
-                            frame = currentFrame,
-                        )
-                    )
-                }
 
                 // 3. Write to Hardware
                 // This call blocks if the hardware buffer is full, pacing the loop

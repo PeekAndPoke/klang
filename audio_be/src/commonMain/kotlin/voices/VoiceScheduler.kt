@@ -57,6 +57,9 @@ class VoiceScheduler(
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
     private val active = ArrayList<Voice>(64)
 
+    // Playback lifecycle management - track start frames for relative-to-absolute translation
+    private val playbackStartFrames = mutableMapOf<String, Long>()
+
     // Scratch buffers
     private val voiceBuffer = DoubleArray(options.blockFrames)
     private val freqModBuffer = DoubleArray(options.blockFrames)
@@ -148,22 +151,49 @@ class VoiceScheduler(
         return samples[req] as? SampleEntry.Complete
     }
 
+    /**
+     * Register a playback start - records the current frame for relative-to-absolute translation
+     */
+    fun startPlayback(playbackId: String, currentFrame: Long) {
+        playbackStartFrames[playbackId] = currentFrame
+    }
+
+    /**
+     * Stop a playback - removes tracking state
+     * TODO: Also clear scheduled voices for this playback
+     */
+    fun stopPlayback(playbackId: String) {
+        playbackStartFrames.remove(playbackId)
+    }
+
     fun scheduleVoice(playbackId: String, voice: ScheduledVoice) {
-        scheduled.push(voice)
+        // Translate relative frame to absolute frame
+        val startFrame = playbackStartFrames[playbackId]
+        if (startFrame == null) {
+            // Playback not registered - ignore this voice
+            return
+        }
+
+        val absoluteVoice = voice.copy(
+            startFrame = startFrame + voice.startFrame,
+            gateEndFrame = startFrame + voice.gateEndFrame,
+        )
+
+        scheduled.push(absoluteVoice)
 
         // Prefetch sound samples
-        if (voice.data.isSampleSound()) {
-            val req = voice.data.asSampleRequest()
+        if (absoluteVoice.data.isSampleSound()) {
+            val req = absoluteVoice.data.asSampleRequest()
 
             if (!samples.containsKey(req)) {
                 // make sure we do not request this one again
                 samples[req] = SampleEntry.Requested(req)
 
-                // println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
+                // println("VoiceScheduler: requesting sample ${absoluteVoice.data.asSampleRequest()}")
                 options.commLink.feedback.send(
                     KlangCommLink.Feedback.RequestSample(
                         playbackId = playbackId,
-                        req = voice.data.asSampleRequest(),
+                        req = absoluteVoice.data.asSampleRequest(),
                     )
                 )
             }

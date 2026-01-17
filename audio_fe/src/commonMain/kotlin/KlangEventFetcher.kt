@@ -28,7 +28,10 @@ class KlangEventFetcher(
     private val secPerCycle = 1.0 / config.cps
     private var queryCursorCycles = 0.0
     private val fetchChunk = 1.0
-    private var currentFrame = 0L
+
+    // Autonomous progression - track elapsed time since start
+    private var startTimeMs = 0.0
+    private var localFrameCounter = 0L
 
     // samples
     private val samples = config.samples
@@ -43,24 +46,35 @@ class KlangEventFetcher(
     private val samplesAlreadySent = mutableSetOf<SampleRequest>()
 
     suspend fun run(scope: CoroutineScope) {
+        // Record start time for autonomous progression
+        startTimeMs = KlangTime.nowMs()
 
         lookAheadForSampleSounds(0.0, sampleSoundLookAheadCycles)
 
         while (scope.isActive) {
+            // Update local frame counter based on elapsed time
+            updateLocalFrameCounter()
+
             // Look ahead for sample sound
             lookAheadForSampleSounds(queryCursorCycles + sampleSoundLookAheadCycles, 1.0)
 
             // Request the next cycles from the source
             requestNextCyclesAndAdvanceCursor()
 
-            // Query feedback-events from backend
+            // Query feedback-events from backend (only for sample requests now)
             processFeedbackEvents()
 
             // roughly 60 FPS
             delay(16)
         }
 
-        println("KlangPlayerBackend stopped")
+        println("KlangEventFetcher stopped")
+    }
+
+    private fun updateLocalFrameCounter() {
+        val elapsedMs = KlangTime.nowMs() - startTimeMs
+        val elapsedSec = elapsedMs / 1000.0
+        localFrameCounter = (elapsedSec * config.sampleRate).toLong()
     }
 
     private fun lookAheadForSampleSounds(from: Double, dur: Double = from + 1.0) {
@@ -70,7 +84,7 @@ class KlangEventFetcher(
 
         sampleSoundLookAheadPointer = to
 
-        println("Sample Look ahead $from - $to")
+        println("[Song: ${config.playbackId}] Sample Look ahead $from - $to")
 
         // Lookup events
         val events = config.source.query(from, to)
@@ -89,7 +103,8 @@ class KlangEventFetcher(
     }
 
     private fun requestNextCyclesAndAdvanceCursor() {
-        val nowFrame = currentFrame
+        // Use local frame counter for autonomous progression
+        val nowFrame = localFrameCounter
         val nowSec = nowFrame.toDouble() / config.sampleRate.toDouble()
         val nowCycles = nowSec / secPerCycle
 
@@ -137,12 +152,12 @@ class KlangEventFetcher(
             }
 
             when (evt) {
-                is KlangCommLink.Feedback.UpdateCursorFrame -> {
-                    currentFrame = evt.frame
-                }
-
                 is KlangCommLink.Feedback.RequestSample -> {
                     requestSendSampleAndSendCmd(evt.req)
+                }
+
+                is KlangCommLink.Feedback.UpdateCursorFrame -> {
+                    // Ignore - event-fetcher is now autonomous
                 }
             }
         }

@@ -4,11 +4,14 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.strudel.lang.pan
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.browser.document
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 fun main() {
     console.log("Klang JS App Started")
@@ -57,8 +60,8 @@ suspend fun runStrudelDemo() {
         cyclesPerSecond = 0.6,
     )
 
-//    val pattern = StrudelPattern.Static.fromJson(strangerThingsJson)
-    val pattern = TestKotlinPatterns.tetris
+    val pattern1 = TestKotlinPatterns.strangerThings.pan(-1.0)
+    val pattern2 = TestKotlinPatterns.tetris.pan(1.0)
 
 //    console.log("Compiling pattern")
 //    val pattern = StrudelPattern.compile(TestTextPatterns.tetris)!!
@@ -71,8 +74,13 @@ suspend fun runStrudelDemo() {
     )
 
     // 5. Start playback
-    val playback = player.playStrudel(pattern)
-    playback.start()
+    val playback1 = player.playStrudel(pattern1)
+    playback1.start()
+
+    delay(5_000.milliseconds)
+
+    val playback2 = player.playStrudel(pattern2)
+    playback2.start()
 
     println("Strudel Player started!")
 }

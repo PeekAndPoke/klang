@@ -95,8 +95,6 @@ private suspend fun helloStrudel() {
 
 //        val pattern = StrudelPattern.compile(code)!!
 
-        val pattern1 = TestKotlinPatterns.strangerThings.pan(1.0)
-        val pattern2 = TestKotlinPatterns.tetris.pan(-1.0)
 //        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
 
 //        val pattern = sound("bd").loop()
@@ -112,6 +110,9 @@ private suspend fun helloStrudel() {
 //            pattern.makeStatic(0.0, 8.0).toJson()
 //        )
 //        println("=======================================================================")
+
+        val pattern1 = TestKotlinPatterns.strangerThings.pan(1.0)
+        val pattern2 = TestKotlinPatterns.tetris.pan(-1.0)
 
         val samples = Samples.create(catalogue = SampleCatalogue.default)
         val playerOptions = KlangPlayer.Options(

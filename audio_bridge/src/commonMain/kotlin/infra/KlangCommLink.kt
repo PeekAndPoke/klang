@@ -13,6 +13,22 @@ class KlangCommLink(capacity: Int = 8192) {
     sealed interface Cmd {
         val playbackId: String
 
+        data class StartPlayback(
+            override val playbackId: String,
+        ) : Cmd {
+            companion object {
+                const val SERIAL_NAME = "start-playback"
+            }
+        }
+
+        data class StopPlayback(
+            override val playbackId: String,
+        ) : Cmd {
+            companion object {
+                const val SERIAL_NAME = "stop-playback"
+            }
+        }
+
         data class ScheduleVoice(
             override val playbackId: String,
             val voice: ScheduledVoice,
