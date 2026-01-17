@@ -190,11 +190,6 @@ interface StrudelPattern {
 }
 
 /**
- * Converts the pattern into an event source.
- */
-fun StrudelPattern.asEventSource(): StrudelEventSource = StrudelEventSource(this)
-
-/**
  * Creates a static pattern, that can be stored and used for playback with
  * any life strudel event generator.
  *

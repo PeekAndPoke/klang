@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.audio_fe
 
 import io.peekandpoke.klang.audio_bridge.SampleRequest
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import kotlinx.coroutines.CancellationException
@@ -9,14 +8,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
-class KlangEventFetcher<T>(
-    private val config: Config<T>,
+class KlangEventFetcher(
+    private val config: Config,
 ) {
-    data class Config<T>(
-        val source: KlangEventSource<T>,
+    data class Config(
+        val source: KlangEventSource,
         val samples: Samples,
         val commLink: KlangCommLink.FrontendEndpoint,
-        val transform: (T) -> ScheduledVoice,
         val sampleRate: Int,
         val cps: Double,
         val lookaheadSec: Double,
@@ -78,7 +76,7 @@ class KlangEventFetcher<T>(
 
         // Figure out which samples we need to send to the backend
         val newSamples = events
-            .map { config.transform(it).data.asSampleRequest() }
+            .map { it.data.asSampleRequest() }
             .toSet().minus(samplesAlreadySent)
 
         for (sample in newSamples) {
@@ -109,10 +107,8 @@ class KlangEventFetcher<T>(
                     emptyList()
                 }
 
-                for (e in events) {
-                    // 1. Transform source event T to scheduled event S
-                    val voice = config.transform(e)
-                    // 2. Schedule the voice
+                for (voice in events) {
+                    // Schedule the voice
                     control.send(KlangCommLink.Cmd.ScheduleVoice(voice))
                 }
 

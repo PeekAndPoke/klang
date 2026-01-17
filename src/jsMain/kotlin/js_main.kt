@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.browser.document
 import kotlinx.coroutines.GlobalScope
@@ -66,12 +67,12 @@ suspend fun runStrudelDemo() {
 
     // 4. Create Player
     val player = strudelPlayer(
-        pattern = pattern,
         options = playerOptions
     )
 
-    // 5. Start
-    player.start()
+    // 5. Start playback
+    val playback = player.playStrudel(pattern)
+    playback.start()
 
     println("Strudel Player started!")
 }

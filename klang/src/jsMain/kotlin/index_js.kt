@@ -3,26 +3,20 @@ package io.peekandpoke.klang.audio_engine
 import io.peekandpoke.klang.audio_be.JsAudioBackend
 import io.peekandpoke.klang.audio_bridge.AudioContext
 import io.peekandpoke.klang.audio_bridge.AudioContextOptions
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_fe.KlangEventSource
 import kotlinx.coroutines.Dispatchers
 import kotlin.js.json
 
 /**
- * Create a KlangPlayer for the JVM
+ * Create a KlangPlayer for JS
  */
-actual fun <T> klangPlayer(
-    source: KlangEventSource<T>,
-    transform: (T) -> ScheduledVoice,
+actual fun klangPlayer(
     options: KlangPlayer.Options,
-): KlangPlayer<T> {
+): KlangPlayer {
     val sampleRate = resolveBestSampleRate(options.sampleRate)
 
     val effectiveOptions = options.copy(sampleRate = sampleRate)
 
     return KlangPlayer(
-        source = source,
-        transform = transform,
         options = effectiveOptions,
         backendFactory = { config -> JsAudioBackend(config) },
         fetcherDispatcher = Dispatchers.Default,

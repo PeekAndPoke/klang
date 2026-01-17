@@ -1,8 +1,6 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.JvmAudioBackend
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_fe.KlangEventSource
 import kotlinx.coroutines.Dispatchers
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
@@ -13,11 +11,9 @@ import kotlin.math.abs
 /**
  * Create a KlangPlayer for the JVM
  */
-actual fun <T> klangPlayer(
-    source: KlangEventSource<T>,
-    transform: (T) -> ScheduledVoice,
+actual fun klangPlayer(
     options: KlangPlayer.Options,
-): KlangPlayer<T> {
+): KlangPlayer {
     val sampleRate = resolveBestSampleRate(options.sampleRate)
 
     val effectiveOptions = options.copy(sampleRate = sampleRate)
@@ -25,8 +21,6 @@ actual fun <T> klangPlayer(
     println("[KlangPlayer][JVM] using sample rate $sampleRate")
 
     return KlangPlayer(
-        source = source,
-        transform = transform,
         options = effectiveOptions,
         backendFactory = { config -> JvmAudioBackend(config) },
         fetcherDispatcher = Dispatchers.Default,

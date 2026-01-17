@@ -8,6 +8,7 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.makeStatic
+import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
@@ -119,16 +120,16 @@ private suspend fun helloStrudel() {
             cyclesPerSecond = 0.6,
         )
 
-        val audio1 = strudelPlayer(
-            pattern = pattern,
+        val player = strudelPlayer(
             options = playerOptions,
         )
 
         println("start 1 ...")
-        audio1.start()
+        val playback = player.playStrudel(pattern)
+        playback.start()
 
         delay(600_000)
-        audio1.stop()
+        playback.stop()
 //        audio2.stop()
         println("Done")
     }

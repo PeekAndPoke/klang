@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.AudioBackend
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.KlangEventFetcher
 import io.peekandpoke.klang.audio_fe.KlangEventSource
@@ -9,13 +8,9 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import kotlinx.coroutines.*
 import kotlin.math.ceil
 
-class KlangPlayer<T>(
-    /** Sound event source */
-    private val source: KlangEventSource<T>,
-    /** Transformation from sound even to ScheduledVoice */
-    private val transform: (T) -> ScheduledVoice,
+class KlangPlayer(
     /** The player config */
-    private val options: Options,
+    val options: Options,
     /** Player Backend factory */
     private val backendFactory: suspend (config: AudioBackend.Config) -> AudioBackend,
     /** The coroutines scope on which the player runs */
@@ -40,6 +35,35 @@ class KlangPlayer<T>(
         val prefetchCycles: Int = ceil(maxOf(2.0, cyclesPerSecond * 2)).toInt(),
     )
 
+    /**
+     * Create a new playback for the given source.
+     */
+    fun play(source: KlangEventSource): KlangPlayback {
+        return KlangPlayback(
+            source = source,
+            options = options,
+            backendFactory = backendFactory,
+            scope = scope,
+            fetcherDispatcher = fetcherDispatcher,
+            backendDispatcher = backendDispatcher,
+        )
+    }
+}
+
+class KlangPlayback internal constructor(
+    /** Sound event source */
+    private val source: KlangEventSource,
+    /** The player config */
+    private val options: KlangPlayer.Options,
+    /** Player Backend factory */
+    private val backendFactory: suspend (config: AudioBackend.Config) -> AudioBackend,
+    /** The coroutines scope on which the player runs */
+    private val scope: CoroutineScope,
+    /** The dispatcher used for the event fetcher */
+    private val fetcherDispatcher: CoroutineDispatcher,
+    /** The dispatcher used for the audio backend */
+    private val backendDispatcher: CoroutineDispatcher,
+) {
     // TODO: make atomic
     private var running = false
 
@@ -58,7 +82,6 @@ class KlangPlayer<T>(
                     samples = options.samples,
                     source = source,
                     commLink = commLink.frontend,
-                    transform = transform,
                     sampleRate = options.sampleRate,
                     cps = options.cyclesPerSecond,
                     lookaheadSec = options.lookaheadSec,
