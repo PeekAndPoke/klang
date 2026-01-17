@@ -8,7 +8,6 @@ import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeBooleanOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeGetMember
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
@@ -39,6 +38,7 @@ class GraalStrudelPattern(
         for (i in 0 until count) {
             val item = arc.getArrayElement(i)
 
+//            println("---------------------------------------------------------------------------------------------")
 //            println(graal.prettyFormat(item))
 
             val event = item.toStrudelEvent()
@@ -91,7 +91,7 @@ class GraalStrudelPattern(
         // ///////////////////////////////////////////////////////////////////////////////////
         // Get sound parameters / sample bank and index
         val bank = value.safeGetMember("bank").safeStringOrNull()
-        val sound = value.safeGetMember("s").safeStringOrNull()
+        var sound = value.safeGetMember("s").safeStringOrNull()
             ?: value.safeGetMember("wave").safeStringOrNull()
             ?: value.safeGetMember("sound").safeStringOrNull()
         val soundIndex = value.safeGetMember("n").safeNumberOrNull()?.toInt()
@@ -186,11 +186,13 @@ class GraalStrudelPattern(
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Sample Manipulation
-        val sampleBegin = value.safeGetMember("begin").safeNumberOrNull()
+        val loop = value.safeGetMember("loop")
+        sound = loop?.safeGetMember("s")?.safeStringOrNull() ?: sound
+
+        val sampleLoop = if (loop != null) true else null
+        val sampleBeginPos = value.safeGetMember("begin").safeNumberOrNull()
         val sampleEndPos = value.safeGetMember("end").safeNumberOrNull()
         val sampleSpeed = value.safeGetMember("speed").safeNumberOrNull()
-        val sampleLoop = value.safeGetMember("loop").safeBooleanOrNull()
-        val sampleLoopAt = value.safeGetMember("loopAt").safeNumberOrNull()
         val sampleCut = value.safeGetMember("cut").safeNumberOrNull()?.toInt()
 
         // add event
@@ -247,11 +249,10 @@ class GraalStrudelPattern(
                 room = room,
                 roomSize = roomSize,
                 // Sample manipulation
-                begin = sampleBegin,
+                begin = sampleBeginPos,
                 end = sampleEndPos,
                 speed = sampleSpeed,
                 loop = sampleLoop,
-                loopAt = sampleLoopAt,
                 cut = sampleCut,
                 // Value
                 value = when {

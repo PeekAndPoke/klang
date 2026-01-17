@@ -10,25 +10,22 @@ object TestKotlinPatterns {
         note(
             """
                 <
-                    [e5 [b4 c5] d5 [c5 b4]]
-                    [a4 [a4 c5] e5 [d5 c5]]
-                    [b4 [~ c5] d5 e5]
-                    [c5 a4 a4 ~]
-                    [[~ d5] [~ f5] a5 [g5 f5]]
-                    [e5 [~ c5] e5 [d5 c5]]
-                    [b4 [b4 c5] d5 e5]
-                    [c5 a4 a4 ~]
+                    [e5 [b4 c5] d5 [c5 b4]] [a4 [a4 c5] e5 [d5 c5]]
+                    [b4 [~ c5] d5 e5]       [c5 a4 a4 ~]
+                    
+                    [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]
+                    [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
                 >
                 """.trimIndent()
         ).sound("tri")
-            .filterWhen { it >= 32 }
+            .filterWhen { it >= 16 }
 //            .struct("x(5,8,2)")
-            .orbit(0).gain(0.375)
-            .pan(sine2.slow(48).range(-0.7, 0.7).flipSign())
-            .delay(0.2).delaytime(0.4).delayfeedback(0.10)
+            .orbit(0).gain(0.425)
+            .pan(sine2.slow(48).range(-0.5, 0.5).flipSign())
+            .delay(0.1).delaytime(0.4).delayfeedback(0.1)
             .room(0.2).rsize(0.1)
             .clip(0.3)
-            .hpf(800)
+            .hpf(600)
 //            .adsr("0.025:0.2:0.5:0.0")
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
 //            .rev(4.1).rev(3)
@@ -37,24 +34,21 @@ object TestKotlinPatterns {
         note(
             """
                 <
-                    [[e2 e3]*4]
-                    [[a2 a3]*4]
-                    [[g#2 g#3]*2 [e2 e3]*2]
-                    [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
-                    [[d2 d3]*4]
-                    [[c2 c3]*4]
-                    [[b1 b2 b1 b2] [e2 e3 e2 e3]]
-                    [a3 a2 a2 a1 a1 [c1 e2] [a5 a4] [a3 a2]]
+                    [[e2 e3]*4]             [[a2 a3]*4] 
+                    [[g#2 g#3]*2 [e2 e3]*2] [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
+                    
+                    [[d2 d3]*4]                   [[c2 c3]*4]
+                    [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [c1 e2] [a5 a4] [a3 a2]]
                 >
             """.trimIndent()
         ).sound("supersaw")
-            .filterWhen { it >= 16 }
+            .filterWhen { it >= 31.5 }
 //            .struct("<x*2>")
             .spread(0.5).unison(sine.range(4, 12).slow(32))
             .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
-            .orbit(2).gain(0.675)
-            .pan(sine2.slow(48).range(-0.7, 0.7))
-            .adsr("0.01:0.3:0.6:0.35")
+            .orbit(2).gain(0.55)
+            .pan(sine2.slow(48).range(-0.5, 0.5))
+            .adsr("0.01:0.3:0.6:0.5")
 //            .lpf(4000)
             .room(0.02).rsize(0.5)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
@@ -64,38 +58,17 @@ object TestKotlinPatterns {
         sound(
             """
             <
-            [[bd:2, cr, cr] hh sd hh] 
-            [bd hh sd oh]
-            [bd hh sd hh] 
-            [bd hh sd hh]
-            [[bd, hh] hh sd hh] 
-            [bd hh sd oh]
-            [bd hh sd hh] 
-            [bd hh [mt mt, sd] [ht ht, oh]]
-            [[bd:2, cr] hh sd hh] 
-            [bd hh sd oh]
-            [bd hh sd hh] 
-            [bd hh sd oh]
-            [[bd, hh] oh sd oh] 
-            [bd hh sd oh]
-            [bd hh sd hh] 
-            [bd hh [sd sd] [[sd sd], oh]]
-            [[bd:2, cr, cr] hh sd [sd hh]] 
-            [bd hh sd oh]
-            [bd hh sd hh] 
-            [bd hh sd hh]
-            [[bd, hh] hh sd [hh sd]] 
-            [bd hh sd oh]
-            [bd hh sd hh] 
-            [bd hh [lt lt, sd sd] ~]
-            [[bd:2, cr] hh [sd, cr] [sd, hh]] 
-            [bd hh sd:8 oh]
-            [bd hh sd hh] 
-            [bd hh sd [bd, oh]]
-            [[bd, cr] oh sd oh] 
-            [cr hh cr hh]
-            [[sd, cr:4] mt sd [mt, hh]] 
-            [sd lt [bd bd] [bd bd]]
+            [[bd:2, cr, cr] hh sd hh] [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
+            [[bd, hh] hh sd hh]       [bd hh sd oh] [bd hh sd hh] [bd hh [mt mt, sd] [ht ht, oh]]
+            
+            [[bd:2, cr] hh sd hh]     [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
+            [[bd, hh] hh [sd, hh] oh] [bd hh sd oh] [bd hh sd hh] [bd hh [sd sd] [sd sd]]
+            
+            [[bd:2, cr, cr] hh sd sd] [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
+            [[bd, hh] hh sd [hh sd]]  [bd hh sd oh] [bd hh sd hh] [bd hh [lt lt, sd sd] ~]
+            
+            [[bd:2, cr] hh [sd, cr] [sd, hh]] [bd hh sd:8 oh] [bd hh sd hh]              [bd hh sd [bd, oh]]
+            [[bd, cr] oh sd oh]               [cr hh cr hh]   [[sd, oh] mt sd [mt, hh]]  [sd [lt, hh] [bd bd] [bd bd, hh]]
             >            
         """.trimIndent()
 //                [[sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh] [sd, hr] [bd, hh]]
@@ -105,7 +78,6 @@ object TestKotlinPatterns {
         )
             .orbit(3).pan(-0.0).gain(1.0)
             .room(0.02).rsize(0.5)
-//            .delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5)
             .adsr("0.01:0.2:0.8:0.5")
             .fast(2)
 //            .rev(4).rev(3),

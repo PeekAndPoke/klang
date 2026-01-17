@@ -83,7 +83,6 @@ data class VoiceData(
     val end: Double?,
     val speed: Double?,
     val loop: Boolean?,
-    val loopAt: Double?,
     val cut: Int?,
 
     // Custom value
@@ -126,7 +125,6 @@ data class VoiceData(
             end = null,
             speed = null,
             loop = null,
-            loopAt = null,
             cut = null,
             value = null,
         )

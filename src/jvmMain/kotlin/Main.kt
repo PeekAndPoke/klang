@@ -79,40 +79,26 @@ private suspend fun helloStrudel() {
 
         println(result)
 
-//        val pattern = strudel.compile(TestTextPatterns.smallTownBoy).await()
+        val code = """
+                sound("a")
+                  .loop()
+                  .begin(0.5)
+                  .end(0.5)
+                  .speed(-1)
+                  .loopAt(2)
+                  .cut(1)
+                  .slice(4, 1)
+        """.trimIndent()
+
+//        val pattern = strudel.compile(code).await()
+
+//        val pattern = StrudelPattern.compile(code)!!
 
 //        val pattern = TestKotlinPatterns.strangerThings
         val pattern = TestKotlinPatterns.tetris
 //        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
 
-//        val pattern = StrudelPattern.compile(
-//            """note("a b c d").early(sine)"""
-//        ) ?: error("Failed to compile pattern")
-
-//        val pattern = note("c,eb,g").slow(2)
-
-//        val pattern = note("a b c d").pan(sine2.range(-1.0, 1.0).slow(4))
-
-//        val pattern = StrudelPattern.compile(
-//            """note("a b c d").bypass(true)"""
-//        )!!
-
-//        val pattern = note("[a b c d]").degradeBy("[0.1 1.0 0.2 0.9]")
-//        val pattern = note("a b c d").undegradeBy(steady(1.0))
-
-//        val pattern = note("[a b c d] [e f g a]").firstOf(4, { it.rev() })
-
-//        val pattern = seq("1 1 1 1").add("3 4")
-
-//        val pattern = StrudelPattern.compile(
-//            """
-//                euclidLegato(3, 8, sound("bd"))
-//            """.trimIndent()
-//        )  !!
-
-//        val pattern = euclidLegatoRot(3, 8, 1, sound("bd"))
-
-//        val pattern = bjork(listOf(3, 8, 2), sound("bd"))
+//        val pattern = sound("bd").loop()
 
         pattern.queryArc(0.0, 8.0).let { arc ->
             arc.forEach {
@@ -130,7 +116,7 @@ private suspend fun helloStrudel() {
         val playerOptions = KlangPlayer.Options(
             samples = samples,
             sampleRate = 48_000,
-            cyclesPerSecond = 0.615,
+            cyclesPerSecond = 0.6,
         )
 
         val audio1 = strudelPlayer(

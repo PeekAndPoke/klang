@@ -350,17 +350,17 @@ class VoiceScheduler(
                 val pitchRatio = (targetPitchHz / baseSamplePitchHz).coerceIn(1.0 / 32.0, 32.0)
 
                 // Speed modifier
-                val speed = data.speed ?: 1.0
-                val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio * speed
+                val loopSpeed = data.speed ?: 1.0
+                val rate = (sample.sampleRate.toDouble() / sampleRate.toDouble()) * pitchRatio * loopSpeed
 
                 val pcmSize = sample.pcm.size.toDouble()
 
                 // Begin/End Logic
-                val beginRatio = data.begin ?: 0.0
-                val startSample = beginRatio * pcmSize
+                val loopBeginRatio = data.begin ?: 0.0
+                val startSample = loopBeginRatio * pcmSize
 
-                val endRatio = data.end ?: 1.0
-                val endSample = endRatio * pcmSize
+                val loopEndRatio = data.end ?: 1.0
+                val endSample = loopEndRatio * pcmSize
 
                 // Loop Logic
                 val explicitLoop = data.loop == true

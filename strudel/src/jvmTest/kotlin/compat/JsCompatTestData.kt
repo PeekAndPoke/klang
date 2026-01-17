@@ -197,7 +197,10 @@ object JsCompatTestData {
         Example("Sample Speed", """s("bd").speed(2)"""),
         Example("Sample Speed Negative", """s("bd").speed(-1)"""),
         Example("Sample Loop", """s("bd").loop()"""),
-        Example("Sample LoopAt", """s("bd").loopAt(2)"""),
+        Example("Sample LoopAt #1", """s("bd").loopAt(1)"""),
+        Example("Sample LoopAt #2", """s("bd").loopAt(2)"""),
+        Example("Sample LoopAt #3", """s("bd").loopAt(3)"""),
+        Example("Sample LoopAt #4", """s("bd").loopAt(4)"""),
         Example("Sample Cut", """s("bd").cut(1)"""),
         Example("Sample Slice", """s("bd").slice(4, 1)"""),
 

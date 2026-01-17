@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -20,17 +20,17 @@ private fun applyBegin(source: StrudelPattern, args: List<Any?>): StrudelPattern
         args = args,
         modify = beginMutation,
         getValue = { begin },
-        setValue = { v, _ -> copy(begin = v) },
+        setValue = { v, c -> copy(begin = c.value?.asDouble ?: v) },
     )
 }
 
 /** Sets the sample start position (0..1) */
 @StrudelDsl
-val StrudelPattern.begin by dslPatternExtension { p, args -> applyBegin(p, args) }
+val begin by dslFunction { args -> args.toPattern(beginMutation) }
 
 /** Sets the sample start position (0..1) */
 @StrudelDsl
-val begin by dslFunction { args -> args.toPattern(beginMutation) }
+val StrudelPattern.begin by dslPatternExtension { p, args -> applyBegin(p, args) }
 
 /** Sets the sample start position (0..1) */
 @StrudelDsl
@@ -47,17 +47,17 @@ private fun applyEnd(source: StrudelPattern, args: List<Any?>): StrudelPattern {
         args = args,
         modify = endMutation,
         getValue = { end },
-        setValue = { v, _ -> copy(end = v) },
+        setValue = { v, c -> copy(end = c.value?.asDouble ?: v) },
     )
 }
 
 /** Sets the sample end position (0..1) */
 @StrudelDsl
-val StrudelPattern.end by dslPatternExtension { p, args -> applyEnd(p, args) }
+val end by dslFunction { args -> args.toPattern(endMutation) }
 
 /** Sets the sample end position (0..1) */
 @StrudelDsl
-val end by dslFunction { args -> args.toPattern(endMutation) }
+val StrudelPattern.end by dslPatternExtension { p, args -> applyEnd(p, args) }
 
 /** Sets the sample end position (0..1) */
 @StrudelDsl
@@ -74,17 +74,17 @@ private fun applySpeed(source: StrudelPattern, args: List<Any?>): StrudelPattern
         args = args,
         modify = speedMutation,
         getValue = { speed },
-        setValue = { v, _ -> copy(speed = v) },
+        setValue = { v, c -> copy(speed = c.value?.asDouble ?: v) },
     )
 }
 
 /** Sets the sample playback speed */
 @StrudelDsl
-val StrudelPattern.speed by dslPatternExtension { p, args -> applySpeed(p, args) }
+val speed by dslFunction { args -> args.toPattern(speedMutation) }
 
 /** Sets the sample playback speed */
 @StrudelDsl
-val speed by dslFunction { args -> args.toPattern(speedMutation) }
+val StrudelPattern.speed by dslPatternExtension { p, args -> applySpeed(p, args) }
 
 /** Sets the sample playback speed */
 @StrudelDsl
@@ -93,16 +93,22 @@ val String.speed by dslStringExtension { p, args -> applySpeed(p, args) }
 // -- loop() -----------------------------------------------------------------------------------------------------------
 
 private val loopMutation = voiceModifier {
-    copy(loop = true)
+    copy(loop = it?.asVoiceValue()?.asBoolean)
 }
 
-private fun applyLoop(source: StrudelPattern): StrudelPattern {
-    return source.reinterpretVoice { it.copy(loop = true) }
-}
+private fun applyLoop(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    val args = when (args.isEmpty()) {
+        true -> listOf(1.0)
+        else -> args
+    }
 
-/** Enables sample looping */
-@StrudelDsl
-val StrudelPattern.loop by dslPatternExtension { p, _ -> applyLoop(p) }
+    return source.applyNumericalParam(
+        args = args,
+        modify = loopMutation,
+        getValue = { if (loop == true) 1.0 else 0.0 },
+        setValue = { v, c -> copy(loop = c.value?.asBoolean ?: v.asVoiceValue().asBoolean) },
+    )
+}
 
 /** Enables sample looping */
 @StrudelDsl
@@ -110,30 +116,48 @@ val loop by dslFunction { args -> args.toPattern(loopMutation) }
 
 /** Enables sample looping */
 @StrudelDsl
-val String.loop by dslStringExtension { p, _ -> applyLoop(p) }
+val StrudelPattern.loop by dslPatternExtension { p, args -> applyLoop(p, args) }
+
+/** Enables sample looping */
+@StrudelDsl
+val String.loop by dslStringExtension { p, args -> applyLoop(p, args) }
 
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 
 private val loopAtMutation = voiceModifier {
-    copy(loopAt = it?.asDoubleOrNull())
+    val value = it?.asDoubleOrNull()
+
+    // 1.0 -> 0.5
+    // 2.0 -> 0.25
+    // 3.0 -> 0.16666666666666
+    // 4.0 -> 0.125
+
+    // What is the formula?
+
+
+    if (value == null) {
+        copy(speed = null)
+    } else {
+        copy(speed = 1.0 / (2.0 * value))
+    }
 }
 
 private fun applyLoopAt(source: StrudelPattern, args: List<Any?>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = loopAtMutation,
-        getValue = { loopAt },
-        setValue = { v, _ -> copy(loopAt = v) },
+        getValue = { speed },
+        setValue = { v, c -> copy(speed = c.value?.asDouble ?: v) },
     )
 }
 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
-val StrudelPattern.loopAt by dslPatternExtension { p, args -> applyLoopAt(p, args) }
+val loopAt by dslFunction { args -> args.toPattern(loopAtMutation) }
 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
-val loopAt by dslFunction { args -> args.toPattern(loopAtMutation) }
+val StrudelPattern.loopAt by dslPatternExtension { p, args -> applyLoopAt(p, args) }
 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
@@ -146,17 +170,18 @@ private val cutMutation = voiceModifier {
 }
 
 private fun applyCut(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+    val args = when (args.isEmpty()) {
+        true -> listOf(1.0)
+        else -> args
+    }
+
     return source.applyNumericalParam(
         args = args,
         modify = cutMutation,
         getValue = { cut?.toDouble() },
-        setValue = { v, _ -> copy(cut = v.toInt()) },
+        setValue = { v, c -> copy(cut = c.value?.asInt ?: v.toInt()) },
     )
 }
-
-/** Sets the cut group (choke group) */
-@StrudelDsl
-val StrudelPattern.cut by dslPatternExtension { p, args -> applyCut(p, args) }
 
 /** Sets the cut group (choke group) */
 @StrudelDsl
@@ -164,17 +189,15 @@ val cut by dslFunction { args -> args.toPattern(cutMutation) }
 
 /** Sets the cut group (choke group) */
 @StrudelDsl
+val StrudelPattern.cut by dslPatternExtension { p, args -> applyCut(p, args) }
+
+/** Sets the cut group (choke group) */
+@StrudelDsl
 val String.cut by dslStringExtension { p, args -> applyCut(p, args) }
 
 // -- slice() ----------------------------------------------------------------------------------------------------------
 
-/**
- * Plays a slice of the sample.
- * @param {n} Total number of slices
- * @param {index} Index of the slice to play (0 to n-1)
- */
-@StrudelDsl
-val StrudelPattern.slice by dslPatternExtension { p, args ->
+private fun applySlice(source: StrudelPattern, args: List<Any?>): StrudelPattern {
     val n = args.getOrNull(0)?.asIntOrNull() ?: 1
     val indexArg = args.getOrNull(1)
 
@@ -184,7 +207,7 @@ val StrudelPattern.slice by dslPatternExtension { p, args ->
     val start = index.toDouble() / n
     val end = (index + 1.0) / n
 
-    p.begin(start).end(end)
+    return source.begin(start).end(end)
 }
 
 /**
@@ -193,6 +216,12 @@ val StrudelPattern.slice by dslPatternExtension { p, args ->
  * @param {index} Index of the slice to play (0 to n-1)
  */
 @StrudelDsl
-val String.slice by dslStringExtension { p, args ->
-    p.slice(args)
-}
+val StrudelPattern.slice by dslPatternExtension { p, args -> applySlice(p, args) }
+
+/**
+ * Plays a slice of the sample.
+ * @param {n} Total number of slices
+ * @param {index} Index of the slice to play (0 to n-1)
+ */
+@StrudelDsl
+val String.slice by dslStringExtension { p, args -> applySlice(p, args) }
