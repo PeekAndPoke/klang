@@ -9,6 +9,17 @@ import javax.sound.sampled.SourceDataLine
 import kotlin.math.abs
 
 /**
+ * High-priority dispatcher for real-time audio processing.
+ * Uses 2 threads at maximum priority to minimize latency and ensure consistent audio playback.
+ */
+private val audioDispatcher = createHighPriorityDispatcher(
+    threadCount = 2,
+    namePrefix = "klang-audio-",
+    priority = Thread.MAX_PRIORITY,
+    daemon = false,
+)
+
+/**
  * Create a KlangPlayer for the JVM
  */
 actual fun klangPlayer(
@@ -24,7 +35,7 @@ actual fun klangPlayer(
         options = effectiveOptions,
         backendFactory = { config -> JvmAudioBackend(config) },
         fetcherDispatcher = Dispatchers.Default,
-        backendDispatcher = Dispatchers.IO,
+        backendDispatcher = audioDispatcher,
     )
 }
 
