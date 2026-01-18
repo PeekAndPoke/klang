@@ -24,8 +24,11 @@ class JsAudioBackend(
 
     override suspend fun run(scope: CoroutineScope) {
         // Init the audio context with the given sample rate
+        // latencyHint="playback" prioritizes glitch-free audio with larger buffers
+        // This provides more headroom to prevent buffer starvation during CPU spikes or GC pauses
         val contextOpts = jsObject<AudioContextOptions> {
             sampleRate = config.sampleRate
+            latencyHint = "playback"  // Prioritize stable, glitch-free playback over minimal latency
         }
         val ctx = AudioContext(contextOpts)
 

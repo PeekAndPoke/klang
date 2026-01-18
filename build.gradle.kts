@@ -11,7 +11,6 @@ plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization") version Deps.kotlinVersion apply false
     id("com.google.devtools.ksp") version Deps.Ksp.version apply false
-    id("org.jetbrains.kotlinx.atomicfu") version Deps.KotlinLibs.atomicfu_version apply false
     id("io.kotest") version Deps.Test.kotest_plugin_version apply false
 }
 
@@ -87,6 +86,13 @@ kotlin {
                 Deps.Test {
                     commonTestDeps()
                 }
+            }
+        }
+
+        jsMain {
+            dependencies {
+                implementation(Deps.KotlinLibs.Kraft.core)
+                implementation(Deps.KotlinLibs.Kraft.semanticui)
             }
         }
 

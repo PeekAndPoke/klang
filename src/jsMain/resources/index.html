@@ -2,37 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Klang Audio Engine - JS Demo</title>
+    <title>Funktor-Demo Admin</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="referrer" content="origin">
+
+    <!-- Fomantic UI CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.8/dist/semantic.min.css">
+
     <style>
         body {
-            font-family: sans-serif;
-            background: #222;
-            color: #eee;
-            padding: 2rem;
-        }
-
-        button {
-            padding: 1rem 2rem;
-            font-size: 1.2rem;
-            cursor: pointer;
-            background: #4caf50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-        }
-
-        button:hover {
-            background: #45a049;
+            background-color: white;
         }
     </style>
+
 </head>
 <body>
-<h1>Klang Audio Engine</h1>
-<p>Click below to start the audio context.</p>
 
-<!-- The Kotlin/JS Main function will append UI elements here or to document.body -->
+<!-- PLACEHOLDER::CONFIG -->
 
-<!-- Load the application bundle -->
-<script src="klang-engine.js"></script>
+<div id="spa"></div>
+
+<script src="/klang-engine.js?cacheBuster="></script>
+
 </body>
 </html>

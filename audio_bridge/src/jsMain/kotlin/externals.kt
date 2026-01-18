@@ -19,6 +19,7 @@ external class AudioContext(options: AudioContextOptions = definedExternally) {
 
 external interface AudioContextOptions {
     var sampleRate: Int?
+    var latencyHint: String?  // "interactive", "balanced", or "playback"
 }
 
 external class AudioBuffer {
