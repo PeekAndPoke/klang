@@ -20,9 +20,9 @@ object TestKotlinPatterns {
         ).sound("tri")
             .filterWhen { it >= 16 }
 //            .struct("x(5,8,2)")
-            .orbit(0).gain(0.425)
+            .orbit(0).gain(0.375)
             .pan(sine2.slow(48).range(-0.5, 0.5).flipSign())
-            .delay(0.1).delaytime(0.4).delayfeedback(0.1)
+            .delay(0.2).delaytime(0.4).delayfeedback(0.1)
             .room(0.2).rsize(0.1)
             .clip(0.3)
             .hpf(600)
@@ -48,7 +48,7 @@ object TestKotlinPatterns {
             .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
             .orbit(2).gain(0.55)
             .pan(sine2.slow(48).range(-0.5, 0.5))
-            .adsr("0.01:0.3:0.6:0.5")
+            .adsr("0.01:0.3:0.4:0.5")
 //            .lpf(4000)
             .room(0.02).rsize(0.5)
             .superimpose { x -> x.transpose("<0 12 0 -12>/8") }

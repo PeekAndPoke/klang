@@ -54,7 +54,7 @@ class VoiceScheduler(
 
     private val samples = mutableMapOf<SampleRequest, SampleEntry>()
 
-    private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startFrame < b.startFrame }
+    private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
     private val active = ArrayList<Voice>(64)
 
     // Playback lifecycle management - track start frames for relative-to-absolute translation
@@ -167,16 +167,18 @@ class VoiceScheduler(
     }
 
     fun scheduleVoice(playbackId: String, voice: ScheduledVoice) {
-        // Translate relative frame to absolute frame
+        // Get the playback start frame for relative-to-absolute translation
         val startFrame = playbackStartFrames[playbackId]
         if (startFrame == null) {
             // Playback not registered - ignore this voice
             return
         }
 
+        // Convert relative time to absolute time by adding the start offset
+        val startTimeSec = startFrame.toDouble() / options.sampleRate.toDouble()
         val absoluteVoice = voice.copy(
-            startFrame = startFrame + voice.startFrame,
-            gateEndFrame = startFrame + voice.gateEndFrame,
+            startTime = startTimeSec + voice.startTime,
+            gateEndTime = startTimeSec + voice.gateEndTime,
         )
 
         scheduled.push(absoluteVoice)
@@ -230,19 +232,23 @@ class VoiceScheduler(
     }
 
     private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
+        val nowSec = nowFrame.toDouble() / options.sampleRate.toDouble()
+        val blockEndSec = blockEnd.toDouble() / options.sampleRate.toDouble()
+
         while (true) {
             // Do we have a voice scheduled?
             val head = scheduled.peek() ?: break
             // Optimization: Early exit if we're past the block end
-            if (head.startFrame >= blockEnd) break
+            if (head.startTime >= blockEndSec) break
 
-            // println("Starting voice with note '${head.data.note}' at frame ${head.startFrame}")
+            // println("Starting voice with note '${head.data.note}' at time ${head.startTime}")
 
             // Remove the head
             scheduled.pop()
             // 1. Drop if too old (e.g. more than 1 block in the past)
             // If the system lagged, we don't want to blast 50 old notes at once.
-            if (head.startFrame <= nowFrame - options.blockFrames) continue
+            val oldestAllowedSec = (nowFrame - options.blockFrames).toDouble() / options.sampleRate.toDouble()
+            if (head.startTime <= oldestAllowedSec) continue
             // Finally, make a voice
             makeVoice(head, nowFrame)?.let {
                 active.add(it)
@@ -268,12 +274,16 @@ class VoiceScheduler(
         val sampleRate = options.sampleRate
         val data = scheduled.data
 
+        // Convert time to frames
+        val startFrame = (scheduled.startTime * sampleRate).toLong()
+        val gateEndFrameFromTime = (scheduled.gateEndTime * sampleRate).toLong()
+
         // Handle legato (clip) logic, if present, it scales the gate duration (note length)
         val clip = data.legato
-        val originalGateDuration = scheduled.gateEndFrame - scheduled.startFrame
+        val originalGateDuration = gateEndFrameFromTime - startFrame
         val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toLong() else originalGateDuration
         // Calculate new end frames based on the effective gate duration
-        val gateEndFrame = scheduled.startFrame + effectiveGateDuration
+        val gateEndFrame = startFrame + effectiveGateDuration
 
         // Bake Filters
         val bakedFilters = data.filters.filters.map { it.toFilter() }.combine()
@@ -338,7 +348,7 @@ class VoiceScheduler(
 
                 SynthVoice(
                     orbitId = orbit,
-                    startFrame = scheduled.startFrame,
+                    startFrame = startFrame,
                     endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
                     gain = data.gain ?: 1.0,

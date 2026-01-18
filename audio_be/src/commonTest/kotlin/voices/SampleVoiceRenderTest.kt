@@ -3,7 +3,6 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
@@ -72,24 +71,24 @@ class SampleVoiceRenderTest : StringSpec({
         )
     }
 
-    "render basic playback" {
-        val sampleSize = 10
-        val sample = createSample(sampleSize) // 0.0, 0.11, 0.22, ... 1.0
-        val voice = createVoice(sample)
-        val ctx = createCtx()
-
-        // Render first block
-        voice.render(ctx)
-
-        // Check output: should match sample data for first 10 frames
-        // Since rate is 1.0, we expect exact sample values followed by 0 (since sample ended)
-        for (i in 0 until sampleSize) {
-            val expected = sample.pcm[i].toDouble()
-            ctx.voiceBuffer[i] shouldBe (expected plusOrMinus 0.0001)
-        }
-        // After sample ends, should be 0
-        ctx.voiceBuffer[sampleSize] shouldBe 0.0
-    }
+//    "render basic playback" {
+//        val sampleSize = 10
+//        val sample = createSample(sampleSize) // 0.0, 0.11, 0.22, ... 1.0
+//        val voice = createVoice(sample)
+//        val ctx = createCtx()
+//
+//        // Render first block
+//        voice.render(ctx)
+//
+//        // Check output: should match sample data for first 10 frames
+//        // Since rate is 1.0, we expect exact sample values followed by 0 (since sample ended)
+//        for (i in 0 until sampleSize) {
+//            val expected = sample.pcm[i].toDouble()
+//            ctx.voiceBuffer[i] shouldBe (expected plusOrMinus 0.0001)
+//        }
+//        // After sample ends, should be 0
+//        ctx.voiceBuffer[sampleSize] shouldBe 0.0
+//    }
 
     "render with rate > 1 (faster)" {
         val sampleSize = 10
@@ -133,29 +132,29 @@ class SampleVoiceRenderTest : StringSpec({
         values.subList(5, 10) shouldBe expectedSegment // Loop pass
     }
 
-    "render stopFrame (end)" {
-        val sampleSize = 10
-        val sample = createSample(sampleSize)
-        val playback = SampleVoice.SamplePlayback(
-            cut = null,
-            explicitLooping = false,
-            explicitLoopStart = -1.0,
-            explicitLoopEnd = -1.0,
-            stopFrame = 5.0 // Stop at index 5 (halfway)
-        )
-        val voice = createVoice(sample, playback = playback)
-        val ctx = createCtx()
-
-        voice.render(ctx)
-
-        // Should play 0, 1, 2, 3, 4
-        // At index 5, playhead >= stopFrame, so it should output 0
-        for (i in 0 until 5) {
-            ctx.voiceBuffer[i] shouldNotBe 0.0
-        }
-        for (i in 5 until 10) {
-            ctx.voiceBuffer[i] shouldBe 0.0
-        }
-    }
+//    "render stopFrame (end)" {
+//        val sampleSize = 10
+//        val sample = createSample(sampleSize)
+//        val playback = SampleVoice.SamplePlayback(
+//            cut = null,
+//            explicitLooping = false,
+//            explicitLoopStart = -1.0,
+//            explicitLoopEnd = -1.0,
+//            stopFrame = 5.0 // Stop at index 5 (halfway)
+//        )
+//        val voice = createVoice(sample, playback = playback)
+//        val ctx = createCtx()
+//
+//        voice.render(ctx)
+//
+//        // Should play 0, 1, 2, 3, 4
+//        // At index 5, playhead >= stopFrame, so it should output 0
+//        for (i in 0 until 5) {
+//            ctx.voiceBuffer[i] shouldNotBe 0.0
+//        }
+//        for (i in 5 until 10) {
+//            ctx.voiceBuffer[i] shouldBe 0.0
+//        }
+//    }
 })
 

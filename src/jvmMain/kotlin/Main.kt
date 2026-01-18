@@ -1,11 +1,11 @@
 package io.peekandpoke.klang
 
-import io.peekandpoke.klang.audio_engine.KlangPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.lang.pan
 import io.peekandpoke.klang.strudel.lang.strudelLib
@@ -128,7 +128,7 @@ private suspend fun helloStrudel() {
         println("start 1 ...")
         val playback1 = player.playStrudel(pattern1)
         playback1.start(
-            KlangPlayback.Options(
+            StrudelPlayback.Options(
                 cyclesPerSecond = 0.6,
             )
         )

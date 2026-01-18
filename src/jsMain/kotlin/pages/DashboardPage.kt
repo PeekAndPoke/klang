@@ -9,13 +9,13 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.audio_engine.KlangPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
 import kotlinx.html.Tag
 
@@ -30,7 +30,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     var loading: Boolean by value(false)
     var player: KlangPlayer? by value(null)
-    var song: KlangPlayback? by value(null)
+    var song: StrudelPlayback? by value(null)
 
     var input: String by value(
         """
@@ -76,16 +76,21 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                 ui.fields {
                     ui.button {
                         onClick {
-                            song?.stop()
+                            when (val s = song) {
+                                null -> launch {
+                                    if (!loading) {
+                                        createPlayer().let { p ->
+                                            val pattern = StrudelPattern.compile(input)!!
 
-                            launch {
-                                if (!loading) {
-                                    createPlayer().let { p ->
-                                        val compiled = StrudelPattern.compile(input)!!
-
-                                        song = p.playStrudel(compiled)
-                                        song?.start()
+                                            song = p.playStrudel(pattern)
+                                            song?.start()
+                                        }
                                     }
+                                }
+
+                                else -> {
+                                    val pattern = StrudelPattern.compile(input)!!
+                                    s.updatePattern(pattern)
                                 }
                             }
                         }
@@ -100,6 +105,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                     ui.button {
                         onClick {
                             song?.stop()
+                            song = null
                         }
 
                         icon.stop()

@@ -5,7 +5,6 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangAtomicInt
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangLock
 import io.peekandpoke.klang.audio_bridge.infra.withLock
-import io.peekandpoke.klang.audio_fe.KlangEventSource
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import kotlinx.coroutines.*
 
@@ -35,12 +34,16 @@ class KlangPlayer(
     )
 
     // Shared communication link and backend
-    private val commLink = KlangCommLink(capacity = 8192)
+    val commLink = KlangCommLink(capacity = 8192)
     private var backendJob: Job? = null
 
     // Thread-safe state management
     private val lock = KlangLock()
     private val _activePlaybacks = mutableListOf<KlangPlayback>()
+
+    // Expose scope and dispatcher for playback implementations
+    val playbackScope: CoroutineScope get() = scope
+    val playbackFetcherDispatcher: CoroutineDispatcher get() = fetcherDispatcher
 
     /**
      * Read-only list of currently active playbacks
@@ -66,25 +69,29 @@ class KlangPlayer(
     }
 
     /**
-     * Create a new playback for the given source.
+     * Register a playback.
+     * Called by playback implementations (like StrudelPlayback) during initialization.
      */
-    fun play(source: KlangEventSource): KlangPlayback {
-        val playback = KlangPlayback(
-            playbackId = generatePlaybackId(),
-            source = source,
-            playerOptions = options,
-            commLink = commLink,
-            scope = scope,
-            fetcherDispatcher = fetcherDispatcher,
-            onStopped = { stopped ->
-                lock.withLock { _activePlaybacks.remove(stopped) }
-            }
-        )
+    fun registerPlayback(playback: KlangPlayback) {
         lock.withLock {
             _activePlaybacks.add(playback)
         }
-        return playback
     }
+
+    /**
+     * Unregister a playback.
+     * Called when a playback is stopped.
+     */
+    fun unregisterPlayback(playback: KlangPlayback) {
+        lock.withLock {
+            _activePlaybacks.remove(playback)
+        }
+    }
+
+    /**
+     * Generate a unique playback ID.
+     */
+    fun generatePlaybackId(): String = Companion.generatePlaybackId()
 
     /**
      * Stop all playbacks and shut down the backend.
