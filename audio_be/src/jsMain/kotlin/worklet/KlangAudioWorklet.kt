@@ -23,6 +23,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         }
 
         val commLink = KlangCommLink()
+        val klangTime = KlangTime.create()  // Creates AudioWorklet-specific time source
 
         // Core DSP components
         val orbits = Orbits(
@@ -65,8 +66,11 @@ class KlangAudioWorklet : AudioWorkletProcessor {
 
             val ctx = Ctx(sampleRate, blockFrames)
 
-            // Set backend start time from KlangTime epoch
-            ctx.voices.setBackendStartTime(KlangTime.nowMs() / 1000.0)
+            // Initialize KlangTime with current frame
+            ctx.klangTime.updateCurrentFrame(ctx.cursorFrame)
+
+            // Set backend start time
+            ctx.voices.setBackendStartTime(ctx.klangTime.internalMsNow() / 1000.0)
 
             return ctx
         }
@@ -102,6 +106,9 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         parameters: dynamic,
     ): Boolean = init(outputs) {
         if (!isPlaying) return@init true
+
+        // Update KlangTime with current frame for accurate timing
+        klangTime.updateCurrentFrame(cursorFrame)
 
         // Port 0
         val output = outputs[0]

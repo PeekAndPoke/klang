@@ -44,8 +44,9 @@ class JvmAudioBackend(
     )
 
     override suspend fun run(scope: CoroutineScope) {
-        // Set backend start time from KlangTime epoch
-        voices.setBackendStartTime(KlangTime.nowMs() / 1000.0)
+        // Set backend start time from KlangTime relative clock
+        val klangTime = KlangTime.create()
+        voices.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
 
         var currentFrame = 0L
 

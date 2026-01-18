@@ -185,6 +185,8 @@ class VoiceScheduler(
     fun process(cursorFrame: Long) {
         val blockEnd = cursorFrame + options.blockFrames
 
+        // println("active voices: ${active.size}")
+
         // 1. Promote scheduled to active
         promoteScheduled(cursorFrame, blockEnd)
 
@@ -256,9 +258,12 @@ class VoiceScheduler(
         val sampleRate = options.sampleRate
         val data = scheduled.data
 
-        // Convert time to frames
-        val startFrame = (scheduled.startTime * sampleRate).toLong()
-        val gateEndFrameFromTime = (scheduled.gateEndTime * sampleRate).toLong()
+        // Convert absolute time to backend-relative time, then to frames
+        val relativeStartTime = scheduled.startTime - backendStartTimeSec
+        val relativeGateEndTime = scheduled.gateEndTime - backendStartTimeSec
+
+        val startFrame = (relativeStartTime * sampleRate).toLong()
+        val gateEndFrameFromTime = (relativeGateEndTime * sampleRate).toLong()
 
         // Handle legato (clip) logic, if present, it scales the gate duration (note length)
         val clip = data.legato

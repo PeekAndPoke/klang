@@ -69,6 +69,7 @@ class StrudelPlayback internal constructor(
     private val control = commLink.frontend.control
     private val feedback = commLink.frontend.feedback
     private val samplesAlreadySent = mutableSetOf<SampleRequest>()
+    private val klangTime = KlangTime.create()
 
     // ===== Public API =====
 
@@ -131,7 +132,7 @@ class StrudelPlayback internal constructor(
 
     private suspend fun run(scope: CoroutineScope) {
         // Record start time for autonomous progression
-        startTimeMs = KlangTime.nowMs()
+        startTimeMs = klangTime.internalMsNow()
 
         // Reset state
         queryCursorCycles = 0.0
@@ -160,7 +161,7 @@ class StrudelPlayback internal constructor(
     }
 
     private fun updateLocalFrameCounter() {
-        val elapsedMs = KlangTime.nowMs() - startTimeMs
+        val elapsedMs = klangTime.internalMsNow() - startTimeMs
         val elapsedSec = elapsedMs / 1000.0
         localFrameCounter = (elapsedSec * playerOptions.sampleRate).toLong()
     }
@@ -191,8 +192,8 @@ class StrudelPlayback internal constructor(
 
             ScheduledVoice(
                 data = event.data,
-                startTime = 1.0 + absoluteStartTime,
-                gateEndTime = 1.0 + absoluteStartTime + duration,
+                startTime = absoluteStartTime,
+                gateEndTime = absoluteStartTime + duration,
             )
         }
     }
