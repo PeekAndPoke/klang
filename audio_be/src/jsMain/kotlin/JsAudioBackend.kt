@@ -81,8 +81,6 @@ class JsAudioBackend(
 
                     when (cmd) {
                         // Direct forwarding
-                        is KlangCommLink.Cmd.StartPlayback -> node.port.sendCmd(cmd)
-                        is KlangCommLink.Cmd.StopPlayback -> node.port.sendCmd(cmd)
                         is KlangCommLink.Cmd.ScheduleVoice -> node.port.sendCmd(cmd)
 
                         is KlangCommLink.Cmd.Sample -> when (cmd) {

@@ -6,6 +6,7 @@ import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendFeed
 import io.peekandpoke.klang.audio_bridge.AudioWorkletProcessor
+import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import org.khronos.webgl.Float32Array
 import org.khronos.webgl.set
@@ -62,7 +63,12 @@ class KlangAudioWorklet : AudioWorkletProcessor {
             // Fallback to 128 if no channels (unlikely)
             val blockFrames = if (numChannels > 0) output[0].length else 128
 
-            return Ctx(sampleRate, blockFrames)
+            val ctx = Ctx(sampleRate, blockFrames)
+
+            // Set backend start time from KlangTime epoch
+            ctx.voices.setBackendStartTime(KlangTime.nowMs() / 1000.0)
+
+            return ctx
         }
 
         return (ctx ?: makeContext()).let { ctx ->
@@ -74,14 +80,6 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                     // console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
 
                     when (cmd) {
-                        is KlangCommLink.Cmd.StartPlayback -> {
-                            ctx.voices.startPlayback(cmd.playbackId, ctx.cursorFrame)
-                        }
-
-                        is KlangCommLink.Cmd.StopPlayback -> {
-                            ctx.voices.stopPlayback(cmd.playbackId)
-                        }
-
                         is KlangCommLink.Cmd.ScheduleVoice -> {
                             ctx.voices.scheduleVoice(
                                 playbackId = cmd.playbackId,

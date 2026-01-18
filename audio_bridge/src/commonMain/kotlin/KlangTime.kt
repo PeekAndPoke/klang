@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_fe
+package io.peekandpoke.klang.audio_bridge
 
 /**
  * High-precision time source for autonomous event fetcher progression

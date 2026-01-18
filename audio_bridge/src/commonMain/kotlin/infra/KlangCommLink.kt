@@ -13,22 +13,6 @@ class KlangCommLink(capacity: Int = 8192) {
     sealed interface Cmd {
         val playbackId: String
 
-        data class StartPlayback(
-            override val playbackId: String,
-        ) : Cmd {
-            companion object {
-                const val SERIAL_NAME = "start-playback"
-            }
-        }
-
-        data class StopPlayback(
-            override val playbackId: String,
-        ) : Cmd {
-            companion object {
-                const val SERIAL_NAME = "stop-playback"
-            }
-        }
-
         data class ScheduleVoice(
             override val playbackId: String,
             val voice: ScheduledVoice,
@@ -82,6 +66,7 @@ class KlangCommLink(capacity: Int = 8192) {
                 }
             }
 
+            @Suppress("ArrayInDataClass")
             data class Chunk(
                 override val playbackId: String,
                 override val req: SampleRequest,
@@ -103,7 +88,7 @@ class KlangCommLink(capacity: Int = 8192) {
         }
     }
 
-    /** Send from the backend to the frontend */
+    /** Sent from the backend to the frontend */
     @Serializable
     sealed interface Feedback {
         val playbackId: String

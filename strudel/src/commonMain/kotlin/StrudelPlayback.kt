@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel
 
+import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangAtomicBool
@@ -8,7 +9,6 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangLock
 import io.peekandpoke.klang.audio_bridge.infra.withLock
 import io.peekandpoke.klang.audio_engine.KlangPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.audio_fe.KlangTime
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
@@ -26,7 +26,7 @@ class StrudelPlayback internal constructor(
     /** The player options */
     private val playerOptions: KlangPlayer.Options,
     /** Shared communication link to the backend */
-    private val commLink: KlangCommLink,
+    commLink: KlangCommLink,
     /** The coroutines scope on which the player runs */
     private val scope: CoroutineScope,
     /** The dispatcher used for the event fetcher */
@@ -102,19 +102,10 @@ class StrudelPlayback internal constructor(
         this.cyclesPerSecond = options.cyclesPerSecond
         this.lookaheadSec = options.lookaheadSec
 
-        // Tell backend to start this playback
-        control.send(
-            KlangCommLink.Cmd.StartPlayback(playbackId = playbackId)
-        )
-
-        // Calculate prefetchCycles if not specified
-        val prefetchCycles = options.prefetchCycles
-            ?: kotlin.math.ceil(kotlin.math.max(2.0, options.cyclesPerSecond * 2)).toInt()
-
         // Start the fetcher job
         jobLock.withLock {
             fetcherJob = scope.launch(fetcherDispatcher.limitedParallelism(1)) {
-                run(this, prefetchCycles.toDouble())
+                run(this)
             }
         }
     }
@@ -132,18 +123,13 @@ class StrudelPlayback internal constructor(
             fetcherJob = null
         }
 
-        // Tell backend to stop this playback
-        control.send(
-            KlangCommLink.Cmd.StopPlayback(playbackId = playbackId)
-        )
-
         // Notify the player that this playback has stopped
         onStopped(this)
     }
 
     // ===== Private Implementation =====
 
-    private suspend fun run(scope: CoroutineScope, prefetchCycles: Double) {
+    private suspend fun run(scope: CoroutineScope) {
         // Record start time for autonomous progression
         startTimeMs = KlangTime.nowMs()
 
@@ -181,7 +167,7 @@ class StrudelPlayback internal constructor(
 
     /**
      * Query events from the Strudel pattern and convert to ScheduledVoice.
-     * This replaces the old StrudelEventSource.query() method.
+     * Returns absolute times from KlangTime epoch.
      */
     private fun queryEvents(from: Double, to: Double): List<ScheduledVoice> {
         // Convert Double time to Rational for exact pattern arithmetic
@@ -192,17 +178,21 @@ class StrudelPlayback internal constructor(
             .filter { it.begin >= fromRational && it.begin < toRational }
             .sortedBy { it.begin }
 
-        // Transform to ScheduledVoice using time instead of frames
+        // Transform to ScheduledVoice using absolute time from KlangTime epoch
         val secPerCycle = 1.0 / cyclesPerSecond
+        val playbackStartTimeSec = startTimeMs / 1000.0
 
         return events.map { event ->
-            val startTime = (event.begin * secPerCycle).toDouble()
+            val relativeStartTime = (event.begin * secPerCycle).toDouble()
             val duration = (event.dur * secPerCycle).toDouble()
+
+            // Convert to absolute time
+            val absoluteStartTime = playbackStartTimeSec + relativeStartTime
 
             ScheduledVoice(
                 data = event.data,
-                startTime = startTime,
-                gateEndTime = startTime + duration,
+                startTime = 1.0 + absoluteStartTime,
+                gateEndTime = 1.0 + absoluteStartTime + duration,
             )
         }
     }

@@ -57,8 +57,8 @@ class VoiceScheduler(
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
     private val active = ArrayList<Voice>(64)
 
-    // Playback lifecycle management - track start frames for relative-to-absolute translation
-    private val playbackStartFrames = mutableMapOf<String, Long>()
+    // Global start time for absolute time to frame conversion
+    private var backendStartTimeSec: Double = 0.0
 
     // Scratch buffers
     private val voiceBuffer = DoubleArray(options.blockFrames)
@@ -152,50 +152,30 @@ class VoiceScheduler(
     }
 
     /**
-     * Register a playback start - records the current frame for relative-to-absolute translation
+     * Set the backend start time. Called once when the backend initializes.
      */
-    fun startPlayback(playbackId: String, currentFrame: Long) {
-        playbackStartFrames[playbackId] = currentFrame
-    }
-
-    /**
-     * Stop a playback - removes tracking state
-     * TODO: Also clear scheduled voices for this playback
-     */
-    fun stopPlayback(playbackId: String) {
-        playbackStartFrames.remove(playbackId)
+    fun setBackendStartTime(startTimeSec: Double) {
+        backendStartTimeSec = startTimeSec
     }
 
     fun scheduleVoice(playbackId: String, voice: ScheduledVoice) {
-        // Get the playback start frame for relative-to-absolute translation
-        val startFrame = playbackStartFrames[playbackId]
-        if (startFrame == null) {
-            // Playback not registered - ignore this voice
-            return
-        }
-
-        // Convert relative time to absolute time by adding the start offset
-        val startTimeSec = startFrame.toDouble() / options.sampleRate.toDouble()
-        val absoluteVoice = voice.copy(
-            startTime = startTimeSec + voice.startTime,
-            gateEndTime = startTimeSec + voice.gateEndTime,
-        )
-
-        scheduled.push(absoluteVoice)
+        // Voice already has absolute time from KlangTime
+        // Just schedule it directly
+        scheduled.push(voice)
 
         // Prefetch sound samples
-        if (absoluteVoice.data.isSampleSound()) {
-            val req = absoluteVoice.data.asSampleRequest()
+        if (voice.data.isSampleSound()) {
+            val req = voice.data.asSampleRequest()
 
             if (!samples.containsKey(req)) {
                 // make sure we do not request this one again
                 samples[req] = SampleEntry.Requested(req)
 
-                // println("VoiceScheduler: requesting sample ${absoluteVoice.data.asSampleRequest()}")
+                // println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
                 options.commLink.feedback.send(
                     KlangCommLink.Feedback.RequestSample(
                         playbackId = playbackId,
-                        req = absoluteVoice.data.asSampleRequest(),
+                        req = voice.data.asSampleRequest(),
                     )
                 )
             }
@@ -232,14 +212,15 @@ class VoiceScheduler(
     }
 
     private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
-        val nowSec = nowFrame.toDouble() / options.sampleRate.toDouble()
-        val blockEndSec = blockEnd.toDouble() / options.sampleRate.toDouble()
+        // Convert backend-relative frames to absolute time (from KlangTime epoch)
+        val nowAbsSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
+        val blockEndAbsSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
 
         while (true) {
             // Do we have a voice scheduled?
             val head = scheduled.peek() ?: break
             // Optimization: Early exit if we're past the block end
-            if (head.startTime >= blockEndSec) break
+            if (head.startTime >= blockEndAbsSec) break
 
             // println("Starting voice with note '${head.data.note}' at time ${head.startTime}")
 
@@ -247,8 +228,9 @@ class VoiceScheduler(
             scheduled.pop()
             // 1. Drop if too old (e.g. more than 1 block in the past)
             // If the system lagged, we don't want to blast 50 old notes at once.
-            val oldestAllowedSec = (nowFrame - options.blockFrames).toDouble() / options.sampleRate.toDouble()
-            if (head.startTime <= oldestAllowedSec) continue
+            val oldestAllowedAbsSec =
+                backendStartTimeSec + ((nowFrame - options.blockFrames).toDouble() / options.sampleRate.toDouble())
+            if (head.startTime <= oldestAllowedAbsSec) continue
             // Finally, make a voice
             makeVoice(head, nowFrame)?.let {
                 active.add(it)

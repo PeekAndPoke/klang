@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
+import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -43,6 +44,9 @@ class JvmAudioBackend(
     )
 
     override suspend fun run(scope: CoroutineScope) {
+        // Set backend start time from KlangTime epoch
+        voices.setBackendStartTime(KlangTime.nowMs() / 1000.0)
+
         var currentFrame = 0L
 
         // Stereo
@@ -69,14 +73,6 @@ class JvmAudioBackend(
                     val cmd = commLink.control.receive() ?: break
 
                     when (cmd) {
-                        is KlangCommLink.Cmd.StartPlayback -> {
-                            voices.startPlayback(cmd.playbackId, currentFrame)
-                        }
-
-                        is KlangCommLink.Cmd.StopPlayback -> {
-                            voices.stopPlayback(cmd.playbackId)
-                        }
-
                         is KlangCommLink.Cmd.ScheduleVoice -> {
                             voices.scheduleVoice(
                                 playbackId = cmd.playbackId,
