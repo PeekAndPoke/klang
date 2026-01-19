@@ -3,6 +3,7 @@ package io.peekandpoke.klang.script
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.script.ast.ArrowFunctionBody
 import io.peekandpoke.klang.script.runtime.*
 
 /**
@@ -81,16 +82,18 @@ class ArrowFunctionTest : StringSpec({
 
                 // Execute based on body type
                 when (val body = func.body) {
-                    is io.peekandpoke.klang.script.ast.ArrowFunctionBody.ExpressionBody -> {
+                    is ArrowFunctionBody.ExpressionBody -> {
                         // Expression body: evaluate directly
                         funcInterpreter.evaluate(body.expression)
                     }
 
-                    is io.peekandpoke.klang.script.ast.ArrowFunctionBody.BlockBody -> {
+                    is ArrowFunctionBody.BlockBody -> {
                         // Block body: execute statements
                         try {
+                            @Suppress("VariableNeverRead")
                             var lastValue: RuntimeValue = NullValue
                             for (stmt in body.statements) {
+                                @Suppress("AssignedValueIsNeverRead")
                                 lastValue = funcInterpreter.executeStatement(stmt)
                             }
                             NullValue

@@ -10,11 +10,16 @@ import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
 
 /** Shortcut for parsing mini notation into patterns */
-fun parseMiniNotation(input: String, atomFactory: (String) -> StrudelPattern): StrudelPattern =
-    MiniNotationParser(input, atomFactory).parse()
+fun parseMiniNotation(
+    input: String,
+    baseLocation: io.peekandpoke.klang.script.ast.SourceLocation? = null,
+    atomFactory: (String) -> StrudelPattern,
+): StrudelPattern =
+    MiniNotationParser(input, baseLocation, atomFactory).parse()
 
 class MiniNotationParser(
     private val input: String,
+    private val baseLocation: io.peekandpoke.klang.script.ast.SourceLocation? = null,
     private val atomFactory: (String) -> StrudelPattern,
 ) {
     private val tokens = tokenize(input)

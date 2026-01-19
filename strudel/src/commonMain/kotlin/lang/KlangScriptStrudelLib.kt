@@ -2,7 +2,6 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.builder.registerType
-import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -34,7 +33,10 @@ fun KlangScriptExtensionBuilder.registerStrudelDsl() {
 
     // 3. Register Global Functions (e.g., note(), silence, s(), etc.)
     StrudelRegistry.functions.forEach { (name, handler) ->
-        registerVarargFunction(name) { args -> handler(args) }
+        registerFunctionRaw(name) { args, _ ->
+            val pattern = handler(args)
+            io.peekandpoke.klang.script.runtime.wrapAsRuntimeValue(pattern)
+        }
     }
 
     // 4. Register Pattern Extension Methods (e.g., pattern.slow(), pattern.note(), etc.)

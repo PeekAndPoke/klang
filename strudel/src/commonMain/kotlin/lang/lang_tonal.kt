@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.tones.Tones
@@ -461,7 +462,8 @@ fun VoiceData.transpose(amount: Any?): VoiceData {
             }
         }
 
-        is io.peekandpoke.klang.audio_bridge.VoiceValue -> return transpose(amount.asDouble ?: amount.asString)
+        is VoiceValue -> return transpose(amount.asDouble ?: amount.asString)
+
         else -> return this
     }
 

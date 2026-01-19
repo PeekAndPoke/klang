@@ -292,9 +292,9 @@ class Interpreter(
      */
     fun evaluate(expression: Expression): RuntimeValue {
         return when (expression) {
-            // Literals evaluate to themselves
-            is NumberLiteral -> NumberValue(expression.value)
-            is StringLiteral -> StringValue(expression.value)
+            // Literals evaluate to themselves (preserving source location)
+            is NumberLiteral -> NumberValue(expression.value, location = expression.location)
+            is StringLiteral -> StringValue(expression.value, location = expression.location)
             is BooleanLiteral -> BooleanValue(expression.value)
             is NullLiteral -> NullValue
 

@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.script.runtime.RuntimeValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
@@ -18,7 +19,7 @@ import kotlin.reflect.KProperty
 
 object StrudelRegistry {
     val symbols = mutableMapOf<String, Any>()
-    val functions = mutableMapOf<String, (List<Any?>) -> StrudelPattern>()
+    val functions = mutableMapOf<String, (List<RuntimeValue>) -> StrudelPattern>()
     val patternExtensionMethods = mutableMapOf<String, (StrudelPattern, List<Any?>) -> StrudelPattern>()
     val stringExtensionMethods = mutableMapOf<String, (String, List<Any?>) -> StrudelPattern>()
 }
@@ -172,14 +173,77 @@ internal fun List<Any?>.toListOfPatterns(
         AtomicPattern(VoiceData.empty.modify(it))
     }
 
-    return this.flatMap { arg ->
+    return this.flatMap { arg: Any? ->
         when (arg) {
-            is String -> listOf(parseMiniNotation(arg, atomFactory))
+            // -- KlangScript runtime values | we extract to code locations for live-coding ----------------------------
+            is RuntimeValue -> arg.toPattern(modify, atomFactory)
+
+            // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
+            is String -> listOf(parseMiniNotation(arg, atomFactory = atomFactory))
             is Number -> listOf(atomFactory(arg.toString()))
             is Boolean -> listOf(atomFactory(arg.toString()))
             is StrudelPattern -> listOf(arg)
             is List<*> -> arg.toListOfPatterns(modify)
+
+            // -- empty or null ----------------------------------------------------------------------------------------
+            null -> emptyList()
             else -> emptyList()
+        }
+    }
+}
+
+private fun RuntimeValue.toPattern(
+    modify: VoiceDataModifier,
+    atomFactory: (String) -> AtomicPattern,
+): List<StrudelPattern> {
+    return when (val arg = this) {
+        is io.peekandpoke.klang.script.runtime.StringValue -> {
+            // Adjust location to point to content (skip opening quote)
+            val baseLocation = arg.location?.let {
+                it.copy(column = it.column + 1)
+            }
+            listOf(parseMiniNotation(arg.value, baseLocation, atomFactory))
+        }
+
+        is io.peekandpoke.klang.script.runtime.NumberValue -> {
+            // Could track location here too for number literals in the future
+            listOf(atomFactory(arg.value.toString()))
+        }
+
+        is io.peekandpoke.klang.script.runtime.BooleanValue -> {
+            listOf(atomFactory(arg.value.toString()))
+        }
+
+        is io.peekandpoke.klang.script.runtime.ArrayValue -> {
+            arg.elements.toListOfPatterns(modify)
+        }
+
+        is io.peekandpoke.klang.script.runtime.NullValue -> {
+            emptyList()
+        }
+
+        is io.peekandpoke.klang.script.runtime.ObjectValue -> {
+            throw IllegalArgumentException("Cannot convert ObjectValue to pattern")
+        }
+
+        is io.peekandpoke.klang.script.runtime.FunctionValue -> {
+            throw IllegalArgumentException("Cannot convert FunctionValue to pattern")
+        }
+
+        is io.peekandpoke.klang.script.runtime.NativeFunctionValue -> {
+            throw IllegalArgumentException("Cannot convert NativeFunctionValue to pattern")
+        }
+
+        is io.peekandpoke.klang.script.runtime.BoundNativeMethod -> {
+            throw IllegalArgumentException("Cannot convert BoundNativeMethod to pattern")
+        }
+
+        is io.peekandpoke.klang.script.runtime.NativeObjectValue<*> -> {
+            // Check if it's a StrudelPattern wrapped in NativeObjectValue
+            when (val value = arg.value) {
+                is StrudelPattern -> listOf(value)
+                else -> throw IllegalArgumentException("Cannot convert NativeObjectValue (${arg.qualifiedName}) to pattern")
+            }
         }
     }
 }
@@ -317,8 +381,10 @@ class DslFunctionProvider(
         val name = prop.name
         val func = DslFunction(handler)
 
-        // Register in the evaluator registry
-        StrudelRegistry.functions[name] = { args -> func.invoke(args) }
+        // Register in the evaluator registry - convert RuntimeValue to Any? for the handler
+        StrudelRegistry.functions[name] = { args ->
+            func.invoke(args.map { it.value })
+        }
 
         return ReadOnlyProperty { _, _ -> func }
     }

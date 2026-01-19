@@ -103,9 +103,24 @@ fun RuntimeValue.isFunction() = this is FunctionValue || this is NativeFunctionV
  * This simplifies the type system and avoids int/float conversion issues.
  *
  * Examples: 42, 3.14, -0.5
+ *
+ * @property location Optional source location where this value originated (for tracking in AST).
+ *                    Not included in equality/hashCode checks.
  */
-data class NumberValue(override val value: Double) : RuntimeValue {
+data class NumberValue(
+    override val value: Double,
+    val location: io.peekandpoke.klang.script.ast.SourceLocation? = null,
+) : RuntimeValue {
     override fun toDisplayString(): String = value.toString()
+
+    // Only compare value, not location
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is NumberValue) return false
+        return value == other.value
+    }
+
+    override fun hashCode(): Int = value.hashCode()
 }
 
 /**
@@ -114,9 +129,24 @@ data class NumberValue(override val value: Double) : RuntimeValue {
  * Immutable text values.
  *
  * Examples: "hello", 'world'
+ *
+ * @property location Optional source location where this value originated (for tracking in AST).
+ *                    Not included in equality/hashCode checks.
  */
-data class StringValue(override val value: String) : RuntimeValue {
+data class StringValue(
+    override val value: String,
+    val location: io.peekandpoke.klang.script.ast.SourceLocation? = null,
+) : RuntimeValue {
     override fun toDisplayString(): String = value
+
+    // Only compare value, not location
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is StringValue) return false
+        return value == other.value
+    }
+
+    override fun hashCode(): Int = value.hashCode()
 }
 
 /**
