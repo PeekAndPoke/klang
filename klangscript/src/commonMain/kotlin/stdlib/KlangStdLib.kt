@@ -139,18 +139,18 @@ object KlangStdLib {
             }
 
             // Object utility methods (need RuntimeValue parameters)
-            registerExtensionMethod(ObjectUtility::class, "keys") { _, args ->
+            registerExtensionMethod(ObjectUtility::class, "keys") { _, args, _ ->
                 val obj = args[0] as? ObjectValue
                     ?: throw IllegalArgumentException("Object.keys() expects an object argument")
                 val keys = obj.properties.keys.map { StringValue(it) }
                 ArrayValue(keys.toMutableList())
             }
-            registerExtensionMethod(ObjectUtility::class, "values") { _, args ->
+            registerExtensionMethod(ObjectUtility::class, "values") { _, args, _ ->
                 val obj = args[0] as? ObjectValue
                     ?: throw IllegalArgumentException("Object.values() expects an object argument")
                 ArrayValue(obj.properties.values.toMutableList())
             }
-            registerExtensionMethod(ObjectUtility::class, "entries") { _, args ->
+            registerExtensionMethod(ObjectUtility::class, "entries") { _, args, _ ->
                 val obj = args[0] as? ObjectValue
                     ?: throw IllegalArgumentException("Object.entries() expects an object argument")
                 val entries = obj.properties.map { (key, value) ->
@@ -237,20 +237,20 @@ object KlangStdLib {
 
             // Array methods that need RuntimeValue parameters (registerFunctionRaw style)
             // These can't use type-safe registerMethod because they need to accept any RuntimeValue
-            registerExtensionMethod(ArrayValue::class, "concat") { arr, args ->
+            registerExtensionMethod(ArrayValue::class, "concat") { arr, args, _ ->
                 val other = args[0] as? ArrayValue
                     ?: throw IllegalArgumentException("concat() expects an array argument")
                 ArrayValue((arr.elements + other.elements).toMutableList())
             }
-            registerExtensionMethod(ArrayValue::class, "join") { arr, args ->
+            registerExtensionMethod(ArrayValue::class, "join") { arr, args, _ ->
                 val sep = (args[0] as? StringValue)?.value ?: ", "
                 StringValue(arr.elements.joinToString(sep) { it.toDisplayString() })
             }
-            registerExtensionMethod(ArrayValue::class, "indexOf") { arr, args ->
+            registerExtensionMethod(ArrayValue::class, "indexOf") { arr, args, _ ->
                 val searchValue = args[0]
                 NumberValue(arr.elements.indexOfFirst { it.value == searchValue.value }.toDouble())
             }
-            registerExtensionMethod(ArrayValue::class, "includes") { arr, args ->
+            registerExtensionMethod(ArrayValue::class, "includes") { arr, args, _ ->
                 val searchValue = args[0]
                 BooleanValue(arr.elements.any { it.value == searchValue.value })
             }
@@ -265,17 +265,17 @@ object KlangStdLib {
             }
 
             // String Functions (kept as global functions)
-            registerFunctionRaw("length") { args ->
+            registerFunctionRaw("length") { args, _ ->
                 requireExactly(args, 1, "length")
                 val str = toString(args[0], "length")
                 NumberValue(str.length.toDouble())
             }
-            registerFunctionRaw("toUpperCase") { args ->
+            registerFunctionRaw("toUpperCase") { args, _ ->
                 requireExactly(args, 1, "toUpperCase")
                 val str = toString(args[0], "toUpperCase")
                 StringValue(str.uppercase())
             }
-            registerFunctionRaw("toLowerCase") { args ->
+            registerFunctionRaw("toLowerCase") { args, _ ->
                 requireExactly(args, 1, "toLowerCase")
                 val str = toString(args[0], "toLowerCase")
                 StringValue(str.lowercase())

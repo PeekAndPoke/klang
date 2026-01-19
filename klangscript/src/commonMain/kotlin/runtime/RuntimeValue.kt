@@ -149,11 +149,13 @@ data object NullValue : RuntimeValue {
  * Represents a function implemented in Kotlin that can be called from scripts.
  * These are registered with the engine and become available in the script environment.
  *
- * The function receives a list of runtime values as arguments and returns a runtime value.
+ * The function receives a list of runtime values as arguments, the source location
+ * where the function was called (for error reporting and location tracking), and
+ * returns a runtime value.
  *
  * Example registration:
  * ```kotlin
- * engine.registerFunction("print") { args ->
+ * engine.registerFunction("print") { args, location ->
  *     println(args[0].toDisplayString())
  *     NullValue
  * }
@@ -161,7 +163,7 @@ data object NullValue : RuntimeValue {
  */
 data class NativeFunctionValue(
     val name: String,
-    val function: (List<RuntimeValue>) -> RuntimeValue,
+    val function: (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
 ) : RuntimeValue {
     override val value = null
 
@@ -379,7 +381,7 @@ data class ArrayValue(
  *
  * @property methodName The name of the method
  * @property receiver The native object this method is bound to
- * @property invoker Function that invokes the extension method with arguments
+ * @property invoker Function that invokes the extension method with arguments and source location
  *
  * Example:
  * ```kotlin
@@ -388,14 +390,14 @@ data class ArrayValue(
  * BoundNativeMethod(
  *     methodName = "sound",
  *     receiver = NativeObjectValue(...),
- *     invoker = { args -> /* calls sound method */ }
+ *     invoker = { args, location -> /* calls sound method */ }
  * )
  * ```
  */
 data class BoundNativeMethod(
     val methodName: String,
     val receiver: NativeObjectValue<*>,
-    val invoker: (List<RuntimeValue>) -> RuntimeValue,
+    val invoker: (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
 ) : RuntimeValue {
     override val value = null
 

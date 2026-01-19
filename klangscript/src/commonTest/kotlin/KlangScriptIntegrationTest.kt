@@ -12,7 +12,7 @@ class KlangScriptIntegrationTest : StringSpec({
 
         // Register a print function
         val engine = klangScript {
-            registerFunctionRaw("print") { values ->
+            registerFunctionRaw("print") { values, _ ->
                 val value = values.first()
                 output.add(value.toDisplayString())
                 value
@@ -30,7 +30,7 @@ class KlangScriptIntegrationTest : StringSpec({
         val output = mutableListOf<String>()
 
         val engine = klangScript {
-            registerFunctionRaw("print") { values ->
+            registerFunctionRaw("print") { values, _ ->
                 val value = values.first()
                 output.add(value.toDisplayString())
                 value
@@ -52,7 +52,7 @@ class KlangScriptIntegrationTest : StringSpec({
         var receivedValue: Double? = null
 
         val engine = klangScript {
-            registerFunctionRaw("check") { values ->
+            registerFunctionRaw("check") { values, _ ->
                 val value = values.first()
                 receivedValue = (value as NumberValue).value
                 value
@@ -68,7 +68,7 @@ class KlangScriptIntegrationTest : StringSpec({
         var sum = 0.0
 
         val engine = klangScript {
-            registerFunctionRaw("add") { args ->
+            registerFunctionRaw("add") { args, _ ->
                 sum = args.sumOf { (it as NumberValue).value }
                 NumberValue(sum)
             }
@@ -83,13 +83,13 @@ class KlangScriptIntegrationTest : StringSpec({
         val output = mutableListOf<String>()
 
         val engine = klangScript {
-            registerFunctionRaw("print") { values ->
+            registerFunctionRaw("print") { values, _ ->
                 val value = values.first()
                 output.add(value.toDisplayString())
                 value
             }
 
-            registerFunctionRaw("upper") { values ->
+            registerFunctionRaw("upper") { values, _ ->
                 val value = values.first()
                 StringValue((value as StringValue).value.uppercase())
             }

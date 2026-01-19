@@ -208,7 +208,7 @@ class ImportSystemTest : StringSpec({
     "should allow importing library that uses native functions" {
         val engine = klangScript {
             // Register a native function
-            registerFunctionRaw("nativeDouble") { values ->
+            registerFunctionRaw("nativeDouble") { values, _ ->
                 val value = values[0]
                 NumberValue((value as NumberValue).value * 2)
             }

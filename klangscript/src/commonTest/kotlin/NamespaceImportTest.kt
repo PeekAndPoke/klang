@@ -296,7 +296,7 @@ class NamespaceImportTest : StringSpec({
 
     "should support namespace with native functions in library" {
         val engine = klangScript {
-            registerFunctionRaw("nativeSquare") { values ->
+            registerFunctionRaw("nativeSquare") { values, _ ->
                 val value = values.first()
                 val num = (value as NumberValue).value
                 NumberValue(num * num)

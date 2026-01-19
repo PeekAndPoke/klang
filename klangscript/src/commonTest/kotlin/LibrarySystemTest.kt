@@ -464,7 +464,7 @@ class LibrarySystemTest : StringSpec({
         val lib = klangScriptLibrary("test") {
             source("let x = 1")
             registerFunction<Double, MathHelper>("create") { MathHelper(it) }
-            registerFunctionRaw("test") { _ -> NumberValue(0.0) }
+            registerFunctionRaw("test") { _, _ -> NumberValue(0.0) }
 
             registerType<MathHelper> {
                 registerMethod("double") { double() }
@@ -480,7 +480,7 @@ class LibrarySystemTest : StringSpec({
     "Library with registerFunction (not registerNativeFunction)" {
 
         val lib = klangScriptLibrary("utils") {
-            registerFunctionRaw("sum") { args ->
+            registerFunctionRaw("sum") { args, _ ->
                 val sum = args.sumOf { (it as NumberValue).value }
                 NumberValue(sum)
             }

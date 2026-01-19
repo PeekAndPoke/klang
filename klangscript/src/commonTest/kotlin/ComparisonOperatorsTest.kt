@@ -356,11 +356,11 @@ class ComparisonOperatorsTest : StringSpec({
     "should parse original issue line 4: note(\"a b\").filter((x) => x + 1)" {
         val script = klangScript {
             // Register minimal stubs for note() and filter() to make the code executable
-            registerFunctionRaw("note") { args ->
+            registerFunctionRaw("note") { args, _ ->
                 // Return an object with a filter method
                 ObjectValue(
                     mutableMapOf(
-                    "filter" to NativeFunctionValue("filter") { filterArgs ->
+                        "filter" to NativeFunctionValue("filter") { filterArgs, _ ->
                         // Just return the function argument to verify it was parsed
                         filterArgs[0]
                     }
@@ -377,11 +377,11 @@ class ComparisonOperatorsTest : StringSpec({
     "should parse original issue line 5: note(\"a b\").filter((x) => x.data.note == \"a\")" {
         val script = klangScript {
             // Register minimal stubs for note() and filter() to make the code executable
-            registerFunctionRaw("note") { args ->
+            registerFunctionRaw("note") { args, _ ->
                 // Return an object with a filter method
                 ObjectValue(
                     mutableMapOf(
-                    "filter" to NativeFunctionValue("filter") { filterArgs ->
+                        "filter" to NativeFunctionValue("filter") { filterArgs, _ ->
                         // Just return the function argument to verify it was parsed
                         filterArgs[0]
                     }

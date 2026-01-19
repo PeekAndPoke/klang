@@ -38,7 +38,8 @@ interface LibraryLoader {
  *
  * Example:
  * ```kotlin
- * val interpreter = Interpreter()
+ * val context = ExecutionContext(sourceName = "main.klang")
+ * val interpreter = Interpreter(executionContext = context, engine = engine)
  * val program = KlangScriptParser.parse("print('hello')")
  * interpreter.execute(program)
  * ```
@@ -50,6 +51,8 @@ class Interpreter(
     private val engine: KlangScriptEngine,
     /** Call stack for tracking function calls and generating stack traces */
     private val callStack: CallStack = CallStack(),
+    /** Execution context with source metadata and current location */
+    private val executionContext: ExecutionContext,
 ) {
     /**
      * Get the current stack trace
@@ -178,8 +181,13 @@ class Interpreter(
         // starting with the native environment of the engine.
         val libraryEnv = Environment(parent = engine.nativeEnvironment)
 
-        // Execute the library in an isolated environment
-        val libraryInterpreter = Interpreter(env = libraryEnv, engine = engine)
+        // Execute the library in an isolated environment with shared execution context
+        val libraryInterpreter = Interpreter(
+            env = libraryEnv,
+            engine = engine,
+            callStack = CallStack(),
+            executionContext = executionContext
+        )
         libraryInterpreter.execute(libraryProgram)
 
         // Import symbols from library environment into current environment
@@ -372,10 +380,16 @@ class Interpreter(
             is NativeFunctionValue -> {
                 // Push native function onto call stack
                 callStack.push("<native>", call.location)
+
+                // Update execution context with current call location
+                val previousLocation = executionContext.currentLocation
+                executionContext.currentLocation = call.location
+
                 try {
-                    // Call native Kotlin function
-                    callee.function(args)
+                    // Call native Kotlin function with location
+                    callee.function(args, call.location)
                 } finally {
+                    executionContext.currentLocation = previousLocation
                     callStack.pop()
                 }
             }
@@ -404,8 +418,8 @@ class Interpreter(
                         funcEnv.define(param, arg)
                     }
 
-                    // Create temporary interpreter with function environment and shared call stack
-                    val funcInterpreter = Interpreter(funcEnv, engine, callStack)
+                    // Create temporary interpreter with function environment, shared call stack, and execution context
+                    val funcInterpreter = Interpreter(funcEnv, engine, callStack, executionContext)
 
                     // Evaluate function body based on type
                     when (val body = callee.body) {
@@ -436,9 +450,15 @@ class Interpreter(
             is BoundNativeMethod -> {
                 // Call the bound native method
                 callStack.push("${callee.receiver.qualifiedName}.${callee.methodName}", call.location)
+
+                // Update execution context with current call location
+                val previousLocation = executionContext.currentLocation
+                executionContext.currentLocation = call.location
+
                 try {
-                    callee.invoker(args)
+                    callee.invoker(args, call.location)
                 } finally {
+                    executionContext.currentLocation = previousLocation
                     callStack.pop()
                 }
             }
@@ -707,7 +727,7 @@ class Interpreter(
                 return BoundNativeMethod(
                     methodName = memberAccess.property,
                     receiver = objValue,
-                    invoker = { args -> extensionMethod.invoker(objValue.value, args) }
+                    invoker = { args, location -> extensionMethod.invoker(objValue.value, args, location) }
                 )
             }
 
@@ -734,7 +754,7 @@ class Interpreter(
                 return BoundNativeMethod(
                     methodName = memberAccess.property,
                     receiver = NativeObjectValue.fromValue(objValue),
-                    invoker = { args -> extensionMethod.invoker(objValue, args) }
+                    invoker = { args, location -> extensionMethod.invoker(objValue, args, location) }
                 )
             }
 

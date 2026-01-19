@@ -67,18 +67,21 @@ class KlangScriptEngine private constructor(
     /** The global environment where user functions and variables are stored */
     val environment = Environment(parent = nativeEnvironment)
 
-    /** The interpreter that executes parsed programs */
-    val interpreter = Interpreter(env = environment, engine = this)
-
     /**
      * Execute a KlangScript program
      *
      * This method:
      * 1. Parses the source code into an AST
-     * 2. Executes the AST using the interpreter
-     * 3. Returns the value of the last statement
+     * 2. Creates an execution context for this execution
+     * 3. Creates an interpreter with the context
+     * 4. Executes the AST using the interpreter
+     * 5. Returns the value of the last statement
+     *
+     * Each execution gets its own ExecutionContext, allowing multiple concurrent
+     * executions without interference (e.g., multiple editor instances).
      *
      * @param source The KlangScript source code to execute
+     * @param sourceName Optional name for the source (e.g., "main.klang", "user-script")
      * @return The runtime value of the last statement
      * @throws ParseException if the source contains syntax errors
      * @throws RuntimeException if execution fails (e.g., undefined variable)
@@ -89,12 +92,24 @@ class KlangScriptEngine private constructor(
      *     print("first")
      *     print("second")
      *     42
-     * """)
+     * """, sourceName = "test.klang")
      * // result is NumberValue(42.0)
      * ```
      */
     fun execute(source: String, sourceName: String? = null): RuntimeValue {
         val program = KlangScriptParser.parse(source, sourceName)
+
+        // Create execution context for this execution
+        val executionContext = ExecutionContext(sourceName = sourceName)
+
+        // Create interpreter with execution context
+        val interpreter = Interpreter(
+            env = environment,
+            engine = this,
+            callStack = CallStack(),
+            executionContext = executionContext
+        )
+
         return interpreter.execute(program)
     }
 

@@ -19,12 +19,12 @@ data class NativeTypeInfo(
  *
  * @property methodName The name of the method
  * @property receiverClass The Kotlin class this method is registered on
- * @property invoker Function that invokes the extension method with receiver and arguments
+ * @property invoker Function that invokes the extension method with receiver, arguments, and source location
  */
 data class NativeExtensionMethod(
     val methodName: String,
     val receiverClass: KClass<*>,
-    val invoker: (receiver: Any, args: List<RuntimeValue>) -> RuntimeValue,
+    val invoker: (receiver: Any, args: List<RuntimeValue>, location: io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
 )
 
 /** Check if the number of arguments matches the expected count */
@@ -150,8 +150,10 @@ private fun FunctionValue.callFunction(args: List<Any?>): Any? {
     parameters.zip(wrappedArgs).forEach { (paramName, argValue) ->
         callEnv.define(paramName, argValue)
     }
-    // 4. Create a new Interpreter instance
-    val interpreter = Interpreter(env = callEnv, engine = engine)
+    // 4. Create a new Interpreter instance with a default execution context
+    // This is used when script functions are called from Kotlin code
+    val executionContext = ExecutionContext(sourceName = "native-callback")
+    val interpreter = Interpreter(env = callEnv, engine = engine, executionContext = executionContext)
     // 5. Evaluate the body based on type
     val result = when (val functionBody = body) {
         is ArrowFunctionBody.ExpressionBody -> {

@@ -387,13 +387,13 @@ class RuntimeValueHelpersTest : StringSpec({
     }
 
     "isFunction() returns true for NativeFunctionValue" {
-        val value = NativeFunctionValue("test") { NullValue }
+        val value = NativeFunctionValue("test") { _, _ -> NullValue }
         value.isFunction() shouldBe true
     }
 
     "isFunction() returns true for BoundNativeMethod" {
         val receiver = NativeObjectValue.fromValue("test")
-        val value = BoundNativeMethod("method", receiver) { NullValue }
+        val value = BoundNativeMethod("method", receiver) { _, _ -> NullValue }
         value.isFunction() shouldBe true
     }
 

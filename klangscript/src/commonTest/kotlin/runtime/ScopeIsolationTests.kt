@@ -235,7 +235,7 @@ class ScopeIsolationTest : StringSpec({
 
     "Encapsulation: Callbacks passed to native functions retain closure" {
         val engine = klangScript {
-            registerFunctionRaw("runCallback") { args ->
+            registerFunctionRaw("runCallback") { args, _ ->
                 val fn = args[0] as FunctionValue
                 val kotlinFn: () -> Any? = fn.convertFunctionToKotlin()
                 val result = kotlinFn()

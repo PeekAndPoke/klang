@@ -174,7 +174,7 @@ class ImportAliasingTest : StringSpec({
 
     "should support aliasing for complex library patterns" {
         val engine = klangScript {
-            registerFunctionRaw("nativeLog") { values ->
+            registerFunctionRaw("nativeLog") { values, _ ->
                 val value = values[0]
                 NumberValue((value as NumberValue).value * 10)
             }

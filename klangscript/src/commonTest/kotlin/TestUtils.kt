@@ -46,5 +46,5 @@ fun KlangScriptEngine.createNativeFunction(
     name: String,
     function: (List<RuntimeValue>) -> RuntimeValue,
 ): NativeFunctionValue {
-    return NativeFunctionValue(name, function)
+    return NativeFunctionValue(name) { args, _ -> function(args) }
 }

@@ -138,7 +138,7 @@ class ArrayLiteralTest : StringSpec({
         val captured = mutableListOf<String>()
 
         val engine = klangScript {
-            registerFunctionRaw("capture") { args ->
+            registerFunctionRaw("capture") { args, _ ->
                 captured.add(args[0].toDisplayString())
                 args[0]
             }
@@ -154,8 +154,8 @@ class ArrayLiteralTest : StringSpec({
 
     "Array with function calls as elements" {
         val engine = klangScript {
-            registerFunctionRaw("getValue") { NumberValue(42.0) }
-            registerFunctionRaw("getDouble") { args ->
+            registerFunctionRaw("getValue") { _, _ -> NumberValue(42.0) }
+            registerFunctionRaw("getDouble") { args, _ ->
                 val n = args[0] as NumberValue
                 NumberValue(n.value * 2)
             }

@@ -114,7 +114,7 @@ class StackTraceTest : StringSpec({
 
     "Stack trace with native function calls" {
         val engine = klangScript {
-            registerFunctionRaw("process") { x ->
+            registerFunctionRaw("process") { x, _ ->
                 // This will cause the script function to throw
                 x.first()
             }

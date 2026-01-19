@@ -15,7 +15,7 @@ class KlangScriptExtension(
     /** Registered libraries */
     val libraries: Map<String, KlangScriptLibrary>,
     /** Registered native functions */
-    val functions: List<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>,
+    val functions: List<Pair<String, (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue>>,
     /** Registered native types */
     val types: Map<KClass<*>, NativeTypeInfo>,
     /** Registered native objects */
@@ -41,8 +41,11 @@ interface KlangScriptExtensionBuilder {
     /** Register a library with the engine */
     fun registerLibrary(library: KlangScriptLibrary)
 
-    /** Registers a native function as a top-level function */
-    fun registerFunctionRaw(name: String, fn: (List<RuntimeValue>) -> RuntimeValue)
+    /** Registers a native function as a top-level function with source location */
+    fun registerFunctionRaw(
+        name: String,
+        fn: (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+    )
 
     /** Register a native Kotlin type */
     fun <T : Any> registerType(cls: KClass<T>, block: NativeObjectExtensionsBuilder<T>.() -> Unit = {})
@@ -54,7 +57,7 @@ interface KlangScriptExtensionBuilder {
     fun <T : Any> registerExtensionMethod(
         receiver: KClass<T>,
         name: String,
-        fn: (T, List<RuntimeValue>) -> RuntimeValue,
+        fn: (T, List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
     )
 }
 
@@ -66,7 +69,8 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
     private val libraries = mutableMapOf<String, KlangScriptLibrary>()
 
     /** Registered native functions */
-    private val nativeFunctions = mutableListOf<Pair<String, (List<RuntimeValue>) -> RuntimeValue>>()
+    private val nativeFunctions =
+        mutableListOf<Pair<String, (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue>>()
 
     /** Registered native types */
     private val nativeTypes = mutableMapOf<KClass<*>, NativeTypeInfo>()
@@ -92,7 +96,10 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
     }
 
     /** Register a native function */
-    override fun registerFunctionRaw(name: String, fn: (List<RuntimeValue>) -> RuntimeValue) {
+    override fun registerFunctionRaw(
+        name: String,
+        fn: (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+    ) {
         nativeFunctions.add(name to fn)
     }
 
@@ -122,14 +129,16 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
 
     /** Register a native Kotlin extension method */
     override fun <T : Any> registerExtensionMethod(
-        receiver: KClass<T>, name: String, fn: (T, List<RuntimeValue>) -> RuntimeValue,
+        receiver: KClass<T>,
+        name: String,
+        fn: (T, List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
     ) {
         val extensionMethod = NativeExtensionMethod(
             methodName = name,
             receiverClass = receiver,
-            invoker = { receiver, args ->
+            invoker = { receiver, args, location ->
                 @Suppress("UNCHECKED_CAST")
-                val result = fn(receiver as T, args)
+                val result = fn(receiver as T, args, location)
                 wrapAsRuntimeValue(result)
             })
 
@@ -152,7 +161,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
     inline fun <reified P : Any, reified R : Any> registerVarargMethod(
         name: String, noinline fn: T.(List<P>) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args ->
+        builder.registerExtensionMethod(cls, name) { receiver, args, _ ->
             val params = List(args.size) { index ->
                 convertArgToKotlin(name, args, index, P::class)
             }
@@ -166,7 +175,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
     inline fun <reified R : Any> registerMethod(
         name: String, noinline fn: T.(Any?) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, _ ->
+        builder.registerExtensionMethod(cls, name) { receiver, _, _ ->
             val result = receiver.fn(null)
             wrapAsRuntimeValue(result)
         }
@@ -176,7 +185,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
     inline fun <reified P1 : Any, reified R : Any> registerMethod(
         name: String, noinline fn: T.(P1) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args ->
+        builder.registerExtensionMethod(cls, name) { receiver, args, _ ->
             checkArgsSize(name, args, 1)
             val p1 = convertArgToKotlin(name, args, 0, P1::class)
             val result = receiver.fn(p1)
@@ -190,7 +199,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
     inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> registerMethod(
         name: String, noinline fn: T.(P1, P2) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args ->
+        builder.registerExtensionMethod(cls, name) { receiver, args, _ ->
             checkArgsSize(name, args, 2)
             val p1 = convertArgToKotlin(name, args, 0, P1::class)
             val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -203,7 +212,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
     inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any> registerMethod(
         name: String, noinline fn: T.(P1, P2, P3) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args ->
+        builder.registerExtensionMethod(cls, name) { receiver, args, _ ->
             checkArgsSize(name, args, 3)
             val p1 = convertArgToKotlin(name, args, 0, P1::class)
             val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -216,7 +225,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
     /** Register a native extension method with four parameters */
     inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
             registerMethod(name: String, noinline fn: T.(P1, P2, P3, P4) -> R) {
-        builder.registerExtensionMethod(cls, name) { receiver, args ->
+        builder.registerExtensionMethod(cls, name) { receiver, args, _ ->
             checkArgsSize(name, args, 4)
             val p1 = convertArgToKotlin(name, args, 0, P1::class)
             val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -227,7 +236,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
         }
     }
 
-    /** Register a native extension method with four parameters */
+    /** Register a native extension method with five parameters */
     inline fun <
             reified P1 : Any,
             reified P2 : Any,
@@ -239,7 +248,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
         name: String,
         noinline fn: T.(P1, P2, P3, P4, P5) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args ->
+        builder.registerExtensionMethod(cls, name) { receiver, args, _ ->
             checkArgsSize(name, args, 5)
             val p1 = convertArgToKotlin(name, args, 0, P1::class)
             val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -270,7 +279,7 @@ inline fun <reified T : Any> KlangScriptExtensionBuilder.registerType(
 inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.registerVarargFunction(
     name: String, noinline fn: (List<P>) -> R,
 ) {
-    registerFunctionRaw(name) { args ->
+    registerFunctionRaw(name) { args, _ ->
         val params = List(args.size) { index ->
             // println("Converting arg $index of type ${args[index].value!!::class} to type ${P::class}")
             convertArgToKotlin(name, args, index, P::class)
@@ -285,7 +294,7 @@ inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.regist
 inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (Any?) -> R,
 ) {
-    registerFunctionRaw(name) { _ ->
+    registerFunctionRaw(name) { _, _ ->
         val result = fn(null)
         wrapAsRuntimeValue(result)
     }
@@ -295,7 +304,7 @@ inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
 inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (P1) -> R,
 ) {
-    registerFunctionRaw(name) { args ->
+    registerFunctionRaw(name) { args, _ ->
         checkArgsSize(name, args, 1)
         val param = convertArgToKotlin(name, args, 0, P1::class)
         val result = fn(param)
@@ -307,7 +316,7 @@ inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.regis
 inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (P1, P2) -> R,
 ) {
-    registerFunctionRaw(name) { args ->
+    registerFunctionRaw(name) { args, _ ->
         checkArgsSize(name, args, 2)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -319,7 +328,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExte
 /** Registers a native function as a top-level function with three parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3) -> R) {
-    registerFunctionRaw(name) { args ->
+    registerFunctionRaw(name) { args, _ ->
         checkArgsSize(name, args, 3)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -332,7 +341,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : An
 /** Registers a native function as a top-level function with four parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4) -> R) {
-    registerFunctionRaw(name) { args ->
+    registerFunctionRaw(name) { args, _ ->
         checkArgsSize(name, args, 4)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)
@@ -346,7 +355,7 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
 /** Registers a native function as a top-level function with five parameters */
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4, P5) -> R) {
-    registerFunctionRaw(name) { args ->
+    registerFunctionRaw(name) { args, _ ->
         checkArgsSize(name, args, 5)
         val p1 = convertArgToKotlin(name, args, 0, P1::class)
         val p2 = convertArgToKotlin(name, args, 1, P2::class)

@@ -336,7 +336,7 @@ class ErrorHandlingTest : StringSpec({
 
     "Error in nested function call" {
         val builder = KlangScriptEngine.builder()
-        builder.registerFunctionRaw("process") { values ->
+        builder.registerFunctionRaw("process") { values, _ ->
             val x = values[0]
             NumberValue((x as NumberValue).value * 2)
         }
@@ -609,7 +609,7 @@ class ErrorHandlingTest : StringSpec({
 
     "ReferenceError - undefined in chained calls" {
         val builder = KlangScriptEngine.builder()
-        builder.registerFunctionRaw("process") { x -> x.first() }
+        builder.registerFunctionRaw("process") { x, _ -> x.first() }
 
         val engine = builder.build()
 
