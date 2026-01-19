@@ -28,3 +28,20 @@ data class StrudelPatternEvent(
     @Transient
     val sourceLocations: SourceLocationChain? = null,
 )
+
+/**
+ * Event fired when a voice is scheduled for playback
+ *
+ * Used for live code highlighting - provides timing and source location information.
+ * Not serialized - only used for frontend callbacks.
+ */
+data class ScheduledVoiceEvent(
+    /** Absolute start time (seconds from KlangTime epoch) */
+    val startTime: Double,
+    /** Absolute end time (seconds from KlangTime epoch) */
+    val endTime: Double,
+    /** The voice data being played */
+    val data: VoiceData,
+    /** Source location chain for highlighting */
+    val sourceLocations: SourceLocationChain?,
+)

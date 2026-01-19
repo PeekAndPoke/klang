@@ -11,13 +11,29 @@ import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
 
+fun <T> parseMiniNotation(
+    input: StrudelDslArg<T>,
+    atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
+): StrudelPattern = when (val v = input.value) {
+    is StrudelPattern -> v
+    null -> silence
+    else -> parseMiniNotation(
+        input = v.toString(),
+        baseLocation = input.sourceLocation,
+        atomFactory = atomFactory,
+    )
+}
+
 /** Shortcut for parsing mini notation into patterns */
 fun parseMiniNotation(
     input: String,
     baseLocation: SourceLocation? = null,
     atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
-): StrudelPattern =
-    MiniNotationParser(input, baseLocation, atomFactory).parse()
+): StrudelPattern = MiniNotationParser(
+    input = input,
+    baseLocation = baseLocation,
+    atomFactory = atomFactory,
+).parse()
 
 class MiniNotationParser(
     private val input: String,

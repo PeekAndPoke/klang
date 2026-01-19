@@ -31,6 +31,8 @@ class StrudelPlayback internal constructor(
     private val scope: CoroutineScope,
     /** The dispatcher used for the event fetcher */
     private val fetcherDispatcher: CoroutineDispatcher,
+    /** The dispatcher used for frontend callbacks */
+    private val callbackDispatcher: CoroutineDispatcher,
     /** Callback invoked when this playback is stopped */
     private val onStopped: (KlangPlayback) -> Unit = {},
 ) : KlangPlayback {
@@ -74,15 +76,12 @@ class StrudelPlayback internal constructor(
     // ===== Live Coding Callbacks =====
 
     /**
-     * Callback fired when events are scheduled for playback
+     * Callback fired when a voice is scheduled for playback
      *
-     * Used for live code highlighting - provides the event and its scheduled time
+     * Used for live code highlighting - provides timing and source location information
      * so the frontend can highlight the corresponding source code.
-     *
-     * @param {event} The pattern event being scheduled
-     * @param {absoluteTime} The absolute scheduled time (seconds from KlangTime epoch)
      */
-    var onEventScheduled: ((event: StrudelPatternEvent, absoluteTime: Double) -> Unit)? = null
+    var onVoiceScheduled: ((event: ScheduledVoiceEvent) -> Unit)? = null
 
     // ===== Public API =====
 
@@ -196,22 +195,44 @@ class StrudelPlayback internal constructor(
         val secPerCycle = 1.0 / cyclesPerSecond
         val playbackStartTimeSec = startTimeMs / 1000.0
 
-        return events.map { event ->
+        // Build voice events for callbacks (collected first to avoid blocking audio scheduling)
+        val voiceEvents = mutableListOf<ScheduledVoiceEvent>()
+
+        val voices = events.map { event ->
             val relativeStartTime = (event.begin * secPerCycle).toDouble()
             val duration = (event.dur * secPerCycle).toDouble()
 
             // Convert to absolute time
             val absoluteStartTime = playbackStartTimeSec + relativeStartTime
+            val absoluteEndTime = absoluteStartTime + duration
 
-            // Fire callback for live code highlighting
-            onEventScheduled?.invoke(event, absoluteStartTime)
+            // Collect callback event (don't invoke yet - audio scheduling is critical path)
+            voiceEvents.add(
+                ScheduledVoiceEvent(
+                    startTime = absoluteStartTime,
+                    endTime = absoluteEndTime,
+                    data = event.data,
+                    sourceLocations = event.sourceLocations,
+                )
+            )
 
             ScheduledVoice(
                 data = event.data,
                 startTime = absoluteStartTime,
-                gateEndTime = absoluteStartTime + duration,
+                gateEndTime = absoluteEndTime,
             )
         }
+
+        // Fire callbacks on separate dispatcher to avoid blocking audio scheduling
+        if (voiceEvents.isNotEmpty() && onVoiceScheduled != null) {
+            scope.launch(callbackDispatcher) {
+                voiceEvents.forEach { event ->
+                    onVoiceScheduled?.invoke(event)
+                }
+            }
+        }
+
+        return voices
     }
 
     private fun lookAheadForSampleSounds(from: Double, dur: Double) {

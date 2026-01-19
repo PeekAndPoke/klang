@@ -19,6 +19,7 @@ fun KlangPlayer.playStrudel(
         commLink = commLink,
         scope = playbackScope,
         fetcherDispatcher = playbackFetcherDispatcher,
+        callbackDispatcher = playbackCallbackDispatcher,
         onStopped = { unregisterPlayback(it) }
     )
     registerPlayback(playback)

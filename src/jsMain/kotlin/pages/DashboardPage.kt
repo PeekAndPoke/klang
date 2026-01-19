@@ -1,11 +1,13 @@
 package io.peekandpoke.klang.pages
 
+import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.NoProps
 import de.peekandpoke.kraft.components.PureComponent
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
@@ -21,6 +23,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
 import kotlinx.html.Tag
+import kotlinx.html.div
 import kotlinx.serialization.builtins.serializer
 
 @Suppress("FunctionName")
@@ -48,6 +51,8 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     val cps: Double by subscribingTo(cpsStream) {
         song?.updateCyclesPerSecond(it)
     }
+
+    val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
 
     init {
         lifecycle {
@@ -77,14 +82,23 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    fun doSomethingOnEditor() {
+        editorRef {
+            it
+            val x: CodeMirrorComp = it
+        }
+    }
+
     override fun VDom.render() {
 
         ui.container {
             ui.header H1 { +"Klang Audio Engine" }
 
             ui.form {
-
+                key = "dashboard-form"
                 ui.six.fields.fields {
+                    key = "dashboard-form-fields"
+
                     ui.field {
                         ui.fluid.button {
                             onClick {
@@ -95,6 +109,43 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                                 val pattern = StrudelPattern.compile(input)!!
 
                                                 song = p.playStrudel(pattern)
+
+                                                // Set up live code highlighting callback
+                                                song?.onVoiceScheduled = { event ->
+//                                                    console.log(
+//                                                        "Voice scheduled:",
+//                                                        "time=${event.startTime.asDynamic().toFixed(3)}-${event.endTime.asDynamic().toFixed(3)}",
+//                                                        "dur=${(event.endTime - event.startTime).asDynamic().toFixed(3)}",
+//                                                        "note=${event.data.note}",
+//                                                        "sound=${event.data.sound}",
+//                                                        "locations=${event.sourceLocations}"
+//                                                    )
+
+                                                    // Highlight in editor
+                                                    val location = event.sourceLocations?.innermost
+
+                                                    console.log("location", location)
+
+                                                    if (location != null) {
+                                                        editorRef { editor ->
+                                                            console.log("here", editor)
+
+                                                            val highlightId = editor.addHighlight(
+                                                                line = location.line,
+                                                                column = location.column,
+                                                                length = 2  // TODO: calculate actual length
+                                                            )
+
+                                                            // Remove highlight after duration
+                                                            val durationMs =
+                                                                ((event.endTime - event.startTime) * 1000).toInt()
+                                                            kotlinx.browser.window.setTimeout({
+                                                                editorRef { it.removeHighlight(highlightId) }
+                                                            }, durationMs)
+                                                        }
+                                                    }
+                                                }
+
                                                 song?.start(
                                                     StrudelPlayback.Options(cyclesPerSecond = cps)
                                                 )
@@ -139,8 +190,13 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                 }
 
-                // CodeMirror editor container
-                CodeMirrorComp(code = input, onCodeChanged = { inputStream(it) })
+                div {
+                    key = "dashboard-form-code"
+
+                    // CodeMirror editor container
+                    CodeMirrorComp(code = input, onCodeChanged = { inputStream(it) })
+                        .track(editorRef)
+                }
             }
         }
     }

@@ -21,6 +21,7 @@ actual fun klangPlayer(
         backendFactory = { config -> JsAudioBackend(config) },
         fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = Dispatchers.Default,
+        callbackDispatcher = Dispatchers.Default,
     )
 }
 

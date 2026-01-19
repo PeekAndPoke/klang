@@ -20,7 +20,7 @@ private val distortMutation = voiceModifier {
     copy(distort = it?.asDoubleOrNull())
 }
 
-private fun applyDistort(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyDistort(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = distortMutation,
@@ -30,15 +30,15 @@ private fun applyDistort(source: StrudelPattern, args: List<Any?>): StrudelPatte
 }
 
 @StrudelDsl
-val StrudelPattern.distort by dslPatternExtension { p, args ->
+val StrudelPattern.distort by dslPatternExtension { p, args, callInfo ->
     applyDistort(p, args)
 }
 
 @StrudelDsl
-val distort by dslFunction { args -> args.toPattern(distortMutation) }
+val distort by dslFunction { args, callInfo -> args.toPattern(distortMutation) }
 
 @StrudelDsl
-val String.distort by dslStringExtension { p, args ->
+val String.distort by dslStringExtension { p, args, callInfo ->
     applyDistort(p, args)
 }
 
@@ -46,7 +46,7 @@ val String.distort by dslStringExtension { p, args ->
 
 private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
 
-private fun applyCrush(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyCrush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = crushMutation,
@@ -56,15 +56,15 @@ private fun applyCrush(source: StrudelPattern, args: List<Any?>): StrudelPattern
 }
 
 @StrudelDsl
-val StrudelPattern.crush by dslPatternExtension { p, args ->
+val StrudelPattern.crush by dslPatternExtension { p, args, callInfo ->
     applyCrush(p, args)
 }
 
 @StrudelDsl
-val crush by dslFunction { args -> args.toPattern(crushMutation) }
+val crush by dslFunction { args, callInfo -> args.toPattern(crushMutation) }
 
 @StrudelDsl
-val String.crush by dslStringExtension { p, args ->
+val String.crush by dslStringExtension { p, args, callInfo ->
     applyCrush(p, args)
 }
 
@@ -74,7 +74,7 @@ private val coarseMutation = voiceModifier {
     copy(coarse = it?.asDoubleOrNull())
 }
 
-private fun applyCoarse(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyCoarse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = coarseMutation,
@@ -84,15 +84,15 @@ private fun applyCoarse(source: StrudelPattern, args: List<Any?>): StrudelPatter
 }
 
 @StrudelDsl
-val StrudelPattern.coarse by dslPatternExtension { p, args ->
+val StrudelPattern.coarse by dslPatternExtension { p, args, callInfo ->
     applyCoarse(p, args)
 }
 
 @StrudelDsl
-val coarse by dslFunction { args -> args.toPattern(coarseMutation) }
+val coarse by dslFunction { args, callInfo -> args.toPattern(coarseMutation) }
 
 @StrudelDsl
-val String.coarse by dslStringExtension { p, args ->
+val String.coarse by dslStringExtension { p, args, callInfo ->
     applyCoarse(p, args)
 }
 
@@ -102,7 +102,7 @@ private val roomMutation = voiceModifier {
     copy(room = it?.asDoubleOrNull())
 }
 
-private fun applyRoom(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyRoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = roomMutation,
@@ -112,15 +112,15 @@ private fun applyRoom(source: StrudelPattern, args: List<Any?>): StrudelPattern 
 }
 
 @StrudelDsl
-val StrudelPattern.room by dslPatternExtension { p, args ->
+val StrudelPattern.room by dslPatternExtension { p, args, callInfo ->
     applyRoom(p, args)
 }
 
 @StrudelDsl
-val room by dslFunction { args -> args.toPattern(roomMutation) }
+val room by dslFunction { args, callInfo -> args.toPattern(roomMutation) }
 
 @StrudelDsl
-val String.room by dslStringExtension { p, args ->
+val String.room by dslStringExtension { p, args, callInfo ->
     applyRoom(p, args)
 }
 
@@ -130,7 +130,7 @@ private val roomSizeMutation = voiceModifier {
     copy(roomSize = it?.asDoubleOrNull())
 }
 
-private fun applyRoomSize(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyRoomSize(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = roomSizeMutation,
@@ -140,29 +140,29 @@ private fun applyRoomSize(source: StrudelPattern, args: List<Any?>): StrudelPatt
 }
 
 @StrudelDsl
-val StrudelPattern.roomsize by dslPatternExtension { p, args ->
+val StrudelPattern.roomsize by dslPatternExtension { p, args, callInfo ->
     applyRoomSize(p, args)
 }
 
 @StrudelDsl
-val roomsize by dslFunction { args -> args.toPattern(roomSizeMutation) }
+val roomsize by dslFunction { args, callInfo -> args.toPattern(roomSizeMutation) }
 
 @StrudelDsl
-val String.roomsize by dslStringExtension { p, args ->
+val String.roomsize by dslStringExtension { p, args, callInfo ->
     applyRoomSize(p, args)
 }
 
 /** Alias for [roomsize] */
 @StrudelDsl
-val StrudelPattern.rsize by dslPatternExtension { p, args -> applyRoomSize(p, args) }
+val StrudelPattern.rsize by dslPatternExtension { p, args, callInfo -> applyRoomSize(p, args) }
 
 /** Alias for [roomsize] */
 @StrudelDsl
-val rsize by dslFunction { args -> args.toPattern(roomSizeMutation) }
+val rsize by dslFunction { args, callInfo -> args.toPattern(roomSizeMutation) }
 
 /** Alias for [roomsize] on a string */
 @StrudelDsl
-val String.rsize by dslStringExtension { p, args -> applyRoomSize(p, args) }
+val String.rsize by dslStringExtension { p, args, callInfo -> applyRoomSize(p, args) }
 
 // -- delay() ----------------------------------------------------------------------------------------------------------
 
@@ -170,7 +170,7 @@ private val delayMutation = voiceModifier {
     copy(delay = it?.asDoubleOrNull())
 }
 
-private fun applyDelay(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyDelay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = delayMutation,
@@ -180,15 +180,15 @@ private fun applyDelay(source: StrudelPattern, args: List<Any?>): StrudelPattern
 }
 
 @StrudelDsl
-val StrudelPattern.delay by dslPatternExtension { p, args ->
+val StrudelPattern.delay by dslPatternExtension { p, args, callInfo ->
     applyDelay(p, args)
 }
 
 @StrudelDsl
-val delay by dslFunction { args -> args.toPattern(delayMutation) }
+val delay by dslFunction { args, callInfo -> args.toPattern(delayMutation) }
 
 @StrudelDsl
-val String.delay by dslStringExtension { p, args ->
+val String.delay by dslStringExtension { p, args, callInfo ->
     applyDelay(p, args)
 }
 
@@ -198,7 +198,7 @@ private val delayTimeMutation = voiceModifier {
     copy(delayTime = it?.asDoubleOrNull())
 }
 
-private fun applyDelayTime(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyDelayTime(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = delayTimeMutation,
@@ -208,15 +208,15 @@ private fun applyDelayTime(source: StrudelPattern, args: List<Any?>): StrudelPat
 }
 
 @StrudelDsl
-val StrudelPattern.delaytime by dslPatternExtension { p, args ->
+val StrudelPattern.delaytime by dslPatternExtension { p, args, callInfo ->
     applyDelayTime(p, args)
 }
 
 @StrudelDsl
-val delaytime by dslFunction { args -> args.toPattern(delayTimeMutation) }
+val delaytime by dslFunction { args, callInfo -> args.toPattern(delayTimeMutation) }
 
 @StrudelDsl
-val String.delaytime by dslStringExtension { p, args ->
+val String.delaytime by dslStringExtension { p, args, callInfo ->
     applyDelayTime(p, args)
 }
 
@@ -226,7 +226,7 @@ private val delayFeedbackMutation = voiceModifier {
     copy(delayFeedback = it?.asDoubleOrNull())
 }
 
-private fun applyDelayFeedback(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyDelayFeedback(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = delayFeedbackMutation,
@@ -236,14 +236,14 @@ private fun applyDelayFeedback(source: StrudelPattern, args: List<Any?>): Strude
 }
 
 @StrudelDsl
-val StrudelPattern.delayfeedback by dslPatternExtension { p, args ->
+val StrudelPattern.delayfeedback by dslPatternExtension { p, args, callInfo ->
     applyDelayFeedback(p, args)
 }
 
 @StrudelDsl
-val delayfeedback by dslFunction { args -> args.toPattern(delayFeedbackMutation) }
+val delayfeedback by dslFunction { args, callInfo -> args.toPattern(delayFeedbackMutation) }
 
 @StrudelDsl
-val String.delayfeedback by dslStringExtension { p, args ->
+val String.delayfeedback by dslStringExtension { p, args, callInfo ->
     applyDelayFeedback(p, args)
 }

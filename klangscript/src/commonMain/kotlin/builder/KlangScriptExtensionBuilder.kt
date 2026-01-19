@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.script.builder
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.getUniqueClassName
 import io.peekandpoke.klang.script.runtime.*
 import kotlin.jvm.JvmName
@@ -166,6 +167,39 @@ class NativeObjectExtensionsBuilder<T : Any>(
                 convertArgToKotlin(name, args, index, P::class)
             }
             val result = receiver.fn(params)
+            wrapAsRuntimeValue(result)
+        }
+    }
+
+    /**
+     * Register a native extension method with CallInfo for location tracking
+     *
+     * Extracts source locations from RuntimeValue parameters and provides them via CallInfo.
+     */
+    inline fun <reified P : Any, reified R> registerVarargMethodWithCallInfo(
+        name: String, noinline fn: T.(List<P>, CallInfo) -> R,
+    ) {
+        builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
+            // Extract parameter locations from RuntimeValue instances
+            val paramLocations = args.map { arg ->
+                when (arg) {
+                    is StringValue -> arg.location
+                    is NumberValue -> arg.location
+                    else -> null
+                }
+            }
+
+            val callInfo = CallInfo(
+                callLocation = callLocation,
+                paramLocations = paramLocations
+            )
+
+            // Convert arguments to target type
+            val params = List(args.size) { index ->
+                convertArgToKotlin(name, args, index, P::class)
+            }
+
+            val result = receiver.fn(params, callInfo)
             wrapAsRuntimeValue(result)
         }
     }
@@ -363,6 +397,41 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
         val p4 = convertArgToKotlin(name, args, 3, P4::class)
         val p5 = convertArgToKotlin(name, args, 4, P5::class)
         val result = fn(p1, p2, p3, p4, p5)
+        wrapAsRuntimeValue(result)
+    }
+}
+
+// ===== CallInfo-aware registration methods =====
+
+/**
+ * Registers a native function with CallInfo for location tracking
+ *
+ * Extracts source locations from RuntimeValue parameters and provides them via CallInfo.
+ */
+inline fun <reified P : Any, reified R> KlangScriptExtensionBuilder.registerVarargFunctionWithCallInfo(
+    name: String, noinline fn: (List<P>, CallInfo) -> R,
+) {
+    registerFunctionRaw(name) { args, callLocation ->
+        // Extract parameter locations from RuntimeValue instances
+        val paramLocations = args.map { arg ->
+            when (arg) {
+                is StringValue -> arg.location
+                is NumberValue -> arg.location
+                else -> null
+            }
+        }
+
+        val callInfo = CallInfo(
+            callLocation = callLocation,
+            paramLocations = paramLocations
+        )
+
+        // Convert arguments to target type
+        val params = List(args.size) { index ->
+            convertArgToKotlin(name, args, index, P::class)
+        }
+
+        val result = fn(params, callInfo)
         wrapAsRuntimeValue(result)
     }
 }

@@ -67,8 +67,8 @@ internal class ChoicePattern(
         // Helper to handle raw lists
         fun createFromRaw(
             selector: StrudelPattern,
-            choices: List<Any?>,
-            weights: List<Any?>? = null,
+            choices: List<StrudelDslArg<Any?>>,
+            weights: List<StrudelDslArg<Any?>>? = null,
             mode: StructurePattern.Mode = StructurePattern.Mode.Out,
         ): StrudelPattern {
             val choicePatterns = choices.toListOfPatterns(defaultModifier)

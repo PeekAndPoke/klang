@@ -58,7 +58,7 @@ private fun StrudelPattern.mapRangeContext(
  * Maps a pattern in the range 0..1 to -1..1.
  */
 @StrudelDsl
-val StrudelPattern.toBipolar by dslPatternExtension { p, _ ->
+val StrudelPattern.toBipolar by dslPatternExtension { p, args, callInfo ->
     val contextAware = p.mapRangeContext(
         transformMin = { (it + 1.0) / 2.0 },
         transformMax = { (it + 1.0) / 2.0 }
@@ -70,14 +70,14 @@ val StrudelPattern.toBipolar by dslPatternExtension { p, _ ->
 }
 
 @StrudelDsl
-val String.toBipolar by dslStringExtension { p, _ -> p.toBipolar() }
+val String.toBipolar by dslStringExtension { p, args, callInfo -> p.toBipolar() }
 
 /**
  * Maps a pattern in the range -1..1 to 0..1.
  * Useful for converting LFOs like sine2/tri2 to probabilities or selectors.
  */
 @StrudelDsl
-val StrudelPattern.fromBipolar by dslPatternExtension { p, _ ->
+val StrudelPattern.fromBipolar by dslPatternExtension { p, args, callInfo ->
     val contextAware = p.mapRangeContext(
         transformMin = { it * 2.0 - 1.0 },
         transformMax = { it * 2.0 - 1.0 }
@@ -89,14 +89,14 @@ val StrudelPattern.fromBipolar by dslPatternExtension { p, _ ->
 }
 
 @StrudelDsl
-val String.fromBipolar by dslStringExtension { p, _ -> p.fromBipolar() }
+val String.fromBipolar by dslStringExtension { p, args, callInfo -> p.fromBipolar() }
 
 // -- Continuous patterns settings -------------------------------------------------------------------------------------
 
-private fun applyRange(pattern: StrudelPattern, args: List<Any?>): ContextModifierPattern {
-    val min = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
-    val max = args.getOrNull(1)?.asDoubleOrNull() ?: 1.0
-    val granularity = args.getOrNull(2)?.asDoubleOrNull()?.toRational() ?: Rational.ONE
+private fun applyRange(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): ContextModifierPattern {
+    val min = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
+    val max = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 1.0
+    val granularity = args.getOrNull(2)?.value?.asDoubleOrNull()?.toRational() ?: Rational.ONE
 
     return pattern.withContext {
         set(ContinuousPattern.minKey, min)
@@ -109,10 +109,10 @@ private fun applyRange(pattern: StrudelPattern, args: List<Any?>): ContextModifi
  * Sets the range of a continuous pattern to a new minimum and maximum value.
  */
 @StrudelDsl
-val StrudelPattern.range by dslPatternExtension { p, args -> applyRange(p, args) }
+val StrudelPattern.range by dslPatternExtension { p, args, callInfo -> applyRange(p, args) }
 
 @StrudelDsl
-val String.range by dslStringExtension { p, args -> applyRange(p, args) }
+val String.range by dslStringExtension { p, args, callInfo -> applyRange(p, args) }
 
 // -- Continuous patterns ----------------------------------------------------------------------------------------------
 
@@ -130,16 +130,16 @@ val rest by dslObject { silence }
  * The first parameter must be a function (Double) -> Double
  */
 @StrudelDsl
-val signal by dslFunction { args ->
+val signal by dslFunction { args, callInfo ->
     @Suppress("UNCHECKED_CAST")
-    val value = args.getOrNull(0) as? Function1<Double, Any?> ?: { 0.0 }
+    val value = args.getOrNull(0)?.value as? Function1<Double, Any?> ?: { 0.0 }
     ContinuousPattern { t -> value(t)?.asDoubleOrNull() ?: 0.0 }
 }
 
 /** Continuous pattern that produces a constant value */
 @StrudelDsl
-val steady by dslFunction { args ->
-    val value = args.getOrNull(0)?.asDoubleOrNull() ?: 0.0
+val steady by dslFunction { args, callInfo ->
+    val value = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
     signal { _ -> value }
 }
 

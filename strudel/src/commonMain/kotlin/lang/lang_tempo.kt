@@ -19,14 +19,14 @@ var strudelLangTempoInit = false
 
 fun applyTimeShift(
     pattern: StrudelPattern,
-    args: List<Any?>,
+    args: List<StrudelDslArg<Any?>>,
     factor: Rational = 1.0.toRational(),
 ): StrudelPattern {
     return when (args.size) {
         0 -> pattern
-        1 if (args[0] is Number) -> applyTimeShift(
+        1 if (args[0].value is Number) -> applyTimeShift(
             pattern = pattern,
-            offset = (args[0]?.asDoubleOrNull()?.toRational() ?: Rational.ZERO) * factor,
+            offset = (args[0].value?.asDoubleOrNull()?.toRational() ?: Rational.ZERO) * factor,
         )
 
         else -> applyTimeShift(
@@ -50,127 +50,129 @@ private fun applyTimeShift(pattern: StrudelPattern, control: StrudelPattern): St
 
 // -- slow() -----------------------------------------------------------------------------------------------------------
 
-private fun applySlow(pattern: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val factorArg = args.firstOrNull()
 
     // Parse the factor argument into a pattern
-    val factorPattern = when (factorArg) {
-        is StrudelPattern -> factorArg
-        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(factorArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
+        is StrudelPattern -> factorVal
+
+        else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     // Check if we have a static value for optimization
-    val staticFactor = factorArg?.asDoubleOrNull()
+    val staticFactor = factorArg?.value?.asDoubleOrNull()
 
     return if (staticFactor != null) {
         // Static path: use the simple TempoModifierPattern
-        TempoModifierPattern(pattern, factor = staticFactor, invertPattern = false)
+        TempoModifierPattern(source = pattern, factor = staticFactor, invertPattern = false)
     } else {
         // Dynamic path: use pattern-controlled tempo modification
-        TempoModifierPatternWithControl(pattern, factorPattern, invertPattern = false)
+        TempoModifierPatternWithControl(source = pattern, factorPattern = factorPattern, invertPattern = false)
     }
 }
 
 /** Slows down all inner patterns by the given factor */
 @StrudelDsl
-val slow by dslFunction { args ->
-    val factor: Any?
-    val sourceParts: List<Any?>
+val slow by dslFunction { args, /* callInfo */ _ ->
+    val factorArg: StrudelDslArg<Any?>
+    val sourceParts: List<StrudelDslArg<Any?>>
 
     // Heuristic: If >1 args, the first one is the factor, the rest is the source.
     // If only 1 arg, it is treated as the source (with factor 1.0).
     if (args.size > 1) {
-        factor = args[0]
+        factorArg = args[0]
         sourceParts = args.drop(1)
     } else {
-        factor = 1.0
+        factorArg = StrudelDslArg(1.0, null)
         sourceParts = args
     }
 
     val source = sourceParts.toPattern(defaultModifier)
-    applySlow(source, listOf(factor))
+    applySlow(source, listOf(factorArg))
 }
 
 @StrudelDsl
-val StrudelPattern.slow by dslPatternExtension { p, args ->
+val StrudelPattern.slow by dslPatternExtension { p, args, /* callInfo */ _ ->
     applySlow(p, args)
 }
 
 @StrudelDsl
-val String.slow by dslStringExtension { p, args ->
+val String.slow by dslStringExtension { p, args, /* callInfo */ _ ->
     applySlow(p, args)
 }
 
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
-private fun applyFast(pattern: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val factorArg = args.firstOrNull()
 
     // Parse the factor argument into a pattern
-    val factorPattern = when (factorArg) {
-        is StrudelPattern -> factorArg
-        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(factorArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
+        is StrudelPattern -> factorVal
+
+        else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     // Check if we have a static value for optimization
-    val staticFactor = factorArg?.asDoubleOrNull()
+    val staticFactor = factorArg?.value?.asDoubleOrNull()
 
     return if (staticFactor != null) {
         // Static path: use the simple TempoModifierPattern
-        TempoModifierPattern(pattern, factor = staticFactor, invertPattern = true)
+        TempoModifierPattern(source = pattern, factor = staticFactor, invertPattern = true)
     } else {
         // Dynamic path: use pattern-controlled tempo modification
-        TempoModifierPatternWithControl(pattern, factorPattern, invertPattern = true)
+        TempoModifierPatternWithControl(source = pattern, factorPattern = factorPattern, invertPattern = true)
     }
 }
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
-val fast by dslFunction { args ->
-    val factor: Any?
-    val sourceParts: List<Any?>
+val fast by dslFunction { args, /* callInfo */ _ ->
+    val factorArg: StrudelDslArg<Any?>
+    val sourceParts: List<StrudelDslArg<Any?>>
 
     if (args.size > 1) {
-        factor = args[0]
+        factorArg = args[0]
         sourceParts = args.drop(1)
     } else {
-        factor = 1.0
+        factorArg = StrudelDslArg(1.0, null)
         sourceParts = args
     }
 
     val source = sourceParts.toPattern(defaultModifier)
-    applyFast(source, listOf(factor))
+    applyFast(source, listOf(factorArg))
 }
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
-val StrudelPattern.fast by dslPatternExtension { p, args ->
+val StrudelPattern.fast by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyFast(p, args)
 }
 
 @StrudelDsl
-val String.fast by dslStringExtension { p, args ->
+val String.fast by dslStringExtension { p, args, /* callInfo */ _ ->
     applyFast(p, args)
 }
 
 // -- rev() ------------------------------------------------------------------------------------------------------------
 
-private fun applyRev(pattern: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nArg = args.firstOrNull()
 
     // Parse the argument to detect if it's a plain number or a pattern
-    val nPattern = when (nArg) {
-        is StrudelPattern -> nArg
-        null -> {
-            // Default to 1
-            parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        }
+    val nPattern = when (val nVal = nArg?.value) {
+        is StrudelPattern -> nVal
 
         else -> {
             // Parse as mini-notation (handles numbers and strings)
-            parseMiniNotation(nArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+            parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
+                AtomicPattern(VoiceData.empty.defaultModifier(text))
+            }
         }
     }
 
@@ -193,8 +195,8 @@ private fun applyRev(pattern: StrudelPattern, args: List<Any?>): StrudelPattern 
 
 /** Reverses the pattern */
 @StrudelDsl
-val rev by dslFunction { args ->
-    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
+val rev by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
         ?: return@dslFunction silence
 
     applyRev(pattern, args.take(1))
@@ -202,26 +204,26 @@ val rev by dslFunction { args ->
 
 /** Reverses the pattern */
 @StrudelDsl
-val StrudelPattern.rev by dslPatternExtension { p, args ->
+val StrudelPattern.rev by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyRev(p, args)
 }
 
 /** Reverses the pattern */
 @StrudelDsl
-val String.rev by dslStringExtension { p, args ->
+val String.rev by dslStringExtension { p, args, /* callInfo */ _ ->
     applyRev(p, args)
 }
 
 // -- palindrome() -----------------------------------------------------------------------------------------------------
 
 private fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
-    return applyCat(listOf(pattern, applyRev(pattern, listOf(1))))
+    return applyCat(listOf(pattern, applyRev(pattern, listOf(StrudelDslArg(1, null)))))
 }
 
 /** Plays the pattern forward then backward over two cycles */
 @StrudelDsl
-val palindrome by dslFunction { args ->
-    val pattern = args.filterIsInstance<StrudelPattern>().firstOrNull()
+val palindrome by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
         ?: return@dslFunction silence
 
     applyPalindrome(pattern)
@@ -229,13 +231,13 @@ val palindrome by dslFunction { args ->
 
 /** Plays the pattern forward then backward over two cycles */
 @StrudelDsl
-val StrudelPattern.palindrome by dslPatternExtension { p, _ ->
+val StrudelPattern.palindrome by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     applyPalindrome(p)
 }
 
 /** Plays the pattern forward then backward over two cycles */
 @StrudelDsl
-val String.palindrome by dslStringExtension { p, _ ->
+val String.palindrome by dslStringExtension { p, /* args */ _, /* callInfo */ _ ->
     applyPalindrome(p)
 }
 
@@ -243,17 +245,17 @@ val String.palindrome by dslStringExtension { p, _ ->
 
 /** Nudges the pattern to start earlier in time by the given number of cycles */
 @StrudelDsl
-val early by dslFunction {
+val early by dslFunction { /* args */ _, /* callInfo */ _ ->
     silence
 }
 
 @StrudelDsl
-val StrudelPattern.early by dslPatternExtension { p, args ->
+val StrudelPattern.early by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyTimeShift(p, args, (-1.0).toRational())
 }
 
 @StrudelDsl
-val String.early by dslStringExtension { p, args ->
+val String.early by dslStringExtension { p, args, /* callInfo */ _ ->
     applyTimeShift(p, args, (-1.0).toRational())
 }
 
@@ -262,16 +264,16 @@ val String.early by dslStringExtension { p, args ->
 
 /** Nudges the pattern to start later in time by the given number of cycles */
 @StrudelDsl
-val late by dslFunction {
+val late by dslFunction { /* args */ _, /* callInfo */ _ ->
     silence
 }
 
 @StrudelDsl
-val StrudelPattern.late by dslPatternExtension { p, args ->
+val StrudelPattern.late by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyTimeShift(p, args, 1.0.toRational())
 }
 
 @StrudelDsl
-val String.late by dslStringExtension { p, args ->
+val String.late by dslStringExtension { p, args, /* callInfo */ _ ->
     applyTimeShift(p, args, 1.0.toRational())
 }

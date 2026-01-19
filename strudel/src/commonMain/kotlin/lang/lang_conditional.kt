@@ -5,6 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.ArrangementPattern
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
@@ -19,17 +20,24 @@ var strudelLangConditionalInit = false
 
 // -- firstOf() --------------------------------------------------------------------------------------------------------
 
-private fun applyFirstOf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nArg = args.firstOrNull()
 
     @Suppress("UNCHECKED_CAST")
-    val transform = args.getOrNull(1) as? (StrudelPattern) -> StrudelPattern ?: { it }
+    val transform: (StrudelPattern) -> StrudelPattern =
+        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
     // Parse n as a pattern
-    val nPattern = when (nArg) {
-        is StrudelPattern -> nArg
-        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(nArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val nPattern = when (val nArgVal = nArg?.value) {
+        is StrudelPattern -> nArgVal
+
+        null -> parseMiniNotation("1") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+
+        else -> parseMiniNotation(nArg) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     val staticN = nArg?.asIntOrNull()
@@ -72,45 +80,57 @@ private fun applyFirstOf(source: StrudelPattern, args: List<Any?>): StrudelPatte
  * @param {transform} - the function to apply to the first cycle
  */
 @StrudelDsl
-val firstOf by dslFunction { _ -> silence }
+val firstOf by dslFunction { args, _ ->
+    val n = args.getOrNull(0) ?: StrudelDslArg.of(1)
+
+    @Suppress("UNCHECKED_CAST")
+    val transform: (StrudelPattern) -> StrudelPattern =
+        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+
+    // TODO: parse mini
+    val pat = args.getOrNull(2)?.value as? StrudelPattern ?: silence
+
+    applyFirstOf(pat, listOf(n, transform).asStrudelDslArgs())
+}
 
 @StrudelDsl
-val StrudelPattern.firstOf by dslPatternExtension { source, args -> applyFirstOf(source, args) }
+val StrudelPattern.firstOf by dslPatternExtension { source, args, /* callInfo */ _ -> applyFirstOf(source, args) }
 
 @StrudelDsl
-val String.firstOf by dslStringExtension { source, args -> applyFirstOf(source, args) }
+val String.firstOf by dslStringExtension { source, args, /* callInfo */ _ -> applyFirstOf(source, args) }
 
 // -- every() ----------------------------------------------------------------------------------------------------------
 
 /** Alias for [firstOf] */
 @StrudelDsl
-val every by dslFunction { _ -> silence }
+val every by dslFunction { args, callInfo -> firstOf(args, callInfo) }
 
 /** Alias for [firstOf] */
 @StrudelDsl
-val StrudelPattern.every by dslPatternExtension { source, args -> applyFirstOf(source, args) }
+val StrudelPattern.every by dslPatternExtension { source, args, callInfo -> source.firstOf(args, callInfo) }
 
 /** Alias for [firstOf] */
 @StrudelDsl
-val String.every by dslStringExtension { source, args -> applyFirstOf(source, args) }
+val String.every by dslStringExtension { source, args, callInfo -> source.firstOf(args, callInfo) }
 
 // -- lastOf() ---------------------------------------------------------------------------------------------------------
 
-private fun applyLastOf(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nArg = args.firstOrNull()
 
     @Suppress("UNCHECKED_CAST")
-    val transform = args.getOrNull(1) as? (StrudelPattern) -> StrudelPattern ?: { it }
+    val transform: (StrudelPattern) -> StrudelPattern =
+        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
     // Parse n as a pattern
-    val nPattern = when (nArg) {
-        is StrudelPattern -> nArg
+    val nPattern = when (val nArgVal = nArg?.value) {
+        is StrudelPattern -> nArgVal
 
         null -> parseMiniNotation("1") { text, _ ->
             AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
 
-        else -> parseMiniNotation(nArg.toString()) { text, _ ->
+        else -> parseMiniNotation(nArg) { text, _ ->
             AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
     }
@@ -155,22 +175,25 @@ private fun applyLastOf(source: StrudelPattern, args: List<Any?>): StrudelPatter
  * @param {transform} - the function to apply to the first cycle
  */
 @StrudelDsl
-val lastOf by dslFunction { args ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 1
+val lastOf by dslFunction { args, /* callInfo */ _ ->
+    val n = args.getOrNull(0) ?: StrudelDslArg.of(1)
 
     @Suppress("UNCHECKED_CAST")
-    val transform = args.getOrNull(1) as? (StrudelPattern) -> StrudelPattern ?: { it }
-    val pat = args.getOrNull(2) as? StrudelPattern ?: silence
+    val transform: (StrudelPattern) -> StrudelPattern =
+        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    applyLastOf(pat, listOf(n, transform))
+    // TODO: parse mini
+    val pat = args.getOrNull(2)?.value as? StrudelPattern ?: silence
+
+    applyLastOf(pat, listOf(n, transform).asStrudelDslArgs())
 }
 
 @StrudelDsl
-val StrudelPattern.lastOf by dslPatternExtension { source, args ->
+val StrudelPattern.lastOf by dslPatternExtension { source, args, /* callInfo */ _ ->
     applyLastOf(source, args)
 }
 
 @StrudelDsl
-val String.lastOf by dslStringExtension { source, args ->
+val String.lastOf by dslStringExtension { source, args, /* callInfo */ _ ->
     applyLastOf(source, args)
 }

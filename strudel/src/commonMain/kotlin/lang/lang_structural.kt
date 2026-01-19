@@ -8,6 +8,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
@@ -32,17 +33,17 @@ var strudelLangStructuralInit = false
 
 /** Stops all playing patterns by returning silence, ignoring all arguments. */
 @StrudelDsl
-val hush by dslFunction { _ ->
+val hush by dslFunction { _, _ ->
     silence
 }
 
 @StrudelDsl
-val StrudelPattern.hush by dslPatternExtension { _, _ ->
+val StrudelPattern.hush by dslPatternExtension { _, _, _ ->
     silence
 }
 
 @StrudelDsl
-val String.hush by dslStringExtension { _, _ ->
+val String.hush by dslStringExtension { _, _, _ ->
     silence
 }
 
@@ -66,13 +67,13 @@ private fun applyGap(args: List<Any?>): StrudelPattern {
 
 /** Creates silence with a specific duration in steps (metrical steps). */
 @StrudelDsl
-val gap by dslFunction { args -> applyGap(args) }
+val gap by dslFunction { args, callInfo -> applyGap(args) }
 
 @StrudelDsl
-val StrudelPattern.gap by dslPatternExtension { _, args -> applyGap(args) }
+val StrudelPattern.gap by dslPatternExtension { _, args, callInfo -> applyGap(args) }
 
 @StrudelDsl
-val String.gap by dslStringExtension { _, args -> applyGap(args) }
+val String.gap by dslStringExtension { _, args, callInfo -> applyGap(args) }
 
 // -- seq() ------------------------------------------------------------------------------------------------------------
 
@@ -85,7 +86,7 @@ private fun applySeq(patterns: List<StrudelPattern>): StrudelPattern {
 
 /** Creates a sequence pattern. */
 @StrudelDsl
-val seq by dslFunction { args ->
+val seq by dslFunction { args, callInfo ->
     // specialized modifier for seq to prioritize value
     args.toPattern {
         copy(
@@ -96,13 +97,13 @@ val seq by dslFunction { args ->
 }
 
 @StrudelDsl
-val StrudelPattern.seq by dslPatternExtension { p, args ->
+val StrudelPattern.seq by dslPatternExtension { p, args, callInfo ->
     val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
     applySeq(patterns)
 }
 
 @StrudelDsl
-val String.seq by dslStringExtension { p, args ->
+val String.seq by dslStringExtension { p, args, callInfo ->
     val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
     applySeq(patterns)
 }
@@ -110,7 +111,7 @@ val String.seq by dslStringExtension { p, args ->
 // -- mini() -----------------------------------------------------------------------------------------------------------
 
 /** Parses input as mini-notation. Effectively an alias for `seq`. */
-val mini by dslFunction { args ->
+val mini by dslFunction { args, callInfo ->
     args.toPattern(defaultModifier)
 }
 
@@ -122,19 +123,19 @@ private fun applyStack(patterns: List<StrudelPattern>): StrudelPattern {
 
 /** Plays multiple patterns at the same time. */
 @StrudelDsl
-val stack by dslFunction { args ->
+val stack by dslFunction { args, callInfo ->
     val patterns = args.toListOfPatterns(defaultModifier)
     if (patterns.isEmpty()) silence else StackPattern(patterns)
 }
 
 @StrudelDsl
-val StrudelPattern.stack by dslPatternExtension { p, args ->
+val StrudelPattern.stack by dslPatternExtension { p, args, callInfo ->
     val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
     applyStack(patterns)
 }
 
 @StrudelDsl
-val String.stack by dslStringExtension { p, args ->
+val String.stack by dslStringExtension { p, args, callInfo ->
     val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
     applyStack(patterns)
 }
@@ -165,17 +166,17 @@ private fun applyArrange(args: List<Any?>): StrudelPattern {
 
 // arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
 @StrudelDsl
-val arrange by dslFunction { args ->
+val arrange by dslFunction { args, callInfo ->
     applyArrange(args)
 }
 
 @StrudelDsl
-val StrudelPattern.arrange by dslPatternExtension { p, args ->
+val StrudelPattern.arrange by dslPatternExtension { p, args, callInfo ->
     applyArrange(listOf(p) + args)
 }
 
 @StrudelDsl
-val String.arrange by dslStringExtension { p, args ->
+val String.arrange by dslStringExtension { p, args, callInfo ->
     applyArrange(listOf(p) + args)
 }
 
@@ -255,7 +256,7 @@ private fun applyStackBy(patterns: List<StrudelPattern>, alignment: Double): Str
  * 0 = left, 0.5 = center, 1 = right.
  */
 @StrudelDsl
-val stackBy by dslFunction { args ->
+val stackBy by dslFunction { args, callInfo ->
     val by = args.firstOrNull()?.asDoubleOrNull() ?: 0.0
     val patterns = args.drop(1).toListOfPatterns(defaultModifier)
     applyStackBy(patterns, by)
@@ -265,7 +266,7 @@ val stackBy by dslFunction { args ->
 
 /** Stack patterns aligned to the left (start). */
 @StrudelDsl
-val stackLeft by dslFunction { args ->
+val stackLeft by dslFunction { args, callInfo ->
     applyStackBy(args.toListOfPatterns(defaultModifier), 0.0)
 }
 
@@ -273,7 +274,7 @@ val stackLeft by dslFunction { args ->
 
 /** Stack patterns aligned to the right (end). */
 @StrudelDsl
-val stackRight by dslFunction { args ->
+val stackRight by dslFunction { args, callInfo ->
     applyStackBy(args.toListOfPatterns(defaultModifier), 1.0)
 }
 
@@ -281,7 +282,7 @@ val stackRight by dslFunction { args ->
 
 /** Stack patterns aligned to the center. */
 @StrudelDsl
-val stackCentre by dslFunction { args ->
+val stackCentre by dslFunction { args, callInfo ->
     applyStackBy(args.toListOfPatterns(defaultModifier), 0.5)
 }
 
@@ -291,17 +292,17 @@ val stackCentre by dslFunction { args ->
  * Alias for stack. Creates polyrhythms by playing patterns simultaneously.
  */
 @StrudelDsl
-val polyrhythm by dslFunction { args ->
+val polyrhythm by dslFunction { args, callInfo ->
     applyStack(args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.polyrhythm by dslPatternExtension { p, args ->
+val StrudelPattern.polyrhythm by dslPatternExtension { p, args, callInfo ->
     applyStack(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.polyrhythm by dslStringExtension { p, args ->
+val String.polyrhythm by dslStringExtension { p, args, callInfo ->
     applyStack(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
@@ -311,7 +312,7 @@ val String.polyrhythm by dslStringExtension { p, args ->
  * Pattern of patterns sequence. Alias for seq.
  */
 @StrudelDsl
-val sequenceP by dslFunction { args ->
+val sequenceP by dslFunction { args, callInfo ->
     applySeq(args.toListOfPatterns(defaultModifier))
 }
 
@@ -320,7 +321,7 @@ val sequenceP by dslFunction { args ->
 // pickRestart([a, b, c]) -> picks patterns sequentially per cycle (slowcat)
 // TODO: make this really work. Must be dslMethod -> https://strudel.cc/learn/conditional-modifiers/#pickrestart
 @StrudelDsl
-val pickRestart by dslFunction { args ->
+val pickRestart by dslFunction { args, callInfo ->
     val patterns = args.toListOfPatterns(defaultModifier)
     if (patterns.isEmpty()) {
         silence
@@ -340,17 +341,17 @@ internal fun applyCat(patterns: List<StrudelPattern>): StrudelPattern = when {
 }
 
 @StrudelDsl
-val cat by dslFunction { args ->
+val cat by dslFunction { args, callInfo ->
     applyCat(args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.cat by dslPatternExtension { p, args ->
+val StrudelPattern.cat by dslPatternExtension { p, args, callInfo ->
     applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.cat by dslStringExtension { p, args ->
+val String.cat by dslStringExtension { p, args, callInfo ->
     applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
@@ -366,17 +367,17 @@ val String.cat by dslStringExtension { p, args ->
  * // same as seq("bd", "sd") or "bd sd"
  */
 @StrudelDsl
-val fastcat by dslFunction { args ->
+val fastcat by dslFunction { args, callInfo ->
     applySeq(args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.fastcat by dslPatternExtension { p, args ->
+val StrudelPattern.fastcat by dslPatternExtension { p, args, callInfo ->
     applySeq(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.fastcat by dslStringExtension { p, args ->
+val String.fastcat by dslStringExtension { p, args, callInfo ->
     applySeq(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
@@ -397,17 +398,17 @@ val String.fastcat by dslStringExtension { p, args ->
  * // Cycle 1: "sd"
  */
 @StrudelDsl
-val slowcat by dslFunction { args ->
+val slowcat by dslFunction { args, callInfo ->
     applyCat(args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.slowcat by dslPatternExtension { p, args ->
+val StrudelPattern.slowcat by dslPatternExtension { p, args, callInfo ->
     applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.slowcat by dslStringExtension { p, args ->
+val String.slowcat by dslStringExtension { p, args, callInfo ->
     applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
@@ -420,17 +421,17 @@ val String.slowcat by dslStringExtension { p, args ->
  * @param {patterns} patterns to concatenate
  */
 @StrudelDsl
-val slowcatPrime by dslFunction { args ->
+val slowcatPrime by dslFunction { args, callInfo ->
     applyCat(args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.slowcatPrime by dslPatternExtension { p, args ->
+val StrudelPattern.slowcatPrime by dslPatternExtension { p, args, callInfo ->
     applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.slowcatPrime by dslStringExtension { p, args ->
+val String.slowcatPrime by dslStringExtension { p, args, callInfo ->
     applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
@@ -470,17 +471,17 @@ private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = nul
  * @param {patterns} patterns to align
  */
 @StrudelDsl
-val polymeter by dslFunction { args ->
+val polymeter by dslFunction { args, callInfo ->
     applyPolymeter(args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.polymeter by dslPatternExtension { p, args ->
+val StrudelPattern.polymeter by dslPatternExtension { p, args, callInfo ->
     applyPolymeter(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.polymeter by dslStringExtension { p, args ->
+val String.polymeter by dslStringExtension { p, args, callInfo ->
     applyPolymeter(listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
@@ -494,7 +495,7 @@ val String.polymeter by dslStringExtension { p, args ->
  * @param {patterns} The patterns to align.
  */
 @StrudelDsl
-val polymeterSteps by dslFunction { args ->
+val polymeterSteps by dslFunction { args, callInfo ->
     val steps = args.getOrNull(0)?.asIntOrNull() ?: 4
     // Remaining args are patterns
     val patterns = args.drop(1).toListOfPatterns(defaultModifier)
@@ -510,7 +511,7 @@ val polymeterSteps by dslFunction { args ->
  * @param {value} The value to wrap in a pattern.
  */
 @StrudelDsl
-val pure by dslFunction { args ->
+val pure by dslFunction { args, callInfo ->
     val value = args.getOrNull(0)
     AtomicPattern(VoiceData.empty.copy(value = value?.asVoiceValue()))
 }
@@ -540,7 +541,7 @@ private fun applyStruct(source: StrudelPattern, structArg: Any?): StrudelPattern
  * Structures the pattern according to another pattern (the mask).
  */
 @StrudelDsl
-val struct by dslFunction { args ->
+val struct by dslFunction { args, callInfo ->
     val structArg = args.getOrNull(0)
     val source = args.filterIsInstance<StrudelPattern>().let {
         if (it.size >= 2 && structArg is StrudelPattern) it[1] else it.firstOrNull()
@@ -550,12 +551,12 @@ val struct by dslFunction { args ->
 }
 
 @StrudelDsl
-val StrudelPattern.struct by dslPatternExtension { source, args ->
+val StrudelPattern.struct by dslPatternExtension { source, args, callInfo ->
     applyStruct(source, args.firstOrNull())
 }
 
 @StrudelDsl
-val String.struct by dslStringExtension { source, args ->
+val String.struct by dslStringExtension { source, args, callInfo ->
     applyStruct(source, args.firstOrNull())
 }
 
@@ -587,7 +588,7 @@ private fun applyStructAll(source: StrudelPattern, structArg: Any?): StrudelPatt
  * Example: structAll("x", note("c e")) -> keeps both c and e within the x window
  */
 @StrudelDsl
-val structAll by dslFunction { args ->
+val structAll by dslFunction { args, callInfo ->
     val structArg = args.getOrNull(0)
     val source = args.filterIsInstance<StrudelPattern>().let {
         if (it.size >= 2 && structArg is StrudelPattern) it[1] else it.firstOrNull()
@@ -597,12 +598,12 @@ val structAll by dslFunction { args ->
 }
 
 @StrudelDsl
-val StrudelPattern.structAll by dslPatternExtension { source, args ->
+val StrudelPattern.structAll by dslPatternExtension { source, args, callInfo ->
     applyStructAll(source, args.firstOrNull())
 }
 
 @StrudelDsl
-val String.structAll by dslStringExtension { source, args ->
+val String.structAll by dslStringExtension { source, args, callInfo ->
     applyStructAll(source, args.firstOrNull())
 }
 
@@ -630,7 +631,7 @@ private fun applyMask(source: StrudelPattern, maskArg: Any?): StrudelPattern {
  * Only events from the source that overlap with "truthy" events in the mask are kept.
  */
 @StrudelDsl
-val mask by dslFunction { args ->
+val mask by dslFunction { args, callInfo ->
     val maskArg = args.getOrNull(0)
     val source = args.filterIsInstance<StrudelPattern>().let {
         if (it.size >= 2 && maskArg is StrudelPattern) it[1] else it.firstOrNull()
@@ -640,12 +641,12 @@ val mask by dslFunction { args ->
 }
 
 @StrudelDsl
-val StrudelPattern.mask by dslPatternExtension { source, args ->
+val StrudelPattern.mask by dslPatternExtension { source, args, callInfo ->
     applyMask(source, args.firstOrNull())
 }
 
 @StrudelDsl
-val String.mask by dslStringExtension { source, args ->
+val String.mask by dslStringExtension { source, args, callInfo ->
     applyMask(source, args.firstOrNull())
 }
 
@@ -674,7 +675,7 @@ private fun applyMaskAll(source: StrudelPattern, maskArg: Any?): StrudelPattern 
  * Filters the pattern using a mask, keeping all source events that overlap with the mask's structure.
  */
 @StrudelDsl
-val maskAll by dslFunction { args ->
+val maskAll by dslFunction { args, callInfo ->
     val maskArg = args.getOrNull(0)
     val source = args.filterIsInstance<StrudelPattern>().let {
         if (it.size >= 2 && maskArg is StrudelPattern) it[1] else it.firstOrNull()
@@ -684,12 +685,12 @@ val maskAll by dslFunction { args ->
 }
 
 @StrudelDsl
-val StrudelPattern.maskAll by dslPatternExtension { source, args ->
+val StrudelPattern.maskAll by dslPatternExtension { source, args, callInfo ->
     applyMaskAll(source, args.firstOrNull())
 }
 
 @StrudelDsl
-val String.maskAll by dslStringExtension { source, args ->
+val String.maskAll by dslStringExtension { source, args, callInfo ->
     applyMaskAll(source, args.firstOrNull())
 }
 
@@ -710,7 +711,7 @@ private fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent)
 
 /** Filters haps using the given function. */
 @StrudelDsl
-val filter by dslFunction { _ -> silence }
+val filter by dslFunction { _, _ -> silence }
 
 @Suppress("unused")
 @StrudelDsl
@@ -718,7 +719,7 @@ fun filter(ignored: (StrudelPatternEvent) -> Boolean): StrudelPattern = silence
 
 /** Filters haps using the given function. */
 @StrudelDsl
-val StrudelPattern.filter by dslPatternExtension { source, args ->
+val StrudelPattern.filter by dslPatternExtension { source, args, callInfo ->
     @Suppress("UNCHECKED_CAST")
     val predicate = args.firstOrNull() as? (StrudelPatternEvent) -> Boolean
 
@@ -731,7 +732,7 @@ fun StrudelPattern.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelP
 
 /** Filters haps using the given function. */
 @StrudelDsl
-val String.filter by dslStringExtension { source, args ->
+val String.filter by dslStringExtension { source, args, callInfo ->
     @Suppress("UNCHECKED_CAST")
     val predicate = args.firstOrNull() as? (StrudelPatternEvent) -> Boolean
 
@@ -755,7 +756,7 @@ fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
  * @param {predicate} function to test the begin time (Double)
  */
 @StrudelDsl
-val filterWhen by dslFunction { args ->
+val filterWhen by dslFunction { args, callInfo ->
     @Suppress("UNCHECKED_CAST")
     val predicate = args.getOrNull(0) as? (Double) -> Boolean
     val pat = args.getOrNull(1) as? StrudelPattern ?: silence
@@ -768,7 +769,7 @@ val filterWhen by dslFunction { args ->
 fun filterWhen(predicate: (Double) -> Boolean): StrudelPattern = silence
 
 @StrudelDsl
-val StrudelPattern.filterWhen by dslPatternExtension { source, args ->
+val StrudelPattern.filterWhen by dslPatternExtension { source, args, callInfo ->
     @Suppress("UNCHECKED_CAST")
     val predicate = args.firstOrNull() as? (Double) -> Boolean
 
@@ -780,7 +781,7 @@ fun StrudelPattern.filterWhen(predicate: (Double) -> Boolean): StrudelPattern =
     applyFilter(this) { predicate(it.begin.toDouble()) }
 
 @StrudelDsl
-val String.filterWhen by dslStringExtension { source, args ->
+val String.filterWhen by dslStringExtension { source, args, callInfo ->
     @Suppress("UNCHECKED_CAST")
     val predicate = args.firstOrNull() as? (Double) -> Boolean
 
@@ -798,7 +799,7 @@ fun String.filterWhen(predicate: (Double) -> Boolean): StrudelPattern {
 
 // -- bypass() ---------------------------------------------------------------------------------------------------------
 
-private fun applyBypass(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyBypass(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.isEmpty()) return source
 
     val condition = args.toPattern(defaultModifier)
@@ -817,13 +818,13 @@ private fun applyBypass(source: StrudelPattern, args: List<Any?>): StrudelPatter
  * Supports both static values and patterns.
  */
 @StrudelDsl
-val bypass by dslFunction { args -> applyBypass(silence, args) }
+val bypass by dslFunction { args, callInfo -> applyBypass(silence, args) }
 
 @StrudelDsl
-val StrudelPattern.bypass by dslPatternExtension { source, args -> applyBypass(source, args) }
+val StrudelPattern.bypass by dslPatternExtension { source, args, callInfo -> applyBypass(source, args) }
 
 @StrudelDsl
-val String.bypass by dslStringExtension { source, args -> applyBypass(source, args) }
+val String.bypass by dslStringExtension { source, args, callInfo -> applyBypass(source, args) }
 
 // -- superimpose() ----------------------------------------------------------------------------------------------------
 
@@ -833,9 +834,11 @@ val String.bypass by dslStringExtension { source, args -> applyBypass(source, ar
  * Example: s("bd sd").superimpose { it.fast(2) }
  */
 @StrudelDsl
-val StrudelPattern.superimpose by dslPatternExtension { source, args ->
+val StrudelPattern.superimpose by dslPatternExtension { source, args, callInfo ->
     @Suppress("UNCHECKED_CAST")
-    val transform = args.firstOrNull() as? (StrudelPattern) -> StrudelPattern ?: { it }
+    val transform: (StrudelPattern) -> StrudelPattern =
+        args.firstOrNull()?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+
     SuperimposePattern(source, transform)
 }
 
@@ -849,7 +852,7 @@ val StrudelPattern.superimpose by dslPatternExtension { source, args ->
  * Example: s("bd").layer({ it.fast(2) }, { it.rev() })
  */
 @StrudelDsl
-val StrudelPattern.layer by dslPatternExtension { source, args ->
+val StrudelPattern.layer by dslPatternExtension { source, args, callInfo ->
     val transforms = args.filterIsInstance<(StrudelPattern) -> StrudelPattern>()
 
     if (transforms.isEmpty()) {
@@ -878,7 +881,7 @@ val StrudelPattern.layer by dslPatternExtension { source, args ->
  * Alias for [layer].
  */
 @StrudelDsl
-val StrudelPattern.apply by dslPatternExtension { source, args ->
+val StrudelPattern.apply by dslPatternExtension { source, args, callInfo ->
     source.layer(args)
 }
 
@@ -886,7 +889,7 @@ val StrudelPattern.apply by dslPatternExtension { source, args ->
 
 // -- zoom() -----------------------------------------------------------------------------------------------------------
 
-private fun applyZoom(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val startArg = args.getOrNull(0)
     val endArg = args.getOrNull(1)
 
@@ -933,22 +936,23 @@ private fun applyZoom(source: StrudelPattern, args: List<Any?>): StrudelPattern 
  * @param {end}   end of the zoom window (0.0 to 1.0)
  */
 @StrudelDsl
-val StrudelPattern.zoom by dslPatternExtension { p, args -> applyZoom(p, args) }
+val StrudelPattern.zoom by dslPatternExtension { p, args, callInfo -> applyZoom(p, args) }
 
 /**
  * Plays a portion of a pattern, specified by the beginning and end of a time span.
  */
-fun StrudelPattern.zoom(start: Double, end: Double): StrudelPattern = applyZoom(this, listOf(start, end))
+fun StrudelPattern.zoom(start: Double, end: Double): StrudelPattern =
+    applyZoom(this, listOf(start, end).asStrudelDslArgs())
 
 @StrudelDsl
-val String.zoom by dslStringExtension { p, args -> applyZoom(p, args) }
+val String.zoom by dslStringExtension { p, args, callInfo -> applyZoom(p, args) }
 
 @StrudelDsl
 fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, end)
 
 // -- bite() -----------------------------------------------------------------------------------------------------------
 
-private fun applyBite(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nArg = args.getOrNull(0)
     val indicesArg = args.getOrNull(1)
 
@@ -1074,14 +1078,14 @@ private fun applyBite(source: StrudelPattern, args: List<Any?>): StrudelPattern 
  * @param indices pattern of slice indices
  */
 @StrudelDsl
-val StrudelPattern.bite by dslPatternExtension { p, args -> applyBite(p, args) }
+val StrudelPattern.bite by dslPatternExtension { p, args, callInfo -> applyBite(p, args) }
 
 @StrudelDsl
-val String.bite by dslStringExtension { p, args -> applyBite(p, args) }
+val String.bite by dslStringExtension { p, args, callInfo -> applyBite(p, args) }
 
 // -- segment() --------------------------------------------------------------------------------------------------------
 
-private fun applySegment(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applySegment(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nArg = args.firstOrNull()
 
     val nPattern = when (nArg) {
@@ -1113,20 +1117,20 @@ private fun applySegment(source: StrudelPattern, args: List<Any?>): StrudelPatte
  * @param {number} segments number of segments per cycle
  */
 @StrudelDsl
-val StrudelPattern.segment by dslPatternExtension { p, args -> applySegment(p, args) }
+val StrudelPattern.segment by dslPatternExtension { p, args, callInfo -> applySegment(p, args) }
 
 @StrudelDsl
 fun StrudelPattern.segment(n: Int) = this.segment(n as Any)
 
 @StrudelDsl
-val String.segment by dslStringExtension { p, args -> applySegment(p, args) }
+val String.segment by dslStringExtension { p, args, callInfo -> applySegment(p, args) }
 
 @StrudelDsl
 fun String.segment(n: Int) = this.segment(n as Any)
 
 /** Alias for [segment] */
 @StrudelDsl
-val StrudelPattern.seg by dslPatternExtension { p, args -> applySegment(p, args) } // Alias
+val StrudelPattern.seg by dslPatternExtension { p, args, callInfo -> applySegment(p, args) } // Alias
 
 /** Alias for [segment] */
 @StrudelDsl
@@ -1134,7 +1138,7 @@ fun StrudelPattern.seg(n: Int) = this.segment(n as Any)
 
 /** Alias for [segment] */
 @StrudelDsl
-val String.seg by dslStringExtension { p, args -> applySegment(p, args) }
+val String.seg by dslStringExtension { p, args, callInfo -> applySegment(p, args) }
 
 /** Alias for [segment] */
 @StrudelDsl
@@ -1161,14 +1165,14 @@ private fun applyEuclid(source: StrudelPattern, pulses: Int, steps: Int, rotatio
  * @param {pattern}  the pattern to apply the euclid to
  */
 @StrudelDsl
-val euclid by dslFunction { args ->
+val euclid by dslFunction { args, callInfo ->
     val pattern = args.drop(2).toPattern(defaultModifier)
 
     pattern.euclid(args)
 }
 
 @StrudelDsl
-val StrudelPattern.euclid by dslPatternExtension { p, args ->
+val StrudelPattern.euclid by dslPatternExtension { p, args, callInfo ->
     val pulsesArg = args.getOrNull(0)
     val stepsArg = args.getOrNull(1)
 
@@ -1195,7 +1199,7 @@ val StrudelPattern.euclid by dslPatternExtension { p, args ->
 }
 
 @StrudelDsl
-val String.euclid by dslStringExtension { p, args -> p.euclid(args) }
+val String.euclid by dslStringExtension { p, args, callInfo -> p.euclid(args) }
 
 // -- euclidRot() ------------------------------------------------------------------------------------------------------
 
@@ -1208,14 +1212,14 @@ val String.euclid by dslStringExtension { p, args -> p.euclid(args) }
  * @param {pattern}  the pattern to apply the euclid to
  */
 @StrudelDsl
-val euclidRot by dslFunction { args ->
+val euclidRot by dslFunction { args, callInfo ->
     val pattern = args.drop(3).toPattern(defaultModifier)
 
     pattern.euclidRot(args)
 }
 
 @StrudelDsl
-val StrudelPattern.euclidRot by dslPatternExtension { p, args ->
+val StrudelPattern.euclidRot by dslPatternExtension { p, args, callInfo ->
     val pulsesArg = args.getOrNull(0)
     val stepsArg = args.getOrNull(1)
     val rotationArg = args.getOrNull(2)
@@ -1256,19 +1260,19 @@ val StrudelPattern.euclidRot by dslPatternExtension { p, args ->
 }
 
 @StrudelDsl
-val String.euclidRot by dslStringExtension { p, args -> p.euclidRot(args) }
+val String.euclidRot by dslStringExtension { p, args, callInfo -> p.euclidRot(args) }
 
 /** Alias for [euclidRot] */
 @StrudelDsl
-val euclidrot by dslFunction { args -> euclidRot(args) }
+val euclidrot by dslFunction { args, callInfo -> euclidRot(args) }
 
 /** Alias for [euclidRot] */
 @StrudelDsl
-val StrudelPattern.euclidrot by dslPatternExtension { p, args -> p.euclidRot(args) }
+val StrudelPattern.euclidrot by dslPatternExtension { p, args, callInfo -> p.euclidRot(args) }
 
 /** Alias for [euclidRot] */
 @StrudelDsl
-val String.euclidrot by dslStringExtension { p, args -> p.euclidRot(args) }
+val String.euclidrot by dslStringExtension { p, args, callInfo -> p.euclidRot(args) }
 
 // -- bjork() ----------------------------------------------------------------------------------------------------------
 
@@ -1279,14 +1283,14 @@ val String.euclidrot by dslStringExtension { p, args -> p.euclidRot(args) }
  * @param {pattern} the pattern to apply the euclid to
  */
 @StrudelDsl
-val bjork by dslFunction { args ->
+val bjork by dslFunction { args, callInfo ->
     val pattern = args.drop(1).toPattern(defaultModifier)
 
     pattern.bjork(args)
 }
 
 @StrudelDsl
-val StrudelPattern.bjork by dslPatternExtension { p, args ->
+val StrudelPattern.bjork by dslPatternExtension { p, args, callInfo ->
     val list = args.getOrNull(0) as? List<*> ?: args
     val pulsesArg = list.getOrNull(0)
     val stepsArg = list.getOrNull(1)
@@ -1328,7 +1332,7 @@ val StrudelPattern.bjork by dslPatternExtension { p, args ->
 }
 
 @StrudelDsl
-val String.bjork by dslStringExtension { p, args -> p.bjork(args) }
+val String.bjork by dslStringExtension { p, args, callInfo -> p.bjork(args) }
 
 // -- euclidLegato() ---------------------------------------------------------------------------------------------------
 
@@ -1340,14 +1344,14 @@ val String.bjork by dslStringExtension { p, args -> p.bjork(args) }
  * @param {pattern}  the pattern to apply the euclid to
  */
 @StrudelDsl
-val euclidLegato by dslFunction { args ->
+val euclidLegato by dslFunction { args, callInfo ->
     val pattern = args.drop(2).toPattern(defaultModifier)
 
     pattern.euclidLegato(args)
 }
 
 @StrudelDsl
-val StrudelPattern.euclidLegato by dslPatternExtension { p, args ->
+val StrudelPattern.euclidLegato by dslPatternExtension { p, args, callInfo ->
     val pulsesArg = args.getOrNull(0)
     val stepsArg = args.getOrNull(1)
 
@@ -1374,7 +1378,7 @@ val StrudelPattern.euclidLegato by dslPatternExtension { p, args ->
 }
 
 @StrudelDsl
-val String.euclidLegato by dslStringExtension { p, args -> p.euclidLegato(args) }
+val String.euclidLegato by dslStringExtension { p, args, callInfo -> p.euclidLegato(args) }
 
 // -- euclidLegatoRot() ------------------------------------------------------------------------------------------------
 
@@ -1388,14 +1392,14 @@ val String.euclidLegato by dslStringExtension { p, args -> p.euclidLegato(args) 
  * @param {pattern}  the pattern to apply the euclid to
  */
 @StrudelDsl
-val euclidLegatoRot by dslFunction { args ->
+val euclidLegatoRot by dslFunction { args, callInfo ->
     val pattern = args.drop(3).toPattern(defaultModifier)
 
     pattern.euclidLegatoRot(args)
 }
 
 @StrudelDsl
-val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args ->
+val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args, callInfo ->
     val pulsesArg = args.getOrNull(0)
     val stepsArg = args.getOrNull(1)
     val rotationArg = args.getOrNull(2)
@@ -1436,11 +1440,11 @@ val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args ->
 }
 
 @StrudelDsl
-val String.euclidLegatoRot by dslStringExtension { p, args -> p.euclidLegatoRot(args) }
+val String.euclidLegatoRot by dslStringExtension { p, args, callInfo -> p.euclidLegatoRot(args) }
 
 // -- euclidish() ------------------------------------------------------------------------------------------------------
 
-private fun applyEuclidish(source: StrudelPattern, args: List<Any?>): StrudelPattern {
+private fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val pulsesArg = args.getOrNull(0)
     val stepsArg = args.getOrNull(1)
     val grooveArg = args.getOrNull(2)
@@ -1494,31 +1498,31 @@ private fun applyEuclidish(source: StrudelPattern, args: List<Any?>): StrudelPat
  * @param {pattern} source pattern
  */
 @StrudelDsl
-val euclidish by dslFunction { args ->
+val euclidish by dslFunction { args, callInfo ->
     // euclidish(pulses, steps, groove, pat)
     val pattern = args.drop(3).toPattern(defaultModifier)
     applyEuclidish(pattern, args.take(3))
 }
 
 @StrudelDsl
-val StrudelPattern.euclidish by dslPatternExtension { p, args ->
+val StrudelPattern.euclidish by dslPatternExtension { p, args, callInfo ->
     applyEuclidish(p, args)
 }
 
 @StrudelDsl
-val String.euclidish by dslStringExtension { p, args -> p.euclidish(args) }
+val String.euclidish by dslStringExtension { p, args, callInfo -> p.euclidish(args) }
 
 /** Alias for [euclidish] */
 @StrudelDsl
-val eish by dslFunction { args -> euclidish(args) }
+val eish by dslFunction { args, callInfo -> euclidish(args) }
 
 /** Alias for [euclidish] */
 @StrudelDsl
-val StrudelPattern.eish by dslPatternExtension { p, args -> p.euclidish(args) }
+val StrudelPattern.eish by dslPatternExtension { p, args, callInfo -> p.euclidish(args) }
 
 /** Alias for [euclidish] */
 @StrudelDsl
-val String.eish by dslStringExtension { p, args -> p.euclidish(args) }
+val String.eish by dslStringExtension { p, args, callInfo -> p.euclidish(args) }
 
 
 // -- run() ------------------------------------------------------------------------------------------------------------
@@ -1543,7 +1547,7 @@ private fun applyRun(n: Int): StrudelPattern {
  * // n("0 1 2 3").scale("C4:pentatonic")
  */
 @StrudelDsl
-val run by dslFunction { args ->
+val run by dslFunction { args, callInfo ->
     val n = args.getOrNull(0)?.asIntOrNull() ?: 0
     applyRun(n)
 }
@@ -1579,7 +1583,7 @@ private fun applyBinaryN(n: Int, bits: Int): StrudelPattern {
  * // "hh".s().struct("0 1 0 1")
  */
 @StrudelDsl
-val binaryN by dslFunction { args ->
+val binaryN by dslFunction { args, callInfo ->
     val n = args.getOrNull(0)?.asIntOrNull() ?: 0
     val bits = args.getOrNull(1)?.asIntOrNull() ?: 16
     applyBinaryN(n, bits)
@@ -1598,7 +1602,7 @@ val binaryN by dslFunction { args ->
  * // "hh".s().struct("1 0 1")
  */
 @StrudelDsl
-val binary by dslFunction { args ->
+val binary by dslFunction { args, callInfo ->
     val n = args.getOrNull(0)?.asIntOrNull() ?: 0
     if (n == 0) {
         applyBinaryN(0, 1)
@@ -1635,7 +1639,7 @@ private fun applyBinaryNL(n: Int, bits: Int): StrudelPattern {
  * @param {number} bits - pattern length, defaults to 16
  */
 @StrudelDsl
-val binaryNL by dslFunction { args ->
+val binaryNL by dslFunction { args, callInfo ->
     val n = args.getOrNull(0)?.asIntOrNull() ?: 0
     val bits = args.getOrNull(1)?.asIntOrNull() ?: 16
     applyBinaryNL(n, bits)
@@ -1650,7 +1654,7 @@ val binaryNL by dslFunction { args ->
  * @param {number} n - input number to convert to binary
  */
 @StrudelDsl
-val binaryL by dslFunction { args ->
+val binaryL by dslFunction { args, callInfo ->
     val n = args.getOrNull(0)?.asIntOrNull() ?: 0
     if (n == 0) {
         applyBinaryNL(0, 1)

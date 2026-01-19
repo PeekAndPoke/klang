@@ -3,8 +3,11 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.script.runtime.RuntimeValue
+import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
@@ -15,20 +18,6 @@ import kotlin.jvm.JvmName
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
-// --- Registry ---
-
-object StrudelRegistry {
-    val symbols = mutableMapOf<String, Any>()
-    val functions = mutableMapOf<String, (List<RuntimeValue>) -> StrudelPattern>()
-    val patternExtensionMethods = mutableMapOf<String, (StrudelPattern, List<Any?>) -> StrudelPattern>()
-    val stringExtensionMethods = mutableMapOf<String, (String, List<Any?>) -> StrudelPattern>()
-}
-
-// --- Type Aliases ---
-
-typealias VoiceDataModifier = VoiceData.(Any?) -> VoiceData
-typealias VoiceDataMerger = (source: VoiceData, control: VoiceData) -> VoiceData
-
 // --- Init Property ---
 
 /**
@@ -36,6 +25,44 @@ typealias VoiceDataMerger = (source: VoiceData, control: VoiceData) -> VoiceData
  * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
  */
 var strudelLangHelpersInit = false
+
+// --- Type Aliases ---
+
+typealias VoiceDataModifier = VoiceData.(Any?) -> VoiceData
+
+typealias VoiceDataMerger = (source: VoiceData, control: VoiceData) -> VoiceData
+
+typealias StrudelDslFn = (args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
+
+typealias StrudelDslExtFn<R> = (recv: R, args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
+
+// --- Registry ---
+
+object StrudelRegistry {
+    val symbols = mutableMapOf<String, Any>()
+    val functions = mutableMapOf<String, StrudelDslFn>()
+    val patternExtensionMethods = mutableMapOf<String, StrudelDslExtFn<StrudelPattern>>()
+    val stringExtensionMethods = mutableMapOf<String, StrudelDslExtFn<String>>()
+}
+
+data class StrudelDslArg<T>(
+    val value: T,
+    val sourceLocation: SourceLocation?,
+) {
+    companion object {
+        fun <T> of(value: T): StrudelDslArg<T> = StrudelDslArg(value = value, sourceLocation = null)
+
+        fun List<Any?>.asStrudelDslArgs(callInfo: CallInfo? = null): List<StrudelDslArg<Any?>> {
+            return mapIndexed { index, arg ->
+                @Suppress("UNCHECKED_CAST")
+                when (arg) {
+                    is StrudelDslArg<*> -> arg as StrudelDslArg<Any?>
+                    else -> StrudelDslArg(value = arg, sourceLocation = callInfo?.paramLocations?.getOrNull(index))
+                }
+            }
+        }
+    }
+}
 
 /** Default modifier for patterns that populates VoiceData.value */
 val defaultModifier: VoiceDataModifier = {
@@ -73,20 +100,17 @@ fun voiceModifier(modify: VoiceDataModifier): VoiceDataModifier = modify
 /**
  * Creates a DSL function that returns a StrudelPattern.
  */
-fun dslFunction(handler: (List<Any?>) -> StrudelPattern) =
-    DslFunctionProvider(handler)
+fun dslFunction(handler: StrudelDslFn) = DslFunctionProvider(handler)
 
 /**
  * Creates a DSL extension method on StrudelPattern that returns a StrudelPattern.
  */
-fun dslPatternExtension(handler: (StrudelPattern, List<Any?>) -> StrudelPattern) =
-    DslPatternExtensionProvider(handler)
+fun dslPatternExtension(handler: StrudelDslExtFn<StrudelPattern>) = DslPatternExtensionProvider(handler)
 
 /**
  * Creates a DSL extension method on String that returns a StrudelPattern.
  */
-fun dslStringExtension(handler: (StrudelPattern, List<Any?>) -> StrudelPattern) =
-    DslStringExtensionProvider(handler)
+fun dslStringExtension(handler: StrudelDslExtFn<StrudelPattern>) = DslStringExtensionProvider(handler)
 
 /**
  * Creates a DSL object that is registered in the StrudelRegistry.
@@ -100,7 +124,7 @@ fun <T : Any> dslObject(handler: () -> T) = DslObjectProvider(handler)
  * Arguments are interpreted as a control pattern.
  */
 fun StrudelPattern.applyControlFromParams(
-    args: List<Any?>,
+    args: List<StrudelDslArg<Any?>>,
     modify: VoiceDataModifier,
     combine: VoiceDataMerger,
 ): StrudelPattern {
@@ -128,7 +152,7 @@ fun StrudelPattern.applyControlFromParams(
  *                 The second param is the full control VoiceData (useful for merging extra fields like resonance).
  */
 fun StrudelPattern.applyNumericalParam(
-    args: List<Any?>,
+    args: List<StrudelDslArg<Any?>>,
     modify: VoiceDataModifier,
     getValue: VoiceData.() -> Double?,
     setValue: VoiceData.(value: Double, control: VoiceData) -> VoiceData,
@@ -153,7 +177,7 @@ fun StrudelPattern.applyNumericalParam(
  * - Single String/Number -> parses to AtomicPattern using [modify].
  * - Multiple args -> returns a SequencePattern of the parsed items.
  */
-fun List<Any?>.toPattern(modify: VoiceDataModifier): StrudelPattern {
+fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceDataModifier): StrudelPattern {
     val patterns = this.toListOfPatterns(modify)
 
     return when {
@@ -166,85 +190,42 @@ fun List<Any?>.toPattern(modify: VoiceDataModifier): StrudelPattern {
 /**
  * Recursively flattens arguments into a list of StrudelPatterns.
  */
-internal fun List<Any?>.toListOfPatterns(
+internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
     modify: VoiceDataModifier,
 ): List<StrudelPattern> {
-    val atomFactory = { text: String, sourceLocations: io.peekandpoke.klang.script.ast.SourceLocationChain? ->
-        AtomicPattern(VoiceData.empty.modify(text), sourceLocations)
+    val atomFactory = { text: String, sourceLocations: SourceLocationChain? ->
+        AtomicPattern(
+            data = VoiceData.empty.modify(text),
+            sourceLocations = sourceLocations,
+        )
     }
 
-    return this.flatMap { arg: Any? ->
-        when (arg) {
-            // -- KlangScript runtime values | we extract to code locations for live-coding ----------------------------
-            is RuntimeValue -> arg.toPattern(modify, atomFactory)
+    return this.flatMap { dslArg ->
+        val loc = dslArg.sourceLocation
 
+        when (val arg = dslArg.value) {
             // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
-            is String -> listOf(parseMiniNotation(arg, atomFactory = atomFactory))
+            is String -> listOf(
+                parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
+            )
+
             is Number -> listOf(atomFactory(arg.toString(), null))
+
             is Boolean -> listOf(atomFactory(arg.toString(), null))
+
             is StrudelPattern -> listOf(arg)
-            is List<*> -> arg.toListOfPatterns(modify)
+
+            is List<*> -> arg.map {
+                @Suppress("UNCHECKED_CAST")
+                when (it) {
+                    is StrudelDslArg<*> -> it as StrudelDslArg<Any?>
+                    else -> StrudelDslArg(value = it, sourceLocation = loc)
+                }
+            }.toListOfPatterns(modify)
 
             // -- empty or null ----------------------------------------------------------------------------------------
             null -> emptyList()
             else -> emptyList()
-        }
-    }
-}
-
-private fun RuntimeValue.toPattern(
-    modify: VoiceDataModifier,
-    atomFactory: (String, io.peekandpoke.klang.script.ast.SourceLocationChain?) -> StrudelPattern,
-): List<StrudelPattern> {
-    return when (val arg = this) {
-        is io.peekandpoke.klang.script.runtime.StringValue -> {
-            // Adjust location to point to content (skip opening quote)
-            val baseLocation = arg.location?.let {
-                it.copy(column = it.column + 1)
-            }
-            listOf(parseMiniNotation(arg.value, baseLocation, atomFactory))
-        }
-
-        is io.peekandpoke.klang.script.runtime.NumberValue -> {
-            // Could track location here too for number literals in the future
-            val locationChain = arg.location?.let { io.peekandpoke.klang.script.ast.SourceLocationChain.single(it) }
-            listOf(atomFactory(arg.value.toString(), locationChain))
-        }
-
-        is io.peekandpoke.klang.script.runtime.BooleanValue -> {
-            listOf(atomFactory(arg.value.toString(), null))
-        }
-
-        is io.peekandpoke.klang.script.runtime.ArrayValue -> {
-            arg.elements.toListOfPatterns(modify)
-        }
-
-        is io.peekandpoke.klang.script.runtime.NullValue -> {
-            emptyList()
-        }
-
-        is io.peekandpoke.klang.script.runtime.ObjectValue -> {
-            throw IllegalArgumentException("Cannot convert ObjectValue to pattern")
-        }
-
-        is io.peekandpoke.klang.script.runtime.FunctionValue -> {
-            throw IllegalArgumentException("Cannot convert FunctionValue to pattern")
-        }
-
-        is io.peekandpoke.klang.script.runtime.NativeFunctionValue -> {
-            throw IllegalArgumentException("Cannot convert NativeFunctionValue to pattern")
-        }
-
-        is io.peekandpoke.klang.script.runtime.BoundNativeMethod -> {
-            throw IllegalArgumentException("Cannot convert BoundNativeMethod to pattern")
-        }
-
-        is io.peekandpoke.klang.script.runtime.NativeObjectValue<*> -> {
-            // Check if it's a StrudelPattern wrapped in NativeObjectValue
-            when (val value = arg.value) {
-                is StrudelPattern -> listOf(value)
-                else -> throw IllegalArgumentException("Cannot convert NativeObjectValue (${arg.qualifiedName}) to pattern")
-            }
         }
     }
 }
@@ -272,7 +253,7 @@ fun StrudelPattern.applyControl(
  */
 internal fun applyBinaryOp(
     source: StrudelPattern,
-    args: List<Any?>,
+    args: List<StrudelDslArg<Any?>>,
     op: (VoiceValue, VoiceValue) -> VoiceValue?,
 ): StrudelPattern {
     // We use defaultModifier for args because we just want the 'value'
@@ -318,20 +299,24 @@ internal fun applyUnaryOp(
 
 // --- Generic Function Delegate (stack, arrange, etc.) ---
 
-class DslFunction(val handler: (List<Any?>) -> StrudelPattern) {
-    operator fun invoke() = handler(emptyList())
+class DslFunction(val handler: StrudelDslFn) {
+    operator fun invoke() = invoke(args = emptyList())
 
     @JvmName("invokeFunction")
-    operator fun invoke(block: (Double) -> Double) = handler(listOf(block))
+    operator fun invoke(block: (Double) -> Double) = invoke(args = listOf(block).asStrudelDslArgs())
 
     @JvmName("invokeVararg")
-    operator fun invoke(vararg args: Any?): StrudelPattern = handler(args.toList())
+    operator fun invoke(vararg args: Any?): StrudelPattern = invoke(args = args.toList().asStrudelDslArgs())
 
     @JvmName("invokeArray")
-    operator fun invoke(args: Array<Any?>): StrudelPattern = handler(args.toList())
+    operator fun invoke(args: Array<Any?>): StrudelPattern = invoke(args = args.toList().asStrudelDslArgs())
 
     @JvmName("invokeList")
-    operator fun invoke(args: List<Any?>): StrudelPattern = handler(args)
+    operator fun invoke(args: List<Any?>): StrudelPattern = invoke(args = args.asStrudelDslArgs())
+
+    operator fun invoke(args: List<StrudelDslArg<Any?>>, callInfo: CallInfo? = null): StrudelPattern {
+        return handler(args, callInfo)
+    }
 }
 
 // --- Generic Method Delegate (fast, slow, etc.) ---
@@ -342,49 +327,51 @@ class DslFunction(val handler: (List<Any?>) -> StrudelPattern) {
  */
 class DslPatternMethod(
     val pattern: StrudelPattern,
-    val handler: (StrudelPattern, List<Any?>) -> StrudelPattern,
+    val handler: StrudelDslExtFn<StrudelPattern>,
 ) {
-    operator fun invoke() =
-        handler(pattern, emptyList())
+    operator fun invoke() = invoke(args = emptyList())
 
     @JvmName("invokeBlock")
     operator fun invoke(block: (StrudelPattern) -> StrudelPattern) =
-        handler(pattern, listOf(block))
+        invoke(args = listOf(block).asStrudelDslArgs())
 
     @JvmName("invokeBlock")
     operator fun invoke(p1: Any, block: (StrudelPattern) -> StrudelPattern) =
-        handler(pattern, listOf(p1, block))
+        invoke(args = listOf(p1, block).asStrudelDslArgs())
 
     @JvmName("invokeBlocksVararg")
     operator fun invoke(vararg block: (StrudelPattern) -> StrudelPattern) =
-        handler(pattern, block.toList())
+        invoke(args = block.toList().asStrudelDslArgs())
 
     @JvmName("invokeVararg")
     operator fun invoke(vararg args: Any?): StrudelPattern =
-        handler(pattern, args.toList())
+        invoke(args = args.toList().asStrudelDslArgs())
 
     @JvmName("invokeArray")
     operator fun invoke(args: Array<Any?>): StrudelPattern =
-        handler(pattern, args.toList())
+        invoke(args = args.toList().asStrudelDslArgs())
 
     @JvmName("invokeList")
     operator fun invoke(args: List<Any?>): StrudelPattern =
-        handler(pattern, args)
+        invoke(args = args.asStrudelDslArgs())
+
+    operator fun invoke(args: List<StrudelDslArg<Any?>>, callInfo: CallInfo? = null): StrudelPattern =
+        handler(pattern, args, callInfo)
 }
 
 /**
  * Provider that registers the function name and creates bound delegates.
  */
 class DslFunctionProvider(
-    private val handler: (List<Any?>) -> StrudelPattern,
+    private val handler: StrudelDslFn,
 ) {
     operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, DslFunction> {
         val name = prop.name
         val func = DslFunction(handler)
 
         // Register in the evaluator registry - convert RuntimeValue to Any? for the handler
-        StrudelRegistry.functions[name] = { args ->
-            func.invoke(args.map { it.value })
+        StrudelRegistry.functions[name] = { args, callInfo ->
+            func.invoke(args = args, callInfo = callInfo)
         }
 
         return ReadOnlyProperty { _, _ -> func }
@@ -395,7 +382,7 @@ class DslFunctionProvider(
  * Provider that registers the method name and creates bound delegates.
  */
 class DslPatternExtensionProvider(
-    private val handler: (StrudelPattern, List<Any?>) -> StrudelPattern,
+    private val handler: StrudelDslExtFn<StrudelPattern>,
 ) {
     operator fun provideDelegate(
         thisRef: Any?,
@@ -404,8 +391,8 @@ class DslPatternExtensionProvider(
         val name = prop.name
 
         // Register in the evaluator registry
-        StrudelRegistry.patternExtensionMethods[name] = { recv, args ->
-            handler(recv, args)
+        StrudelRegistry.patternExtensionMethods[name] = { recv, args, callInfo ->
+            handler(recv, args, callInfo)
         }
 
         // Return a delegate that creates a BOUND method when accessed
@@ -419,7 +406,7 @@ class DslPatternExtensionProvider(
  * Provider that registers the method name and creates bound delegates for Strings.
  */
 class DslStringExtensionProvider(
-    private val handler: (StrudelPattern, List<Any?>) -> StrudelPattern,
+    private val handler: StrudelDslExtFn<StrudelPattern>,
 ) {
     operator fun provideDelegate(
         thisRef: Any?,
@@ -428,9 +415,9 @@ class DslStringExtensionProvider(
         val name = prop.name
 
         // Register in the evaluator registry
-        StrudelRegistry.stringExtensionMethods[name] = { recv, args ->
+        StrudelRegistry.stringExtensionMethods[name] = { recv, args, callInfo ->
             val pattern = parse(recv)
-            handler(pattern, args)
+            handler(pattern, args, callInfo)
         }
 
         // Return a delegate that creates a BOUND method when accessed
@@ -441,9 +428,10 @@ class DslStringExtensionProvider(
     }
 
     private fun parse(str: String): StrudelPattern {
-        return parseMiniNotation(str) { text, _ ->
+        return parseMiniNotation(str) { text, loc ->
             AtomicPattern(
-                VoiceData.empty.defaultModifier(text)
+                data = VoiceData.empty.defaultModifier(text),
+                sourceLocations = loc,
             )
         }
     }

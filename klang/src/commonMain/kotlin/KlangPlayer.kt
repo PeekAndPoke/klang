@@ -19,6 +19,8 @@ class KlangPlayer(
     private val fetcherDispatcher: CoroutineDispatcher,
     /** The dispatcher used for the audio backend */
     private val backendDispatcher: CoroutineDispatcher,
+    /** The dispatcher used for frontend callbacks */
+    private val callbackDispatcher: CoroutineDispatcher,
 ) {
     companion object {
         private val nextPlaybackId = KlangAtomicInt(0)
@@ -41,9 +43,10 @@ class KlangPlayer(
     private val lock = KlangLock()
     private val _activePlaybacks = mutableListOf<KlangPlayback>()
 
-    // Expose scope and dispatcher for playback implementations
+    // Expose scope and dispatchers for playback implementations
     val playbackScope: CoroutineScope get() = scope
     val playbackFetcherDispatcher: CoroutineDispatcher get() = fetcherDispatcher
+    val playbackCallbackDispatcher: CoroutineDispatcher get() = callbackDispatcher
 
     /**
      * Read-only list of currently active playbacks

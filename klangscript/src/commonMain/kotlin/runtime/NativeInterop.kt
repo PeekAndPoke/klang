@@ -43,7 +43,6 @@ fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int) {
  * Convert a RuntimeValue to a Kotlin type
  */
 fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
-
     // println("Converting ${this::class.simpleName} to ${cls.simpleName}")
 
     val result = when (this) {

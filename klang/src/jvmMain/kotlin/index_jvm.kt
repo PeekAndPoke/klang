@@ -36,6 +36,7 @@ actual fun klangPlayer(
         backendFactory = { config -> JvmAudioBackend(config) },
         fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = audioDispatcher,
+        callbackDispatcher = Dispatchers.Default,
     )
 }
 
