@@ -1,5 +1,36 @@
 # Immediate Todos
 
+## Live-coding
+
+Hi! Today we have a hard nut to crack...
+
+I am working on the frontend for the strudel live-editor. See DashboardPage.
+
+Now I want to mimick a very cool feature of the original strudel.cc. So what they do is the following:
+
+1. parse the code (we do too, done)
+2. play the music (we do too, done)
+3. highlight the currently played sound and notes in the code while the music is playing.
+
+The 3. point is the hard nut.
+
+We need to think how we get the information from the KlangScript all the way to the code-editor.
+
+Please let us only think about possibilities for now. You will need to look at KlangScript and how the strudel dsl is
+currently implemented.                                                                         
+The goals are at least:
+
+- get 3. to work as described above
+- the strudel dsl must work directly in kotlin code
+- the strudel dsl must work as KlangScript code
+- we need to put additional information into StrudelPatternEvent whenever possible.
+
+In the long run I also want to make the whole thing available for Kotlin-Notebooks and there we should be able to have
+the same "effect" of highlighting currently played notes / sounds etc.                        
+Maybe even an IntelliJ-Plugin to highlight things inside the kotlin code.
+
+So what we are looking for is a solid architectural foundation.
+
 ## More
 
 - change KlangPlayer.play() logic
