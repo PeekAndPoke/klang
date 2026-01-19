@@ -520,7 +520,11 @@ val pure by dslFunction { args ->
 private fun applyStruct(source: StrudelPattern, structArg: Any?): StrudelPattern {
     val structure = when (structArg) {
         is StrudelPattern -> structArg
-        is String -> parseMiniNotation(input = structArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+
+        is String -> parseMiniNotation(input = structArg) { text, _ ->
+            AtomicPattern(VoiceData.empty.copy(note = text))
+        }
+
         else -> silence
     }
 
@@ -560,7 +564,11 @@ val String.struct by dslStringExtension { source, args ->
 private fun applyStructAll(source: StrudelPattern, structArg: Any?): StrudelPattern {
     val structure = when (structArg) {
         is StrudelPattern -> structArg
-        is String -> parseMiniNotation(input = structArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+
+        is String -> parseMiniNotation(input = structArg) { text, _ ->
+            AtomicPattern(VoiceData.empty.copy(note = text))
+        }
+
         else -> silence
     }
 
@@ -601,7 +609,11 @@ val String.structAll by dslStringExtension { source, args ->
 private fun applyMask(source: StrudelPattern, maskArg: Any?): StrudelPattern {
     val maskPattern = when (maskArg) {
         is StrudelPattern -> maskArg
-        is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+
+        is String -> parseMiniNotation(input = maskArg) { text, _ ->
+            AtomicPattern(VoiceData.empty.copy(note = text))
+        }
+
         else -> silence
     }
 
@@ -642,7 +654,11 @@ val String.mask by dslStringExtension { source, args ->
 private fun applyMaskAll(source: StrudelPattern, maskArg: Any?): StrudelPattern {
     val maskPattern = when (maskArg) {
         is StrudelPattern -> maskArg
-        is String -> parseMiniNotation(input = maskArg) { AtomicPattern(VoiceData.empty.copy(note = it)) }
+
+        is String -> parseMiniNotation(input = maskArg) { text, _ ->
+            AtomicPattern(VoiceData.empty.copy(note = text))
+        }
+
         else -> silence
     }
 
@@ -710,7 +726,8 @@ val StrudelPattern.filter by dslPatternExtension { source, args ->
 }
 
 /** Filters haps using the given function. */
-fun StrudelPattern.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern = applyFilter(this, predicate)
+fun StrudelPattern.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern =
+    applyFilter(this, predicate)
 
 /** Filters haps using the given function. */
 @StrudelDsl
@@ -723,8 +740,8 @@ val String.filter by dslStringExtension { source, args ->
 
 /** Filters haps using the given function. */
 fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
-    val pattern = parseMiniNotation(this) {
-        AtomicPattern(VoiceData.empty.defaultModifier(it))
+    val pattern = parseMiniNotation(this) { text, _ ->
+        AtomicPattern(VoiceData.empty.defaultModifier(text))
     }
 
     return pattern.filter(predicate)
@@ -772,8 +789,8 @@ val String.filterWhen by dslStringExtension { source, args ->
 
 @StrudelDsl
 fun String.filterWhen(predicate: (Double) -> Boolean): StrudelPattern {
-    val pattern = parseMiniNotation(this) {
-        AtomicPattern(VoiceData.empty.defaultModifier(it))
+    val pattern = parseMiniNotation(this) { text, _ ->
+        AtomicPattern(VoiceData.empty.defaultModifier(text))
     }
 
     return pattern.filterWhen(predicate)
@@ -876,15 +893,15 @@ private fun applyZoom(source: StrudelPattern, args: List<Any?>): StrudelPattern 
     // Parse the start argument into a pattern
     val startPattern = when (startArg) {
         is StrudelPattern -> startArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(startArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(startArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     // Parse the end argument into a pattern
     val endPattern = when (endArg) {
         is StrudelPattern -> endArg
-        null -> parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(endArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(endArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     // Check if we have static values for optimization
@@ -938,14 +955,21 @@ private fun applyBite(source: StrudelPattern, args: List<Any?>): StrudelPattern 
     // Parse the n argument into a pattern
     val nPattern = when (nArg) {
         is StrudelPattern -> nArg
-        null -> parseMiniNotation("4") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("4") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(nArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     // Parse the indices argument into a pattern
     val indices = when (indicesArg) {
         is StrudelPattern -> indicesArg
-        is String -> parseMiniNotation(input = indicesArg) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        is String -> parseMiniNotation(input = indicesArg) { text, _ ->
+            AtomicPattern(
+                VoiceData.empty.defaultModifier(
+                    text
+                )
+            )
+        }
+
         else -> return silence
     }
 
@@ -1062,15 +1086,15 @@ private fun applySegment(source: StrudelPattern, args: List<Any?>): StrudelPatte
 
     val nPattern = when (nArg) {
         is StrudelPattern -> nArg
-        null -> parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(nArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val staticN = nArg?.asIntOrNull()
 
     return if (staticN != null) {
         // Static path: use original implementation with struct + fast
-        val structPat = parseMiniNotation("x") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        val structPat = parseMiniNotation("x") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
         source.struct(structPat.fast(staticN))
     } else {
         // Dynamic path: use SegmentPatternWithControl which properly slices each timespan
@@ -1150,14 +1174,14 @@ val StrudelPattern.euclid by dslPatternExtension { p, args ->
 
     val pulsesPattern = when (pulsesArg) {
         is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val stepsPattern = when (stepsArg) {
         is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val staticPulses = pulsesArg?.asIntOrNull()
@@ -1198,20 +1222,26 @@ val StrudelPattern.euclidRot by dslPatternExtension { p, args ->
 
     val pulsesPattern = when (pulsesArg) {
         is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val stepsPattern = when (stepsArg) {
         is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val rotationPattern = when (rotationArg) {
         is StrudelPattern -> rotationArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(rotationArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(rotationArg.toString()) { text, _ ->
+            AtomicPattern(
+                VoiceData.empty.defaultModifier(
+                    text
+                )
+            )
+        }
     }
 
     val staticPulses = pulsesArg?.asIntOrNull()
@@ -1264,20 +1294,26 @@ val StrudelPattern.bjork by dslPatternExtension { p, args ->
 
     val pulsesPattern = when (pulsesArg) {
         is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val stepsPattern = when (stepsArg) {
         is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val rotationPattern = when (rotationArg) {
         is StrudelPattern -> rotationArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(rotationArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(rotationArg.toString()) { text, _ ->
+            AtomicPattern(
+                VoiceData.empty.defaultModifier(
+                    text
+                )
+            )
+        }
     }
 
     val staticPulses = pulsesArg?.asIntOrNull()
@@ -1317,14 +1353,14 @@ val StrudelPattern.euclidLegato by dslPatternExtension { p, args ->
 
     val pulsesPattern = when (pulsesArg) {
         is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val stepsPattern = when (stepsArg) {
         is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val staticPulses = pulsesArg?.asIntOrNull()
@@ -1366,20 +1402,26 @@ val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args ->
 
     val pulsesPattern = when (pulsesArg) {
         is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val stepsPattern = when (stepsArg) {
         is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val rotationPattern = when (rotationArg) {
         is StrudelPattern -> rotationArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(rotationArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(rotationArg.toString()) { text, _ ->
+            AtomicPattern(
+                VoiceData.empty.defaultModifier(
+                    text
+                )
+            )
+        }
     }
 
     val staticPulses = pulsesArg?.asIntOrNull()
@@ -1405,14 +1447,14 @@ private fun applyEuclidish(source: StrudelPattern, args: List<Any?>): StrudelPat
 
     val pulsesPattern = when (pulsesArg) {
         is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val stepsPattern = when (stepsArg) {
         is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(stepsArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     // groove defaults to 0 (straight euclid)
@@ -1420,7 +1462,7 @@ private fun applyEuclidish(source: StrudelPattern, args: List<Any?>): StrudelPat
         is StrudelPattern -> grooveArg
         else -> {
             val g = grooveArg ?: 0
-            parseMiniNotation(g.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+            parseMiniNotation(g.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
         }
     }
 

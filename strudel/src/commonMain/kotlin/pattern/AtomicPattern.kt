@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
@@ -10,8 +11,14 @@ import io.peekandpoke.klang.strudel.math.Rational
 /**
  * Atomic Pattern: Represents a single event that repeats every cycle (0, 1, 2...).
  * Used for basic primitives like `note("c3")`.
+ *
+ * @property data The voice data for this atom
+ * @property sourceLocations Optional source location chain for live code highlighting
  */
-internal class AtomicPattern(val data: VoiceData) : StrudelPattern.FixedWeight {
+internal class AtomicPattern(
+    val data: VoiceData,
+    val sourceLocations: SourceLocationChain? = null,
+) : StrudelPattern.FixedWeight {
     companion object {
         /**
          * AtomicPattern that produces events with empty VoiceData.
@@ -42,7 +49,8 @@ internal class AtomicPattern(val data: VoiceData) : StrudelPattern.FixedWeight {
                         begin = begin,
                         end = begin + Rational.ONE, // Default duration is 1 cycle
                         dur = Rational.ONE,
-                        data = data
+                        data = data,
+                        sourceLocations = sourceLocations
                     )
                 )
             }

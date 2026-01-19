@@ -84,8 +84,14 @@ val brandBy by dslFunction { args ->
 
     val probPattern = when (probArg) {
         is StrudelPattern -> probArg
-        null -> parseMiniNotation("0.5") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(probArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+
+        null -> parseMiniNotation("0.5") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+
+        else -> parseMiniNotation(probArg.toString()) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     val staticProb = probArg?.asDoubleOrNull()
@@ -137,8 +143,14 @@ val irand by dslFunction { args ->
 
     val nPattern = when (nArg) {
         is StrudelPattern -> nArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+
+        null -> parseMiniNotation("0") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+
+        else -> parseMiniNotation(nArg.toString()) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     val staticN = nArg?.asIntOrNull()
@@ -191,8 +203,8 @@ private fun applyDegradeBy(pattern: StrudelPattern, args: List<Any?>): StrudelPa
 
     val probPattern = when (probArg) {
         is StrudelPattern -> probArg
-        is String -> parseMiniNotation(input = probArg) {
-            AtomicPattern(VoiceData.empty.defaultModifier(it))
+        is String -> parseMiniNotation(input = probArg) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
 
         else -> null
@@ -248,8 +260,8 @@ private fun applyUndegradeBy(pattern: StrudelPattern, args: List<Any?>): Strudel
 
     val probPattern = when (probArg) {
         is StrudelPattern -> probArg
-        is String -> parseMiniNotation(input = probArg) {
-            AtomicPattern(VoiceData.empty.defaultModifier(it))
+        is String -> parseMiniNotation(input = probArg) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
 
         else -> null
@@ -326,8 +338,8 @@ private fun applySometimesBy(
         when (arg) {
             is Number -> if (probArg == null) probArg = arg
             is StrudelPattern -> if (probArg == null) probArg = arg
-            is String -> if (probArg == null) probArg = parseMiniNotation(input = arg) {
-                AtomicPattern(VoiceData.empty.defaultModifier(it))
+            is String -> if (probArg == null) probArg = parseMiniNotation(input = arg) { text, _ ->
+                AtomicPattern(VoiceData.empty.defaultModifier(text))
             }
 
             is Function1<*, *> -> {
@@ -508,8 +520,14 @@ val randL by dslFunction { args ->
 
     val nPattern = when (nArg) {
         is StrudelPattern -> nArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+
+        null -> parseMiniNotation("0") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+
+        else -> parseMiniNotation(nArg.toString()) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     val staticN = nArg?.asIntOrNull()
@@ -591,8 +609,14 @@ val randrun: DslFunction by dslFunction { args ->
 
     val nPattern = when (nArg) {
         is StrudelPattern -> nArg
-        null -> parseMiniNotation("0") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+
+        null -> parseMiniNotation("0") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+
+        else -> parseMiniNotation(nArg.toString()) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     val staticN = nArg?.asIntOrNull()

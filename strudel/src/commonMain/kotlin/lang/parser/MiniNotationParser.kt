@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
@@ -12,28 +14,18 @@ import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
 /** Shortcut for parsing mini notation into patterns */
 fun parseMiniNotation(
     input: String,
-    baseLocation: io.peekandpoke.klang.script.ast.SourceLocation? = null,
-    atomFactory: (String) -> StrudelPattern,
+    baseLocation: SourceLocation? = null,
+    atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
 ): StrudelPattern =
     MiniNotationParser(input, baseLocation, atomFactory).parse()
 
 class MiniNotationParser(
     private val input: String,
-    private val baseLocation: io.peekandpoke.klang.script.ast.SourceLocation? = null,
-    private val atomFactory: (String) -> StrudelPattern,
+    private val baseLocation: SourceLocation? = null,
+    private val atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
 ) {
     private val tokens = tokenize(input)
     private var pos = 0
-
-    companion object {
-        private data class CacheKey(val input: String, val factoryHash: Int)
-
-        private val cache = mutableMapOf<CacheKey, StrudelPattern>()
-
-        fun clearCache() {
-            cache.clear()
-        }
-    }
 
     // Internal pattern to mark sequences that should be flattened into the parent
     private class SplittableSequencePattern(val patterns: List<StrudelPattern>) : StrudelPattern {
@@ -49,14 +41,6 @@ class MiniNotationParser(
     }
 
     fun parse(): StrudelPattern {
-        val cacheKey = CacheKey(input, atomFactory.hashCode())
-
-        return cache.getOrPut(cacheKey) {
-            parseInternal()
-        }
-    }
-
-    private fun parseInternal(): StrudelPattern {
         if (tokens.isEmpty()) return silence
 
         val result = parseExpression()
@@ -113,8 +97,15 @@ class MiniNotationParser(
             match(TokenType.TILDE) -> silence
 
             match(TokenType.LITERAL) -> {
-                val text = previous().text
+                val token = previous()
+                val text = token.text
                 val parts = text.split(":")
+
+                // Build source location chain for this atom
+                val atomLocation = token.toLocation(baseLocation)
+                val locationChain = if (atomLocation != null) {
+                    SourceLocationChain.single(atomLocation)
+                } else null
 
                 // Check if it matches the pattern name:int[:double]
                 // If parts[1] is not an integer, we treat the whole thing as the atom name (e.g. scale "C4:minor")
@@ -126,7 +117,7 @@ class MiniNotationParser(
                     // The index (and gain) will be applied via ControlPattern below.
                     val atomText = parts[0]
 
-                    var p = atomFactory(atomText)
+                    var p = atomFactory(atomText, locationChain)
 
                     // Apply index
                     p = ControlPattern(
@@ -151,7 +142,7 @@ class MiniNotationParser(
                     p
                 } else {
                     // Treat as single atom
-                    atomFactory(text)
+                    atomFactory(text, locationChain)
                 }
             }
 
@@ -253,7 +244,26 @@ class MiniNotationParser(
         COMMA, STAR, SLASH, TILDE, AT, PIPE, QUESTION, BANG, LITERAL
     }
 
-    private data class Token(val type: TokenType, val text: String)
+    private data class Token(
+        val type: TokenType,
+        val text: String,
+        /** Start position in the input string (inclusive) */
+        val start: Int,
+        /** End position in the input string (exclusive) */
+        val end: Int,
+    ) {
+        /**
+         * Create a SourceLocation for this token
+         */
+        fun toLocation(base: SourceLocation?): SourceLocation? {
+            if (base == null) return null
+
+            // Calculate line and column offsets
+            // For now, we assume single-line strings (no newlines in mini-notation)
+            // Column = base.column + token.start
+            return base.copy(column = base.column + start)
+        }
+    }
 
     private fun tokenize(input: String): List<Token> {
         val tokens = mutableListOf<Token>()
@@ -263,59 +273,59 @@ class MiniNotationParser(
             when (c) {
                 ' ', '\t', '\n', '\r' -> i++
                 '(' -> {
-                    tokens.add(Token(TokenType.L_PAREN, "(")); i++
+                    tokens.add(Token(TokenType.L_PAREN, "(", start = i, end = i + 1)); i++
                 }
 
                 ')' -> {
-                    tokens.add(Token(TokenType.R_PAREN, ")")); i++
+                    tokens.add(Token(TokenType.R_PAREN, ")", start = i, end = i + 1)); i++
                 }
 
                 '[' -> {
-                    tokens.add(Token(TokenType.L_BRACKET, "[")); i++
+                    tokens.add(Token(TokenType.L_BRACKET, "[", start = i, end = i + 1)); i++
                 }
 
                 ']' -> {
-                    tokens.add(Token(TokenType.R_BRACKET, "]")); i++
+                    tokens.add(Token(TokenType.R_BRACKET, "]", start = i, end = i + 1)); i++
                 }
 
                 '<' -> {
-                    tokens.add(Token(TokenType.L_ANGLE, "<")); i++
+                    tokens.add(Token(TokenType.L_ANGLE, "<", start = i, end = i + 1)); i++
                 }
 
                 '>' -> {
-                    tokens.add(Token(TokenType.R_ANGLE, ">")); i++
+                    tokens.add(Token(TokenType.R_ANGLE, ">", start = i, end = i + 1)); i++
                 }
 
                 ',' -> {
-                    tokens.add(Token(TokenType.COMMA, ",")); i++
+                    tokens.add(Token(TokenType.COMMA, ",", start = i, end = i + 1)); i++
                 }
 
                 '*' -> {
-                    tokens.add(Token(TokenType.STAR, "*")); i++
+                    tokens.add(Token(TokenType.STAR, "*", start = i, end = i + 1)); i++
                 }
 
                 '/' -> {
-                    tokens.add(Token(TokenType.SLASH, "/")); i++
+                    tokens.add(Token(TokenType.SLASH, "/", start = i, end = i + 1)); i++
                 }
 
                 '~' -> {
-                    tokens.add(Token(TokenType.TILDE, "~")); i++
+                    tokens.add(Token(TokenType.TILDE, "~", start = i, end = i + 1)); i++
                 }
 
                 '@' -> {
-                    tokens.add(Token(TokenType.AT, "@")); i++
+                    tokens.add(Token(TokenType.AT, "@", start = i, end = i + 1)); i++
                 }
 
                 '|' -> {
-                    tokens.add(Token(TokenType.PIPE, "|")); i++
+                    tokens.add(Token(TokenType.PIPE, "|", start = i, end = i + 1)); i++
                 }
 
                 '?' -> {
-                    tokens.add(Token(TokenType.QUESTION, "?")); i++
+                    tokens.add(Token(TokenType.QUESTION, "?", start = i, end = i + 1)); i++
                 }
 
                 '!' -> {
-                    tokens.add(Token(TokenType.BANG, "!")); i++
+                    tokens.add(Token(TokenType.BANG, "!", start = i, end = i + 1)); i++
                 }
 
                 else -> {
@@ -324,7 +334,7 @@ class MiniNotationParser(
                         if (input[i] in " []<>,*/~@()|?! \t\n\r") break
                         i++
                     }
-                    tokens.add(Token(TokenType.LITERAL, input.substring(start, i)))
+                    tokens.add(Token(TokenType.LITERAL, input.substring(start, i), start = start, end = i))
                 }
             }
         }

@@ -71,6 +71,19 @@ class StrudelPlayback internal constructor(
     private val samplesAlreadySent = mutableSetOf<SampleRequest>()
     private val klangTime = KlangTime.create()
 
+    // ===== Live Coding Callbacks =====
+
+    /**
+     * Callback fired when events are scheduled for playback
+     *
+     * Used for live code highlighting - provides the event and its scheduled time
+     * so the frontend can highlight the corresponding source code.
+     *
+     * @param {event} The pattern event being scheduled
+     * @param {absoluteTime} The absolute scheduled time (seconds from KlangTime epoch)
+     */
+    var onEventScheduled: ((event: StrudelPatternEvent, absoluteTime: Double) -> Unit)? = null
+
     // ===== Public API =====
 
     /**
@@ -189,6 +202,9 @@ class StrudelPlayback internal constructor(
 
             // Convert to absolute time
             val absoluteStartTime = playbackStartTimeSec + relativeStartTime
+
+            // Fire callback for live code highlighting
+            onEventScheduled?.invoke(event, absoluteStartTime)
 
             ScheduledVoice(
                 data = event.data,

@@ -28,8 +28,8 @@ private fun applyFirstOf(source: StrudelPattern, args: List<Any?>): StrudelPatte
     // Parse n as a pattern
     val nPattern = when (nArg) {
         is StrudelPattern -> nArg
-        null -> parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(nArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     val staticN = nArg?.asIntOrNull()
@@ -106,12 +106,12 @@ private fun applyLastOf(source: StrudelPattern, args: List<Any?>): StrudelPatter
     val nPattern = when (nArg) {
         is StrudelPattern -> nArg
 
-        null -> parseMiniNotation("1") {
-            AtomicPattern(VoiceData.empty.defaultModifier(it))
+        null -> parseMiniNotation("1") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
 
-        else -> parseMiniNotation(nArg.toString()) {
-            AtomicPattern(VoiceData.empty.defaultModifier(it))
+        else -> parseMiniNotation(nArg.toString()) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
     }
 

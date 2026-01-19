@@ -56,8 +56,8 @@ private fun applySlow(pattern: StrudelPattern, args: List<Any?>): StrudelPattern
     // Parse the factor argument into a pattern
     val factorPattern = when (factorArg) {
         is StrudelPattern -> factorArg
-        null -> parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(factorArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(factorArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     // Check if we have a static value for optimization
@@ -110,8 +110,8 @@ private fun applyFast(pattern: StrudelPattern, args: List<Any?>): StrudelPattern
     // Parse the factor argument into a pattern
     val factorPattern = when (factorArg) {
         is StrudelPattern -> factorArg
-        null -> parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
-        else -> parseMiniNotation(factorArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(factorArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
     }
 
     // Check if we have a static value for optimization
@@ -165,12 +165,12 @@ private fun applyRev(pattern: StrudelPattern, args: List<Any?>): StrudelPattern 
         is StrudelPattern -> nArg
         null -> {
             // Default to 1
-            parseMiniNotation("1") { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+            parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
         }
 
         else -> {
             // Parse as mini-notation (handles numbers and strings)
-            parseMiniNotation(nArg.toString()) { AtomicPattern(VoiceData.empty.defaultModifier(it)) }
+            parseMiniNotation(nArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
         }
     }
 

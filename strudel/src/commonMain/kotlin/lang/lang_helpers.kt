@@ -169,8 +169,8 @@ fun List<Any?>.toPattern(modify: VoiceDataModifier): StrudelPattern {
 internal fun List<Any?>.toListOfPatterns(
     modify: VoiceDataModifier,
 ): List<StrudelPattern> {
-    val atomFactory = { it: String ->
-        AtomicPattern(VoiceData.empty.modify(it))
+    val atomFactory = { text: String, sourceLocations: io.peekandpoke.klang.script.ast.SourceLocationChain? ->
+        AtomicPattern(VoiceData.empty.modify(text), sourceLocations)
     }
 
     return this.flatMap { arg: Any? ->
@@ -180,8 +180,8 @@ internal fun List<Any?>.toListOfPatterns(
 
             // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
             is String -> listOf(parseMiniNotation(arg, atomFactory = atomFactory))
-            is Number -> listOf(atomFactory(arg.toString()))
-            is Boolean -> listOf(atomFactory(arg.toString()))
+            is Number -> listOf(atomFactory(arg.toString(), null))
+            is Boolean -> listOf(atomFactory(arg.toString(), null))
             is StrudelPattern -> listOf(arg)
             is List<*> -> arg.toListOfPatterns(modify)
 
@@ -194,7 +194,7 @@ internal fun List<Any?>.toListOfPatterns(
 
 private fun RuntimeValue.toPattern(
     modify: VoiceDataModifier,
-    atomFactory: (String) -> AtomicPattern,
+    atomFactory: (String, io.peekandpoke.klang.script.ast.SourceLocationChain?) -> StrudelPattern,
 ): List<StrudelPattern> {
     return when (val arg = this) {
         is io.peekandpoke.klang.script.runtime.StringValue -> {
@@ -207,11 +207,12 @@ private fun RuntimeValue.toPattern(
 
         is io.peekandpoke.klang.script.runtime.NumberValue -> {
             // Could track location here too for number literals in the future
-            listOf(atomFactory(arg.value.toString()))
+            val locationChain = arg.location?.let { io.peekandpoke.klang.script.ast.SourceLocationChain.single(it) }
+            listOf(atomFactory(arg.value.toString(), locationChain))
         }
 
         is io.peekandpoke.klang.script.runtime.BooleanValue -> {
-            listOf(atomFactory(arg.value.toString()))
+            listOf(atomFactory(arg.value.toString(), null))
         }
 
         is io.peekandpoke.klang.script.runtime.ArrayValue -> {
@@ -440,9 +441,9 @@ class DslStringExtensionProvider(
     }
 
     private fun parse(str: String): StrudelPattern {
-        return parseMiniNotation(str) {
+        return parseMiniNotation(str) { text, _ ->
             AtomicPattern(
-                VoiceData.empty.defaultModifier(it)
+                VoiceData.empty.defaultModifier(text)
             )
         }
     }

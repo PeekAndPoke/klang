@@ -6,7 +6,7 @@ import io.peekandpoke.klang.strudel.lang.note
 
 class MiniNotationIntervalSpec : StringSpec({
 
-    fun parse(input: String) = MiniNotationParser(input) { note(it) }.parse()
+    fun parse(input: String) = parseMiniNotation(input) { text, _ -> note(text) }
 
     "Parsing negative intervals '-2M'" {
         val pattern = parse("-2M")

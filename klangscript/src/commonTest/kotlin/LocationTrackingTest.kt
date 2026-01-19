@@ -6,10 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.builder.registerFunction
-import io.peekandpoke.klang.script.runtime.ArgumentError
-import io.peekandpoke.klang.script.runtime.ImportError
-import io.peekandpoke.klang.script.runtime.ReferenceError
-import io.peekandpoke.klang.script.runtime.TypeError
+import io.peekandpoke.klang.script.runtime.*
 
 /**
  * Tests for end-to-end source location tracking in error messages
@@ -172,6 +169,164 @@ class LocationTrackingTest : StringSpec({
         error.location?.source shouldBe null
         error.location?.line shouldBe 1
         error.format() shouldContain "line 1"
+    }
+
+    // ===== RuntimeValue Location Tracking Tests =====
+
+    "StringValue preserves location from parser" {
+        val engine = klangScript {
+            registerFunctionRaw("checkLocation") { args, _ ->
+                val stringValue = args[0] as? StringValue
+                stringValue shouldNotBe null
+                stringValue?.location shouldNotBe null
+                stringValue?.location?.source shouldBe "location-test.klang"
+                stringValue?.location?.line shouldBe 1
+                stringValue?.location?.column shouldBe 15
+                NullValue
+            }
+        }
+
+        val script = """checkLocation("hello")"""
+
+        engine.execute(script, sourceName = "location-test.klang")
+    }
+
+    "NumberValue preserves location from parser" {
+        val engine = klangScript {
+            registerFunctionRaw("checkLocation") { args, _ ->
+                val numberValue = args[0] as? NumberValue
+                numberValue shouldNotBe null
+                numberValue?.location shouldNotBe null
+                numberValue?.location?.source shouldBe "location-test.klang"
+                numberValue?.location?.line shouldBe 1
+                numberValue?.location?.column shouldBe 15
+                NullValue
+            }
+        }
+
+        val script = """checkLocation(42)"""
+
+        engine.execute(script, sourceName = "location-test.klang")
+    }
+
+    "StringValue location points to string literal" {
+        val engine = klangScript {
+            registerFunctionRaw("checkLocation") { args, _ ->
+                val stringValue = args[0] as? StringValue
+                stringValue shouldNotBe null
+                stringValue?.location shouldNotBe null
+                stringValue?.location?.line shouldBe 1
+                stringValue?.location?.column shouldBe 15
+                NullValue
+            }
+        }
+
+        val script = """checkLocation("direct literal")"""
+
+        engine.execute(script, sourceName = "location-test.klang")
+    }
+
+    "NumberValue location points to number literal" {
+        val engine = klangScript {
+            registerFunctionRaw("checkLocation") { args, _ ->
+                val numberValue = args[0] as? NumberValue
+                numberValue shouldNotBe null
+                numberValue?.location shouldNotBe null
+                numberValue?.location?.line shouldBe 1
+                numberValue?.location?.column shouldBe 15
+                NullValue
+            }
+        }
+
+        val script = """checkLocation(123.45)"""
+
+        engine.execute(script, sourceName = "location-test.klang")
+    }
+
+    "Multiple string literals have different locations" {
+        val engine = klangScript {
+            var firstLocation: io.peekandpoke.klang.script.ast.SourceLocation? = null
+            var secondLocation: io.peekandpoke.klang.script.ast.SourceLocation? = null
+
+            registerFunctionRaw("captureFirst") { args, _ ->
+                val stringValue = args[0] as? StringValue
+                firstLocation = stringValue?.location
+                NullValue
+            }
+
+            registerFunctionRaw("captureSecond") { args, _ ->
+                val stringValue = args[0] as? StringValue
+                secondLocation = stringValue?.location
+                NullValue
+            }
+
+            registerFunctionRaw("verify") { _, _ ->
+                firstLocation shouldNotBe null
+                secondLocation shouldNotBe null
+                firstLocation?.line shouldBe 1
+                secondLocation?.line shouldBe 2
+                firstLocation shouldNotBe secondLocation
+                NullValue
+            }
+        }
+
+        val script = """
+            captureFirst("first string")
+            captureSecond("second string")
+            verify()
+        """.trimIndent()
+
+        engine.execute(script, sourceName = "multi-location.klang")
+    }
+
+    "StringValue equality ignores location" {
+        val engine = klangScript {
+            registerFunctionRaw("checkEquality") { args, _ ->
+                val str1 = args[0] as? StringValue
+                val str2 = args[1] as? StringValue
+
+                str1 shouldNotBe null
+                str2 shouldNotBe null
+
+                // Values should be equal even though they have different locations
+                (str1 == str2) shouldBe true
+
+                // But locations should be different (column differs)
+                str1?.location?.column shouldBe 15
+                str2?.location?.column shouldBe 23
+
+                NullValue
+            }
+        }
+
+        val script = """checkEquality("test", "test")"""
+
+        engine.execute(script, sourceName = "equality-test.klang")
+    }
+
+    "NumberValue equality ignores location" {
+        val engine = klangScript {
+            registerFunctionRaw("checkEquality") { args, _ ->
+                val num1 = args[0] as? NumberValue
+                val num2 = args[1] as? NumberValue
+
+                num1 shouldNotBe null
+                num2 shouldNotBe null
+
+                // Values should be equal even though they have different locations
+                (num1 == num2) shouldBe true
+
+                // But locations should be different (column differs)
+                num1?.location?.column shouldBe 15
+                num2?.location?.column shouldBe 20
+
+                NullValue
+            }
+        }
+
+        val script = """checkEquality(100, 100)"""
+
+        engine.execute(script, sourceName = "equality-test.klang")
     }
 })
 

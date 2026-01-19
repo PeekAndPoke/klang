@@ -7,12 +7,12 @@ import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.parser.MiniNotationParser
+import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.lang.seed
 
 class ChoicePatternSpec : StringSpec() {
 
-    fun parse(input: String) = MiniNotationParser(input) { note(it) }.parse()
+    fun parse(input: String) = parseMiniNotation(input) { text, _ -> note(text) }
 
     init {
         "Choice (|): Deterministic selection when random seed is set" {

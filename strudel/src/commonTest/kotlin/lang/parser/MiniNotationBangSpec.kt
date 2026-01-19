@@ -12,7 +12,7 @@ import io.peekandpoke.klang.strudel.pattern.SequencePattern
 
 class MiniNotationBangSpec : StringSpec() {
 
-    fun parse(input: String) = MiniNotationParser(input) { note(it) }.parse()
+    fun parse(input: String) = parseMiniNotation(input) { text, _ -> note(text) }
 
     init {
         "Simple repetition 'a!2'" {
