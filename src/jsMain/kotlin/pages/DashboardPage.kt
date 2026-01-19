@@ -4,7 +4,6 @@ import de.peekandpoke.kraft.components.NoProps
 import de.peekandpoke.kraft.components.PureComponent
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
-import de.peekandpoke.kraft.semanticui.forms.UiTextArea
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.onClick
@@ -17,6 +16,7 @@ import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
@@ -36,6 +36,8 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     """.trimIndent()
     ).persistInLocalStorage("current-song", String.serializer())
 
+    val cpsStream = StreamSource(0.5).persistInLocalStorage("current-cps", Double.serializer())
+
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     var loading: Boolean by value(false)
@@ -43,10 +45,9 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     var song: StrudelPlayback? by value(null)
 
     val input: String by subscribingTo(inputStream)
-    var cps: Double by value(0.5) {
+    val cps: Double by subscribingTo(cpsStream) {
         song?.updateCyclesPerSecond(it)
     }
-
 
     init {
         lifecycle {
@@ -129,7 +130,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                         }
                     }
 
-                    UiInputField(cps, { cps = it }) {
+                    UiInputField(cps, { cpsStream(it) }) {
                         step(0.01)
 
                         leftLabel {
@@ -138,7 +139,8 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                 }
 
-                UiTextArea(input, { inputStream(it) })
+                // CodeMirror editor container
+                CodeMirrorComp(code = input, onCodeChanged = { inputStream(it) })
             }
         }
     }

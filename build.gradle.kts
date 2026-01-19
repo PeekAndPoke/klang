@@ -93,6 +93,14 @@ kotlin {
             dependencies {
                 implementation(Deps.KotlinLibs.Kraft.core)
                 implementation(Deps.KotlinLibs.Kraft.semanticui)
+
+                // CodeMirror 6
+                implementation(Deps.Npm { codemirrorState() })
+                implementation(Deps.Npm { codemirrorView() })
+                implementation(Deps.Npm { codemirrorCommands() })
+                implementation(Deps.Npm { codemirrorLanguage() })
+                implementation(Deps.Npm { codemirrorLangJavascript() })
+                implementation(Deps.Npm { codemirrorBasicSetup() })
             }
         }
 

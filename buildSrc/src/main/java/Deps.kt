@@ -406,6 +406,25 @@ object Deps {
         operator fun <T> invoke(block: Npm.() -> T): T {
             return this.block()
         }
+
+        // CodeMirror 6
+        // https://www.npmjs.com/package/@codemirror/state
+        fun KotlinDependencyHandler.codemirrorState() = npm("@codemirror/state", "6.5.4")
+
+        // https://www.npmjs.com/package/@codemirror/view
+        fun KotlinDependencyHandler.codemirrorView() = npm("@codemirror/view", "6.39.11")
+
+        // https://www.npmjs.com/package/@codemirror/commands
+        fun KotlinDependencyHandler.codemirrorCommands() = npm("@codemirror/commands", "6.10.1")
+
+        // https://www.npmjs.com/package/@codemirror/language
+        fun KotlinDependencyHandler.codemirrorLanguage() = npm("@codemirror/language", "6.12.1")
+
+        // https://www.npmjs.com/package/@codemirror/lang-javascript
+        fun KotlinDependencyHandler.codemirrorLangJavascript() = npm("@codemirror/lang-javascript", "6.2.4")
+
+        // https://www.npmjs.com/package/codemirror
+        fun KotlinDependencyHandler.codemirrorBasicSetup() = npm("codemirror", "6.0.1")
     }
 
     // // Test dependencies ////////////////////////////////////////////////////////////////////////
