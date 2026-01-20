@@ -14,12 +14,26 @@ external interface Extension
  */
 external interface Facet<T> {
     fun of(value: T): Extension
+    fun from(field: StateField<out T>): Extension
 }
 
 /**
  * A state field stores additional state in the editor
  */
-external interface StateField<T>
+external interface StateField<T> {
+    companion object {
+        fun <T> define(config: StateFieldConfig<T>): StateField<T>
+    }
+}
+
+/**
+ * Configuration for creating a StateField
+ */
+external interface StateFieldConfig<T> {
+    var create: (() -> T)?
+    var update: ((value: T, tr: Transaction) -> T)?
+    var provide: ((field: StateField<T>) -> Extension)?
+}
 
 /**
  * Configuration options for creating an EditorState

@@ -181,18 +181,35 @@ external class Decoration {
         fun replace(spec: ReplaceDecorationSpec): Decoration
         fun line(spec: LineDecorationSpec): Decoration
 
-        val none: Any // DecorationSet
-        fun set(decorations: Array<Range<Decoration>>, sort: Boolean = definedExternally): Any // DecorationSet
+        val none: DecorationSet = definedExternally
+        fun set(decorations: Array<Range<Decoration>>, sort: Boolean = definedExternally): DecorationSet
     }
+}
+
+/**
+ * A set of decorations
+ */
+external class DecorationSet {
+    fun map(changes: ChangeDesc): DecorationSet
+    fun update(spec: DecorationSetUpdateSpec): DecorationSet
+    fun between(from: Int, to: Int, f: (from: Int, to: Int, value: Decoration) -> Unit)
+}
+
+/**
+ * Specification for updating a decoration set
+ */
+external interface DecorationSetUpdateSpec {
+    var add: Array<Range<Decoration>>?
+    var filter: ((from: Int, to: Int, value: Decoration) -> Boolean)?
 }
 
 /**
  * Decoration range
  */
 external interface Range<T> {
-    val from: Int
-    val to: Int
-    val value: T
+    var from: Int
+    var to: Int
+    var value: T
 }
 
 /**

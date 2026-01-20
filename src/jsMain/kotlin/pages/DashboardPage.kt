@@ -35,8 +35,8 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     val inputStream = StreamSource(
         """
-        sound("bd hh sd oh")
-    """.trimIndent()
+            sound("bd hh sd oh")
+        """.trimIndent()
     ).persistInLocalStorage("current-song", String.serializer())
 
     val cpsStream = StreamSource(0.5).persistInLocalStorage("current-cps", Double.serializer())
@@ -47,12 +47,12 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     var player: KlangPlayer? by value(null)
     var song: StrudelPlayback? by value(null)
 
+    val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
+
     val input: String by subscribingTo(inputStream)
     val cps: Double by subscribingTo(cpsStream) {
         song?.updateCyclesPerSecond(it)
     }
-
-    val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
 
     init {
         lifecycle {

@@ -5,11 +5,9 @@ import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.utils.jsObject
-import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.OnChange
 import io.peekandpoke.klang.codemirror.ext.*
-import kotlinx.browser.document
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.id
@@ -36,34 +34,126 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // Highlight data structure
+    data class HighlightRange(
+        val from: Int,
+        val to: Int,
+        val id: String,
+    )
+
+    // Define StateEffect types for managing highlights
+    private val addHighlightEffect: StateEffectType<HighlightRange> = StateEffect.define<HighlightRange>()
+    private val removeHighlightEffect: StateEffectType<String> = StateEffect.define()
+    private val clearHighlightsEffect: StateEffectType<Unit> = StateEffect.define()
+
     private val editorId = "codemirror-editor-${hashCode()}"
     private var editor: EditorView? by value(null)
+
+    init {
+        lifecycle {
+            onMount {
+                initialize()
+            }
+
+            onUnmount {
+                destroy()
+            }
+        }
+    }
+
+    // Create the highlight StateField extension
+    private fun createHighlightExtension(): Extension {
+        return StateField.define(
+            jsObject<StateFieldConfig<DecorationSet>> {
+                // Initialize with empty decorations
+                this.create = { Decoration.none }
+
+                // Update decorations based on transactions
+                this.update = { decorations, tr ->
+                    // Map existing decorations through document changes
+                    var updated = decorations.map(tr.changes.desc())
+
+                    // Process state effects
+                    tr.effects.forEach { effect ->
+                        when {
+                            effect.`is`(addHighlightEffect) -> {
+                                val range = effect.value.unsafeCast<HighlightRange>()
+                                updated = updated.update(
+                                    jsObject {
+                                        this.add = arrayOf(
+                                            jsObject {
+                                                this.from = range.from
+                                                this.to = range.to
+                                                this.value = Decoration.mark(
+                                                    jsObject {
+                                                        this.`class` = "cm-highlight-playing"
+                                                        this.attributes = jsObject {
+                                                            this.`data-highlight-id` = range.id
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        )
+                                    }
+                                )
+                            }
+
+                            effect.`is`(removeHighlightEffect) -> {
+                                val id = effect.value.unsafeCast<String>()
+                                val newRanges = mutableListOf<Range<Decoration>>()
+                                updated.between(0, tr.state.doc.length) { from, to, value ->
+                                    val attrs = value.asDynamic().spec?.attributes
+                                    if (attrs == null || attrs["data-highlight-id"] != id) {
+                                        newRanges.add(
+                                            jsObject {
+                                                this.from = from
+                                                this.to = to
+                                                this.value = value
+                                            }
+                                        )
+                                    }
+                                }
+                                updated = Decoration.set(newRanges.toTypedArray())
+                            }
+
+                            effect.`is`(clearHighlightsEffect) -> {
+                                updated = Decoration.none
+                            }
+                        }
+                    }
+
+                    updated
+                }
+
+                // Provide decorations to the editor view
+                this.provide = { field ->
+                    EditorView.decorations.from(field)
+                }
+            }
+        ).unsafeCast<Extension>()
+    }
 
     private fun initialize() {
         val container = dom?.querySelector("#$editorId") as? HTMLDivElement ?: return
 
         // Set up callback for editor changes
-        js("window.codemirrorCallback = undefined")
-        js("window").codemirrorCallback = { newContent: String ->
-            props.onCodeChanged(newContent)
+        val updateFn = { update: dynamic ->
+            if (update.docChanged) {
+                if (update.docChanged) {
+                    props.onCodeChanged(update.state.doc.toString())
+                }
+            }
         }
 
         // Create update listener extension
-        val updateListenerExtension = EditorView.updateListener.of(
-            js(
-                """(function(update) {
-                if (update.docChanged && window.codemirrorCallback) {
-                    window.codemirrorCallback(update.state.doc.toString());
-                }
-            })"""
-            )
-        )
+        val updateListenerExtension = EditorView.updateListener.of(updateFn)
 
         // Create extensions array - combine basicSetup with our custom extensions
         val allExtensions = basicSetup.asDynamic().concat(
             arrayOf(
                 javascript(),
-                updateListenerExtension
+                updateListenerExtension,
+                createHighlightExtension()
             )
         ).unsafeCast<Array<Extension>>()
 
@@ -78,15 +168,21 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         val state = EditorState.create(stateConfig).unsafeCast<EditorState>()
 
         // Create editor view config
-        val viewConfig = jsObject<EditorViewConfig>() {
+        val viewConfig = jsObject<EditorViewConfig> {
             this.state = state
             this.parent = container
             this.root = null
             this.dispatch = null
         }
 
+        console.log("viewConfig", viewConfig)
+
         // Create editor view
-        editor = EditorView(viewConfig)
+        try {
+            editor = EditorView(viewConfig)
+        } catch (e: Throwable) {
+            console.error("Error initializing CodeMirror:", e)
+        }
     }
 
     fun destroy() {
@@ -104,15 +200,13 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
     fun addHighlight(line: Int, column: Int, length: Int): String {
         val view = editor ?: return ""
 
-        // console.log("Adding highlight at line=$line, column=$column, length=$length")
-
         // Generate unique ID for this highlight
         val timestamp = js("Date.now()") as Double
         val random = js("Math.random()") as Double
         val highlightId = "highlight-${timestamp.toLong()}-${(random * 1000).toInt()}"
 
         try {
-            // Convert line/column to position (CodeMirror uses 0-based line numbers)
+            // Convert line/column to position (CodeMirror uses 1-based line numbers)
             val lineObj = view.state.doc.line(line)
             val from = lineObj.from + (column - 1)
             val to = from + length
@@ -123,30 +217,17 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                 return ""
             }
 
-            // For now, use direct DOM manipulation
-            // TODO: Implement proper StateField-based decorations
-            val domPos = view.domAtPos(from)
-            val element = domPos.node.asDynamic()
+            // Create the highlight range and effect
+            val range = HighlightRange(from, to, highlightId)
+            val effect = addHighlightEffect.of(range.unsafeCast<HighlightRange>())
 
-            // console.log("domPos:", domPos)
-            // console.log("element:", element)
-
-            if (element.nodeType == 3.toShort()) { // Text node
-                // Wrap in a span
-                val parent = element.parentNode
-                if (parent != null) {
-                    val span = document.createElement("span")
-                    span.className = "cm-highlight-playing"
-                    span.setAttribute("data-highlight-id", highlightId)
-
-                    // This is simplified - proper implementation would need range handling
-                    parent.replaceChild(span, element)
-                    span.appendChild(element)
+            // Dispatch transaction
+            val transaction = view.state.update(
+                jsObject {
+                    this.effects = effect
                 }
-            } else if (element.classList) {
-                element.classList.add("cm-highlight-playing")
-                element.setAttribute("data-highlight-id", highlightId)
-            }
+            )
+            view.dispatch(transaction)
 
         } catch (e: Throwable) {
             console.error("Error adding highlight:", e)
@@ -163,15 +244,16 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         val view = editor ?: return
 
         try {
-            // Find and remove element with this highlight ID
-            val elements = view.dom.querySelectorAll("[data-highlight-id='$highlightId']")
-            for (i in 0 until elements.length) {
-                val element = elements.item(i)?.asDynamic()
-                if (element?.classList) {
-                    element.classList.remove("cm-highlight-playing")
-                    element.removeAttribute("data-highlight-id")
+            // Create the remove effect
+            val effect = removeHighlightEffect.of(highlightId.unsafeCast<String>())
+
+            // Dispatch transaction
+            val transaction = view.state.update(
+                jsObject {
+                    this.effects = effect
                 }
-            }
+            )
+            view.dispatch(transaction)
         } catch (e: Throwable) {
             console.error("Error removing highlight:", e)
         }
@@ -184,30 +266,18 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         val view = editor ?: return
 
         try {
-            val elements = view.dom.querySelectorAll(".cm-highlight-playing")
-            for (i in 0 until elements.length) {
-                val element = elements.item(i)?.asDynamic()
-                if (element?.classList) {
-                    element.classList.remove("cm-highlight-playing")
-                    element.removeAttribute("data-highlight-id")
+            // Create the clear effect
+            val effect = clearHighlightsEffect.of(Unit.unsafeCast<Unit>())
+
+            // Dispatch transaction
+            val transaction = view.state.update(
+                jsObject {
+                    this.effects = effect
                 }
-            }
+            )
+            view.dispatch(transaction)
         } catch (e: Throwable) {
             console.error("Error clearing highlights:", e)
-        }
-    }
-
-    init {
-        lifecycle {
-            onMount {
-                launch {
-                    initialize()
-                }
-            }
-
-            onUnmount {
-                destroy()
-            }
         }
     }
 
