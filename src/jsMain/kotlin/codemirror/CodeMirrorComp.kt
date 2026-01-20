@@ -128,6 +128,9 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
             val domPos = view.domAtPos(from)
             val element = domPos.node.asDynamic()
 
+            console.log("domPos:", domPos)
+            console.log("element:", element)
+
             if (element.nodeType == 3.toShort()) { // Text node
                 // Wrap in a span
                 val parent = element.parentNode

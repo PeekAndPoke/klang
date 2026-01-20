@@ -124,16 +124,16 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                                     // Highlight in editor
                                                     val location = event.sourceLocations?.innermost
 
-                                                    console.log("location", location)
+//                                                    console.log("location", location)
 
                                                     if (location != null) {
                                                         editorRef { editor ->
-                                                            console.log("here", editor)
+                                                            // console.log("here", editor)
 
                                                             val highlightId = editor.addHighlight(
                                                                 line = location.line,
                                                                 column = location.column,
-                                                                length = 2  // TODO: calculate actual length
+                                                                length = 20  // TODO: calculate actual length
                                                             )
 
                                                             // Remove highlight after duration

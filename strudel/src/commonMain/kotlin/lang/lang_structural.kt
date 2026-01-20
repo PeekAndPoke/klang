@@ -677,8 +677,8 @@ private fun applyMaskAll(source: StrudelPattern, maskArg: Any?): StrudelPattern 
 @StrudelDsl
 val maskAll by dslFunction { args, callInfo ->
     val maskArg = args.getOrNull(0)
-    val source = args.filterIsInstance<StrudelPattern>().let {
-        if (it.size >= 2 && maskArg is StrudelPattern) it[1] else it.firstOrNull()
+    val source = args.map { it.value }.filterIsInstance<StrudelPattern>().let {
+        if (it.size >= 2 && maskArg?.value is StrudelPattern) it[1] else it.firstOrNull()
     } ?: return@dslFunction silence
 
     applyMaskAll(source, maskArg)
@@ -721,7 +721,8 @@ fun filter(ignored: (StrudelPatternEvent) -> Boolean): StrudelPattern = silence
 @StrudelDsl
 val StrudelPattern.filter by dslPatternExtension { source, args, callInfo ->
     @Suppress("UNCHECKED_CAST")
-    val predicate = args.firstOrNull() as? (StrudelPatternEvent) -> Boolean
+    val predicate: ((StrudelPatternEvent) -> Boolean)? =
+        args.firstOrNull()?.value as? (StrudelPatternEvent) -> Boolean
 
     if (predicate != null) applyFilter(source, predicate) else source
 }
@@ -758,8 +759,9 @@ fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
 @StrudelDsl
 val filterWhen by dslFunction { args, callInfo ->
     @Suppress("UNCHECKED_CAST")
-    val predicate = args.getOrNull(0) as? (Double) -> Boolean
-    val pat = args.getOrNull(1) as? StrudelPattern ?: silence
+    val predicate: ((Double) -> Boolean)? = args.getOrNull(0)?.value as? (Double) -> Boolean
+
+    val pat: StrudelPattern = args.getOrNull(1)?.value as? StrudelPattern ?: silence
 
     if (predicate != null) applyFilter(pat) { predicate(it.begin.toDouble()) } else pat
 }
@@ -771,7 +773,7 @@ fun filterWhen(predicate: (Double) -> Boolean): StrudelPattern = silence
 @StrudelDsl
 val StrudelPattern.filterWhen by dslPatternExtension { source, args, callInfo ->
     @Suppress("UNCHECKED_CAST")
-    val predicate = args.firstOrNull() as? (Double) -> Boolean
+    val predicate: ((Double) -> Boolean)? = args.firstOrNull()?.value as? (Double) -> Boolean
 
     if (predicate != null) applyFilter(source) { predicate(it.begin.toDouble()) } else source
 }
@@ -783,7 +785,7 @@ fun StrudelPattern.filterWhen(predicate: (Double) -> Boolean): StrudelPattern =
 @StrudelDsl
 val String.filterWhen by dslStringExtension { source, args, callInfo ->
     @Suppress("UNCHECKED_CAST")
-    val predicate = args.firstOrNull() as? (Double) -> Boolean
+    val predicate = args.firstOrNull()?.value as? (Double) -> Boolean
 
     if (predicate != null) applyFilter(source) { predicate(it.begin.toDouble()) } else source
 }

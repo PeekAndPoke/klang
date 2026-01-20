@@ -99,72 +99,57 @@ object TestTextPatterns {
 
     val tetris = """
         stack(
-            note(`
-                <
-                [e5 [b4 c5] d5 [c5 b4]] [a4 [a4 c5] e5 [d5 c5]]
-                [b4 [~ c5] d5 e5]       [c5 a4 a4 ~]
+            note(`<
+                [e5 [b4 c5] d5 [c5 b4]]    [a4 [a4 c5] e5 [d5 c5]]
+                [b4 [~ c5] d5 e5]          [c5 a4 a4 ~]
                 
                 [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]
                 [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
-                >
-            `)
-            .sound("tri")
-            .filterWhen(x => x>= 16)
-                       // .struct("x(5,8,2)")
-            .orbit(0).gain(0.375)
-            .pan(cosine2.slow(48).range(-0.6, 0.6).flipSign())
-            .delay(0.2).delaytime(0.2).delayfeedback(0.1)
-            .room(0.2).rsize(0.1)
-            .clip(0.3)
-            .hpf(600)
-            //            .adsr("0.025:0.2:0.5:0.0")
-            .superimpose(x => x.transpose("<0 12 0 -12>/8"))
-        //            .rev(4.1).rev(3)
+            >`)
+              .sound("tri")
+              .filterWhen(x => x >= 16)
+              .orbit(0).gain(0.35)
+              .pan(cosine2.slow(48).range(-0.62, 0.62).flipSign())
+              .delay(0.3).delaytime(0.15).delayfeedback(0.25)
+              .clip(0.33)
+              .hpf(600)
+              .superimpose(x => x.transpose("<0 12 0 -12>/8"))
+          // .hush()
             ,
-        
-        
-            note(`
-                <
+            note(`<
                     [[e2 e3]*4]             [[a2 a3]*4] 
                     [[g#2 g#3]*2 [e2 e3]*2] [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
                     
                     [[d2 d3]*4]                   [[c2 c3]*4]
-                    [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [c1 e2] [a5 a4] [a3 a2]]
-                >
-            `)
-            .sound("supersaw")
-            .filterWhen(x => x >= 31.5)
-            .spread(0.5).unison(sine.range(4, 12).slow(32))
-            .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
-            .orbit(2).gain(0.55)
-            .pan(cosine2.slow(48).range(-0.6, 0.6))
-            .adsr("0.01:0.5:0.2:0.5")
-            .room(0.02).rsize(0.5)
-            .superimpose(x => x.transpose("<0 12 0 -12>/8"))
+                    [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [c1 e2] [a5 a4] [a2 a3]]
+            >`)
+              .sound("supersaw")
+              .filterWhen(x => x >= 31.3)
+              .spread(0.5).unison(sine.range(6, 16).slow(32))
+              .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
+              .orbit(2).gain(0.5)
+              .pan(cosine2.slow(48).range(-0.31, 0.31))
+              .adsr("0.01:0.5:0.5:0.8")
+              .superimpose(x => x.transpose("<0 12 0 -12>/8"))
+              .superimpose(x => x.bandf(sine.range(400, 10000).slow(16)).late(0.3).gain(0.3))
             ,
-        
-            sound(
-                `
-                    <
-                    [[bd:2, cr, cr] hh sd hh] [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
-                    [[bd, hh] hh sd hh]       [bd hh sd oh] [bd hh sd hh] [bd hh [mt mt, sd] [ht ht, oh]]
+            sound(`<
+                    [[bd:2, cr, cr] hh sd hh]   [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
+                    [[bd, hh] hh sd hh]         [bd hh sd oh]   [bd hh sd hh]             [bd hh [mt mt, sd] [ht ht, oh]]
                     
-                    [[bd:2, cr] hh sd hh]     [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
-                    [[bd, hh] hh [sd, hh] oh] [bd hh sd oh] [bd hh sd hh] [bd hh [sd sd] [sd sd]]
+                    [[bd:2, cr] hh sd hh]       [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
+                    [[bd, hh] hh [sd, hh] oh]   [bd hh sd oh]   [bd hh sd hh]             [bd hh [sd sd] [sd sd]]
                     
-                    [[bd:2, cr, cr] hh sd sd] [bd hh sd oh] [bd hh sd hh] [bd hh sd hh]
-                    [[bd, hh] hh sd [hh sd]]  [bd hh sd oh] [bd hh sd hh] [bd hh [lt lt, sd sd] ~]
+                    [[bd:2, cr, cr] hh sd sd]   [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
+                    [[bd, hh] hh sd [hh sd]]    [bd hh sd oh]   [bd hh sd hh]             [bd hh [lt lt, sd sd] ~]
                     
-                    [[bd:2, cr] hh sd [sd, hh]] [bd hh sd:8 oh] [bd hh sd hh]              [bd hh sd [bd, oh]]
-                    [[bd, cr] oh sd oh]         [cr hh cr hh]   [[sd, oh] mt sd [mt, hh]]  [sd [lt, hh] [bd bd] [bd bd, hh]]
-                    >            
-                    `
-            )
-                .orbit(3).pan(-0.0).gain(0.8)
-                .room(0.02).rsize(0.5)
-                .adsr("0.01:0.2:0.8:0.5")
-                .fast(2)
-        )        
+                    [[bd:2, cr] hh sd [sd, hh]] [bd hh sd:8 oh] [bd hh sd hh]             [bd hh sd [bd, oh]]
+                    [[bd, cr] hh sd oh]         [cr hh cr hh]   [[oh, sd] ht sd [lt, hh]] [sd [ht, hh] [bd bd] [bd bd, hh]]
+            >`)
+              .orbit(3).pan(-0.0).gain(0.8)
+              .adsr("0.01:0.2:0.8:0.5")
+              .fast(2)
+        ).room(0.02).rsize(2.0)
     """.trimIndent()
 
     val tetrisRemix = """
