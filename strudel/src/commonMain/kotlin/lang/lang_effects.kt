@@ -30,15 +30,15 @@ private fun applyDistort(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
 }
 
 @StrudelDsl
-val StrudelPattern.distort by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.distort by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyDistort(p, args)
 }
 
 @StrudelDsl
-val distort by dslFunction { args, callInfo -> args.toPattern(distortMutation) }
+val distort by dslFunction { args, /* callInfo */ _ -> args.toPattern(distortMutation) }
 
 @StrudelDsl
-val String.distort by dslStringExtension { p, args, callInfo ->
+val String.distort by dslStringExtension { p, args, /* callInfo */ _ ->
     applyDistort(p, args)
 }
 
@@ -56,15 +56,15 @@ private fun applyCrush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 }
 
 @StrudelDsl
-val StrudelPattern.crush by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.crush by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyCrush(p, args)
 }
 
 @StrudelDsl
-val crush by dslFunction { args, callInfo -> args.toPattern(crushMutation) }
+val crush by dslFunction { args, /* callInfo */ _ -> args.toPattern(crushMutation) }
 
 @StrudelDsl
-val String.crush by dslStringExtension { p, args, callInfo ->
+val String.crush by dslStringExtension { p, args, /* callInfo */ _ ->
     applyCrush(p, args)
 }
 
@@ -84,15 +84,15 @@ private fun applyCoarse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 @StrudelDsl
-val StrudelPattern.coarse by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.coarse by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyCoarse(p, args)
 }
 
 @StrudelDsl
-val coarse by dslFunction { args, callInfo -> args.toPattern(coarseMutation) }
+val coarse by dslFunction { args, /* callInfo */ _ -> args.toPattern(coarseMutation) }
 
 @StrudelDsl
-val String.coarse by dslStringExtension { p, args, callInfo ->
+val String.coarse by dslStringExtension { p, args, /* callInfo */ _ ->
     applyCoarse(p, args)
 }
 
@@ -112,15 +112,15 @@ private fun applyRoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
 }
 
 @StrudelDsl
-val StrudelPattern.room by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.room by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyRoom(p, args)
 }
 
 @StrudelDsl
-val room by dslFunction { args, callInfo -> args.toPattern(roomMutation) }
+val room by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomMutation) }
 
 @StrudelDsl
-val String.room by dslStringExtension { p, args, callInfo ->
+val String.room by dslStringExtension { p, args, /* callInfo */ _ ->
     applyRoom(p, args)
 }
 
@@ -140,29 +140,29 @@ private fun applyRoomSize(source: StrudelPattern, args: List<StrudelDslArg<Any?>
 }
 
 @StrudelDsl
-val StrudelPattern.roomsize by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.roomsize by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyRoomSize(p, args)
 }
 
 @StrudelDsl
-val roomsize by dslFunction { args, callInfo -> args.toPattern(roomSizeMutation) }
+val roomsize by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomSizeMutation) }
 
 @StrudelDsl
-val String.roomsize by dslStringExtension { p, args, callInfo ->
+val String.roomsize by dslStringExtension { p, args, /* callInfo */ _ ->
     applyRoomSize(p, args)
 }
 
 /** Alias for [roomsize] */
 @StrudelDsl
-val StrudelPattern.rsize by dslPatternExtension { p, args, callInfo -> applyRoomSize(p, args) }
+val StrudelPattern.rsize by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 
 /** Alias for [roomsize] */
 @StrudelDsl
-val rsize by dslFunction { args, callInfo -> args.toPattern(roomSizeMutation) }
+val rsize by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomSizeMutation) }
 
 /** Alias for [roomsize] on a string */
 @StrudelDsl
-val String.rsize by dslStringExtension { p, args, callInfo -> applyRoomSize(p, args) }
+val String.rsize by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 
 // -- delay() ----------------------------------------------------------------------------------------------------------
 
@@ -180,15 +180,15 @@ private fun applyDelay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 }
 
 @StrudelDsl
-val StrudelPattern.delay by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.delay by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyDelay(p, args)
 }
 
 @StrudelDsl
-val delay by dslFunction { args, callInfo -> args.toPattern(delayMutation) }
+val delay by dslFunction { args, /* callInfo */ _ -> args.toPattern(delayMutation) }
 
 @StrudelDsl
-val String.delay by dslStringExtension { p, args, callInfo ->
+val String.delay by dslStringExtension { p, args, /* callInfo */ _ ->
     applyDelay(p, args)
 }
 
@@ -208,15 +208,15 @@ private fun applyDelayTime(source: StrudelPattern, args: List<StrudelDslArg<Any?
 }
 
 @StrudelDsl
-val StrudelPattern.delaytime by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.delaytime by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyDelayTime(p, args)
 }
 
 @StrudelDsl
-val delaytime by dslFunction { args, callInfo -> args.toPattern(delayTimeMutation) }
+val delaytime by dslFunction { args, /* callInfo */ _ -> args.toPattern(delayTimeMutation) }
 
 @StrudelDsl
-val String.delaytime by dslStringExtension { p, args, callInfo ->
+val String.delaytime by dslStringExtension { p, args, /* callInfo */ _ ->
     applyDelayTime(p, args)
 }
 
@@ -236,14 +236,14 @@ private fun applyDelayFeedback(source: StrudelPattern, args: List<StrudelDslArg<
 }
 
 @StrudelDsl
-val StrudelPattern.delayfeedback by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.delayfeedback by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyDelayFeedback(p, args)
 }
 
 @StrudelDsl
-val delayfeedback by dslFunction { args, callInfo -> args.toPattern(delayFeedbackMutation) }
+val delayfeedback by dslFunction { args, /* callInfo */ _ -> args.toPattern(delayFeedbackMutation) }
 
 @StrudelDsl
-val String.delayfeedback by dslStringExtension { p, args, callInfo ->
+val String.delayfeedback by dslStringExtension { p, args, /* callInfo */ _ ->
     applyDelayFeedback(p, args)
 }

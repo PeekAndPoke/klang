@@ -82,8 +82,9 @@ val rand2 by dslObject { rand.range(-1.0, 1.0) }
 @StrudelDsl
 val brandBy by dslFunction { args, /* callInfo */ _ ->
     val probArg = args.getOrNull(0)
+    val probVal = probArg?.value
 
-    val probPattern: StrudelPattern = when (val probVal = probArg?.value) {
+    val probPattern: StrudelPattern = when (probVal) {
         is StrudelPattern -> probVal
 
         else -> parseMiniNotation(probArg ?: StrudelDslArg.of("0.5")) { text, _ ->
@@ -91,7 +92,7 @@ val brandBy by dslFunction { args, /* callInfo */ _ ->
         }
     }
 
-    val staticProb = probArg?.asDoubleOrNull()
+    val staticProb = probVal?.asDoubleOrNull()
 
     if (staticProb != null) {
         // Static path
@@ -137,8 +138,9 @@ val brand by dslObject { brandBy(0.5) }
 @StrudelDsl
 val irand by dslFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
+    val nVal = nArg?.value
 
-    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
+    val nPattern: StrudelPattern = when (nVal) {
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
@@ -146,7 +148,7 @@ val irand by dslFunction { args, /* callInfo */ _ ->
         }
     }
 
-    val staticN = nArg?.asIntOrNull()
+    val staticN = nVal?.asIntOrNull()
 
     if (staticN != null) {
         // Static path
@@ -554,8 +556,9 @@ val String.someCycles by dslStringExtension { pattern, args, /* callInfo */ _ ->
 @StrudelDsl
 val randL by dslFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
+    val nVal = nArg?.value
 
-    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
+    val nPattern: StrudelPattern = when (nVal) {
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
@@ -563,7 +566,7 @@ val randL by dslFunction { args, /* callInfo */ _ ->
         }
     }
 
-    val staticN = nArg?.value?.asIntOrNull()
+    val staticN = nVal?.asIntOrNull()
 
     if (staticN != null) {
         // Static path
@@ -639,8 +642,9 @@ val randL by dslFunction { args, /* callInfo */ _ ->
 @StrudelDsl
 val randrun: DslFunction by dslFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
+    val nVal = nArg?.value
 
-    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
+    val nPattern: StrudelPattern = when (nVal) {
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
@@ -648,7 +652,7 @@ val randrun: DslFunction by dslFunction { args, /* callInfo */ _ ->
         }
     }
 
-    val staticN = nArg?.value?.asIntOrNull()
+    val staticN = nVal?.asIntOrNull()
 
     if (staticN != null) {
         // Static path

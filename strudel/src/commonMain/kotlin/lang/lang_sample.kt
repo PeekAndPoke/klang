@@ -26,15 +26,15 @@ private fun applyBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 
 /** Sets the sample start position (0..1) */
 @StrudelDsl
-val begin by dslFunction { args, callInfo -> args.toPattern(beginMutation) }
+val begin by dslFunction { args, /* callInfo */ _ -> args.toPattern(beginMutation) }
 
 /** Sets the sample start position (0..1) */
 @StrudelDsl
-val StrudelPattern.begin by dslPatternExtension { p, args, callInfo -> applyBegin(p, args) }
+val StrudelPattern.begin by dslPatternExtension { p, args, /* callInfo */ _ -> applyBegin(p, args) }
 
 /** Sets the sample start position (0..1) */
 @StrudelDsl
-val String.begin by dslStringExtension { p, args, callInfo -> applyBegin(p, args) }
+val String.begin by dslStringExtension { p, args, callInfo -> p.begin(args, callInfo) }
 
 // -- end() ------------------------------------------------------------------------------------------------------------
 
@@ -53,15 +53,15 @@ private fun applyEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
 
 /** Sets the sample end position (0..1) */
 @StrudelDsl
-val end by dslFunction { args, callInfo -> args.toPattern(endMutation) }
+val end by dslFunction { args, /* callInfo */ _ -> args.toPattern(endMutation) }
 
 /** Sets the sample end position (0..1) */
 @StrudelDsl
-val StrudelPattern.end by dslPatternExtension { p, args, callInfo -> applyEnd(p, args) }
+val StrudelPattern.end by dslPatternExtension { p, args, /* callInfo */ _ -> applyEnd(p, args) }
 
 /** Sets the sample end position (0..1) */
 @StrudelDsl
-val String.end by dslStringExtension { p, args, callInfo -> applyEnd(p, args) }
+val String.end by dslStringExtension { p, args, callInfo -> p.end(args, callInfo) }
 
 // -- speed() ----------------------------------------------------------------------------------------------------------
 
@@ -80,15 +80,15 @@ private fun applySpeed(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 
 /** Sets the sample playback speed */
 @StrudelDsl
-val speed by dslFunction { args, callInfo -> args.toPattern(speedMutation) }
+val speed by dslFunction { args, /* callInfo */ _ -> args.toPattern(speedMutation) }
 
 /** Sets the sample playback speed */
 @StrudelDsl
-val StrudelPattern.speed by dslPatternExtension { p, args, callInfo -> applySpeed(p, args) }
+val StrudelPattern.speed by dslPatternExtension { p, args, /* callInfo */ _ -> applySpeed(p, args) }
 
 /** Sets the sample playback speed */
 @StrudelDsl
-val String.speed by dslStringExtension { p, args, callInfo -> applySpeed(p, args) }
+val String.speed by dslStringExtension { p, args, callInfo -> p.speed(args, callInfo) }
 
 // -- loop() -----------------------------------------------------------------------------------------------------------
 
@@ -112,28 +112,20 @@ private fun applyLoop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
 
 /** Enables sample looping */
 @StrudelDsl
-val loop by dslFunction { args, callInfo -> args.toPattern(loopMutation) }
+val loop by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopMutation) }
 
 /** Enables sample looping */
 @StrudelDsl
-val StrudelPattern.loop by dslPatternExtension { p, args, callInfo -> applyLoop(p, args) }
+val StrudelPattern.loop by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoop(p, args) }
 
 /** Enables sample looping */
 @StrudelDsl
-val String.loop by dslStringExtension { p, args, callInfo -> applyLoop(p, args) }
+val String.loop by dslStringExtension { p, args, callInfo -> p.loop(args, callInfo) }
 
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 
 private val loopAtMutation = voiceModifier {
     val value = it?.asDoubleOrNull()
-
-    // 1.0 -> 0.5
-    // 2.0 -> 0.25
-    // 3.0 -> 0.16666666666666
-    // 4.0 -> 0.125
-
-    // What is the formula?
-
 
     if (value == null) {
         copy(speed = null)
@@ -153,15 +145,15 @@ private fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
-val loopAt by dslFunction { args, callInfo -> args.toPattern(loopAtMutation) }
+val loopAt by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopAtMutation) }
 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
-val StrudelPattern.loopAt by dslPatternExtension { p, args, callInfo -> applyLoopAt(p, args) }
+val StrudelPattern.loopAt by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAt(p, args) }
 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
-val String.loopAt by dslStringExtension { p, args, callInfo -> applyLoopAt(p, args) }
+val String.loopAt by dslStringExtension { p, args, callInfo -> p.loopAt(args, callInfo) }
 
 // -- cut() ------------------------------------------------------------------------------------------------------------
 
@@ -185,27 +177,29 @@ private fun applyCut(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
 
 /** Sets the cut group (choke group) */
 @StrudelDsl
-val cut by dslFunction { args, callInfo -> args.toPattern(cutMutation) }
+val cut by dslFunction { args, /* callInfo */ _ -> args.toPattern(cutMutation) }
 
 /** Sets the cut group (choke group) */
 @StrudelDsl
-val StrudelPattern.cut by dslPatternExtension { p, args, callInfo -> applyCut(p, args) }
+val StrudelPattern.cut by dslPatternExtension { p, args, /* callInfo */ _ -> applyCut(p, args) }
 
 /** Sets the cut group (choke group) */
 @StrudelDsl
-val String.cut by dslStringExtension { p, args, callInfo -> applyCut(p, args) }
+val String.cut by dslStringExtension { p, args, callInfo -> p.cut(args, callInfo) }
 
 // -- slice() ----------------------------------------------------------------------------------------------------------
 
 private fun applySlice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 1
-    val indexArg = args.getOrNull(1)
+    val nArg = args.getOrNull(0)
+    val nVal = maxOf(1, nArg?.value?.asIntOrNull() ?: 1)
 
     // TODO: support dynamic index pattern
-    val index = indexArg?.asIntOrNull() ?: 0
 
-    val start = index.toDouble() / n
-    val end = (index + 1.0) / n
+    val indexArg = args.getOrNull(1)
+    val indexVal = indexArg?.value?.asIntOrNull() ?: 0
+
+    val start = indexVal.toDouble() / nVal
+    val end = (indexVal + 1.0) / nVal
 
     return source.begin(start).end(end)
 }
@@ -216,7 +210,7 @@ private fun applySlice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
  * @param {index} Index of the slice to play (0 to n-1)
  */
 @StrudelDsl
-val StrudelPattern.slice by dslPatternExtension { p, args, callInfo -> applySlice(p, args) }
+val StrudelPattern.slice by dslPatternExtension { p, args, /* callInfo */ _ -> applySlice(p, args) }
 
 /**
  * Plays a slice of the sample.
@@ -224,4 +218,4 @@ val StrudelPattern.slice by dslPatternExtension { p, args, callInfo -> applySlic
  * @param {index} Index of the slice to play (0 to n-1)
  */
 @StrudelDsl
-val String.slice by dslStringExtension { p, args, callInfo -> applySlice(p, args) }
+val String.slice by dslStringExtension { p, args, callInfo -> p.slice(args, callInfo) }

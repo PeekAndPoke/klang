@@ -104,7 +104,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
     fun addHighlight(line: Int, column: Int, length: Int): String {
         val view = editor ?: return ""
 
-        console.log("Adding highlight at line=$line, column=$column, length=$length")
+        // console.log("Adding highlight at line=$line, column=$column, length=$length")
 
         // Generate unique ID for this highlight
         val timestamp = js("Date.now()") as Double
@@ -128,8 +128,8 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
             val domPos = view.domAtPos(from)
             val element = domPos.node.asDynamic()
 
-            console.log("domPos:", domPos)
-            console.log("element:", element)
+            // console.log("domPos:", domPos)
+            // console.log("element:", element)
 
             if (element.nodeType == 3.toShort()) { // Text node
                 // Wrap in a span

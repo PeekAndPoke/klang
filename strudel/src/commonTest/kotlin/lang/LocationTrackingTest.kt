@@ -4,8 +4,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.runtime.NumberValue
-import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 
 /**
@@ -15,9 +13,9 @@ class LocationTrackingTest : StringSpec({
 
     "RuntimeValue with location creates AtomicPattern with sourceLocations" {
         val location = SourceLocation(source = "test.klang", line = 1, column = 10)
-        val stringValue = StringValue("bd", location = location)
+        val stringValue = StrudelDslArg("bd", location = location)
 
-        val patterns = listOf<Any?>(stringValue).toListOfPatterns(defaultModifier)
+        val patterns = listOf(stringValue).toListOfPatterns(defaultModifier)
 
         patterns.size shouldBe 1
         val pattern = patterns[0] as? AtomicPattern
@@ -31,9 +29,9 @@ class LocationTrackingTest : StringSpec({
 
     "NumberValue with location creates AtomicPattern with sourceLocations" {
         val location = SourceLocation(source = "test.klang", line = 2, column = 5)
-        val numberValue = NumberValue(440.0, location = location)
+        val numberValue = StrudelDslArg(440.0, location = location)
 
-        val patterns = listOf<Any?>(numberValue).toListOfPatterns(defaultModifier)
+        val patterns = listOf(numberValue).toListOfPatterns(defaultModifier)
 
         patterns.size shouldBe 1
         val pattern = patterns[0] as? AtomicPattern
@@ -44,9 +42,9 @@ class LocationTrackingTest : StringSpec({
     }
 
     "RuntimeValue without location creates AtomicPattern with null sourceLocations" {
-        val stringValue = StringValue("bd", location = null)
+        val stringValue = StrudelDslArg("bd", location = null)
 
-        val patterns = listOf<Any?>(stringValue).toListOfPatterns(defaultModifier)
+        val patterns = listOf(stringValue).toListOfPatterns(defaultModifier)
 
         patterns.size shouldBe 1
         val pattern = patterns[0] as? AtomicPattern
@@ -59,8 +57,8 @@ class LocationTrackingTest : StringSpec({
         val loc2 = SourceLocation(source = "test.klang", line = 2, column = 15)
 
         val values = listOf(
-            StringValue("bd", location = loc1),
-            StringValue("hh", location = loc2)
+            StrudelDslArg("bd", location = loc1),
+            StrudelDslArg("hh", location = loc2)
         )
 
         val patterns = values.toListOfPatterns(defaultModifier)
@@ -77,7 +75,9 @@ class LocationTrackingTest : StringSpec({
     }
 
     "Plain Kotlin values create patterns without locations" {
-        val patterns = listOf<Any?>("bd", 440.0, true).toListOfPatterns(defaultModifier)
+        val patterns = listOf("bd", 440.0, true)
+            .map { StrudelDslArg.of(it) }
+            .toListOfPatterns(defaultModifier)
 
         patterns.size shouldBe 3
         patterns.forEach { pattern ->
@@ -87,9 +87,11 @@ class LocationTrackingTest : StringSpec({
 
     "Nested lists preserve locations" {
         val loc = SourceLocation(source = "test.klang", line = 1, column = 10)
-        val stringValue = StringValue("bd", location = loc)
+        val stringValue = StrudelDslArg("bd", location = loc)
 
-        val patterns = listOf<Any?>(listOf(stringValue)).toListOfPatterns(defaultModifier)
+        val patterns = listOf(
+            StrudelDslArg.of(listOf(stringValue))
+        ).toListOfPatterns(defaultModifier)
 
         patterns.size shouldBe 1
         val pattern = patterns[0] as? AtomicPattern

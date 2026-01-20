@@ -45,19 +45,18 @@ object StrudelRegistry {
     val stringExtensionMethods = mutableMapOf<String, StrudelDslExtFn<String>>()
 }
 
-data class StrudelDslArg<T>(
+data class StrudelDslArg<out T>(
     val value: T,
-    val sourceLocation: SourceLocation?,
+    val location: SourceLocation?,
 ) {
     companion object {
-        fun <T> of(value: T): StrudelDslArg<T> = StrudelDslArg(value = value, sourceLocation = null)
+        fun <T> of(value: T): StrudelDslArg<T> = StrudelDslArg(value = value, location = null)
 
         fun List<Any?>.asStrudelDslArgs(callInfo: CallInfo? = null): List<StrudelDslArg<Any?>> {
             return mapIndexed { index, arg ->
-                @Suppress("UNCHECKED_CAST")
                 when (arg) {
-                    is StrudelDslArg<*> -> arg as StrudelDslArg<Any?>
-                    else -> StrudelDslArg(value = arg, sourceLocation = callInfo?.paramLocations?.getOrNull(index))
+                    is StrudelDslArg<*> -> arg
+                    else -> StrudelDslArg(value = arg, location = callInfo?.paramLocations?.getOrNull(index))
                 }
             }
         }
@@ -201,7 +200,7 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
     }
 
     return this.flatMap { dslArg ->
-        val loc = dslArg.sourceLocation
+        val loc = dslArg.location
 
         when (val arg = dslArg.value) {
             // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
@@ -216,10 +215,9 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
             is StrudelPattern -> listOf(arg)
 
             is List<*> -> arg.map {
-                @Suppress("UNCHECKED_CAST")
                 when (it) {
-                    is StrudelDslArg<*> -> it as StrudelDslArg<Any?>
-                    else -> StrudelDslArg(value = it, sourceLocation = loc)
+                    is StrudelDslArg<*> -> it
+                    else -> StrudelDslArg(value = it, location = loc)
                 }
             }.toListOfPatterns(modify)
 

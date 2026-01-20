@@ -58,7 +58,7 @@ private fun StrudelPattern.mapRangeContext(
  * Maps a pattern in the range 0..1 to -1..1.
  */
 @StrudelDsl
-val StrudelPattern.toBipolar by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.toBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     val contextAware = p.mapRangeContext(
         transformMin = { (it + 1.0) / 2.0 },
         transformMax = { (it + 1.0) / 2.0 }
@@ -70,14 +70,14 @@ val StrudelPattern.toBipolar by dslPatternExtension { p, args, callInfo ->
 }
 
 @StrudelDsl
-val String.toBipolar by dslStringExtension { p, args, callInfo -> p.toBipolar() }
+val String.toBipolar by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.toBipolar() }
 
 /**
  * Maps a pattern in the range -1..1 to 0..1.
  * Useful for converting LFOs like sine2/tri2 to probabilities or selectors.
  */
 @StrudelDsl
-val StrudelPattern.fromBipolar by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.fromBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     val contextAware = p.mapRangeContext(
         transformMin = { it * 2.0 - 1.0 },
         transformMax = { it * 2.0 - 1.0 }
@@ -89,7 +89,7 @@ val StrudelPattern.fromBipolar by dslPatternExtension { p, args, callInfo ->
 }
 
 @StrudelDsl
-val String.fromBipolar by dslStringExtension { p, args, callInfo -> p.fromBipolar() }
+val String.fromBipolar by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.fromBipolar() }
 
 // -- Continuous patterns settings -------------------------------------------------------------------------------------
 
@@ -109,10 +109,10 @@ private fun applyRange(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>)
  * Sets the range of a continuous pattern to a new minimum and maximum value.
  */
 @StrudelDsl
-val StrudelPattern.range by dslPatternExtension { p, args, callInfo -> applyRange(p, args) }
+val StrudelPattern.range by dslPatternExtension { p, args, /* callInfo */ _ -> applyRange(p, args) }
 
 @StrudelDsl
-val String.range by dslStringExtension { p, args, callInfo -> applyRange(p, args) }
+val String.range by dslStringExtension { p, args, /* callInfo */ _ -> applyRange(p, args) }
 
 // -- Continuous patterns ----------------------------------------------------------------------------------------------
 
@@ -130,15 +130,16 @@ val rest by dslObject { silence }
  * The first parameter must be a function (Double) -> Double
  */
 @StrudelDsl
-val signal by dslFunction { args, callInfo ->
+val signal by dslFunction { args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val value = args.getOrNull(0)?.value as? Function1<Double, Any?> ?: { 0.0 }
+
     ContinuousPattern { t -> value(t)?.asDoubleOrNull() ?: 0.0 }
 }
 
 /** Continuous pattern that produces a constant value */
 @StrudelDsl
-val steady by dslFunction { args, callInfo ->
+val steady by dslFunction { args, /* callInfo */ _ ->
     val value = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
     signal { _ -> value }
 }

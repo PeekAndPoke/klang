@@ -38,17 +38,17 @@ private fun applyLpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
 
 /** Adds a Low Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val StrudelPattern.lpf by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.lpf by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyLpf(p, args)
 }
 
 /** Adds a Low Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val lpf by dslFunction { args, callInfo -> args.toPattern(lpfMutation) }
+val lpf by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpfMutation) }
 
 /** Adds a Low Pass Filter with the given cutoff frequency on a string. */
 @StrudelDsl
-val String.lpf by dslStringExtension { p, args, callInfo ->
+val String.lpf by dslStringExtension { p, args, /* callInfo */ _ ->
     applyLpf(p, args)
 }
 
@@ -75,17 +75,17 @@ private fun applyHpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
 
 /** Adds a High Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val StrudelPattern.hpf by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.hpf by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyHpf(p, args)
 }
 
 /** Adds a High Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val hpf by dslFunction { args, callInfo -> args.toPattern(hpfMutation) }
+val hpf by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpfMutation) }
 
 /** Adds a High Pass Filter with the given cutoff frequency on a string. */
 @StrudelDsl
-val String.hpf by dslStringExtension { p, args, callInfo ->
+val String.hpf by dslStringExtension { p, args, /* callInfo */ _ ->
     applyHpf(p, args)
 }
 
@@ -112,31 +112,31 @@ private fun applyBandf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 
 /** Adds a Band Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val StrudelPattern.bandf by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.bandf by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyBandf(p, args)
 }
 
 /** Adds a Band Pass Filter with the given cutoff frequency. */
 @StrudelDsl
-val bandf by dslFunction { args, callInfo -> args.toPattern(bandfMutation) }
+val bandf by dslFunction { args, /* callInfo */ _ -> args.toPattern(bandfMutation) }
 
 /** Adds a Band Pass Filter with the given cutoff frequency on a string. */
 @StrudelDsl
-val String.bandf by dslStringExtension { p, args, callInfo ->
+val String.bandf by dslStringExtension { p, args, /* callInfo */ _ ->
     applyBandf(p, args)
 }
 
 /** Alias for [bandf] */
 @StrudelDsl
-val StrudelPattern.bpf by dslPatternExtension { p, args, callInfo -> applyBandf(p, args) }
+val StrudelPattern.bpf by dslPatternExtension { p, args, /* callInfo */ _ -> applyBandf(p, args) }
 
 /** Alias for [bandf] */
 @StrudelDsl
-val bpf by dslFunction { args, callInfo -> args.toPattern(bandfMutation) }
+val bpf by dslFunction { args, /* callInfo */ _ -> args.toPattern(bandfMutation) }
 
 /** Alias for [bandf] on a string */
 @StrudelDsl
-val String.bpf by dslStringExtension { p, args, callInfo -> applyBandf(p, args) }
+val String.bpf by dslStringExtension { p, args, /* callInfo */ _ -> applyBandf(p, args) }
 
 // -- notchf() ---------------------------------------------------------------------------------------------------------
 
@@ -161,17 +161,17 @@ private fun applyNotchf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 
 /** Adds a Notch Filter with the given cutoff frequency. */
 @StrudelDsl
-val StrudelPattern.notchf by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.notchf by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyNotchf(p, args)
 }
 
 /** Adds a Notch Filter with the given cutoff frequency. */
 @StrudelDsl
-val notchf by dslFunction { args, callInfo -> args.toPattern(notchfMutation) }
+val notchf by dslFunction { args, /* callInfo */ _ -> args.toPattern(notchfMutation) }
 
 /** Adds a Notch Filter with the given cutoff frequency on a string. */
 @StrudelDsl
-val String.notchf by dslStringExtension { p, args, callInfo ->
+val String.notchf by dslStringExtension { p, args, /* callInfo */ _ ->
     applyNotchf(p, args)
 }
 
@@ -203,28 +203,28 @@ private fun applyResonance(source: StrudelPattern, args: List<StrudelDslArg<Any?
 
 /** Sets the filter resonance. */
 @StrudelDsl
-val StrudelPattern.resonance by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.resonance by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyResonance(p, args)
 }
 
 /** Sets the filter resonance. */
 @StrudelDsl
-val resonance by dslFunction { args, callInfo -> args.toPattern(resonanceMutation) }
+val resonance by dslFunction { args, /* callInfo */ _ -> args.toPattern(resonanceMutation) }
 
 /** Sets the filter resonance on a string. */
 @StrudelDsl
-val String.resonance by dslStringExtension { p, args, callInfo ->
+val String.resonance by dslStringExtension { p, args, /* callInfo */ _ ->
     applyResonance(p, args)
 }
 
 /** Alias for [resonance] */
 @StrudelDsl
-val StrudelPattern.res by dslPatternExtension { p, args, callInfo -> applyResonance(p, args) }
+val StrudelPattern.res by dslPatternExtension { p, args, /* callInfo */ _ -> applyResonance(p, args) }
 
 /** Alias for [resonance] */
 @StrudelDsl
-val res by dslFunction { args, callInfo -> args.toPattern(resonanceMutation) }
+val res by dslFunction { args, /* callInfo */ _ -> args.toPattern(resonanceMutation) }
 
 /** Alias for [resonance] on a string */
 @StrudelDsl
-val String.res by dslStringExtension { p, args, callInfo -> applyResonance(p, args) }
+val String.res by dslStringExtension { p, args, /* callInfo */ _ -> applyResonance(p, args) }

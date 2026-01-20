@@ -33,26 +33,20 @@ var strudelLangStructuralInit = false
 
 /** Stops all playing patterns by returning silence, ignoring all arguments. */
 @StrudelDsl
-val hush by dslFunction { _, _ ->
-    silence
-}
+val hush by dslFunction { _, _ -> silence }
 
 @StrudelDsl
-val StrudelPattern.hush by dslPatternExtension { _, _, _ ->
-    silence
-}
+val StrudelPattern.hush by dslPatternExtension { _, _, _ -> silence }
 
 @StrudelDsl
-val String.hush by dslStringExtension { _, _, _ ->
-    silence
-}
+val String.hush by dslStringExtension { _, _, _ -> silence }
 
 // -- gap() ------------------------------------------------------------------------------------------------------------
 
 /** Creates silence with a specific duration in steps (metrical steps). */
-private fun applyGap(args: List<Any?>): StrudelPattern {
-    val stepsArg = args.firstOrNull()?.asDoubleOrNull() ?: 1.0
-    val stepsRat = stepsArg.toRational()
+private fun applyGap(args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val stepsVal = args.firstOrNull()?.value?.asDoubleOrNull() ?: 1.0
+    val stepsRat = stepsVal.toRational()
 
     return object : StrudelPattern {
         override val weight: Double = 1.0
@@ -67,26 +61,28 @@ private fun applyGap(args: List<Any?>): StrudelPattern {
 
 /** Creates silence with a specific duration in steps (metrical steps). */
 @StrudelDsl
-val gap by dslFunction { args, callInfo -> applyGap(args) }
+val gap by dslFunction { args, /* callInfo */ _ -> applyGap(args) }
 
 @StrudelDsl
-val StrudelPattern.gap by dslPatternExtension { _, args, callInfo -> applyGap(args) }
+val StrudelPattern.gap by dslPatternExtension { _, args, /* callInfo */ _ -> applyGap(args) }
 
 @StrudelDsl
-val String.gap by dslStringExtension { _, args, callInfo -> applyGap(args) }
+val String.gap by dslStringExtension { p, args, callInfo -> p.gap(args, callInfo) }
 
 // -- seq() ------------------------------------------------------------------------------------------------------------
 
 /** Creates a sequence pattern. */
 private fun applySeq(patterns: List<StrudelPattern>): StrudelPattern {
-    return if (patterns.isEmpty()) EmptyPattern
-    else if (patterns.size == 1) patterns.first()
-    else SequencePattern(patterns)
+    return when (patterns.size) {
+        0 -> silence
+        1 -> patterns.first()
+        else -> SequencePattern(patterns)
+    }
 }
 
 /** Creates a sequence pattern. */
 @StrudelDsl
-val seq by dslFunction { args, callInfo ->
+val seq by dslFunction { args, /* callInfo */ _ ->
     // specialized modifier for seq to prioritize value
     args.toPattern {
         copy(
@@ -97,88 +93,98 @@ val seq by dslFunction { args, callInfo ->
 }
 
 @StrudelDsl
-val StrudelPattern.seq by dslPatternExtension { p, args, callInfo ->
-    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
-    applySeq(patterns)
+val StrudelPattern.seq by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applySeq(patterns = listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.seq by dslStringExtension { p, args, callInfo ->
-    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
-    applySeq(patterns)
-}
+val String.seq by dslStringExtension { p, args, callInfo -> p.seq(args, callInfo) }
 
 // -- mini() -----------------------------------------------------------------------------------------------------------
 
 /** Parses input as mini-notation. Effectively an alias for `seq`. */
-val mini by dslFunction { args, callInfo ->
+val mini by dslFunction { args, /* callInfo */ _ ->
     args.toPattern(defaultModifier)
 }
 
 // -- stack() ----------------------------------------------------------------------------------------------------------
 
 private fun applyStack(patterns: List<StrudelPattern>): StrudelPattern {
-    return if (patterns.size == 1) patterns.first() else StackPattern(patterns)
+    return when (patterns.size) {
+        0 -> silence
+        1 -> patterns.first()
+        else -> StackPattern(patterns)
+    }
 }
 
 /** Plays multiple patterns at the same time. */
 @StrudelDsl
-val stack by dslFunction { args, callInfo ->
-    val patterns = args.toListOfPatterns(defaultModifier)
-    if (patterns.isEmpty()) silence else StackPattern(patterns)
+val stack by dslFunction { args, /* callInfo */ _ ->
+    applyStack(patterns = args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.stack by dslPatternExtension { p, args, callInfo ->
-    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
-    applyStack(patterns)
+val StrudelPattern.stack by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyStack(patterns = listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.stack by dslStringExtension { p, args, callInfo ->
-    val patterns = listOf(p) + args.toListOfPatterns(defaultModifier)
-    applyStack(patterns)
-}
+val String.stack by dslStringExtension { p, args, callInfo -> p.stack(args, callInfo) }
 
 // -- arrange() --------------------------------------------------------------------------------------------------------
 
-private fun applyArrange(args: List<Any?>): StrudelPattern {
-    val segments = args.map { arg ->
-        when (arg) {
+private fun applyArrange(args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val segments: List<Pair<Double, StrudelPattern>> = args.map { arg ->
+        when (val argVal = arg.value) {
             // Case: pattern (defaults to 1 cycle)
-            is StrudelPattern -> 1.0 to arg
+            is StrudelPattern -> 1.0 to argVal
             // Case: [2, pattern]
-            is List<*> if arg.size == 2 && arg[0] is Number && arg[1] is StrudelPattern -> {
-                val dur = (arg[0] as Number).toDouble()
-                val pat = arg[1] as StrudelPattern
+            is List<*> if argVal.size >= 2 && argVal[0] is Number && argVal[1] is StrudelPattern -> {
+                val dur = ((argVal[0] as? Number) ?: 1.0).toDouble()
+
+                val pat = when (val patVal = argVal[1]) {
+                    is StrudelPattern -> patVal
+                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
+                        AtomicPattern(VoiceData.empty.defaultModifier(text))
+                    }
+                }
+
                 dur to pat
             }
             // Case: [pattern] (defaults to 1 cycle)
-            is List<*> if arg.size == 1 && arg[0] is StrudelPattern -> 1.0 to (arg[0] as StrudelPattern)
+            is List<*> if argVal.size == 1 -> {
+                val pat = when (val patVal = argVal[0]) {
+                    is StrudelPattern -> patVal
+                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
+                        AtomicPattern(VoiceData.empty.defaultModifier(text))
+                    }
+                }
+
+                1.0 to pat
+            }
             // Unknown
             else -> 0.0 to silence
         }
     }.filter { it.first > 0.0 }
 
-    return if (segments.isEmpty()) silence
-    else ArrangementPattern(segments)
+    return if (segments.isEmpty()) {
+        silence
+    } else {
+        ArrangementPattern(segments)
+    }
 }
 
 // arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
 @StrudelDsl
-val arrange by dslFunction { args, callInfo ->
-    applyArrange(args)
+val arrange by dslFunction { args, /* callInfo */ _ -> applyArrange(args) }
+
+@StrudelDsl
+val StrudelPattern.arrange by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyArrange(listOf(StrudelDslArg.of(p)) + args)
 }
 
 @StrudelDsl
-val StrudelPattern.arrange by dslPatternExtension { p, args, callInfo ->
-    applyArrange(listOf(p) + args)
-}
-
-@StrudelDsl
-val String.arrange by dslStringExtension { p, args, callInfo ->
-    applyArrange(listOf(p) + args)
-}
+val String.arrange by dslStringExtension { p, args, callInfo -> p.arrange(args, callInfo) }
 
 // -- stackBy() --------------------------------------------------------------------------------------------------------
 
@@ -256,34 +262,35 @@ private fun applyStackBy(patterns: List<StrudelPattern>, alignment: Double): Str
  * 0 = left, 0.5 = center, 1 = right.
  */
 @StrudelDsl
-val stackBy by dslFunction { args, callInfo ->
-    val by = args.firstOrNull()?.asDoubleOrNull() ?: 0.0
+val stackBy by dslFunction { args, /* callInfo */ _ ->
+    val alignment = args.firstOrNull()?.value?.asDoubleOrNull() ?: 0.0
     val patterns = args.drop(1).toListOfPatterns(defaultModifier)
-    applyStackBy(patterns, by)
+
+    applyStackBy(patterns = patterns, alignment = alignment)
 }
 
 // -- stackLeft() ------------------------------------------------------------------------------------------------------
 
 /** Stack patterns aligned to the left (start). */
 @StrudelDsl
-val stackLeft by dslFunction { args, callInfo ->
-    applyStackBy(args.toListOfPatterns(defaultModifier), 0.0)
+val stackLeft by dslFunction { args, /* callInfo */ _ ->
+    applyStackBy(patterns = args.toListOfPatterns(defaultModifier), alignment = 0.0)
 }
 
 // -- stackRight() -----------------------------------------------------------------------------------------------------
 
 /** Stack patterns aligned to the right (end). */
 @StrudelDsl
-val stackRight by dslFunction { args, callInfo ->
-    applyStackBy(args.toListOfPatterns(defaultModifier), 1.0)
+val stackRight by dslFunction { args, /* callInfo */ _ ->
+    applyStackBy(patterns = args.toListOfPatterns(defaultModifier), alignment = 1.0)
 }
 
 // -- stackCentre() ----------------------------------------------------------------------------------------------------
 
 /** Stack patterns aligned to the center. */
 @StrudelDsl
-val stackCentre by dslFunction { args, callInfo ->
-    applyStackBy(args.toListOfPatterns(defaultModifier), 0.5)
+val stackCentre by dslFunction { args, /* callInfo */ _ ->
+    applyStackBy(patterns = args.toListOfPatterns(defaultModifier), alignment = 0.5)
 }
 
 // -- polyrhythm() -----------------------------------------------------------------------------------------------------
@@ -292,19 +299,17 @@ val stackCentre by dslFunction { args, callInfo ->
  * Alias for stack. Creates polyrhythms by playing patterns simultaneously.
  */
 @StrudelDsl
-val polyrhythm by dslFunction { args, callInfo ->
-    applyStack(args.toListOfPatterns(defaultModifier))
+val polyrhythm by dslFunction { args, /* callInfo */ _ ->
+    applyStack(patterns = args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.polyrhythm by dslPatternExtension { p, args, callInfo ->
-    applyStack(listOf(p) + args.toListOfPatterns(defaultModifier))
+val StrudelPattern.polyrhythm by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyStack(patterns = listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.polyrhythm by dslStringExtension { p, args, callInfo ->
-    applyStack(listOf(p) + args.toListOfPatterns(defaultModifier))
-}
+val String.polyrhythm by dslStringExtension { p, args, callInfo -> p.polyrhythm(args, callInfo) }
 
 // -- sequenceP() ------------------------------------------------------------------------------------------------------
 
@@ -312,7 +317,7 @@ val String.polyrhythm by dslStringExtension { p, args, callInfo ->
  * Pattern of patterns sequence. Alias for seq.
  */
 @StrudelDsl
-val sequenceP by dslFunction { args, callInfo ->
+val sequenceP by dslFunction { args, /* callInfo */ _ ->
     applySeq(args.toListOfPatterns(defaultModifier))
 }
 
@@ -321,7 +326,7 @@ val sequenceP by dslFunction { args, callInfo ->
 // pickRestart([a, b, c]) -> picks patterns sequentially per cycle (slowcat)
 // TODO: make this really work. Must be dslMethod -> https://strudel.cc/learn/conditional-modifiers/#pickrestart
 @StrudelDsl
-val pickRestart by dslFunction { args, callInfo ->
+val pickRestart by dslFunction { args, /* callInfo */ _ ->
     val patterns = args.toListOfPatterns(defaultModifier)
     if (patterns.isEmpty()) {
         silence
@@ -334,26 +339,26 @@ val pickRestart by dslFunction { args, callInfo ->
 
 // -- cat() ------------------------------------------------------------------------------------------------------------
 
-internal fun applyCat(patterns: List<StrudelPattern>): StrudelPattern = when {
-    patterns.isEmpty() -> silence
-    patterns.size == 1 -> patterns.first()
-    else -> ArrangementPattern(patterns.map { 1.0 to it })
+internal fun applyCat(patterns: List<StrudelPattern>): StrudelPattern {
+    return when (patterns.size) {
+        0 -> silence
+        1 -> patterns.first()
+        else -> ArrangementPattern(patterns.map { 1.0 to it })
+    }
 }
 
 @StrudelDsl
-val cat by dslFunction { args, callInfo ->
-    applyCat(args.toListOfPatterns(defaultModifier))
+val cat by dslFunction { args, /* callInfo */ _ ->
+    applyCat(patterns = args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.cat by dslPatternExtension { p, args, callInfo ->
-    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
+val StrudelPattern.cat by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyCat(patterns = listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.cat by dslStringExtension { p, args, callInfo ->
-    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
-}
+val String.cat by dslStringExtension { p, args, callInfo -> p.cat(args, callInfo) }
 
 // -- fastcat() --------------------------------------------------------------------------------------------------------
 
@@ -367,19 +372,17 @@ val String.cat by dslStringExtension { p, args, callInfo ->
  * // same as seq("bd", "sd") or "bd sd"
  */
 @StrudelDsl
-val fastcat by dslFunction { args, callInfo ->
-    applySeq(args.toListOfPatterns(defaultModifier))
+val fastcat by dslFunction { args, /* callInfo */ _ ->
+    applySeq(patterns = args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.fastcat by dslPatternExtension { p, args, callInfo ->
-    applySeq(listOf(p) + args.toListOfPatterns(defaultModifier))
+val StrudelPattern.fastcat by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applySeq(patterns = listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.fastcat by dslStringExtension { p, args, callInfo ->
-    applySeq(listOf(p) + args.toListOfPatterns(defaultModifier))
-}
+val String.fastcat by dslStringExtension { p, args, callInfo -> p.fastcat(args, callInfo) }
 
 // -- slowcat() --------------------------------------------------------------------------------------------------------
 
@@ -398,19 +401,17 @@ val String.fastcat by dslStringExtension { p, args, callInfo ->
  * // Cycle 1: "sd"
  */
 @StrudelDsl
-val slowcat by dslFunction { args, callInfo ->
-    applyCat(args.toListOfPatterns(defaultModifier))
+val slowcat by dslFunction { args, /* callInfo */ _ ->
+    applyCat(patterns = args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.slowcat by dslPatternExtension { p, args, callInfo ->
-    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
+val StrudelPattern.slowcat by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyCat(patterns = listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.slowcat by dslStringExtension { p, args, callInfo ->
-    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
-}
+val String.slowcat by dslStringExtension { p, args, callInfo -> p.slowcat(args, callInfo) }
 
 // -- slowcatPrime() ---------------------------------------------------------------------------------------------------
 
@@ -421,19 +422,17 @@ val String.slowcat by dslStringExtension { p, args, callInfo ->
  * @param {patterns} patterns to concatenate
  */
 @StrudelDsl
-val slowcatPrime by dslFunction { args, callInfo ->
-    applyCat(args.toListOfPatterns(defaultModifier))
+val slowcatPrime by dslFunction { args, /* callInfo */ _ ->
+    applyCat(patterns = args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.slowcatPrime by dslPatternExtension { p, args, callInfo ->
-    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
+val StrudelPattern.slowcatPrime by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyCat(patterns = listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.slowcatPrime by dslStringExtension { p, args, callInfo ->
-    applyCat(listOf(p) + args.toListOfPatterns(defaultModifier))
-}
+val String.slowcatPrime by dslStringExtension { p, args, callInfo -> p.slowcatPrime(args, callInfo) }
 
 // -- polymeter() ------------------------------------------------------------------------------------------------------
 
@@ -471,19 +470,17 @@ private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = nul
  * @param {patterns} patterns to align
  */
 @StrudelDsl
-val polymeter by dslFunction { args, callInfo ->
-    applyPolymeter(args.toListOfPatterns(defaultModifier))
+val polymeter by dslFunction { args, /* callInfo */ _ ->
+    applyPolymeter(patterns = args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val StrudelPattern.polymeter by dslPatternExtension { p, args, callInfo ->
-    applyPolymeter(listOf(p) + args.toListOfPatterns(defaultModifier))
+val StrudelPattern.polymeter by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPolymeter(patterns = listOf(p) + args.toListOfPatterns(defaultModifier))
 }
 
 @StrudelDsl
-val String.polymeter by dslStringExtension { p, args, callInfo ->
-    applyPolymeter(listOf(p) + args.toListOfPatterns(defaultModifier))
-}
+val String.polymeter by dslStringExtension { p, args, callInfo -> p.polymeter(args, callInfo) }
 
 // -- polymeterSteps() -------------------------------------------------------------------------------------------------
 
@@ -495,11 +492,12 @@ val String.polymeter by dslStringExtension { p, args, callInfo ->
  * @param {patterns} The patterns to align.
  */
 @StrudelDsl
-val polymeterSteps by dslFunction { args, callInfo ->
-    val steps = args.getOrNull(0)?.asIntOrNull() ?: 4
+val polymeterSteps by dslFunction { args, /* callInfo */ _ ->
+    val steps = args.getOrNull(0)?.value?.asIntOrNull() ?: 4
     // Remaining args are patterns
     val patterns = args.drop(1).toListOfPatterns(defaultModifier)
-    applyPolymeter(patterns, baseSteps = steps)
+
+    applyPolymeter(patterns = patterns, baseSteps = steps)
 }
 
 // -- pure() -----------------------------------------------------------------------------------------------------------
@@ -511,22 +509,22 @@ val polymeterSteps by dslFunction { args, callInfo ->
  * @param {value} The value to wrap in a pattern.
  */
 @StrudelDsl
-val pure by dslFunction { args, callInfo ->
-    val value = args.getOrNull(0)
+val pure by dslFunction { args, /* callInfo */ _ ->
+    val value = args.getOrNull(0)?.value
     AtomicPattern(VoiceData.empty.copy(value = value?.asVoiceValue()))
 }
 
 // -- struct() ---------------------------------------------------------------------------------------------------------
 
-private fun applyStruct(source: StrudelPattern, structArg: Any?): StrudelPattern {
-    val structure = when (structArg) {
-        is StrudelPattern -> structArg
+private fun applyStruct(source: StrudelPattern, structArg: StrudelDslArg<Any?>?): StrudelPattern {
+    val structure: StrudelPattern = when (val structVal = structArg?.value) {
+        null -> silence
 
-        is String -> parseMiniNotation(input = structArg) { text, _ ->
+        is StrudelPattern -> structVal
+
+        else -> parseMiniNotation(input = structArg) { text, _ ->
             AtomicPattern(VoiceData.empty.copy(note = text))
         }
-
-        else -> silence
     }
 
     return StructurePattern(
@@ -541,36 +539,33 @@ private fun applyStruct(source: StrudelPattern, structArg: Any?): StrudelPattern
  * Structures the pattern according to another pattern (the mask).
  */
 @StrudelDsl
-val struct by dslFunction { args, callInfo ->
-    val structArg = args.getOrNull(0)
-    val source = args.filterIsInstance<StrudelPattern>().let {
-        if (it.size >= 2 && structArg is StrudelPattern) it[1] else it.firstOrNull()
-    } ?: return@dslFunction silence
+val struct by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) return@dslFunction silence
 
-    applyStruct(source, structArg)
+    val pattern = listOf(args[1]).toPattern(defaultModifier)
+
+    applyStruct(source = pattern, structArg = args.getOrNull(0))
 }
 
 @StrudelDsl
-val StrudelPattern.struct by dslPatternExtension { source, args, callInfo ->
-    applyStruct(source, args.firstOrNull())
+val StrudelPattern.struct by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyStruct(source = p, structArg = args.firstOrNull())
 }
 
 @StrudelDsl
-val String.struct by dslStringExtension { source, args, callInfo ->
-    applyStruct(source, args.firstOrNull())
-}
+val String.struct by dslStringExtension { p, args, callInfo -> p.struct(args, callInfo) }
 
 // -- structAll() ------------------------------------------------------------------------------------------------------
 
-private fun applyStructAll(source: StrudelPattern, structArg: Any?): StrudelPattern {
-    val structure = when (structArg) {
-        is StrudelPattern -> structArg
+private fun applyStructAll(source: StrudelPattern, structArg: StrudelDslArg<Any?>?): StrudelPattern {
+    val structure: StrudelPattern = when (val structVal = structArg?.value) {
+        null -> silence
 
-        is String -> parseMiniNotation(input = structArg) { text, _ ->
+        is StrudelPattern -> structVal
+
+        else -> parseMiniNotation(input = structArg) { text, _ ->
             AtomicPattern(VoiceData.empty.copy(note = text))
         }
-
-        else -> silence
     }
 
     // We use a different implementation for structAll that preserves all source events
@@ -588,34 +583,33 @@ private fun applyStructAll(source: StrudelPattern, structArg: Any?): StrudelPatt
  * Example: structAll("x", note("c e")) -> keeps both c and e within the x window
  */
 @StrudelDsl
-val structAll by dslFunction { args, callInfo ->
-    val structArg = args.getOrNull(0)
-    val source = args.filterIsInstance<StrudelPattern>().let {
-        if (it.size >= 2 && structArg is StrudelPattern) it[1] else it.firstOrNull()
-    } ?: return@dslFunction silence
+val structAll by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) return@dslFunction silence
 
-    applyStructAll(source, structArg)
+    val pattern = listOf(args[1]).toPattern(defaultModifier)
+
+    applyStructAll(source = pattern, structArg = args.getOrNull(0))
 }
 
 @StrudelDsl
-val StrudelPattern.structAll by dslPatternExtension { source, args, callInfo ->
-    applyStructAll(source, args.firstOrNull())
+val StrudelPattern.structAll by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyStructAll(source = p, structArg = args.firstOrNull())
 }
 
 @StrudelDsl
-val String.structAll by dslStringExtension { source, args, callInfo ->
-    applyStructAll(source, args.firstOrNull())
-}
+val String.structAll by dslStringExtension { p, args, callInfo -> p.structAll(args, callInfo) }
 
-private fun applyMask(source: StrudelPattern, maskArg: Any?): StrudelPattern {
-    val maskPattern = when (maskArg) {
-        is StrudelPattern -> maskArg
+// -- mask() -----------------------------------------------------------------------------------------------------------
 
-        is String -> parseMiniNotation(input = maskArg) { text, _ ->
+private fun applyMask(source: StrudelPattern, maskArg: StrudelDslArg<Any?>?): StrudelPattern {
+    val maskPattern: StrudelPattern = when (val maskVal = maskArg?.value) {
+        null -> silence
+
+        is StrudelPattern -> maskVal
+
+        else -> parseMiniNotation(input = maskArg) { text, _ ->
             AtomicPattern(VoiceData.empty.copy(note = text))
         }
-
-        else -> silence
     }
 
     return StructurePattern(
@@ -631,36 +625,33 @@ private fun applyMask(source: StrudelPattern, maskArg: Any?): StrudelPattern {
  * Only events from the source that overlap with "truthy" events in the mask are kept.
  */
 @StrudelDsl
-val mask by dslFunction { args, callInfo ->
-    val maskArg = args.getOrNull(0)
-    val source = args.filterIsInstance<StrudelPattern>().let {
-        if (it.size >= 2 && maskArg is StrudelPattern) it[1] else it.firstOrNull()
-    } ?: return@dslFunction silence
+val mask by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) return@dslFunction silence
 
-    applyMask(source, maskArg)
+    val pattern = listOf(args[1]).toPattern(defaultModifier)
+
+    applyMask(source = pattern, maskArg = args.getOrNull(0))
 }
 
 @StrudelDsl
-val StrudelPattern.mask by dslPatternExtension { source, args, callInfo ->
-    applyMask(source, args.firstOrNull())
+val StrudelPattern.mask by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyMask(source = p, maskArg = args.firstOrNull())
 }
 
 @StrudelDsl
-val String.mask by dslStringExtension { source, args, callInfo ->
-    applyMask(source, args.firstOrNull())
-}
+val String.mask by dslStringExtension { p, args, callInfo -> p.mask(args, callInfo) }
 
 // -- maskAll() --------------------------------------------------------------------------------------------------------
 
-private fun applyMaskAll(source: StrudelPattern, maskArg: Any?): StrudelPattern {
-    val maskPattern = when (maskArg) {
-        is StrudelPattern -> maskArg
+private fun applyMaskAll(source: StrudelPattern, maskArg: StrudelDslArg<Any?>?): StrudelPattern {
+    val maskPattern: StrudelPattern = when (val maskVal = maskArg?.value) {
+        null -> silence
 
-        is String -> parseMiniNotation(input = maskArg) { text, _ ->
+        is StrudelPattern -> maskVal
+
+        else -> parseMiniNotation(input = maskArg) { text, _ ->
             AtomicPattern(VoiceData.empty.copy(note = text))
         }
-
-        else -> silence
     }
 
     return StructurePattern(
@@ -675,8 +666,9 @@ private fun applyMaskAll(source: StrudelPattern, maskArg: Any?): StrudelPattern 
  * Filters the pattern using a mask, keeping all source events that overlap with the mask's structure.
  */
 @StrudelDsl
-val maskAll by dslFunction { args, callInfo ->
+val maskAll by dslFunction { args, /* callInfo */ _ ->
     val maskArg = args.getOrNull(0)
+
     val source = args.map { it.value }.filterIsInstance<StrudelPattern>().let {
         if (it.size >= 2 && maskArg?.value is StrudelPattern) it[1] else it.firstOrNull()
     } ?: return@dslFunction silence
@@ -685,14 +677,12 @@ val maskAll by dslFunction { args, callInfo ->
 }
 
 @StrudelDsl
-val StrudelPattern.maskAll by dslPatternExtension { source, args, callInfo ->
-    applyMaskAll(source, args.firstOrNull())
+val StrudelPattern.maskAll by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyMaskAll(source = p, maskArg = args.firstOrNull())
 }
 
 @StrudelDsl
-val String.maskAll by dslStringExtension { source, args, callInfo ->
-    applyMaskAll(source, args.firstOrNull())
-}
+val String.maskAll by dslStringExtension { p, args, callInfo -> p.maskAll(args, callInfo) }
 
 // -- filter() ---------------------------------------------------------------------------------------------------------
 
@@ -719,35 +709,24 @@ fun filter(ignored: (StrudelPatternEvent) -> Boolean): StrudelPattern = silence
 
 /** Filters haps using the given function. */
 @StrudelDsl
-val StrudelPattern.filter by dslPatternExtension { source, args, callInfo ->
+val StrudelPattern.filter by dslPatternExtension { p, args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val predicate: ((StrudelPatternEvent) -> Boolean)? =
         args.firstOrNull()?.value as? (StrudelPatternEvent) -> Boolean
 
-    if (predicate != null) applyFilter(source, predicate) else source
+    if (predicate != null) applyFilter(source = p, predicate = predicate) else p
 }
 
 /** Filters haps using the given function. */
 fun StrudelPattern.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern =
-    applyFilter(this, predicate)
+    applyFilter(source = this, predicate = predicate)
 
 /** Filters haps using the given function. */
 @StrudelDsl
-val String.filter by dslStringExtension { source, args, callInfo ->
-    @Suppress("UNCHECKED_CAST")
-    val predicate = args.firstOrNull() as? (StrudelPatternEvent) -> Boolean
-
-    if (predicate != null) applyFilter(source, predicate) else source
-}
+val String.filter by dslStringExtension { p, args, callInfo -> p.filter(args, callInfo) }
 
 /** Filters haps using the given function. */
-fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
-    val pattern = parseMiniNotation(this) { text, _ ->
-        AtomicPattern(VoiceData.empty.defaultModifier(text))
-    }
-
-    return pattern.filter(predicate)
-}
+fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern = filter(predicate as Any)
 
 // -- filterWhen() -----------------------------------------------------------------------------------------------------
 
@@ -757,7 +736,7 @@ fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
  * @param {predicate} function to test the begin time (Double)
  */
 @StrudelDsl
-val filterWhen by dslFunction { args, callInfo ->
+val filterWhen by dslFunction { args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val predicate: ((Double) -> Boolean)? = args.getOrNull(0)?.value as? (Double) -> Boolean
 
@@ -771,33 +750,22 @@ val filterWhen by dslFunction { args, callInfo ->
 fun filterWhen(predicate: (Double) -> Boolean): StrudelPattern = silence
 
 @StrudelDsl
-val StrudelPattern.filterWhen by dslPatternExtension { source, args, callInfo ->
+val StrudelPattern.filterWhen by dslPatternExtension { source, args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val predicate: ((Double) -> Boolean)? = args.firstOrNull()?.value as? (Double) -> Boolean
 
-    if (predicate != null) applyFilter(source) { predicate(it.begin.toDouble()) } else source
+    if (predicate != null) applyFilter(source = source) { predicate(it.begin.toDouble()) } else source
 }
 
 @StrudelDsl
 fun StrudelPattern.filterWhen(predicate: (Double) -> Boolean): StrudelPattern =
-    applyFilter(this) { predicate(it.begin.toDouble()) }
+    applyFilter(source = this) { predicate(it.begin.toDouble()) }
 
 @StrudelDsl
-val String.filterWhen by dslStringExtension { source, args, callInfo ->
-    @Suppress("UNCHECKED_CAST")
-    val predicate = args.firstOrNull()?.value as? (Double) -> Boolean
-
-    if (predicate != null) applyFilter(source) { predicate(it.begin.toDouble()) } else source
-}
+val String.filterWhen by dslStringExtension { source, args, callInfo -> source.filterWhen(args, callInfo) }
 
 @StrudelDsl
-fun String.filterWhen(predicate: (Double) -> Boolean): StrudelPattern {
-    val pattern = parseMiniNotation(this) { text, _ ->
-        AtomicPattern(VoiceData.empty.defaultModifier(text))
-    }
-
-    return pattern.filterWhen(predicate)
-}
+fun String.filterWhen(predicate: (Double) -> Boolean): StrudelPattern = filterWhen(predicate as Any)
 
 // -- bypass() ---------------------------------------------------------------------------------------------------------
 
@@ -820,13 +788,13 @@ private fun applyBypass(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
  * Supports both static values and patterns.
  */
 @StrudelDsl
-val bypass by dslFunction { args, callInfo -> applyBypass(silence, args) }
+val bypass by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
 
 @StrudelDsl
-val StrudelPattern.bypass by dslPatternExtension { source, args, callInfo -> applyBypass(source, args) }
+val StrudelPattern.bypass by dslPatternExtension { p, args, /* callInfo */ _ -> applyBypass(p, args) }
 
 @StrudelDsl
-val String.bypass by dslStringExtension { source, args, callInfo -> applyBypass(source, args) }
+val String.bypass by dslStringExtension { p, args, callInfo -> p.bypass(args, callInfo) }
 
 // -- superimpose() ----------------------------------------------------------------------------------------------------
 
@@ -836,17 +804,18 @@ val String.bypass by dslStringExtension { source, args, callInfo -> applyBypass(
  * Example: s("bd sd").superimpose { it.fast(2) }
  */
 @StrudelDsl
-val StrudelPattern.superimpose by dslPatternExtension { source, args, callInfo ->
+val StrudelPattern.superimpose by dslPatternExtension { p, args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val transform: (StrudelPattern) -> StrudelPattern =
         args.firstOrNull()?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    SuperimposePattern(source, transform)
+    SuperimposePattern(p, transform)
 }
 
-// TODO: string extension
+@StrudelDsl
+val String.superimpose by dslStringExtension { p, args, callInfo -> p.superimpose(args, callInfo) }
 
-// -- superimpose() ----------------------------------------------------------------------------------------------------
+// -- layer() //////----------------------------------------------------------------------------------------------------
 
 /**
  * Applies multiple transformation functions to the pattern and stacks the results.
@@ -854,15 +823,16 @@ val StrudelPattern.superimpose by dslPatternExtension { source, args, callInfo -
  * Example: s("bd").layer({ it.fast(2) }, { it.rev() })
  */
 @StrudelDsl
-val StrudelPattern.layer by dslPatternExtension { source, args, callInfo ->
-    val transforms = args.filterIsInstance<(StrudelPattern) -> StrudelPattern>()
+val StrudelPattern.layer by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val transforms: List<(StrudelPattern) -> StrudelPattern> =
+        args.map { it.value }.filterIsInstance<(StrudelPattern) -> StrudelPattern>()
 
     if (transforms.isEmpty()) {
         silence
     } else {
         val patterns = transforms.mapNotNull { transform ->
             try {
-                transform(source)
+                transform(p)
             } catch (e: Exception) {
                 println("Error applying layer transform: ${e.stackTraceToString()}")
                 null
@@ -877,41 +847,47 @@ val StrudelPattern.layer by dslPatternExtension { source, args, callInfo ->
     }
 }
 
-// TODO: string extension
+@StrudelDsl
+val String.layer by dslStringExtension { p, args, callInfo -> p.layer(args, callInfo) }
 
 /**
  * Alias for [layer].
  */
 @StrudelDsl
-val StrudelPattern.apply by dslPatternExtension { source, args, callInfo ->
-    source.layer(args)
-}
+val StrudelPattern.apply by dslPatternExtension { p, args, callInfo -> p.layer(args, callInfo) }
 
-// TODO: string extension
+@StrudelDsl
+val String.apply by dslStringExtension { p, args, callInfo -> p.apply(args, callInfo) }
 
 // -- zoom() -----------------------------------------------------------------------------------------------------------
 
 private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val startArg = args.getOrNull(0)
+    val startVal = startArg?.value
     val endArg = args.getOrNull(1)
+    val endVal = endArg?.value
 
     // Parse the start argument into a pattern
-    val startPattern = when (startArg) {
-        is StrudelPattern -> startArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(startArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val startPattern: StrudelPattern = when (startVal) {
+        is StrudelPattern -> startVal
+
+        else -> parseMiniNotation(startArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     // Parse the end argument into a pattern
-    val endPattern = when (endArg) {
-        is StrudelPattern -> endArg
-        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(endArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val endPattern: StrudelPattern = when (val endVal = endArg?.value) {
+        is StrudelPattern -> endVal
+
+        else -> parseMiniNotation(endArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     // Check if we have static values for optimization
-    val staticStart = startArg?.asDoubleOrNull()
-    val staticEnd = endArg?.asDoubleOrNull()
+    val staticStart = startVal?.asDoubleOrNull()
+    val staticEnd = endVal?.asDoubleOrNull()
 
     return if (staticStart != null && staticEnd != null) {
         // Static path: use the simple early/fast approach
@@ -938,7 +914,7 @@ private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
  * @param {end}   end of the zoom window (0.0 to 1.0)
  */
 @StrudelDsl
-val StrudelPattern.zoom by dslPatternExtension { p, args, callInfo -> applyZoom(p, args) }
+val StrudelPattern.zoom by dslPatternExtension { p, args, /* callInfo */ _ -> applyZoom(p, args) }
 
 /**
  * Plays a portion of a pattern, specified by the beginning and end of a time span.
@@ -947,7 +923,7 @@ fun StrudelPattern.zoom(start: Double, end: Double): StrudelPattern =
     applyZoom(this, listOf(start, end).asStrudelDslArgs())
 
 @StrudelDsl
-val String.zoom by dslStringExtension { p, args, callInfo -> applyZoom(p, args) }
+val String.zoom by dslStringExtension { p, args, callInfo -> p.zoom(args, callInfo) }
 
 @StrudelDsl
 fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, end)
@@ -959,24 +935,23 @@ private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     val indicesArg = args.getOrNull(1)
 
     // Parse the n argument into a pattern
-    val nPattern = when (nArg) {
-        is StrudelPattern -> nArg
-        null -> parseMiniNotation("4") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(nArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
+        is StrudelPattern -> nVal
+
+        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("4")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     // Parse the indices argument into a pattern
-    val indices = when (indicesArg) {
-        is StrudelPattern -> indicesArg
-        is String -> parseMiniNotation(input = indicesArg) { text, _ ->
-            AtomicPattern(
-                VoiceData.empty.defaultModifier(
-                    text
-                )
-            )
-        }
+    val indices: StrudelPattern = when (val indicesVal = indicesArg?.value) {
+        null -> return silence
 
-        else -> return silence
+        is StrudelPattern -> indicesVal
+
+        else -> parseMiniNotation(input = indicesArg) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     // Check if we have a static value for n for optimization
@@ -1080,27 +1055,32 @@ private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
  * @param indices pattern of slice indices
  */
 @StrudelDsl
-val StrudelPattern.bite by dslPatternExtension { p, args, callInfo -> applyBite(p, args) }
+val StrudelPattern.bite by dslPatternExtension { p, args, /* callInfo */ _ -> applyBite(p, args) }
 
 @StrudelDsl
-val String.bite by dslStringExtension { p, args, callInfo -> applyBite(p, args) }
+val String.bite by dslStringExtension { p, args, callInfo -> p.bite(args, callInfo) }
 
 // -- segment() --------------------------------------------------------------------------------------------------------
 
 private fun applySegment(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nArg = args.firstOrNull()
 
-    val nPattern = when (nArg) {
-        is StrudelPattern -> nArg
-        null -> parseMiniNotation("1") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(nArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
+        is StrudelPattern -> nVal
+
+        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
     val staticN = nArg?.asIntOrNull()
 
     return if (staticN != null) {
         // Static path: use original implementation with struct + fast
-        val structPat = parseMiniNotation("x") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        val structPat = parseMiniNotation("x") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+
         source.struct(structPat.fast(staticN))
     } else {
         // Dynamic path: use SegmentPatternWithControl which properly slices each timespan
@@ -1119,20 +1099,20 @@ private fun applySegment(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
  * @param {number} segments number of segments per cycle
  */
 @StrudelDsl
-val StrudelPattern.segment by dslPatternExtension { p, args, callInfo -> applySegment(p, args) }
+val StrudelPattern.segment by dslPatternExtension { p, args, /* callInfo */ _ -> applySegment(p, args) }
 
 @StrudelDsl
 fun StrudelPattern.segment(n: Int) = this.segment(n as Any)
 
 @StrudelDsl
-val String.segment by dslStringExtension { p, args, callInfo -> applySegment(p, args) }
+val String.segment by dslStringExtension { p, args, callInfo -> p.segment(args, callInfo) }
 
 @StrudelDsl
 fun String.segment(n: Int) = this.segment(n as Any)
 
 /** Alias for [segment] */
 @StrudelDsl
-val StrudelPattern.seg by dslPatternExtension { p, args, callInfo -> applySegment(p, args) } // Alias
+val StrudelPattern.seg by dslPatternExtension { p, args, callInfo -> p.segment(args, callInfo) }
 
 /** Alias for [segment] */
 @StrudelDsl
@@ -1140,7 +1120,7 @@ fun StrudelPattern.seg(n: Int) = this.segment(n as Any)
 
 /** Alias for [segment] */
 @StrudelDsl
-val String.seg by dslStringExtension { p, args, callInfo -> applySegment(p, args) }
+val String.seg by dslStringExtension { p, args, callInfo -> p.segment(args, callInfo) }
 
 /** Alias for [segment] */
 @StrudelDsl
@@ -1167,31 +1147,37 @@ private fun applyEuclid(source: StrudelPattern, pulses: Int, steps: Int, rotatio
  * @param {pattern}  the pattern to apply the euclid to
  */
 @StrudelDsl
-val euclid by dslFunction { args, callInfo ->
+val euclid by dslFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(2).toPattern(defaultModifier)
 
     pattern.euclid(args)
 }
 
 @StrudelDsl
-val StrudelPattern.euclid by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.euclid by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
+    val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
+    val stepsVal = stepsArg?.value
 
-    val pulsesPattern = when (pulsesArg) {
-        is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val pulsesPattern: StrudelPattern = when (pulsesVal) {
+        is StrudelPattern -> pulsesVal
+
+        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
-    val stepsPattern = when (stepsArg) {
-        is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val stepsPattern: StrudelPattern = when (stepsVal) {
+        is StrudelPattern -> stepsVal
+
+        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
-    val staticPulses = pulsesArg?.asIntOrNull()
-    val staticSteps = stepsArg?.asIntOrNull()
+    val staticPulses = pulsesVal?.asIntOrNull()
+    val staticSteps = stepsVal?.asIntOrNull()
 
     if (staticPulses != null && staticSteps != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = 0)
@@ -1201,7 +1187,7 @@ val StrudelPattern.euclid by dslPatternExtension { p, args, callInfo ->
 }
 
 @StrudelDsl
-val String.euclid by dslStringExtension { p, args, callInfo -> p.euclid(args) }
+val String.euclid by dslStringExtension { p, args, callInfo -> p.euclid(args, callInfo) }
 
 // -- euclidRot() ------------------------------------------------------------------------------------------------------
 
@@ -1214,45 +1200,48 @@ val String.euclid by dslStringExtension { p, args, callInfo -> p.euclid(args) }
  * @param {pattern}  the pattern to apply the euclid to
  */
 @StrudelDsl
-val euclidRot by dslFunction { args, callInfo ->
+val euclidRot by dslFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(3).toPattern(defaultModifier)
 
     pattern.euclidRot(args)
 }
 
 @StrudelDsl
-val StrudelPattern.euclidRot by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.euclidRot by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
+    val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
+    val stepsVal = stepsArg?.value
     val rotationArg = args.getOrNull(2)
+    val rotationVal = rotationArg?.value
 
-    val pulsesPattern = when (pulsesArg) {
-        is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-    }
+    val pulsesPattern: StrudelPattern = when (pulsesVal) {
+        is StrudelPattern -> pulsesVal
 
-    val stepsPattern = when (stepsArg) {
-        is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-    }
-
-    val rotationPattern = when (rotationArg) {
-        is StrudelPattern -> rotationArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(rotationArg.toString()) { text, _ ->
-            AtomicPattern(
-                VoiceData.empty.defaultModifier(
-                    text
-                )
-            )
+        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
     }
 
-    val staticPulses = pulsesArg?.asIntOrNull()
-    val staticSteps = stepsArg?.asIntOrNull()
-    val staticRotation = rotationArg?.asIntOrNull()
+    val stepsPattern: StrudelPattern = when (stepsVal) {
+        is StrudelPattern -> stepsVal
+
+        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val rotationPattern: StrudelPattern = when (rotationVal) {
+        is StrudelPattern -> rotationVal
+
+        else -> parseMiniNotation(rotationArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val staticPulses = pulsesVal?.asIntOrNull()
+    val staticSteps = stepsVal?.asIntOrNull()
+    val staticRotation = rotationVal?.asIntOrNull()
 
     if (staticPulses != null && staticSteps != null && staticRotation != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
@@ -1262,19 +1251,19 @@ val StrudelPattern.euclidRot by dslPatternExtension { p, args, callInfo ->
 }
 
 @StrudelDsl
-val String.euclidRot by dslStringExtension { p, args, callInfo -> p.euclidRot(args) }
+val String.euclidRot by dslStringExtension { p, args, callInfo -> p.euclidRot(args, callInfo) }
 
 /** Alias for [euclidRot] */
 @StrudelDsl
-val euclidrot by dslFunction { args, callInfo -> euclidRot(args) }
+val euclidrot by dslFunction { args, /* callInfo */ _ -> euclidRot(args) }
 
 /** Alias for [euclidRot] */
 @StrudelDsl
-val StrudelPattern.euclidrot by dslPatternExtension { p, args, callInfo -> p.euclidRot(args) }
+val StrudelPattern.euclidrot by dslPatternExtension { p, args, callInfo -> p.euclidRot(args, callInfo) }
 
 /** Alias for [euclidRot] */
 @StrudelDsl
-val String.euclidrot by dslStringExtension { p, args, callInfo -> p.euclidRot(args) }
+val String.euclidrot by dslStringExtension { p, args, callInfo -> p.euclidRot(args, callInfo) }
 
 // -- bjork() ----------------------------------------------------------------------------------------------------------
 
@@ -1285,56 +1274,64 @@ val String.euclidrot by dslStringExtension { p, args, callInfo -> p.euclidRot(ar
  * @param {pattern} the pattern to apply the euclid to
  */
 @StrudelDsl
-val bjork by dslFunction { args, callInfo ->
+val bjork by dslFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(1).toPattern(defaultModifier)
 
     pattern.bjork(args)
 }
 
 @StrudelDsl
-val StrudelPattern.bjork by dslPatternExtension { p, args, callInfo ->
-    val list = args.getOrNull(0) as? List<*> ?: args
-    val pulsesArg = list.getOrNull(0)
-    val stepsArg = list.getOrNull(1)
-    val rotationArg = list.getOrNull(2)
+val StrudelPattern.bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val list = args.getOrNull(0)?.value as? List<*>
+        ?: args.map { it.value }
 
-    val pulsesPattern = when (pulsesArg) {
-        is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-    }
+    val pulsesVal = list.getOrNull(0)
+    val stepsVal = list.getOrNull(1)
+    val rotationVal = list.getOrNull(2)
 
-    val stepsPattern = when (stepsArg) {
-        is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-    }
+    val pulsesPattern = when (pulsesVal) {
+        is StrudelPattern -> pulsesVal
 
-    val rotationPattern = when (rotationArg) {
-        is StrudelPattern -> rotationArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(rotationArg.toString()) { text, _ ->
-            AtomicPattern(
-                VoiceData.empty.defaultModifier(
-                    text
-                )
-            )
+        else -> parseMiniNotation(pulsesVal?.toString() ?: "0") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
     }
 
-    val staticPulses = pulsesArg?.asIntOrNull()
-    val staticSteps = stepsArg?.asIntOrNull()
-    val staticRotation = rotationArg?.asIntOrNull()
+    val stepsPattern = when (stepsVal) {
+        is StrudelPattern -> stepsVal
+
+        else -> parseMiniNotation(stepsVal?.toString() ?: "0") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val rotationPattern = when (rotationVal) {
+        is StrudelPattern -> rotationVal
+
+        else -> parseMiniNotation(rotationVal?.toString() ?: "0") { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val staticPulses = pulsesVal?.asIntOrNull()
+    val staticSteps = stepsVal?.asIntOrNull()
+    val staticRotation = rotationVal?.asIntOrNull()
 
     if (staticPulses != null && staticSteps != null && staticRotation != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
     } else {
-        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern, legato = false)
+        EuclideanPatternWithControl(
+            inner = p,
+            pulsesPattern = pulsesPattern,
+            stepsPattern = stepsPattern,
+            rotationPattern = rotationPattern,
+            legato = false
+        )
     }
 }
 
 @StrudelDsl
-val String.bjork by dslStringExtension { p, args, callInfo -> p.bjork(args) }
+val String.bjork by dslStringExtension { p, args, callInfo -> p.bjork(args, callInfo) }
 
 // -- euclidLegato() ---------------------------------------------------------------------------------------------------
 
@@ -1346,41 +1343,49 @@ val String.bjork by dslStringExtension { p, args, callInfo -> p.bjork(args) }
  * @param {pattern}  the pattern to apply the euclid to
  */
 @StrudelDsl
-val euclidLegato by dslFunction { args, callInfo ->
+val euclidLegato by dslFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(2).toPattern(defaultModifier)
 
     pattern.euclidLegato(args)
 }
 
 @StrudelDsl
-val StrudelPattern.euclidLegato by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.euclidLegato by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
+    val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
+    val stepsVal = stepsArg?.value
 
-    val pulsesPattern = when (pulsesArg) {
-        is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val pulsesPattern: StrudelPattern = when (pulsesVal) {
+        is StrudelPattern -> pulsesVal
+
+        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
-    val stepsPattern = when (stepsArg) {
-        is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+    val stepsPattern: StrudelPattern = when (stepsVal) {
+        is StrudelPattern -> stepsVal
+
+        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
     }
 
-    val staticPulses = pulsesArg?.asIntOrNull()
-    val staticSteps = stepsArg?.asIntOrNull()
+    val staticPulses = pulsesVal?.asIntOrNull()
+    val staticSteps = stepsVal?.asIntOrNull()
 
     if (staticPulses != null && staticSteps != null) {
-        EuclideanPattern.createLegato(inner = p, pulses = staticPulses, steps = staticSteps, rotation = 0)
+        EuclideanPattern.createLegato(
+            inner = p, pulses = staticPulses, steps = staticSteps, rotation = 0,
+        )
     } else {
         EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = true)
     }
 }
 
 @StrudelDsl
-val String.euclidLegato by dslStringExtension { p, args, callInfo -> p.euclidLegato(args) }
+val String.euclidLegato by dslStringExtension { p, args, callInfo -> p.euclidLegato(args, callInfo) }
 
 // -- euclidLegatoRot() ------------------------------------------------------------------------------------------------
 
@@ -1394,98 +1399,122 @@ val String.euclidLegato by dslStringExtension { p, args, callInfo -> p.euclidLeg
  * @param {pattern}  the pattern to apply the euclid to
  */
 @StrudelDsl
-val euclidLegatoRot by dslFunction { args, callInfo ->
+val euclidLegatoRot by dslFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(3).toPattern(defaultModifier)
 
     pattern.euclidLegatoRot(args)
 }
 
 @StrudelDsl
-val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
+    val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
+    val stepsVal = stepsArg?.value
     val rotationArg = args.getOrNull(2)
+    val rotationVal = rotationArg?.value
 
-    val pulsesPattern = when (pulsesArg) {
-        is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-    }
+    val pulsesPattern: StrudelPattern = when (pulsesVal) {
+        is StrudelPattern -> pulsesVal
 
-    val stepsPattern = when (stepsArg) {
-        is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-    }
-
-    val rotationPattern = when (rotationArg) {
-        is StrudelPattern -> rotationArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(rotationArg.toString()) { text, _ ->
-            AtomicPattern(
-                VoiceData.empty.defaultModifier(
-                    text
-                )
-            )
+        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
     }
 
-    val staticPulses = pulsesArg?.asIntOrNull()
-    val staticSteps = stepsArg?.asIntOrNull()
-    val staticRotation = rotationArg?.asIntOrNull()
+    val stepsPattern: StrudelPattern = when (stepsVal) {
+        is StrudelPattern -> stepsVal
+
+        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val rotationPattern: StrudelPattern = when (rotationVal) {
+        is StrudelPattern -> rotationVal
+
+        else -> parseMiniNotation(rotationArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val staticPulses = pulsesVal?.asIntOrNull()
+    val staticSteps = stepsVal?.asIntOrNull()
+    val staticRotation = rotationVal?.asIntOrNull()
 
     if (staticPulses != null && staticSteps != null && staticRotation != null) {
-        EuclideanPattern.createLegato(inner = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
+        EuclideanPattern.createLegato(
+            inner = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation,
+        )
     } else {
-        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern, legato = true)
+        EuclideanPatternWithControl(
+            inner = p,
+            pulsesPattern = pulsesPattern,
+            stepsPattern = stepsPattern,
+            rotationPattern = rotationPattern,
+            legato = true
+        )
     }
 }
 
 @StrudelDsl
-val String.euclidLegatoRot by dslStringExtension { p, args, callInfo -> p.euclidLegatoRot(args) }
+val String.euclidLegatoRot by dslStringExtension { p, args, callInfo -> p.euclidLegatoRot(args, callInfo) }
 
 // -- euclidish() ------------------------------------------------------------------------------------------------------
 
 private fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val pulsesArg = args.getOrNull(0)
+    val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
+    val stepsVal = stepsArg?.value
     val grooveArg = args.getOrNull(2)
+    val grooveVal = grooveArg?.value
 
-    val pulsesPattern = when (pulsesArg) {
-        is StrudelPattern -> pulsesArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(pulsesArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-    }
+    val pulsesPattern: StrudelPattern = when (pulsesVal) {
+        is StrudelPattern -> pulsesVal
 
-    val stepsPattern = when (stepsArg) {
-        is StrudelPattern -> stepsArg
-        null -> parseMiniNotation("0") { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-        else -> parseMiniNotation(stepsArg.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
-    }
-
-    // groove defaults to 0 (straight euclid)
-    val groovePattern = when (grooveArg) {
-        is StrudelPattern -> grooveArg
-        else -> {
-            val g = grooveArg ?: 0
-            parseMiniNotation(g.toString()) { text, _ -> AtomicPattern(VoiceData.empty.defaultModifier(text)) }
+        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
     }
 
-    val staticPulses = pulsesArg?.asIntOrNull()
-    val staticSteps = stepsArg?.asIntOrNull()
+    val stepsPattern: StrudelPattern = when (stepsVal) {
+        is StrudelPattern -> stepsVal
+
+        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(VoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    // groove defaults to 0 (straight euclid)
+    val groovePattern = when (grooveVal) {
+        is StrudelPattern -> grooveVal
+        else -> {
+            parseMiniNotation(grooveArg ?: StrudelDslArg.of("0")) { text, _ ->
+                AtomicPattern(VoiceData.empty.defaultModifier(text))
+            }
+        }
+    }
+
+    val staticPulses = pulsesVal?.asIntOrNull()
+    val staticSteps = stepsVal?.asIntOrNull()
 
     return if (staticPulses != null && staticSteps != null) {
         // Static path: use original EuclideanMorphPattern
         if (staticPulses <= 0 || staticSteps <= 0) {
             silence
         } else {
-            val structPattern = EuclideanMorphPattern(staticPulses, staticSteps, groovePattern)
+            val structPattern = EuclideanMorphPattern(
+                nPulses = staticPulses, nSteps = staticSteps, groove = groovePattern
+            )
+
             source.struct(structPattern)
         }
     } else {
-        // Dynamic path: use EuclideanMorphPatternWithControl
-        val structPattern = EuclideanMorphPatternWithControl(pulsesPattern, stepsPattern, groovePattern)
+        val structPattern = EuclideanMorphPatternWithControl(
+            pulsesPattern = pulsesPattern, stepsPattern = stepsPattern, groovePattern = groovePattern
+        )
+
         source.struct(structPattern)
     }
 }
@@ -1500,36 +1529,38 @@ private fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?
  * @param {pattern} source pattern
  */
 @StrudelDsl
-val euclidish by dslFunction { args, callInfo ->
+val euclidish by dslFunction { args, /* callInfo */ _ ->
     // euclidish(pulses, steps, groove, pat)
     val pattern = args.drop(3).toPattern(defaultModifier)
     applyEuclidish(pattern, args.take(3))
 }
 
 @StrudelDsl
-val StrudelPattern.euclidish by dslPatternExtension { p, args, callInfo ->
+val StrudelPattern.euclidish by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyEuclidish(p, args)
 }
 
 @StrudelDsl
-val String.euclidish by dslStringExtension { p, args, callInfo -> p.euclidish(args) }
+val String.euclidish by dslStringExtension { p, args, callInfo -> p.euclidish(args, callInfo) }
 
 /** Alias for [euclidish] */
 @StrudelDsl
-val eish by dslFunction { args, callInfo -> euclidish(args) }
+val eish by dslFunction { args, callInfo -> euclidish(args, callInfo) }
 
 /** Alias for [euclidish] */
 @StrudelDsl
-val StrudelPattern.eish by dslPatternExtension { p, args, callInfo -> p.euclidish(args) }
+val StrudelPattern.eish by dslPatternExtension { p, args, callInfo -> p.euclidish(args, callInfo) }
 
 /** Alias for [euclidish] */
 @StrudelDsl
-val String.eish by dslStringExtension { p, args, callInfo -> p.euclidish(args) }
+val String.eish by dslStringExtension { p, args, callInfo -> p.euclidish(args, callInfo) }
 
 
 // -- run() ------------------------------------------------------------------------------------------------------------
 
 private fun applyRun(n: Int): StrudelPattern {
+    // TODO: support control pattern
+
     if (n <= 0) return silence
     // "0 1 2 ... n-1"
     // equivalent to saw.range(0, n).round().segment(n) in JS
@@ -1537,6 +1568,7 @@ private fun applyRun(n: Int): StrudelPattern {
     val items = (0 until n).map {
         AtomicPattern(VoiceData.empty.copy(value = it.asVoiceValue()))
     }
+
     return SequencePattern(items)
 }
 
@@ -1549,8 +1581,8 @@ private fun applyRun(n: Int): StrudelPattern {
  * // n("0 1 2 3").scale("C4:pentatonic")
  */
 @StrudelDsl
-val run by dslFunction { args, callInfo ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+val run by dslFunction { args, /* callInfo */ _ ->
+    val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
     applyRun(n)
 }
 
@@ -1585,9 +1617,10 @@ private fun applyBinaryN(n: Int, bits: Int): StrudelPattern {
  * // "hh".s().struct("0 1 0 1")
  */
 @StrudelDsl
-val binaryN by dslFunction { args, callInfo ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
-    val bits = args.getOrNull(1)?.asIntOrNull() ?: 16
+val binaryN by dslFunction { args, /* callInfo */ _ ->
+    val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
+    val bits = args.getOrNull(1)?.value?.asIntOrNull() ?: 16
+
     applyBinaryN(n, bits)
 }
 
@@ -1604,8 +1637,8 @@ val binaryN by dslFunction { args, callInfo ->
  * // "hh".s().struct("1 0 1")
  */
 @StrudelDsl
-val binary by dslFunction { args, callInfo ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+val binary by dslFunction { args, /* callInfo */ _ ->
+    val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
     if (n == 0) {
         applyBinaryN(0, 1)
     } else {
@@ -1641,9 +1674,9 @@ private fun applyBinaryNL(n: Int, bits: Int): StrudelPattern {
  * @param {number} bits - pattern length, defaults to 16
  */
 @StrudelDsl
-val binaryNL by dslFunction { args, callInfo ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
-    val bits = args.getOrNull(1)?.asIntOrNull() ?: 16
+val binaryNL by dslFunction { args, /* callInfo */ _ ->
+    val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
+    val bits = args.getOrNull(1)?.value?.asIntOrNull() ?: 16
     applyBinaryNL(n, bits)
 }
 
@@ -1656,8 +1689,8 @@ val binaryNL by dslFunction { args, callInfo ->
  * @param {number} n - input number to convert to binary
  */
 @StrudelDsl
-val binaryL by dslFunction { args, callInfo ->
-    val n = args.getOrNull(0)?.asIntOrNull() ?: 0
+val binaryL by dslFunction { args, /* callInfo */ _ ->
+    val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
     if (n == 0) {
         applyBinaryNL(0, 1)
     } else {

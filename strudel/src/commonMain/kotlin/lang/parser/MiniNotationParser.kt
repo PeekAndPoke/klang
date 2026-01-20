@@ -19,7 +19,7 @@ fun <T> parseMiniNotation(
     null -> silence
     else -> parseMiniNotation(
         input = v.toString(),
-        baseLocation = input.sourceLocation,
+        baseLocation = input.location,
         atomFactory = atomFactory,
     )
 }

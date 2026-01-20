@@ -22,25 +22,22 @@ var strudelLangConditionalInit = false
 
 private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nArg = args.firstOrNull()
+    val nVal = nArg?.value
 
     @Suppress("UNCHECKED_CAST")
     val transform: (StrudelPattern) -> StrudelPattern =
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
     // Parse n as a pattern
-    val nPattern = when (val nArgVal = nArg?.value) {
-        is StrudelPattern -> nArgVal
+    val nPattern = when (nVal) {
+        is StrudelPattern -> nVal
 
-        null -> parseMiniNotation("1") { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
-        }
-
-        else -> parseMiniNotation(nArg) { text, _ ->
+        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
             AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
     }
 
-    val staticN = nArg?.asIntOrNull()
+    val staticN = nVal?.asIntOrNull()
 
     if (staticN != null) {
         // Static path
@@ -117,25 +114,22 @@ val String.every by dslStringExtension { source, args, callInfo -> source.firstO
 
 private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nArg = args.firstOrNull()
+    val nVal = nArg?.value
 
     @Suppress("UNCHECKED_CAST")
     val transform: (StrudelPattern) -> StrudelPattern =
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
     // Parse n as a pattern
-    val nPattern = when (val nArgVal = nArg?.value) {
-        is StrudelPattern -> nArgVal
+    val nPattern = when (nVal) {
+        is StrudelPattern -> nVal
 
-        null -> parseMiniNotation("1") { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
-        }
-
-        else -> parseMiniNotation(nArg) { text, _ ->
+        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
             AtomicPattern(VoiceData.empty.defaultModifier(text))
         }
     }
 
-    val staticN = nArg?.asIntOrNull()
+    val staticN = nVal?.asIntOrNull()
 
     if (staticN != null) {
         // Static path

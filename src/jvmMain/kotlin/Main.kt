@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.lang.pan
@@ -112,7 +113,9 @@ private suspend fun helloStrudel() {
 //        )
 //        println("=======================================================================")
 
-        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
+//        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
+
+        val pattern1 = StrudelPattern.compile(TestTextPatterns.tetris)!!
 
 //        val pattern1 = StrudelPattern.compile(
 //            """

@@ -95,14 +95,10 @@ val slow by dslFunction { args, /* callInfo */ _ ->
 }
 
 @StrudelDsl
-val StrudelPattern.slow by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applySlow(p, args)
-}
+val StrudelPattern.slow by dslPatternExtension { p, args, /* callInfo */ _ -> applySlow(p, args) }
 
 @StrudelDsl
-val String.slow by dslStringExtension { p, args, /* callInfo */ _ ->
-    applySlow(p, args)
-}
+val String.slow by dslStringExtension { p, args, callInfo -> p.slow(args, callInfo) }
 
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
@@ -150,14 +146,10 @@ val fast by dslFunction { args, /* callInfo */ _ ->
 
 /** Speeds up all inner patterns by the given factor */
 @StrudelDsl
-val StrudelPattern.fast by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyFast(p, args)
-}
+val StrudelPattern.fast by dslPatternExtension { p, args, /* callInfo */ _ -> applyFast(p, args) }
 
 @StrudelDsl
-val String.fast by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyFast(p, args)
-}
+val String.fast by dslStringExtension { p, args, callInfo -> p.fast(args, callInfo) }
 
 // -- rev() ------------------------------------------------------------------------------------------------------------
 
@@ -204,15 +196,11 @@ val rev by dslFunction { args, /* callInfo */ _ ->
 
 /** Reverses the pattern */
 @StrudelDsl
-val StrudelPattern.rev by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyRev(p, args)
-}
+val StrudelPattern.rev by dslPatternExtension { p, args, /* callInfo */ _ -> applyRev(p, args) }
 
 /** Reverses the pattern */
 @StrudelDsl
-val String.rev by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyRev(p, args)
-}
+val String.rev by dslStringExtension { p, args, callInfo -> p.rev(args, callInfo) }
 
 // -- palindrome() -----------------------------------------------------------------------------------------------------
 
@@ -237,9 +225,7 @@ val StrudelPattern.palindrome by dslPatternExtension { p, /* args */ _, /* callI
 
 /** Plays the pattern forward then backward over two cycles */
 @StrudelDsl
-val String.palindrome by dslStringExtension { p, /* args */ _, /* callInfo */ _ ->
-    applyPalindrome(p)
-}
+val String.palindrome by dslStringExtension { p, args, callInfo -> p.palindrome(args, callInfo) }
 
 // -- early() ----------------------------------------------------------------------------------------------------------
 
@@ -255,18 +241,14 @@ val StrudelPattern.early by dslPatternExtension { p, args, /* callInfo */ _ ->
 }
 
 @StrudelDsl
-val String.early by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyTimeShift(p, args, (-1.0).toRational())
-}
+val String.early by dslStringExtension { p, args, callInfo -> p.early(args, callInfo) }
 
 // -- late() -----------------------------------------------------------------------------------------------------------
 
 
 /** Nudges the pattern to start later in time by the given number of cycles */
 @StrudelDsl
-val late by dslFunction { /* args */ _, /* callInfo */ _ ->
-    silence
-}
+val late by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.late by dslPatternExtension { p, args, /* callInfo */ _ ->
@@ -274,6 +256,4 @@ val StrudelPattern.late by dslPatternExtension { p, args, /* callInfo */ _ ->
 }
 
 @StrudelDsl
-val String.late by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyTimeShift(p, args, 1.0.toRational())
-}
+val String.late by dslStringExtension { p, args, callInfo -> p.late(args, callInfo) }
