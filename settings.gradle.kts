@@ -18,4 +18,7 @@ include(
 
     // Sequencers
     ":strudel",
+
+    // Interactive/Notebook support
+    ":klang-notebook",
 )

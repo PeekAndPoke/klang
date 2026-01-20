@@ -36,14 +36,15 @@ fun Tag.DashboardPage() = comp {
 
 class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
-    val inputStream = StreamSource(
-        """
-            import * from "stdlib"
-            import * from "strudel"
+    val defaultCode = """
+        import * from "stdlib"
+        import * from "strudel"
 
-            sound("bd hh sd oh")
-        """.trimIndent()
-    ).persistInLocalStorage("current-song", String.serializer())
+        sound("bd hh sd oh")
+    """.trimIndent()
+
+    val codeStream = StreamSource(defaultCode)
+        .persistInLocalStorage("current-song", String.serializer())
 
     val cpsStream = StreamSource(0.5).persistInLocalStorage("current-cps", Double.serializer())
 
@@ -55,7 +56,10 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
 
-    val input: String by subscribingTo(inputStream)
+    var code: String by value(codeStream()) {
+        codeStream(it)
+    }
+
     val cps: Double by subscribingTo(cpsStream) {
         song?.updateCyclesPerSecond(it)
     }
@@ -135,7 +139,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
             null -> launch {
                 if (!loading) {
                     createPlayer().let { p ->
-                        val pattern = StrudelPattern.compileRaw(input)!!
+                        val pattern = StrudelPattern.compileRaw(code)!!
 
                         song = p.playStrudel(pattern)
 
@@ -150,7 +154,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             else -> {
-                val pattern = StrudelPattern.compileRaw(input)!!
+                val pattern = StrudelPattern.compileRaw(code)!!
                 s.updatePattern(pattern)
             }
         }
@@ -206,7 +210,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                     key = "dashboard-form-code"
 
                     // CodeMirror editor container
-                    CodeMirrorComp(code = input, onCodeChanged = { inputStream(it) })
+                    CodeMirrorComp(code = code, onCodeChanged = { code = it })
                         .track(editorRef)
                 }
             }
