@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.SourceDataLine
 import kotlin.time.Duration.Companion.milliseconds
 
 class JvmAudioBackend(
@@ -52,8 +53,11 @@ class JvmAudioBackend(
 
         // Stereo
         val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
+
         // Audio line
-        val line = AudioSystem.getSourceDataLine(format)
+        val line: SourceDataLine = AudioSystem.getSourceDataLine(format)
+
+        // println("AudioSystem SourceDataLine: $line ${line.isActive}")
 
         // Buffer size: 500ms should be safe enough for JVM
         val bufferMs = 250
