@@ -44,4 +44,10 @@ data class ScheduledVoiceEvent(
     val data: VoiceData,
     /** Source location chain for highlighting */
     val sourceLocations: SourceLocationChain?,
-)
+) {
+    /** Start time in milliseconds */
+    val startTimeMs get() = (startTime * 1000).toLong()
+
+    /** End time in milliseconds */
+    val endTimeMs get() = (endTime * 1000).toLong()
+}

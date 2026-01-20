@@ -71,7 +71,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                 // Update decorations based on transactions
                 this.update = { decorations, tr ->
                     // Map existing decorations through document changes
-                    var updated = decorations.map(tr.changes.desc())
+                    var updated = decorations.map(tr.changes)
 
                     // Process state effects
                     tr.effects.forEach { effect ->
@@ -113,7 +113,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                                         )
                                     }
                                 }
-                                updated = Decoration.set(newRanges.toTypedArray())
+                                updated = Decoration.set(newRanges.toTypedArray(), sort = true)
                             }
 
                             effect.`is`(clearHighlightsEffect) -> {

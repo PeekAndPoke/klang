@@ -21,6 +21,10 @@ interface StrudelPattern {
                 
             """.trimIndent() + code
 
+            return compileRaw(code)
+        }
+
+        fun compileRaw(code: String): StrudelPattern? {
             val klangScriptEngine = klangScript {
                 registerLibrary(strudelLib)
             }

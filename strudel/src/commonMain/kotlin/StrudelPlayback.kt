@@ -182,7 +182,7 @@ class StrudelPlayback internal constructor(
      * Query events from the Strudel pattern and convert to ScheduledVoice.
      * Returns absolute times from KlangTime epoch.
      */
-    private fun queryEvents(from: Double, to: Double): List<ScheduledVoice> {
+    private fun queryEvents(from: Double, to: Double, sendEvents: Boolean): List<ScheduledVoice> {
         // Convert Double time to Rational for exact pattern arithmetic
         val fromRational = Rational(from)
         val toRational = Rational(to)
@@ -224,7 +224,7 @@ class StrudelPlayback internal constructor(
         }
 
         // Fire callbacks on separate dispatcher to avoid blocking audio scheduling
-        if (voiceEvents.isNotEmpty() && onVoiceScheduled != null) {
+        if (sendEvents && voiceEvents.isNotEmpty() && onVoiceScheduled != null) {
             scope.launch(callbackDispatcher) {
                 voiceEvents.forEach { event ->
                     onVoiceScheduled?.invoke(event)
@@ -245,7 +245,7 @@ class StrudelPlayback internal constructor(
         println("[Song: $playbackId] Sample Look ahead $from - $to")
 
         // Lookup events
-        val events = queryEvents(from, to)
+        val events = queryEvents(from = from, to = to, sendEvents = false)
 
         // Figure out which samples we need to send to the backend
         val newSamples = events
@@ -275,7 +275,7 @@ class StrudelPlayback internal constructor(
 
             try {
                 val events = try {
-                    queryEvents(from, to)
+                    queryEvents(from = from, to = to, sendEvents = true)
                 } catch (e: Exception) {
                     e.printStackTrace()
                     emptyList()

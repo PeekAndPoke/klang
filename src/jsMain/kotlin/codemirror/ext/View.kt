@@ -190,7 +190,7 @@ external class Decoration {
  * A set of decorations
  */
 external class DecorationSet {
-    fun map(changes: ChangeDesc): DecorationSet
+    fun map(changes: ChangeSet): DecorationSet
     fun update(spec: DecorationSetUpdateSpec): DecorationSet
     fun between(from: Int, to: Int, f: (from: Int, to: Int, value: Decoration) -> Unit)
 }
