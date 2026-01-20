@@ -299,8 +299,10 @@ class MiniNotationParserSpec : StringSpec() {
         "Single atom tracks source location" {
             val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
                 source = "test.klang",
-                line = 1,
-                column = 10
+                startLine = 1,
+                startColumn = 10,
+                endLine = 1,
+                endColumn = 12
             )
 
             val pattern = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
@@ -317,15 +319,17 @@ class MiniNotationParserSpec : StringSpec() {
             atomPattern shouldNotBe null
             atomPattern?.sourceLocations shouldNotBe null
             atomPattern?.sourceLocations?.outermost?.source shouldBe "test.klang"
-            atomPattern?.sourceLocations?.outermost?.line shouldBe 1
-            atomPattern?.sourceLocations?.outermost?.column shouldBe 10  // baseColumn + 0 (start of "bd")
+            atomPattern?.sourceLocations?.outermost?.startLine shouldBe 1
+            atomPattern?.sourceLocations?.outermost?.startColumn shouldBe 10  // baseColumn + 0 (start of "bd")
         }
 
         "Sequence preserves individual atom locations" {
             val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
                 source = "test.klang",
-                line = 1,
-                column = 10
+                startLine = 1,
+                startColumn = 10,
+                endLine = 1,
+                endColumn = 12
             )
 
             val pattern = parseMiniNotation("bd hh", baseLocation) { text, sourceLocations ->
@@ -339,17 +343,19 @@ class MiniNotationParserSpec : StringSpec() {
             events.size shouldBe 2
 
             // First event should have location at column 10 (start of "bd")
-            events[0].sourceLocations?.outermost?.column shouldBe 10
+            events[0].sourceLocations?.outermost?.startColumn shouldBe 10
 
             // Second event should have location at column 13 (start of "hh")
-            events[1].sourceLocations?.outermost?.column shouldBe 13
+            events[1].sourceLocations?.outermost?.startColumn shouldBe 13
         }
 
         "Nested groups preserve atom locations" {
             val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
                 source = "test.klang",
-                line = 1,
-                column = 10
+                startLine = 1,
+                startColumn = 10,
+                endLine = 1,
+                endColumn = 12
             )
 
             val pattern = parseMiniNotation("[bd hh]", baseLocation) { text, sourceLocations ->
@@ -363,17 +369,19 @@ class MiniNotationParserSpec : StringSpec() {
             events.size shouldBe 2
 
             // First event "bd" is at position 1 inside the brackets (column 10 + 1)
-            events[0].sourceLocations?.outermost?.column shouldBe 11
+            events[0].sourceLocations?.outermost?.startColumn shouldBe 11
 
             // Second event "hh" is at position 4 inside the brackets (column 10 + 4)
-            events[1].sourceLocations?.outermost?.column shouldBe 14
+            events[1].sourceLocations?.outermost?.startColumn shouldBe 14
         }
 
         "Alternation preserves atom locations" {
             val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
                 source = "test.klang",
-                line = 1,
-                column = 10
+                startLine = 1,
+                startColumn = 10,
+                endLine = 1,
+                endColumn = 12
             )
 
             val pattern = parseMiniNotation("<bd hh>", baseLocation) { text, sourceLocations ->
@@ -388,17 +396,19 @@ class MiniNotationParserSpec : StringSpec() {
             val events1 = pattern.queryArc(1.0, 2.0)
 
             // Cycle 0 should play "bd" at column 11
-            events0[0].sourceLocations?.outermost?.column shouldBe 11
+            events0[0].sourceLocations?.outermost?.startColumn shouldBe 11
 
             // Cycle 1 should play "hh" at column 14
-            events1[0].sourceLocations?.outermost?.column shouldBe 14
+            events1[0].sourceLocations?.outermost?.startColumn shouldBe 14
         }
 
         "Euclidean rhythm preserves inner pattern location" {
             val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
                 source = "test.klang",
-                line = 1,
-                column = 10
+                startLine = 1,
+                startColumn = 10,
+                endLine = 1,
+                endColumn = 12
             )
 
             val pattern = parseMiniNotation("bd(3,8)", baseLocation) { text, sourceLocations ->
@@ -411,14 +421,16 @@ class MiniNotationParserSpec : StringSpec() {
             val events = pattern.queryArc(0.0, 1.0)
 
             // All events should come from "bd" which starts at column 10
-            events.all { it.sourceLocations?.outermost?.column == 10 } shouldBe true
+            events.all { it.sourceLocations?.outermost?.startColumn == 10 } shouldBe true
         }
 
         "Weighted pattern preserves atom location" {
             val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
                 source = "test.klang",
-                line = 1,
-                column = 10
+                startLine = 1,
+                startColumn = 10,
+                endLine = 1,
+                endColumn = 12
             )
 
             val pattern = parseMiniNotation("bd@3", baseLocation) { text, sourceLocations ->
@@ -429,14 +441,16 @@ class MiniNotationParserSpec : StringSpec() {
             }
 
             val events = pattern.queryArc(0.0, 1.0)
-            events[0].sourceLocations?.outermost?.column shouldBe 10
+            events[0].sourceLocations?.outermost?.startColumn shouldBe 10
         }
 
         "Fast/slow modifiers preserve atom location" {
             val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
                 source = "test.klang",
-                line = 1,
-                column = 10
+                startLine = 1,
+                startColumn = 10,
+                endLine = 1,
+                endColumn = 12
             )
 
             val pattern = parseMiniNotation("bd*2", baseLocation) { text, sourceLocations ->
@@ -448,14 +462,16 @@ class MiniNotationParserSpec : StringSpec() {
 
             val events = pattern.queryArc(0.0, 1.0)
             // Both fast repetitions should point to the same "bd" at column 10
-            events.all { it.sourceLocations?.outermost?.column == 10 } shouldBe true
+            events.all { it.sourceLocations?.outermost?.startColumn == 10 } shouldBe true
         }
 
         "Multiline notation tracks line numbers" {
             val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
                 source = "test.klang",
-                line = 5,
-                column = 0
+                startLine = 5,
+                startColumn = 0,
+                endLine = 5,
+                endColumn = 7
             )
 
             // Mini-notation doesn't actually support multi-line strings,
@@ -470,7 +486,7 @@ class MiniNotationParserSpec : StringSpec() {
             val events = pattern.queryArc(0.0, 1.0)
 
             // All locations should be on line 5
-            events.all { it.sourceLocations?.outermost?.line == 5 } shouldBe true
+            events.all { it.sourceLocations?.outermost?.startLine == 5 } shouldBe true
         }
 
         "Null baseLocation creates atoms without source locations" {

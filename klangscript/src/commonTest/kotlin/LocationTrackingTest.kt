@@ -30,7 +30,7 @@ class LocationTrackingTest : StringSpec({
         error.symbolName shouldBe "undefinedVariable"
         error.location shouldNotBe null
         error.location?.source shouldBe "test.klang"
-        error.location?.line shouldBe 2
+        error.location?.startLine shouldBe 2
         error.format() shouldContain "test.klang:2:"
     }
 
@@ -48,7 +48,7 @@ class LocationTrackingTest : StringSpec({
 
         error.location shouldNotBe null
         error.location?.source shouldBe "math.klang"
-        error.location?.line shouldBe 3
+        error.location?.startLine shouldBe 3
         error.format() shouldContain "math.klang:3:"
     }
 
@@ -65,7 +65,7 @@ class LocationTrackingTest : StringSpec({
 
         error.location shouldNotBe null
         error.location?.source shouldBe "access.klang"
-        error.location?.line shouldBe 2
+        error.location?.startLine shouldBe 2
         error.format() shouldContain "access.klang:2:"
     }
 
@@ -82,7 +82,7 @@ class LocationTrackingTest : StringSpec({
 
         error.location shouldNotBe null
         error.location?.source shouldBe "call.klang"
-        error.location?.line shouldBe 2
+        error.location?.startLine shouldBe 2
         error.format() shouldContain "call.klang:2:"
     }
 
@@ -100,7 +100,7 @@ class LocationTrackingTest : StringSpec({
 
         error.location shouldNotBe null
         error.location?.source shouldBe "args.klang"
-        error.location?.line shouldBe 2
+        error.location?.startLine shouldBe 2
         error.format() shouldContain "args.klang:2:"
     }
 
@@ -135,7 +135,7 @@ class LocationTrackingTest : StringSpec({
 
         error.location shouldNotBe null
         error.location?.source shouldBe "imports.klang"
-        error.location?.line shouldBe 1
+        error.location?.startLine shouldBe 1
         error.format() shouldContain "imports.klang:1:"
     }
 
@@ -154,7 +154,7 @@ class LocationTrackingTest : StringSpec({
             engine.execute(script, sourceName = "multiline.klang")
         }
 
-        error.location?.line shouldBe 5
+        error.location?.startLine shouldBe 5
         error.format() shouldContain "multiline.klang:5:"
     }
 
@@ -167,8 +167,8 @@ class LocationTrackingTest : StringSpec({
 
         error.location shouldNotBe null
         error.location?.source shouldBe null
-        error.location?.line shouldBe 1
-        error.format() shouldContain "line 1"
+        error.location?.startLine shouldBe 1
+        error.format() shouldContain "1:"
     }
 
     // ===== RuntimeValue Location Tracking Tests =====
@@ -180,8 +180,8 @@ class LocationTrackingTest : StringSpec({
                 stringValue shouldNotBe null
                 stringValue?.location shouldNotBe null
                 stringValue?.location?.source shouldBe "location-test.klang"
-                stringValue?.location?.line shouldBe 1
-                stringValue?.location?.column shouldBe 15
+                stringValue?.location?.startLine shouldBe 1
+                stringValue?.location?.startColumn shouldBe 15
                 NullValue
             }
         }
@@ -198,8 +198,8 @@ class LocationTrackingTest : StringSpec({
                 numberValue shouldNotBe null
                 numberValue?.location shouldNotBe null
                 numberValue?.location?.source shouldBe "location-test.klang"
-                numberValue?.location?.line shouldBe 1
-                numberValue?.location?.column shouldBe 15
+                numberValue?.location?.startLine shouldBe 1
+                numberValue?.location?.startColumn shouldBe 15
                 NullValue
             }
         }
@@ -215,8 +215,8 @@ class LocationTrackingTest : StringSpec({
                 val stringValue = args[0] as? StringValue
                 stringValue shouldNotBe null
                 stringValue?.location shouldNotBe null
-                stringValue?.location?.line shouldBe 1
-                stringValue?.location?.column shouldBe 15
+                stringValue?.location?.startLine shouldBe 1
+                stringValue?.location?.startColumn shouldBe 15
                 NullValue
             }
         }
@@ -232,8 +232,8 @@ class LocationTrackingTest : StringSpec({
                 val numberValue = args[0] as? NumberValue
                 numberValue shouldNotBe null
                 numberValue?.location shouldNotBe null
-                numberValue?.location?.line shouldBe 1
-                numberValue?.location?.column shouldBe 15
+                numberValue?.location?.startLine shouldBe 1
+                numberValue?.location?.startColumn shouldBe 15
                 NullValue
             }
         }
@@ -263,8 +263,8 @@ class LocationTrackingTest : StringSpec({
             registerFunctionRaw("verify") { _, _ ->
                 firstLocation shouldNotBe null
                 secondLocation shouldNotBe null
-                firstLocation?.line shouldBe 1
-                secondLocation?.line shouldBe 2
+                firstLocation?.startLine shouldBe 1
+                secondLocation?.startLine shouldBe 2
                 firstLocation shouldNotBe secondLocation
                 NullValue
             }
@@ -292,8 +292,8 @@ class LocationTrackingTest : StringSpec({
                 (str1 == str2) shouldBe true
 
                 // But locations should be different (column differs)
-                str1?.location?.column shouldBe 15
-                str2?.location?.column shouldBe 23
+                str1?.location?.startColumn shouldBe 15
+                str2?.location?.startColumn shouldBe 23
 
                 NullValue
             }
@@ -317,8 +317,8 @@ class LocationTrackingTest : StringSpec({
                 (num1 == num2) shouldBe true
 
                 // But locations should be different (column differs)
-                num1?.location?.column shouldBe 15
-                num2?.location?.column shouldBe 20
+                num1?.location?.startColumn shouldBe 15
+                num2?.location?.startColumn shouldBe 20
 
                 NullValue
             }

@@ -42,9 +42,25 @@ object KlangScriptParser : Grammar<Program>() {
 
     /**
      * Helper function to create SourceLocation from TokenMatch
+     *
+     * Calculates end position based on token text, handling both single-line and multiline tokens.
      */
     private fun TokenMatch.toLocation(): SourceLocation {
-        return SourceLocation(currentSource, row, column)
+        val lines = text.split('\n')
+        val endLine = row + lines.size - 1
+        val endColumn = if (lines.size == 1) {
+            column + text.length
+        } else {
+            lines.last().length + 1  // +1 for 1-based indexing
+        }
+
+        return SourceLocation(
+            source = currentSource,
+            startLine = row,
+            startColumn = column,
+            endLine = endLine,
+            endColumn = endColumn
+        )
     }
 
     // ============================================================

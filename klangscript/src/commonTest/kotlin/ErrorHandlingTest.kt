@@ -40,17 +40,17 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "ReferenceError - format() with location (no source)" {
-        val location = SourceLocation(null, 5, 12)
+        val location = SourceLocation(null, 5, 12, 5, 13)
         val error = ReferenceError("foo", location = location)
 
-        error.format() shouldBe "ReferenceError at line 5, column 12: Undefined variable: foo"
+        error.format() shouldBe "ReferenceError at 5:12-13: Undefined variable: foo"
     }
 
     "ReferenceError - format() with location (with source)" {
-        val location = SourceLocation("main.klang", 5, 12)
+        val location = SourceLocation("main.klang", 5, 12, 5, 13)
         val error = ReferenceError("foo", location = location)
 
-        error.format() shouldBe "ReferenceError at main.klang:5:12: Undefined variable: foo"
+        error.format() shouldBe "ReferenceError at main.klang:5:12-13: Undefined variable: foo"
     }
 
     // ============================================================
@@ -104,17 +104,17 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "TypeError - format() with location but no operation" {
-        val location = SourceLocation("math.klang", 10, 5)
+        val location = SourceLocation("math.klang", 10, 5, 10, 6)
         val error = TypeError("Invalid type", location = location)
 
-        error.format() shouldBe "TypeError at math.klang:10:5: Invalid type"
+        error.format() shouldBe "TypeError at math.klang:10:5-6: Invalid type"
     }
 
     "TypeError - format() with both location and operation" {
-        val location = SourceLocation("math.klang", 10, 5)
+        val location = SourceLocation("math.klang", 10, 5, 10, 6)
         val error = TypeError("Cannot add string and number", operation = "+", location = location)
 
-        error.format() shouldBe "TypeError at math.klang:10:5 in +: Cannot add string and number"
+        error.format() shouldBe "TypeError at math.klang:10:5-6 in +: Cannot add string and number"
     }
 
     // ============================================================
@@ -162,17 +162,17 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "ArgumentError - format() with location" {
-        val location = SourceLocation("app.klang", 15, 8)
+        val location = SourceLocation("app.klang", 15, 8, 15, 9)
         val error = ArgumentError("myFunc", "Wrong arguments", expected = 2, actual = 3, location = location)
 
-        error.format() shouldBe "ArgumentError at app.klang:15:8 in myFunc: Expected 2 arguments, got 3"
+        error.format() shouldBe "ArgumentError at app.klang:15:8-9 in myFunc: Expected 2 arguments, got 3"
     }
 
     "ArgumentError - format() with custom message and location" {
-        val location = SourceLocation("app.klang", 15, 8)
+        val location = SourceLocation("app.klang", 15, 8, 15, 9)
         val error = ArgumentError("myFunc", "Invalid argument type", location = location)
 
-        error.format() shouldBe "ArgumentError at app.klang:15:8 in myFunc: Invalid argument type"
+        error.format() shouldBe "ArgumentError at app.klang:15:8-9 in myFunc: Invalid argument type"
     }
 
     // ============================================================
@@ -224,10 +224,10 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "ImportError - format() with location and library name" {
-        val location = SourceLocation("main.klang", 1, 1)
+        val location = SourceLocation("main.klang", 1, 1, 1, 2)
         val error = ImportError("math", "Library not found", location = location)
 
-        error.format() shouldBe "ImportError at main.klang:1:1 in library 'math': Library not found"
+        error.format() shouldBe "ImportError at main.klang:1:1-2 in library 'math': Library not found"
     }
 
     // ============================================================
@@ -251,10 +251,10 @@ class ErrorHandlingTest : StringSpec({
     }
 
     "AssignmentError - format() with location" {
-        val location = SourceLocation("app.klang", 20, 3)
+        val location = SourceLocation("app.klang", 20, 3, 20, 4)
         val error = AssignmentError("x", "Cannot reassign const", location = location)
 
-        error.format() shouldBe "AssignmentError at app.klang:20:3 for variable 'x': Cannot reassign const"
+        error.format() shouldBe "AssignmentError at app.klang:20:3-4 for variable 'x': Cannot reassign const"
     }
 
     "AssignmentError - format() without variable name" {
@@ -268,15 +268,15 @@ class ErrorHandlingTest : StringSpec({
     // ============================================================
 
     "SourceLocation - toString() without source" {
-        val location = SourceLocation(null, 10, 5)
+        val location = SourceLocation(null, 10, 5, 10, 6)
 
-        location.toString() shouldBe "line 10, column 5"
+        location.toString() shouldBe "10:5-6"
     }
 
     "SourceLocation - toString() with source" {
-        val location = SourceLocation("math.klang", 10, 5)
+        val location = SourceLocation("math.klang", 10, 5, 10, 6)
 
-        location.toString() shouldBe "math.klang:10:5"
+        location.toString() shouldBe "math.klang:10:5-6"
     }
 
     // ============================================================

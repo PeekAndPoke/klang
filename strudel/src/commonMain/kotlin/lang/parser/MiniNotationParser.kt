@@ -279,20 +279,30 @@ class MiniNotationParser(
             if (base == null) return null
 
             // Calculate absolute line and column
-            // base.column points to the first character INSIDE the string (after the opening quote)
-            // base.line points to the line with the opening quote
+            // base.startColumn points to the first character INSIDE the string (after the opening quote)
+            // base.startLine points to the line with the opening quote
             // token.line and token.column are both 1-based within the string content
 
-            val absoluteLine = base.line + line - 1  // -1 because line 1 in content is on base.line
-            val absoluteColumn = if (line == 1) {
+            val absoluteStartLine = base.startLine + line - 1  // -1 because line 1 in content is on base.startLine
+            val absoluteStartColumn = if (line == 1) {
                 // Same line as the opening quote - add to base column (both 1-based)
-                base.column + column - 1  // -1 because column 1 starts at base.column
+                base.startColumn + column - 1  // -1 because column 1 starts at base.startColumn
             } else {
                 // Different line - just use the token's column (already 1-based)
                 column
             }
 
-            return base.copy(line = absoluteLine, column = absoluteColumn)
+            // Calculate end position based on token length
+            val absoluteEndLine = absoluteStartLine
+            val absoluteEndColumn = absoluteStartColumn + text.length
+
+            return SourceLocation(
+                source = base.source,
+                startLine = absoluteStartLine,
+                startColumn = absoluteStartColumn,
+                endLine = absoluteEndLine,
+                endColumn = absoluteEndColumn
+            )
         }
     }
 

@@ -15,7 +15,8 @@ import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 class LocationTrackingTest : StringSpec({
 
     "RuntimeValue with location creates AtomicPattern with sourceLocations" {
-        val location = SourceLocation(source = "test.klang", line = 1, column = 10)
+        val location =
+            SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
         val stringValue = StrudelDslArg("bd", location = location)
 
         val patterns = listOf(stringValue).toListOfPatterns(defaultModifier)
@@ -26,12 +27,12 @@ class LocationTrackingTest : StringSpec({
         pattern?.sourceLocations shouldNotBe null
         // The location points to the first character inside the string (column already accounts for the quote)
         pattern?.sourceLocations?.outermost?.source shouldBe "test.klang"
-        pattern?.sourceLocations?.outermost?.line shouldBe 1
-        pattern?.sourceLocations?.outermost?.column shouldBe 10  // Location already points past the opening quote
+        pattern?.sourceLocations?.outermost?.startLine shouldBe 1
+        pattern?.sourceLocations?.outermost?.startColumn shouldBe 10  // Location already points past the opening quote
     }
 
     "NumberValue with location creates AtomicPattern with sourceLocations" {
-        val location = SourceLocation(source = "test.klang", line = 2, column = 5)
+        val location = SourceLocation(source = "test.klang", startLine = 2, startColumn = 5, endLine = 2, endColumn = 8)
         val numberValue = StrudelDslArg(440.0, location = location)
 
         val patterns = listOf(numberValue).toListOfPatterns(defaultModifier)
@@ -56,8 +57,8 @@ class LocationTrackingTest : StringSpec({
     }
 
     "Multiple RuntimeValues preserve individual locations" {
-        val loc1 = SourceLocation(source = "test.klang", line = 1, column = 10)
-        val loc2 = SourceLocation(source = "test.klang", line = 2, column = 15)
+        val loc1 = SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
+        val loc2 = SourceLocation(source = "test.klang", startLine = 2, startColumn = 15, endLine = 2, endColumn = 17)
 
         val values = listOf(
             StrudelDslArg("bd", location = loc1),
@@ -69,17 +70,17 @@ class LocationTrackingTest : StringSpec({
         patterns.size shouldBe 2
 
         val pattern1 = patterns[0] as? AtomicPattern
-        pattern1?.sourceLocations?.outermost?.line shouldBe 1
-        pattern1?.sourceLocations?.outermost?.column shouldBe 10  // Location already points past the opening quote
+        pattern1?.sourceLocations?.outermost?.startLine shouldBe 1
+        pattern1?.sourceLocations?.outermost?.startColumn shouldBe 10  // Location already points past the opening quote
 
         val pattern2 = patterns[1] as? AtomicPattern
-        pattern2?.sourceLocations?.outermost?.line shouldBe 2
-        pattern2?.sourceLocations?.outermost?.column shouldBe 15  // Location already points past the opening quote
+        pattern2?.sourceLocations?.outermost?.startLine shouldBe 2
+        pattern2?.sourceLocations?.outermost?.startColumn shouldBe 15  // Location already points past the opening quote
     }
 
     "Plain Kotlin values create patterns without locations" {
         val patterns = listOf("bd", 440.0, true)
-            .map { StrudelDslArg.Companion.of(it) }
+            .map { StrudelDslArg.of(it) }
             .toListOfPatterns(defaultModifier)
 
         patterns.size shouldBe 3
@@ -89,16 +90,16 @@ class LocationTrackingTest : StringSpec({
     }
 
     "Nested lists preserve locations" {
-        val loc = SourceLocation(source = "test.klang", line = 1, column = 10)
+        val loc = SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
         val stringValue = StrudelDslArg("bd", location = loc)
 
         val patterns = listOf(
-            StrudelDslArg.Companion.of(listOf(stringValue))
+            StrudelDslArg.of(listOf(stringValue))
         ).toListOfPatterns(defaultModifier)
 
         patterns.size shouldBe 1
         val pattern = patterns[0] as? AtomicPattern
-        pattern?.sourceLocations?.outermost?.line shouldBe 1
-        pattern?.sourceLocations?.outermost?.column shouldBe 10  // Location already points past the opening quote
+        pattern?.sourceLocations?.outermost?.startLine shouldBe 1
+        pattern?.sourceLocations?.outermost?.startColumn shouldBe 10  // Location already points past the opening quote
     }
 })

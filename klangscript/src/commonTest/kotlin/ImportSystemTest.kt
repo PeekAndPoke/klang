@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ImportStatement
 import io.peekandpoke.klang.script.builder.registerLibrary
@@ -161,7 +162,9 @@ class ImportSystemTest : StringSpec({
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
-            e.message shouldBe "Failed to load library: Library not found"
+            e.message shouldContain "Failed to load library"
+            e.message shouldContain "nonexistent"
+            e.message shouldContain ": Library not found"
         }
     }
 

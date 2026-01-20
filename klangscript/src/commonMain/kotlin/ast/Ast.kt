@@ -11,24 +11,35 @@ package io.peekandpoke.klang.script.ast
 /**
  * Source location information for error reporting
  *
- * Tracks the position of a code element in the source file.
+ * Tracks the position of a code element in the source file using start and end positions.
+ * This naturally handles both single-line and multiline code spans.
  *
  * @param source Source file or library name (e.g., "main.klang", "math.klang", or null for main script)
- * @param line Line number (1-based)
- * @param column Column number (1-based)
+ * @param startLine Starting line number (1-based)
+ * @param startColumn Starting column number (1-based)
+ * @param endLine Ending line number (1-based)
+ * @param endColumn Ending column number (1-based, exclusive - points to character after the last character)
  */
 data class SourceLocation(
     val source: String?,
-    val line: Int,
-    val column: Int,
+    val startLine: Int,
+    val startColumn: Int,
+    val endLine: Int,
+    val endColumn: Int,
 ) {
     fun asChain() = SourceLocationChain.single(this)
 
     override fun toString(): String {
-        return if (source != null) {
-            "$source:$line:$column"
+        val range = if (startLine == endLine) {
+            "$startLine:$startColumn-$endColumn"
         } else {
-            "line $line, column $column"
+            "$startLine:$startColumn-$endLine:$endColumn"
+        }
+
+        return if (source != null) {
+            "$source:$range"
+        } else {
+            range
         }
     }
 }

@@ -18,7 +18,8 @@ class StrudelPlaybackLocationTest : StringSpec({
         var receivedEvent: StrudelPatternEvent? = null
         var receivedTime: Double? = null
 
-        val baseLocation = SourceLocation(source = "test.klang", line = 1, column = 10)
+        val baseLocation =
+            SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
             AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
@@ -31,12 +32,13 @@ class StrudelPlaybackLocationTest : StringSpec({
         events.size shouldBe 1
         events[0].sourceLocations shouldNotBe null
         events[0].sourceLocations?.outermost?.source shouldBe "test.klang"
-        events[0].sourceLocations?.outermost?.line shouldBe 1
-        events[0].sourceLocations?.outermost?.column shouldBe 10
+        events[0].sourceLocations?.outermost?.startLine shouldBe 1
+        events[0].sourceLocations?.outermost?.startColumn shouldBe 10
     }
 
     "Events from sequence pattern preserve individual atom locations" {
-        val baseLocation = SourceLocation(source = "test.klang", line = 1, column = 10)
+        val baseLocation =
+            SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd hh sd", baseLocation) { text, sourceLocations ->
             AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
@@ -47,21 +49,23 @@ class StrudelPlaybackLocationTest : StringSpec({
         events.size shouldBe 3
 
         // bd at column 10
-        events[0].sourceLocations?.outermost?.column shouldBe 10
+        events[0].sourceLocations?.outermost?.startColumn shouldBe 10
         // hh at column 13
-        events[1].sourceLocations?.outermost?.column shouldBe 13
+        events[1].sourceLocations?.outermost?.startColumn shouldBe 13
         // sd at column 16
-        events[2].sourceLocations?.outermost?.column shouldBe 16
+        events[2].sourceLocations?.outermost?.startColumn shouldBe 16
     }
 
     "Events from stacked patterns preserve individual locations" {
-        val baseLocation = SourceLocation(source = "test.klang", line = 1, column = 10)
+        val baseLocation =
+            SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern1 = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
             AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
         }
 
-        val baseLocation2 = SourceLocation(source = "test.klang", line = 2, column = 5)
+        val baseLocation2 =
+            SourceLocation(source = "test.klang", startLine = 2, startColumn = 5, endLine = 2, endColumn = 7)
         val pattern2 = parseMiniNotation("hh", baseLocation2) { text, sourceLocations ->
             AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
         }
@@ -79,15 +83,16 @@ class StrudelPlaybackLocationTest : StringSpec({
         bdEvent shouldNotBe null
         hhEvent shouldNotBe null
 
-        bdEvent?.sourceLocations?.outermost?.line shouldBe 1
-        bdEvent?.sourceLocations?.outermost?.column shouldBe 10
+        bdEvent?.sourceLocations?.outermost?.startLine shouldBe 1
+        bdEvent?.sourceLocations?.outermost?.startColumn shouldBe 10
 
-        hhEvent?.sourceLocations?.outermost?.line shouldBe 2
-        hhEvent?.sourceLocations?.outermost?.column shouldBe 5
+        hhEvent?.sourceLocations?.outermost?.startLine shouldBe 2
+        hhEvent?.sourceLocations?.outermost?.startColumn shouldBe 5
     }
 
     "Euclidean rhythm preserves inner pattern location" {
-        val baseLocation = SourceLocation(source = "test.klang", line = 1, column = 10)
+        val baseLocation =
+            SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd(3,8)", baseLocation) { text, sourceLocations ->
             AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
@@ -99,6 +104,6 @@ class StrudelPlaybackLocationTest : StringSpec({
         events.size shouldBe 3
 
         // All events should point to the same "bd" source location
-        events.all { it.sourceLocations?.outermost?.column == 10 } shouldBe true
+        events.all { it.sourceLocations?.outermost?.startColumn == 10 } shouldBe true
     }
 })

@@ -97,7 +97,8 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
         if (location != null) {
             val now = Date.now()
-            val startFromNowMs = event.startTimeMs - now
+            // few ms early for better visuals
+            val startFromNowMs = maxOf(1.0, (event.startTimeMs - now) - 25.0)
 
             console.log("startFromNowMs", startFromNowMs)
 
@@ -106,9 +107,15 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                     // console.log("here", editor)
 
                     val highlightId = editor.addHighlight(
-                        line = location.line,
-                        column = location.column,
-                        length = 2  // TODO: calculate actual length
+                        line = location.startLine,
+                        column = location.startColumn,
+                        length = if (location.startLine == location.endLine) {
+                            location.endColumn - location.startColumn
+                        } else {
+                            // For multiline locations, just highlight the first line for now
+                            // TODO: support multiline highlighting
+                            2
+                        }
                     )
 
                     // Remove highlight after duration
@@ -143,7 +150,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             else -> {
-                val pattern = StrudelPattern.compile(input)!!
+                val pattern = StrudelPattern.compileRaw(input)!!
                 s.updatePattern(pattern)
             }
         }

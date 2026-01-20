@@ -55,20 +55,20 @@ sound("bd hh sd oh")
         locations shouldHaveSize 4
 
         // "bd" starts at line 4, column 7 (after opening quote at column 6)
-        locations[0].line shouldBe 4
-        locations[0].column shouldBe 7
+        locations[0].startLine shouldBe 4
+        locations[0].startColumn shouldBe 7
 
         // "hh" starts at column 10
-        locations[1].line shouldBe 4
-        locations[1].column shouldBe 10
+        locations[1].startLine shouldBe 4
+        locations[1].startColumn shouldBe 10
 
         // "sd" starts at column 13
-        locations[2].line shouldBe 4
-        locations[2].column shouldBe 13
+        locations[2].startLine shouldBe 4
+        locations[2].startColumn shouldBe 13
 
         // "oh" starts at column 16
-        locations[3].line shouldBe 4
-        locations[3].column shouldBe 16
+        locations[3].startLine shouldBe 4
+        locations[3].startColumn shouldBe 16
     }
 
     "sound(\" bd  hh   sd    oh  \") - pattern with extra whitespace" {
@@ -93,16 +93,16 @@ sound(" bd  hh   sd    oh  ")
         locations shouldHaveSize 4
 
         // "bd" starts at column 8 (after space)
-        locations[0].column shouldBe 8
+        locations[0].startColumn shouldBe 8
 
         // "hh" starts at column 12
-        locations[1].column shouldBe 12
+        locations[1].startColumn shouldBe 12
 
         // "sd" starts at column 17
-        locations[2].column shouldBe 17
+        locations[2].startColumn shouldBe 17
 
         // "oh" starts at column 23
-        locations[3].column shouldBe 23
+        locations[3].startColumn shouldBe 23
     }
 
     "\"bd hh sd oh\".sound() - method call syntax" {
@@ -127,20 +127,20 @@ import * from "strudel"
         locations shouldHaveSize 4
 
         // "bd" starts at line 4, column 2
-        locations[0].line shouldBe 4
-        locations[0].column shouldBe 1
+        locations[0].startLine shouldBe 4
+        locations[0].startColumn shouldBe 1
 
         // "hh" starts at column 5
-        locations[1].line shouldBe 4
-        locations[1].column shouldBe 4
+        locations[1].startLine shouldBe 4
+        locations[1].startColumn shouldBe 4
 
         // "sd" starts at column 8
-        locations[2].line shouldBe 4
-        locations[2].column shouldBe 7
+        locations[2].startLine shouldBe 4
+        locations[2].startColumn shouldBe 7
 
         // "oh" starts at column 11
-        locations[3].line shouldBe 4
-        locations[3].column shouldBe 10
+        locations[3].startLine shouldBe 4
+        locations[3].startColumn shouldBe 10
     }
 
     "sound(`bd hh sd oh`) - multiline string" {
@@ -167,20 +167,20 @@ bd hh sd oh
         locations shouldHaveSize 4
 
         // "bd" starts at line 5, column 1
-        locations[0].line shouldBe 5
-        locations[0].column shouldBe 1
+        locations[0].startLine shouldBe 5
+        locations[0].startColumn shouldBe 1
 
         // "hh" starts at column 4
-        locations[1].line shouldBe 5
-        locations[1].column shouldBe 4
+        locations[1].startLine shouldBe 5
+        locations[1].startColumn shouldBe 4
 
         // "sd" starts at column 7
-        locations[2].line shouldBe 5
-        locations[2].column shouldBe 7
+        locations[2].startLine shouldBe 5
+        locations[2].startColumn shouldBe 7
 
         // "oh" starts at column 10
-        locations[3].line shouldBe 5
-        locations[3].column shouldBe 10
+        locations[3].startLine shouldBe 5
+        locations[3].startColumn shouldBe 10
     }
 
     "`bd hh sd oh`.sound() - multiline method call" {
@@ -207,19 +207,19 @@ bd hh sd oh
         locations shouldHaveSize 4
 
         // "bd" starts at line 5, column 1
-        locations[0].line shouldBe 5
-        locations[0].column shouldBe 1
+        locations[0].startLine shouldBe 5
+        locations[0].startColumn shouldBe 1
 
         // "hh" starts at column 4
-        locations[1].line shouldBe 5
-        locations[1].column shouldBe 4
+        locations[1].startLine shouldBe 5
+        locations[1].startColumn shouldBe 4
 
         // "sd" starts at column 7
-        locations[2].line shouldBe 5
-        locations[2].column shouldBe 7
+        locations[2].startLine shouldBe 5
+        locations[2].startColumn shouldBe 7
 
         // "oh" starts at column 10
-        locations[3].line shouldBe 5
-        locations[3].column shouldBe 10
+        locations[3].startLine shouldBe 5
+        locations[3].startColumn shouldBe 10
     }
 })
