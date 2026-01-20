@@ -174,12 +174,19 @@ class NativeObjectExtensionsBuilder<T : Any>(
     /**
      * Register a native extension method with CallInfo for location tracking
      *
-     * Extracts source locations from RuntimeValue parameters and provides them via CallInfo.
+     * Extracts source locations from RuntimeValue parameters and receiver, and provides them via CallInfo.
      */
     inline fun <reified P : Any, reified R> registerVarargMethodWithCallInfo(
         name: String, noinline fn: T.(List<P>, CallInfo) -> R,
     ) {
         builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
+            // Extract receiver location if it's a StringValue or NumberValue
+            val receiverLocation = when (receiver) {
+                is StringValue -> receiver.location
+                is NumberValue -> receiver.location
+                else -> null
+            }
+
             // Extract parameter locations from RuntimeValue instances
             val paramLocations = args.map { arg ->
                 when (arg) {
@@ -191,6 +198,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
 
             val callInfo = CallInfo(
                 callLocation = callLocation,
+                receiverLocation = receiverLocation,
                 paramLocations = paramLocations
             )
 

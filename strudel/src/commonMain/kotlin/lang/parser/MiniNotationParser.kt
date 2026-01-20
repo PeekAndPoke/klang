@@ -267,6 +267,10 @@ class MiniNotationParser(
         val start: Int,
         /** End position in the input string (exclusive) */
         val end: Int,
+        /** Line number within the input string (1-based) */
+        val line: Int,
+        /** Column number within the line (1-based) */
+        val column: Int,
     ) {
         /**
          * Create a SourceLocation for this token
@@ -274,83 +278,248 @@ class MiniNotationParser(
         fun toLocation(base: SourceLocation?): SourceLocation? {
             if (base == null) return null
 
-            // Calculate line and column offsets
-            // For now, we assume single-line strings (no newlines in mini-notation)
-            // Column = base.column + token.start
-            return base.copy(column = base.column + start)
+            // Calculate absolute line and column
+            // base.column points to the first character INSIDE the string (after the opening quote)
+            // base.line points to the line with the opening quote
+            // token.line and token.column are both 1-based within the string content
+
+            val absoluteLine = base.line + line - 1  // -1 because line 1 in content is on base.line
+            val absoluteColumn = if (line == 1) {
+                // Same line as the opening quote - add to base column (both 1-based)
+                base.column + column - 1  // -1 because column 1 starts at base.column
+            } else {
+                // Different line - just use the token's column (already 1-based)
+                column
+            }
+
+            return base.copy(line = absoluteLine, column = absoluteColumn)
         }
     }
 
     private fun tokenize(input: String): List<Token> {
         val tokens = mutableListOf<Token>()
         var i = 0
+        var line = 1  // 1-based
+        var column = 1  // 1-based
+
+        fun addToken(type: TokenType, text: String, start: Int, end: Int, tokenLine: Int, tokenColumn: Int) {
+            tokens.add(
+                Token(type = type, text = text, start = start, end = end, line = tokenLine, column = tokenColumn)
+            )
+        }
+
         while (i < input.length) {
             val c = input[i]
             when (c) {
-                ' ', '\t', '\n', '\r' -> i++
+                '\n' -> {
+                    i++
+                    line++
+                    column = 1  // Reset to 1 at start of new line
+                }
+
+                ' ', '\t', '\r' -> {
+                    i++
+                    column++
+                }
                 '(' -> {
-                    tokens.add(Token(TokenType.L_PAREN, "(", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.L_PAREN,
+                        text = "(",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 ')' -> {
-                    tokens.add(Token(TokenType.R_PAREN, ")", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.R_PAREN,
+                        text = ")",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '[' -> {
-                    tokens.add(Token(TokenType.L_BRACKET, "[", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.L_BRACKET,
+                        text = "[",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 ']' -> {
-                    tokens.add(Token(TokenType.R_BRACKET, "]", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.R_BRACKET,
+                        text = "]",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '<' -> {
-                    tokens.add(Token(TokenType.L_ANGLE, "<", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.L_ANGLE,
+                        text = "<",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '>' -> {
-                    tokens.add(Token(TokenType.R_ANGLE, ">", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.R_ANGLE,
+                        text = ">",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 ',' -> {
-                    tokens.add(Token(TokenType.COMMA, ",", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.COMMA,
+                        text = ",",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '*' -> {
-                    tokens.add(Token(TokenType.STAR, "*", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.STAR,
+                        text = "*",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '/' -> {
-                    tokens.add(Token(TokenType.SLASH, "/", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.SLASH,
+                        text = "/",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '~' -> {
-                    tokens.add(Token(TokenType.TILDE, "~", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.TILDE,
+                        text = "~",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '@' -> {
-                    tokens.add(Token(TokenType.AT, "@", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.AT,
+                        text = "@",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '|' -> {
-                    tokens.add(Token(TokenType.PIPE, "|", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.PIPE,
+                        text = "|",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '?' -> {
-                    tokens.add(Token(TokenType.QUESTION, "?", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.QUESTION,
+                        text = "?",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 '!' -> {
-                    tokens.add(Token(TokenType.BANG, "!", start = i, end = i + 1)); i++
+                    addToken(
+                        type = TokenType.BANG,
+                        text = "!",
+                        start = i,
+                        end = i + 1,
+                        tokenLine = line,
+                        tokenColumn = column
+                    )
+                    i++
+                    column++
                 }
 
                 else -> {
                     val start = i
+                    val tokenLine = line
+                    val tokenColumn = column
                     while (i < input.length) {
                         if (input[i] in " []<>,*/~@()|?! \t\n\r") break
                         i++
+                        column++
                     }
-                    tokens.add(Token(TokenType.LITERAL, input.substring(start, i), start = start, end = i))
+                    addToken(
+                        type = TokenType.LITERAL,
+                        text = input.substring(start, i),
+                        start = start,
+                        end = i,
+                        tokenLine = tokenLine,
+                        tokenColumn = tokenColumn
+                    )
                 }
             }
         }

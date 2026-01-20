@@ -22,6 +22,8 @@ data class SourceLocation(
     val line: Int,
     val column: Int,
 ) {
+    fun asChain() = SourceLocationChain.single(this)
+
     override fun toString(): String {
         return if (source != null) {
             "$source:$line:$column"

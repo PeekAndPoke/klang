@@ -22,7 +22,7 @@ val strudelLib = klangScriptLibrary("strudel") {
  * by the property delegates in `lang.kt` and all `lang_*.kt` files. It iterates
  * over all registered functions and methods and exposes them to the KlangScript runtime.
  */
-fun KlangScriptExtensionBuilder.registerStrudelDsl() {
+internal fun KlangScriptExtensionBuilder.registerStrudelDsl() {
 
     // 1. Ensure all lang_*.kt files are initialized
     // This call forces the static initializers to run in all lang files,

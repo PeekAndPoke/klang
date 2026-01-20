@@ -208,9 +208,9 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
                 parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
             )
 
-            is Number -> listOf(atomFactory(arg.toString(), null))
+            is Number -> listOf(atomFactory(arg.toString(), loc?.asChain()))
 
-            is Boolean -> listOf(atomFactory(arg.toString(), null))
+            is Boolean -> listOf(atomFactory(arg.toString(), loc?.asChain()))
 
             is StrudelPattern -> listOf(arg)
 
@@ -414,19 +414,19 @@ class DslStringExtensionProvider(
 
         // Register in the evaluator registry
         StrudelRegistry.stringExtensionMethods[name] = { recv, args, callInfo ->
-            val pattern = parse(recv)
+            val pattern = parse(str = recv, baseLocation = callInfo?.receiverLocation)
             handler(pattern, args, callInfo)
         }
 
         // Return a delegate that creates a BOUND method when accessed
         return ReadOnlyProperty { string, _ ->
-            val pattern = parse(string)
+            val pattern = parse(str = string, baseLocation = null)
             DslPatternMethod(pattern, handler)
         }
     }
 
-    private fun parse(str: String): StrudelPattern {
-        return parseMiniNotation(str) { text, loc ->
+    private fun parse(str: String, baseLocation: SourceLocation?): StrudelPattern {
+        return parseMiniNotation(input = str, baseLocation = baseLocation) { text, loc ->
             AtomicPattern(
                 data = VoiceData.empty.defaultModifier(text),
                 sourceLocations = loc,

@@ -162,13 +162,14 @@ class Interpreter(
      * ```
      */
     private fun executeImport(importStmt: ImportStatement): RuntimeValue {
-        // Load library source code
+        val libName = importStmt.libraryName
+
         val librarySource = try {
-            engine.loadLibrary(importStmt.libraryName)
+            engine.loadLibrary(libName)
         } catch (e: Exception) {
             throw ImportError(
-                importStmt.libraryName,
-                "Failed to load library: ${e.message}",
+                libraryName = libName,
+                message = "Failed to load library '${libName}': ${e.message}",
                 location = importStmt.location,
                 stackTrace = getStackTrace()
             )
