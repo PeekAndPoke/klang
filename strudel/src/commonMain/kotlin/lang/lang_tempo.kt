@@ -257,3 +257,48 @@ val StrudelPattern.late by dslPatternExtension { p, args, /* callInfo */ _ ->
 
 @StrudelDsl
 val String.late by dslStringExtension { p, args, callInfo -> p.late(args, callInfo) }
+
+// -- compress() -------------------------------------------------------------------------------------------------------
+
+private fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    if (args.size < 2) {
+        return pattern
+    }
+
+    val startArg = args[0].value?.asDoubleOrNull() ?: 0.0
+    val endArg = args[1].value?.asDoubleOrNull() ?: 1.0
+
+    return CompressPattern(
+        source = pattern,
+        start = startArg.toRational(),
+        end = endArg.toRational()
+    )
+}
+
+/** Compresses pattern into the given timespan, leaving a gap */
+@StrudelDsl
+val compress by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 3) {
+        return@dslFunction silence
+    }
+
+    val startArg = args[0].value?.asDoubleOrNull() ?: 0.0
+    val endArg = args[1].value?.asDoubleOrNull() ?: 1.0
+    val pattern = args.drop(2).toPattern(defaultModifier)
+
+    CompressPattern(
+        source = pattern,
+        start = startArg.toRational(),
+        end = endArg.toRational()
+    )
+}
+
+/** Compresses pattern into the given timespan, leaving a gap */
+@StrudelDsl
+val StrudelPattern.compress by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyCompress(p, args)
+}
+
+/** Compresses pattern into the given timespan, leaving a gap */
+@StrudelDsl
+val String.compress by dslStringExtension { p, args, callInfo -> p.compress(args, callInfo) }

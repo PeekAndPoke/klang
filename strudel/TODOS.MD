@@ -89,7 +89,7 @@ and category.
 - [x] **`euclidLegatoRot(pulses, steps, rotation)`** - Legato Euclidean with rotation, now supports control patterns (
   standalone, pattern method,
   string extension)
-- [ ] **`compress(start, end)`** - Compresses pattern into timespan
+- [x] **`compress(start, end)`** - Compresses pattern into timespan (standalone, pattern method, string extension)
 - [ ] **`compressSpan(span)`** - Compresses pattern into span
 - [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
 - [ ] **`focusSpan(span)`** - Focus with span parameter
@@ -548,9 +548,9 @@ and category.
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ~12 missing (12 completed with control pattern support: `fast`, `slow`, `early`, `late`, `gap`,
-  `zoom`, `euclid`,
-  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`)
+- **Time Modification**: ~11 missing (13 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `compress`,
+  `euclid`,
+  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
 - **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
@@ -581,9 +581,9 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~78 features remaining
+### Total Estimated: ~77 features remaining
 
-### Completed So Far: ~180 features! 🎉
+### Completed So Far: ~181 features! 🎉
 
 **Major achievements:**
 
