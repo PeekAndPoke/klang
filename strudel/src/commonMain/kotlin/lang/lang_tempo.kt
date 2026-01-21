@@ -243,44 +243,14 @@ private fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?
         return pattern
     }
 
-    val startArg = args.getOrNull(0)
-    val endArg = args.getOrNull(1)
+    val startProvider = args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(0.0))
+    val endProvider = args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse start argument into a pattern
-    val startPattern: StrudelPattern = when (val startVal = startArg?.value) {
-        is StrudelPattern -> startVal
-        else -> parseMiniNotation(startArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Parse end argument into a pattern
-    val endPattern: StrudelPattern = when (val endVal = endArg?.value) {
-        is StrudelPattern -> endVal
-        else -> parseMiniNotation(endArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have static values for optimization
-    val staticStart = startArg?.value?.asDoubleOrNull()
-    val staticEnd = endArg?.value?.asDoubleOrNull()
-
-    return if (staticStart != null && staticEnd != null) {
-        // Static path: use the simple CompressPattern
-        CompressPattern(
-            source = pattern,
-            start = staticStart.toRational(),
-            end = staticEnd.toRational()
-        )
-    } else {
-        // Dynamic path: use pattern-controlled compress
-        CompressPatternWithControl(
-            source = pattern,
-            startPattern = startPattern,
-            endPattern = endPattern
-        )
-    }
+    return CompressPattern(
+        source = pattern,
+        startProvider = startProvider,
+        endProvider = endProvider
+    )
 }
 
 /** Compresses pattern into the given timespan, leaving a gap */
@@ -290,14 +260,14 @@ val compress by dslFunction { args, /* callInfo */ _ ->
         return@dslFunction silence
     }
 
-    val startArg = args[0].value?.asDoubleOrNull() ?: 0.0
-    val endArg = args[1].value?.asDoubleOrNull() ?: 1.0
+    val startProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(0.0))
+    val endProvider = args[1].asControlValueProvider(StrudelVoiceValue.Num(1.0))
     val pattern = args.drop(2).toPattern(defaultModifier)
 
     CompressPattern(
         source = pattern,
-        start = startArg.toRational(),
-        end = endArg.toRational()
+        startProvider = startProvider,
+        endProvider = endProvider
     )
 }
 
