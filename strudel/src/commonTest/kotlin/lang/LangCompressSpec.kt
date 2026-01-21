@@ -189,4 +189,39 @@ class LangCompressSpec : StringSpec({
             ce.end.toDouble() shouldBe (oe.end.toDouble() plusOrMinus EPSILON)
         }
     }
+
+    "compress() with control pattern for start" {
+        val p = note("c d").compress("0 0.5", "1")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Verified against JavaScript implementation via JsCompat test
+        // Control pattern creates compressions with different start values
+        events.size shouldBe 3
+    }
+
+    "compress() with control pattern for end" {
+        val p = note("c d").compress("0", "0.5 1")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Verified against JavaScript implementation via JsCompat test
+        // Control pattern creates compressions with different end values
+        events.size shouldBe 3
+    }
+
+    "compress() with control patterns for both" {
+        val p = note("c d").compress("0 0.25", "0.5 0.75")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Verified against JavaScript implementation via JsCompat test
+        // Control patterns for both start and end create compressions
+        events.size shouldBe 3
+    }
+
+    "compress() with control pattern in compiled code" {
+        val p = StrudelPattern.compile("""note("c d").compress("0 0.5", 1)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        // Verified against JavaScript implementation via JsCompat test
+        events.size shouldBe 3
+    }
 })

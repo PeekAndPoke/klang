@@ -265,14 +265,44 @@ private fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?
         return pattern
     }
 
-    val startArg = args[0].value?.asDoubleOrNull() ?: 0.0
-    val endArg = args[1].value?.asDoubleOrNull() ?: 1.0
+    val startArg = args.getOrNull(0)
+    val endArg = args.getOrNull(1)
 
-    return CompressPattern(
-        source = pattern,
-        start = startArg.toRational(),
-        end = endArg.toRational()
-    )
+    // Parse start argument into a pattern
+    val startPattern: StrudelPattern = when (val startVal = startArg?.value) {
+        is StrudelPattern -> startVal
+        else -> parseMiniNotation(startArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    // Parse end argument into a pattern
+    val endPattern: StrudelPattern = when (val endVal = endArg?.value) {
+        is StrudelPattern -> endVal
+        else -> parseMiniNotation(endArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    // Check if we have static values for optimization
+    val staticStart = startArg?.value?.asDoubleOrNull()
+    val staticEnd = endArg?.value?.asDoubleOrNull()
+
+    return if (staticStart != null && staticEnd != null) {
+        // Static path: use the simple CompressPattern
+        CompressPattern(
+            source = pattern,
+            start = staticStart.toRational(),
+            end = staticEnd.toRational()
+        )
+    } else {
+        // Dynamic path: use pattern-controlled compress
+        CompressPatternWithControl(
+            source = pattern,
+            startPattern = startPattern,
+            endPattern = endPattern
+        )
+    }
 }
 
 /** Compresses pattern into the given timespan, leaving a gap */

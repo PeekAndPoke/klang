@@ -89,7 +89,8 @@ and category.
 - [x] **`euclidLegatoRot(pulses, steps, rotation)`** - Legato Euclidean with rotation, now supports control patterns (
   standalone, pattern method,
   string extension)
-- [x] **`compress(start, end)`** - Compresses pattern into timespan (standalone, pattern method, string extension)
+- [x] **`compress(start, end)`** - Compresses pattern into timespan, now supports control patterns for both parameters (
+  standalone, pattern method, string extension)
 - [ ] ~~**`compressSpan(span)`**~~ - **Won't implement**: Not documented, requires TimeSpan/Fraction types not available
   in KlangScript; use `compress(start, end)` instead
 - [ ] **`focus(start, end)`** - Like compress but keeps cycle timing

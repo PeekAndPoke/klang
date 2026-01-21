@@ -120,6 +120,8 @@ object JsCompatTestData {
         Example("Compress middle", """note("c d e f").compress(0.25, 0.75)"""),
         Example("Compress small range", """note("c d").compress(0.4, 0.6)"""),
         Example("Compress with sound", """sound("bd hh sd oh").compress(0.25, 0.75)"""),
+        Example("Compress control pattern start", """note("c d").compress("0 0.5", 1)"""),
+        Example("Compress control pattern both", """note("c d").compress("0 0.25", "0.5 0.75")"""),
         Example("Ply basic", """note("c d").ply(3)"""),
         Example("Ply with 2", """note("c d e f").ply(2)"""),
         Example("Ply with sound", """sound("bd hh").ply(2)"""),
