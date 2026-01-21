@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.VoiceValue
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
@@ -252,7 +252,7 @@ fun StrudelPattern.applyControl(
 internal fun applyBinaryOp(
     source: StrudelPattern,
     args: List<StrudelDslArg<Any?>>,
-    op: (VoiceValue, VoiceValue) -> VoiceValue?,
+    op: (StrudelVoiceValue, StrudelVoiceValue) -> StrudelVoiceValue?,
 ): StrudelPattern {
     // We use defaultModifier for args because we just want the 'value'
     val controlPattern = args.toPattern(defaultModifier)
@@ -280,7 +280,7 @@ internal fun applyBinaryOp(
  */
 internal fun applyUnaryOp(
     source: StrudelPattern,
-    op: (VoiceValue) -> VoiceValue?,
+    op: (StrudelVoiceValue) -> StrudelVoiceValue?,
 ): StrudelPattern {
     // Unary ops (like log2) apply directly to the source values without a control pattern
     return source.reinterpretVoice { srcData ->

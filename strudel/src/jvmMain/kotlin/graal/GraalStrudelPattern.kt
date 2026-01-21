@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.strudel.graal
 
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeGetMember
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull

@@ -1,6 +1,9 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.audio_bridge.*
+import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlinx.serialization.Serializable
 
 /**
@@ -100,7 +103,7 @@ data class StrudelVoiceData(
     val cut: Int?,
 
     // Custom value
-    val value: VoiceValue? = null,
+    val value: StrudelVoiceValue? = null,
 ) {
     companion object {
         val empty = StrudelVoiceData(
@@ -209,14 +212,6 @@ data class StrudelVoiceData(
             speed = speed,
             loop = loop,
             cut = cut,
-            value = value,
         )
-    }
-
-    /**
-     * Converts to a sample request for pre-loading samples.
-     */
-    fun asSampleRequest(): SampleRequest {
-        return SampleRequest(bank = bank, sound = sound, index = soundIndex, note = note)
     }
 }

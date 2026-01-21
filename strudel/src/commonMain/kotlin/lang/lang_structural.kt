@@ -2,12 +2,12 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.VoiceValue
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
@@ -1662,7 +1662,7 @@ private fun applyBinaryNL(n: Int, bits: Int): StrudelPattern {
 
     // Returns a single event containing the list of bits as a Seq value
     return AtomicPattern(
-        StrudelVoiceData.empty.copy(value = VoiceValue.Seq(bitList))
+        StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Seq(bitList))
     )
 }
 
