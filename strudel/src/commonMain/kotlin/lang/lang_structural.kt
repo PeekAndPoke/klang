@@ -1083,8 +1083,8 @@ private fun applySegment(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
 
         source.struct(structPat.fast(staticN))
     } else {
-        // Dynamic path: use SegmentPatternWithControl which properly slices each timespan
-        SegmentPatternWithControl(source, nPattern)
+        // Dynamic path: use SegmentPattern which properly slices each timespan
+        SegmentPattern.control(source, nPattern)
     }
 }
 
