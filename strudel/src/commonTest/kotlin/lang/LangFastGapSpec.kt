@@ -192,4 +192,22 @@ class LangFastGapSpec : StringSpec({
         // Verified against JavaScript implementation via JsCompat test
         events.size shouldBe 2
     }
+
+    "fastGap() string extension alias works" {
+        val p = "c d".fastGap("2")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "c"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "d"
+    }
+
+    "densityGap() string extension alias works" {
+        val p = "c d".densityGap("2")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "c"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "d"
+    }
 })
