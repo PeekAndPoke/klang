@@ -125,6 +125,13 @@ object JsCompatTestData {
         Example("Ply with sound", """sound("bd hh").ply(2)"""),
         Example("Ply high count", """note("c").ply(4)"""),
         Example("Ply complex pattern", """note("c [d e]").ply(2)"""),
+        Example("Hurry basic", """sound("bd hh").hurry(2)"""),
+        Example("Hurry with notes", """note("c d").hurry(2)"""),
+        Example("Hurry slow", """sound("bd hh sd oh").hurry(0.5)"""),
+        Example("Hurry with speed", """sound("bd hh").speed(0.5).hurry(2)"""),
+        Example("FastGap basic", """note("c d").fastGap(2)"""),
+        Example("FastGap factor 3", """note("c d e").fastGap(3)"""),
+        Example("FastGap with sound", """sound("bd hh sd").fastGap(2)"""),
 
         // Euclidish
         Example("Euclidish Function #1", """euclidish(3, 8, 0, note("bd"))"""),

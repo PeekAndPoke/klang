@@ -344,3 +344,99 @@ val StrudelPattern.ply by dslPatternExtension { p, args, /* callInfo */ _ ->
 /** Repeats each event n times within its timespan */
 @StrudelDsl
 val String.ply by dslStringExtension { p, args, callInfo -> p.ply(args, callInfo) }
+
+// -- hurry() ----------------------------------------------------------------------------------------------------------
+
+private fun applyHurry(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    if (args.isEmpty()) {
+        return pattern
+    }
+
+    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+    if (factor <= 0.0 || factor == 1.0) {
+        return pattern
+    }
+
+    return HurryPattern(source = pattern, factor = factor)
+}
+
+/** Speeds up pattern and increases speed parameter by the same factor */
+@StrudelDsl
+val hurry by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslFunction silence
+    }
+
+    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+    val pattern = args.drop(1).toPattern(defaultModifier)
+
+    if (factor <= 0.0 || factor == 1.0) {
+        pattern
+    } else {
+        HurryPattern(source = pattern, factor = factor)
+    }
+}
+
+/** Speeds up pattern and increases speed parameter by the same factor */
+@StrudelDsl
+val StrudelPattern.hurry by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyHurry(p, args)
+}
+
+/** Speeds up pattern and increases speed parameter by the same factor */
+@StrudelDsl
+val String.hurry by dslStringExtension { p, args, callInfo -> p.hurry(args, callInfo) }
+
+// -- fastGap() --------------------------------------------------------------------------------------------------------
+
+private fun applyFastGap(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    if (args.isEmpty()) {
+        return pattern
+    }
+
+    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+    if (factor <= 0.0 || factor == 1.0) {
+        return pattern
+    }
+
+    return FastGapPattern(source = pattern, factor = factor)
+}
+
+/** Speeds up pattern like fast, but plays once per cycle with gaps (alias: densityGap) */
+@StrudelDsl
+val fastGap by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslFunction silence
+    }
+
+    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+    val pattern = args.drop(1).toPattern(defaultModifier)
+
+    if (factor <= 0.0 || factor == 1.0) {
+        pattern
+    } else {
+        FastGapPattern(source = pattern, factor = factor)
+    }
+}
+
+/** Speeds up pattern like fast, but plays once per cycle with gaps (alias: densityGap) */
+@StrudelDsl
+val StrudelPattern.fastGap by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyFastGap(p, args)
+}
+
+/** Speeds up pattern like fast, but plays once per cycle with gaps (alias: densityGap) */
+@StrudelDsl
+val String.fastGap by dslStringExtension { p, args, callInfo -> p.fastGap(args, callInfo) }
+
+/** Alias for fastGap */
+@StrudelDsl
+val densityGap by dslFunction { args, callInfo -> fastGap(args, callInfo) }
+
+/** Alias for fastGap */
+@StrudelDsl
+val StrudelPattern.densityGap by dslPatternExtension { p, args, callInfo -> p.fastGap(args, callInfo) }
+
+/** Alias for fastGap */
+@StrudelDsl
+val String.densityGap by dslStringExtension { p, args, callInfo -> p.fastGap(args, callInfo) }

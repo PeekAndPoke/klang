@@ -98,13 +98,15 @@ and category.
   function)
 - [ ] **`zoomArc(arc)`** - Zoom with arc parameter
 - [x] **`gap(steps)`** - Create gap with n steps, now supports control patterns via slow()
-- [ ] **`fastGap(factor)`** - Speeds up with gaps between
+- [x] **`fastGap(factor)`** - Speeds up with gaps between (standalone, pattern method, string extension, alias:
+  densityGap)
 - [ ] **`swingBy(subdivision, offset)`** - Creates swing rhythm
 - [ ] **`swing(subdivision)`** - Swing with default 1/3 offset
 - [x] **`ply(n)`** - Repeats each event n times within its timespan (standalone, pattern method, string extension)
 - [ ] **`plyWith(n, func)`** - Repeats with function applied
 - [ ] **`plyForEach(n, func)`** - Repeats with function applied per repetition
-- [ ] **`hurry(factor)`** - Speeds up and shortens events
+- [x] **`hurry(factor)`** - Speeds up pattern and multiplies speed parameter (standalone, pattern method, string
+  extension)
 - [ ] **`loopAt(cycles)`** - Fit sample to cycles
 - [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
 
@@ -548,8 +550,8 @@ and category.
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ~10 missing (14 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `compress`, `ply`,
-  `euclid`,
+- **Time Modification**: ~8 missing (16 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `compress`, `ply`,
+  `hurry`, `fastGap`, `euclid`,
   `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
@@ -581,9 +583,9 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~76 features remaining
+### Total Estimated: ~74 features remaining
 
-### Completed So Far: ~182 features! 🎉
+### Completed So Far: ~184 features! 🎉
 
 **Major achievements:**
 
