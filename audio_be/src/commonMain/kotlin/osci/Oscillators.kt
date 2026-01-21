@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.osci
 
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.safeEnumOrNull
+import kotlin.jvm.JvmStatic
 import kotlin.math.*
 import kotlin.random.Random
 
@@ -187,69 +188,104 @@ class Oscillators private constructor(
         ): OscFn {
             val v = voices.coerceIn(1, 16)
             val sr = sampleRate.toDouble()
+            val blepMinDt = 1.0e-5
 
             // Internal state for supersaw phases (independent of Voice phase)
             val phases = DoubleArray(v) { rng.nextDouble() }
 
             val g1 = sqrt(1.0 - panSpread.coerceIn(0.0, 1.0))
             val g2 = sqrt(panSpread.coerceIn(0.0, 1.0))
-            val invV = 1.0 / v.toDouble()
+            val gainInvV = gain / v.toDouble()
 
-            // Pre-calculate detunes to avoid doing it per sample
+            // Pre-calculate detunes and gains per voice
             val detunes = DoubleArray(v) { n ->
                 val det = getUnisonDetune(v, freqSpread, n)
                 val freqAdjusted = applySemitoneDetuneToFrequency(baseFreqHz, det)
-                freqAdjusted / sr // This is the increment
+                freqAdjusted / sr
+            }
+
+            // Pre-compute combined stereo gain: (gainL + gainR) per voice
+            val combinedGains = DoubleArray(v) { n ->
+                val gl = if ((n and 1) == 1) g2 else g1
+                val gr = if ((n and 1) == 1) g1 else g2
+                (gl + gr) * gainInvV
             }
 
             return OscFn { buffer, offset, length, _, _, phaseMod ->
-                // Supersaw ignores the master phase/phaseInc because it manages its own stack
                 val end = offset + length
+                val dets = detunes
+                val cgs = combinedGains
+                val phs = phases
 
                 if (phaseMod == null) {
-                    for (i in offset until end) {
-                        var sl = 0.0
-                        var srSum = 0.0
+                    // Initialize buffer with voice 0, then accumulate remaining voices.
+                    run {
+                        val dt0 = dets[0]
+                        val cg0 = cgs[0]
+                        var p0 = phs[0]
 
-                        for (n in 0 until v) {
-                            val dt = detunes[n]
-                            val isOdd = (n and 1) == 1
-                            val gainL = if (isOdd) g2 else g1
-                            val gainR = if (isOdd) g1 else g2
-
-                            val p = polyBlep(phases[n], dt)
-                            val s = 2.0 * phases[n] - 1.0 - p
-
-                            sl += s * gainL
-                            srSum += s * gainR
-
-                            phases[n] += dt
-                            if (phases[n] > 1.0) phases[n] -= 1.0
+                        if (dt0 <= blepMinDt) {
+                            for (i in offset until end) {
+                                buffer[i] = (2.0 * p0 - 1.0) * cg0
+                                p0 += dt0
+                                if (p0 >= 1.0) p0 -= 1.0
+                            }
+                        } else {
+                            for (i in offset until end) {
+                                val blep = polyBlep(p0, dt0)
+                                buffer[i] = (2.0 * p0 - 1.0 - blep) * cg0
+                                p0 += dt0
+                                if (p0 >= 1.0) p0 -= 1.0
+                            }
                         }
-                        buffer[i] = gain * (sl + srSum) * invV
+                        phs[0] = p0
+                    }
+
+                    for (n in 1 until v) {
+                        val dt = dets[n]
+                        val cg = cgs[n]
+                        var p = phs[n]
+
+                        if (dt <= blepMinDt) {
+                            for (i in offset until end) {
+                                buffer[i] += (2.0 * p - 1.0) * cg
+                                p += dt
+                                if (p >= 1.0) p -= 1.0
+                            }
+                        } else {
+                            for (i in offset until end) {
+                                val blep = polyBlep(p, dt)
+                                buffer[i] += (2.0 * p - 1.0 - blep) * cg
+                                p += dt
+                                if (p >= 1.0) p -= 1.0
+                            }
+                        }
+                        phs[n] = p
                     }
                 } else {
+                    // When phaseMod is present, we must iterate per-sample.
                     for (i in offset until end) {
-                        var sl = 0.0
-                        var srSum = 0.0
                         val mod = phaseMod[i]
+                        var sum = 0.0
 
                         for (n in 0 until v) {
-                            val dt = detunes[n] * mod
-                            val isOdd = (n and 1) == 1
-                            val gainL = if (isOdd) g2 else g1
-                            val gainR = if (isOdd) g1 else g2
+                            val dt = dets[n] * mod
+                            val cg = cgs[n]
 
-                            val p = polyBlep(phases[n], dt)
-                            val s = 2.0 * phases[n] - 1.0 - p
+                            val p = phs[n]
+                            val s = if (dt <= blepMinDt) {
+                                (2.0 * p - 1.0) * cg
+                            } else {
+                                val blep = polyBlep(p, dt)
+                                (2.0 * p - 1.0 - blep) * cg
+                            }
+                            sum += s
 
-                            sl += s * gainL
-                            srSum += s * gainR
-
-                            phases[n] += dt
-                            if (phases[n] > 1.0) phases[n] -= 1.0
+                            var np = p + dt
+                            if (np >= 1.0) np -= 1.0
+                            phs[n] = np
                         }
-                        buffer[i] = gain * (sl + srSum) * invV
+                        buffer[i] = sum
                     }
                 }
                 0.0 // Dummy return
@@ -380,6 +416,8 @@ class Oscillators private constructor(
             0.0
         }
 
+        @Suppress("NOTHING_TO_INLINE")
+        @JvmStatic
         private fun polyBlep(tIn: Double, dt: Double): Double {
             var t = tIn
             // 0 <= t < 1

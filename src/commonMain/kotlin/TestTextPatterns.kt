@@ -107,7 +107,7 @@ object TestTextPatterns {
                 [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
             >`)
               .sound("tri")
-              .filterWhen(x => x >= 16)
+//              .filterWhen(x => x >= 16)
               .orbit(0).gain(0.35)
               .pan(cosine2.slow(48).range(-0.62, 0.62).flipSign())
               .delay(0.3).delaytime(0.15).delayfeedback(0.25)
@@ -124,8 +124,8 @@ object TestTextPatterns {
                     [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [c1 e2] [a5 a4] [a2 a3]]
             >`)
               .sound("supersaw")
-              .filterWhen(x => x >= 31.3)
-              .spread(0.5).unison(sine.range(6, 16).slow(32))
+//              .filterWhen(x => x >= 31.3)
+              .spread(0.5).unison(sine.range(4, 10).slow(32))
               .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
               .orbit(2).gain(0.5)
               .pan(cosine2.slow(48).range(-0.31, 0.31))

@@ -93,18 +93,17 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun scheduleHighlight(event: ScheduledVoiceEvent) {
-        console.log("Voice scheduled:", event.startTime, event.endTime, Date.now())
+        // console.log("Voice scheduled:", event.startTime, event.endTime, Date.now())
 
         // Highlight in editor
         val location = event.sourceLocations?.innermost
-
 
         if (location != null) {
             val now = Date.now()
             // few ms early for better visuals
             val startFromNowMs = maxOf(1.0, (event.startTimeMs - now) - 25.0)
 
-            console.log("startFromNowMs", startFromNowMs)
+            // console.log("startFromNowMs", startFromNowMs)
 
             setTimeout(startFromNowMs.toInt()) {
                 editorRef { editor ->

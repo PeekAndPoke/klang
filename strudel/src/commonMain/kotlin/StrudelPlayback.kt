@@ -242,7 +242,7 @@ class StrudelPlayback internal constructor(
 
         sampleSoundLookAheadPointer = to
 
-        println("[Song: $playbackId] Sample Look ahead $from - $to")
+        // println("[Song: $playbackId] Sample Look ahead $from - $to")
 
         // Lookup events
         val events = queryEvents(from = from, to = to, sendEvents = false)
