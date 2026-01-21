@@ -64,35 +64,73 @@ internal class CompressPattern(
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // For static values, we can optimize with a single query
-        if (startProvider is ControlValueProvider.Static && endProvider is ControlValueProvider.Static) {
-            val start = (startProvider.value.asDouble ?: 0.0).toRational()
-            val end = (endProvider.value.asDouble ?: 1.0).toRational()
-            return queryWithStaticValues(from, to, ctx, start, end)
+        // Check if both values are static - if so, apply directly to the whole range
+        val isAllStatic = startProvider is ControlValueProvider.Static &&
+                endProvider is ControlValueProvider.Static
+
+        if (isAllStatic) {
+            val start = (startProvider as ControlValueProvider.Static).value.asDouble ?: 0.0
+            val end = (endProvider as ControlValueProvider.Static).value.asDouble ?: 1.0
+            return queryWithStaticValues(from, to, ctx, start.toRational(), end.toRational())
         }
 
-        // At least one is a pattern - create patterns for both sides
-        val startPattern = when (startProvider) {
+        // At least one parameter is a pattern - sample values and find overlaps
+        val startEvents = when (startProvider) {
             is ControlValueProvider.Static -> {
-                // Convert static value to a constant pattern
-                val value = startProvider.value.asDouble ?: 0.0
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value)))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = startProvider.value)
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> startProvider.pattern
+            is ControlValueProvider.Pattern -> startProvider.pattern.queryArcContextual(from, to, ctx)
         }
 
-        val endPattern = when (endProvider) {
+        val endEvents = when (endProvider) {
             is ControlValueProvider.Static -> {
-                // Convert static value to a constant pattern
-                val value = endProvider.value.asDouble ?: 1.0
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value)))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = endProvider.value)
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> endProvider.pattern
+            is ControlValueProvider.Pattern -> endProvider.pattern.queryArcContextual(from, to, ctx)
         }
 
-        return queryWithControlPatterns(from, to, ctx, startPattern, endPattern)
+        if (startEvents.isEmpty() || endEvents.isEmpty()) return emptyList()
+
+        val result = mutableListOf<StrudelPatternEvent>()
+
+        // Pair up start and end events by their overlapping timespans
+        for (startEvent in startEvents) {
+            for (endEvent in endEvents) {
+                // Check if events overlap
+                if (startEvent.end <= endEvent.begin || endEvent.end <= startEvent.begin) continue
+
+                val start = startEvent.data.value?.asDouble ?: 0.0
+                val end = endEvent.data.value?.asDouble ?: 1.0
+
+                if (start >= end) continue
+
+                // Calculate the overlap timespan
+                val overlapBegin = maxOf(startEvent.begin, endEvent.begin)
+                val overlapEnd = minOf(startEvent.end, endEvent.end)
+
+                // Apply compress with these start/end values for this segment
+                val events = queryWithStaticValues(overlapBegin, overlapEnd, ctx, start.toRational(), end.toRational())
+                result.addAll(events)
+            }
+        }
+
+        return result
     }
 
     private fun queryWithStaticValues(
@@ -157,47 +195,4 @@ internal class CompressPattern(
         return result
     }
 
-    private fun queryWithControlPatterns(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-        startPattern: StrudelPattern,
-        endPattern: StrudelPattern,
-    ): List<StrudelPatternEvent> {
-        val startEvents = startPattern.queryArcContextual(from, to, ctx)
-        val endEvents = endPattern.queryArcContextual(from, to, ctx)
-
-        if (startEvents.isEmpty() || endEvents.isEmpty()) return emptyList()
-
-        val result = mutableListOf<StrudelPatternEvent>()
-
-        // Pair up start and end events by their timespans
-        for (startEvent in startEvents) {
-            for (endEvent in endEvents) {
-                // Check if events overlap
-                if (startEvent.end <= endEvent.begin || endEvent.end <= startEvent.begin) continue
-
-                val start = startEvent.data.value?.asDouble ?: 0.0
-                val end = endEvent.data.value?.asDouble ?: 1.0
-
-                if (start >= end) continue
-
-                // Calculate the overlap timespan
-                val overlapBegin = maxOf(startEvent.begin, endEvent.begin)
-                val overlapEnd = minOf(startEvent.end, endEvent.end)
-
-                // Apply compress with these start/end values for this segment
-                val events = queryWithStaticValues(
-                    overlapBegin,
-                    overlapEnd,
-                    ctx,
-                    start.toRational(),
-                    end.toRational()
-                )
-                result.addAll(events)
-            }
-        }
-
-        return result
-    }
 }

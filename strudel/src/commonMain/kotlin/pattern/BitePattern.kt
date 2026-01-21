@@ -63,76 +63,46 @@ internal class BitePattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // For static values, we can optimize
-        if (nProvider is ControlValueProvider.Static && indicesProvider is ControlValueProvider.Static) {
-            val n = nProvider.value.asInt ?: 4
-            val idx = indicesProvider.value.asInt ?: 0
+        // Check if all values are static - if so, apply directly to the whole range
+        val isAllStatic = nProvider is ControlValueProvider.Static &&
+                indicesProvider is ControlValueProvider.Static
+
+        if (isAllStatic) {
+            val n = (nProvider as ControlValueProvider.Static).value.asInt ?: 4
+            val idx = (indicesProvider as ControlValueProvider.Static).value.asInt ?: 0
             return queryWithStaticValues(from, to, ctx, n, idx)
         }
 
-        // At least one is a pattern - create patterns for both sides
-        val nPattern = when (nProvider) {
+        // At least one parameter is a pattern - sample values and find overlaps
+        val nEvents = when (nProvider) {
             is ControlValueProvider.Static -> {
-                val value = nProvider.value.asInt ?: 4
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value.toDouble())))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = nProvider.value)
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> nProvider.pattern
+            is ControlValueProvider.Pattern -> nProvider.pattern.queryArcContextual(from, to, ctx)
         }
 
-        val indicesPattern = when (indicesProvider) {
+        val indexEvents = when (indicesProvider) {
             is ControlValueProvider.Static -> {
-                val value = indicesProvider.value.asInt ?: 0
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value.toDouble())))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = indicesProvider.value)
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> indicesProvider.pattern
+            is ControlValueProvider.Pattern -> indicesProvider.pattern.queryArcContextual(from, to, ctx)
         }
-
-        return queryWithControlPatterns(from, to, ctx, nPattern, indicesPattern)
-    }
-
-    private fun queryWithStaticValues(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-        n: Int,
-        idx: Int,
-    ): List<StrudelPatternEvent> {
-        if (n <= 0) return emptyList()
-
-        // Handle wrapping like JS .mod(1)
-        val normalizedIdx = idx.mod(n)
-        val safeIdx = if (normalizedIdx < 0) normalizedIdx + n else normalizedIdx
-
-        val start = safeIdx.toDouble() / n
-        val end = (safeIdx + 1.0) / n
-
-        // Get the slice using zoom logic: early(start).fast(end - start)
-        val duration = end - start
-        if (duration <= 0.0) return emptyList()
-
-        val slice = TempoModifierPattern.static(
-            source = TimeShiftPattern.static(
-                source = source,
-                offset = start.toRational() * Rational.MINUS_ONE,
-            ),
-            factor = duration.toRational(),
-            invertPattern = true,
-        )
-
-        return slice.queryArcContextual(from, to, ctx)
-    }
-
-    private fun queryWithControlPatterns(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-        nPattern: StrudelPattern,
-        indicesPattern: StrudelPattern,
-    ): List<StrudelPatternEvent> {
-        val nEvents = nPattern.queryArcContextual(from, to, ctx)
-        val indexEvents = indicesPattern.queryArcContextual(from, to, ctx)
 
         if (nEvents.isEmpty() || indexEvents.isEmpty()) return emptyList()
 
@@ -142,7 +112,7 @@ internal class BitePattern(
         for (nEvent in nEvents) {
             for (indexEvent in indexEvents) {
                 // Check if events overlap
-                if (nEvent.end <= indexEvent.begin || indexEvent.end <= nEvent.begin) continue
+                if (nEvent.end <= indexEvent.begin || indexEvent.end <= indexEvent.begin) continue
 
                 val n = nEvent.data.value?.asInt ?: 4
                 if (n <= 0) continue
@@ -186,4 +156,37 @@ internal class BitePattern(
 
         return result
     }
+
+    private fun queryWithStaticValues(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+        n: Int,
+        idx: Int,
+    ): List<StrudelPatternEvent> {
+        if (n <= 0) return emptyList()
+
+        // Handle wrapping like JS .mod(1)
+        val normalizedIdx = idx.mod(n)
+        val safeIdx = if (normalizedIdx < 0) normalizedIdx + n else normalizedIdx
+
+        val start = safeIdx.toDouble() / n
+        val end = (safeIdx + 1.0) / n
+
+        // Get the slice using zoom logic: early(start).fast(end - start)
+        val duration = end - start
+        if (duration <= 0.0) return emptyList()
+
+        val slice = TempoModifierPattern.static(
+            source = TimeShiftPattern.static(
+                source = source,
+                offset = start.toRational() * Rational.MINUS_ONE,
+            ),
+            factor = duration.toRational(),
+            invertPattern = true,
+        )
+
+        return slice.queryArcContextual(from, to, ctx)
+    }
+
 }

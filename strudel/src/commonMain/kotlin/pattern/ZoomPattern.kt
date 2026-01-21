@@ -81,43 +81,42 @@ internal class ZoomPattern(
         // For static values, use pre-computed transformation
         staticTransformed?.let { return it.queryArcContextual(from, to, ctx) }
 
-        // At least one is a pattern - create patterns for both sides
-        val startPattern = when (startProvider) {
+        // At least one parameter is a pattern - sample values and find overlaps
+        val startEvents = when (startProvider) {
             is ControlValueProvider.Static -> {
-                val value = startProvider.value.asDouble ?: 0.0
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value)))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = startProvider.value)
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> startProvider.pattern
+            is ControlValueProvider.Pattern -> startProvider.pattern.queryArcContextual(from, to, ctx)
         }
 
-        val endPattern = when (endProvider) {
+        val endEvents = when (endProvider) {
             is ControlValueProvider.Static -> {
-                val value = endProvider.value.asDouble ?: 1.0
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value)))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = endProvider.value)
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> endProvider.pattern
+            is ControlValueProvider.Pattern -> endProvider.pattern.queryArcContextual(from, to, ctx)
         }
-
-        return queryWithControlPatterns(from, to, ctx, startPattern, endPattern)
-    }
-
-    private fun queryWithControlPatterns(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-        startPattern: StrudelPattern,
-        endPattern: StrudelPattern,
-    ): List<StrudelPatternEvent> {
-        val startEvents = startPattern.queryArcContextual(from, to, ctx)
-        val endEvents = endPattern.queryArcContextual(from, to, ctx)
 
         if (startEvents.isEmpty() || endEvents.isEmpty()) return emptyList()
 
         val result = mutableListOf<StrudelPatternEvent>()
 
-        // Pair up start and end events by their timespans
+        // Pair up start and end events by their overlapping timespans
         for (startEvent in startEvents) {
             for (endEvent in endEvents) {
                 // Check if events overlap
@@ -134,14 +133,9 @@ internal class ZoomPattern(
                 val overlapEnd = minOf(startEvent.end, endEvent.end)
 
                 // Apply zoom: early(start).fast(duration)
-                val zoomed =
-                    TimeShiftPattern.static(source = inner, offset = start.toRational() * Rational.MINUS_ONE)
-
-                val final =
-                    TempoModifierPattern.static(zoomed, factor = duration.toRational(), invertPattern = true)
-
-                val events: List<StrudelPatternEvent> =
-                    final.queryArcContextual(overlapBegin, overlapEnd, ctx)
+                val zoomed = TimeShiftPattern.static(source = inner, offset = start.toRational() * Rational.MINUS_ONE)
+                val final = TempoModifierPattern.static(zoomed, factor = duration.toRational(), invertPattern = true)
+                val events = final.queryArcContextual(overlapBegin, overlapEnd, ctx)
 
                 result.addAll(events)
             }
