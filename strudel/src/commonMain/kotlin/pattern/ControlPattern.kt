@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -12,14 +12,14 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
  *
  * @param source The pattern defining the rhythm/structure (e.g. note("..."))
  * @param control The pattern defining the values (e.g. seq(0.5, 1.0))
- * @param mapper additional mapper from VoiceData to VoiceData
- * @param combiner Function to merge the source VoiceData with the control event's VoiceData
+ * @param mapper additional mapper from StrudelVoiceData to StrudelVoiceData
+ * @param combiner Function to merge the source StrudelVoiceData with the control event's StrudelVoiceData
  */
 internal class ControlPattern(
     val source: StrudelPattern,
     val control: StrudelPattern,
-    val mapper: (VoiceData) -> VoiceData,
-    val combiner: (VoiceData, VoiceData) -> VoiceData,
+    val mapper: (StrudelVoiceData) -> StrudelVoiceData,
+    val combiner: (StrudelVoiceData, StrudelVoiceData) -> StrudelVoiceData,
 ) : StrudelPattern {
 
     companion object {

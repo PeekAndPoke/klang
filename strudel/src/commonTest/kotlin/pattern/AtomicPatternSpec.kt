@@ -4,15 +4,15 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.note
 
 class AtomicPatternSpec : StringSpec({
 
     "AtomicPattern: Direct Instantiation" {
-        val pattern = AtomicPattern(VoiceData.empty.copy(note = "c3"))
+        val pattern = AtomicPattern(StrudelVoiceData.empty.copy(note = "c3"))
 
         verifyPattern(pattern, 1) { _, note, begin, dur ->
             note shouldBe "c3"

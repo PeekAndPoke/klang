@@ -2,20 +2,20 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 
 class ReversePatternWithControlSpec : StringSpec({
 
     "ReversePatternWithControl with static n=1 reverses normally" {
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(VoiceData.empty.copy(note = "a")),
-                AtomicPattern(VoiceData.empty.copy(note = "b"))
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "a")),
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
             )
         )
         // Control pattern that always returns 1
-        val control = AtomicPattern(VoiceData.empty.copy(value = 1.asVoiceValue()))
+        val control = AtomicPattern(StrudelVoiceData.empty.copy(value = 1.asVoiceValue()))
         val reversed = ReversePatternWithControl(inner, control)
 
         val events = reversed.queryArc(0.0, 1.0).sortedBy { it.begin }
@@ -28,12 +28,12 @@ class ReversePatternWithControlSpec : StringSpec({
     "ReversePatternWithControl with n=2 applies multi-cycle reversal" {
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(VoiceData.empty.copy(note = "a")),
-                AtomicPattern(VoiceData.empty.copy(note = "b"))
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "a")),
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
             )
         )
         // Control pattern that always returns 2
-        val control = AtomicPattern(VoiceData.empty.copy(value = 2.asVoiceValue()))
+        val control = AtomicPattern(StrudelVoiceData.empty.copy(value = 2.asVoiceValue()))
         val reversed = ReversePatternWithControl(inner, control)
 
         val events = reversed.queryArc(0.0, 1.0).sortedBy { it.begin }
@@ -48,15 +48,15 @@ class ReversePatternWithControlSpec : StringSpec({
     "ReversePatternWithControl with discrete pattern control" {
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(VoiceData.empty.copy(note = "x")),
-                AtomicPattern(VoiceData.empty.copy(note = "y"))
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "x")),
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "y"))
             )
         )
         // Control pattern: "1 2" - first half n=1, second half n=2
         val control = SequencePattern(
             listOf(
-                AtomicPattern(VoiceData.empty.copy(value = 1.asVoiceValue())),
-                AtomicPattern(VoiceData.empty.copy(value = 2.asVoiceValue()))
+                AtomicPattern(StrudelVoiceData.empty.copy(value = 1.asVoiceValue())),
+                AtomicPattern(StrudelVoiceData.empty.copy(value = 2.asVoiceValue()))
             )
         )
         val reversed = ReversePatternWithControl(inner, control)
@@ -70,12 +70,12 @@ class ReversePatternWithControlSpec : StringSpec({
     "ReversePatternWithControl with n=0 applies normal reversal" {
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(VoiceData.empty.copy(note = "a")),
-                AtomicPattern(VoiceData.empty.copy(note = "b"))
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "a")),
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
             )
         )
         // Control pattern with n=0 (should behave like n=1)
-        val control = AtomicPattern(VoiceData.empty.copy(value = 0.asVoiceValue()))
+        val control = AtomicPattern(StrudelVoiceData.empty.copy(value = 0.asVoiceValue()))
         val reversed = ReversePatternWithControl(inner, control)
 
         val events = reversed.queryArc(0.0, 1.0).sortedBy { it.begin }
@@ -89,8 +89,8 @@ class ReversePatternWithControlSpec : StringSpec({
     "ReversePatternWithControl returns empty when control pattern has no events" {
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(VoiceData.empty.copy(note = "a")),
-                AtomicPattern(VoiceData.empty.copy(note = "b"))
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "a")),
+                AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
             )
         )
         // Empty control pattern
@@ -103,8 +103,8 @@ class ReversePatternWithControlSpec : StringSpec({
     }
 
     "ReversePatternWithControl preserves weight from inner pattern" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "test"))
-        val control = AtomicPattern(VoiceData.empty.copy(value = 1.asVoiceValue()))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "test"))
+        val control = AtomicPattern(StrudelVoiceData.empty.copy(value = 1.asVoiceValue()))
         val reversed = ReversePatternWithControl(inner, control)
 
         reversed.weight shouldBe inner.weight

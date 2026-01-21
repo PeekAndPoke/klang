@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
@@ -28,9 +28,9 @@ var strudelLangHelpersInit = false
 
 // --- Type Aliases ---
 
-typealias VoiceDataModifier = VoiceData.(Any?) -> VoiceData
+typealias VoiceDataModifier = StrudelVoiceData.(Any?) -> StrudelVoiceData
 
-typealias VoiceDataMerger = (source: VoiceData, control: VoiceData) -> VoiceData
+typealias VoiceDataMerger = (source: StrudelVoiceData, control: StrudelVoiceData) -> StrudelVoiceData
 
 typealias StrudelDslFn = (args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
 
@@ -131,7 +131,7 @@ fun StrudelPattern.applyControlFromParams(
 
     val control = args.toPattern(modify)
 
-    val mapper: (VoiceData) -> VoiceData = { data ->
+    val mapper: (StrudelVoiceData) -> StrudelVoiceData = { data ->
         val value = data.value
         if (value != null) data.modify(value) else data
     }
@@ -144,17 +144,17 @@ fun StrudelPattern.applyControlFromParams(
  * It checks both the specific field and the generic 'value' field.
  *
  * @param args The arguments passed to the function (e.g. pan("0.5") or pan(sine)).
- * @param modify The modifier to create a VoiceData from a single argument (string/number).
- * @param getValue Function to extract the specific Double value from the control VoiceData.
- * @param setValue Function to apply the Double value to the source VoiceData.
+ * @param modify The modifier to create a StrudelVoiceData from a single argument (string/number).
+ * @param getValue Function to extract the specific Double value from the control StrudelVoiceData.
+ * @param setValue Function to apply the Double value to the source StrudelVoiceData.
  *                 The first param is the Double value.
- *                 The second param is the full control VoiceData (useful for merging extra fields like resonance).
+ *                 The second param is the full control StrudelVoiceData (useful for merging extra fields like resonance).
  */
 fun StrudelPattern.applyNumericalParam(
     args: List<StrudelDslArg<Any?>>,
     modify: VoiceDataModifier,
-    getValue: VoiceData.() -> Double?,
-    setValue: VoiceData.(value: Double, control: VoiceData) -> VoiceData,
+    getValue: StrudelVoiceData.() -> Double?,
+    setValue: StrudelVoiceData.(value: Double, control: StrudelVoiceData) -> StrudelVoiceData,
 ): StrudelPattern {
     if (args.isEmpty()) return this
 
@@ -194,7 +194,7 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
 ): List<StrudelPattern> {
     val atomFactory = { text: String, sourceLocations: SourceLocationChain? ->
         AtomicPattern(
-            data = VoiceData.empty.modify(text),
+            data = StrudelVoiceData.empty.modify(text),
             sourceLocations = sourceLocations,
         )
     }
@@ -235,7 +235,7 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
  */
 fun StrudelPattern.applyControl(
     control: StrudelPattern,
-    mapper: (VoiceData) -> VoiceData,
+    mapper: (StrudelVoiceData) -> StrudelVoiceData,
     combiner: VoiceDataMerger,
 ): StrudelPattern = ControlPattern(
     source = this,
@@ -428,7 +428,7 @@ class DslStringExtensionProvider(
     private fun parse(str: String, baseLocation: SourceLocation?): StrudelPattern {
         return parseMiniNotation(input = str, baseLocation = baseLocation) { text, loc ->
             AtomicPattern(
-                data = VoiceData.empty.defaultModifier(text),
+                data = StrudelVoiceData.empty.defaultModifier(text),
                 sourceLocations = loc,
             )
         }

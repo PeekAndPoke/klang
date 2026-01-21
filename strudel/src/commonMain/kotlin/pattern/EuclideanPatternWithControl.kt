@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -37,7 +38,7 @@ internal class EuclideanPatternWithControl(
                 begin = from,
                 end = to,
                 dur = to - from,
-                data = io.peekandpoke.klang.audio_bridge.VoiceData.empty.copy(value = 0.asVoiceValue())
+                data = StrudelVoiceData.empty.copy(value = 0.asVoiceValue())
             )
         )
 

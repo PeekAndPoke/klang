@@ -13,7 +13,7 @@ class LangDecaySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.adsr.decay } shouldBe listOf(0.1, 0.5)
+        events.map { it.data.decay } shouldBe listOf(0.1, 0.5)
     }
 
     "decay() works as pattern extension" {
@@ -21,7 +21,7 @@ class LangDecaySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.adsr.decay shouldBe 0.1
+        events[0].data.decay shouldBe 0.1
     }
 
     "decay() works as string extension" {
@@ -29,14 +29,14 @@ class LangDecaySpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.adsr.decay shouldBe 0.1
+        events[0].data.decay shouldBe 0.1
     }
 
     "decay() works in compiled code" {
         val p = StrudelPattern.compile("""note("c").decay("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.adsr.decay shouldBe 0.1
+        events[0].data.decay shouldBe 0.1
     }
 
     "decay() with continuous pattern sets decay correctly" {
@@ -46,12 +46,12 @@ class LangDecaySpec : StringSpec({
 
         events.size shouldBe 4
         // t=0.0: sine(0) = 0.5
-        events[0].data.adsr.decay shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].data.decay shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.25: sine(0.25) = 1.0
-        events[1].data.adsr.decay shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].data.decay shouldBe (1.0 plusOrMinus EPSILON)
         // t=0.5: sine(0.5) = 0.5
-        events[2].data.adsr.decay shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].data.decay shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.75: sine(0.75) = 0.0
-        events[3].data.adsr.decay shouldBe (0.0 plusOrMinus EPSILON)
+        events[3].data.decay shouldBe (0.0 plusOrMinus EPSILON)
     }
 })

@@ -176,11 +176,11 @@ object JsCompatTestData {
         Example("ADSR String", """note("c").adsr("0.1:0.2:0.5:1.0")"""),
 
         // Filters
-        Example("LowPass", """s("saw").lpf(333)"""),
-        Example("HighPass", """s("saw").hpf(444)"""),
-        Example("BandPass", """s("saw").bandf(555)"""),
+        Example("LowPass", """s("saw").lpf(333).resonance(0.3)"""),
+        Example("HighPass", """s("saw").hpf(444).hresonance(0.7)"""),
+        Example("BandPass", """s("saw").bandf(555).bandq(0.6)"""),
         // TODO: notchf does not seem to exist in strudel ... or we need to figure how?
-        Example(SKIP, "Notch", """s("saw").notchf(666)"""),
+        Example(SKIP, "Notch", """s("saw").notchf(666).nresonance(0.4)"""),
 
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),

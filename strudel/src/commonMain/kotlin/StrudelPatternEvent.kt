@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.serialization.Serializable
@@ -18,7 +17,7 @@ data class StrudelPatternEvent(
     /** The duration of the note (in cycles) */
     val dur: Rational,
     /** The voice data */
-    val data: VoiceData,
+    val data: StrudelVoiceData,
     /**
      * Source location chain for live code highlighting
      *
@@ -41,7 +40,7 @@ data class ScheduledVoiceEvent(
     /** Absolute end time (seconds from KlangTime epoch) */
     val endTime: Double,
     /** The voice data being played */
-    val data: VoiceData,
+    val data: StrudelVoiceData,
     /** Source location chain for highlighting */
     val sourceLocations: SourceLocationChain?,
 ) {

@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.math.bjorklund
@@ -114,7 +114,7 @@ internal class EuclideanMorphPattern(
                                 begin = intersectStart,
                                 end = intersectEnd,
                                 dur = intersectEnd - intersectStart,
-                                data = VoiceData.empty.copy(value = 1.asVoiceValue()) // Gate open
+                                data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue()) // Gate open
                             )
                         )
                     }

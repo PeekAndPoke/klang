@@ -2,7 +2,6 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 /**
@@ -228,15 +227,15 @@ val String.d by dslStringExtension { p, args, /* callInfo */ _ -> applyDensity(p
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
 
 private val attackMutation = voiceModifier {
-    copy(adsr = adsr.copy(attack = it?.asDoubleOrNull()))
+    copy(attack = it?.asDoubleOrNull())
 }
 
 private fun applyAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = attackMutation,
-        getValue = { adsr.attack },
-        setValue = { v, _ -> copy(adsr = adsr.copy(attack = v)) },
+        getValue = { attack },
+        setValue = { v, _ -> copy(attack = v) },
     )
 }
 
@@ -259,15 +258,15 @@ val String.attack by dslStringExtension { p, args, /* callInfo */ _ ->
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
 private val decayMutation = voiceModifier {
-    copy(adsr = adsr.copy(decay = it?.asDoubleOrNull()))
+    copy(decay = it?.asDoubleOrNull())
 }
 
 private fun applyDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = decayMutation,
-        getValue = { adsr.decay },
-        setValue = { v, _ -> copy(adsr = adsr.copy(decay = v)) },
+        getValue = { decay },
+        setValue = { v, _ -> copy(decay = v) },
     )
 }
 
@@ -290,15 +289,15 @@ val String.decay by dslStringExtension { p, args, /* callInfo */ _ ->
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
 private val sustainMutation = voiceModifier {
-    copy(adsr = adsr.copy(sustain = it?.asDoubleOrNull()))
+    copy(sustain = it?.asDoubleOrNull())
 }
 
 private fun applySustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = sustainMutation,
-        getValue = { adsr.sustain },
-        setValue = { v, _ -> copy(adsr = adsr.copy(sustain = v)) },
+        getValue = { sustain },
+        setValue = { v, _ -> copy(sustain = v) },
     )
 }
 
@@ -321,15 +320,15 @@ val String.sustain by dslStringExtension { p, args, /* callInfo */ _ ->
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 
 private val releaseMutation = voiceModifier {
-    copy(adsr = adsr.copy(release = it?.asDoubleOrNull()))
+    copy(release = it?.asDoubleOrNull())
 }
 
 private fun applyRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = releaseMutation,
-        getValue = { adsr.release },
-        setValue = { v, _ -> copy(adsr = adsr.copy(release = v)) },
+        getValue = { release },
+        setValue = { v, _ -> copy(release = v) },
     )
 }
 
@@ -355,19 +354,22 @@ private val adsrMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.mapNotNull { d -> d.toDoubleOrNull() } ?: emptyList()
 
-    val newAdsr = AdsrEnvelope(
-        attack = parts.getOrNull(0),
-        decay = parts.getOrNull(1),
-        sustain = parts.getOrNull(2),
-        release = parts.getOrNull(3),
+    copy(
+        attack = parts.getOrNull(0) ?: attack,
+        decay = parts.getOrNull(1) ?: decay,
+        sustain = parts.getOrNull(2) ?: sustain,
+        release = parts.getOrNull(3) ?: release,
     )
-
-    copy(adsr = newAdsr.mergeWith(adsr))
 }
 
 private fun applyAdsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyControlFromParams(args, adsrMutation) { src, ctrl ->
-        src.copy(adsr = ctrl.adsr.mergeWith(src.adsr))
+        src.copy(
+            attack = ctrl.attack ?: src.attack,
+            decay = ctrl.decay ?: src.decay,
+            sustain = ctrl.sustain ?: src.sustain,
+            release = ctrl.release ?: src.release,
+        )
     }
 }
 

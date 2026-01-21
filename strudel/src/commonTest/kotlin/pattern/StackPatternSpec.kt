@@ -4,17 +4,17 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.stack
 
 class StackPatternSpec : StringSpec({
 
     "StackPattern: Direct Instantiation" {
-        val p1 = AtomicPattern(VoiceData.empty.copy(note = "a"))
-        val p2 = AtomicPattern(VoiceData.empty.copy(note = "b"))
+        val p1 = AtomicPattern(StrudelVoiceData.empty.copy(note = "a"))
+        val p2 = AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
         val pattern = StackPattern(listOf(p1, p2))
 
         // We sort by begin in verifyPattern, but notes "a" and "b" both start at 0.0.

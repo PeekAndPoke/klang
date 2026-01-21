@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.struct
@@ -95,7 +95,7 @@ internal class EuclideanPattern private constructor(
                             begin = from,
                             end = to,
                             dur = to - from,
-                            data = VoiceData.empty.copy(value = 1.asVoiceValue())
+                            data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
                         )
                     )
                 }

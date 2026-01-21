@@ -2,8 +2,8 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -58,7 +58,7 @@ private fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>):
         is StrudelPattern -> factorVal
 
         else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -110,7 +110,7 @@ private fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>):
         is StrudelPattern -> factorVal
 
         else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -163,7 +163,7 @@ private fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         else -> {
             // Parse as mini-notation (handles numbers and strings)
             parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-                AtomicPattern(VoiceData.empty.defaultModifier(text))
+                AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
             }
         }
     }

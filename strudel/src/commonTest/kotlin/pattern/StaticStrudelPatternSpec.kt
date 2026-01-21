@@ -4,9 +4,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -20,13 +20,13 @@ class StaticStrudelPatternSpec : StringSpec({
                 begin = 0.0.toRational(),
                 end = 0.5.toRational(),
                 dur = 0.5.toRational(),
-                data = VoiceData.empty.copy(note = "a"),
+                data = StrudelVoiceData.empty.copy(note = "a"),
             ),
             StrudelPatternEvent(
                 begin = 0.5.toRational(),
                 end = 1.0.toRational(),
                 dur = 0.5.toRational(),
-                data = VoiceData.empty.copy(note = "b"),
+                data = StrudelVoiceData.empty.copy(note = "b"),
             )
         )
         val pattern = StaticStrudelPattern(events)
@@ -52,7 +52,7 @@ class StaticStrudelPatternSpec : StringSpec({
                 begin = 0.0.toRational(),
                 end = 1.0.toRational(),
                 dur = 1.0.toRational(),
-                data = VoiceData.empty.copy(note = "kick"),
+                data = StrudelVoiceData.empty.copy(note = "kick"),
             )
         )
         val pattern = StaticStrudelPattern(events)

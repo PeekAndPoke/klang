@@ -2,9 +2,9 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.tones.Tones
@@ -32,7 +32,7 @@ fun String.ucFirst() = replaceFirstChar { it.uppercaseChar() }
  * @param newIndex An optional new index to force (e.g. from n("0")).
  *                 If null, it tries to use existing soundIndex or interpret value as index.
  */
-fun VoiceData.resolveNote(newIndex: Int? = null): VoiceData {
+fun StrudelVoiceData.resolveNote(newIndex: Int? = null): StrudelVoiceData {
     val effectiveScale = scale?.cleanScaleName()
 
     // Determine the effective index:
@@ -418,10 +418,10 @@ val String.accelerate by dslStringExtension { p, args, callInfo -> p.accelerate(
 // -- transpose() ------------------------------------------------------------------------------------------------------
 
 /**
- * Applies transposition logic to a VoiceData instance.
+ * Applies transposition logic to a StrudelVoiceData instance.
  * Accepts either a numeric value (semitones) or a string (interval name).
  */
-fun VoiceData.transpose(amount: Any?): VoiceData {
+fun StrudelVoiceData.transpose(amount: Any?): StrudelVoiceData {
     val semitones: Int
     val intervalName: String
 

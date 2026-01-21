@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
@@ -138,7 +138,7 @@ class MiniNotationParser(
                     // Apply index
                     p = ControlPattern(
                         source = p,
-                        control = AtomicPattern(VoiceData.empty.copy(soundIndex = index)),
+                        control = AtomicPattern(StrudelVoiceData.empty.copy(soundIndex = index)),
                         mapper = { it },
                         combiner = { src, ctrl -> src.copy(soundIndex = ctrl.soundIndex ?: src.soundIndex) }
                     )
@@ -149,7 +149,7 @@ class MiniNotationParser(
                         if (gain != null) {
                             p = ControlPattern(
                                 source = p,
-                                control = AtomicPattern(VoiceData.empty.copy(gain = gain)),
+                                control = AtomicPattern(StrudelVoiceData.empty.copy(gain = gain)),
                                 mapper = { it },
                                 combiner = { src, ctrl -> src.copy(gain = ctrl.gain) }
                             )

@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -62,7 +62,7 @@ internal class RandrunWithControlPattern(
                         begin = eventBegin,
                         end = eventEnd,
                         dur = stepSize,
-                        data = VoiceData.empty.copy(value = value)
+                        data = StrudelVoiceData.empty.copy(value = value)
                     )
                 )
             }

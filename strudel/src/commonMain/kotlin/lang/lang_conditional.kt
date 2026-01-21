@@ -3,8 +3,8 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.ArrangementPattern
@@ -33,7 +33,7 @@ private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -125,7 +125,7 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
