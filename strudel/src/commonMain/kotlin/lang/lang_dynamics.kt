@@ -31,9 +31,7 @@ private fun applyGain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
 
 /** Modifies the gains of a pattern */
 @StrudelDsl
-val StrudelPattern.gain by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyGain(p, args)
-}
+val StrudelPattern.gain by dslPatternExtension { p, args, /* callInfo */ _ -> applyGain(p, args) }
 
 /** Creates a pattern with gains */
 @StrudelDsl
@@ -41,9 +39,7 @@ val gain by dslFunction { args, /* callInfo */ _ -> args.toPattern(gainMutation)
 
 /** Modifies the gains of a pattern defined by a string */
 @StrudelDsl
-val String.gain by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyGain(p, args)
-}
+val String.gain by dslStringExtension { p, args, callInfo -> p.gain(args, callInfo) }
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
@@ -62,9 +58,7 @@ private fun applyPan(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
 
 /** Modifies the pans of a pattern */
 @StrudelDsl
-val StrudelPattern.pan by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPan(p, args)
-}
+val StrudelPattern.pan by dslPatternExtension { p, args, /* callInfo */ _ -> applyPan(p, args) }
 
 /** Creates a pattern with pans */
 @StrudelDsl
@@ -72,9 +66,7 @@ val pan by dslFunction { args, /* callInfo */ _ -> args.toPattern(panMutation) }
 
 /** Modifies the pans of a pattern defined by a string */
 @StrudelDsl
-val String.pan by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyPan(p, args)
-}
+val String.pan by dslStringExtension { p, args, callInfo -> p.pan(args, callInfo) }
 
 // -- unison() ---------------------------------------------------------------------------------------------------------
 
@@ -93,9 +85,7 @@ private fun applyUnison(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 
 /** Modifies the voices of a pattern */
 @StrudelDsl
-val StrudelPattern.unison by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyUnison(p, args)
-}
+val StrudelPattern.unison by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
 
 /** Creates a pattern with unison */
 @StrudelDsl
@@ -103,21 +93,19 @@ val unison by dslFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutat
 
 /** Modifies the voices of a pattern defined by a string */
 @StrudelDsl
-val String.unison by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyUnison(p, args)
-}
+val String.unison by dslStringExtension { p, args, callInfo -> p.unison(args, callInfo) }
 
 /** Alias for [unison] */
 @StrudelDsl
-val StrudelPattern.uni by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
+val StrudelPattern.uni by dslPatternExtension { p, args, callInfo -> p.unison(args, callInfo) }
 
 /** Alias for [unison] */
 @StrudelDsl
-val uni by dslFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
+val uni by dslFunction { args, callInfo -> unison(args, callInfo) }
 
 /** Alias for [unison] on a string */
 @StrudelDsl
-val String.uni by dslStringExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
+val String.uni by dslStringExtension { p, args, callInfo -> p.unison(args, callInfo) }
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
@@ -136,9 +124,7 @@ private fun applyDetune(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 
 /** Sets the oscillator frequency spread (for supersaw) */
 @StrudelDsl
-val StrudelPattern.detune by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDetune(p, args)
-}
+val StrudelPattern.detune by dslPatternExtension { p, args, /* callInfo */ _ -> applyDetune(p, args) }
 
 /** Sets the oscillator frequency spread (for supersaw) */
 @StrudelDsl
@@ -146,9 +132,7 @@ val detune by dslFunction { args, /* callInfo */ _ -> args.toPattern(detuneMutat
 
 /** Sets the oscillator frequency spread (for supersaw) on a string */
 @StrudelDsl
-val String.detune by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyDetune(p, args)
-}
+val String.detune by dslStringExtension { p, args, callInfo -> p.detune(args, callInfo) }
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
@@ -167,9 +151,7 @@ private fun applySpread(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 
 /** Sets the oscillator pan spread (for supersaw) */
 @StrudelDsl
-val StrudelPattern.spread by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applySpread(p, args)
-}
+val StrudelPattern.spread by dslPatternExtension { p, args, /* callInfo */ _ -> applySpread(p, args) }
 
 /** Sets the oscillator pan spread (for supersaw) */
 @StrudelDsl
@@ -177,9 +159,7 @@ val spread by dslFunction { args, /* callInfo */ _ -> args.toPattern(spreadMutat
 
 /** Sets the oscillator pan spread (for supersaw) on a string */
 @StrudelDsl
-val String.spread by dslStringExtension { p, args, /* callInfo */ _ ->
-    applySpread(p, args)
-}
+val String.spread by dslStringExtension { p, args, callInfo -> p.spread(args, callInfo) }
 
 // -- density() --------------------------------------------------------------------------------------------------------
 
@@ -198,9 +178,7 @@ private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
 
 /** Sets the oscillator density (for supersaw) */
 @StrudelDsl
-val StrudelPattern.density by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDensity(p, args)
-}
+val StrudelPattern.density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
 
 /** Sets the oscillator density (for supersaw) */
 @StrudelDsl
@@ -208,21 +186,19 @@ val density by dslFunction { args, /* callInfo */ _ -> args.toPattern(densityMut
 
 /** Sets the oscillator density (for supersaw) on a string */
 @StrudelDsl
-val String.density by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyDensity(p, args)
-}
+val String.density by dslStringExtension { p, args, callInfo -> p.density(args, callInfo) }
 
 /** Alias for [density] */
 @StrudelDsl
-val StrudelPattern.d by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
+val StrudelPattern.d by dslPatternExtension { p, args, callInfo -> p.density(args, callInfo) }
 
 /** Alias for [density] */
 @StrudelDsl
-val d by dslFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
+val d by dslFunction { args, callInfo -> density(args, callInfo) }
 
 /** Alias for [density] on a string */
 @StrudelDsl
-val String.d by dslStringExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
+val String.d by dslStringExtension { p, args, callInfo -> p.density(args, callInfo) }
 
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
 
@@ -241,9 +217,7 @@ private fun applyAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 
 /** Sets the note envelope attack */
 @StrudelDsl
-val StrudelPattern.attack by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyAttack(p, args)
-}
+val StrudelPattern.attack by dslPatternExtension { p, args, /* callInfo */ _ -> applyAttack(p, args) }
 
 /** Sets the note envelope attack */
 @StrudelDsl
@@ -251,9 +225,7 @@ val attack by dslFunction { args, /* callInfo */ _ -> args.toPattern(attackMutat
 
 /** Sets the note envelope attack on a string */
 @StrudelDsl
-val String.attack by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyAttack(p, args)
-}
+val String.attack by dslStringExtension { p, args, callInfo -> p.attack(args, callInfo) }
 
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
@@ -272,9 +244,7 @@ private fun applyDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 
 /** Sets the note envelope decay */
 @StrudelDsl
-val StrudelPattern.decay by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDecay(p, args)
-}
+val StrudelPattern.decay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDecay(p, args) }
 
 /** Sets the note envelope decay */
 @StrudelDsl
@@ -282,9 +252,7 @@ val decay by dslFunction { args, /* callInfo */ _ -> args.toPattern(decayMutatio
 
 /** Sets the note envelope decay on a string */
 @StrudelDsl
-val String.decay by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyDecay(p, args)
-}
+val String.decay by dslStringExtension { p, args, callInfo -> p.decay(args, callInfo) }
 
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
@@ -303,9 +271,7 @@ private fun applySustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
 
 /** Sets the note envelope sustain */
 @StrudelDsl
-val StrudelPattern.sustain by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applySustain(p, args)
-}
+val StrudelPattern.sustain by dslPatternExtension { p, args, /* callInfo */ _ -> applySustain(p, args) }
 
 /** Sets the note envelope sustain */
 @StrudelDsl
@@ -313,9 +279,7 @@ val sustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(sustainMut
 
 /** Sets the note envelope sustain on a string */
 @StrudelDsl
-val String.sustain by dslStringExtension { p, args, /* callInfo */ _ ->
-    applySustain(p, args)
-}
+val String.sustain by dslStringExtension { p, args, callInfo -> p.sustain(args, callInfo) }
 
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 
@@ -334,9 +298,7 @@ private fun applyRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
 
 /** Sets the note envelope release */
 @StrudelDsl
-val StrudelPattern.release by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyRelease(p, args)
-}
+val StrudelPattern.release by dslPatternExtension { p, args, /* callInfo */ _ -> applyRelease(p, args) }
 
 /** Sets the note envelope release */
 @StrudelDsl
@@ -344,9 +306,7 @@ val release by dslFunction { args, /* callInfo */ _ -> args.toPattern(releaseMut
 
 /** Sets the note envelope release on a string */
 @StrudelDsl
-val String.release by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyRelease(p, args)
-}
+val String.release by dslStringExtension { p, args, callInfo -> p.release(args, callInfo) }
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
@@ -375,9 +335,7 @@ private fun applyAdsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
 
 /** Sets the note envelope via string or pattern */
 @StrudelDsl
-val StrudelPattern.adsr by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyAdsr(p, args)
-}
+val StrudelPattern.adsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyAdsr(p, args) }
 
 /** Sets the note envelope via string or pattern */
 @StrudelDsl
@@ -385,9 +343,7 @@ val adsr by dslFunction { args, /* callInfo */ _ -> args.toPattern(adsrMutation)
 
 /** Sets the note envelope via string or pattern on a string */
 @StrudelDsl
-val String.adsr by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyAdsr(p, args)
-}
+val String.adsr by dslStringExtension { p, args, callInfo -> p.adsr(args, callInfo) }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
@@ -409,14 +365,10 @@ private fun applyOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 }
 
 @StrudelDsl
-val StrudelPattern.orbit by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyOrbit(p, args)
-}
+val StrudelPattern.orbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
 
 @StrudelDsl
 val orbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
 
 @StrudelDsl
-val String.orbit by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyOrbit(p, args)
-}
+val String.orbit by dslStringExtension { p, args, callInfo -> p.orbit(args, callInfo) }
