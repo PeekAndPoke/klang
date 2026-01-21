@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import kotlinx.serialization.json.Json
 
@@ -225,11 +226,11 @@ class StrudelVoiceDataSpec : StringSpec({
         val json = Json.encodeToString(StrudelVoiceData.serializer(), data)
 
         json shouldNotBe null
-        json.contains("\"note\":\"c4\"") shouldBe true
-        json.contains("\"freqHz\":440.0") shouldBe true
-        json.contains("\"gain\":0.8") shouldBe true
-        json.contains("\"cutoff\":1000.0") shouldBe true
-        json.contains("\"resonance\":1.5") shouldBe true
+        json shouldContain "\"note\":\"c4\""
+        json shouldContain "\"freqHz\":440"
+        json shouldContain "\"gain\":0.8"
+        json shouldContain "\"cutoff\":1000"
+        json shouldContain "\"resonance\":1.5"
     }
 
     "StrudelVoiceData can be deserialized from JSON" {
