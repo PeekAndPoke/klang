@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -13,27 +14,91 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
  * For example, hurry(2) will make the pattern play twice as fast AND make samples play
  * at double speed (higher pitch).
  *
+ * For static values, applies uniform hurry across the entire pattern.
+ * For control patterns, segments the time range and applies different factors to each segment.
+ *
  * @param source The source pattern to speed up
- * @param factor The speed multiplication factor
+ * @param factorProvider Control value provider for the factor
  */
 internal class HurryPattern(
     val source: StrudelPattern,
-    val factor: Double,
+    val factorProvider: ControlValueProvider,
 ) : StrudelPattern {
+    companion object {
+        /**
+         * Create a HurryPattern with a static factor value.
+         */
+        fun static(source: StrudelPattern, factor: Rational): HurryPattern {
+            return HurryPattern(
+                source = source,
+                factorProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(factor.toDouble()))
+            )
+        }
 
-    private val factorRat = factor.toRational()
-    private val scale = factorRat
+        /**
+         * Create a HurryPattern with a control pattern for the factor.
+         */
+        fun control(source: StrudelPattern, factorPattern: StrudelPattern): HurryPattern {
+            return HurryPattern(
+                source = source,
+                factorProvider = ControlValueProvider.Pattern(factorPattern)
+            )
+        }
+    }
 
     override val weight: Double get() = source.weight
 
     override val steps: Rational? get() = source.steps
 
     override fun estimateCycleDuration(): Rational {
+        // Use static value if available, otherwise use 1.0 as estimate
+        val factor = if (factorProvider is ControlValueProvider.Static) {
+            (factorProvider.value.asDouble ?: 1.0).toRational()
+        } else {
+            Rational.ONE
+        }
+
         val sourceDur = source.estimateCycleDuration()
-        return sourceDur / scale
+        return sourceDur / factor
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        // For static values, we can optimize with a single query
+        if (factorProvider is ControlValueProvider.Static) {
+            val factor = (factorProvider.value.asDouble ?: 1.0).toRational()
+            return queryWithFactor(from, to, ctx, factor)
+        }
+
+        // For control patterns, segment by control events
+        val controlPattern = (factorProvider as? ControlValueProvider.Pattern)?.pattern
+            ?: return queryWithFactor(from, to, ctx, Rational.ONE)
+
+        val factorEvents = controlPattern.queryArcContextual(from, to, ctx)
+        if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
+
+        val result = mutableListOf<StrudelPatternEvent>()
+
+        for (factorEvent in factorEvents) {
+            val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
+            val events = queryWithFactor(factorEvent.begin, factorEvent.end, ctx, factor)
+            result.addAll(events)
+        }
+
+        return result
+    }
+
+    private fun queryWithFactor(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+        factor: Rational,
+    ): List<StrudelPatternEvent> {
+        // If factor is 1.0, just return the source as-is
+        if (factor == Rational.ONE) {
+            return source.queryArcContextual(from, to, ctx)
+        }
+
+        val scale = factor
         val innerFrom = from * scale
         val innerTo = to * scale
 
@@ -47,7 +112,7 @@ internal class HurryPattern(
             if (mappedEnd > from && mappedBegin < to) {
                 // Multiply the speed parameter by the factor
                 val currentSpeed = ev.data.speed ?: 1.0
-                val newSpeed = currentSpeed * factor
+                val newSpeed = currentSpeed * factor.toDouble()
 
                 ev.copy(
                     begin = mappedBegin,

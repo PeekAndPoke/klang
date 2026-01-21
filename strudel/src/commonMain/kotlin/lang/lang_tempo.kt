@@ -459,31 +459,10 @@ private fun applyHurry(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>)
         return pattern
     }
 
-    val factorArg = args.firstOrNull()
+    val factorProvider: ControlValueProvider =
+        args.firstOrNull().asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse the factor argument into a pattern
-    val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
-        is StrudelPattern -> factorVal
-
-        else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have a static value for optimization
-    val staticFactor = factorArg?.value?.asDoubleOrNull()
-
-    return if (staticFactor != null) {
-        // Static path: use the simple HurryPattern
-        if (staticFactor <= 0.0 || staticFactor == 1.0) {
-            pattern
-        } else {
-            HurryPattern(source = pattern, factor = staticFactor)
-        }
-    } else {
-        // Dynamic path: use pattern-controlled hurry
-        HurryPatternWithControl(source = pattern, factorPattern = factorPattern)
-    }
+    return HurryPattern(source = pattern, factorProvider = factorProvider)
 }
 
 /** Speeds up pattern and increases speed parameter by the same factor */
@@ -493,14 +472,10 @@ val hurry by dslFunction { args, /* callInfo */ _ ->
         return@dslFunction silence
     }
 
-    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+    val factorProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(1.0))
     val pattern = args.drop(1).toPattern(defaultModifier)
 
-    if (factor <= 0.0 || factor == 1.0) {
-        pattern
-    } else {
-        HurryPattern(source = pattern, factor = factor)
-    }
+    HurryPattern(source = pattern, factorProvider = factorProvider)
 }
 
 /** Speeds up pattern and increases speed parameter by the same factor */
@@ -520,31 +495,10 @@ private fun applyFastGap(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>
         return pattern
     }
 
-    val factorArg = args.firstOrNull()
+    val factorProvider: ControlValueProvider =
+        args.firstOrNull().asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse the factor argument into a pattern
-    val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
-        is StrudelPattern -> factorVal
-
-        else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have a static value for optimization
-    val staticFactor = factorArg?.value?.asDoubleOrNull()
-
-    return if (staticFactor != null) {
-        // Static path: use the simple FastGapPattern
-        if (staticFactor <= 0.0 || staticFactor == 1.0) {
-            pattern
-        } else {
-            FastGapPattern(source = pattern, factor = staticFactor)
-        }
-    } else {
-        // Dynamic path: use pattern-controlled fastGap
-        FastGapPatternWithControl(source = pattern, factorPattern = factorPattern)
-    }
+    return FastGapPattern(source = pattern, factorProvider = factorProvider)
 }
 
 /** Speeds up pattern like fast, but plays once per cycle with gaps (alias: densityGap) */
@@ -560,7 +514,7 @@ val fastGap by dslFunction { args, /* callInfo */ _ ->
     if (factor <= 0.0 || factor == 1.0) {
         pattern
     } else {
-        FastGapPattern(source = pattern, factor = factor)
+        FastGapPattern.static(source = pattern, factor = factor.toRational())
     }
 }
 

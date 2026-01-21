@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import kotlin.math.floor
@@ -15,16 +16,37 @@ import kotlin.math.floor
  *
  * This is equivalent to compress(0, 1/factor).
  *
+ * For static values, applies uniform fastGap across the entire pattern.
+ * For control patterns, segments the time range and applies different factors to each segment.
+ *
  * @param source The source pattern to compress
- * @param factor The speed/compression factor
+ * @param factorProvider Control value provider for the factor
  */
 internal class FastGapPattern(
     val source: StrudelPattern,
-    val factor: Double,
+    val factorProvider: ControlValueProvider,
 ) : StrudelPattern {
+    companion object {
+        /**
+         * Create a FastGapPattern with a static factor value.
+         */
+        fun static(source: StrudelPattern, factor: Rational): FastGapPattern {
+            return FastGapPattern(
+                source = source,
+                factorProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(factor.toDouble()))
+            )
+        }
 
-    private val factorRat = factor.toRational()
-    private val span = Rational.ONE / factorRat
+        /**
+         * Create a FastGapPattern with a control pattern for the factor.
+         */
+        fun control(source: StrudelPattern, factorPattern: StrudelPattern): FastGapPattern {
+            return FastGapPattern(
+                source = source,
+                factorProvider = ControlValueProvider.Pattern(factorPattern)
+            )
+        }
+    }
 
     override val weight: Double get() = source.weight
 
@@ -35,11 +57,47 @@ internal class FastGapPattern(
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        // For static values, we can optimize with a single query
+        if (factorProvider is ControlValueProvider.Static) {
+            val factor = (factorProvider.value.asDouble ?: 1.0).toRational()
+            return queryWithFactor(from, to, ctx, factor)
+        }
+
+        // For control patterns, segment by control events
+        val controlPattern = (factorProvider as? ControlValueProvider.Pattern)?.pattern
+            ?: return queryWithFactor(from, to, ctx, Rational.ONE)
+
+        val factorEvents = controlPattern.queryArcContextual(from, to, ctx)
+        if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
+
+        val result = mutableListOf<StrudelPatternEvent>()
+
+        for (factorEvent in factorEvents) {
+            val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
+            val events = queryWithFactor(factorEvent.begin, factorEvent.end, ctx, factor)
+            result.addAll(events)
+        }
+
+        return result
+    }
+
+    private fun queryWithFactor(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+        factor: Rational,
+    ): List<StrudelPatternEvent> {
         // Handle edge case where factor <= 0
-        if (factor <= 0.0) {
+        if (factor.toDouble() <= 0.0) {
             return emptyList()
         }
 
+        // If factor is 1.0, just return the source as-is
+        if (factor == Rational.ONE) {
+            return source.queryArcContextual(from, to, ctx)
+        }
+
+        val span = Rational.ONE / factor
         val result = mutableListOf<StrudelPatternEvent>()
 
         // Determine which cycles we need to query
