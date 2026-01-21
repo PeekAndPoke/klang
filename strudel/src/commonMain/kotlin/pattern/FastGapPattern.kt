@@ -37,15 +37,6 @@ internal class FastGapPattern(
             )
         }
 
-        /**
-         * Create a FastGapPattern with a control pattern for the factor.
-         */
-        fun control(source: StrudelPattern, factorPattern: StrudelPattern): FastGapPattern {
-            return FastGapPattern(
-                source = source,
-                factorProvider = ControlValueProvider.Pattern(factorPattern)
-            )
-        }
     }
 
     override val weight: Double get() = source.weight

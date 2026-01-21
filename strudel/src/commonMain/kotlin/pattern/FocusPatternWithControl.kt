@@ -57,10 +57,10 @@ internal class FocusPatternWithControl(
                 val factor = 1.0 / span
                 val startRat = start.toRational()
 
-                val step1 = TimeShiftPattern(source, -startRat.floor())
+                val step1 = TimeShiftPattern.static(source, -startRat.floor())
                 val step2 =
                     TempoModifierPattern.static(source = step1, factor = factor.toRational(), invertPattern = true)
-                val focused = TimeShiftPattern(source = step2, offset = startRat)
+                val focused = TimeShiftPattern.static(source = step2, offset = startRat)
 
                 val events: List<StrudelPatternEvent> =
                     focused.queryArcContextual(overlapBegin, overlapEnd, ctx)

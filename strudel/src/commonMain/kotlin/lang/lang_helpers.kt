@@ -9,6 +9,7 @@ import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import kotlin.jvm.JvmName
@@ -66,7 +67,13 @@ fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): Co
 
     val argDbl = argVal.asDoubleOrNull()
 
-    if (argDbl != null) return ControlValueProvider.Static(StrudelVoiceValue.Num(argDbl))
+    if (argDbl != null) {
+        return ControlValueProvider.Static(StrudelVoiceValue.Num(argDbl))
+    }
+
+    if (argVal is Rational) {
+        return ControlValueProvider.Static(StrudelVoiceValue.Num(argVal.toDouble()))
+    }
 
     val pattern = when (argVal) {
         is StrudelPattern -> argVal

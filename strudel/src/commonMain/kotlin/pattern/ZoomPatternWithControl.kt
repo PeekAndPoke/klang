@@ -51,7 +51,7 @@ internal class ZoomPatternWithControl(
 
                 // Apply zoom: early(start).fast(duration)
                 val zoomed =
-                    TimeShiftPattern(source = inner, offset = start.toRational() * Rational.MINUS_ONE)
+                    TimeShiftPattern.static(source = inner, offset = start.toRational() * Rational.MINUS_ONE)
 
                 val final =
                     TempoModifierPattern.static(zoomed, factor = duration.toRational(), invertPattern = true)

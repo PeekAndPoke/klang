@@ -23,34 +23,29 @@ fun applyTimeShift(
     args: List<StrudelDslArg<Any?>>,
     factor: Rational = 1.0.toRational(),
 ): StrudelPattern {
-    val argVal = args.getOrNull(0)?.value
-
-    return when (args.size) {
-        0 -> pattern
-
-        1 if (argVal is Rational) -> applyTimeShift(
-            pattern = pattern,
-            offset = argVal,
-        )
-
-        1 if (argVal is Number) -> applyTimeShift(
-            pattern = pattern,
-            offset = (argVal.toRational()) * factor,
-        )
-
-        else -> applyTimeShift(
-            pattern = pattern,
-            control = args.toPattern(defaultModifier).mul(factor),
-        )
+    if (args.isEmpty()) {
+        return pattern
     }
-}
 
-private fun applyTimeShift(pattern: StrudelPattern, offset: Rational): StrudelPattern {
-    return TimeShiftPattern(pattern, offset)
-}
+    // Handle direct Rational or Number values
+    val offsetProvider = when (val argVal = args.getOrNull(0)?.value) {
+        is Rational -> {
+            ControlValueProvider.Static(StrudelVoiceValue.Num((argVal * factor).toDouble()))
+        }
 
-private fun applyTimeShift(pattern: StrudelPattern, control: StrudelPattern): StrudelPattern {
-    return TimeShiftPatternWithControl(pattern, control)
+        is Number -> {
+            val offset = argVal.toDouble().toRational() * factor
+            ControlValueProvider.Static(StrudelVoiceValue.Num(offset.toDouble()))
+        }
+
+        else -> {
+            // Pattern case - multiply by factor
+            val controlPattern = args.toPattern(defaultModifier).mul(factor)
+            ControlValueProvider.Pattern(controlPattern)
+        }
+    }
+
+    return TimeShiftPattern(source = pattern, offsetProvider = offsetProvider)
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
