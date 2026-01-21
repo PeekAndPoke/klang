@@ -175,4 +175,21 @@ class LangFastGapSpec : StringSpec({
         events[0].data.note shouldBeEqualIgnoringCase "c"
         events[0].data.gain shouldBe 0.5
     }
+
+    "fastGap() with control pattern" {
+        val p = note("c d").fastGap("2 3")
+        val events = p.queryArc(0.0, 1.0)
+
+        // FastGap with control pattern compresses into first 1/factor of cycle
+        // Verified against JavaScript implementation via JsCompat test
+        events.size shouldBe 2
+    }
+
+    "fastGap() with control pattern in compiled code" {
+        val p = StrudelPattern.compile("""note("c d").fastGap("2 4")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        // Verified against JavaScript implementation via JsCompat test
+        events.size shouldBe 2
+    }
 })

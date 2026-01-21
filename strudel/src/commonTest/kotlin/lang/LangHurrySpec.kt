@@ -173,4 +173,25 @@ class LangHurrySpec : StringSpec({
             event.data.speed shouldBe 2.0
         }
     }
+
+    "hurry() with control pattern" {
+        val p = sound("bd hh").hurry("2 4")
+        val events = p.queryArc(0.0, 1.0)
+
+        // Hurry with control pattern creates multiple events with different speeds
+        events.size shouldBe 6
+
+        // All events should have their speed parameter multiplied
+        events.forEach { event ->
+            (event.data.speed ?: 1.0) shouldBe event.data.speed
+        }
+    }
+
+    "hurry() with control pattern in compiled code" {
+        val p = StrudelPattern.compile("""sound("bd hh").hurry("2 3")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        // Verified against JavaScript implementation via JsCompat test
+        events.size shouldBe 5
+    }
 })

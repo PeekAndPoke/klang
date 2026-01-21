@@ -90,22 +90,28 @@ and category.
   standalone, pattern method,
   string extension)
 - [x] **`compress(start, end)`** - Compresses pattern into timespan (standalone, pattern method, string extension)
-- [ ] **`compressSpan(span)`** - Compresses pattern into span
+- [ ] ~~**`compressSpan(span)`**~~ - **Won't implement**: Not documented, requires TimeSpan/Fraction types not available
+  in KlangScript; use `compress(start, end)` instead
 - [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
-- [ ] **`focusSpan(span)`** - Focus with span parameter
+- [ ] ~~**`focusSpan(span)`**~~ - **Won't implement**: Same reason as compressSpan; use `focus(start, end)` if
+  implemented
 - [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle, now supports control patterns for both
   parameters (pattern method, string extension, typed
   function)
-- [ ] **`zoomArc(arc)`** - Zoom with arc parameter
+- [ ] ~~**`zoomArc(arc)`**~~ - **Won't implement**: Requires Arc type not available in KlangScript; use
+  `zoom(start, end)` instead
 - [x] **`gap(steps)`** - Create gap with n steps, now supports control patterns via slow()
-- [x] **`fastGap(factor)`** - Speeds up with gaps between (standalone, pattern method, string extension, alias:
+- [x] **`fastGap(factor)`** - Speeds up with gaps between, now supports control patterns (standalone, pattern method,
+  string extension, alias:
   densityGap)
 - [ ] **`swingBy(subdivision, offset)`** - Creates swing rhythm
 - [ ] **`swing(subdivision)`** - Swing with default 1/3 offset
-- [x] **`ply(n)`** - Repeats each event n times within its timespan (standalone, pattern method, string extension)
+- [x] **`ply(n)`** - Repeats each event n times within its timespan, now supports control patterns (standalone, pattern
+  method, string extension)
 - [ ] **`plyWith(n, func)`** - Repeats with function applied
 - [ ] **`plyForEach(n, func)`** - Repeats with function applied per repetition
-- [x] **`hurry(factor)`** - Speeds up pattern and multiplies speed parameter (standalone, pattern method, string
+- [x] **`hurry(factor)`** - Speeds up pattern and multiplies speed parameter, now supports control patterns (standalone,
+  pattern method, string
   extension)
 - [ ] **`loopAt(cycles)`** - Fit sample to cycles
 - [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
@@ -550,9 +556,11 @@ and category.
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ~8 missing (16 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `compress`, `ply`,
+- **Time Modification**: ~5 missing, 3 won't implement (16 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
+  `compress`, `ply`,
   `hurry`, `fastGap`, `euclid`,
-  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support)
+  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support; won't
+  implement: `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
   `apply`)
 - **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
@@ -583,7 +591,7 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~74 features remaining
+### Total Estimated: ~71 features remaining (3 marked "won't implement")
 
 ### Completed So Far: ~184 features! 🎉
 

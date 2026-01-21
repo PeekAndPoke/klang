@@ -310,12 +310,31 @@ private fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         return pattern
     }
 
-    val n = args[0].value?.asIntOrNull() ?: 1
-    if (n <= 1) {
-        return pattern
+    val nArg = args.firstOrNull()
+
+    // Parse the n argument into a pattern
+    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
+        is StrudelPattern -> nVal
+
+        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
     }
 
-    return PlyPattern(source = pattern, n = n)
+    // Check if we have a static value for optimization
+    val staticN = nArg?.value?.asIntOrNull()
+
+    return if (staticN != null) {
+        // Static path: use the simple PlyPattern
+        if (staticN <= 1) {
+            pattern
+        } else {
+            PlyPattern(source = pattern, n = staticN)
+        }
+    } else {
+        // Dynamic path: use pattern-controlled ply
+        PlyPatternWithControl(source = pattern, nPattern = nPattern)
+    }
 }
 
 /** Repeats each event n times within its timespan */
@@ -352,12 +371,31 @@ private fun applyHurry(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>)
         return pattern
     }
 
-    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
-    if (factor <= 0.0 || factor == 1.0) {
-        return pattern
+    val factorArg = args.firstOrNull()
+
+    // Parse the factor argument into a pattern
+    val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
+        is StrudelPattern -> factorVal
+
+        else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
     }
 
-    return HurryPattern(source = pattern, factor = factor)
+    // Check if we have a static value for optimization
+    val staticFactor = factorArg?.value?.asDoubleOrNull()
+
+    return if (staticFactor != null) {
+        // Static path: use the simple HurryPattern
+        if (staticFactor <= 0.0 || staticFactor == 1.0) {
+            pattern
+        } else {
+            HurryPattern(source = pattern, factor = staticFactor)
+        }
+    } else {
+        // Dynamic path: use pattern-controlled hurry
+        HurryPatternWithControl(source = pattern, factorPattern = factorPattern)
+    }
 }
 
 /** Speeds up pattern and increases speed parameter by the same factor */
@@ -394,12 +432,31 @@ private fun applyFastGap(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>
         return pattern
     }
 
-    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
-    if (factor <= 0.0 || factor == 1.0) {
-        return pattern
+    val factorArg = args.firstOrNull()
+
+    // Parse the factor argument into a pattern
+    val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
+        is StrudelPattern -> factorVal
+
+        else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
     }
 
-    return FastGapPattern(source = pattern, factor = factor)
+    // Check if we have a static value for optimization
+    val staticFactor = factorArg?.value?.asDoubleOrNull()
+
+    return if (staticFactor != null) {
+        // Static path: use the simple FastGapPattern
+        if (staticFactor <= 0.0 || staticFactor == 1.0) {
+            pattern
+        } else {
+            FastGapPattern(source = pattern, factor = staticFactor)
+        }
+    } else {
+        // Dynamic path: use pattern-controlled fastGap
+        FastGapPatternWithControl(source = pattern, factorPattern = factorPattern)
+    }
 }
 
 /** Speeds up pattern like fast, but plays once per cycle with gaps (alias: densityGap) */

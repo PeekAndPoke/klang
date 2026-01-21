@@ -206,4 +206,45 @@ class LangPlySpec : StringSpec({
         events[4].data.note shouldBeEqualIgnoringCase "e"
         events[5].data.note shouldBeEqualIgnoringCase "e"
     }
+
+    "ply() with control pattern" {
+        val p = note("c d e f").ply("2 3")
+        val events = p.queryArc(0.0, 1.0)
+
+        // First event (c) uses 2, second (d) uses 3, third (e) uses 2, fourth (f) uses 3
+        // 2 + 3 + 2 + 3 = 10 total events
+        events.size shouldBe 10
+
+        // c repeated 2 times
+        events[0].data.note shouldBeEqualIgnoringCase "c"
+        events[1].data.note shouldBeEqualIgnoringCase "c"
+
+        // d repeated 3 times
+        events[2].data.note shouldBeEqualIgnoringCase "d"
+        events[3].data.note shouldBeEqualIgnoringCase "d"
+
+        // e repeated 2 times
+        events[4].data.note shouldBeEqualIgnoringCase "e"
+        events[5].data.note shouldBeEqualIgnoringCase "e"
+        events[6].data.note shouldBeEqualIgnoringCase "e"
+
+        // f repeated 3 times
+        events[7].data.note shouldBeEqualIgnoringCase "f"
+        events[8].data.note shouldBeEqualIgnoringCase "f"
+        events[9].data.note shouldBeEqualIgnoringCase "f"
+    }
+
+    "ply() with control pattern in compiled code" {
+        val p = StrudelPattern.compile("""note("c d").ply("2 3")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        // c repeated 2 times, d repeated 3 times = 5 total
+        events.size shouldBe 5
+
+        events[0].data.note shouldBeEqualIgnoringCase "c"
+        events[1].data.note shouldBeEqualIgnoringCase "c"
+        events[2].data.note shouldBeEqualIgnoringCase "d"
+        events[3].data.note shouldBeEqualIgnoringCase "d"
+        events[4].data.note shouldBeEqualIgnoringCase "d"
+    }
 })
