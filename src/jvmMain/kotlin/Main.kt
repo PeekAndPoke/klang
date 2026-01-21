@@ -9,8 +9,8 @@ import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.pan
-import io.peekandpoke.klang.strudel.lang.ply
 import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.strudel.lang.swingBy
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -117,7 +117,7 @@ private suspend fun helloStrudel() {
 //        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
 
 //        val pattern1 = StrudelPattern.compile(TestTextPatterns.tetris)!!
-        val pattern1 = note("c d e f").ply("2 3")
+        val pattern1 = note("c d e f").swingBy("[0.5 0.0]", 2)
 
 //        val pattern1 = StrudelPattern.compile(
 //            """

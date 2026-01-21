@@ -9,11 +9,8 @@ import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.ControlPattern
-import io.peekandpoke.klang.strudel.pattern.EmptyPattern
+import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
-import io.peekandpoke.klang.strudel.pattern.SequencePattern
 import kotlin.jvm.JvmName
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -62,6 +59,26 @@ data class StrudelDslArg<out T>(
         }
     }
 }
+
+fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): ControlValueProvider {
+    val arg = this
+    val argVal = arg?.value ?: return ControlValueProvider.Static(default)
+
+    val argDbl = argVal.asDoubleOrNull()
+
+    if (argDbl != null) return ControlValueProvider.Static(StrudelVoiceValue.Num(argDbl))
+
+    val pattern = when (argVal) {
+        is StrudelPattern -> argVal
+
+        else -> parseMiniNotation(arg) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    return ControlValueProvider.Pattern(pattern)
+}
+
 
 /** Default modifier for patterns that populates VoiceData.value */
 val defaultModifier: VoiceDataModifier = {

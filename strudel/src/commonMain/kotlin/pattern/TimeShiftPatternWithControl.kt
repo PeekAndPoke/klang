@@ -13,6 +13,10 @@ internal class TimeShiftPatternWithControl(
     val source: StrudelPattern,
     val offsetPattern: StrudelPattern,
 ) : StrudelPattern {
+    companion object {
+        private val epsilon = 1e-7.toRational()
+    }
+
     override val weight: Double get() = source.weight
 
     override val steps: Rational? get() = source.steps
@@ -33,7 +37,8 @@ internal class TimeShiftPatternWithControl(
         val sourceEvents = source.queryArcContextual(extendedFrom, extendedTo, ctx)
         if (sourceEvents.isEmpty()) return emptyList()
 
-        val epsilon = 1e-5.toRational()
+        val fromPlusEps = from + epsilon
+        val toMinusEps = to - epsilon
 
         return sourceEvents.mapNotNull { event ->
             val queryTime = event.begin
@@ -50,7 +55,7 @@ internal class TimeShiftPatternWithControl(
             val mappedEnd = event.end + offset
 
             // Only include events that overlap with the requested range
-            if (mappedEnd > from && mappedBegin < to) {
+            if (mappedEnd > fromPlusEps && mappedBegin < toMinusEps) {
                 event.copy(
                     begin = mappedBegin,
                     end = mappedEnd,

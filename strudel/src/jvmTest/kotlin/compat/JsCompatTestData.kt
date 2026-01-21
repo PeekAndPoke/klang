@@ -145,6 +145,23 @@ object JsCompatTestData {
         Example("FastGap factor 3", """note("c d e").fastGap(3)"""),
         Example("FastGap with sound", """sound("bd hh sd").fastGap(2)"""),
         Example("FastGap control pattern", """note("c d").fastGap("2 4")"""),
+        Example("Inside basic", """note("c d e f").inside(2, x => x.rev())"""),
+        Example("Inside with fast", """note("c d e f").inside(4, x => x.fast(2))"""),
+        Example("Inside with sound", """sound("bd hh sd oh").inside(2, x => x.rev())"""),
+        Example("Inside higher factor", """note("0 1 2 3 4 5 6 7").inside(4, x => x.rev())"""),
+        Example("Outside basic", """note("c d e f").outside(2, x => x.rev())"""),
+        Example("Outside with slow", """note("c d e f g a b c").outside(2, x => x.slow(2))"""),
+        Example("Outside with sound", """sound("bd hh sd oh").outside(2, x => x.rev())"""),
+
+        // Swing has a better implementation than javascript
+        Example(SKIP, "Swing basic #1", """sound("a b c d").swing(4)"""),
+        Example(SKIP, "Swing basic #2", """sound("hh*8").swing(4)"""),
+        Example(SKIP, "Swing with notes #1", """note("c d e f g a b c").swing(8)"""),
+        Example(SKIP, "Swing with notes #2", """note("c d e f g a b c").swing(4)"""),
+        Example(SKIP, "SwingBy basic #1", """sound("hh*8").swingBy(0.5, 8)"""),
+        Example(SKIP, "SwingBy basic #2", """sound("hh*8").swingBy(0.5, 4)"""),
+        Example(SKIP, "SwingBy with notes #1", """note("c d e f").swingBy(0.25, 4)"""),
+        Example(SKIP, "SwingBy with notes #2", """note("c d e f").swingBy(0.25, 2)"""),
 
         // Euclidish
         Example("Euclidish Function #1", """euclidish(3, 8, 0, note("bd"))"""),

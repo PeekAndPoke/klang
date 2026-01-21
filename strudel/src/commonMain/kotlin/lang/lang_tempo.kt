@@ -4,6 +4,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -620,3 +621,117 @@ val StrudelPattern.densityGap by dslPatternExtension { p, args, callInfo -> p.fa
 /** Alias for fastGap */
 @StrudelDsl
 val String.densityGap by dslStringExtension { p, args, callInfo -> p.fastGap(args, callInfo) }
+
+// -- inside() ---------------------------------------------------------------------------------------------------------
+
+/**
+ * Carries out an operation 'inside' a cycle.
+ * Slows the pattern by factor, applies the function, then speeds it back up.
+ * @example note("0 1 2 3").inside(4) { it.rev() }
+ */
+@StrudelDsl
+val StrudelPattern.inside by dslPatternExtension { p, args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslPatternExtension p
+    }
+
+    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+
+    @Suppress("UNCHECKED_CAST")
+    val func: (StrudelPattern) -> StrudelPattern =
+        args[1].value as? (StrudelPattern) -> StrudelPattern ?: return@dslPatternExtension p
+
+    val slowed = p.slow(factor)
+    val transformed = func(slowed)
+
+    transformed.fast(factor)
+}
+
+// -- outside() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Carries out an operation 'outside' a cycle.
+ * Speeds the pattern by factor, applies the function, then slows it back down.
+ * @example note("0 1 2 3").outside(4) { it.rev() }
+ */
+@StrudelDsl
+val StrudelPattern.outside by dslPatternExtension { p, args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslPatternExtension p
+    }
+
+    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+
+    @Suppress("UNCHECKED_CAST")
+    val func: (StrudelPattern) -> StrudelPattern =
+        args[1].value as? (StrudelPattern) -> StrudelPattern ?: return@dslPatternExtension p
+
+    val sped = p.fast(factor)
+    val transformed = func(sped)
+
+    transformed.slow(factor)
+}
+
+// -- swingBy() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Creates a swing or shuffle rhythm by adjusting event timing and duration within subdivisions.
+ *
+ * Divides each cycle into `n` subdivisions. Within each subdivision, events are split into two groups:
+ * - First half: gets (1 + swing) / 2 of the subdivision duration
+ * - Second half: gets (1 - swing) / 2 of the subdivision duration
+ *
+ * This creates natural rhythmic patterns without overlapping events:
+ * - Positive swing (e.g., 1/3): "long-short" pattern (classic swing feel)
+ * - Negative swing (e.g., -1/3): "short-long" pattern (reverse swing)
+ * - Zero swing: Equal durations (no swing)
+ *
+ * @param swing Swing amount (-1 to 1). Controls timing offset and duration ratio
+ * @param n Number of subdivisions per cycle
+ * @example sound("hh*8").swingBy(1/3, 4)  // Classic swing on hi-hats
+ * @example note("c d e f").swingBy(-0.25, 2)  // Reverse swing on notes
+ */
+@StrudelDsl
+val StrudelPattern.swingBy by dslPatternExtension { p, args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslPatternExtension p
+    }
+
+    val swing = args.getOrNull(0)
+        .asControlValueProvider(StrudelVoiceValue.Num(0.0))
+
+    val n = args.getOrNull(1)
+        .asControlValueProvider(StrudelVoiceValue.Num(1.0))
+
+    SwingPattern(source = p, swingProvider = swing, nProvider = n)
+}
+
+@StrudelDsl
+val String.swingBy by dslStringExtension { p, args, callInfo -> p.swingBy(args, callInfo) }
+
+// -- swing() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Creates a swing rhythm with default 1/3 swing amount.
+ *
+ * This is a shorthand for swingBy(1/3, n), creating the classic swing/shuffle feel
+ * where events are played in a "long-short" pattern.
+ *
+ * @param n Number of subdivisions per cycle
+ * @example sound("hh*8").swing(4)  // Classic swing on hi-hats
+ * @example note("c d e f g a b c").swing(2)  // Swing on melody
+ */
+@StrudelDsl
+val StrudelPattern.swing by dslPatternExtension { p, args, /* callInfo */ _ ->
+    if (args.isEmpty()) {
+        return@dslPatternExtension p
+    }
+
+    val nArg = args.getOrNull(0)
+
+    // swing(n) = swingBy(1/3, n)
+    p.swingBy(StrudelDslArg.of(1.0 / 3.0), nArg ?: StrudelDslArg.of(1.0))
+}
+
+@StrudelDsl
+val String.swing by dslStringExtension { p, args, callInfo -> p.swing(args, callInfo) }
