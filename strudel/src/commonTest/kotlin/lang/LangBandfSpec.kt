@@ -9,16 +9,16 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangBandfSpec : StringSpec({
 
-    "bandf() sets VoiceData.bandf and adds FilterDef.BandPass" {
+    "bandf() sets StrudelVoiceData.bandf and converts to FilterDef.BandPass" {
         val p = bandf("1000 500")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events[0].data.bandf shouldBe 1000.0
-        events[0].data.filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe 1000.0
+        events[0].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe 1000.0
 
         events[1].data.bandf shouldBe 500.0
-        events[1].data.filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe 500.0
+        events[1].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe 500.0
     }
 
     "bpf() alias works" {
@@ -34,7 +34,7 @@ class LangBandfSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.bandf shouldBe 1000.0
-        events[0].data.filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe 1000.0
+        events[0].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe 1000.0
     }
 
     "bandf() works as string extension" {
@@ -58,13 +58,16 @@ class LangBandfSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
-        // t=0.0: sine(0) = 0.5
-        events[0].data.filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.25: sine(0.25) = 1.0
-        events[1].data.filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (1.0 plusOrMinus EPSILON)
-        // t=0.5: sine(0.5) = 0.5
-        events[2].data.filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.75: sine(0.75) = 0.0
-        events[3].data.filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (0.0 plusOrMinus EPSILON)
+        // Check flat fields
+        events[0].data.bandf shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].data.bandf shouldBe (1.0 plusOrMinus EPSILON)
+        events[2].data.bandf shouldBe (0.5 plusOrMinus EPSILON)
+        events[3].data.bandf shouldBe (0.0 plusOrMinus EPSILON)
+
+        // Also check converted VoiceData
+        events[0].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (1.0 plusOrMinus EPSILON)
+        events[2].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (0.5 plusOrMinus EPSILON)
+        events[3].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (0.0 plusOrMinus EPSILON)
     }
 })

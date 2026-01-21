@@ -8,13 +8,13 @@ import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.note
 
-class LastOfWithControlPatternSpec : StringSpec({
+class LastOfPatternSpec : StringSpec({
 
-    "LastOfWithControlPattern with n=4 applies transform on last cycle only" {
+    "LastOfPattern with n=4 applies transform on last cycle only" {
         val source = note("a b c")
         val nPattern = AtomicPattern.value(4)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = LastOfWithControlPattern(source, nPattern, transform)
+        val pattern = LastOfPattern(source, nPattern, transform)
 
         // Cycle 0-2: should be original (a, b, c)
         val cycle0 = pattern.queryArc(0.0, 1.0)
@@ -49,11 +49,11 @@ class LastOfWithControlPatternSpec : StringSpec({
         cycle7.all { it.data.note?.lowercase() == "x" } shouldBe true
     }
 
-    "LastOfWithControlPattern with n=1 applies transform every cycle" {
+    "LastOfPattern with n=1 applies transform every cycle" {
         val source = note("a")
         val nPattern = AtomicPattern.value(1)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = LastOfWithControlPattern(source, nPattern, transform)
+        val pattern = LastOfPattern(source, nPattern, transform)
 
         // Every cycle should be transformed
         val cycle0 = pattern.queryArc(0.0, 1.0)
@@ -69,11 +69,11 @@ class LastOfWithControlPatternSpec : StringSpec({
         cycle2[0].data.note shouldBeEqualIgnoringCase "x"
     }
 
-    "LastOfWithControlPattern with n=2 alternates original and transform" {
+    "LastOfPattern with n=2 alternates original and transform" {
         val source = note("a b")
         val nPattern = AtomicPattern.value(2)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = LastOfWithControlPattern(source, nPattern, transform)
+        val pattern = LastOfPattern(source, nPattern, transform)
 
         // Cycle 0: original
         val cycle0 = pattern.queryArc(0.0, 1.0)
@@ -98,11 +98,11 @@ class LastOfWithControlPatternSpec : StringSpec({
         cycle3.all { it.data.note?.lowercase() == "x" } shouldBe true
     }
 
-    "LastOfWithControlPattern with n=3 applies transform on cycle 2, 5, 8, etc." {
+    "LastOfPattern with n=3 applies transform on cycle 2, 5, 8, etc." {
         val source = note("a")
         val nPattern = AtomicPattern.value(3)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = LastOfWithControlPattern(source, nPattern, transform)
+        val pattern = LastOfPattern(source, nPattern, transform)
 
         // Cycle 0: original (position 0)
         val cycle0 = pattern.queryArc(0.0, 1.0)
@@ -129,12 +129,12 @@ class LastOfWithControlPatternSpec : StringSpec({
         cycle5[0].data.note shouldBeEqualIgnoringCase "x"
     }
 
-    "LastOfWithControlPattern with static n values across different cycles" {
+    "LastOfPattern with static n values across different cycles" {
         val source = note("a")
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
 
         // Test with n=2
-        val pattern2 = LastOfWithControlPattern(source, AtomicPattern.value(2), transform)
+        val pattern2 = LastOfPattern(source, AtomicPattern.value(2), transform)
 
         // With n=2: cycle 0 position 0 (original), cycle 1 position 1/last (transformed)
         val cycle0_n2 = pattern2.queryArc(0.0, 1.0)
@@ -144,7 +144,7 @@ class LastOfWithControlPatternSpec : StringSpec({
         cycle1_n2[0].data.note shouldBeEqualIgnoringCase "x"
 
         // Test with n=3
-        val pattern3 = LastOfWithControlPattern(source, AtomicPattern.value(3), transform)
+        val pattern3 = LastOfPattern(source, AtomicPattern.value(3), transform)
 
         // With n=3: cycles 0,1 original, cycle 2 transformed
         val cycle0_n3 = pattern3.queryArc(0.0, 1.0)
@@ -157,31 +157,31 @@ class LastOfWithControlPatternSpec : StringSpec({
         cycle2_n3[0].data.note shouldBeEqualIgnoringCase "x"
     }
 
-    "LastOfWithControlPattern with n=0 produces no events" {
+    "LastOfPattern with n=0 produces no events" {
         val source = note("a")
         val nPattern = AtomicPattern.value(0)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = LastOfWithControlPattern(source, nPattern, transform)
+        val pattern = LastOfPattern(source, nPattern, transform)
 
         val events = pattern.queryArc(0.0, 1.0)
         events.size shouldBe 0
     }
 
-    "LastOfWithControlPattern with negative n produces no events" {
+    "LastOfPattern with negative n produces no events" {
         val source = note("a")
         val nPattern = AtomicPattern.value(-3)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = LastOfWithControlPattern(source, nPattern, transform)
+        val pattern = LastOfPattern(source, nPattern, transform)
 
         val events = pattern.queryArc(0.0, 1.0)
         events.size shouldBe 0
     }
 
-    "LastOfWithControlPattern handles negative cycles correctly" {
+    "LastOfPattern handles negative cycles correctly" {
         val source = note("a")
         val nPattern = AtomicPattern.value(3)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = LastOfWithControlPattern(source, nPattern, transform)
+        val pattern = LastOfPattern(source, nPattern, transform)
 
         // Cycle -1 should be transformed (position 2, last of group)
         val cycleM1 = pattern.queryArc(-1.0, 0.0)

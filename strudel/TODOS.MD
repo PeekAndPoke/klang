@@ -89,22 +89,34 @@ and category.
 - [x] **`euclidLegatoRot(pulses, steps, rotation)`** - Legato Euclidean with rotation, now supports control patterns (
   standalone, pattern method,
   string extension)
-- [ ] **`compress(start, end)`** - Compresses pattern into timespan
-- [ ] **`compressSpan(span)`** - Compresses pattern into span
-- [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
-- [ ] **`focusSpan(span)`** - Focus with span parameter
+- [x] **`compress(start, end)`** - Compresses pattern into timespan, now supports control patterns for both parameters (
+  standalone, pattern method, string extension)
+- [ ] ~~**`compressSpan(span)`**~~ - **Won't implement**: Not documented, requires TimeSpan/Fraction types not available
+  in KlangScript; use `compress(start, end)` instead
+- [x] **`focus(start, end)`** - Like compress but keeps cycle timing, now supports control patterns for both
+  parameters (
+  standalone, pattern method, string extension)
+- [ ] ~~**`focusSpan(span)`**~~ - **Won't implement**: Same reason as compressSpan; use `focus(start, end)` if
+  implemented
 - [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle, now supports control patterns for both
   parameters (pattern method, string extension, typed
   function)
-- [ ] **`zoomArc(arc)`** - Zoom with arc parameter
+- [ ] ~~**`zoomArc(arc)`**~~ - **Won't implement**: Requires Arc type not available in KlangScript; use
+  `zoom(start, end)` instead
 - [x] **`gap(steps)`** - Create gap with n steps, now supports control patterns via slow()
-- [ ] **`fastGap(factor)`** - Speeds up with gaps between
-- [ ] **`swingBy(subdivision, offset)`** - Creates swing rhythm
-- [ ] **`swing(subdivision)`** - Swing with default 1/3 offset
-- [ ] **`ply(n)`** - Repeats each event n times
+- [x] **`fastGap(factor)`** - Speeds up with gaps between, now supports control patterns (standalone, pattern method,
+  string extension, alias:
+  densityGap)
+- [x] **`swingBy(swing, n)`** - Creates swing/shuffle rhythm with adjustable timing and duration (custom implementation:
+  long-short or short-long patterns based on positive/negative swing values, no overlaps)
+- [x] **`swing(n)`** - Swing with default 1/3 swing amount (custom implementation using swingBy)
+- [x] **`ply(n)`** - Repeats each event n times within its timespan, now supports control patterns (standalone, pattern
+  method, string extension)
 - [ ] **`plyWith(n, func)`** - Repeats with function applied
 - [ ] **`plyForEach(n, func)`** - Repeats with function applied per repetition
-- [ ] **`hurry(factor)`** - Speeds up and shortens events
+- [x] **`hurry(factor)`** - Speeds up pattern and multiplies speed parameter, now supports control patterns (standalone,
+  pattern method, string
+  extension)
 - [ ] **`loopAt(cycles)`** - Fit sample to cycles
 - [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
 
@@ -127,6 +139,7 @@ and category.
 - [ ] **`within(start, end, func)`** - Apply function within time range
 - [ ] **`brak()`** - Make every other cycle syncopated
 - [ ] **`inv()` / `invert()`** - Invert pattern structure
+- [ ] **`off`** - https://strudel.cc/workshop/pattern-effects/#pattern-effects
 
 ### Pattern Picking & Selection ⭐⭐⭐
 
@@ -161,6 +174,7 @@ and category.
 
 - [x] **`note()`** - Set note values
 - [x] **`n()`** - Set note index or sample number
+- [ ] **`freq()`** - Set frequencies in hz
 - [x] **`scale()`** - Set scale for note resolution
 - [x] **`sound()` / `s()`** - Set sound/sample bank
 - [x] **`bank()`** - Set sample bank
@@ -297,8 +311,10 @@ and category.
 - [ ] **`iterBack(subdivisions)`** - Plays subdivisions in reverse (alias: `iterback`)
 - [ ] **`linger(fraction)`** - Selects and repeats pattern fraction
 - [ ] **`ribbon(offset, cycles)`** - Loops pattern section (alias: `rib`)
-- [ ] **`inside(cycles, operation)`** - Applies operation within cycle
-- [ ] **`outside(cycles, operation)`** - Applies operation outside cycle
+- [x] **`inside(factor, operation)`** - Applies operation within cycle (slows pattern, applies function, then speeds
+  back up)
+- [x] **`outside(factor, operation)`** - Applies operation outside cycle (speeds pattern, applies function, then slows
+  back down)
 - [ ] **`stepcat(...timepats)`** - Concatenate patterns proportionally (aliases: `timecat`, `timeCat`, `s_cat`)
 - [ ] **`stepalt(...groups)`** - Alternate between pattern groups (alias: `s_alt`)
 - [ ] **`echo(times, delay, decay)`** - Echo with velocity decay (alias: `stut`)
@@ -548,11 +564,14 @@ and category.
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ~12 missing (12 completed with control pattern support: `fast`, `slow`, `early`, `late`, `gap`,
-  `zoom`, `euclid`,
-  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`)
-- **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
-  `apply`)
+- **Time Modification**: ~3 missing, 3 won't implement (18 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
+  `compress`, `ply`,
+  `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`,
+  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support; won't
+  implement: `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
+- **Pattern Operations**: ~9 missing (4 completed: `rev`, `palindrome`, `inside`, `outside`)
+- **Pattern Transformation**: ~11 missing (7 completed: `struct`, `mask`, `superimpose`, `layer`, `apply`, `structAll`,
+  `maskAll`)
 - **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
@@ -581,9 +600,9 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~78 features remaining
+### Total Estimated: ~67 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~180 features! 🎉
+### Completed So Far: ~188 features! 🎉
 
 **Major achievements:**
 

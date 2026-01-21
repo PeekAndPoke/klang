@@ -1,10 +1,11 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.struct
@@ -23,30 +24,79 @@ import kotlin.math.min
  * This pattern acts as a gate (`struct`). It only allows the inner pattern to play
  * during the active steps of the Euclidean rhythm.
  * Events are strictly clipped to the step duration to ensure the rhythmic structure is preserved.
+ *
+ * @param inner The pattern to apply the Euclidean rhythm to
+ * @param pulsesProvider Control value provider for the number of pulses
+ * @param stepsProvider Control value provider for the number of steps
+ * @param rotationProvider Control value provider for rotation offset (optional)
+ * @param legato If true, pulses are held until the next pulse (no gaps)
  */
-internal class EuclideanPattern private constructor(
+@Suppress("DuplicatedCode")
+internal class EuclideanPattern(
     val inner: StrudelPattern,
-    val nPulses: Int,
-    val nSteps: Int,
-    val nRotation: Int,
+    val pulsesProvider: ControlValueProvider,
+    val stepsProvider: ControlValueProvider,
+    val rotationProvider: ControlValueProvider?,
+    val legato: Boolean = false,
 ) : StrudelPattern {
 
     override val weight: Double get() = inner.weight
 
-    override val steps: Rational get() = nSteps.toRational()
+    override val steps: Rational?
+        get() {
+            return if (stepsProvider is ControlValueProvider.Static) {
+                (stepsProvider.value.asInt ?: 0).toRational()
+            } else {
+                inner.steps
+            }
+        }
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 
-    // JS Implementation calls: rotate(bjorklund(...), -rotation)
-    // We must replicate JS rotate behavior which relies on Array.slice behavior for out-of-bounds indices
-    private val rhythm = rotateJs(bjorklundStrudel(nPulses, nSteps), -nRotation)
-
     companion object {
         /**
-         * Creates a standard Euclidean Pattern (gated).
+         * Create a EuclideanPattern with static values.
+         */
+        fun static(
+            inner: StrudelPattern,
+            pulses: Int,
+            steps: Int,
+            rotation: Int = 0,
+            legato: Boolean = false,
+        ): EuclideanPattern {
+            return EuclideanPattern(
+                inner = inner,
+                pulsesProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(pulses.toDouble())),
+                stepsProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(steps.toDouble())),
+                rotationProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(rotation.toDouble())),
+                legato = legato
+            )
+        }
+
+        /**
+         * Create a EuclideanPattern with control patterns.
+         */
+        fun control(
+            inner: StrudelPattern,
+            pulsesPattern: StrudelPattern,
+            stepsPattern: StrudelPattern,
+            rotationPattern: StrudelPattern?,
+            legato: Boolean = false,
+        ): EuclideanPattern {
+            return EuclideanPattern(
+                inner = inner,
+                pulsesProvider = ControlValueProvider.Pattern(pulsesPattern),
+                stepsProvider = ControlValueProvider.Pattern(stepsPattern),
+                rotationProvider = rotationPattern?.let { ControlValueProvider.Pattern(it) },
+                legato = legato
+            )
+        }
+
+        /**
+         * Creates a standard Euclidean Pattern (gated) - legacy method for internal use.
          * Returns the inner pattern if inputs are invalid (e.g. steps <= 0).
          */
-        fun create(
+        internal fun create(
             inner: StrudelPattern,
             pulses: Int,
             steps: Int,
@@ -56,18 +106,30 @@ internal class EuclideanPattern private constructor(
             // pulses < 0 is valid (inversion)
             // pulses > steps is valid (returns all 1s)
 
-            return EuclideanPattern(inner, pulses, steps, rotation)
+            return static(inner, pulses, steps, rotation, legato = false)
         }
 
         /**
-         * Creates a Legato Euclidean Pattern.
+         * Creates a Legato Euclidean Pattern - legacy method for internal use.
          * In this version, pulses are held until the next pulse (no gaps).
          */
-        fun createLegato(
+        internal fun createLegato(
             inner: StrudelPattern,
             pulses: Int,
             steps: Int,
             rotation: Int = 0,
+        ): StrudelPattern {
+            return static(inner, pulses, steps, rotation, legato = true)
+        }
+
+        /**
+         * Internal implementation for static legato euclidean pattern.
+         */
+        private fun createLegatoStatic(
+            inner: StrudelPattern,
+            pulses: Int,
+            steps: Int,
+            rotation: Int,
         ): StrudelPattern {
             if (pulses <= 0 || steps <= 0) return EmptyPattern
 
@@ -95,7 +157,7 @@ internal class EuclideanPattern private constructor(
                             begin = from,
                             end = to,
                             dur = to - from,
-                            data = VoiceData.empty.copy(value = 1.asVoiceValue())
+                            data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
                         )
                     )
                 }
@@ -151,20 +213,18 @@ internal class EuclideanPattern private constructor(
 
         private fun bjorklundStrudel(pulses: Int, steps: Int): List<Int> {
             val k = abs(pulses)
-            val n = steps
-            if (n <= 0) return emptyList()
+            if (steps <= 0) return emptyList()
 
             // Calculate base pattern
-            val basePattern = if (k >= n) {
-                List(n) { 1 }
+            val basePattern = if (k >= steps) {
+                List(steps) { 1 }
             } else {
-                val ons = k
-                val offs = n - k
+                val offs = steps - k
 
-                val ones = List(ons) { listOf(1) }
+                val ones = List(k) { listOf(1) }
                 val zeros = List(offs) { listOf(0) }
 
-                val result = recursiveBjorklund(ons, offs, ones, zeros)
+                val result = recursiveBjorklund(k, offs, ones, zeros)
                 result.first.flatten() + result.second.flatten()
             }
 
@@ -178,13 +238,144 @@ internal class EuclideanPattern private constructor(
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        // Check if all values are static - if so, apply directly to the whole range
+        val isAllStatic = pulsesProvider is ControlValueProvider.Static &&
+                stepsProvider is ControlValueProvider.Static &&
+                (rotationProvider == null || rotationProvider is ControlValueProvider.Static)
+
+        if (isAllStatic) {
+            val pulses = pulsesProvider.value.asInt ?: 0
+            val steps = stepsProvider.value.asInt ?: 0
+            val rotation = rotationProvider?.value?.asInt ?: 0
+
+            return applyEuclideanRhythm(from, to, ctx, pulses, steps, rotation)
+        }
+
+        // At least one parameter is a pattern - need to sample values and find overlaps
+        // We'll query a conservative range and find combinations
+        val pulsesEvents = when (pulsesProvider) {
+            is ControlValueProvider.Static -> {
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = pulsesProvider.value)
+                    )
+                )
+            }
+
+            is ControlValueProvider.Pattern -> pulsesProvider.pattern.queryArcContextual(from, to, ctx)
+        }
+
+        val stepsEvents = when (stepsProvider) {
+            is ControlValueProvider.Static -> {
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = stepsProvider.value)
+                    )
+                )
+            }
+
+            is ControlValueProvider.Pattern -> stepsProvider.pattern.queryArcContextual(from, to, ctx)
+        }
+
+        val rotationEvents = when (rotationProvider) {
+            is ControlValueProvider.Static -> {
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = rotationProvider.value),
+                    )
+                )
+            }
+
+            is ControlValueProvider.Pattern -> rotationProvider.pattern.queryArcContextual(from, to, ctx)
+            null -> {
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(
+                            value = StrudelVoiceValue.Num(0.0),
+                        )
+                    )
+                )
+            }
+        }
+
+        if (pulsesEvents.isEmpty() || stepsEvents.isEmpty() || rotationEvents.isEmpty()) {
+            return emptyList()
+        }
+
+        val result = mutableListOf<StrudelPatternEvent>()
+
+        // Find all overlapping combinations
+        for (pulsesEvent in pulsesEvents) {
+            for (stepsEvent in stepsEvents) {
+                for (rotationEvent in rotationEvents) {
+                    val overlapBegin: Rational =
+                        maxOf(pulsesEvent.begin, stepsEvent.begin, rotationEvent.begin)
+
+                    val overlapEnd: Rational =
+                        minOf(pulsesEvent.end, stepsEvent.end, rotationEvent.end)
+
+                    if (overlapEnd <= overlapBegin) continue
+
+                    val pulses = pulsesEvent.data.value?.asInt ?: 0
+                    val steps = stepsEvent.data.value?.asInt ?: 0
+                    val rotation = rotationEvent.data.value?.asInt ?: 0
+
+                    val events: List<StrudelPatternEvent> =
+                        applyEuclideanRhythm(overlapBegin, overlapEnd, ctx, pulses, steps, rotation)
+
+                    result.addAll(events)
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun applyEuclideanRhythm(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+        pulses: Int,
+        steps: Int,
+        rotation: Int,
+    ): List<StrudelPatternEvent> {
+        return if (legato) {
+            queryLegatoStatic(from, to, ctx, pulses, steps, rotation)
+        } else {
+            queryStatic(from, to, ctx, pulses, steps, rotation)
+        }
+    }
+
+    private fun queryStatic(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+        pulses: Int,
+        steps: Int,
+        rotation: Int,
+    ): List<StrudelPatternEvent> {
+        if (steps <= 0 || steps < abs(pulses)) return emptyList()
+
         val events = mutableListOf<StrudelPatternEvent>()
+        val rhythm = rotateJs(bjorklundStrudel(pulses, steps), -rotation)
 
         val startCycle = from.floor().toInt()
         val endCycle = to.ceil().toInt()
 
         // EXACT step duration using rational arithmetic
-        val stepDuration = Rational.ONE / Rational(nSteps)
+        val stepDuration = Rational.ONE / Rational(steps)
 
         for (cycle in startCycle until endCycle) {
             val cycleOffset = Rational(cycle)
@@ -216,5 +407,17 @@ internal class EuclideanPattern private constructor(
         }
 
         return events
+    }
+
+    private fun queryLegatoStatic(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+        pulses: Int,
+        steps: Int,
+        rotation: Int,
+    ): List<StrudelPatternEvent> {
+        val legatoPattern = createLegatoStatic(inner, pulses, steps, rotation)
+        return legatoPattern.queryArcContextual(from, to, ctx)
     }
 }

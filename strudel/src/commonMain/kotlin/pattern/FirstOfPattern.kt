@@ -19,7 +19,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  * @param nPattern The control pattern determining the cycle group size
  * @param transform The transformation function to apply on first cycles
  */
-internal class FirstOfWithControlPattern(
+internal class FirstOfPattern(
     val source: StrudelPattern,
     val nPattern: StrudelPattern,
     val transform: (StrudelPattern) -> StrudelPattern,

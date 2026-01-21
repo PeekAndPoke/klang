@@ -20,6 +20,7 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.ScheduledVoiceEvent
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
@@ -95,10 +96,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     private fun scheduleHighlight(event: ScheduledVoiceEvent) {
         // console.log("Voice scheduled:", event.startTime, event.endTime, Date.now())
 
-        // Highlight in editor
-        val location = event.sourceLocations?.innermost
-
-        if (location != null) {
+        fun doIt(location: SourceLocation) {
             val now = Date.now()
             // few ms early for better visuals
             val startFromNowMs = maxOf(1.0, (event.startTimeMs - now) - 25.0)
@@ -131,6 +129,9 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
         }
+
+        // Highlight in editor
+        event.sourceLocations?.innermost?.let { doIt(it) }
     }
 
     private fun onPlay() {

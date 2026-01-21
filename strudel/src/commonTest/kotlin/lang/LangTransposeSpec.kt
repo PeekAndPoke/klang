@@ -4,9 +4,9 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 
 class LangTransposeSpec : StringSpec({
 
@@ -57,8 +57,8 @@ class LangTransposeSpec : StringSpec({
 
     "debug: VoiceData.transpose with intervals from 'note'" {
         // Test that VoiceData.transpose works correctly with interval strings
-        val c2 = VoiceData.empty.copy(note = "C2")
-        val c3 = VoiceData.empty.copy(note = "C3")
+        val c2 = StrudelVoiceData.empty.copy(note = "C2")
+        val c3 = StrudelVoiceData.empty.copy(note = "C3")
 
         c2.transpose("1P").note shouldBe "C2"
         c3.transpose("1P").note shouldBe "C3"
@@ -75,8 +75,8 @@ class LangTransposeSpec : StringSpec({
 
     "debug: VoiceData.transpose with intervals from 'value'" {
         // Test that VoiceData.transpose works correctly with interval strings
-        val c2 = VoiceData.empty.copy(value = "C2".asVoiceValue())
-        val c3 = VoiceData.empty.copy(value = "C3".asVoiceValue())
+        val c2 = StrudelVoiceData.empty.copy(value = "C2".asVoiceValue())
+        val c3 = StrudelVoiceData.empty.copy(value = "C3".asVoiceValue())
 
         c2.transpose("1P").note shouldBe "C2"
         c3.transpose("1P").note shouldBe "C3"

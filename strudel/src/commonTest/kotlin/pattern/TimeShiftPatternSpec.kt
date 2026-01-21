@@ -12,7 +12,7 @@ class TimeShiftPatternSpec : StringSpec({
     "TimeShiftPattern shifts events forward" {
         val source = note("a") // Starts at 0, ends at 1
         val shift = 0.5.toRational() // 0.5
-        val pattern = TimeShiftPattern(source, shift)
+        val pattern = TimeShiftPattern.static(source, shift)
 
         val events = pattern.queryArc(0.0, 2.0)
         events.size shouldBe 3
@@ -27,7 +27,7 @@ class TimeShiftPatternSpec : StringSpec({
     "TimeShiftPattern shifts events backward" {
         val source = note("a")
         val shift = (-0.25).toRational()
-        val pattern = TimeShiftPattern(source, shift)
+        val pattern = TimeShiftPattern.static(source, shift)
 
         val events = pattern.queryArc(-1.0, 1.0)
         events.size shouldBe 3

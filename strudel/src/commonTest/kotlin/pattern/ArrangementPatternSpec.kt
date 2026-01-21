@@ -5,17 +5,17 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.arrange
 import io.peekandpoke.klang.strudel.lang.note
 
 class ArrangementPatternSpec : StringSpec({
 
     "ArrangementPattern: Direct Instantiation" {
-        val p1 = AtomicPattern(VoiceData.empty.copy(note = "a"))
-        val p2 = AtomicPattern(VoiceData.empty.copy(note = "b"))
+        val p1 = AtomicPattern(StrudelVoiceData.empty.copy(note = "a"))
+        val p2 = AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
         // Arrange p1 for 2 cycles, then p2 for 1 cycle. Total = 3 cycles.
         val pattern = ArrangementPattern(listOf(2.0 to p1, 1.0 to p2))
 

@@ -21,7 +21,7 @@ object TestKotlinPatterns {
             .filterWhen { it >= 16 }
 //            .struct("x(5,8,2)")
             .orbit(0).gain(0.375)
-            .pan(sine2.slow(48).range(-0.5, 0.5).flipSign())
+            .pan(sine.slow(48).range(0.3, 0.7).flipSign())
             .delay(0.2).delaytime(0.4).delayfeedback(0.1)
             .room(0.2).rsize(0.1)
             .clip(0.3)
@@ -47,7 +47,7 @@ object TestKotlinPatterns {
             .spread(0.5).unison(sine.range(4, 12).slow(32))
             .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
             .orbit(2).gain(0.55)
-            .pan(sine2.slow(48).range(-0.5, 0.5))
+            .pan(sine.slow(48).range(0.3, 0.7))
             .adsr("0.01:0.3:0.4:0.5")
 //            .lpf(4000)
             .room(0.02).rsize(0.5)

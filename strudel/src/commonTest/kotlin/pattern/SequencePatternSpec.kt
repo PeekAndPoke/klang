@@ -6,17 +6,17 @@ import io.kotest.matchers.collections.shouldBeSameSizeAs
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.seq
 
 class SequencePatternSpec : StringSpec({
 
     "SequencePattern: Direct Instantiation" {
-        val p1 = AtomicPattern(VoiceData.empty.copy(note = "a"))
-        val p2 = AtomicPattern(VoiceData.empty.copy(note = "b"))
+        val p1 = AtomicPattern(StrudelVoiceData.empty.copy(note = "a"))
+        val p2 = AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
         val pattern = SequencePattern(listOf(p1, p2))
 
         verifyPattern(pattern, 2) { i, note, begin, dur ->

@@ -12,7 +12,7 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     // Equal Power Panning
     // Input: -1.0 (Left) .. 1.0 (Right)
     // Map to: 0.0 .. PI/2
-    val panNorm = (pan.coerceIn(-1.0, 1.0) + 1.0) * 0.5
+    val panNorm = pan.coerceIn(0.0, 1.0)
     val panAngle = panNorm * (PI / 2.0)
 
     val gainL = cos(panAngle) * gain

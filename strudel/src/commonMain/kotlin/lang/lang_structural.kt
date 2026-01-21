@@ -2,12 +2,12 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.VoiceValue
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
@@ -145,7 +145,7 @@ private fun applyArrange(args: List<StrudelDslArg<Any?>>): StrudelPattern {
                 val pat = when (val patVal = argVal[1]) {
                     is StrudelPattern -> patVal
                     else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(VoiceData.empty.defaultModifier(text))
+                        AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
                     }
                 }
 
@@ -156,7 +156,7 @@ private fun applyArrange(args: List<StrudelDslArg<Any?>>): StrudelPattern {
                 val pat = when (val patVal = argVal[0]) {
                     is StrudelPattern -> patVal
                     else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(VoiceData.empty.defaultModifier(text))
+                        AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
                     }
                 }
 
@@ -511,7 +511,7 @@ val polymeterSteps by dslFunction { args, /* callInfo */ _ ->
 @StrudelDsl
 val pure by dslFunction { args, /* callInfo */ _ ->
     val value = args.getOrNull(0)?.value
-    AtomicPattern(VoiceData.empty.copy(value = value?.asVoiceValue()))
+    AtomicPattern(StrudelVoiceData.empty.copy(value = value?.asVoiceValue()))
 }
 
 // -- struct() ---------------------------------------------------------------------------------------------------------
@@ -523,7 +523,7 @@ private fun applyStruct(source: StrudelPattern, structArg: StrudelDslArg<Any?>?)
         is StrudelPattern -> structVal
 
         else -> parseMiniNotation(input = structArg) { text, _ ->
-            AtomicPattern(VoiceData.empty.copy(note = text))
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text))
         }
     }
 
@@ -564,7 +564,7 @@ private fun applyStructAll(source: StrudelPattern, structArg: StrudelDslArg<Any?
         is StrudelPattern -> structVal
 
         else -> parseMiniNotation(input = structArg) { text, _ ->
-            AtomicPattern(VoiceData.empty.copy(note = text))
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text))
         }
     }
 
@@ -608,7 +608,7 @@ private fun applyMask(source: StrudelPattern, maskArg: StrudelDslArg<Any?>?): St
         is StrudelPattern -> maskVal
 
         else -> parseMiniNotation(input = maskArg) { text, _ ->
-            AtomicPattern(VoiceData.empty.copy(note = text))
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text))
         }
     }
 
@@ -650,7 +650,7 @@ private fun applyMaskAll(source: StrudelPattern, maskArg: StrudelDslArg<Any?>?):
         is StrudelPattern -> maskVal
 
         else -> parseMiniNotation(input = maskArg) { text, _ ->
-            AtomicPattern(VoiceData.empty.copy(note = text))
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text))
         }
     }
 
@@ -862,44 +862,10 @@ val String.apply by dslStringExtension { p, args, callInfo -> p.apply(args, call
 // -- zoom() -----------------------------------------------------------------------------------------------------------
 
 private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val startArg = args.getOrNull(0)
-    val startVal = startArg?.value
-    val endArg = args.getOrNull(1)
-    val endVal = endArg?.value
+    val startProvider = args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(0.0))
+    val endProvider = args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse the start argument into a pattern
-    val startPattern: StrudelPattern = when (startVal) {
-        is StrudelPattern -> startVal
-
-        else -> parseMiniNotation(startArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Parse the end argument into a pattern
-    val endPattern: StrudelPattern = when (val endVal = endArg?.value) {
-        is StrudelPattern -> endVal
-
-        else -> parseMiniNotation(endArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have static values for optimization
-    val staticStart = startVal?.asDoubleOrNull()
-    val staticEnd = endVal?.asDoubleOrNull()
-
-    return if (staticStart != null && staticEnd != null) {
-        // Static path: use the simple early/fast approach
-        val duration = staticEnd - staticStart
-        if (duration <= 0.0) silence
-        else source.early(staticStart).fast(duration)
-    } else {
-        // Dynamic path: ZoomPatternWithControl is necessary because we need to
-        // pair up start/end events together, not just use pattern arithmetic.
-        // endPattern.sub(startPattern) would use endPattern's structure which isn't correct.
-        ZoomPatternWithControl(source, startPattern, endPattern)
-    }
+    return ZoomPattern(inner = source, startProvider = startProvider, endProvider = endProvider)
 }
 
 /**
@@ -931,71 +897,17 @@ fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, e
 // -- bite() -----------------------------------------------------------------------------------------------------------
 
 private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val nArg = args.getOrNull(0)
-    val indicesArg = args.getOrNull(1)
-
-    // Parse the n argument into a pattern
-    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
-        is StrudelPattern -> nVal
-
-        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("4")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
-        }
+    if (args.size < 2) {
+        return silence
     }
 
-    // Parse the indices argument into a pattern
-    val indices: StrudelPattern = when (val indicesVal = indicesArg?.value) {
-        null -> return silence
+    val nProvider: ControlValueProvider =
+        args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(4.0))
 
-        is StrudelPattern -> indicesVal
+    val indicesProvider: ControlValueProvider =
+        args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(0.0))
 
-        else -> parseMiniNotation(input = indicesArg) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have a static value for n for optimization
-    val staticN = nArg?.asIntOrNull()
-
-    return if (staticN != null) {
-        // Static path: use the original inline implementation
-        object : StrudelPattern {
-            override val weight: Double get() = source.weight
-            override val steps: Rational? get() = source.steps
-            override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
-
-            override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
-                ctx: QueryContext,
-            ): List<StrudelPatternEvent> {
-                val indexEvents = indices.queryArcContextual(from, to, ctx)
-
-                return indexEvents.flatMap { ev ->
-                    val idx = ev.data.value?.asInt ?: 0
-
-                    // Handle wrapping like JS .mod(1)
-                    val normalizedIdx = idx.mod(staticN)
-                    val safeIdx = if (normalizedIdx < 0) normalizedIdx + staticN else normalizedIdx
-
-                    val start = safeIdx.toDouble() / staticN
-                    val end = (safeIdx + 1.0) / staticN
-
-                    val slice = source.zoom(start, end)
-
-                    val dur = ev.dur.toDouble()
-                    if (dur <= 0.0) return@flatMap emptyList()
-
-                    val fitted = slice.fast(1.0 / dur).late(ev.begin.toDouble())
-
-                    fitted.queryArcContextual(ev.begin, ev.end, ctx)
-                }
-            }
-        }
-    } else {
-        // Dynamic path: use pattern-controlled bite
-        BitePatternWithControl(source, nPattern, indices)
-    }
+    return BitePattern(source = source, nProvider = nProvider, indicesProvider = indicesProvider)
 }
 
 /**
@@ -1069,7 +981,7 @@ private fun applySegment(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1078,13 +990,13 @@ private fun applySegment(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     return if (staticN != null) {
         // Static path: use original implementation with struct + fast
         val structPat = parseMiniNotation("x") { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
 
         source.struct(structPat.fast(staticN))
     } else {
-        // Dynamic path: use SegmentPatternWithControl which properly slices each timespan
-        SegmentPatternWithControl(source, nPattern)
+        // Dynamic path: use SegmentPattern which properly slices each timespan
+        SegmentPattern.control(source, nPattern)
     }
 }
 
@@ -1164,7 +1076,7 @@ val StrudelPattern.euclid by dslPatternExtension { p, args, /* callInfo */ _ ->
         is StrudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1172,7 +1084,7 @@ val StrudelPattern.euclid by dslPatternExtension { p, args, /* callInfo */ _ ->
         is StrudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1182,7 +1094,7 @@ val StrudelPattern.euclid by dslPatternExtension { p, args, /* callInfo */ _ ->
     if (staticPulses != null && staticSteps != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = 0)
     } else {
-        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = false)
+        EuclideanPattern.control(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = false)
     }
 }
 
@@ -1219,7 +1131,7 @@ val StrudelPattern.euclidRot by dslPatternExtension { p, args, /* callInfo */ _ 
         is StrudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1227,7 +1139,7 @@ val StrudelPattern.euclidRot by dslPatternExtension { p, args, /* callInfo */ _ 
         is StrudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1235,7 +1147,7 @@ val StrudelPattern.euclidRot by dslPatternExtension { p, args, /* callInfo */ _ 
         is StrudelPattern -> rotationVal
 
         else -> parseMiniNotation(rotationArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1246,7 +1158,7 @@ val StrudelPattern.euclidRot by dslPatternExtension { p, args, /* callInfo */ _ 
     if (staticPulses != null && staticSteps != null && staticRotation != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
     } else {
-        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern, legato = false)
+        EuclideanPattern.control(p, pulsesPattern, stepsPattern, rotationPattern, legato = false)
     }
 }
 
@@ -1293,7 +1205,7 @@ val StrudelPattern.bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
         is StrudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1301,7 +1213,7 @@ val StrudelPattern.bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
         is StrudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1309,7 +1221,7 @@ val StrudelPattern.bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
         is StrudelPattern -> rotationVal
 
         else -> parseMiniNotation(rotationVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1320,7 +1232,7 @@ val StrudelPattern.bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
     if (staticPulses != null && staticSteps != null && staticRotation != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
     } else {
-        EuclideanPatternWithControl(
+        EuclideanPattern.control(
             inner = p,
             pulsesPattern = pulsesPattern,
             stepsPattern = stepsPattern,
@@ -1360,7 +1272,7 @@ val StrudelPattern.euclidLegato by dslPatternExtension { p, args, /* callInfo */
         is StrudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1368,7 +1280,7 @@ val StrudelPattern.euclidLegato by dslPatternExtension { p, args, /* callInfo */
         is StrudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1380,7 +1292,7 @@ val StrudelPattern.euclidLegato by dslPatternExtension { p, args, /* callInfo */
             inner = p, pulses = staticPulses, steps = staticSteps, rotation = 0,
         )
     } else {
-        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = true)
+        EuclideanPattern.control(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = true)
     }
 }
 
@@ -1418,7 +1330,7 @@ val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args, /* callInfo
         is StrudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1426,7 +1338,7 @@ val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args, /* callInfo
         is StrudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1434,7 +1346,7 @@ val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args, /* callInfo
         is StrudelPattern -> rotationVal
 
         else -> parseMiniNotation(rotationArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1447,7 +1359,7 @@ val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args, /* callInfo
             inner = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation,
         )
     } else {
-        EuclideanPatternWithControl(
+        EuclideanPattern.control(
             inner = p,
             pulsesPattern = pulsesPattern,
             stepsPattern = stepsPattern,
@@ -1474,7 +1386,7 @@ private fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?
         is StrudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1482,7 +1394,7 @@ private fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?
         is StrudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(VoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
         }
     }
 
@@ -1491,7 +1403,7 @@ private fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?
         is StrudelPattern -> grooveVal
         else -> {
             parseMiniNotation(grooveArg ?: StrudelDslArg.of("0")) { text, _ ->
-                AtomicPattern(VoiceData.empty.defaultModifier(text))
+                AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
             }
         }
     }
@@ -1504,14 +1416,14 @@ private fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?
         if (staticPulses <= 0 || staticSteps <= 0) {
             silence
         } else {
-            val structPattern = EuclideanMorphPattern(
-                nPulses = staticPulses, nSteps = staticSteps, groove = groovePattern
+            val structPattern = EuclideanMorphPattern.static(
+                pulses = staticPulses, steps = staticSteps, groovePattern = groovePattern
             )
 
             source.struct(structPattern)
         }
     } else {
-        val structPattern = EuclideanMorphPatternWithControl(
+        val structPattern = EuclideanMorphPattern.control(
             pulsesPattern = pulsesPattern, stepsPattern = stepsPattern, groovePattern = groovePattern
         )
 
@@ -1566,7 +1478,7 @@ private fun applyRun(n: Int): StrudelPattern {
     // equivalent to saw.range(0, n).round().segment(n) in JS
     // But we can just create a sequence directly.
     val items = (0 until n).map {
-        AtomicPattern(VoiceData.empty.copy(value = it.asVoiceValue()))
+        AtomicPattern(StrudelVoiceData.empty.copy(value = it.asVoiceValue()))
     }
 
     return SequencePattern(items)
@@ -1601,7 +1513,7 @@ private fun applyBinaryN(n: Int, bits: Int): StrudelPattern {
         // Shift: bits - 1 - i
         val shift = bits - 1 - i
         val bit = (n shr shift) and 1
-        AtomicPattern(VoiceData.empty.copy(value = bit.asVoiceValue()))
+        AtomicPattern(StrudelVoiceData.empty.copy(value = bit.asVoiceValue()))
     }
     return SequencePattern(items)
 }
@@ -1662,7 +1574,7 @@ private fun applyBinaryNL(n: Int, bits: Int): StrudelPattern {
 
     // Returns a single event containing the list of bits as a Seq value
     return AtomicPattern(
-        VoiceData.empty.copy(value = VoiceValue.Seq(bitList))
+        StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Seq(bitList))
     )
 }
 

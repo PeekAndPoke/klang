@@ -5,15 +5,15 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.note
 
 class WeightedPatternSpec : StringSpec({
 
     "WeightedPattern: Direct Instantiation" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "a"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "a"))
         val pattern = WeightedPattern(inner, 3.5)
 
         // Verify that the weight property is explicitly set to the provided value

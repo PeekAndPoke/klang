@@ -6,12 +6,12 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangAdsrSpec : StringSpec({
 
-    "adsr() sets VoiceData.adsr components correctly from string" {
+    "adsr() sets StrudelVoiceData ADSR components correctly from string" {
         val p = adsr("0.1:0.2:0.8:0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        with(events[0].data.adsr) {
+        with(events[0].data) {
             attack shouldBe 0.1
             decay shouldBe 0.2
             sustain shouldBe 0.8
@@ -24,7 +24,7 @@ class LangAdsrSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        with(events[0].data.adsr) {
+        with(events[0].data) {
             attack shouldBe 0.1
             decay shouldBe 0.2
             // Others should be null/unchanged
@@ -38,7 +38,7 @@ class LangAdsrSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        with(events[0].data.adsr) {
+        with(events[0].data) {
             attack shouldBe 0.1
             decay shouldBe 0.2
             sustain shouldBe 0.8
@@ -50,7 +50,7 @@ class LangAdsrSpec : StringSpec({
         val p = StrudelPattern.compile("""note("c").adsr("0.1:0.2:0.8:0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        with(events[0].data.adsr) {
+        with(events[0].data) {
             attack shouldBe 0.1
             decay shouldBe 0.2
             sustain shouldBe 0.8

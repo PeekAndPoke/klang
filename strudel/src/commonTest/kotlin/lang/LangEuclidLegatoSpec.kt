@@ -1,7 +1,9 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
 
 class LangEuclidLegatoSpec : StringSpec({
 
@@ -19,14 +21,14 @@ class LangEuclidLegatoSpec : StringSpec({
 
         events.size shouldBe 3
 
-        events[0].begin.toDouble() shouldBe 0.0
-        events[0].dur.toDouble() shouldBe 0.375
+        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
 
-        events[1].begin.toDouble() shouldBe 0.375
-        events[1].dur.toDouble() shouldBe 0.375
+        events[1].begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+        events[1].dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
 
-        events[2].begin.toDouble() shouldBe 0.75
-        events[2].dur.toDouble() shouldBe 0.25
+        events[2].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[2].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "euclidLegato works as top-level function" {

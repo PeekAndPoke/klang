@@ -4,9 +4,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceValue
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
 
 class LangStackSpec : StringSpec({
 
@@ -56,8 +56,8 @@ class LangStackSpec : StringSpec({
         // Second event (from "b")
 
         // Since sort by note, "a" comes first.
-        events[0].data.value shouldBe VoiceValue.Text("a")
-        events[1].data.value shouldBe VoiceValue.Text("b")
+        events[0].data.value shouldBe StrudelVoiceValue.Text("a")
+        events[1].data.value shouldBe StrudelVoiceValue.Text("b")
     }
 
     "stack() works in compiled code" {
@@ -83,7 +83,7 @@ class LangStackSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.data.note ?: "z" } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.value shouldBe VoiceValue.Text("a")
-        events[1].data.value shouldBe VoiceValue.Text("b")
+        events[0].data.value shouldBe StrudelVoiceValue.Text("a")
+        events[1].data.value shouldBe StrudelVoiceValue.Text("b")
     }
 })

@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -115,7 +115,7 @@ internal class StructurePattern(
         return result
     }
 
-    private fun VoiceData.isTruthy(): Boolean {
+    private fun StrudelVoiceData.isTruthy(): Boolean {
         val noteStr = note ?: ""
         // Use the VoiceValue truthiness logic (which now correctly handles 0.0 vs 1.0)
         val valueTruthy = value?.isTruthy() ?: false

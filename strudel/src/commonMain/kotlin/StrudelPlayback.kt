@@ -217,7 +217,7 @@ class StrudelPlayback internal constructor(
             )
 
             ScheduledVoice(
-                data = event.data,
+                data = event.data.toVoiceData(),
                 startTime = absoluteStartTime,
                 gateEndTime = absoluteEndTime,
             )

@@ -3,11 +3,11 @@ package io.peekandpoke.klang.strudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 
-class RandrunWithControlPatternSpec : StringSpec({
+class RandrunPatternSpec : StringSpec({
 
-    "RandrunWithControlPattern with static n=3 should generate shuffled sequence 0,1,2" {
+    "RandrunPattern with static n=3 should generate shuffled sequence 0,1,2" {
         val nPattern = AtomicPattern.value(3)
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         // Query first cycle
         val events = pattern.queryArc(0.0, 1.0)
@@ -20,9 +20,9 @@ class RandrunWithControlPatternSpec : StringSpec({
         values.sorted() shouldBe listOf(0, 1, 2)
     }
 
-    "RandrunWithControlPattern with static n=5 should generate shuffled sequence 0..4" {
+    "RandrunPattern with static n=5 should generate shuffled sequence 0..4" {
         val nPattern = AtomicPattern.value(5)
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         val events = pattern.queryArc(0.0, 1.0)
 
@@ -32,9 +32,9 @@ class RandrunWithControlPatternSpec : StringSpec({
         values.sorted() shouldBe listOf(0, 1, 2, 3, 4)
     }
 
-    "RandrunWithControlPattern should produce different shuffle each cycle" {
+    "RandrunPattern should produce different shuffle each cycle" {
         val nPattern = AtomicPattern.value(4)
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         val cycle1 = pattern.queryArc(0.0, 1.0).mapNotNull { it.data.value?.asInt }
         val cycle2 = pattern.queryArc(1.0, 2.0).mapNotNull { it.data.value?.asInt }
@@ -47,18 +47,18 @@ class RandrunWithControlPatternSpec : StringSpec({
         // Note: There's a 1/24 chance they're the same, but we can't assert inequality reliably
     }
 
-    "RandrunWithControlPattern with n=0 should produce no events" {
+    "RandrunPattern with n=0 should produce no events" {
         val nPattern = AtomicPattern.value(0)
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         val events = pattern.queryArc(0.0, 1.0)
 
         events.size shouldBe 0
     }
 
-    "RandrunWithControlPattern with n=1 should produce single event with value 0" {
+    "RandrunPattern with n=1 should produce single event with value 0" {
         val nPattern = AtomicPattern.value(1)
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         val events = pattern.queryArc(0.0, 1.0)
 
@@ -67,7 +67,7 @@ class RandrunWithControlPatternSpec : StringSpec({
         values shouldBe listOf(0)
     }
 
-    "RandrunWithControlPattern with varying n should adapt sequence length" {
+    "RandrunPattern with varying n should adapt sequence length" {
         // Create a pattern that alternates between n=2 and n=4
         val nPattern = SequencePattern(
             listOf(
@@ -75,7 +75,7 @@ class RandrunWithControlPatternSpec : StringSpec({
                 AtomicPattern.value(4)
             )
         )
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         // Query full cycle - should have exactly 2 + 4 = 6 events
         val allEvents = pattern.queryArc(0.0, 1.0)
@@ -96,18 +96,18 @@ class RandrunWithControlPatternSpec : StringSpec({
         last4.sorted() shouldBe listOf(0, 1, 2, 3)
     }
 
-    "RandrunWithControlPattern with negative n should produce no events" {
+    "RandrunPattern with negative n should produce no events" {
         val nPattern = AtomicPattern.value(-5)
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         val events = pattern.queryArc(0.0, 1.0)
 
         events.size shouldBe 0
     }
 
-    "RandrunWithControlPattern should maintain deterministic behavior with same seed" {
+    "RandrunPattern should maintain deterministic behavior with same seed" {
         val nPattern = AtomicPattern.value(5)
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         // Query same timespan multiple times should give same results
         val result1 = pattern.queryArc(0.0, 1.0).mapNotNull { it.data.value?.asInt }
@@ -116,9 +116,9 @@ class RandrunWithControlPatternSpec : StringSpec({
         result1 shouldBe result2
     }
 
-    "RandrunWithControlPattern preserves event timing within sequence" {
+    "RandrunPattern preserves event timing within sequence" {
         val nPattern = AtomicPattern.value(4)
-        val pattern = RandrunWithControlPattern(nPattern)
+        val pattern = RandrunPattern(nPattern)
 
         val events = pattern.queryArc(0.0, 1.0)
 

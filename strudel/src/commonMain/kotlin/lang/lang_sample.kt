@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 
 /**
  * Accessing this property forces the initialization of this file's class,

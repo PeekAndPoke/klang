@@ -5,18 +5,19 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.slow
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class TempoModifierPatternSpec : StringSpec({
 
     "TempoModifierPattern: Direct Instantiation (slow 2)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "a"))
-        val pattern = TempoModifierPattern(inner, 2.0)
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "a"))
+        val pattern = TempoModifierPattern.static(inner, 2.0.toRational())
 
         // a normally is 0..1. slow(2) makes it 0..2.
         val events = pattern.queryArc(0.0, 2.0).sortedBy { it.begin }

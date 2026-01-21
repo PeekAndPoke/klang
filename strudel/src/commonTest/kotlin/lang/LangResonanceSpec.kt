@@ -3,7 +3,6 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
@@ -32,7 +31,6 @@ class LangResonanceSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.resonance shouldBe 5.0
-        events[0].data.filters.getByType<FilterDef.LowPass>()?.q shouldBe 5.0
     }
 
     "resonance() works as string extension" {

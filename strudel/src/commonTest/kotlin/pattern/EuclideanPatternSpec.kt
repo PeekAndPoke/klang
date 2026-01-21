@@ -5,9 +5,9 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.note
 
 /**
@@ -16,7 +16,7 @@ import io.peekandpoke.klang.strudel.lang.note
 class EuclideanPatternSpec : StringSpec({
 
     "EuclideanPattern: Direct Instantiation (3 pulses in 8 steps)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         // bd(3,8) should result in beats at indices 0, 3, 6 (steps: 1, 0, 0, 1, 0, 0, 1, 0)
         val pattern = EuclideanPattern.create(inner, pulses = 3, steps = 8, rotation = 0)
 
@@ -39,7 +39,7 @@ class EuclideanPatternSpec : StringSpec({
     }
 
     "EuclideanPattern: Rotation 1 (3,8,1)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         // (3,8) base is [1, 0, 0, 1, 0, 0, 1, 0]
         // Rotation logic in JS: rotate(b, -1) -> JS slice logic
         // slice(-1) gets last element [0], slice(0, -1) gets everything but last.
@@ -63,7 +63,7 @@ class EuclideanPatternSpec : StringSpec({
     }
 
     "EuclideanPattern: Rotation equal to steps (1,2,2)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         // (1,2) base is [1, 0]
         // rotate(b, -2) -> slice(-2) is full array [1,0], slice(0, -2) is empty [].
         // Result [1, 0] -> Index 0
@@ -76,7 +76,7 @@ class EuclideanPatternSpec : StringSpec({
     }
 
     "EuclideanPattern: Rotation greater than steps (1,2,3)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         // (1,2) base is [1, 0] (length 2)
         // rotate(b, -3) -> slice(-3).concat(slice(0, -3))
         // slice(-3): -3 < -2, clamps to 0. Returns slice(0) -> [1, 0]
@@ -93,7 +93,7 @@ class EuclideanPatternSpec : StringSpec({
     }
 
     "EuclideanPattern: Rotation large odd number (1,2,7)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         // (1,2) base is [1, 0]
         // rotate(b, -7)
         // slice(-7) -> clamps to 0 -> [1, 0]
@@ -123,7 +123,7 @@ class EuclideanPatternSpec : StringSpec({
         // Result: [0,0,1,0,0,1,0] + [1] -> [0, 0, 1, 0, 0, 1, 0, 1]
         // Indices: 2, 5, 7.
 
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         val pattern = EuclideanPattern.create(inner, pulses = 3, steps = 8, rotation = -1)
 
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
@@ -135,7 +135,7 @@ class EuclideanPatternSpec : StringSpec({
     }
 
     "EuclideanPattern: Negative Pulses (Inversion) (-3, 8)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         // bjorklund(3,8) -> [1, 0, 0, 1, 0, 0, 1, 0]
         // Inverted: [0, 1, 1, 0, 1, 1, 0, 1]
         // Indices: 1, 2, 4, 5, 7
@@ -153,14 +153,14 @@ class EuclideanPatternSpec : StringSpec({
     }
 
     "EuclideanPattern: Zero Pulses (0, 8)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         val pattern = EuclideanPattern.create(inner, pulses = 0, steps = 8, rotation = 0)
         val events = pattern.queryArc(0.0, 1.0)
         events.size shouldBe 0
     }
 
     "EuclideanPattern: Full Pulses (8, 8)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         val pattern = EuclideanPattern.create(inner, pulses = 8, steps = 8, rotation = 0)
         val events = pattern.queryArc(0.0, 1.0)
         events.size shouldBe 8
@@ -215,7 +215,7 @@ class EuclideanPatternSpec : StringSpec({
     }
 
     "EuclideanPattern: Invalid Steps (3, 0)" {
-        val inner = AtomicPattern(VoiceData.empty.copy(note = "bd"))
+        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "bd"))
         val pattern = EuclideanPattern.create(inner, pulses = 3, steps = 0, rotation = 0)
 
         // Should fall back to inner pattern

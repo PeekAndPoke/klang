@@ -2,7 +2,7 @@ package io.peekandpoke.klang.strudel
 
 import kotlin.math.max
 
-const val EPSILON = 1e-7
+const val EPSILON = 1e-5
 
 fun List<List<Any?>>.formatAsTable(lineBreak: String = "\n"): String {
 

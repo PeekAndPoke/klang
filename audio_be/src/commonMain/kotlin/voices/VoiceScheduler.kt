@@ -215,7 +215,6 @@ class VoiceScheduler(
 
     private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
         // Convert backend-relative frames to absolute time (from KlangTime epoch)
-        val nowAbsSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
         val blockEndAbsSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
 
         while (true) {
@@ -339,7 +338,7 @@ class VoiceScheduler(
                     endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
                     gain = data.gain ?: 1.0,
-                    pan = data.pan ?: 0.0,
+                    pan = data.pan ?: 0.5,
                     accelerate = accelerate,
                     vibrato = vibrato,
                     filter = bakedFilters,
@@ -442,7 +441,7 @@ class VoiceScheduler(
                     endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
                     gain = data.gain ?: 1.0,
-                    pan = data.pan ?: 0.0,
+                    pan = data.pan ?: 0.5,
                     filter = bakedFilters,
                     accelerate = accelerate,
                     vibrato = vibrato,

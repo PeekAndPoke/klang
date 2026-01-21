@@ -3,7 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.audio_bridge.VoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
 
 class LangBinarySpec : StringSpec({
 
@@ -43,7 +43,7 @@ class LangBinarySpec : StringSpec({
 
         events.size shouldBe 1
         val value = events[0].data.value
-        value.shouldBeInstanceOf<VoiceValue.Seq>()
+        value.shouldBeInstanceOf<StrudelVoiceValue.Seq>()
         value.value.map { it.asInt } shouldBe listOf(1, 0, 1)
     }
 
@@ -53,7 +53,7 @@ class LangBinarySpec : StringSpec({
 
         events.size shouldBe 1
         val value = events[0].data.value
-        value.shouldBeInstanceOf<VoiceValue.Seq>()
+        value.shouldBeInstanceOf<StrudelVoiceValue.Seq>()
         value.value.map { it.asInt } shouldBe listOf(0, 1, 0, 1)
     }
 })

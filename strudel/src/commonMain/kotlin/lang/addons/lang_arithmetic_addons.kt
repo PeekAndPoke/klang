@@ -1,9 +1,10 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.dslPatternExtension
 import io.peekandpoke.klang.strudel.lang.dslStringExtension
+import io.peekandpoke.klang.strudel.lang.mul
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
 
 /**
@@ -19,12 +20,7 @@ var strudelLangArithmeticAddonsInit = false
 // -- negateValue  -----------------------------------------------------------------------------------------------------
 
 private fun applyFlipSign(pattern: StrudelPattern): StrudelPattern {
-    return pattern.reinterpret { evt ->
-        val current = evt.data.value?.asDouble ?: 0.0
-        val negated = -current
-
-        evt.copy(data = evt.data.copy(value = negated.asVoiceValue()))
-    }
+    return pattern.mul(-1.0)
 }
 
 /** Flips the sign of numerical values of the event's voice data. */

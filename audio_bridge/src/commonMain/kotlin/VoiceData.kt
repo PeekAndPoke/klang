@@ -84,9 +84,6 @@ data class VoiceData(
     val speed: Double?,
     val loop: Boolean?,
     val cut: Int?,
-
-    // Custom value
-    val value: VoiceValue? = null,
 ) {
     companion object {
         val empty = VoiceData(
@@ -126,7 +123,6 @@ data class VoiceData(
             speed = null,
             loop = null,
             cut = null,
-            value = null,
         )
     }
 

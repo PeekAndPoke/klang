@@ -1,13 +1,10 @@
 package io.peekandpoke.klang.strudel.graal
 
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.VoiceData
-import io.peekandpoke.klang.audio_bridge.VoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeGetMember
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
@@ -56,8 +53,6 @@ class GraalStrudelPattern(
     fun Value.toStrudelEvent(): StrudelPatternEvent {
         val event = this
 
-        val filters = mutableListOf<FilterDef>()
-
         val part = event.safeGetMember("part")
 
         // Begin
@@ -104,18 +99,11 @@ class GraalStrudelPattern(
         val freqSpread = value.safeGetMember("detune").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
-        // ADRS
+        // ADSR (flat fields)
         val attack = value.safeGetMember("attack").safeNumberOrNull()
         val decay = value.safeGetMember("decay").safeNumberOrNull()
         val sustain = value.safeGetMember("sustain").safeNumberOrNull()
         val release = value.safeGetMember("release").safeNumberOrNull()
-
-        val adsr = AdsrEnvelope(
-            attack = attack,
-            decay = decay,
-            sustain = sustain,
-            release = release,
-        )
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Pitch / Glisando
@@ -164,25 +152,17 @@ class GraalStrudelPattern(
         val coarse = value.safeGetMember("coarse").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
-        // Apply low pass filter?
-        val resonance = value.safeGetMember("resonance").safeNumberOrNull()
-
+        // Filters (flat fields) - each filter has its own cutoff and resonance
         val cutoff = value.safeGetMember("cutoff").safeNumberOrNull()
-        cutoff?.let { filters.add(FilterDef.LowPass(cutoffHz = it, q = resonance)) }
-
-        // Apply high pass filter?
+        val resonance = value.safeGetMember("resonance").safeNumberOrNull()
         val hcutoff = value.safeGetMember("hcutoff").safeNumberOrNull()
-        hcutoff?.let { filters.add(FilterDef.HighPass(cutoffHz = it, q = resonance)) }
-
-        // Apply band pass filter?
+        val hresonance = value.safeGetMember("hresonance").safeNumberOrNull()
         val bandf = value.safeGetMember("bandf").safeNumberOrNull()
             ?: value.safeGetMember("bandpass").safeNumberOrNull()
-        bandf?.let { filters.add(FilterDef.BandPass(cutoffHz = it, q = resonance)) }
-
-        // Apply notch filter?
+        val bandq = value.safeGetMember("bandq").safeNumberOrNull()
         val notchf = value.safeGetMember("notchf").safeNumberOrNull()
             ?: value.safeGetMember("notch").safeNumberOrNull()
-        notchf?.let { filters.add(FilterDef.Notch(cutoffHz = it, q = resonance)) }
+        val nresonance = value.safeGetMember("nresonance").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Sample Manipulation
@@ -202,7 +182,7 @@ class GraalStrudelPattern(
             end = end,
             dur = dur,
             // Voice data
-            data = VoiceData(
+            data = StrudelVoiceData(
                 // Frequency and note
                 note = note,
                 scale = scale,
@@ -219,10 +199,11 @@ class GraalStrudelPattern(
                 voices = voices,
                 panSpread = panSpread,
                 freqSpread = freqSpread,
-                // Filters
-                filters = FilterDefs(filters),
-                // ADSR envelope
-                adsr = adsr,
+                // ADSR (flat fields)
+                attack = attack,
+                decay = decay,
+                sustain = sustain,
+                release = release,
                 // Pitch / Glisando
                 accelerate = accelerate,
                 // Vibrato
@@ -232,11 +213,15 @@ class GraalStrudelPattern(
                 distort = distort,
                 coarse = coarse,
                 crush = crush,
-                // HPF / LPF
+                // Filters (flat fields) - each filter has its own resonance
                 cutoff = cutoff,
-                hcutoff = hcutoff,
-                bandf = bandf,
                 resonance = resonance,
+                hcutoff = hcutoff,
+                hresonance = hresonance,
+                bandf = bandf,
+                bandq = bandq,
+                notchf = notchf,
+                nresonance = nresonance,
                 // Routing
                 orbit = orbit,
                 // Pan

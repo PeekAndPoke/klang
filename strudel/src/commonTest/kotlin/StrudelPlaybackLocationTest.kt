@@ -3,7 +3,6 @@ package io.peekandpoke.klang.strudel
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
@@ -22,7 +21,7 @@ class StrudelPlaybackLocationTest : StringSpec({
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
-            AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text), sourceLocations)
         }
 
         // We can't easily test the full StrudelPlayback without mocking the audio system,
@@ -41,7 +40,7 @@ class StrudelPlaybackLocationTest : StringSpec({
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd hh sd", baseLocation) { text, sourceLocations ->
-            AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text), sourceLocations)
         }
 
         val events = pattern.queryArc(0.0, 1.0)
@@ -61,13 +60,13 @@ class StrudelPlaybackLocationTest : StringSpec({
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern1 = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
-            AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text), sourceLocations)
         }
 
         val baseLocation2 =
             SourceLocation(source = "test.klang", startLine = 2, startColumn = 5, endLine = 2, endColumn = 7)
         val pattern2 = parseMiniNotation("hh", baseLocation2) { text, sourceLocations ->
-            AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text), sourceLocations)
         }
 
         val stacked = io.peekandpoke.klang.strudel.lang.stack(pattern1, pattern2)
@@ -95,7 +94,7 @@ class StrudelPlaybackLocationTest : StringSpec({
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
         val pattern = parseMiniNotation("bd(3,8)", baseLocation) { text, sourceLocations ->
-            AtomicPattern(VoiceData.empty.copy(note = text), sourceLocations)
+            AtomicPattern(StrudelVoiceData.empty.copy(note = text), sourceLocations)
         }
 
         val events = pattern.queryArc(0.0, 1.0)

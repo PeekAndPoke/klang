@@ -4,16 +4,16 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.*
 
 class ControlPatternSpec : StringSpec({
 
     "ControlPattern: Direct Instantiation" {
-        val source = AtomicPattern(VoiceData.empty.copy(note = "c3"))
-        val control = AtomicPattern(VoiceData.empty.copy(gain = 0.5))
+        val source = AtomicPattern(StrudelVoiceData.empty.copy(note = "c3"))
+        val control = AtomicPattern(StrudelVoiceData.empty.copy(gain = 0.5))
 
         val pattern = ControlPattern(
             source = source,
