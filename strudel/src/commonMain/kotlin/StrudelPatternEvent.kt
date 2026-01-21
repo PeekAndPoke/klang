@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel
 
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.serialization.Serializable
@@ -26,7 +27,17 @@ data class StrudelPatternEvent(
      */
     @Transient
     val sourceLocations: SourceLocationChain? = null,
-)
+) {
+    fun prependLocation(location: SourceLocation?) = when (location) {
+        null -> this
+        else -> copy(sourceLocations = sourceLocations?.prepend(location) ?: location.asChain())
+    }
+
+    fun appendLocation(location: SourceLocation?) = when (location) {
+        null -> this
+        else -> copy(sourceLocations = sourceLocations?.append(location) ?: location.asChain())
+    }
+}
 
 /**
  * Event fired when a voice is scheduled for playback

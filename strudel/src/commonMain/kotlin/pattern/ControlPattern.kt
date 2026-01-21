@@ -50,7 +50,9 @@ internal class ControlPattern(
                 // Apply the mapper to the control data BEFORE combining
                 val mappedControlData = mapper(match.data)
                 val newData = combiner(event.data, mappedControlData)
-                result.add(event.copy(data = newData))
+                result.add(
+                    event.copy(data = newData).prependLocation(match.sourceLocations?.innermost)
+                )
             } else {
                 result.add(event)
             }
