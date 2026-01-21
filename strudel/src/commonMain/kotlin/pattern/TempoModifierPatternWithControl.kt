@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * A pattern that modifies tempo (speed) based on a control pattern.
@@ -32,10 +33,15 @@ internal class TempoModifierPatternWithControl(
 
         for (factorEvent in factorEvents) {
             val factor = factorEvent.data.value?.asDouble ?: 1.0
+            val factorRat = factor.toRational()
 
             // Apply tempo modification for this timespan
-            val patternToQuery = TempoModifierPattern(source, factor = factor, invertPattern = invertPattern)
-            val events = patternToQuery.queryArcContextual(factorEvent.begin, factorEvent.end, ctx)
+            val patternToQuery =
+                TempoModifierPattern(source = source, factor = factorRat, invertPattern = invertPattern)
+
+            val events: List<StrudelPatternEvent> =
+                patternToQuery.queryArcContextual(factorEvent.begin, factorEvent.end, ctx)
+
             result.addAll(events)
         }
 

@@ -22,11 +22,19 @@ fun applyTimeShift(
     args: List<StrudelDslArg<Any?>>,
     factor: Rational = 1.0.toRational(),
 ): StrudelPattern {
+    val argVal = args.getOrNull(0)?.value
+
     return when (args.size) {
         0 -> pattern
-        1 if (args[0].value is Number) -> applyTimeShift(
+
+        1 if (argVal is Rational) -> applyTimeShift(
             pattern = pattern,
-            offset = (args[0].value?.asDoubleOrNull()?.toRational() ?: Rational.ZERO) * factor,
+            offset = argVal,
+        )
+
+        1 if (argVal is Number) -> applyTimeShift(
+            pattern = pattern,
+            offset = (argVal.toRational()) * factor,
         )
 
         else -> applyTimeShift(
@@ -52,6 +60,7 @@ private fun applyTimeShift(pattern: StrudelPattern, control: StrudelPattern): St
 
 private fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val factorArg = args.firstOrNull()
+    val factorVal = factorArg?.value
 
     // Parse the factor argument into a pattern
     val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
@@ -63,7 +72,11 @@ private fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     }
 
     // Check if we have a static value for optimization
-    val staticFactor = factorArg?.value?.asDoubleOrNull()
+    val staticFactor = when (factorVal) {
+        is Rational -> factorVal
+        is Number -> factorVal.toRational()
+        else -> null
+    }
 
     return if (staticFactor != null) {
         // Static path: use the simple TempoModifierPattern
@@ -104,6 +117,7 @@ val String.slow by dslStringExtension { p, args, callInfo -> p.slow(args, callIn
 
 private fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val factorArg = args.firstOrNull()
+    val factorVal = factorArg?.value
 
     // Parse the factor argument into a pattern
     val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
@@ -115,7 +129,11 @@ private fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     }
 
     // Check if we have a static value for optimization
-    val staticFactor = factorArg?.value?.asDoubleOrNull()
+    val staticFactor = when (factorVal) {
+        is Rational -> factorVal
+        is Number -> factorVal.toRational()
+        else -> null
+    }
 
     return if (staticFactor != null) {
         // Static path: use the simple TempoModifierPattern
@@ -332,6 +350,81 @@ val StrudelPattern.compress by dslPatternExtension { p, args, /* callInfo */ _ -
 /** Compresses pattern into the given timespan, leaving a gap */
 @StrudelDsl
 val String.compress by dslStringExtension { p, args, callInfo -> p.compress(args, callInfo) }
+
+// -- focus() ----------------------------------------------------------------------------------------------------------
+
+private fun applyFocus(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    if (args.size < 2) {
+        return pattern
+    }
+
+    val startArg = args.getOrNull(0)
+    val endArg = args.getOrNull(1)
+
+    // Parse start argument into a pattern
+    val startPattern: StrudelPattern = when (val startVal = startArg?.value) {
+        is StrudelPattern -> startVal
+        else -> parseMiniNotation(startArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    // Parse end argument into a pattern
+    val endPattern: StrudelPattern = when (val endVal = endArg?.value) {
+        is StrudelPattern -> endVal
+        else -> parseMiniNotation(endArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    // Check if we have static values for optimization
+    val staticStart = startArg?.value?.asDoubleOrNull()
+    val staticEnd = endArg?.value?.asDoubleOrNull()
+
+    return if (staticStart != null && staticEnd != null) {
+        // Static path: use the simple FocusPattern
+        FocusPattern(
+            source = pattern,
+            start = staticStart.toRational(),
+            end = staticEnd.toRational()
+        )
+    } else {
+        // Dynamic path: use pattern-controlled focus
+        FocusPatternWithControl(
+            source = pattern,
+            startPattern = startPattern,
+            endPattern = endPattern
+        )
+    }
+}
+
+/** Focuses on a portion of each cycle, keeping original timing */
+@StrudelDsl
+val focus by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 3) {
+        return@dslFunction silence
+    }
+
+    val startArg = args[0].value?.asDoubleOrNull() ?: 0.0
+    val endArg = args[1].value?.asDoubleOrNull() ?: 1.0
+    val pattern = args.drop(2).toPattern(defaultModifier)
+
+    FocusPattern(
+        source = pattern,
+        start = startArg.toRational(),
+        end = endArg.toRational()
+    )
+}
+
+/** Focuses on a portion of each cycle, keeping original timing */
+@StrudelDsl
+val StrudelPattern.focus by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyFocus(p, args)
+}
+
+/** Focuses on a portion of each cycle, keeping original timing */
+@StrudelDsl
+val String.focus by dslStringExtension { p, args, callInfo -> p.focus(args, callInfo) }
 
 // -- ply() ------------------------------------------------------------------------------------------------------------
 

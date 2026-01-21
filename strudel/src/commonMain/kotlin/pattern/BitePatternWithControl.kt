@@ -62,8 +62,15 @@ internal class BitePatternWithControl(
                 // Get the slice using zoom logic: early(start).fast(end - start)
                 val duration = end - start
                 if (duration <= 0.0) continue
-                val slice = TimeShiftPattern(source, start.toRational() * Rational.MINUS_ONE)
-                    .let { TempoModifierPattern(it, factor = duration, invertPattern = true) }
+
+                val slice = TempoModifierPattern(
+                    source = TimeShiftPattern(
+                        source = source,
+                        offset = start.toRational() * Rational.MINUS_ONE,
+                    ),
+                    factor = duration.toRational(),
+                    invertPattern = true,
+                )
 
                 val dur = (overlapEnd - overlapBegin).toDouble()
                 if (dur <= 0.0) continue

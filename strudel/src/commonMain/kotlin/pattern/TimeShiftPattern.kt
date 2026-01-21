@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * Shifts a pattern in time by a given offset.
@@ -14,6 +15,10 @@ internal class TimeShiftPattern(
     val source: StrudelPattern,
     val offset: Rational,
 ) : StrudelPattern {
+    companion object {
+        private val epsilon = 1e-7.toRational()
+    }
+
     override val weight: Double get() = source.weight
 
     override val steps: Rational? get() = source.steps
@@ -28,12 +33,15 @@ internal class TimeShiftPattern(
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
+        val fromPlusEps = from + epsilon
+        val toMinusEps = to - epsilon
+
         return innerEvents.mapNotNull { ev ->
             val mappedBegin = ev.begin + offset
             val mappedEnd = ev.end + offset
 
             // Only include events that overlap with the requested range
-            if (mappedEnd > from && mappedBegin <= to) {
+            if (mappedEnd > fromPlusEps && mappedBegin <= toMinusEps) {
                 ev.copy(
                     begin = mappedBegin,
                     end = mappedEnd,

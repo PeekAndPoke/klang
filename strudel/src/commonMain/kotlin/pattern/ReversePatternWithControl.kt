@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * Reverses the pattern with control pattern for the reversal factor.
@@ -34,6 +35,7 @@ internal class ReversePatternWithControl(
         // For each control event, apply reversal with its n value
         for (nEvent in nEvents) {
             val n = nEvent.data.value?.asInt ?: 1
+            val nRat = n.toRational()
 
             // Query the inner pattern for this time span
             val patternToReverse = if (n <= 1) {
@@ -42,13 +44,16 @@ internal class ReversePatternWithControl(
             } else {
                 // Multi-cycle reversal using fast/slow approach
                 // fast(n).rev().slow(n)
-                val fast = TempoModifierPattern(inner, factor = n.toDouble(), invertPattern = true)
-                val reversed = ReversePattern(fast)
-                TempoModifierPattern(reversed, factor = n.toDouble(), invertPattern = false)
+                val fast = TempoModifierPattern(source = inner, factor = nRat, invertPattern = true)
+                val reversed = ReversePattern(inner = fast)
+
+                TempoModifierPattern(source = reversed, factor = nRat, invertPattern = false)
             }
 
             // Query the reversed pattern for the control event's timespan
-            val events = patternToReverse.queryArcContextual(nEvent.begin, nEvent.end, ctx)
+            val events: List<StrudelPatternEvent> =
+                patternToReverse.queryArcContextual(nEvent.begin, nEvent.end, ctx)
+
             result.addAll(events)
         }
 

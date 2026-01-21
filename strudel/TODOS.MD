@@ -93,7 +93,9 @@ and category.
   standalone, pattern method, string extension)
 - [ ] ~~**`compressSpan(span)`**~~ - **Won't implement**: Not documented, requires TimeSpan/Fraction types not available
   in KlangScript; use `compress(start, end)` instead
-- [ ] **`focus(start, end)`** - Like compress but keeps cycle timing
+- [x] **`focus(start, end)`** - Like compress but keeps cycle timing, now supports control patterns for both
+  parameters (
+  standalone, pattern method, string extension)
 - [ ] ~~**`focusSpan(span)`**~~ - **Won't implement**: Same reason as compressSpan; use `focus(start, end)` if
   implemented
 - [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle, now supports control patterns for both
@@ -136,6 +138,7 @@ and category.
 - [ ] **`within(start, end, func)`** - Apply function within time range
 - [ ] **`brak()`** - Make every other cycle syncopated
 - [ ] **`inv()` / `invert()`** - Invert pattern structure
+- [ ] **`off`** - https://strudel.cc/workshop/pattern-effects/#pattern-effects
 
 ### Pattern Picking & Selection ⭐⭐⭐
 
@@ -170,6 +173,7 @@ and category.
 
 - [x] **`note()`** - Set note values
 - [x] **`n()`** - Set note index or sample number
+- [ ] **`freq()`** - Set frequencies in hz
 - [x] **`scale()`** - Set scale for note resolution
 - [x] **`sound()` / `s()`** - Set sound/sample bank
 - [x] **`bank()`** - Set sample bank

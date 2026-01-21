@@ -8,15 +8,17 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 internal class TempoModifierPattern(
     val source: StrudelPattern,
-    val factor: Double,
+    val factor: Rational,
     val invertPattern: Boolean = false,
 ) : StrudelPattern {
-    private val factorRat = factor.toRational()
+    companion object {
+        private val epsilon = 1e-7.toRational()
+    }
 
     private val scale = if (invertPattern) {
-        factorRat
+        factor
     } else {
-        (Rational.ONE / maxOf(0.001.toRational(), factorRat))
+        (Rational.ONE / maxOf(0.001.toRational(), factor))
     }
 
     override val weight: Double get() = source.weight
@@ -29,8 +31,8 @@ internal class TempoModifierPattern(
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        val innerFrom = from * scale
-        val innerTo = to * scale
+        val innerFrom = (from * scale) + epsilon
+        val innerTo = (to * scale) - epsilon
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 

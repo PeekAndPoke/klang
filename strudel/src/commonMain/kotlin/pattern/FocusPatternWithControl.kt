@@ -7,25 +7,28 @@ import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
- * A pattern that zooms into portions based on control patterns for start and end.
+ * A pattern that focuses based on control patterns for start and end.
  *
- * For each pair of control events (start and end), zooms into that portion of the inner pattern.
- * Zoom works by shifting the pattern earlier and then speeding it up.
+ * For each pair of control events (start and end), applies the focus transformation.
  *
- * @param inner The pattern to zoom into
+ * @param source The pattern to focus
  * @param startPattern The control pattern providing start positions (0.0 to 1.0)
  * @param endPattern The control pattern providing end positions (0.0 to 1.0)
  */
-internal class ZoomPatternWithControl(
-    val inner: StrudelPattern,
+internal class FocusPatternWithControl(
+    val source: StrudelPattern,
     val startPattern: StrudelPattern,
     val endPattern: StrudelPattern,
 ) : StrudelPattern {
-    override val weight: Double get() = inner.weight
+    override val weight: Double get() = source.weight
 
-    override val steps: Rational? get() = inner.steps
+    override val steps: Rational? get() = source.steps
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+    ): List<StrudelPatternEvent> {
         val startEvents = startPattern.queryArcContextual(from, to, ctx)
         val endEvents = endPattern.queryArcContextual(from, to, ctx)
 
@@ -41,23 +44,25 @@ internal class ZoomPatternWithControl(
 
                 val start = startEvent.data.value?.asDouble ?: 0.0
                 val end = endEvent.data.value?.asDouble ?: 1.0
-                val duration = end - start
 
-                if (duration <= 0.0) continue
+                if (start >= end) continue
 
                 // Calculate the overlap timespan
                 val overlapBegin = maxOf(startEvent.begin, endEvent.begin)
                 val overlapEnd = minOf(startEvent.end, endEvent.end)
 
-                // Apply zoom: early(start).fast(duration)
-                val zoomed =
-                    TimeShiftPattern(source = inner, offset = start.toRational() * Rational.MINUS_ONE)
+                // Apply focus transformation: early(start.floor()) -> fast(1/span) -> late(start)
+                // start.floor() gives the cycle start (sam in Strudel terms)
+                val span = end - start
+                val factor = 1.0 / span
+                val startRat = start.toRational()
 
-                val final =
-                    TempoModifierPattern(zoomed, factor = duration.toRational(), invertPattern = true)
+                val step1 = TimeShiftPattern(source, -startRat.floor())
+                val step2 = TempoModifierPattern(source = step1, factor = factor.toRational(), invertPattern = true)
+                val focused = TimeShiftPattern(source = step2, offset = startRat)
 
                 val events: List<StrudelPatternEvent> =
-                    final.queryArcContextual(overlapBegin, overlapEnd, ctx)
+                    focused.queryArcContextual(overlapBegin, overlapEnd, ctx)
 
                 result.addAll(events)
             }

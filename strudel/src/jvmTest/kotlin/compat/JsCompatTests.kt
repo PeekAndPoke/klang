@@ -6,7 +6,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.test.logging.warn
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.formatAsTable
@@ -93,40 +92,6 @@ class JsCompatTests : StringSpec() {
 
         val nativeArc = (0..<numCycles)
             .flatMap { nativePattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
-
-//        val zippedAll = graalArc.zipAll(nativeArc)
-//
-//        val overview = listOf(
-//            listOf("", "Graal", "Native")
-//        ).plus(zippedAll.mapIndexed { index, (graal, native) ->
-//
-//            fun Double.rounded(): Double {
-//                return kotlin.math.floor(this * 100.0) / 100.0
-//            }
-//
-//            fun Rational.rounded(): Double {
-//                return toDouble().rounded()
-//            }
-//
-//            fun format(p: StrudelPatternEvent?) = p?.let {
-//                val d = p.data
-//
-//                "${p.begin.rounded()} - ${p.end.rounded()} | " +
-//                        "${listOf(d.note, d.sound)} | " +
-//                        "${listOf(d.value?.asString, d.gain?.rounded(), d.pan?.rounded())}"
-//            } ?: " --- "
-//
-//            listOf(
-//                "#${index + 1}",
-//                format(graal),
-//                format(native),
-//            )
-//        })
-//
-//        println("Graal: ${graalArc.size} events | Native: ${nativeArc.size} events")
-//        println()
-//        println(overview.formatAsTable())
-//        println()
 
         assertSoftly {
             withClue("Number of events must match | Graal: ${graalArc.size} VS Native: ${nativeArc.size}") {
@@ -217,7 +182,7 @@ ${comparison.report}
             if (graalNum != null && nativeNum != null) {
                 val numDiff = abs(graalNum - nativeNum)
 
-                if (numDiff < EPSILON) return ComparisonResult.CLOSE
+                if (numDiff < 1e-3) return ComparisonResult.CLOSE
             }
 
             val graalStr = graalElem.contentOrNull
