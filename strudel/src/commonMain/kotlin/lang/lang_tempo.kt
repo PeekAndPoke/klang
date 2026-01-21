@@ -60,32 +60,14 @@ private fun applyTimeShift(pattern: StrudelPattern, control: StrudelPattern): St
 // -- slow() -----------------------------------------------------------------------------------------------------------
 
 private fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val factorArg = args.firstOrNull()
-    val factorVal = factorArg?.value
+    val factorProvider = args.firstOrNull()
+        .asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse the factor argument into a pattern
-    val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
-        is StrudelPattern -> factorVal
-
-        else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have a static value for optimization
-    val staticFactor = when (factorVal) {
-        is Rational -> factorVal
-        is Number -> factorVal.toRational()
-        else -> null
-    }
-
-    return if (staticFactor != null) {
-        // Static path: use the simple TempoModifierPattern
-        TempoModifierPattern(source = pattern, factor = staticFactor, invertPattern = false)
-    } else {
-        // Dynamic path: use pattern-controlled tempo modification
-        TempoModifierPatternWithControl(source = pattern, factorPattern = factorPattern, invertPattern = false)
-    }
+    return TempoModifierPattern(
+        source = pattern,
+        factorProvider = factorProvider,
+        invertPattern = false
+    )
 }
 
 /** Slows down all inner patterns by the given factor */
@@ -117,32 +99,14 @@ val String.slow by dslStringExtension { p, args, callInfo -> p.slow(args, callIn
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
 private fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val factorArg = args.firstOrNull()
-    val factorVal = factorArg?.value
+    val factorProvider = args.firstOrNull()
+        .asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse the factor argument into a pattern
-    val factorPattern: StrudelPattern = when (val factorVal = factorArg?.value) {
-        is StrudelPattern -> factorVal
-
-        else -> parseMiniNotation(factorArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have a static value for optimization
-    val staticFactor = when (factorVal) {
-        is Rational -> factorVal
-        is Number -> factorVal.toRational()
-        else -> null
-    }
-
-    return if (staticFactor != null) {
-        // Static path: use the simple TempoModifierPattern
-        TempoModifierPattern(source = pattern, factor = staticFactor, invertPattern = true)
-    } else {
-        // Dynamic path: use pattern-controlled tempo modification
-        TempoModifierPatternWithControl(source = pattern, factorPattern = factorPattern, invertPattern = true)
-    }
+    return TempoModifierPattern(
+        source = pattern,
+        factorProvider = factorProvider,
+        invertPattern = true
+    )
 }
 
 /** Speeds up all inner patterns by the given factor */

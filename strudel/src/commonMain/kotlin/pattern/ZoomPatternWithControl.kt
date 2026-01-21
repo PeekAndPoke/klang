@@ -54,7 +54,7 @@ internal class ZoomPatternWithControl(
                     TimeShiftPattern(source = inner, offset = start.toRational() * Rational.MINUS_ONE)
 
                 val final =
-                    TempoModifierPattern(zoomed, factor = duration.toRational(), invertPattern = true)
+                    TempoModifierPattern.static(zoomed, factor = duration.toRational(), invertPattern = true)
 
                 val events: List<StrudelPatternEvent> =
                     final.queryArcContextual(overlapBegin, overlapEnd, ctx)

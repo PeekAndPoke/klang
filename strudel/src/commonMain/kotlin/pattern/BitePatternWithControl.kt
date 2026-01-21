@@ -63,7 +63,7 @@ internal class BitePatternWithControl(
                 val duration = end - start
                 if (duration <= 0.0) continue
 
-                val slice = TempoModifierPattern(
+                val slice = TempoModifierPattern.static(
                     source = TimeShiftPattern(
                         source = source,
                         offset = start.toRational() * Rational.MINUS_ONE,

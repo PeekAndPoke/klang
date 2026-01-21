@@ -44,10 +44,10 @@ internal class ReversePatternWithControl(
             } else {
                 // Multi-cycle reversal using fast/slow approach
                 // fast(n).rev().slow(n)
-                val fast = TempoModifierPattern(source = inner, factor = nRat, invertPattern = true)
+                val fast = TempoModifierPattern.static(source = inner, factor = nRat, invertPattern = true)
                 val reversed = ReversePattern(inner = fast)
 
-                TempoModifierPattern(source = reversed, factor = nRat, invertPattern = false)
+                TempoModifierPattern.static(source = reversed, factor = nRat, invertPattern = false)
             }
 
             // Query the reversed pattern for the control event's timespan
