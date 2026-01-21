@@ -3,9 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
@@ -132,35 +130,10 @@ val String.fast by dslStringExtension { p, args, callInfo -> p.fast(args, callIn
 // -- rev() ------------------------------------------------------------------------------------------------------------
 
 private fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val nArg = args.firstOrNull()
+    val nProvider: ControlValueProvider =
+        args.firstOrNull().asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse the argument to detect if it's a plain number or a pattern
-    val nPattern = when (val nVal = nArg?.value) {
-        is StrudelPattern -> nVal
-
-        else -> {
-            // Parse as mini-notation (handles numbers and strings)
-            parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-                AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-            }
-        }
-    }
-
-    // Try to extract a static integer value for optimization
-    val staticN = nArg?.asIntOrNull()
-
-    return if (staticN != null) {
-        // Static value optimization
-        if (staticN <= 1) {
-            ReversePattern(pattern)
-        } else {
-            // Reverses every n-th cycle by speeding up, reversing, then slowing back down
-            pattern.fast(staticN).rev().slow(staticN)
-        }
-    } else {
-        // Use pattern-controlled reversal
-        ReversePatternWithControl(pattern, nPattern)
-    }
+    return ReversePattern(inner = pattern, nProvider = nProvider)
 }
 
 /** Reverses the pattern */
@@ -332,31 +305,10 @@ private fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         return pattern
     }
 
-    val nArg = args.firstOrNull()
+    val nProvider: ControlValueProvider =
+        args.firstOrNull().asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse the n argument into a pattern
-    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
-        is StrudelPattern -> nVal
-
-        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have a static value for optimization
-    val staticN = nArg?.value?.asIntOrNull()
-
-    return if (staticN != null) {
-        // Static path: use the simple PlyPattern
-        if (staticN <= 1) {
-            pattern
-        } else {
-            PlyPattern(source = pattern, n = staticN)
-        }
-    } else {
-        // Dynamic path: use pattern-controlled ply
-        PlyPatternWithControl(source = pattern, nPattern = nPattern)
-    }
+    return PlyPattern(source = pattern, nProvider = nProvider)
 }
 
 /** Repeats each event n times within its timespan */
@@ -366,14 +318,10 @@ val ply by dslFunction { args, /* callInfo */ _ ->
         return@dslFunction silence
     }
 
-    val n = args[0].value?.asIntOrNull() ?: 1
+    val nProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(1.0))
     val pattern = args.drop(1).toPattern(defaultModifier)
 
-    if (n <= 1) {
-        pattern
-    } else {
-        PlyPattern(source = pattern, n = n)
-    }
+    PlyPattern(source = pattern, nProvider = nProvider)
 }
 
 /** Repeats each event n times within its timespan */
