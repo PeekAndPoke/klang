@@ -1094,7 +1094,7 @@ val StrudelPattern.euclid by dslPatternExtension { p, args, /* callInfo */ _ ->
     if (staticPulses != null && staticSteps != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = 0)
     } else {
-        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = false)
+        EuclideanPattern.control(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = false)
     }
 }
 
@@ -1158,7 +1158,7 @@ val StrudelPattern.euclidRot by dslPatternExtension { p, args, /* callInfo */ _ 
     if (staticPulses != null && staticSteps != null && staticRotation != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
     } else {
-        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern, legato = false)
+        EuclideanPattern.control(p, pulsesPattern, stepsPattern, rotationPattern, legato = false)
     }
 }
 
@@ -1232,7 +1232,7 @@ val StrudelPattern.bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
     if (staticPulses != null && staticSteps != null && staticRotation != null) {
         applyEuclid(source = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation)
     } else {
-        EuclideanPatternWithControl(
+        EuclideanPattern.control(
             inner = p,
             pulsesPattern = pulsesPattern,
             stepsPattern = stepsPattern,
@@ -1292,7 +1292,7 @@ val StrudelPattern.euclidLegato by dslPatternExtension { p, args, /* callInfo */
             inner = p, pulses = staticPulses, steps = staticSteps, rotation = 0,
         )
     } else {
-        EuclideanPatternWithControl(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = true)
+        EuclideanPattern.control(p, pulsesPattern, stepsPattern, rotationPattern = null, legato = true)
     }
 }
 
@@ -1359,7 +1359,7 @@ val StrudelPattern.euclidLegatoRot by dslPatternExtension { p, args, /* callInfo
             inner = p, pulses = staticPulses, steps = staticSteps, rotation = staticRotation,
         )
     } else {
-        EuclideanPatternWithControl(
+        EuclideanPattern.control(
             inner = p,
             pulsesPattern = pulsesPattern,
             stepsPattern = stepsPattern,
@@ -1416,14 +1416,14 @@ private fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?
         if (staticPulses <= 0 || staticSteps <= 0) {
             silence
         } else {
-            val structPattern = EuclideanMorphPattern(
-                nPulses = staticPulses, nSteps = staticSteps, groove = groovePattern
+            val structPattern = EuclideanMorphPattern.static(
+                pulses = staticPulses, steps = staticSteps, groovePattern = groovePattern
             )
 
             source.struct(structPattern)
         }
     } else {
-        val structPattern = EuclideanMorphPatternWithControl(
+        val structPattern = EuclideanMorphPattern.control(
             pulsesPattern = pulsesPattern, stepsPattern = stepsPattern, groovePattern = groovePattern
         )
 

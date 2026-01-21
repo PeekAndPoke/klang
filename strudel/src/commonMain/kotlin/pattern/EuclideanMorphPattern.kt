@@ -4,19 +4,68 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.math.bjorklund
 
+/**
+ * Euclidean Morph Pattern: Morphs between Euclidean rhythm and even distribution.
+ *
+ * @param pulsesProvider Control value provider for the number of pulses
+ * @param stepsProvider Control value provider for the number of steps
+ * @param groovePattern Pattern controlling the morph factor (0=euclidean, 1=even)
+ */
 internal class EuclideanMorphPattern(
-    val nPulses: Int,
-    val nSteps: Int,
-    val groove: StrudelPattern,
+    val pulsesProvider: ControlValueProvider,
+    val stepsProvider: ControlValueProvider,
+    val groovePattern: StrudelPattern,
 ) : StrudelPattern {
 
+    override val weight: Double get() = groovePattern.weight
+
+    override val steps: Rational?
+        get() = if (stepsProvider is ControlValueProvider.Static) {
+            (stepsProvider.value.asInt ?: 0).toRational()
+        } else {
+            null
+        }
+
+    override fun estimateCycleDuration(): Rational = Rational.ONE
+
     companion object {
-        fun calculateMorphedArcs(pulses: Int, steps: Int, by: Double): List<Pair<Rational, Rational>> {
+        /**
+         * Create an EuclideanMorphPattern with static pulses/steps values and a groove pattern.
+         */
+        fun static(
+            pulses: Int,
+            steps: Int,
+            groovePattern: StrudelPattern,
+        ): EuclideanMorphPattern {
+            return EuclideanMorphPattern(
+                pulsesProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(pulses.toDouble())),
+                stepsProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(steps.toDouble())),
+                groovePattern = groovePattern
+            )
+        }
+
+        /**
+         * Create an EuclideanMorphPattern with control patterns for pulses and steps.
+         */
+        fun control(
+            pulsesPattern: StrudelPattern,
+            stepsPattern: StrudelPattern,
+            groovePattern: StrudelPattern,
+        ): EuclideanMorphPattern {
+            return EuclideanMorphPattern(
+                pulsesProvider = ControlValueProvider.Pattern(pulsesPattern),
+                stepsProvider = ControlValueProvider.Pattern(stepsPattern),
+                groovePattern = groovePattern
+            )
+        }
+
+        internal fun calculateMorphedArcs(pulses: Int, steps: Int, by: Double): List<Pair<Rational, Rational>> {
             // from: bjorklund(pulses, steps)
             val fromList = bjorklund(pulses, steps)
             // to: Array(pulses).fill(1)
@@ -59,43 +108,54 @@ internal class EuclideanMorphPattern(
         }
     }
 
-    override val weight: Double get() = groove.weight
-
-    override val steps: Rational get() = nSteps.toRational()
-
-    override fun estimateCycleDuration(): Rational = Rational.ONE
-
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
         ctx: QueryContext,
     ): List<StrudelPatternEvent> {
-        // 1. Query the groove pattern to get the morph factor (perc) over time
-        val grooveEvents = groove.queryArcContextual(from, to, ctx)
+        // Query groove pattern for morph factor over time
+        val grooveEvents = groovePattern.queryArcContextual(from, to, ctx)
+        if (grooveEvents.isEmpty()) return emptyList()
+
         val result = mutableListOf<StrudelPatternEvent>()
 
-        for (ev in grooveEvents) {
-            val perc = ev.data.value?.asDouble ?: 0.0
+        // For each groove event, sample pulses/steps and generate morphed rhythm
+        for (grooveEvent in grooveEvents) {
+            // Get pulses and steps values for this groove event's timespan
+            val pulses = when (pulsesProvider) {
+                is ControlValueProvider.Static -> pulsesProvider.value.asInt ?: 0
+                is ControlValueProvider.Pattern -> {
+                    val events = pulsesProvider.pattern.queryArcContextual(grooveEvent.begin, grooveEvent.end, ctx)
+                    events.firstOrNull()?.data?.value?.asInt ?: 0
+                }
+            }
 
-            // 2. For each groove event, generate the morphed rhythm arcs
-            val arcs = calculateMorphedArcs(nPulses, nSteps, perc)
+            val steps = when (stepsProvider) {
+                is ControlValueProvider.Static -> stepsProvider.value.asInt ?: 0
+                is ControlValueProvider.Pattern -> {
+                    val events = stepsProvider.pattern.queryArcContextual(grooveEvent.begin, grooveEvent.end, ctx)
+                    events.firstOrNull()?.data?.value?.asInt ?: 0
+                }
+            }
 
-            // 3. Generate events from arcs that intersect with the current cycle and the groove event
-            // Note: The arcs are within a single cycle (0..1). We need to repeat them for the duration of the groove event.
-            // But wait, Strudel patterns are cyclic.
-            // The morph logic calculates arcs for *one cycle*.
-            // We need to check intersection of these arcs (repeated) with the groove event span (ev.begin..ev.end).
+            if (pulses <= 0 || steps <= 0) continue
 
-            val startCycle = ev.begin.floor().toInt()
-            val endCycle = ev.end.ceil().toInt()
+            val perc = grooveEvent.data.value?.asDouble ?: 0.0
+
+            // Generate the morphed rhythm arcs for these values
+            val arcs = calculateMorphedArcs(pulses, steps, perc)
+
+            // Generate events from arcs that intersect with the groove event
+            val startCycle = grooveEvent.begin.floor().toInt()
+            val endCycle = grooveEvent.end.ceil().toInt()
 
             for (cycle in startCycle until endCycle) {
                 val cycleStart = Rational(cycle)
                 val cycleEnd = cycleStart + Rational.ONE
 
-                // Effective window for this cycle is intersection of cycle and event
-                val windowStart = maxOf(ev.begin, cycleStart)
-                val windowEnd = minOf(ev.end, cycleEnd)
+                // Effective window for this cycle is intersection of cycle and groove event
+                val windowStart = maxOf(grooveEvent.begin, cycleStart)
+                val windowEnd = minOf(grooveEvent.end, cycleEnd)
 
                 if (windowStart >= windowEnd) continue
 
@@ -114,7 +174,7 @@ internal class EuclideanMorphPattern(
                                 begin = intersectStart,
                                 end = intersectEnd,
                                 dur = intersectEnd - intersectStart,
-                                data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue()) // Gate open
+                                data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
                             )
                         )
                     }
