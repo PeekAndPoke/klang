@@ -302,3 +302,45 @@ val StrudelPattern.compress by dslPatternExtension { p, args, /* callInfo */ _ -
 /** Compresses pattern into the given timespan, leaving a gap */
 @StrudelDsl
 val String.compress by dslStringExtension { p, args, callInfo -> p.compress(args, callInfo) }
+
+// -- ply() ------------------------------------------------------------------------------------------------------------
+
+private fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    if (args.isEmpty()) {
+        return pattern
+    }
+
+    val n = args[0].value?.asIntOrNull() ?: 1
+    if (n <= 1) {
+        return pattern
+    }
+
+    return PlyPattern(source = pattern, n = n)
+}
+
+/** Repeats each event n times within its timespan */
+@StrudelDsl
+val ply by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslFunction silence
+    }
+
+    val n = args[0].value?.asIntOrNull() ?: 1
+    val pattern = args.drop(1).toPattern(defaultModifier)
+
+    if (n <= 1) {
+        pattern
+    } else {
+        PlyPattern(source = pattern, n = n)
+    }
+}
+
+/** Repeats each event n times within its timespan */
+@StrudelDsl
+val StrudelPattern.ply by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPly(p, args)
+}
+
+/** Repeats each event n times within its timespan */
+@StrudelDsl
+val String.ply by dslStringExtension { p, args, callInfo -> p.ply(args, callInfo) }

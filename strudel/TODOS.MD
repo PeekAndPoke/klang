@@ -101,7 +101,7 @@ and category.
 - [ ] **`fastGap(factor)`** - Speeds up with gaps between
 - [ ] **`swingBy(subdivision, offset)`** - Creates swing rhythm
 - [ ] **`swing(subdivision)`** - Swing with default 1/3 offset
-- [ ] **`ply(n)`** - Repeats each event n times
+- [x] **`ply(n)`** - Repeats each event n times within its timespan (standalone, pattern method, string extension)
 - [ ] **`plyWith(n, func)`** - Repeats with function applied
 - [ ] **`plyForEach(n, func)`** - Repeats with function applied per repetition
 - [ ] **`hurry(factor)`** - Speeds up and shortens events
@@ -548,7 +548,7 @@ and category.
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ~11 missing (13 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `compress`,
+- **Time Modification**: ~10 missing (14 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`, `compress`, `ply`,
   `euclid`,
   `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support)
 - **Pattern Transformation**: ~11 missing (7 completed: `rev`, `palindrome`, `struct`, `mask`, `superimpose`, `layer`,
@@ -581,9 +581,9 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~77 features remaining
+### Total Estimated: ~76 features remaining
 
-### Completed So Far: ~181 features! 🎉
+### Completed So Far: ~182 features! 🎉
 
 **Major achievements:**
 

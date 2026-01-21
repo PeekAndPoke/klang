@@ -120,6 +120,11 @@ object JsCompatTestData {
         Example("Compress middle", """note("c d e f").compress(0.25, 0.75)"""),
         Example("Compress small range", """note("c d").compress(0.4, 0.6)"""),
         Example("Compress with sound", """sound("bd hh sd oh").compress(0.25, 0.75)"""),
+        Example("Ply basic", """note("c d").ply(3)"""),
+        Example("Ply with 2", """note("c d e f").ply(2)"""),
+        Example("Ply with sound", """sound("bd hh").ply(2)"""),
+        Example("Ply high count", """note("c").ply(4)"""),
+        Example("Ply complex pattern", """note("c [d e]").ply(2)"""),
 
         // Euclidish
         Example("Euclidish Function #1", """euclidish(3, 8, 0, note("bd"))"""),
