@@ -862,44 +862,10 @@ val String.apply by dslStringExtension { p, args, callInfo -> p.apply(args, call
 // -- zoom() -----------------------------------------------------------------------------------------------------------
 
 private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val startArg = args.getOrNull(0)
-    val startVal = startArg?.value
-    val endArg = args.getOrNull(1)
-    val endVal = endArg?.value
+    val startProvider = args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(0.0))
+    val endProvider = args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(1.0))
 
-    // Parse the start argument into a pattern
-    val startPattern: StrudelPattern = when (startVal) {
-        is StrudelPattern -> startVal
-
-        else -> parseMiniNotation(startArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Parse the end argument into a pattern
-    val endPattern: StrudelPattern = when (val endVal = endArg?.value) {
-        is StrudelPattern -> endVal
-
-        else -> parseMiniNotation(endArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have static values for optimization
-    val staticStart = startVal?.asDoubleOrNull()
-    val staticEnd = endVal?.asDoubleOrNull()
-
-    return if (staticStart != null && staticEnd != null) {
-        // Static path: use the simple early/fast approach
-        val duration = staticEnd - staticStart
-        if (duration <= 0.0) silence
-        else source.early(staticStart).fast(duration)
-    } else {
-        // Dynamic path: ZoomPatternWithControl is necessary because we need to
-        // pair up start/end events together, not just use pattern arithmetic.
-        // endPattern.sub(startPattern) would use endPattern's structure which isn't correct.
-        ZoomPatternWithControl(source, startPattern, endPattern)
-    }
+    return ZoomPattern(inner = source, startProvider = startProvider, endProvider = endProvider)
 }
 
 /**
@@ -931,71 +897,17 @@ fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, e
 // -- bite() -----------------------------------------------------------------------------------------------------------
 
 private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val nArg = args.getOrNull(0)
-    val indicesArg = args.getOrNull(1)
-
-    // Parse the n argument into a pattern
-    val nPattern: StrudelPattern = when (val nVal = nArg?.value) {
-        is StrudelPattern -> nVal
-
-        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("4")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
+    if (args.size < 2) {
+        return silence
     }
 
-    // Parse the indices argument into a pattern
-    val indices: StrudelPattern = when (val indicesVal = indicesArg?.value) {
-        null -> return silence
+    val nProvider: ControlValueProvider =
+        args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(4.0))
 
-        is StrudelPattern -> indicesVal
+    val indicesProvider: ControlValueProvider =
+        args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(0.0))
 
-        else -> parseMiniNotation(input = indicesArg) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
-        }
-    }
-
-    // Check if we have a static value for n for optimization
-    val staticN = nArg?.asIntOrNull()
-
-    return if (staticN != null) {
-        // Static path: use the original inline implementation
-        object : StrudelPattern {
-            override val weight: Double get() = source.weight
-            override val steps: Rational? get() = source.steps
-            override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
-
-            override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
-                ctx: QueryContext,
-            ): List<StrudelPatternEvent> {
-                val indexEvents = indices.queryArcContextual(from, to, ctx)
-
-                return indexEvents.flatMap { ev ->
-                    val idx = ev.data.value?.asInt ?: 0
-
-                    // Handle wrapping like JS .mod(1)
-                    val normalizedIdx = idx.mod(staticN)
-                    val safeIdx = if (normalizedIdx < 0) normalizedIdx + staticN else normalizedIdx
-
-                    val start = safeIdx.toDouble() / staticN
-                    val end = (safeIdx + 1.0) / staticN
-
-                    val slice = source.zoom(start, end)
-
-                    val dur = ev.dur.toDouble()
-                    if (dur <= 0.0) return@flatMap emptyList()
-
-                    val fitted = slice.fast(1.0 / dur).late(ev.begin.toDouble())
-
-                    fitted.queryArcContextual(ev.begin, ev.end, ctx)
-                }
-            }
-        }
-    } else {
-        // Dynamic path: use pattern-controlled bite
-        BitePatternWithControl(source, nPattern, indices)
-    }
+    return BitePattern(source = source, nProvider = nProvider, indicesProvider = indicesProvider)
 }
 
 /**
