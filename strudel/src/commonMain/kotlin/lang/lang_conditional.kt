@@ -9,8 +9,8 @@ import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArg
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.ArrangementPattern
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.FirstOfWithControlPattern
-import io.peekandpoke.klang.strudel.pattern.LastOfWithControlPattern
+import io.peekandpoke.klang.strudel.pattern.FirstOfPattern
+import io.peekandpoke.klang.strudel.pattern.LastOfPattern
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -53,7 +53,7 @@ private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
         return ArrangementPattern(patterns)
     } else {
         // Dynamic path: Use FirstOfWithControl
-        return FirstOfWithControlPattern(source, nPattern, transform)
+        return FirstOfPattern(source, nPattern, transform)
     }
 }
 
@@ -145,7 +145,7 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
         return ArrangementPattern(patterns)
     } else {
         // Dynamic path: Use LastOfWithControl
-        return LastOfWithControlPattern(source, nPattern, transform)
+        return LastOfPattern(source, nPattern, transform)
     }
 }
 

@@ -6,13 +6,13 @@ import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.note
 
-class FirstOfWithControlPatternSpec : StringSpec({
+class FirstOfPatternSpec : StringSpec({
 
-    "FirstOfWithControlPattern with n=4 applies transform on first cycle only" {
+    "FirstOfPattern with n=4 applies transform on first cycle only" {
         val source = note("a b c")
         val nPattern = AtomicPattern.value(4)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = FirstOfWithControlPattern(source, nPattern, transform)
+        val pattern = FirstOfPattern(source, nPattern, transform)
 
         // Cycle 0: should be transformed (x)
         val cycle0 = pattern.queryArc(0.0, 1.0)
@@ -41,11 +41,11 @@ class FirstOfWithControlPatternSpec : StringSpec({
         cycle4.all { it.data.note?.lowercase() == "x" } shouldBe true
     }
 
-    "FirstOfWithControlPattern with n=1 applies transform every cycle" {
+    "FirstOfPattern with n=1 applies transform every cycle" {
         val source = note("a")
         val nPattern = AtomicPattern.value(1)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = FirstOfWithControlPattern(source, nPattern, transform)
+        val pattern = FirstOfPattern(source, nPattern, transform)
 
         // Every cycle should be transformed
         val cycle0 = pattern.queryArc(0.0, 1.0)
@@ -61,11 +61,11 @@ class FirstOfWithControlPatternSpec : StringSpec({
         cycle2[0].data.note shouldBe "x"
     }
 
-    "FirstOfWithControlPattern with n=2 alternates transform and original" {
+    "FirstOfPattern with n=2 alternates transform and original" {
         val source = note("a b")
         val nPattern = AtomicPattern.value(2)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = FirstOfWithControlPattern(source, nPattern, transform)
+        val pattern = FirstOfPattern(source, nPattern, transform)
 
         // Cycle 0: transformed
         val cycle0 = pattern.queryArc(0.0, 1.0)
@@ -90,7 +90,7 @@ class FirstOfWithControlPatternSpec : StringSpec({
         notes3 shouldBe listOf("a", "b")
     }
 
-    "FirstOfWithControlPattern with varying n adapts to control pattern" {
+    "FirstOfPattern with varying n adapts to control pattern" {
         val source = note("a")
         // n alternates between 2 and 3
         val nPattern = SequencePattern(
@@ -100,7 +100,7 @@ class FirstOfWithControlPatternSpec : StringSpec({
             )
         )
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = FirstOfWithControlPattern(source, nPattern, transform)
+        val pattern = FirstOfPattern(source, nPattern, transform)
 
         // Query full cycle
         val allEvents = pattern.queryArc(0.0, 1.0)
@@ -119,31 +119,31 @@ class FirstOfWithControlPatternSpec : StringSpec({
         event1.end.toDouble() shouldBe 1.0
     }
 
-    "FirstOfWithControlPattern with n=0 produces no events" {
+    "FirstOfPattern with n=0 produces no events" {
         val source = note("a")
         val nPattern = AtomicPattern.value(0)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = FirstOfWithControlPattern(source, nPattern, transform)
+        val pattern = FirstOfPattern(source, nPattern, transform)
 
         val events = pattern.queryArc(0.0, 1.0)
         events.size shouldBe 0
     }
 
-    "FirstOfWithControlPattern with negative n produces no events" {
+    "FirstOfPattern with negative n produces no events" {
         val source = note("a")
         val nPattern = AtomicPattern.value(-3)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = FirstOfWithControlPattern(source, nPattern, transform)
+        val pattern = FirstOfPattern(source, nPattern, transform)
 
         val events = pattern.queryArc(0.0, 1.0)
         events.size shouldBe 0
     }
 
-    "FirstOfWithControlPattern handles negative cycles correctly" {
+    "FirstOfPattern handles negative cycles correctly" {
         val source = note("a")
         val nPattern = AtomicPattern.value(3)
         val transform: (StrudelPattern) -> StrudelPattern = { it.note("x") }
-        val pattern = FirstOfWithControlPattern(source, nPattern, transform)
+        val pattern = FirstOfPattern(source, nPattern, transform)
 
         // Cycle -3 should be transformed (position 0 in group)
         val cycleM3 = pattern.queryArc(-3.0, -2.0)

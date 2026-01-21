@@ -17,6 +17,7 @@ import io.peekandpoke.klang.strudel.math.bjorklund
  * @param stepsProvider Control value provider for the number of steps
  * @param groovePattern Pattern controlling the morph factor (0=euclidean, 1=even)
  */
+@Suppress("DuplicatedCode")
 internal class EuclideanMorphPattern(
     val pulsesProvider: ControlValueProvider,
     val stepsProvider: ControlValueProvider,
@@ -125,7 +126,9 @@ internal class EuclideanMorphPattern(
             val pulses = when (pulsesProvider) {
                 is ControlValueProvider.Static -> pulsesProvider.value.asInt ?: 0
                 is ControlValueProvider.Pattern -> {
-                    val events = pulsesProvider.pattern.queryArcContextual(grooveEvent.begin, grooveEvent.end, ctx)
+                    val events: List<StrudelPatternEvent> =
+                        pulsesProvider.pattern.queryArcContextual(grooveEvent.begin, grooveEvent.end, ctx)
+
                     events.firstOrNull()?.data?.value?.asInt ?: 0
                 }
             }
@@ -133,7 +136,9 @@ internal class EuclideanMorphPattern(
             val steps = when (stepsProvider) {
                 is ControlValueProvider.Static -> stepsProvider.value.asInt ?: 0
                 is ControlValueProvider.Pattern -> {
-                    val events = stepsProvider.pattern.queryArcContextual(grooveEvent.begin, grooveEvent.end, ctx)
+                    val events: List<StrudelPatternEvent> =
+                        stepsProvider.pattern.queryArcContextual(grooveEvent.begin, grooveEvent.end, ctx)
+
                     events.firstOrNull()?.data?.value?.asInt ?: 0
                 }
             }

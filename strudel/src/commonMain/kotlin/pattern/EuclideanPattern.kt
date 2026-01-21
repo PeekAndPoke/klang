@@ -31,6 +31,7 @@ import kotlin.math.min
  * @param rotationProvider Control value provider for rotation offset (optional)
  * @param legato If true, pulses are held until the next pulse (no gaps)
  */
+@Suppress("DuplicatedCode")
 internal class EuclideanPattern(
     val inner: StrudelPattern,
     val pulsesProvider: ControlValueProvider,
@@ -212,20 +213,18 @@ internal class EuclideanPattern(
 
         private fun bjorklundStrudel(pulses: Int, steps: Int): List<Int> {
             val k = abs(pulses)
-            val n = steps
-            if (n <= 0) return emptyList()
+            if (steps <= 0) return emptyList()
 
             // Calculate base pattern
-            val basePattern = if (k >= n) {
-                List(n) { 1 }
+            val basePattern = if (k >= steps) {
+                List(steps) { 1 }
             } else {
-                val ons = k
-                val offs = n - k
+                val offs = steps - k
 
-                val ones = List(ons) { listOf(1) }
+                val ones = List(k) { listOf(1) }
                 val zeros = List(offs) { listOf(0) }
 
-                val result = recursiveBjorklund(ons, offs, ones, zeros)
+                val result = recursiveBjorklund(k, offs, ones, zeros)
                 result.first.flatten() + result.second.flatten()
             }
 
@@ -239,52 +238,124 @@ internal class EuclideanPattern(
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // For all static values, use optimized static path
-        if (pulsesProvider is ControlValueProvider.Static &&
-            stepsProvider is ControlValueProvider.Static &&
-            (rotationProvider == null || rotationProvider is ControlValueProvider.Static)
-        ) {
+        // Check if all values are static - if so, apply directly to the whole range
+        val isAllStatic = pulsesProvider is ControlValueProvider.Static &&
+                stepsProvider is ControlValueProvider.Static &&
+                (rotationProvider == null || rotationProvider is ControlValueProvider.Static)
+
+        if (isAllStatic) {
             val pulses = pulsesProvider.value.asInt ?: 0
             val steps = stepsProvider.value.asInt ?: 0
             val rotation = rotationProvider?.value?.asInt ?: 0
 
-            return if (legato) {
-                queryLegatoStatic(from, to, ctx, pulses, steps, rotation)
-            } else {
-                queryStatic(from, to, ctx, pulses, steps, rotation)
-            }
+            return applyEuclideanRhythm(from, to, ctx, pulses, steps, rotation)
         }
 
-        // At least one is a pattern - create patterns for all three sides
-        val pulsesPattern = when (pulsesProvider) {
+        // At least one parameter is a pattern - need to sample values and find overlaps
+        // We'll query a conservative range and find combinations
+        val pulsesEvents = when (pulsesProvider) {
             is ControlValueProvider.Static -> {
-                val value = pulsesProvider.value.asInt ?: 0
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value.toDouble())))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = pulsesProvider.value)
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> pulsesProvider.pattern
+            is ControlValueProvider.Pattern -> pulsesProvider.pattern.queryArcContextual(from, to, ctx)
         }
 
-        val stepsPattern = when (stepsProvider) {
+        val stepsEvents = when (stepsProvider) {
             is ControlValueProvider.Static -> {
-                val value = stepsProvider.value.asInt ?: 0
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value.toDouble())))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = stepsProvider.value)
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> stepsProvider.pattern
+            is ControlValueProvider.Pattern -> stepsProvider.pattern.queryArcContextual(from, to, ctx)
         }
 
-        val rotationPattern = when (rotationProvider) {
+        val rotationEvents = when (rotationProvider) {
             is ControlValueProvider.Static -> {
-                val value = rotationProvider.value.asInt ?: 0
-                AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(value.toDouble())))
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(value = rotationProvider.value),
+                    )
+                )
             }
 
-            is ControlValueProvider.Pattern -> rotationProvider.pattern
-            null -> AtomicPattern(StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(0.0)))
+            is ControlValueProvider.Pattern -> rotationProvider.pattern.queryArcContextual(from, to, ctx)
+            null -> {
+                listOf(
+                    StrudelPatternEvent(
+                        begin = from,
+                        end = to,
+                        dur = to - from,
+                        data = StrudelVoiceData.empty.copy(
+                            value = StrudelVoiceValue.Num(0.0),
+                        )
+                    )
+                )
+            }
         }
 
-        return queryWithControlPatterns(from, to, ctx, pulsesPattern, stepsPattern, rotationPattern)
+        if (pulsesEvents.isEmpty() || stepsEvents.isEmpty() || rotationEvents.isEmpty()) {
+            return emptyList()
+        }
+
+        val result = mutableListOf<StrudelPatternEvent>()
+
+        // Find all overlapping combinations
+        for (pulsesEvent in pulsesEvents) {
+            for (stepsEvent in stepsEvents) {
+                for (rotationEvent in rotationEvents) {
+                    val overlapBegin: Rational =
+                        maxOf(pulsesEvent.begin, stepsEvent.begin, rotationEvent.begin)
+
+                    val overlapEnd: Rational =
+                        minOf(pulsesEvent.end, stepsEvent.end, rotationEvent.end)
+
+                    if (overlapEnd <= overlapBegin) continue
+
+                    val pulses = pulsesEvent.data.value?.asInt ?: 0
+                    val steps = stepsEvent.data.value?.asInt ?: 0
+                    val rotation = rotationEvent.data.value?.asInt ?: 0
+
+                    val events: List<StrudelPatternEvent> =
+                        applyEuclideanRhythm(overlapBegin, overlapEnd, ctx, pulses, steps, rotation)
+
+                    result.addAll(events)
+                }
+            }
+        }
+
+        return result
+    }
+
+    private fun applyEuclideanRhythm(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+        pulses: Int,
+        steps: Int,
+        rotation: Int,
+    ): List<StrudelPatternEvent> {
+        return if (legato) {
+            queryLegatoStatic(from, to, ctx, pulses, steps, rotation)
+        } else {
+            queryStatic(from, to, ctx, pulses, steps, rotation)
+        }
     }
 
     private fun queryStatic(
@@ -348,60 +419,5 @@ internal class EuclideanPattern(
     ): List<StrudelPatternEvent> {
         val legatoPattern = createLegatoStatic(inner, pulses, steps, rotation)
         return legatoPattern.queryArcContextual(from, to, ctx)
-    }
-
-    private fun queryWithControlPatterns(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-        pulsesPattern: StrudelPattern,
-        stepsPattern: StrudelPattern,
-        rotationPattern: StrudelPattern,
-    ): List<StrudelPatternEvent> {
-        val pulsesEvents = pulsesPattern.queryArcContextual(from, to, ctx)
-        val stepsEvents = stepsPattern.queryArcContextual(from, to, ctx)
-        val rotationEvents = rotationPattern.queryArcContextual(from, to, ctx)
-
-        if (pulsesEvents.isEmpty() || stepsEvents.isEmpty() || rotationEvents.isEmpty()) {
-            return emptyList()
-        }
-
-        val result = mutableListOf<StrudelPatternEvent>()
-
-        // Find all overlapping combinations of pulses, steps, and rotation events
-        for (pulsesEvent in pulsesEvents) {
-            for (stepsEvent in stepsEvents) {
-                for (rotationEvent in rotationEvents) {
-                    // Check if these three events overlap
-                    val overlapBegin = maxOf(
-                        pulsesEvent.begin,
-                        stepsEvent.begin,
-                        rotationEvent.begin
-                    )
-                    val overlapEnd = minOf(
-                        pulsesEvent.end,
-                        stepsEvent.end,
-                        rotationEvent.end
-                    )
-
-                    if (overlapEnd <= overlapBegin) continue
-
-                    val pulses = pulsesEvent.data.value?.asInt ?: 0
-                    val steps = stepsEvent.data.value?.asInt ?: 0
-                    val rotation = rotationEvent.data.value?.asInt ?: 0
-
-                    // Query for this overlap timespan using the static path
-                    val events = if (legato) {
-                        queryLegatoStatic(overlapBegin, overlapEnd, ctx, pulses, steps, rotation)
-                    } else {
-                        queryStatic(overlapBegin, overlapEnd, ctx, pulses, steps, rotation)
-                    }
-
-                    result.addAll(events)
-                }
-            }
-        }
-
-        return result
     }
 }

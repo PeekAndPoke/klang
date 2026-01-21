@@ -16,7 +16,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  *
  * @param nPattern The pattern controlling the sequence length
  */
-internal class RandrunWithControlPattern(
+internal class RandrunPattern(
     val nPattern: StrudelPattern,
 ) : StrudelPattern {
     override val weight = 1.0

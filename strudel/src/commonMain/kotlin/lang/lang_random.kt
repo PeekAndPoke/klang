@@ -677,7 +677,7 @@ val randrun: DslFunction by dslFunction { args, /* callInfo */ _ ->
         }
     } else {
         // Dynamic path: Create a pattern that varies the sequence length
-        RandrunWithControlPattern(nPattern)
+        RandrunPattern(nPattern)
     }
 }
 
