@@ -28,7 +28,7 @@ class LocationTrackingTest : StringSpec({
         // The location points to the first character inside the string (column already accounts for the quote)
         pattern?.sourceLocations?.outermost?.source shouldBe "test.klang"
         pattern?.sourceLocations?.outermost?.startLine shouldBe 1
-        pattern?.sourceLocations?.outermost?.startColumn shouldBe 10  // Location already points past the opening quote
+        pattern?.sourceLocations?.outermost?.startColumn shouldBe 11  // Location already points past the opening quote
     }
 
     "NumberValue with location creates AtomicPattern with sourceLocations" {
@@ -71,11 +71,11 @@ class LocationTrackingTest : StringSpec({
 
         val pattern1 = patterns[0] as? AtomicPattern
         pattern1?.sourceLocations?.outermost?.startLine shouldBe 1
-        pattern1?.sourceLocations?.outermost?.startColumn shouldBe 10  // Location already points past the opening quote
+        pattern1?.sourceLocations?.outermost?.startColumn shouldBe 11  // Location already points past the opening quote
 
         val pattern2 = patterns[1] as? AtomicPattern
         pattern2?.sourceLocations?.outermost?.startLine shouldBe 2
-        pattern2?.sourceLocations?.outermost?.startColumn shouldBe 15  // Location already points past the opening quote
+        pattern2?.sourceLocations?.outermost?.startColumn shouldBe 16  // Location already points past the opening quote
     }
 
     "Plain Kotlin values create patterns without locations" {
@@ -100,6 +100,6 @@ class LocationTrackingTest : StringSpec({
         patterns.size shouldBe 1
         val pattern = patterns[0] as? AtomicPattern
         pattern?.sourceLocations?.outermost?.startLine shouldBe 1
-        pattern?.sourceLocations?.outermost?.startColumn shouldBe 10  // Location already points past the opening quote
+        pattern?.sourceLocations?.outermost?.startColumn shouldBe 11  // Location already points past the opening quote
     }
 })

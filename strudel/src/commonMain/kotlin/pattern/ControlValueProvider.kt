@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -27,6 +29,22 @@ sealed interface ControlValueProvider {
         ): StrudelVoiceValue {
             return value
         }
+
+        override fun queryEvents(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            return listOf(
+                StrudelPatternEvent(
+                    begin = from,
+                    end = to,
+                    dur = to - from,
+                    data = StrudelVoiceData.empty.copy(value = value),
+                    sourceLocations = null
+                )
+            )
+        }
     }
 
     /**
@@ -41,6 +59,14 @@ sealed interface ControlValueProvider {
             val events = pattern.queryArcContextual(from, to, ctx)
             // Return the first event's value, or null if no events
             return events.firstOrNull()?.data?.value
+        }
+
+        override fun queryEvents(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            return pattern.queryArcContextual(from, to, ctx)
         }
     }
 
@@ -57,4 +83,16 @@ sealed interface ControlValueProvider {
         to: Rational = from + DEFAULT_EPSILON,
         ctx: StrudelPattern.QueryContext,
     ): StrudelVoiceValue?
+
+    /**
+     * Query control events for the given time range.
+     *
+     * Static providers return a single event covering [from, to].
+     * Pattern providers return their underlying events.
+     */
+    fun queryEvents(
+        from: Rational,
+        to: Rational = from + DEFAULT_EPSILON,
+        ctx: StrudelPattern.QueryContext,
+    ): List<StrudelPatternEvent>
 }
