@@ -4,16 +4,19 @@ import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.NoProps
 import de.peekandpoke.kraft.components.PureComponent
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.utils.setTimeout
 import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.StreamSource
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_fe.create
@@ -25,6 +28,10 @@ import io.peekandpoke.klang.strudel.ScheduledVoiceEvent
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
+import kotlinx.css.*
+import kotlinx.css.properties.LineHeight
+import kotlinx.css.properties.scaleX
+import kotlinx.css.properties.transform
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.serialization.builtins.serializer
@@ -131,7 +138,10 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
         }
 
         // Highlight in editor
-        event.sourceLocations?.innermost?.let { doIt(it) }
+        event.sourceLocations
+            ?.locations
+            ?.takeLast(5)
+            ?.forEach { doIt(it) }
     }
 
     private fun onPlay() {
@@ -162,58 +172,134 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     override fun VDom.render() {
 
-        ui.container {
-            ui.header H1 { +"Klang Audio Engine" }
+        ui.fluid.container {
 
-            ui.form {
-                key = "dashboard-form"
-                ui.six.fields.fields {
-                    key = "dashboard-form-fields"
+            ui.grid {
+                css {
+                    marginTop = 0.px
+                }
 
-                    ui.field {
-                        ui.fluid.button {
-                            onClick {
-                                onPlay()
-                            }
+                ui.three.wide.column {
 
-                            if (loading) {
-                                icon.loading.spinner()
-                            } else {
-                                icon.play()
-                                +"Play"
-                            }
+                    ui.one.column.grid {
+                        css {
+                            minHeight = 100.vh
+                            backgroundColor = Color.black
                         }
-                    }
-
-                    ui.field {
-                        ui.fluid.button {
-                            onClick {
-                                song?.stop()
-                                song = null
+                        ui.bottom.aligned.center.aligned.column {
+                            css {
+                                minHeight = 100.pct
                             }
 
-                            icon.stop()
-                            +"Stop"
-                        }
-                    }
+                            ui.basic.inverted.black.segment {
+                                css {
+                                    backgroundColor = Color.black
+                                    paddingBottom = 0.px
+                                }
 
-                    UiInputField(cps, { cpsStream(it) }) {
-                        step(0.01)
+                                div {
+                                    css {
+                                        whiteSpace = WhiteSpace.nowrap
+                                    }
 
-                        leftLabel {
-                            ui.basic.label { icon.clock(); +"CPS" }
+                                    onClick {
+                                        router.navToUri(Nav.tour())
+                                    }
+
+                                    icon.music {
+                                        css {
+                                            marginRight = 8.px
+                                        }
+                                    }
+
+                                    ui.small.header H1 {
+                                        css {
+                                            fontFamily = "monospace"
+                                            lineHeight = LineHeight("2.0em")
+                                            color = Color.white
+                                            display = Display.inlineBlock
+                                        }
+                                        +"KLANG AUDIO MOTÖR"
+                                    }
+
+                                    icon.music {
+                                        css {
+                                            transform { scaleX(-1.0) }
+                                            marginLeft = 8.px
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
 
-                div {
-                    key = "dashboard-form-code"
+                ui.thirteen.wide.column {
+                    css {
+                        padding = Padding(0.px)
+                        backgroundColor = Color.white
+                    }
+                    ui.form {
+                        key = "dashboard-form"
+                        ui.basic.segment {
+                            key = "dashboard-form-segment"
 
-                    // CodeMirror editor container
-                    CodeMirrorComp(code = code, onCodeChanged = { code = it })
-                        .track(editorRef)
+                            css {
+                                paddingBottom = 0.px
+                            }
+
+                            ui.six.fields.fields {
+                                key = "dashboard-form-fields"
+
+                                ui.field {
+                                    ui.fluid.button {
+                                        onClick {
+                                            onPlay()
+                                        }
+
+                                        if (loading) {
+                                            icon.loading.spinner()
+                                        } else {
+                                            icon.play()
+                                            +"Play"
+                                        }
+                                    }
+                                }
+
+                                ui.field {
+                                    ui.fluid.button {
+                                        onClick {
+                                            song?.stop()
+                                            song = null
+                                        }
+
+                                        icon.stop()
+                                        +"Stop"
+                                    }
+                                }
+
+                                UiInputField(cps, { cpsStream(it) }) {
+                                    step(0.01)
+
+                                    leftLabel {
+                                        ui.basic.label { icon.clock(); +"CPS" }
+                                    }
+                                }
+                            }
+                        }
+
+
+                        div {
+                            key = "dashboard-form-code"
+
+                            // CodeMirror editor container
+                            CodeMirrorComp(code = code, onCodeChanged = { code = it })
+                                .track(editorRef)
+                        }
+                    }
                 }
             }
         }
+
     }
 }

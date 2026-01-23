@@ -14,6 +14,7 @@
     <style>
         body {
             background-color: white;
+            min-height: 100vh;
         }
 
         /* CodeMirror live code highlighting */
@@ -35,6 +36,23 @@
                 background-color: rgba(255, 100, 0, 0.02);
                 border-color: rgba(255, 100, 0, 0.2);
             }
+        }
+
+        .fade-out {
+            animation: fadeOut 200ms linear forwards;
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+
+        #spa {
+            min-height: 100vh;
         }
     </style>
 

@@ -226,7 +226,9 @@ class StrudelPlayback internal constructor(
         // Fire callbacks on separate dispatcher to avoid blocking audio scheduling
         if (sendEvents && voiceEvents.isNotEmpty() && onVoiceScheduled != null) {
             scope.launch(callbackDispatcher) {
-                voiceEvents.forEach { event ->
+                voiceEvents
+                    .distinctBy { it.startTime to it.sourceLocations }
+                    .forEach { event ->
                     onVoiceScheduled?.invoke(event)
                 }
             }

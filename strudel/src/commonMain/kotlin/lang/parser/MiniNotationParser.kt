@@ -286,7 +286,7 @@ class MiniNotationParser(
             val absoluteStartLine = base.startLine + line - 1  // -1 because line 1 in content is on base.startLine
             val absoluteStartColumn = if (line == 1) {
                 // Same line as the opening quote - add to base column (both 1-based)
-                base.startColumn + column - 1  // -1 because column 1 starts at base.startColumn
+                base.startColumn + column
             } else {
                 // Different line - just use the token's column (already 1-based)
                 column
