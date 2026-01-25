@@ -51,29 +51,16 @@ internal class HurryPattern(
     override val steps: Rational? get() = source.steps
 
     override fun estimateCycleDuration(): Rational {
-        // Use static value if available, otherwise use 1.0 as estimate
-        val factor = if (factorProvider is ControlValueProvider.Static) {
-            (factorProvider.value.asDouble ?: 1.0).toRational()
-        } else {
-            Rational.ONE
-        }
+        // Use queried value if available, otherwise use 1.0 as estimate
+        val factor = (factorProvider.query(from = Rational.ZERO, to = Rational.ONE, ctx = QueryContext.empty)?.asDouble
+            ?: 1.0).toRational()
 
         val sourceDur = source.estimateCycleDuration()
         return sourceDur / factor
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // For static values, we can optimize with a single query
-        if (factorProvider is ControlValueProvider.Static) {
-            val factor = (factorProvider.value.asDouble ?: 1.0).toRational()
-            return queryWithFactor(from, to, ctx, factor)
-        }
-
-        // For control patterns, segment by control events
-        val controlPattern = (factorProvider as? ControlValueProvider.Pattern)?.pattern
-            ?: return queryWithFactor(from, to, ctx, Rational.ONE)
-
-        val factorEvents = controlPattern.queryArcContextual(from, to, ctx)
+        val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
 
         val result = mutableListOf<StrudelPatternEvent>()

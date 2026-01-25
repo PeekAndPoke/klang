@@ -141,7 +141,7 @@ private suspend fun helloStrudel() {
         val playback1 = player.playStrudel(pattern1)
         playback1.start(
             StrudelPlayback.Options(
-                cyclesPerSecond = 0.6,
+                cyclesPerSecond = 0.5,
             )
         )
 

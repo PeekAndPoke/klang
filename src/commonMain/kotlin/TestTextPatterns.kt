@@ -118,25 +118,25 @@ let wait = 16
 
 stack(
     // Melody
-    n("0 2 4 6 7 6 4 2")
+    n("<[0 2 4 6 7 6 4 2]>")
         .scale("<[c3:major c3:pentatonic c3:major c3:major]>/16")
-        .s("supersaw").unison(10).detune(saw.range(0.001, 0.5).slow(16)).spread(1.0)
+        .s("supersaw").unison(10).detune(saw.range(0.001, 0.3).slow(16)).spread(1.0)
         .gain(0.175).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8))
         .distort(0.7)
         // .lpenv(perlin.slow(3).range(1, 4))
         .lpf(perlin.slow(2).range(100, 2000))
         .hpf(660)
-        .adsr("0.03:0.5:0.7:0.2")
+        .adsr("0.03:0.5:0.7:0.3")
         .filterWhen(x => x >= wait * 4)
     ,
     // Bass
-    note("<a1 [f2 c2 a1 [f2 c2]] [a1 f1 a1 f1] [e2 c2 a1 [a1 f2]]>/8").clip(0.75)
+    note("<a1 [f2 c2 a1 [f2 c2]] [a1 f1 a1 f1] e2>/8").clip(0.75)
         .struct("x*8")
         .pan(sine.range(0.3, 0.7).slow(16))
-        .s("supersaw").unison(6).detune(saw.range(0.001, 0.5).slow(16))
-        .adsr("0.03:0.6:0.5:0.5")
-        .gain(0.5)
-        .lpf(3520)
+        .s("supersaw").unison(6).detune(saw.range(0.1, 0.45).slow(16))
+        .adsr("0.03:0.5:0.5:0.5")
+        .gain(0.55)
+        .lpf(1760)
         .filterWhen(x => x >= wait * 2)
     ,
     // Perc 2
@@ -147,7 +147,7 @@ stack(
         .filterWhen(x => x >= wait * 1)
     ,
     // Perc 1
-    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd ~]").slow(8)
+    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow(8)
         .gain(0.9).pan(0.55)
         .degrade(0.25)
         .adsr("0.01:0.5:0.5:1.0").fast(2)
@@ -160,7 +160,7 @@ stack(
      .pan(perlin.early(1.7).range(0.3, 0.7).slow(13))
      
   ,
-).delay(0.15).delaytime(0.2777).delayfeedback(0.5)  
+).delay(0.15).delaytime(0.25).delayfeedback(0.5)  
 .room(0.02).rsize(5.0)
 
    """.trimIndent()
