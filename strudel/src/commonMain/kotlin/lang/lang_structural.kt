@@ -48,15 +48,7 @@ private fun applyGap(args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val stepsVal = args.firstOrNull()?.value?.asDoubleOrNull() ?: 1.0
     val stepsRat = stepsVal.toRational()
 
-    return object : StrudelPattern {
-        override val weight: Double = 1.0
-        override val steps: Rational = stepsRat
-        override fun estimateCycleDuration(): Rational = Rational.ONE
-
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-            return emptyList()
-        }
-    }
+    return GapPattern(stepsRat)
 }
 
 /** Creates silence with a specific duration in steps (metrical steps). */
