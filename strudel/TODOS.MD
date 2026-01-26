@@ -265,14 +265,33 @@ They follow the same pattern as the other filter envelopes but are specific to t
 - [x] **`nfrelease()`** - Notch filter envelope release time (alias: `nfr`)
 - [x] **`nfenv()`** - Notch filter envelope amount (alias: `nfe`)
 
+**⚠️ TODO: Audio Engine Implementation**
+
+The DSL functions and data structures for filter envelopes (lowpass, highpass, bandpass, notch) are complete,
+but the audio engine integration is still pending:
+
+- [ ] **Implement filter envelope processing in audio engine** - The `FilterEnvelope` data is passed to the audio
+  engine via `FilterDef` objects, but the actual envelope modulation of filter cutoff frequencies during sound
+  generation needs to be implemented in the audio processing pipeline.
+
 #### Pitch Envelope
 
-- [ ] **`pattack()`** - Pitch envelope attack time (alias: `patt`)
-- [ ] **`pdecay()`** - Pitch envelope decay time (alias: `pdec`)
-- [ ] **`prelease()`** - Pitch envelope release time (alias: `prel`)
-- [ ] **`penv()`** - Pitch envelope amount in semitones
-- [ ] **`pcurve()`** - Pitch envelope curve (0=linear, 1=exponential)
-- [ ] **`panchor()`** - Pitch envelope range anchor (0-1)
+- [ ] **`pattack()`** — *Attack time of the pitch envelope* (synonym: `patt`). Controls how quickly pitch ramps from its
+  start point toward the envelope peak when a note begins; shorter times create a snappier “thwip,” longer times make a
+  slow bend‑up. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`pdecay()`** — *Decay time of the pitch envelope* (synonym: `pdec`). After the peak, this sets how fast pitch
+  falls toward the sustain level; short decay gives a sharp pitch drop, long decay gives a gentle
+  glide. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`prelease()`** — *Release time of the pitch envelope* (synonym: `prel`). Controls how pitch returns when the
+  note ends; longer release makes the tail drift back, shorter release snaps it
+  off. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`penv()`** — *Pitch‑envelope amount* (synonym: `pamt`). Sets the total pitch modulation depth (in semitones);
+  higher values give dramatic swoops, lower values add subtle pitch movement. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`pcurve()`** — *Pitch‑envelope curve shape* (synonym: `pcrv`). Controls how the pitch change is distributed over
+  time (e.g., more linear vs. more exponential), shaping the feel of the bend. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`panchor()`** — *Pitch‑envelope range anchor* (synonym: `panc`). Sets where the envelope is centered within the
+  pitch range (0–1), so you can bias the bend upward, downward, or centered around the base
+  pitch. [[1]](https://strudel.cc/learn/effects/)
 
 #### Waveshaping / Distortion
 
