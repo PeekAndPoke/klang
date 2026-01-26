@@ -63,7 +63,7 @@ internal class HurryPattern(
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (factorEvent in factorEvents) {
             val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
@@ -86,17 +86,14 @@ internal class HurryPattern(
         }
 
         val scale = factor
-        val innerFrom = from * scale
-        val innerTo = to * scale
+        val (innerFrom, innerTo) = scaleTimeRange(from, to, scale)
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
         return innerEvents.mapNotNull { ev ->
-            val mappedBegin = ev.begin / scale
-            val mappedEnd = ev.end / scale
-            val mappedDur = ev.dur / scale
+            val (mappedBegin, mappedEnd, mappedDur) = mapEventTimeByScale(ev, scale)
 
-            if (mappedEnd > from && mappedBegin < to) {
+            if (hasOverlap(mappedBegin, mappedEnd, from, to)) {
                 // Multiply the speed parameter by the factor
                 val currentSpeed = ev.data.speed ?: 1.0
                 val newSpeed = currentSpeed * factor.toDouble()

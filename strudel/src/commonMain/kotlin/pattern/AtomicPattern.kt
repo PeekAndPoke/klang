@@ -38,7 +38,7 @@ internal class AtomicPattern(
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val startCycle = from.floor().toInt()
         val endCycle = to.ceil().toInt()
-        val events = mutableListOf<StrudelPatternEvent>()
+        val events = createEventList()
 
         for (i in startCycle until endCycle) {
             val begin = Rational(i)

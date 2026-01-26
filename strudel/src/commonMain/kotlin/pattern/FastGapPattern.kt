@@ -6,7 +6,6 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
-import kotlin.math.floor
 
 /**
  * Speeds up a pattern like fast, but plays it only once per cycle in the compressed time, leaving a gap.
@@ -51,7 +50,7 @@ internal class FastGapPattern(
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (factorEvent in factorEvents) {
             val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
@@ -79,13 +78,10 @@ internal class FastGapPattern(
         }
 
         val span = Rational.ONE / factor
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // Determine which cycles we need to query
-        val cycleStart = floor(from.toDouble()).toLong()
-        val cycleEnd = floor(to.toDouble()).toLong()
-
-        for (cycle in cycleStart..cycleEnd) {
+        for (cycle in calculateCycleBounds(from, to)) {
             val cycleRat = cycle.toRational()
 
             // The compressed region in this cycle: [cycle, cycle + 1/factor)
@@ -93,7 +89,7 @@ internal class FastGapPattern(
             val compressedEnd = cycleRat + span
 
             // Check if our query range intersects with the compressed region
-            if (to <= compressedStart || from >= compressedEnd) {
+            if (!cycleRegionIntersects(from, to, compressedStart, compressedEnd)) {
                 continue // No intersection
             }
 
@@ -102,16 +98,10 @@ internal class FastGapPattern(
 
             // Map each event from source cycle [0,1) to compressed region [start, start+span)
             for (ev in sourceEvents) {
-                // Map event times from [cycle, cycle+1) to [compressedStart, compressedEnd)
-                val relativeBegin = ev.begin - cycleRat // Position within source cycle [0,1)
-                val relativeEnd = ev.end - cycleRat
-
-                val mappedBegin = compressedStart + (relativeBegin * span)
-                val mappedEnd = compressedStart + (relativeEnd * span)
-                val mappedDur = ev.dur * span
+                val (mappedBegin, mappedEnd, mappedDur) = mapEventTimeBySpan(ev, cycleRat, compressedStart, span)
 
                 // Only include if it intersects with our query range
-                if (mappedEnd > from && mappedBegin < to) {
+                if (hasOverlap(mappedBegin, mappedEnd, from, to)) {
                     result.add(
                         ev.copy(
                             begin = mappedBegin,

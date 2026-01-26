@@ -33,7 +33,7 @@ internal class RandrunPattern(
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (nEvent in nEvents) {
             val n = nEvent.data.value?.asInt ?: 0

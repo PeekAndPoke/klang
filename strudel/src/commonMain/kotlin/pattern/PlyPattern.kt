@@ -64,7 +64,7 @@ internal class PlyPattern(
         }
 
         val sourceEvents = source.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (event in sourceEvents) {
             // Sample n based on overlapping control events
@@ -110,7 +110,7 @@ internal class PlyPattern(
         }
 
         val sourceEvents = source.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         val nRat = n.toRational()
 

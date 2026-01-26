@@ -56,7 +56,7 @@ internal class TimeShiftPattern(
         val offsetEvents = offsetProvider.queryEvents(from, to, ctx)
         if (offsetEvents.isEmpty()) return queryWithStaticOffset(from, to, ctx, Rational.ZERO)
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (offsetEvent in offsetEvents) {
             val offset = (offsetEvent.data.value?.asDouble ?: 0.0).toRational()
@@ -80,15 +80,11 @@ internal class TimeShiftPattern(
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
-        val fromPlusEps = from + epsilon
-        val toMinusEps = to - epsilon
-
         return innerEvents.mapNotNull { ev ->
-            val mappedBegin = ev.begin + offset
-            val mappedEnd = ev.end + offset
+            val (mappedBegin, mappedEnd) = offsetEventTime(ev, offset)
 
             // Only include events that overlap with the requested range
-            if (mappedEnd > fromPlusEps && mappedBegin <= toMinusEps) {
+            if (hasOverlapWithEpsilon(mappedBegin, mappedEnd, from, to, epsilon)) {
                 ev.copy(
                     begin = mappedBegin,
                     end = mappedEnd,

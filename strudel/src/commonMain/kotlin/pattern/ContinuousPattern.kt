@@ -47,7 +47,7 @@ class ContinuousPattern private constructor(
             ctx.getOrDefault(granularityKey, (to - from))
         )
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
         var currentFrom = from
 
         while (to > currentFrom) {

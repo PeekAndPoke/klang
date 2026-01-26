@@ -261,7 +261,7 @@ internal class EuclideanPattern(
             return emptyList()
         }
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // Find all overlapping combinations
         for (pulsesEvent in pulsesEvents) {
@@ -315,7 +315,7 @@ internal class EuclideanPattern(
     ): List<StrudelPatternEvent> {
         if (steps <= 0 || steps < abs(pulses)) return emptyList()
 
-        val events = mutableListOf<StrudelPatternEvent>()
+        val events = createEventList()
         val rhythm = rotateJs(bjorklundStrudel(pulses, steps), -rotation)
 
         val startCycle = from.floor().toInt()

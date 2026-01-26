@@ -23,7 +23,7 @@ internal class ArrangementPattern(
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (totalDuration == Rational.ZERO) return emptyList()
 
-        val events = mutableListOf<StrudelPatternEvent>()
+        val events = createEventList()
 
         // 1. Determine which loops we cover
         // Usually from..to is small, but it might span the loop boundary.

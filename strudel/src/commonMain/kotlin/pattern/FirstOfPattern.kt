@@ -39,7 +39,7 @@ internal class FirstOfPattern(
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // For each n value's timespan, determine which cycles should be transformed
         for (nEvent in nEvents) {
