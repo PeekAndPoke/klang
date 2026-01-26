@@ -3,7 +3,6 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
@@ -632,16 +631,7 @@ val String.maskAll by dslStringExtension { p, args, callInfo -> p.maskAll(args, 
 // -- filter() ---------------------------------------------------------------------------------------------------------
 
 private fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
-    return object : StrudelPattern {
-        override val weight: Double get() = source.weight
-        override val steps: Rational? get() = source.steps
-
-        override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
-
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-            return source.queryArcContextual(from, to, ctx).filter(predicate)
-        }
-    }
+    return FilterPattern(source = source, predicate = predicate)
 }
 
 /** Filters haps using the given function. */
