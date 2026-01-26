@@ -192,57 +192,12 @@ private fun applyStackBy(patterns: List<StrudelPattern>, alignment: Double): Str
         if (dur == maxDur) {
             pat
         } else {
-            val totalGap = maxDur - dur
-            val timeShift = totalGap * alignment.toRational()
-
-            // Create a pattern that queries at original time then shifts results
-            object : StrudelPattern {
-                override val weight: Double = pat.weight
-                override val steps: Rational? = pat.steps
-
-                override fun estimateCycleDuration(): Rational = maxDur
-
-                override fun queryArcContextual(
-                    from: Rational,
-                    to: Rational,
-                    ctx: QueryContext,
-                ): List<StrudelPatternEvent> {
-                    val results = mutableListOf<StrudelPatternEvent>()
-
-                    // Determine which cycles of the aligned pattern we need to check
-                    val startCycle = (from / maxDur).floor().toInt()
-                    val endCycle = (to / maxDur).ceil().toInt()
-
-                    for (cycle in startCycle until endCycle) {
-                        val cycleOffset = Rational(cycle) * maxDur
-                        val patternStart = cycleOffset + timeShift
-                        val patternEnd = patternStart + dur
-
-                        // Check if this cycle's pattern window overlaps with the query range
-                        if (patternEnd > from && patternStart < to) {
-                            // Query the pattern at its ORIGINAL time coordinates (0 to dur)
-                            // Get events from cycle 0 of the original pattern
-                            val originalStart = Rational(cycle) * dur
-                            val originalEnd = originalStart + dur
-
-                            val events = pat.queryArcContextual(originalStart, originalEnd, ctx)
-
-                            // Shift the events to the aligned position
-                            results.addAll(events.map { event ->
-                                event.copy(
-                                    begin = event.begin - originalStart + patternStart,
-                                    end = event.end - originalStart + patternStart
-                                )
-                            }.filter { event ->
-                                // Only include events that overlap with the query range
-                                event.end > from && event.begin < to
-                            })
-                        }
-                    }
-
-                    return results
-                }
-            }
+            AlignedPattern(
+                source = pat,
+                sourceDuration = dur,
+                targetDuration = maxDur,
+                alignment = alignment
+            )
         }
     }
 
