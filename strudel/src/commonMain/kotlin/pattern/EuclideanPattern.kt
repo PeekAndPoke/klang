@@ -237,78 +237,25 @@ internal class EuclideanPattern(
         }
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // Check if all values are static - if so, apply directly to the whole range
-        val isAllStatic = pulsesProvider is ControlValueProvider.Static &&
-                stepsProvider is ControlValueProvider.Static &&
-                (rotationProvider == null || rotationProvider is ControlValueProvider.Static)
+    override fun queryArcContextual(
+        from: Rational,
+        to: Rational,
+        ctx: QueryContext,
+    ): List<StrudelPatternEvent> {
+        val pulsesEvents = pulsesProvider.queryEvents(from, to, ctx)
+        val stepsEvents = stepsProvider.queryEvents(from, to, ctx)
 
-        if (isAllStatic) {
-            val pulses = pulsesProvider.value.asInt ?: 0
-            val steps = stepsProvider.value.asInt ?: 0
-            val rotation = rotationProvider?.value?.asInt ?: 0
-
-            return applyEuclideanRhythm(from, to, ctx, pulses, steps, rotation)
-        }
-
-        // At least one parameter is a pattern - need to sample values and find overlaps
-        // We'll query a conservative range and find combinations
-        val pulsesEvents = when (pulsesProvider) {
-            is ControlValueProvider.Static -> {
-                listOf(
-                    StrudelPatternEvent(
-                        begin = from,
-                        end = to,
-                        dur = to - from,
-                        data = StrudelVoiceData.empty.copy(value = pulsesProvider.value)
+        val rotationEvents = rotationProvider?.queryEvents(from, to, ctx)
+            ?: listOf(
+                StrudelPatternEvent(
+                    begin = from,
+                    end = to,
+                    dur = to - from,
+                    data = StrudelVoiceData.empty.copy(
+                        value = StrudelVoiceValue.Num(0.0),
                     )
                 )
-            }
-
-            is ControlValueProvider.Pattern -> pulsesProvider.pattern.queryArcContextual(from, to, ctx)
-        }
-
-        val stepsEvents = when (stepsProvider) {
-            is ControlValueProvider.Static -> {
-                listOf(
-                    StrudelPatternEvent(
-                        begin = from,
-                        end = to,
-                        dur = to - from,
-                        data = StrudelVoiceData.empty.copy(value = stepsProvider.value)
-                    )
-                )
-            }
-
-            is ControlValueProvider.Pattern -> stepsProvider.pattern.queryArcContextual(from, to, ctx)
-        }
-
-        val rotationEvents = when (rotationProvider) {
-            is ControlValueProvider.Static -> {
-                listOf(
-                    StrudelPatternEvent(
-                        begin = from,
-                        end = to,
-                        dur = to - from,
-                        data = StrudelVoiceData.empty.copy(value = rotationProvider.value),
-                    )
-                )
-            }
-
-            is ControlValueProvider.Pattern -> rotationProvider.pattern.queryArcContextual(from, to, ctx)
-            null -> {
-                listOf(
-                    StrudelPatternEvent(
-                        begin = from,
-                        end = to,
-                        dur = to - from,
-                        data = StrudelVoiceData.empty.copy(
-                            value = StrudelVoiceValue.Num(0.0),
-                        )
-                    )
-                )
-            }
-        }
+            )
 
         if (pulsesEvents.isEmpty() || stepsEvents.isEmpty() || rotationEvents.isEmpty()) {
             return emptyList()

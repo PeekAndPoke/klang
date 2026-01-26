@@ -118,30 +118,22 @@ internal class EuclideanMorphPattern(
         val grooveEvents = groovePattern.queryArcContextual(from, to, ctx)
         if (grooveEvents.isEmpty()) return emptyList()
 
+        val pulsesEvents = pulsesProvider.queryEvents(from, to, ctx)
+        val stepsEvents = stepsProvider.queryEvents(from, to, ctx)
+        if (pulsesEvents.isEmpty() || stepsEvents.isEmpty()) return emptyList()
+
         val result = mutableListOf<StrudelPatternEvent>()
 
         // For each groove event, sample pulses/steps and generate morphed rhythm
         for (grooveEvent in grooveEvents) {
             // Get pulses and steps values for this groove event's timespan
-            val pulses = when (pulsesProvider) {
-                is ControlValueProvider.Static -> pulsesProvider.value.asInt ?: 0
-                is ControlValueProvider.Pattern -> {
-                    val events: List<StrudelPatternEvent> =
-                        pulsesProvider.pattern.queryArcContextual(grooveEvent.begin, grooveEvent.end, ctx)
+            val pulses = pulsesEvents
+                .firstOrNull { it.begin < grooveEvent.end && it.end > grooveEvent.begin }
+                ?.data?.value?.asInt ?: 0
 
-                    events.firstOrNull()?.data?.value?.asInt ?: 0
-                }
-            }
-
-            val steps = when (stepsProvider) {
-                is ControlValueProvider.Static -> stepsProvider.value.asInt ?: 0
-                is ControlValueProvider.Pattern -> {
-                    val events: List<StrudelPatternEvent> =
-                        stepsProvider.pattern.queryArcContextual(grooveEvent.begin, grooveEvent.end, ctx)
-
-                    events.firstOrNull()?.data?.value?.asInt ?: 0
-                }
-            }
+            val steps = stepsEvents
+                .firstOrNull { it.begin < grooveEvent.end && it.end > grooveEvent.begin }
+                ?.data?.value?.asInt ?: 0
 
             if (pulses <= 0 || steps <= 0) continue
 
