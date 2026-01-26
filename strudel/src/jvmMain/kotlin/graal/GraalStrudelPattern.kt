@@ -176,6 +176,18 @@ class GraalStrudelPattern(
         val lpenv = value.safeGetMember("lpenv").safeNumberOrNull()
             ?: value.safeGetMember("lpe").safeNumberOrNull()
 
+        // Highpass filter envelope
+        val hpattack = value.safeGetMember("hpattack").safeNumberOrNull()
+            ?: value.safeGetMember("hpa").safeNumberOrNull()
+        val hpdecay = value.safeGetMember("hpdecay").safeNumberOrNull()
+            ?: value.safeGetMember("hpd").safeNumberOrNull()
+        val hpsustain = value.safeGetMember("hpsustain").safeNumberOrNull()
+            ?: value.safeGetMember("hps").safeNumberOrNull()
+        val hprelease = value.safeGetMember("hprelease").safeNumberOrNull()
+            ?: value.safeGetMember("hpr").safeNumberOrNull()
+        val hpenv = value.safeGetMember("hpenv").safeNumberOrNull()
+            ?: value.safeGetMember("hpe").safeNumberOrNull()
+
         // ///////////////////////////////////////////////////////////////////////////////////
         // Sample Manipulation
         val loop = value.safeGetMember("loop")
@@ -240,6 +252,12 @@ class GraalStrudelPattern(
                 lpsustain = lpsustain,
                 lprelease = lprelease,
                 lpenv = lpenv,
+                // Highpass filter envelope
+                hpattack = hpattack,
+                hpdecay = hpdecay,
+                hpsustain = hpsustain,
+                hprelease = hprelease,
+                hpenv = hpenv,
                 // Routing
                 orbit = orbit,
                 // Pan

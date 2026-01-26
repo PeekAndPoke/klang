@@ -227,6 +227,22 @@ object JsCompatTestData {
             """s("saw").lpf(1000).lpattack(0.1).lpdecay(0.2).lpsustain(0.8).lprelease(0.5).lpenv(0.7)"""
         ),
 
+        // Filter Envelopes - Highpass
+        Example("HPF with envelope attack", """s("saw").hpf(2000).hpattack(0.1)"""),
+        Example("HPF with envelope alias hpa", """s("saw").hpf(2000).hpa(0.1)"""),
+        Example("HPF with envelope decay", """s("saw").hpf(2000).hpdecay(0.2)"""),
+        Example("HPF with envelope alias hpd", """s("saw").hpf(2000).hpd(0.2)"""),
+        Example("HPF with envelope sustain", """s("saw").hpf(2000).hpsustain(0.8)"""),
+        Example("HPF with envelope alias hps", """s("saw").hpf(2000).hps(0.8)"""),
+        Example("HPF with envelope release", """s("saw").hpf(2000).hprelease(0.5)"""),
+        Example("HPF with envelope alias hpr", """s("saw").hpf(2000).hpr(0.5)"""),
+        Example("HPF with envelope depth", """s("saw").hpf(2000).hpenv(0.5)"""),
+        Example("HPF with envelope alias hpe", """s("saw").hpf(2000).hpe(0.5)"""),
+        Example(
+            "HPF with full envelope",
+            """s("saw").hpf(2000).hpattack(0.1).hpdecay(0.2).hpsustain(0.8).hprelease(0.5).hpenv(0.7)"""
+        ),
+
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),
         Example("Distortion alias dist", """note("c").dist(0.5)"""),

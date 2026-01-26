@@ -580,3 +580,198 @@ val lpe by dslFunction { args, callInfo -> lpenv(args, callInfo) }
 /** Alias for [lpenv] on a string */
 @StrudelDsl
 val String.lpe by dslStringExtension { p, args, callInfo -> p.lpenv(args, callInfo) }
+
+// -- hpattack() - High Pass Filter Envelope Attack ----------------------------------------------------------------------
+
+private val hpattackMutation = voiceModifier {
+    copy(hpattack = it?.asDoubleOrNull())
+}
+
+private fun applyHpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = hpattackMutation,
+        getValue = { hpattack },
+        setValue = { v, _ -> copy(hpattack = v) },
+    )
+}
+
+/** Sets the high pass filter envelope attack time. */
+@StrudelDsl
+val StrudelPattern.hpattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpattack(p, args) }
+
+/** Sets the high pass filter envelope attack time. */
+@StrudelDsl
+val hpattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpattackMutation) }
+
+/** Sets the high pass filter envelope attack time on a string. */
+@StrudelDsl
+val String.hpattack by dslStringExtension { p, args, callInfo -> p.hpattack(args, callInfo) }
+
+/** Alias for [hpattack] */
+@StrudelDsl
+val StrudelPattern.hpa by dslPatternExtension { p, args, callInfo -> p.hpattack(args, callInfo) }
+
+/** Alias for [hpattack] */
+@StrudelDsl
+val hpa by dslFunction { args, callInfo -> hpattack(args, callInfo) }
+
+/** Alias for [hpattack] on a string */
+@StrudelDsl
+val String.hpa by dslStringExtension { p, args, callInfo -> p.hpattack(args, callInfo) }
+
+// -- hpdecay() - High Pass Filter Envelope Decay ------------------------------------------------------------------------
+
+private val hpdecayMutation = voiceModifier {
+    copy(hpdecay = it?.asDoubleOrNull())
+}
+
+private fun applyHpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = hpdecayMutation,
+        getValue = { hpdecay },
+        setValue = { v, _ -> copy(hpdecay = v) },
+    )
+}
+
+/** Sets the high pass filter envelope decay time. */
+@StrudelDsl
+val StrudelPattern.hpdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpdecay(p, args) }
+
+/** Sets the high pass filter envelope decay time. */
+@StrudelDsl
+val hpdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpdecayMutation) }
+
+/** Sets the high pass filter envelope decay time on a string. */
+@StrudelDsl
+val String.hpdecay by dslStringExtension { p, args, callInfo -> p.hpdecay(args, callInfo) }
+
+/** Alias for [hpdecay] */
+@StrudelDsl
+val StrudelPattern.hpd by dslPatternExtension { p, args, callInfo -> p.hpdecay(args, callInfo) }
+
+/** Alias for [hpdecay] */
+@StrudelDsl
+val hpd by dslFunction { args, callInfo -> hpdecay(args, callInfo) }
+
+/** Alias for [hpdecay] on a string */
+@StrudelDsl
+val String.hpd by dslStringExtension { p, args, callInfo -> p.hpdecay(args, callInfo) }
+
+// -- hpsustain() - High Pass Filter Envelope Sustain --------------------------------------------------------------------
+
+private val hpsustainMutation = voiceModifier {
+    copy(hpsustain = it?.asDoubleOrNull())
+}
+
+private fun applyHpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = hpsustainMutation,
+        getValue = { hpsustain },
+        setValue = { v, _ -> copy(hpsustain = v) },
+    )
+}
+
+/** Sets the high pass filter envelope sustain level. */
+@StrudelDsl
+val StrudelPattern.hpsustain by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpsustain(p, args) }
+
+/** Sets the high pass filter envelope sustain level. */
+@StrudelDsl
+val hpsustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpsustainMutation) }
+
+/** Sets the high pass filter envelope sustain level on a string. */
+@StrudelDsl
+val String.hpsustain by dslStringExtension { p, args, callInfo -> p.hpsustain(args, callInfo) }
+
+/** Alias for [hpsustain] */
+@StrudelDsl
+val StrudelPattern.hps by dslPatternExtension { p, args, callInfo -> p.hpsustain(args, callInfo) }
+
+/** Alias for [hpsustain] */
+@StrudelDsl
+val hps by dslFunction { args, callInfo -> hpsustain(args, callInfo) }
+
+/** Alias for [hpsustain] on a string */
+@StrudelDsl
+val String.hps by dslStringExtension { p, args, callInfo -> p.hpsustain(args, callInfo) }
+
+// -- hprelease() - High Pass Filter Envelope Release --------------------------------------------------------------------
+
+private val hpreleaseMutation = voiceModifier {
+    copy(hprelease = it?.asDoubleOrNull())
+}
+
+private fun applyHprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = hpreleaseMutation,
+        getValue = { hprelease },
+        setValue = { v, _ -> copy(hprelease = v) },
+    )
+}
+
+/** Sets the high pass filter envelope release time. */
+@StrudelDsl
+val StrudelPattern.hprelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyHprelease(p, args) }
+
+/** Sets the high pass filter envelope release time. */
+@StrudelDsl
+val hprelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpreleaseMutation) }
+
+/** Sets the high pass filter envelope release time on a string. */
+@StrudelDsl
+val String.hprelease by dslStringExtension { p, args, callInfo -> p.hprelease(args, callInfo) }
+
+/** Alias for [hprelease] */
+@StrudelDsl
+val StrudelPattern.hpr by dslPatternExtension { p, args, callInfo -> p.hprelease(args, callInfo) }
+
+/** Alias for [hprelease] */
+@StrudelDsl
+val hpr by dslFunction { args, callInfo -> hprelease(args, callInfo) }
+
+/** Alias for [hprelease] on a string */
+@StrudelDsl
+val String.hpr by dslStringExtension { p, args, callInfo -> p.hprelease(args, callInfo) }
+
+// -- hpenv() - High Pass Filter Envelope Depth --------------------------------------------------------------------------
+
+private val hpenvMutation = voiceModifier {
+    copy(hpenv = it?.asDoubleOrNull())
+}
+
+private fun applyHpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = hpenvMutation,
+        getValue = { hpenv },
+        setValue = { v, _ -> copy(hpenv = v) },
+    )
+}
+
+/** Sets the high pass filter envelope depth/amount. */
+@StrudelDsl
+val StrudelPattern.hpenv by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpenv(p, args) }
+
+/** Sets the high pass filter envelope depth/amount. */
+@StrudelDsl
+val hpenv by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpenvMutation) }
+
+/** Sets the high pass filter envelope depth/amount on a string. */
+@StrudelDsl
+val String.hpenv by dslStringExtension { p, args, callInfo -> p.hpenv(args, callInfo) }
+
+/** Alias for [hpenv] */
+@StrudelDsl
+val StrudelPattern.hpe by dslPatternExtension { p, args, callInfo -> p.hpenv(args, callInfo) }
+
+/** Alias for [hpenv] */
+@StrudelDsl
+val hpe by dslFunction { args, callInfo -> hpenv(args, callInfo) }
+
+/** Alias for [hpenv] on a string */
+@StrudelDsl
+val String.hpe by dslStringExtension { p, args, callInfo -> p.hpenv(args, callInfo) }

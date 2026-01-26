@@ -240,11 +240,11 @@ and category.
 
 #### Filter Envelopes - Highpass
 
-- [ ] **`hpattack()`** - High pass filter envelope attack time (alias: `hpa`)
-- [ ] **`hpdecay()`** - High pass filter envelope decay time (alias: `hpd`)
-- [ ] **`hpsustain()`** - High pass filter envelope sustain level (alias: `hps`)
-- [ ] **`hprelease()`** - High pass filter envelope release time (alias: `hpr`)
-- [ ] **`hpenv()`** - High pass filter envelope amount (alias: `hpe`)
+- [x] **`hpattack()`** - High pass filter envelope attack time (alias: `hpa`)
+- [x] **`hpdecay()`** - High pass filter envelope decay time (alias: `hpd`)
+- [x] **`hpsustain()`** - High pass filter envelope sustain level (alias: `hps`)
+- [x] **`hprelease()`** - High pass filter envelope release time (alias: `hpr`)
+- [x] **`hpenv()`** - High pass filter envelope amount (alias: `hpe`)
 
 #### Filter Envelopes - Bandpass
 

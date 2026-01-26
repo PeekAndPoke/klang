@@ -320,6 +320,14 @@ All arithmetic operations work on pattern values and can be applied as:
 - `lprelease()` / `lpr()` - LPF envelope release time
 - `lpenv()` / `lpe()` - LPF envelope modulation depth
 
+**Highpass Filter Envelope:**
+
+- `hpattack()` / `hpa()` - HPF envelope attack time
+- `hpdecay()` / `hpd()` - HPF envelope decay time
+- `hpsustain()` / `hps()` - HPF envelope sustain level
+- `hprelease()` / `hpr()` - HPF envelope release time
+- `hpenv()` / `hpe()` - HPF envelope modulation depth
+
 ### Spatial Effects ✅
 
 - `room()` - Reverb mix level
