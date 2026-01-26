@@ -775,3 +775,198 @@ val hpe by dslFunction { args, callInfo -> hpenv(args, callInfo) }
 /** Alias for [hpenv] on a string */
 @StrudelDsl
 val String.hpe by dslStringExtension { p, args, callInfo -> p.hpenv(args, callInfo) }
+
+// -- bpattack() - Band Pass Filter Envelope Attack ----------------------------------------------------------------------
+
+private val bpattackMutation = voiceModifier {
+    copy(bpattack = it?.asDoubleOrNull())
+}
+
+private fun applyBpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = bpattackMutation,
+        getValue = { bpattack },
+        setValue = { v, _ -> copy(bpattack = v) },
+    )
+}
+
+/** Sets the band pass filter envelope attack time. */
+@StrudelDsl
+val StrudelPattern.bpattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpattack(p, args) }
+
+/** Sets the band pass filter envelope attack time. */
+@StrudelDsl
+val bpattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpattackMutation) }
+
+/** Sets the band pass filter envelope attack time on a string. */
+@StrudelDsl
+val String.bpattack by dslStringExtension { p, args, callInfo -> p.bpattack(args, callInfo) }
+
+/** Alias for [bpattack] */
+@StrudelDsl
+val StrudelPattern.bpa by dslPatternExtension { p, args, callInfo -> p.bpattack(args, callInfo) }
+
+/** Alias for [bpattack] */
+@StrudelDsl
+val bpa by dslFunction { args, callInfo -> bpattack(args, callInfo) }
+
+/** Alias for [bpattack] on a string */
+@StrudelDsl
+val String.bpa by dslStringExtension { p, args, callInfo -> p.bpattack(args, callInfo) }
+
+// -- bpdecay() - Band Pass Filter Envelope Decay ------------------------------------------------------------------------
+
+private val bpdecayMutation = voiceModifier {
+    copy(bpdecay = it?.asDoubleOrNull())
+}
+
+private fun applyBpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = bpdecayMutation,
+        getValue = { bpdecay },
+        setValue = { v, _ -> copy(bpdecay = v) },
+    )
+}
+
+/** Sets the band pass filter envelope decay time. */
+@StrudelDsl
+val StrudelPattern.bpdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpdecay(p, args) }
+
+/** Sets the band pass filter envelope decay time. */
+@StrudelDsl
+val bpdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpdecayMutation) }
+
+/** Sets the band pass filter envelope decay time on a string. */
+@StrudelDsl
+val String.bpdecay by dslStringExtension { p, args, callInfo -> p.bpdecay(args, callInfo) }
+
+/** Alias for [bpdecay] */
+@StrudelDsl
+val StrudelPattern.bpd by dslPatternExtension { p, args, callInfo -> p.bpdecay(args, callInfo) }
+
+/** Alias for [bpdecay] */
+@StrudelDsl
+val bpd by dslFunction { args, callInfo -> bpdecay(args, callInfo) }
+
+/** Alias for [bpdecay] on a string */
+@StrudelDsl
+val String.bpd by dslStringExtension { p, args, callInfo -> p.bpdecay(args, callInfo) }
+
+// -- bpsustain() - Band Pass Filter Envelope Sustain --------------------------------------------------------------------
+
+private val bpsustainMutation = voiceModifier {
+    copy(bpsustain = it?.asDoubleOrNull())
+}
+
+private fun applyBpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = bpsustainMutation,
+        getValue = { bpsustain },
+        setValue = { v, _ -> copy(bpsustain = v) },
+    )
+}
+
+/** Sets the band pass filter envelope sustain level. */
+@StrudelDsl
+val StrudelPattern.bpsustain by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpsustain(p, args) }
+
+/** Sets the band pass filter envelope sustain level. */
+@StrudelDsl
+val bpsustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpsustainMutation) }
+
+/** Sets the band pass filter envelope sustain level on a string. */
+@StrudelDsl
+val String.bpsustain by dslStringExtension { p, args, callInfo -> p.bpsustain(args, callInfo) }
+
+/** Alias for [bpsustain] */
+@StrudelDsl
+val StrudelPattern.bps by dslPatternExtension { p, args, callInfo -> p.bpsustain(args, callInfo) }
+
+/** Alias for [bpsustain] */
+@StrudelDsl
+val bps by dslFunction { args, callInfo -> bpsustain(args, callInfo) }
+
+/** Alias for [bpsustain] on a string */
+@StrudelDsl
+val String.bps by dslStringExtension { p, args, callInfo -> p.bpsustain(args, callInfo) }
+
+// -- bprelease() - Band Pass Filter Envelope Release --------------------------------------------------------------------
+
+private val bpreleaseMutation = voiceModifier {
+    copy(bprelease = it?.asDoubleOrNull())
+}
+
+private fun applyBprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = bpreleaseMutation,
+        getValue = { bprelease },
+        setValue = { v, _ -> copy(bprelease = v) },
+    )
+}
+
+/** Sets the band pass filter envelope release time. */
+@StrudelDsl
+val StrudelPattern.bprelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyBprelease(p, args) }
+
+/** Sets the band pass filter envelope release time. */
+@StrudelDsl
+val bprelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpreleaseMutation) }
+
+/** Sets the band pass filter envelope release time on a string. */
+@StrudelDsl
+val String.bprelease by dslStringExtension { p, args, callInfo -> p.bprelease(args, callInfo) }
+
+/** Alias for [bprelease] */
+@StrudelDsl
+val StrudelPattern.bpr by dslPatternExtension { p, args, callInfo -> p.bprelease(args, callInfo) }
+
+/** Alias for [bprelease] */
+@StrudelDsl
+val bpr by dslFunction { args, callInfo -> bprelease(args, callInfo) }
+
+/** Alias for [bprelease] on a string */
+@StrudelDsl
+val String.bpr by dslStringExtension { p, args, callInfo -> p.bprelease(args, callInfo) }
+
+// -- bpenv() - Band Pass Filter Envelope Depth --------------------------------------------------------------------------
+
+private val bpenvMutation = voiceModifier {
+    copy(bpenv = it?.asDoubleOrNull())
+}
+
+private fun applyBpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = bpenvMutation,
+        getValue = { bpenv },
+        setValue = { v, _ -> copy(bpenv = v) },
+    )
+}
+
+/** Sets the band pass filter envelope depth/amount. */
+@StrudelDsl
+val StrudelPattern.bpenv by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpenv(p, args) }
+
+/** Sets the band pass filter envelope depth/amount. */
+@StrudelDsl
+val bpenv by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpenvMutation) }
+
+/** Sets the band pass filter envelope depth/amount on a string. */
+@StrudelDsl
+val String.bpenv by dslStringExtension { p, args, callInfo -> p.bpenv(args, callInfo) }
+
+/** Alias for [bpenv] */
+@StrudelDsl
+val StrudelPattern.bpe by dslPatternExtension { p, args, callInfo -> p.bpenv(args, callInfo) }
+
+/** Alias for [bpenv] */
+@StrudelDsl
+val bpe by dslFunction { args, callInfo -> bpenv(args, callInfo) }
+
+/** Alias for [bpenv] on a string */
+@StrudelDsl
+val String.bpe by dslStringExtension { p, args, callInfo -> p.bpenv(args, callInfo) }

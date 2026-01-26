@@ -243,6 +243,22 @@ object JsCompatTestData {
             """s("saw").hpf(2000).hpattack(0.1).hpdecay(0.2).hpsustain(0.8).hprelease(0.5).hpenv(0.7)"""
         ),
 
+        // Filter Envelopes - Bandpass
+        Example("BPF with envelope attack", """s("saw").bpf(1500).bpattack(0.1)"""),
+        Example("BPF with envelope alias bpa", """s("saw").bpf(1500).bpa(0.1)"""),
+        Example("BPF with envelope decay", """s("saw").bpf(1500).bpdecay(0.2)"""),
+        Example("BPF with envelope alias bpd", """s("saw").bpf(1500).bpd(0.2)"""),
+        Example("BPF with envelope sustain", """s("saw").bpf(1500).bpsustain(0.8)"""),
+        Example("BPF with envelope alias bps", """s("saw").bpf(1500).bps(0.8)"""),
+        Example("BPF with envelope release", """s("saw").bpf(1500).bprelease(0.5)"""),
+        Example("BPF with envelope alias bpr", """s("saw").bpf(1500).bpr(0.5)"""),
+        Example("BPF with envelope depth", """s("saw").bpf(1500).bpenv(0.5)"""),
+        Example("BPF with envelope alias bpe", """s("saw").bpf(1500).bpe(0.5)"""),
+        Example(
+            "BPF with full envelope",
+            """s("saw").bpf(1500).bpattack(0.1).bpdecay(0.2).bpsustain(0.8).bprelease(0.5).bpenv(0.7)"""
+        ),
+
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),
         Example("Distortion alias dist", """note("c").dist(0.5)"""),

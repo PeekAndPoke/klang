@@ -248,11 +248,11 @@ and category.
 
 #### Filter Envelopes - Bandpass
 
-- [ ] **`bpattack()`** - Band pass filter envelope attack time (alias: `bpa`)
-- [ ] **`bpdecay()`** - Band pass filter envelope decay time (alias: `bpd`)
-- [ ] **`bpsustain()`** - Band pass filter envelope sustain level (alias: `bps`)
-- [ ] **`bprelease()`** - Band pass filter envelope release time (alias: `bpr`)
-- [ ] **`bpenv()`** - Band pass filter envelope amount (alias: `bpe`)
+- [x] **`bpattack()`** - Band pass filter envelope attack time (alias: `bpa`)
+- [x] **`bpdecay()`** - Band pass filter envelope decay time (alias: `bpd`)
+- [x] **`bpsustain()`** - Band pass filter envelope sustain level (alias: `bps`)
+- [x] **`bprelease()`** - Band pass filter envelope release time (alias: `bpr`)
+- [x] **`bpenv()`** - Band pass filter envelope amount (alias: `bpe`)
 
 #### Pitch Envelope
 

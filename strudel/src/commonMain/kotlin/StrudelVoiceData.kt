@@ -101,6 +101,18 @@ data class StrudelVoiceData(
     /** High pass filter envelope depth/amount */
     val hpenv: Double?,
 
+    // Bandpass filter envelope
+    /** Band pass filter envelope attack time */
+    val bpattack: Double?,
+    /** Band pass filter envelope decay time */
+    val bpdecay: Double?,
+    /** Band pass filter envelope sustain level */
+    val bpsustain: Double?,
+    /** Band pass filter envelope release time */
+    val bprelease: Double?,
+    /** Band pass filter envelope depth/amount */
+    val bpenv: Double?,
+
     // Routing
     val orbit: Int?,
 
@@ -168,6 +180,11 @@ data class StrudelVoiceData(
             hpsustain = null,
             hprelease = null,
             hpenv = null,
+            bpattack = null,
+            bpdecay = null,
+            bpsustain = null,
+            bprelease = null,
+            bpenv = null,
             orbit = null,
             pan = null,
             delay = null,
@@ -236,7 +253,27 @@ data class StrudelVoiceData(
                     )
                 )
             }
-            bandf?.let { add(FilterDef.BandPass(cutoffHz = it, q = bandq)) }
+            bandf?.let { bandfValue ->
+                // Build envelope if any bpattack/bpdecay/bpsustain/bprelease/bpenv fields are present
+                val envelope =
+                    if (bpattack != null || bpdecay != null || bpsustain != null || bprelease != null || bpenv != null) {
+                        FilterEnvelope(
+                            attack = bpattack,
+                            decay = bpdecay,
+                            sustain = bpsustain,
+                            release = bprelease,
+                            depth = bpenv,
+                        )
+                    } else null
+
+                add(
+                    FilterDef.BandPass(
+                        cutoffHz = bandfValue,
+                        q = bandq,
+                        envelope = envelope
+                    )
+                )
+            }
             notchf?.let { add(FilterDef.Notch(cutoffHz = it, q = nresonance)) }
         }
 
