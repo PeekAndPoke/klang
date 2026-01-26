@@ -117,7 +117,7 @@ and category.
 - [x] **`hurry(factor)`** - Speeds up pattern and multiplies speed parameter, now supports control patterns (standalone,
   pattern method, string
   extension)
-- [ ] **`loopAt(cycles)`** - Fit sample to cycles
+- [x] **`loopAt(cycles)`** - Fit sample to cycles
 - [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
 
 ### Pattern Transformation ⭐⭐⭐
@@ -217,38 +217,139 @@ and category.
 
 ### Audio Effects ⭐⭐⭐
 
-- [x] **`lpf()`** - Low pass filter
-- [x] **`hpf()`** - High pass filter
-- [x] **`bandf()` / `bpf()`** - Band pass filter
+#### Filter Effects
+
+- [x] **`lpf()`** - Low pass filter (aliases: `cutoff`, `ctf`, `lp`)
+- [x] **`lpq()`** - Low pass filter Q/resonance (alias: `resonance`, `res`)
+- [x] **`hpf()`** - High pass filter (aliases: `hp`, `hcutoff`)
+- [x] **`hpq()`** - High pass filter Q/resonance (aliases: `hresonance`, `hres`)
+- [x] **`bpf()`** - Band pass filter (aliases: `bandf`, `bp`)
+- [x] **`bpq()`** - Band pass filter Q/resonance (alias: `bandq`)
 - [x] **`notchf()`** - Notch filter
-- [x] **`resonance()` / `res()`** - Filter resonance/Q
-- [x] **`distort()`** - Distortion effect
-- [x] **`crush()`** - Bit crusher effect
-- [x] **`coarse()`** - Coarse pitch quantization
-- [x] **`room()`** - Reverb room size
-- [x] **`roomsize()` / `rsize()`** - Reverb room size
-- [x] **`delay()`** - Delay effect amount
-- [x] **`delaytime()`** - Delay time
-- [x] **`delayfeedback()`** - Delay feedback
-- [ ] **`lpq()`, `hpq()`, `bpq()`** - Dedicated Q/resonance for each filter
-- [ ] **Filter envelopes** - `lpattack`, `lpdecay`, `lpsustain`, `lprelease` (and hp/bp variants)
-- [ ] **`vowel(sound)`** - Vowel filter (a, e, i, o, u)
-- [ ] **`phaser()`** - Phaser effect
-- [ ] **`tremolo`** with full parameters:
-    - `tremolosync()`, `tremolodepth()`, `tremoloskew()`
-    - `tremolophase()`, `tremoloshape()`
+- [x] **`nresonance()`** - Notch filter resonance (alias: `nres`)
+- [ ] **`ftype()`** - Filter type (12db, ladder, 24db)
+- [ ] **`vowel()`** - Vowel formant filter (a, e, i, o, u, ae, aa, oe, ue, y, uh, un, en, an, on)
+
+#### Filter Envelopes - Lowpass
+
+- [x] **`lpattack()`** - Low pass filter envelope attack time (alias: `lpa`)
+- [x] **`lpdecay()`** - Low pass filter envelope decay time (alias: `lpd`)
+- [x] **`lpsustain()`** - Low pass filter envelope sustain level (alias: `lps`)
+- [x] **`lprelease()`** - Low pass filter envelope release time (alias: `lpr`)
+- [x] **`lpenv()`** - Low pass filter envelope amount (alias: `lpe`)
+
+#### Filter Envelopes - Highpass
+
+- [x] **`hpattack()`** - High pass filter envelope attack time (alias: `hpa`)
+- [x] **`hpdecay()`** - High pass filter envelope decay time (alias: `hpd`)
+- [x] **`hpsustain()`** - High pass filter envelope sustain level (alias: `hps`)
+- [x] **`hprelease()`** - High pass filter envelope release time (alias: `hpr`)
+- [x] **`hpenv()`** - High pass filter envelope amount (alias: `hpe`)
+
+#### Filter Envelopes - Bandpass
+
+- [x] **`bpattack()`** - Band pass filter envelope attack time (alias: `bpa`)
+- [x] **`bpdecay()`** - Band pass filter envelope decay time (alias: `bpd`)
+- [x] **`bpsustain()`** - Band pass filter envelope sustain level (alias: `bps`)
+- [x] **`bprelease()`** - Band pass filter envelope release time (alias: `bpr`)
+- [x] **`bpenv()`** - Band pass filter envelope amount (alias: `bpe`)
+
+#### Filter Envelopes - Notch (⚠️ NOT IN ORIGINAL STRUDEL - KLANG EXTENSION)
+
+**Note:** These features are additional functionality not present in the original Strudel JS implementation.
+They follow the same pattern as the other filter envelopes but are specific to the Klang Kotlin port.
+
+- [x] **`nfattack()`** - Notch filter envelope attack time (alias: `nfa`)
+- [x] **`nfdecay()`** - Notch filter envelope decay time (alias: `nfd`)
+- [x] **`nfsustain()`** - Notch filter envelope sustain level (alias: `nfs`)
+- [x] **`nfrelease()`** - Notch filter envelope release time (alias: `nfr`)
+- [x] **`nfenv()`** - Notch filter envelope amount (alias: `nfe`)
+
+#### Pitch Envelope
+
+- [ ] **`pattack()`** - Pitch envelope attack time (alias: `patt`)
+- [ ] **`pdecay()`** - Pitch envelope decay time (alias: `pdec`)
+- [ ] **`prelease()`** - Pitch envelope release time (alias: `prel`)
+- [ ] **`penv()`** - Pitch envelope amount in semitones
+- [ ] **`pcurve()`** - Pitch envelope curve (0=linear, 1=exponential)
+- [ ] **`panchor()`** - Pitch envelope range anchor (0-1)
+
+#### Waveshaping / Distortion
+
+- [x] **`distort()`** - Distortion effect (alias: `dist`)
+- [x] **`crush()`** - Bit crusher effect (1-16 bits)
+- [x] **`coarse()`** - Sample rate reduction
+- [ ] **`shape()`** - Wave distortion amount
+
+#### Amplitude Modulation / Tremolo
+
+- [ ] **`tremolosync()`** - Tremolo modulation speed in cycles (alias: `tremsync`)
+- [ ] **`tremolodepth()`** - Tremolo depth of modulation (alias: `tremdepth`)
+- [ ] **`tremoloskew()`** - Tremolo waveform shape 0-1 (alias: `tremskew`)
+- [ ] **`tremolophase()`** - Tremolo phase offset in cycles (alias: `tremphase`)
+- [ ] **`tremoloshape()`** - Tremolo waveform type: tri, square, sine, saw, ramp (alias: `tremshape`)
+
+#### Dynamics
+
+- [ ] **`velocity()`** - Volume level 0-1, multiplied with gain
+- [ ] **`postgain()`** - Post-effect gain boost
+- [ ] **`compressor()`** - Dynamic range compression "threshold:ratio:knee:attack:release"
+
+#### Panning
+
+- [ ] **`jux()`** - Apply function to right channel only
+- [ ] **`juxBy()`** - Adjustable stereo width jux (alias: `juxby`; 0=mono, 1=full stereo)
+
+#### Global Effects - Reverb
+
+- [x] **`room()`** - Reverb mix level (0-1)
+- [x] **`roomsize()`** - Reverb room size (0-10) (alias: `rsize`) **MISSING ALIASES: `sz`, `size`**
+- [ ] **`roomfade()`** - Reverb fade time in seconds (alias: `rfade`)
+- [ ] **`roomlp()`** - Reverb lowpass start frequency in Hz (alias: `rlp`)
+- [ ] **`roomdim()`** - Reverb lowpass frequency at -60dB in Hz (alias: `rdim`)
+- [ ] **`iresponse()`** - Impulse response sample (alias: `ir`)
+
+#### Global Effects - Delay
+
+- [x] **`delay()`** - Delay signal level (0-1)
+- [x] **`delaytime()`** - Delay duration
+- [x] **`delayfeedback()`** - Delay feedback amount (aliases: `delayfb`, `dfb`)
+
+#### Global Effects - Phaser
+
+- [ ] **`phaser()`** - Phaser modulation speed (alias: `ph`)
+- [ ] **`phaserdepth()`** - Phaser effect amount 0-1, default 0.75 (aliases: `phd`, `phasdp`)
+- [ ] **`phasercenter()`** - Phaser center frequency in Hz, default 1000 (alias: `phc`)
+- [ ] **`phasersweep()`** - Phaser LFO sweep range in Hz, default 2000 (alias: `phs`)
+
+#### Global Effects - Duck / Sidechain
+
+- [ ] **`duckorbit()`** - Target orbit number for ducking (alias: `duck`)
+- [ ] **`duckattack()`** - Duck return-to-normal time in seconds (alias: `duckatt`)
+- [ ] **`duckdepth()`** - Ducking amount (0-1)
+
+#### Other
+
+- [ ] **`xfade()`** - Cross-fade between signals (0-1)
+- [x] **`orbit()`** - Global effect context grouping **MISSING ALIAS: `o`**
 
 ### Sample Manipulation ⭐⭐⭐
 
-- [ ] **`begin(pos)`** - Skip to sample position
-- [ ] **`end(pos)`** - Cut sample at position
-- [ ] **`speed(rate)`** - Playback speed (including negative)
-- [ ] **`loop()`** - Loop sample
-- [ ] **`loopAt(cycles)`** - Fit sample to cycles
-- [ ] **`cut(group)`** - Stop playing samples in cutgroup
-- [ ] **`chop(slices)`** - Granular slicing
-- [ ] **`slice(index)`** - Trigger specific slice
-
+- [x] **`begin(pos)`** - Skip to sample position (0..1)
+- [x] **`end(pos)`** - Cut sample at position (0..1)
+- [x] **`speed(rate)`** - Playback speed (including negative)
+- [x] **`loop()`** - Loop sample
+- [ ] **`loopBegin()` / `loopb()`** - Set loop start point within sample
+- [ ] **`loopEnd()` / `loope()`** - Set loop end point within sample
+- [x] **`loopAt(cycles)`** - Fit sample to cycles
+- [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
+- [x] **`cut(group)`** - Stop playing samples in cutgroup
+- [ ] **`chop(n)`** - Chop sample into n slices for granular synthesis
+- [x] **`slice(n, index)`** - Play slice index from n slices
+- [ ] **`splice(n, index)`** - Like slice but adjusts speed to match step duration
+- [ ] **`striate(portions)`** - Partition samples into portions, trigger progressively
+- [ ] **`fit()`** - Match sample to event duration (for rhythmic loops)
+- [ ] **`scrub(position, speed)`** - Tape-style scrubbing with position/speed control
 ### Continuous Signals ⭐⭐
 
 - [x] **`steady(value)`** - Constant value continuous pattern
@@ -285,9 +386,12 @@ and category.
 - [x] **`fromBipolar()`** - Convert -1..1 range to 0-1 (pattern method, string extension)
 - [x] **`perlin2`** - Bipolar Perlin noise (-1 to 1)
 - [x] **`berlin2`** - Bipolar Berlin noise (-1 to 1)
-- [ ] **`rangex(min, max)`** - Exponential range scaling
-- [ ] **`range2(min, max)`** - Bipolar range scaling
-- [ ] **`ratio()`** - Get frequency ratio
+- [x] **`rangex(min, max)`** - Exponential range scaling (unipolar 0-1 to min-max with exponential curve)
+- [x] **`range2(min, max)`** - Bipolar range scaling (-1 to 1 to min-max)
+- [x] **`round()`** - Round values to nearest integer
+- [x] **`floor()`** - Floor values to integers
+- [x] **`ceil()`** - Ceil values to integers
+- [x] **`ratio()`** - Divide numbers via list notation using ":" (e.g., "5:4" = 1.25)
 
 ### Random & Seeding ⭐⭐⭐
 
@@ -375,15 +479,17 @@ and category.
   pattern method, string extension)
 - [ ] **`repeatCycles(n)`** - Repeat pattern for n cycles
 
-### Sample Functions
+### Sample Functions (Advanced)
 
-- [ ] **`loopBegin()`** / **`loopEnd()`** - Loop point control
+**Note:** Basic sample functions are listed in HIGH PRIORITY - Sample Manipulation section above.
+
+- [ ] **`loopBegin()` / `loopb()`** - Loop point control
+- [ ] **`loopEnd()` / `loope()`** - Loop point control
 - [ ] **`striate(portions)`** - Progressive sample portions
-- [ ] **`splice(index)`** - Slice with speed adjustment
-- [ ] **`scrub()`** - Tape-like scrubbing
+- [ ] **`splice(n, index)`** - Slice with speed adjustment
+- [ ] **`scrub(position, speed)`** - Tape-like scrubbing
 - [ ] **`fit()`** - Match sample to event duration
 - [ ] **`chop(n)`** - Chop sample into n slices
-- [ ] **`slice(n, index)`** - Play slice index from n slices
 
 ### Synthesis Parameters
 
@@ -564,9 +670,9 @@ and category.
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ~3 missing, 3 won't implement (18 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
-  `compress`, `ply`,
-  `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`,
+- **Time Modification**: ~3 missing, 3 won't implement (20 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
+  `compress`, `focus`, `ply`,
+  `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`, `loopAt`,
   `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support; won't
   implement: `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
 - **Pattern Operations**: ~9 missing (4 completed: `rev`, `palindrome`, `inside`, `outside`)
@@ -576,14 +682,16 @@ and category.
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
-- **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
-- **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ✅ 0 missing (34 completed, many with control pattern support: `steady`, `signal`, `time`,
+- **Audio Effects**: ~46 missing + 2 partial (15 completed: filters with full aliases, filter resonance, distortion,
+  reverb, delay; partial: roomsize missing sz/size aliases, orbit missing o alias)
+- **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
+  `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
+- **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
   `sine`, `sine2`, `cosine`, `cosine2`,
   `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `perlin2`, `berlin`,
-  `berlin2`, `range`,
+  `berlin2`, `range`, `rangex`, `range2`,
   `rand`, `rand2`, `irand` (control patterns), `randL` (control patterns), `brand`, `brandBy` (control patterns),
-  `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`)
+  `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`, `round`, `floor`, `ceil`, `ratio`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~13 missing (1 completed with control pattern support: `bite`)
 - **Conditional & Probabilistic**: ✅ 0 missing (20 completed, with control pattern support: `sometimesBy`, `sometimes`,
@@ -600,9 +708,12 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~67 features remaining (3 marked "won't implement")
+### Total Estimated: ~92 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~188 features! 🎉
+### Completed So Far: ~207 features! 🎉
+
+**Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
+Strudel documentation.
 
 **Major achievements:**
 

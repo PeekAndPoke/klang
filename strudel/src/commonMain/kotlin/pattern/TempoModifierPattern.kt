@@ -64,7 +64,7 @@ internal class TempoModifierPattern(
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (factorEvent in factorEvents) {
             val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
@@ -89,17 +89,14 @@ internal class TempoModifierPattern(
             Rational.ONE / maxOf(0.001.toRational(), factor)
         }
 
-        val innerFrom = (from * scale) + epsilon
-        val innerTo = (to * scale) - epsilon
+        val (innerFrom, innerTo) = scaleTimeRangeWithEpsilon(from, to, scale, epsilon)
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
         return innerEvents.mapNotNull { ev ->
-            val mappedBegin = ev.begin / scale
-            val mappedEnd = ev.end / scale
-            val mappedDur = ev.dur / scale
+            val (mappedBegin, mappedEnd, mappedDur) = mapEventTimeByScale(ev, scale)
 
-            if (mappedEnd > from && mappedBegin < to) {
+            if (hasOverlap(mappedBegin, mappedEnd, from, to)) {
                 ev.copy(
                     begin = mappedBegin,
                     end = mappedEnd,

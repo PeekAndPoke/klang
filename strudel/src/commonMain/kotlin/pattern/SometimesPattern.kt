@@ -91,7 +91,7 @@ internal class SometimesPattern private constructor(
         val sourceEvents = source.queryArcContextual(from, to, ctx)
         if (sourceEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         var matchEvents: MutableList<StrudelPatternEvent>? = null
         var missEvents: MutableList<StrudelPatternEvent>? = null

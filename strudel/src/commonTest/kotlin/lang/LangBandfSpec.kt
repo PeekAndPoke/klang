@@ -70,4 +70,27 @@ class LangBandfSpec : StringSpec({
         events[2].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (0.5 plusOrMinus EPSILON)
         events[3].data.toVoiceData().filters.getByType<FilterDef.BandPass>()?.cutoffHz shouldBe (0.0 plusOrMinus EPSILON)
     }
+
+    "bp() is an alias for bandf()" {
+        val p = bp("1500")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.bandf shouldBe 1500.0
+    }
+
+    "bp() works as pattern extension" {
+        val p = note("c").bp("1500")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.bandf shouldBe 1500.0
+    }
+
+    "bp() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").bp("1500")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.bandf shouldBe 1500.0
+    }
 })

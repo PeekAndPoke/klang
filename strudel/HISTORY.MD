@@ -301,11 +301,48 @@ All arithmetic operations work on pattern values and can be applied as:
 
 ### Filters ✅
 
-- `lpf(freq)` - Low-pass filter
-- `hpf(freq)` - High-pass filter
-- `bandf(freq)` / `bpf(freq)` - Band-pass filter
+- `lpf(freq)` - Low-pass filter (aliases: `cutoff`, `ctf`, `lp`)
+- `hpf(freq)` - High-pass filter (aliases: `hp`, `hcutoff`)
+- `bandf(freq)` / `bpf(freq)` - Band-pass filter (alias: `bp`)
 - `notchf(freq)` - Notch filter
-- `resonance()` / `res()` - Filter resonance/Q factor
+- `resonance()` / `res()` / `lpq()` - Low-pass filter resonance/Q factor
+- `hresonance()` / `hres()` / `hpq()` - High-pass filter resonance/Q factor
+- `bandq()` / `bpq()` - Band-pass filter Q factor
+- `nresonance()` / `nres()` - Notch filter resonance/Q factor
+
+### Filter Envelopes ✅
+
+**Lowpass Filter Envelope:**
+
+- `lpattack()` / `lpa()` - LPF envelope attack time
+- `lpdecay()` / `lpd()` - LPF envelope decay time
+- `lpsustain()` / `lps()` - LPF envelope sustain level
+- `lprelease()` / `lpr()` - LPF envelope release time
+- `lpenv()` / `lpe()` - LPF envelope modulation depth
+
+**Highpass Filter Envelope:**
+
+- `hpattack()` / `hpa()` - HPF envelope attack time
+- `hpdecay()` / `hpd()` - HPF envelope decay time
+- `hpsustain()` / `hps()` - HPF envelope sustain level
+- `hprelease()` / `hpr()` - HPF envelope release time
+- `hpenv()` / `hpe()` - HPF envelope modulation depth
+
+**Bandpass Filter Envelope:**
+
+- `bpattack()` / `bpa()` - BPF envelope attack time
+- `bpdecay()` / `bpd()` - BPF envelope decay time
+- `bpsustain()` / `bps()` - BPF envelope sustain level
+- `bprelease()` / `bpr()` - BPF envelope release time
+- `bpenv()` / `bpe()` - BPF envelope modulation depth
+
+**Notch Filter Envelope:** (⚠️ NOT IN ORIGINAL STRUDEL JS)
+
+- `nfattack()` / `nfa()` - Notch filter envelope attack time
+- `nfdecay()` / `nfd()` - Notch filter envelope decay time
+- `nfsustain()` / `nfs()` - Notch filter envelope sustain level
+- `nfrelease()` / `nfr()` - Notch filter envelope release time
+- `nfenv()` / `nfe()` - Notch filter envelope modulation depth
 
 ### Spatial Effects ✅
 
@@ -313,11 +350,11 @@ All arithmetic operations work on pattern values and can be applied as:
 - `roomsize()` / `rsize()` - Reverb room size
 - `delay()` - Delay mix level
 - `delaytime()` - Delay time
-- `delayfeedback()` - Delay feedback amount
+- `delayfeedback()` / `delayfb()` / `dfb()` - Delay feedback amount
 
 ### Distortion & Degradation ✅
 
-- `distort()` - Distortion effect
+- `distort()` / `dist()` - Distortion effect
 - `crush()` - Bit crushing
 - `coarse()` - Sample rate reduction
 
@@ -381,10 +418,17 @@ All arithmetic operations work on pattern values and can be applied as:
 ### Signal Processing ✅
 
 - `range(min, max)` - Rescale continuous pattern values (transformation order independent via QueryContext)
+- `rangex(min, max)` - Exponential range scaling for unipolar signals (pattern method, string extension)
+- `range2(min, max)` - Bipolar range scaling for -1 to 1 signals (pattern method, string extension)
 - `segment(n)` / `seg(n)` - Sample continuous signal n times per cycle (pattern method, string extension, typed
   function)
 - `toBipolar()` - Convert 0-1 range to -1..1 (pattern method, string extension)
 - `fromBipolar()` - Convert -1..1 range to 0-1 (pattern method, string extension)
+- `round()` - Round values to nearest integer (pattern method, string extension)
+- `floor()` - Floor values to lower integer (pattern method, string extension)
+- `ceil()` - Ceil values to higher integer (pattern method, string extension)
+- `ratio()` - Divide numbers via colon notation (e.g., "5:4" = 1.25) (standalone function, pattern method, string
+  extension)
 
 ## Context & Routing
 
@@ -459,7 +503,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 180+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 198+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 27 core pattern types including:
     - Basic: AtomicPattern, SequencePattern, StackPattern, ArrangementPattern
     - Euclidean: EuclideanPattern, EuclideanPatternWithControl, EuclideanMorphPattern, EuclideanMorphPatternWithControl
@@ -472,10 +516,10 @@ Comprehensive voice data structure supporting:
     - Conditional: FirstOfWithControlPattern, LastOfWithControlPattern
     - Continuous: ContinuousPattern
     - Control: ControlPattern, ReinterpretPattern
-- 34 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
+- 39 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
   isaw2, tri, tri2, itri, itri2, square, square2, perlin, perlin2, berlin, berlin2, rand, rand2, irand, randL, randrun,
-  brand, brandBy,
-  segment, seg, toBipolar, fromBipolar) - many with control pattern support
+  brand, brandBy, segment, seg, toBipolar, fromBipolar, rangex, range2, round, floor, ceil, ratio) - many with control
+  pattern support
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features and caching (including Euclidean rhythms, probabilistic patterns)

@@ -122,7 +122,7 @@ internal class EuclideanMorphPattern(
         val stepsEvents = stepsProvider.queryEvents(from, to, ctx)
         if (pulsesEvents.isEmpty() || stepsEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // For each groove event, sample pulses/steps and generate morphed rhythm
         for (grooveEvent in grooveEvents) {

@@ -63,4 +63,27 @@ class LangResonanceSpec : StringSpec({
         // t=0.75: sine(0.75) = 0.0
         events[3].data.resonance shouldBe (0.0 plusOrMinus EPSILON)
     }
+
+    "lpq() is an alias for resonance()" {
+        val p = lpq("8")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.resonance shouldBe 8.0
+    }
+
+    "lpq() works as pattern extension" {
+        val p = note("c").lpq("8")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.resonance shouldBe 8.0
+    }
+
+    "lpq() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").lpq("8")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.resonance shouldBe 8.0
+    }
 })

@@ -37,7 +37,7 @@ internal class AlignedPattern(
 
         val totalGap = targetDuration - sourceDuration
         val timeShift = totalGap * alignment.toRational()
-        val results = mutableListOf<StrudelPatternEvent>()
+        val results = createEventList()
 
         val startCycle = (from / targetDuration).floor().toInt()
         val endCycle = (to / targetDuration).ceil().toInt()

@@ -14,6 +14,7 @@ import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.math.lcm
 import io.peekandpoke.klang.strudel.pattern.*
+import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.log2
@@ -1546,3 +1547,45 @@ val binaryL by dslFunction { args, /* callInfo */ _ ->
         applyBinaryNL(n, bits)
     }
 }
+
+// -- ratio ------------------------------------------------------------------------------------------------------------
+
+private val ratioMutation = voiceModifier { inputValue ->
+    // Parse colon notation like "5:4" into a ratio
+    // Convert to string first to handle both string and numeric inputs
+    val parts = inputValue?.toString()?.split(":") ?: emptyList()
+
+    val ratioValue = if (parts.size > 1) {
+        // Parse all parts as numbers and divide them: "5:4" -> 5/4 = 1.25
+        val numbers = parts.mapNotNull { it.toDoubleOrNull() }
+        if (numbers.isNotEmpty()) {
+            numbers.drop(1).fold(numbers[0]) { acc, divisor -> acc / divisor }
+        } else {
+            null
+        }
+    } else {
+        // Single value without colon, try to parse as number
+        inputValue?.asDoubleOrNull()
+    }
+
+    copy(value = ratioValue?.asVoiceValue())
+}
+
+/**
+ * Divides numbers via colon notation using ":".
+ * E.g. "5:4" becomes 1.25, "3:2" becomes 1.5, "12:3:2" becomes 2.0.
+ * Returns a new pattern with just numbers.
+ */
+@StrudelDsl
+val ratio by dslFunction { args, /* callInfo */ _ -> args.toPattern(ratioMutation) }
+
+/**
+ * Divides numbers via colon notation using ":".
+ */
+@StrudelDsl
+val StrudelPattern.ratio by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    p.reinterpretVoice { it.ratioMutation(it.value?.asString) }
+}
+
+@StrudelDsl
+val String.ratio by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.ratio() }

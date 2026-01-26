@@ -43,7 +43,7 @@ internal class SequencePattern(
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
 
-        val events = mutableListOf<StrudelPatternEvent>()
+        val events = createEventList()
 
         // Optimize: Iterate only over the cycles involved in the query
         val startCycle = from.floor().toInt()

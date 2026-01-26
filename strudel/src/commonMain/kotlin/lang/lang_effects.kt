@@ -42,6 +42,18 @@ val String.distort by dslStringExtension { p, args, /* callInfo */ _ ->
     applyDistort(p, args)
 }
 
+/** Alias for [distort] */
+@StrudelDsl
+val StrudelPattern.dist by dslPatternExtension { p, args, callInfo -> p.distort(args, callInfo) }
+
+/** Alias for [distort] */
+@StrudelDsl
+val dist by dslFunction { args, callInfo -> distort(args, callInfo) }
+
+/** Alias for [distort] on a string */
+@StrudelDsl
+val String.dist by dslStringExtension { p, args, callInfo -> p.distort(args, callInfo) }
+
 // -- crush() ----------------------------------------------------------------------------------------------------------
 
 private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
@@ -247,3 +259,27 @@ val delayfeedback by dslFunction { args, /* callInfo */ _ -> args.toPattern(dela
 val String.delayfeedback by dslStringExtension { p, args, /* callInfo */ _ ->
     applyDelayFeedback(p, args)
 }
+
+/** Alias for [delayfeedback] */
+@StrudelDsl
+val StrudelPattern.delayfb by dslPatternExtension { p, args, callInfo -> p.delayfeedback(args, callInfo) }
+
+/** Alias for [delayfeedback] */
+@StrudelDsl
+val delayfb by dslFunction { args, callInfo -> delayfeedback(args, callInfo) }
+
+/** Alias for [delayfeedback] on a string */
+@StrudelDsl
+val String.delayfb by dslStringExtension { p, args, callInfo -> p.delayfeedback(args, callInfo) }
+
+/** Alias for [delayfeedback] */
+@StrudelDsl
+val StrudelPattern.dfb by dslPatternExtension { p, args, callInfo -> p.delayfeedback(args, callInfo) }
+
+/** Alias for [delayfeedback] */
+@StrudelDsl
+val dfb by dslFunction { args, callInfo -> delayfeedback(args, callInfo) }
+
+/** Alias for [delayfeedback] on a string */
+@StrudelDsl
+val String.dfb by dslStringExtension { p, args, callInfo -> p.delayfeedback(args, callInfo) }

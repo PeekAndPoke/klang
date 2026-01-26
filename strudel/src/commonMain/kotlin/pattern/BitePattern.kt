@@ -77,7 +77,7 @@ internal class BitePattern(
             return queryWithStaticValues(from, to, ctx, n, idx)
         }
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // Pair up n events with index events by their overlapping timespans
         for (nEvent in nEvents) {

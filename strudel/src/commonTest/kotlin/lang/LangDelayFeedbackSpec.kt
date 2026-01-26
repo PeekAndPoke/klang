@@ -54,4 +54,52 @@ class LangDelayFeedbackSpec : StringSpec({
         // t=0.75: sine(0.75) = 0.0
         events[3].data.delayFeedback shouldBe (0.0 plusOrMinus EPSILON)
     }
+
+    // Alias tests
+
+    "delayfb() is an alias for delayfeedback()" {
+        val p = delayfb("0.6")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.delayFeedback shouldBe 0.6
+    }
+
+    "delayfb() works as pattern extension" {
+        val p = note("c").delayfb("0.6")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.delayFeedback shouldBe 0.6
+    }
+
+    "delayfb() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").delayfb("0.6")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.delayFeedback shouldBe 0.6
+    }
+
+    "dfb() is an alias for delayfeedback()" {
+        val p = dfb("0.8")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.delayFeedback shouldBe 0.8
+    }
+
+    "dfb() works as pattern extension" {
+        val p = note("c").dfb("0.8")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.delayFeedback shouldBe 0.8
+    }
+
+    "dfb() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").dfb("0.8")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.delayFeedback shouldBe 0.8
+    }
 })

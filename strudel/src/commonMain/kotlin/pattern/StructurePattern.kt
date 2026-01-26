@@ -53,7 +53,7 @@ internal class StructurePattern(
      */
     private fun queryIn(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val sourceEvents = source.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // Use a tiny epsilon for point queries to ensure we catch events in discrete patterns
         val epsilon = 1e-6.toRational()
@@ -87,7 +87,7 @@ internal class StructurePattern(
         val otherEvents = other.queryArcContextual(from, to, ctx)
         if (otherEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (maskEvent in otherEvents) {
             // If filtering by truthiness, skip falsy mask events

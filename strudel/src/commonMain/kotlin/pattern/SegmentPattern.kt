@@ -55,7 +55,7 @@ internal class SegmentPattern(
         val nEvents = nProvider.queryEvents(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (nEvent in nEvents) {
             val n = nEvent.data.value?.asInt ?: 1

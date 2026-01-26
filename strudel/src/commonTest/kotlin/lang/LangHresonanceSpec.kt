@@ -69,4 +69,27 @@ class LangHresonanceSpec : StringSpec({
         // t=0.75: sine(0.75) = 0.0
         events[3].data.hresonance shouldBe (0.0 plusOrMinus EPSILON)
     }
+
+    "hpq() is an alias for hresonance()" {
+        val p = hpq("7")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.hresonance shouldBe 7.0
+    }
+
+    "hpq() works as pattern extension" {
+        val p = note("c").hpq("7")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.hresonance shouldBe 7.0
+    }
+
+    "hpq() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").hpq("7")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.hresonance shouldBe 7.0
+    }
 })

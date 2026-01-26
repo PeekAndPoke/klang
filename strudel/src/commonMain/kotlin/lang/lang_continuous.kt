@@ -97,6 +97,57 @@ val StrudelPattern.range by dslPatternExtension { p, args, /* callInfo */ _ -> a
 @StrudelDsl
 val String.range by dslStringExtension { p, args, /* callInfo */ _ -> applyRange(p, args) }
 
+// -- rangex -----------------------------------------------------------------------------------------------------------
+
+private fun applyRangex(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val min = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
+    val max = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 1.0
+    val granularity = args.getOrNull(2)?.value?.asDoubleOrNull()?.toRational() ?: Rational.ONE
+
+    // Apply logarithmic transformation to min/max for exponential scaling
+    val logMin = kotlin.math.ln(kotlin.math.max(min, 0.0001)) // Avoid log(0)
+    val logMax = kotlin.math.ln(kotlin.math.max(max, 0.0001))
+
+    val ranged = pattern.withContext {
+        set(ContinuousPattern.minKey, logMin)
+        set(ContinuousPattern.maxKey, logMax)
+        set(ContinuousPattern.granularityKey, granularity)
+    }
+
+    // Apply exponential function to the result
+    return applyUnaryOp(ranged) { v ->
+        val d = v.asDouble
+        if (d != null) kotlin.math.exp(d).asVoiceValue() else v
+    }
+}
+
+/**
+ * Scales unipolar values (0-1) to a min-max range using an exponential curve.
+ * Useful for frequency ranges and other parameters where exponential scaling feels more natural.
+ */
+@StrudelDsl
+val StrudelPattern.rangex by dslPatternExtension { p, args, /* callInfo */ _ -> applyRangex(p, args) }
+
+@StrudelDsl
+val String.rangex by dslStringExtension { p, args, /* callInfo */ _ -> applyRangex(p, args) }
+
+// -- range2 -----------------------------------------------------------------------------------------------------------
+
+private fun applyRange2(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // Convert bipolar (-1 to 1) to unipolar (0 to 1), then apply range
+    return applyRange(pattern.fromBipolar(), args)
+}
+
+/**
+ * Scales bipolar values (-1 to 1) to a min-max range.
+ * Useful for LFOs and bipolar continuous patterns.
+ */
+@StrudelDsl
+val StrudelPattern.range2 by dslPatternExtension { p, args, /* callInfo */ _ -> applyRange2(p, args) }
+
+@StrudelDsl
+val String.range2 by dslStringExtension { p, args, /* callInfo */ _ -> applyRange2(p, args) }
+
 // -- Continuous patterns ----------------------------------------------------------------------------------------------
 
 /** Empty pattern that does not produce any events */
@@ -237,3 +288,50 @@ val berlin by dslObject {
 
 @StrudelDsl
 val berlin2 by dslObject { berlin.toBipolar() }
+
+// -- Value modifiers --------------------------------------------------------------------------------------------------
+
+/**
+ * Rounds all numerical values to the nearest integer.
+ */
+@StrudelDsl
+val StrudelPattern.round by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyUnaryOp(p) { v ->
+        val d = v.asDouble
+        if (d != null) kotlin.math.round(d).asVoiceValue() else v
+    }
+}
+
+@StrudelDsl
+val String.round by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.round() }
+
+/**
+ * Floors all numerical values to the nearest lower integer.
+ * E.g. 3.7 becomes 3, and -4.2 becomes -5.
+ */
+@StrudelDsl
+val StrudelPattern.floor by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyUnaryOp(p) { v ->
+        val d = v.asDouble
+        if (d != null) kotlin.math.floor(d).asVoiceValue() else v
+    }
+}
+
+@StrudelDsl
+val String.floor by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.floor() }
+
+/**
+ * Ceils all numerical values to the nearest higher integer.
+ * E.g. 3.2 becomes 4, and -4.2 becomes -4.
+ */
+@StrudelDsl
+val StrudelPattern.ceil by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyUnaryOp(p) { v ->
+        val d = v.asDouble
+        if (d != null) kotlin.math.ceil(d).asVoiceValue() else v
+    }
+}
+
+@StrudelDsl
+val String.ceil by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.ceil() }
+

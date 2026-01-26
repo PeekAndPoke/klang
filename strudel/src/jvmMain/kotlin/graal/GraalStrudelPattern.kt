@@ -35,8 +35,8 @@ class GraalStrudelPattern(
         for (i in 0 until count) {
             val item = arc.getArrayElement(i)
 
-//            println("---------------------------------------------------------------------------------------------")
-//            println(graal.prettyFormat(item))
+            println("---------------------------------------------------------------------------------------------")
+            println(graal.prettyFormat(item))
 
             val event = item.toStrudelEvent()
             events += event
@@ -164,6 +164,54 @@ class GraalStrudelPattern(
             ?: value.safeGetMember("notch").safeNumberOrNull()
         val nresonance = value.safeGetMember("nresonance").safeNumberOrNull()
 
+        // Lowpass filter envelope
+        val lpattack = value.safeGetMember("lpattack").safeNumberOrNull()
+            ?: value.safeGetMember("lpa").safeNumberOrNull()
+        val lpdecay = value.safeGetMember("lpdecay").safeNumberOrNull()
+            ?: value.safeGetMember("lpd").safeNumberOrNull()
+        val lpsustain = value.safeGetMember("lpsustain").safeNumberOrNull()
+            ?: value.safeGetMember("lps").safeNumberOrNull()
+        val lprelease = value.safeGetMember("lprelease").safeNumberOrNull()
+            ?: value.safeGetMember("lpr").safeNumberOrNull()
+        val lpenv = value.safeGetMember("lpenv").safeNumberOrNull()
+            ?: value.safeGetMember("lpe").safeNumberOrNull()
+
+        // Highpass filter envelope
+        val hpattack = value.safeGetMember("hpattack").safeNumberOrNull()
+            ?: value.safeGetMember("hpa").safeNumberOrNull()
+        val hpdecay = value.safeGetMember("hpdecay").safeNumberOrNull()
+            ?: value.safeGetMember("hpd").safeNumberOrNull()
+        val hpsustain = value.safeGetMember("hpsustain").safeNumberOrNull()
+            ?: value.safeGetMember("hps").safeNumberOrNull()
+        val hprelease = value.safeGetMember("hprelease").safeNumberOrNull()
+            ?: value.safeGetMember("hpr").safeNumberOrNull()
+        val hpenv = value.safeGetMember("hpenv").safeNumberOrNull()
+            ?: value.safeGetMember("hpe").safeNumberOrNull()
+
+        // Bandpass filter envelope
+        val bpattack = value.safeGetMember("bpattack").safeNumberOrNull()
+            ?: value.safeGetMember("bpa").safeNumberOrNull()
+        val bpdecay = value.safeGetMember("bpdecay").safeNumberOrNull()
+            ?: value.safeGetMember("bpd").safeNumberOrNull()
+        val bpsustain = value.safeGetMember("bpsustain").safeNumberOrNull()
+            ?: value.safeGetMember("bps").safeNumberOrNull()
+        val bprelease = value.safeGetMember("bprelease").safeNumberOrNull()
+            ?: value.safeGetMember("bpr").safeNumberOrNull()
+        val bpenv = value.safeGetMember("bpenv").safeNumberOrNull()
+            ?: value.safeGetMember("bpe").safeNumberOrNull()
+
+        // Notch filter envelope (not in original Strudel JS implementation)
+        val nfattack = value.safeGetMember("nfattack").safeNumberOrNull()
+            ?: value.safeGetMember("nfa").safeNumberOrNull()
+        val nfdecay = value.safeGetMember("nfdecay").safeNumberOrNull()
+            ?: value.safeGetMember("nfd").safeNumberOrNull()
+        val nfsustain = value.safeGetMember("nfsustain").safeNumberOrNull()
+            ?: value.safeGetMember("nfs").safeNumberOrNull()
+        val nfrelease = value.safeGetMember("nfrelease").safeNumberOrNull()
+            ?: value.safeGetMember("nfr").safeNumberOrNull()
+        val nfenv = value.safeGetMember("nfenv").safeNumberOrNull()
+            ?: value.safeGetMember("nfe").safeNumberOrNull()
+
         // ///////////////////////////////////////////////////////////////////////////////////
         // Sample Manipulation
         val loop = value.safeGetMember("loop")
@@ -222,6 +270,30 @@ class GraalStrudelPattern(
                 bandq = bandq,
                 notchf = notchf,
                 nresonance = nresonance,
+                // Lowpass filter envelope
+                lpattack = lpattack,
+                lpdecay = lpdecay,
+                lpsustain = lpsustain,
+                lprelease = lprelease,
+                lpenv = lpenv,
+                // Highpass filter envelope
+                hpattack = hpattack,
+                hpdecay = hpdecay,
+                hpsustain = hpsustain,
+                hprelease = hprelease,
+                hpenv = hpenv,
+                // Bandpass filter envelope
+                bpattack = bpattack,
+                bpdecay = bpdecay,
+                bpsustain = bpsustain,
+                bprelease = bprelease,
+                bpenv = bpenv,
+                // Notch filter envelope (not in original Strudel JS implementation)
+                nfattack = nfattack,
+                nfdecay = nfdecay,
+                nfsustain = nfsustain,
+                nfrelease = nfrelease,
+                nfenv = nfenv,
                 // Routing
                 orbit = orbit,
                 // Pan

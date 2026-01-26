@@ -38,7 +38,7 @@ internal class ControlPattern(
         val sourceEvents = source.queryArcContextual(from, to, ctx)
         if (sourceEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         for (event in sourceEvents) {
             val controlEvents: List<StrudelPatternEvent> =

@@ -1,9 +1,6 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.*
 import kotlinx.serialization.Serializable
 
 /**
@@ -80,6 +77,54 @@ data class StrudelVoiceData(
     /** Notch filter resonance/Q */
     val nresonance: Double?,
 
+    // Lowpass filter envelope
+    /** Low pass filter envelope attack time */
+    val lpattack: Double?,
+    /** Low pass filter envelope decay time */
+    val lpdecay: Double?,
+    /** Low pass filter envelope sustain level */
+    val lpsustain: Double?,
+    /** Low pass filter envelope release time */
+    val lprelease: Double?,
+    /** Low pass filter envelope depth/amount */
+    val lpenv: Double?,
+
+    // Highpass filter envelope
+    /** High pass filter envelope attack time */
+    val hpattack: Double?,
+    /** High pass filter envelope decay time */
+    val hpdecay: Double?,
+    /** High pass filter envelope sustain level */
+    val hpsustain: Double?,
+    /** High pass filter envelope release time */
+    val hprelease: Double?,
+    /** High pass filter envelope depth/amount */
+    val hpenv: Double?,
+
+    // Bandpass filter envelope
+    /** Band pass filter envelope attack time */
+    val bpattack: Double?,
+    /** Band pass filter envelope decay time */
+    val bpdecay: Double?,
+    /** Band pass filter envelope sustain level */
+    val bpsustain: Double?,
+    /** Band pass filter envelope release time */
+    val bprelease: Double?,
+    /** Band pass filter envelope depth/amount */
+    val bpenv: Double?,
+
+    // Notch filter envelope
+    /** Notch filter envelope attack time */
+    val nfattack: Double?,
+    /** Notch filter envelope decay time */
+    val nfdecay: Double?,
+    /** Notch filter envelope sustain level */
+    val nfsustain: Double?,
+    /** Notch filter envelope release time */
+    val nfrelease: Double?,
+    /** Notch filter envelope depth/amount */
+    val nfenv: Double?,
+
     // Routing
     val orbit: Int?,
 
@@ -137,6 +182,26 @@ data class StrudelVoiceData(
             bandq = null,
             notchf = null,
             nresonance = null,
+            lpattack = null,
+            lpdecay = null,
+            lpsustain = null,
+            lprelease = null,
+            lpenv = null,
+            hpattack = null,
+            hpdecay = null,
+            hpsustain = null,
+            hprelease = null,
+            hpenv = null,
+            bpattack = null,
+            bpdecay = null,
+            bpsustain = null,
+            bprelease = null,
+            bpenv = null,
+            nfattack = null,
+            nfdecay = null,
+            nfsustain = null,
+            nfrelease = null,
+            nfenv = null,
             orbit = null,
             pan = null,
             delay = null,
@@ -163,10 +228,90 @@ data class StrudelVoiceData(
     fun toVoiceData(): VoiceData {
         // Build filter list from flat fields, each with its own resonance
         val filters = buildList {
-            cutoff?.let { add(FilterDef.LowPass(cutoffHz = it, q = resonance)) }
-            hcutoff?.let { add(FilterDef.HighPass(cutoffHz = it, q = hresonance)) }
-            bandf?.let { add(FilterDef.BandPass(cutoffHz = it, q = bandq)) }
-            notchf?.let { add(FilterDef.Notch(cutoffHz = it, q = nresonance)) }
+            cutoff?.let { cutoffValue ->
+                // Build envelope if any lpattack/lpdecay/lpsustain/lprelease/lpenv fields are present
+                val envelope =
+                    if (lpattack != null || lpdecay != null || lpsustain != null || lprelease != null || lpenv != null) {
+                        FilterEnvelope(
+                            attack = lpattack,
+                            decay = lpdecay,
+                            sustain = lpsustain,
+                            release = lprelease,
+                            depth = lpenv,
+                        )
+                    } else null
+
+                add(
+                    FilterDef.LowPass(
+                        cutoffHz = cutoffValue,
+                        q = resonance,
+                        envelope = envelope
+                    )
+                )
+            }
+            hcutoff?.let { hcutoffValue ->
+                // Build envelope if any hpattack/hpdecay/hpsustain/hprelease/hpenv fields are present
+                val envelope =
+                    if (hpattack != null || hpdecay != null || hpsustain != null || hprelease != null || hpenv != null) {
+                        FilterEnvelope(
+                            attack = hpattack,
+                            decay = hpdecay,
+                            sustain = hpsustain,
+                            release = hprelease,
+                            depth = hpenv,
+                        )
+                    } else null
+
+                add(
+                    FilterDef.HighPass(
+                        cutoffHz = hcutoffValue,
+                        q = hresonance,
+                        envelope = envelope
+                    )
+                )
+            }
+            bandf?.let { bandfValue ->
+                // Build envelope if any bpattack/bpdecay/bpsustain/bprelease/bpenv fields are present
+                val envelope =
+                    if (bpattack != null || bpdecay != null || bpsustain != null || bprelease != null || bpenv != null) {
+                        FilterEnvelope(
+                            attack = bpattack,
+                            decay = bpdecay,
+                            sustain = bpsustain,
+                            release = bprelease,
+                            depth = bpenv,
+                        )
+                    } else null
+
+                add(
+                    FilterDef.BandPass(
+                        cutoffHz = bandfValue,
+                        q = bandq,
+                        envelope = envelope
+                    )
+                )
+            }
+            notchf?.let { notchfValue ->
+                // Build envelope if any nfattack/nfdecay/nfsustain/nfrelease/nfenv fields are present
+                val envelope =
+                    if (nfattack != null || nfdecay != null || nfsustain != null || nfrelease != null || nfenv != null) {
+                        FilterEnvelope(
+                            attack = nfattack,
+                            decay = nfdecay,
+                            sustain = nfsustain,
+                            release = nfrelease,
+                            depth = nfenv,
+                        )
+                    } else null
+
+                add(
+                    FilterDef.Notch(
+                        cutoffHz = notchfValue,
+                        q = nresonance,
+                        envelope = envelope
+                    )
+                )
+            }
         }
 
         return VoiceData(

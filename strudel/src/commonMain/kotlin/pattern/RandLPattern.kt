@@ -55,7 +55,7 @@ internal class RandLPattern(
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
         val atom = AtomicPattern.pure
 
         for (nEvent in nEvents) {

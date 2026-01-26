@@ -114,7 +114,6 @@ private val noteMutation = voiceModifier { input ->
         copy(
             note = newNote,
             freqHz = Tones.noteToFreq(newNote),
-            gain = gain ?: 1.0,
         )
     } ?: this
 }

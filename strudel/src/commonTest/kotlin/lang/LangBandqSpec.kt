@@ -70,4 +70,27 @@ class LangBandqSpec : StringSpec({
         // t=0.75: sine(0.75) = 0.0
         events[3].data.bandq shouldBe (0.0 plusOrMinus EPSILON)
     }
+
+    "bpq() is an alias for bandq()" {
+        val p = bpq("2.5")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.bandq shouldBe 2.5
+    }
+
+    "bpq() works as pattern extension" {
+        val p = note("c").bpq("2.5")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.bandq shouldBe 2.5
+    }
+
+    "bpq() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").bpq("2.5")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.bandq shouldBe 2.5
+    }
 })

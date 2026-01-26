@@ -62,7 +62,7 @@ internal class ReversePattern(
             }
         }
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // For each control event, apply reversal with its n value
         for (nEvent in nEvents) {
@@ -85,7 +85,7 @@ internal class ReversePattern(
     private fun querySimpleReverse(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val startCycle = from.floor()
         val endCycle = to.ceil()
-        val events = mutableListOf<StrudelPatternEvent>()
+        val events = createEventList()
 
         for (c in startCycle.toLong()..endCycle.toLong()) {
             val cycle = c.toRational()

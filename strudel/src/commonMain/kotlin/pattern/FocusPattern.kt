@@ -87,33 +87,29 @@ internal class FocusPattern(
 
         if (startEvents.isEmpty() || endEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // Pair up start and end events by their overlapping timespans
         for (startEvent in startEvents) {
             for (endEvent in endEvents) {
-                // Check if events overlap
-                if (startEvent.end <= endEvent.begin || endEvent.end <= startEvent.begin) continue
-
                 val start = (startEvent.data.value?.asDouble ?: 0.0).toRational()
                 val end = (endEvent.data.value?.asDouble ?: 1.0).toRational()
 
-                when {
-                    start >= end -> continue
-                    else -> {
-                        // Calculate the overlap timespan
-                        val overlapBegin = maxOf(startEvent.begin, endEvent.begin)
-                        val overlapEnd = minOf(startEvent.end, endEvent.end)
+                if (start >= end) continue
 
-                        // Apply focus: early(start.floor()).fast(1/(end-start)).late(start)
-                        val focused = source.early(start.floor())
-                            .fast(Rational.ONE / (end - start))
-                            .late(start)
+                // Calculate the overlap timespan
+                val overlapRange = calculateOverlapRange(
+                    startEvent.begin, startEvent.end,
+                    endEvent.begin, endEvent.end
+                ) ?: continue
 
-                        val events = focused.queryArcContextual(overlapBegin, overlapEnd, ctx)
-                        result.addAll(events)
-                    }
-                }
+                // Apply focus: early(start.floor()).fast(1/(end-start)).late(start)
+                val focused = source.early(start.floor())
+                    .fast(Rational.ONE / (end - start))
+                    .late(start)
+
+                val events = focused.queryArcContextual(overlapRange.first, overlapRange.second, ctx)
+                result.addAll(events)
             }
         }
 

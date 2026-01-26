@@ -196,19 +196,98 @@ object JsCompatTestData {
 
         // Filters
         Example("LowPass", """s("saw").lpf(333).resonance(0.3)"""),
+        Example("LowPass alias cutoff", """s("saw").cutoff(333)"""),
+        Example("LowPass alias ctf", """s("saw").ctf(333)"""),
+        Example("LowPass alias lp", """s("saw").lp(333)"""),
+        Example("LowPass resonance alias lpq", """s("saw").lpf(333).lpq(0.3)"""),
         Example("HighPass", """s("saw").hpf(444).hresonance(0.7)"""),
+        Example("HighPass alias hp", """s("saw").hp(444)"""),
+        Example("HighPass alias hcutoff", """s("saw").hcutoff(444)"""),
+        Example("HighPass resonance alias hpq", """s("saw").hpf(444).hpq(0.7)"""),
         Example("BandPass", """s("saw").bandf(555).bandq(0.6)"""),
+        Example("BandPass alias bpf", """s("saw").bpf(555)"""),
+        Example("BandPass alias bp", """s("saw").bp(555)"""),
+        Example("BandPass Q alias bpq", """s("saw").bandf(555).bpq(0.6)"""),
         // TODO: notchf does not seem to exist in strudel ... or we need to figure how?
         Example(SKIP, "Notch", """s("saw").notchf(666).nresonance(0.4)"""),
 
+        // Filter Envelopes
+        Example("LPF with envelope attack", """s("saw").lpf(1000).lpattack(0.1)"""),
+        Example("LPF with envelope alias lpa", """s("saw").lpf(1000).lpa(0.1)"""),
+        Example("LPF with envelope decay", """s("saw").lpf(1000).lpdecay(0.2)"""),
+        Example("LPF with envelope alias lpd", """s("saw").lpf(1000).lpd(0.2)"""),
+        Example("LPF with envelope sustain", """s("saw").lpf(1000).lpsustain(0.8)"""),
+        Example("LPF with envelope alias lps", """s("saw").lpf(1000).lps(0.8)"""),
+        Example("LPF with envelope release", """s("saw").lpf(1000).lprelease(0.5)"""),
+        Example("LPF with envelope alias lpr", """s("saw").lpf(1000).lpr(0.5)"""),
+        Example("LPF with envelope depth", """s("saw").lpf(1000).lpenv(0.5)"""),
+        Example("LPF with envelope alias lpe", """s("saw").lpf(1000).lpe(0.5)"""),
+        Example(
+            "LPF with full envelope",
+            """s("saw").lpf(1000).lpattack(0.1).lpdecay(0.2).lpsustain(0.8).lprelease(0.5).lpenv(0.7)"""
+        ),
+
+        // Filter Envelopes - Highpass
+        Example("HPF with envelope attack", """s("saw").hpf(2000).hpattack(0.1)"""),
+        Example("HPF with envelope alias hpa", """s("saw").hpf(2000).hpa(0.1)"""),
+        Example("HPF with envelope decay", """s("saw").hpf(2000).hpdecay(0.2)"""),
+        Example("HPF with envelope alias hpd", """s("saw").hpf(2000).hpd(0.2)"""),
+        Example("HPF with envelope sustain", """s("saw").hpf(2000).hpsustain(0.8)"""),
+        Example("HPF with envelope alias hps", """s("saw").hpf(2000).hps(0.8)"""),
+        Example("HPF with envelope release", """s("saw").hpf(2000).hprelease(0.5)"""),
+        Example("HPF with envelope alias hpr", """s("saw").hpf(2000).hpr(0.5)"""),
+        Example("HPF with envelope depth", """s("saw").hpf(2000).hpenv(0.5)"""),
+        Example("HPF with envelope alias hpe", """s("saw").hpf(2000).hpe(0.5)"""),
+        Example(
+            "HPF with full envelope",
+            """s("saw").hpf(2000).hpattack(0.1).hpdecay(0.2).hpsustain(0.8).hprelease(0.5).hpenv(0.7)"""
+        ),
+
+        // Filter Envelopes - Bandpass
+        Example("BPF with envelope attack", """s("saw").bpf(1500).bpattack(0.1)"""),
+        Example("BPF with envelope alias bpa", """s("saw").bpf(1500).bpa(0.1)"""),
+        Example("BPF with envelope decay", """s("saw").bpf(1500).bpdecay(0.2)"""),
+        Example("BPF with envelope alias bpd", """s("saw").bpf(1500).bpd(0.2)"""),
+        Example("BPF with envelope sustain", """s("saw").bpf(1500).bpsustain(0.8)"""),
+        Example("BPF with envelope alias bps", """s("saw").bpf(1500).bps(0.8)"""),
+        Example("BPF with envelope release", """s("saw").bpf(1500).bprelease(0.5)"""),
+        Example("BPF with envelope alias bpr", """s("saw").bpf(1500).bpr(0.5)"""),
+        Example("BPF with envelope depth", """s("saw").bpf(1500).bpenv(0.5)"""),
+        Example("BPF with envelope alias bpe", """s("saw").bpf(1500).bpe(0.5)"""),
+        Example(
+            "BPF with full envelope",
+            """s("saw").bpf(1500).bpattack(0.1).bpdecay(0.2).bpsustain(0.8).bprelease(0.5).bpenv(0.7)"""
+        ),
+
+        // Filter Envelopes - Notch (NOT IN ORIGINAL STRUDEL JS IMPLEMENTATION)
+        Example("Notch filter with envelope attack", """s("saw").notchf(1500).nfattack(0.1)""", skip = true),
+        Example("Notch filter with envelope alias nfa", """s("saw").notchf(1500).nfa(0.1)""", skip = true),
+        Example("Notch filter with envelope decay", """s("saw").notchf(1500).nfdecay(0.2)""", skip = true),
+        Example("Notch filter with envelope alias nfd", """s("saw").notchf(1500).nfd(0.2)""", skip = true),
+        Example("Notch filter with envelope sustain", """s("saw").notchf(1500).nfsustain(0.8)""", skip = true),
+        Example("Notch filter with envelope alias nfs", """s("saw").notchf(1500).nfs(0.8)""", skip = true),
+        Example("Notch filter with envelope release", """s("saw").notchf(1500).nfrelease(0.5)""", skip = true),
+        Example("Notch filter with envelope alias nfr", """s("saw").notchf(1500).nfr(0.5)""", skip = true),
+        Example("Notch filter with envelope depth", """s("saw").notchf(1500).nfenv(0.5)""", skip = true),
+        Example("Notch filter with envelope alias nfe", """s("saw").notchf(1500).nfe(0.5)""", skip = true),
+        Example(
+            "Notch filter with full envelope",
+            """s("saw").notchf(1500).nfattack(0.1).nfdecay(0.2).nfsustain(0.8).nfrelease(0.5).nfenv(0.7)""",
+            skip = true
+        ),
+
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),
+        Example("Distortion alias dist", """note("c").dist(0.5)"""),
         Example("Distortion medium", """note("c").distort(7.0)"""),
         Example("Distortion high", """note("c").distort(50.0)"""),
         Example("Bitcrush", """note("c").crush(4)"""),
         Example("Downsample", """note("c").coarse(4)"""),
         Example("Reverb", """note("c").room(0.5).roomsize(2.0)"""),
+        Example("Reverb alias rsize", """note("c").room(0.5).rsize(2.0)"""),
         Example("Delay", """note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)"""),
+        Example("Delay alias delayfb", """note("c").delay(0.5).delaytime(0.25).delayfb(0.5)"""),
+        Example("Delay alias dfb", """note("c").delay(0.5).delaytime(0.25).dfb(0.5)"""),
 
         // Sample Manipulation
         Example("Sample Begin", """s("bd").begin(0.5)"""),
@@ -505,6 +584,33 @@ object JsCompatTestData {
             Example("Logical Or #1", """seq("0 1").or("5")"""),
             Example("Logical Or #2", """n("0 1").or("5")"""),
         )//.map { it.ignore("data.gain") }
-            .toTypedArray()
-    )
+            .toTypedArray(),
+
+        // Continuous Range Functions
+        Example("Rangex basic", """sine.rangex(100, 1000)""")
+            .ignore("data.gain"),
+        Example("Rangex with pattern", """note("a b c d").pan(sine.rangex(0.1, 10))"""),
+        Example("Range2 basic", """sine2.range2(0, 100)""")
+            .ignore("data.gain"),
+        Example("Range2 with pattern", """note("a b c d").lpf(sine2.range2(500, 4000))"""),
+
+        // Value Modifiers
+        Example("Round basic", """seq("0.3 1.7 2.51").round()"""),
+        Example("Round with continuous", """sine.range(0, 10).segment(4).round()""")
+            .ignore("data.gain"),
+        Example("Floor basic", """seq("0.9 1.1 2.9").floor()"""),
+        Example("Floor negative", """seq("-1.5 -0.5 0.5 1.5").floor()"""),
+        Example("Ceil basic", """seq("0.1 1.1 2.9").ceil()"""),
+        Example("Ceil negative", """seq("-1.5 -0.5 0.5 1.5").ceil()"""),
+
+        // Ratio Function
+        Example("Ratio basic", """ratio("1 5:4 3:2")"""),
+        Example("Ratio musical intervals", """seq("2:1 3:2 4:3 5:4").ratio().mul(110)"""),
+        Example("Ratio multiple divisions", """seq("12:3:2").ratio()"""),
+        Example("Ratio as pattern method", """seq("5:4 3:2").ratio()"""),
+        // TODO: reactivate when we have freq() implemented
+//        Example("Ratio with freq", """note("a").freq(ratio("5:4").mul(440))"""),
+    ).map {
+        it.recover { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
+    }
 }

@@ -85,7 +85,7 @@ internal class ZoomPattern(
 
         if (startEvents.isEmpty() || endEvents.isEmpty()) return emptyList()
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // Pair up start and end events by their overlapping timespans
         for (startEvent in startEvents) {
