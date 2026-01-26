@@ -3,7 +3,6 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -58,7 +57,7 @@ internal class ZoomPattern(
 
     override val steps: Rational? get() = inner.steps
 
-    // For static values, pre-compute the transformation
+    // Optimization: For pure static values, pre-compute the transformation
     private val staticTransformed: StrudelPattern? by lazy {
         if (startProvider is ControlValueProvider.Static && endProvider is ControlValueProvider.Static) {
             val start = (startProvider.value.asDouble ?: 0.0).toRational()
@@ -81,36 +80,8 @@ internal class ZoomPattern(
         // For static values, use pre-computed transformation
         staticTransformed?.let { return it.queryArcContextual(from, to, ctx) }
 
-        // At least one parameter is a pattern - sample values and find overlaps
-        val startEvents = when (startProvider) {
-            is ControlValueProvider.Static -> {
-                listOf(
-                    StrudelPatternEvent(
-                        begin = from,
-                        end = to,
-                        dur = to - from,
-                        data = StrudelVoiceData.empty.copy(value = startProvider.value)
-                    )
-                )
-            }
-
-            is ControlValueProvider.Pattern -> startProvider.pattern.queryArcContextual(from, to, ctx)
-        }
-
-        val endEvents = when (endProvider) {
-            is ControlValueProvider.Static -> {
-                listOf(
-                    StrudelPatternEvent(
-                        begin = from,
-                        end = to,
-                        dur = to - from,
-                        data = StrudelVoiceData.empty.copy(value = endProvider.value)
-                    )
-                )
-            }
-
-            is ControlValueProvider.Pattern -> endProvider.pattern.queryArcContextual(from, to, ctx)
-        }
+        val startEvents = startProvider.queryEvents(from, to, ctx)
+        val endEvents = endProvider.queryEvents(from, to, ctx)
 
         if (startEvents.isEmpty() || endEvents.isEmpty()) return emptyList()
 

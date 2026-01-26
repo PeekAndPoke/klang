@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -18,11 +19,13 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("c3")
             val events = pattern.queryArc(0.0, 1.0)
 
-            events.size shouldBe 1
-            with(events[0]) {
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 1.0
-                data.note shouldBeEqualIgnoringCase "c3"
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 1.0
+                    data.note shouldBeEqualIgnoringCase "c3"
+                }
             }
         }
 
@@ -30,18 +33,20 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("c3 e3")
             val events = pattern.queryArc(0.0, 1.0)
 
-            events.size shouldBe 2
+            assertSoftly {
+                events.size shouldBe 2
 
-            with(events[0]) {
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 0.5
-                data.note shouldBeEqualIgnoringCase "c3"
-            }
+                with(events[0]) {
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 0.5
+                    data.note shouldBeEqualIgnoringCase "c3"
+                }
 
-            with(events[1]) {
-                begin.toDouble() shouldBe 0.5
-                end.toDouble() shouldBe 1.0
-                data.note shouldBeEqualIgnoringCase "e3"
+                with(events[1]) {
+                    begin.toDouble() shouldBe 0.5
+                    end.toDouble() shouldBe 1.0
+                    data.note shouldBeEqualIgnoringCase "e3"
+                }
             }
         }
 
@@ -62,19 +67,21 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("c3, e3")
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.data.note }
 
-            events.size shouldBe 2
+            assertSoftly {
+                events.size shouldBe 2
 
-            // Both should occupy the full cycle
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "c3"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 1.0
-            }
+                // Both should occupy the full cycle
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "c3"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 1.0
+                }
 
-            with(events[1]) {
-                data.note shouldBeEqualIgnoringCase "e3"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 1.0
+                with(events[1]) {
+                    data.note shouldBeEqualIgnoringCase "e3"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 1.0
+                }
             }
         }
 
@@ -86,22 +93,24 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("[c3 e3] g3")
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-            events.size shouldBe 3
+            assertSoftly {
+                events.size shouldBe 3
 
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "c3"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 0.25
-            }
-            with(events[1]) {
-                data.note shouldBeEqualIgnoringCase "e3"
-                begin.toDouble() shouldBe 0.25
-                end.toDouble() shouldBe 0.5
-            }
-            with(events[2]) {
-                data.note shouldBeEqualIgnoringCase "g3"
-                begin.toDouble() shouldBe 0.5
-                end.toDouble() shouldBe 1.0
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "c3"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 0.25
+                }
+                with(events[1]) {
+                    data.note shouldBeEqualIgnoringCase "e3"
+                    begin.toDouble() shouldBe 0.25
+                    end.toDouble() shouldBe 0.5
+                }
+                with(events[2]) {
+                    data.note shouldBeEqualIgnoringCase "g3"
+                    begin.toDouble() shouldBe 0.5
+                    end.toDouble() shouldBe 1.0
+                }
             }
         }
 
@@ -110,17 +119,19 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("c3*2")
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-            events.size shouldBe 2
+            assertSoftly {
+                events.size shouldBe 2
 
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "c3"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 0.5
-            }
-            with(events[1]) {
-                data.note shouldBeEqualIgnoringCase "c3"
-                begin.toDouble() shouldBe 0.5
-                end.toDouble() shouldBe 1.0
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "c3"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 0.5
+                }
+                with(events[1]) {
+                    data.note shouldBeEqualIgnoringCase "c3"
+                    begin.toDouble() shouldBe 0.5
+                    end.toDouble() shouldBe 1.0
+                }
             }
         }
 
@@ -129,11 +140,13 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("c3/2")
             val events = pattern.queryArc(0.0, 1.0)
 
-            events.size shouldBe 1
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "c3"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 2.0 // It's a 2-cycle event
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "c3"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 2.0 // It's a 2-cycle event
+                }
             }
         }
 
@@ -141,13 +154,15 @@ class MiniNotationParserSpec : StringSpec() {
             // <c3 e3> -> c3 in cycle 0, e3 in cycle 1
             val pattern = parse("<c3 e3>")
 
-            val events0 = pattern.queryArc(0.0, 1.0)
-            events0.size shouldBe 1
-            events0[0].data.note shouldBeEqualIgnoringCase "c3"
+            assertSoftly {
+                val events0 = pattern.queryArc(0.0, 1.0)
+                events0.size shouldBe 1
+                events0[0].data.note shouldBeEqualIgnoringCase "c3"
 
-            val events1 = pattern.queryArc(1.0, 2.0)
-            events1.size shouldBe 1
-            events1[0].data.note shouldBeEqualIgnoringCase "e3"
+                val events1 = pattern.queryArc(1.0, 2.0)
+                events1.size shouldBe 1
+                events1[0].data.note shouldBeEqualIgnoringCase "e3"
+            }
         }
 
         "Parsing complex structure '[c3, e3*2]'" {
@@ -155,10 +170,12 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("[c3, e3*2]")
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-            events.size shouldBe 3
+            assertSoftly {
+                events.size shouldBe 3
 
-            events.count { it.data.note?.lowercase() == "c3" } shouldBe 1
-            events.count { it.data.note?.lowercase() == "e3" } shouldBe 2
+                events.count { it.data.note?.lowercase() == "c3" } shouldBe 1
+                events.count { it.data.note?.lowercase() == "e3" } shouldBe 2
+            }
         }
 
         "Parsing basic weight 'e@2 a'" {
@@ -168,18 +185,20 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("e@2 a")
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-            events.size shouldBe 2
+            assertSoftly {
+                events.size shouldBe 2
 
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "e"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe ((2.0 / 3.0) plusOrMinus EPSILON)
-            }
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "e"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe ((2.0 / 3.0) plusOrMinus EPSILON)
+                }
 
-            with(events[1]) {
-                data.note shouldBeEqualIgnoringCase "a"
-                begin.toDouble() shouldBe ((2.0 / 3.0) plusOrMinus EPSILON)
-                end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+                with(events[1]) {
+                    data.note shouldBeEqualIgnoringCase "a"
+                    begin.toDouble() shouldBe ((2.0 / 3.0) plusOrMinus EPSILON)
+                    end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+                }
             }
         }
 
@@ -189,24 +208,26 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("a b@3 c")
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-            events.size shouldBe 3
+            assertSoftly {
+                events.size shouldBe 3
 
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "a"
-                begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-                end.toDouble() shouldBe (0.2 plusOrMinus EPSILON)
-            }
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "a"
+                    begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+                    end.toDouble() shouldBe (0.2 plusOrMinus EPSILON)
+                }
 
-            with(events[1]) {
-                data.note shouldBeEqualIgnoringCase "b"
-                begin.toDouble() shouldBe (0.2 plusOrMinus EPSILON)
-                end.toDouble() shouldBe (0.8 plusOrMinus EPSILON)
-            }
+                with(events[1]) {
+                    data.note shouldBeEqualIgnoringCase "b"
+                    begin.toDouble() shouldBe (0.2 plusOrMinus EPSILON)
+                    end.toDouble() shouldBe (0.8 plusOrMinus EPSILON)
+                }
 
-            with(events[2]) {
-                data.note shouldBeEqualIgnoringCase "c"
-                begin.toDouble() shouldBe (0.8 plusOrMinus EPSILON)
-                end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+                with(events[2]) {
+                    data.note shouldBeEqualIgnoringCase "c"
+                    begin.toDouble() shouldBe (0.8 plusOrMinus EPSILON)
+                    end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+                }
             }
         }
 
@@ -215,18 +236,20 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("a@2 b@2")
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-            events.size shouldBe 2
+            assertSoftly {
+                events.size shouldBe 2
 
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "a"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 0.5
-            }
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "a"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 0.5
+                }
 
-            with(events[1]) {
-                data.note shouldBeEqualIgnoringCase "b"
-                begin.toDouble() shouldBe 0.5
-                end.toDouble() shouldBe 1.0
+                with(events[1]) {
+                    data.note shouldBeEqualIgnoringCase "b"
+                    begin.toDouble() shouldBe 0.5
+                    end.toDouble() shouldBe 1.0
+                }
             }
         }
 
@@ -237,9 +260,11 @@ class MiniNotationParserSpec : StringSpec() {
             // Then *2 makes it play twice
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-            events.size shouldBe 2
-            events.forEach {
-                it.data.note shouldBeEqualIgnoringCase "c3"
+            assertSoftly {
+                events.size shouldBe 2
+                events.forEach {
+                    it.data.note shouldBeEqualIgnoringCase "c3"
+                }
             }
         }
 
@@ -247,10 +272,12 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("bd:1")
             val events = pattern.queryArc(0.0, 1.0)
 
-            events.size shouldBe 1
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "bd"
-                data.soundIndex shouldBe 1
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "bd"
+                    data.soundIndex shouldBe 1
+                }
             }
         }
 
@@ -258,11 +285,13 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("bd:1:0.5")
             val events = pattern.queryArc(0.0, 1.0)
 
-            events.size shouldBe 1
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "bd"
-                data.soundIndex shouldBe 1
-                data.gain shouldBe 0.5
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "bd"
+                    data.soundIndex shouldBe 1
+                    data.gain shouldBe 0.5
+                }
             }
         }
 
@@ -270,16 +299,18 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("bd:1:0.5*2")
             val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-            events.size shouldBe 2
-            with(events[0]) {
-                data.note shouldBeEqualIgnoringCase "bd"
-                data.soundIndex shouldBe 1
-                data.gain shouldBe 0.5
-            }
-            with(events[1]) {
-                data.note shouldBeEqualIgnoringCase "bd"
-                data.soundIndex shouldBe 1
-                data.gain shouldBe 0.5
+            assertSoftly {
+                events.size shouldBe 2
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "bd"
+                    data.soundIndex shouldBe 1
+                    data.gain shouldBe 0.5
+                }
+                with(events[1]) {
+                    data.note shouldBeEqualIgnoringCase "bd"
+                    data.soundIndex shouldBe 1
+                    data.gain shouldBe 0.5
+                }
             }
         }
 
@@ -287,11 +318,13 @@ class MiniNotationParserSpec : StringSpec() {
             val pattern = parse("C4:minor")
             val events = pattern.queryArc(0.0, 1.0)
 
-            events.size shouldBe 1
-            with(events[0]) {
-                data.note shouldBe "C4:minor"
-                data.soundIndex shouldBe null
-                data.gain shouldBe 1.0
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    data.note shouldBe "C4:minor"
+                    data.soundIndex shouldBe null
+                    data.gain shouldBe 1.0
+                }
             }
         }
 
@@ -313,15 +346,17 @@ class MiniNotationParserSpec : StringSpec() {
                 )
             }
 
-            val events = pattern.queryArc(0.0, 1.0)
-            events.size shouldBe 1
+            assertSoftly {
+                val events = pattern.queryArc(0.0, 1.0)
+                events.size shouldBe 1
 
-            val atomPattern = pattern as? io.peekandpoke.klang.strudel.pattern.AtomicPattern
-            atomPattern shouldNotBe null
-            atomPattern?.sourceLocations shouldNotBe null
-            atomPattern?.sourceLocations?.outermost?.source shouldBe "test.klang"
-            atomPattern?.sourceLocations?.outermost?.startLine shouldBe 1
-            atomPattern?.sourceLocations?.outermost?.startColumn shouldBe 10  // baseColumn + 0 (start of "bd")
+                val atomPattern = pattern as? io.peekandpoke.klang.strudel.pattern.AtomicPattern
+                atomPattern shouldNotBe null
+                atomPattern?.sourceLocations shouldNotBe null
+                atomPattern?.sourceLocations?.outermost?.source shouldBe "test.klang"
+                atomPattern?.sourceLocations?.outermost?.startLine shouldBe 1
+                atomPattern?.sourceLocations?.outermost?.startColumn shouldBe 11  // baseColumn + 0 (start of "bd")
+            }
         }
 
         "Sequence preserves individual atom locations" {
@@ -341,13 +376,14 @@ class MiniNotationParserSpec : StringSpec() {
             }
 
             val events = pattern.queryArc(0.0, 1.0)
-            events.size shouldBe 2
 
-            // First event should have location at column 10 (start of "bd")
-            events[0].sourceLocations?.outermost?.startColumn shouldBe 10
-
-            // Second event should have location at column 13 (start of "hh")
-            events[1].sourceLocations?.outermost?.startColumn shouldBe 13
+            assertSoftly {
+                events.size shouldBe 2
+                // First event should have location at column 10 (start of "bd")
+                events[0].sourceLocations?.outermost?.startColumn shouldBe 11
+                // Second event should have location at column 13 (start of "hh")
+                events[1].sourceLocations?.outermost?.startColumn shouldBe 14
+            }
         }
 
         "Nested groups preserve atom locations" {
@@ -367,13 +403,14 @@ class MiniNotationParserSpec : StringSpec() {
             }
 
             val events = pattern.queryArc(0.0, 1.0)
-            events.size shouldBe 2
 
-            // First event "bd" is at position 1 inside the brackets (column 10 + 1)
-            events[0].sourceLocations?.outermost?.startColumn shouldBe 11
-
-            // Second event "hh" is at position 4 inside the brackets (column 10 + 4)
-            events[1].sourceLocations?.outermost?.startColumn shouldBe 14
+            assertSoftly {
+                events.size shouldBe 2
+                // First event "bd" is at position 1 inside the brackets (column 10 + 1)
+                events[0].sourceLocations?.outermost?.startColumn shouldBe 12
+                // Second event "hh" is at position 4 inside the brackets (column 10 + 4)
+                events[1].sourceLocations?.outermost?.startColumn shouldBe 15
+            }
         }
 
         "Alternation preserves atom locations" {
@@ -396,11 +433,12 @@ class MiniNotationParserSpec : StringSpec() {
             val events0 = pattern.queryArc(0.0, 1.0)
             val events1 = pattern.queryArc(1.0, 2.0)
 
-            // Cycle 0 should play "bd" at column 11
-            events0[0].sourceLocations?.outermost?.startColumn shouldBe 11
-
-            // Cycle 1 should play "hh" at column 14
-            events1[0].sourceLocations?.outermost?.startColumn shouldBe 14
+            assertSoftly {
+                // Cycle 0 should play "bd" at column 11
+                events0[0].sourceLocations?.outermost?.startColumn shouldBe 12
+                // Cycle 1 should play "hh" at column 14
+                events1[0].sourceLocations?.outermost?.startColumn shouldBe 15
+            }
         }
 
         "Euclidean rhythm preserves inner pattern location" {
@@ -421,8 +459,10 @@ class MiniNotationParserSpec : StringSpec() {
 
             val events = pattern.queryArc(0.0, 1.0)
 
-            // All events should come from "bd" which starts at column 10
-            events.all { it.sourceLocations?.outermost?.startColumn == 10 } shouldBe true
+            assertSoftly {
+                // All events should come from "bd" which starts at column 10
+                events.all { it.sourceLocations?.outermost?.startColumn == 11 } shouldBe true
+            }
         }
 
         "Weighted pattern preserves atom location" {
@@ -442,7 +482,10 @@ class MiniNotationParserSpec : StringSpec() {
             }
 
             val events = pattern.queryArc(0.0, 1.0)
-            events[0].sourceLocations?.outermost?.startColumn shouldBe 10
+
+            assertSoftly {
+                events[0].sourceLocations?.outermost?.startColumn shouldBe 11
+            }
         }
 
         "Fast/slow modifiers preserve atom location" {
@@ -462,8 +505,11 @@ class MiniNotationParserSpec : StringSpec() {
             }
 
             val events = pattern.queryArc(0.0, 1.0)
-            // Both fast repetitions should point to the same "bd" at column 10
-            events.all { it.sourceLocations?.outermost?.startColumn == 10 } shouldBe true
+
+            assertSoftly {
+                // Both fast repetitions should point to the same "bd" at column 10
+                events.all { it.sourceLocations?.outermost?.startColumn == 11 } shouldBe true
+            }
         }
 
         "Multiline notation tracks line numbers" {
@@ -486,8 +532,10 @@ class MiniNotationParserSpec : StringSpec() {
 
             val events = pattern.queryArc(0.0, 1.0)
 
-            // All locations should be on line 5
-            events.all { it.sourceLocations?.outermost?.startLine == 5 } shouldBe true
+            assertSoftly {
+                // All locations should be on line 5
+                events.all { it.sourceLocations?.outermost?.startLine == 5 } shouldBe true
+            }
         }
 
         "Null baseLocation creates atoms without source locations" {
@@ -500,10 +548,12 @@ class MiniNotationParserSpec : StringSpec() {
 
             val events = pattern.queryArc(0.0, 1.0)
 
-            // Should have events but no source locations
-            events.size shouldBe 2
-            events[0].sourceLocations shouldBe null
-            events[1].sourceLocations shouldBe null
+            assertSoftly {
+                // Should have events but no source locations
+                events.size shouldBe 2
+                events[0].sourceLocations shouldBe null
+                events[1].sourceLocations shouldBe null
+            }
         }
     }
 }

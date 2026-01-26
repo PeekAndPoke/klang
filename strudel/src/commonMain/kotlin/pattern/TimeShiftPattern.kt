@@ -53,17 +53,18 @@ internal class TimeShiftPattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // For static values, we can optimize with a uniform shift
-        if (offsetProvider is ControlValueProvider.Static) {
-            val offset = (offsetProvider.value.asDouble ?: 0.0).toRational()
-            return queryWithStaticOffset(from, to, ctx, offset)
+        val offsetEvents = offsetProvider.queryEvents(from, to, ctx)
+        if (offsetEvents.isEmpty()) return queryWithStaticOffset(from, to, ctx, Rational.ZERO)
+
+        val result = mutableListOf<StrudelPatternEvent>()
+
+        for (offsetEvent in offsetEvents) {
+            val offset = (offsetEvent.data.value?.asDouble ?: 0.0).toRational()
+            val events = queryWithStaticOffset(offsetEvent.begin, offsetEvent.end, ctx, offset)
+            result.addAll(events)
         }
 
-        // For control patterns, use per-event sampling
-        val controlPattern = (offsetProvider as? ControlValueProvider.Pattern)?.pattern
-            ?: return queryWithStaticOffset(from, to, ctx, Rational.ZERO)
-
-        return queryWithControlPattern(from, to, ctx, controlPattern)
+        return result
     }
 
     private fun queryWithStaticOffset(
@@ -89,48 +90,6 @@ internal class TimeShiftPattern(
             // Only include events that overlap with the requested range
             if (mappedEnd > fromPlusEps && mappedBegin <= toMinusEps) {
                 ev.copy(
-                    begin = mappedBegin,
-                    end = mappedEnd,
-                )
-            } else {
-                null
-            }
-        }
-    }
-
-    private fun queryWithControlPattern(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-        offsetPattern: StrudelPattern,
-    ): List<StrudelPatternEvent> {
-        // We need to query a wider range from the source to account for potential shifts
-        // Use a heuristic: query +/- 10 cycles extra to be safe against larger control values
-        val margin = Rational(10)
-        val extendedFrom = from - margin
-        val extendedTo = to + margin
-
-        val sourceEvents = source.queryArcContextual(extendedFrom, extendedTo, ctx)
-        if (sourceEvents.isEmpty()) return emptyList()
-
-        val fromPlusEps = from + epsilon
-        val toMinusEps = to - epsilon
-
-        return sourceEvents.mapNotNull { event ->
-            val queryTime = event.begin
-
-            // Sample the offset pattern at the event's begin time
-            val offsetEvents = offsetPattern.queryArcContextual(queryTime, queryTime + epsilon, ctx)
-            val offsetValue = offsetEvents.firstOrNull()?.data?.value?.asDouble ?: 0.0
-            val offset = offsetValue.toRational()
-
-            // Shift the event by the sampled offset
-            val mappedBegin = event.begin + offset
-            val mappedEnd = event.end + offset
-
-            // Only include events that overlap with the requested range
-            if (mappedEnd > fromPlusEps && mappedBegin < toMinusEps) {
-                event.copy(
                     begin = mappedBegin,
                     end = mappedEnd,
                 )

@@ -3,8 +3,6 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.math.BerlinNoise
 import io.peekandpoke.klang.strudel.math.PerlinNoise
@@ -12,6 +10,7 @@ import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
+import io.peekandpoke.klang.strudel.pattern.ContextRangeMapPattern
 import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.strudel.pattern.EmptyPattern
 import kotlin.math.PI
@@ -29,28 +28,12 @@ private fun StrudelPattern.mapRangeContext(
     transformMin: (Double) -> Double,
     transformMax: (Double) -> Double,
 ): StrudelPattern {
-    return object : StrudelPattern {
-        override val weight: Double get() = this@mapRangeContext.weight
-
-        override val steps: Rational = Rational.ONE
-
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-            val min = ctx.getOrNull(ContinuousPattern.minKey)
-            val max = ctx.getOrNull(ContinuousPattern.maxKey)
-
-            val newCtx = if (min != null && max != null) {
-                ctx.update {
-                    set(ContinuousPattern.minKey, transformMin(min))
-                    set(ContinuousPattern.maxKey, transformMax(max))
-                }
-            } else {
-                ctx
-            }
-            return this@mapRangeContext.queryArcContextual(from, to, newCtx)
-        }
-    }
+    return ContextRangeMapPattern(
+        source = this,
+        transformMin = transformMin,
+        transformMax = transformMax,
+    )
 }
-
 /**
  * Maps a pattern in the range 0..1 to -1..1.
  */

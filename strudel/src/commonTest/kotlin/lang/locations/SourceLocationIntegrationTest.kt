@@ -49,26 +49,26 @@ sound("bd hh sd oh")
         // Line 4:  sound("bd hh sd oh")
         // Columns: 123456789012345678901
         //                 ^  ^  ^  ^
-        //                 7  10 13 16
+        //                 8  11 14 17
 
         val locations = events.mapNotNull { it.sourceLocations?.outermost }
         locations shouldHaveSize 4
 
         // "bd" starts at line 4, column 7 (after opening quote at column 6)
         locations[0].startLine shouldBe 4
-        locations[0].startColumn shouldBe 7
+        locations[0].startColumn shouldBe 8
 
         // "hh" starts at column 10
         locations[1].startLine shouldBe 4
-        locations[1].startColumn shouldBe 10
+        locations[1].startColumn shouldBe 11
 
         // "sd" starts at column 13
         locations[2].startLine shouldBe 4
-        locations[2].startColumn shouldBe 13
+        locations[2].startColumn shouldBe 14
 
         // "oh" starts at column 16
         locations[3].startLine shouldBe 4
-        locations[3].startColumn shouldBe 16
+        locations[3].startColumn shouldBe 17
     }
 
     "sound(\" bd  hh   sd    oh  \") - pattern with extra whitespace" {
@@ -87,22 +87,22 @@ sound(" bd  hh   sd    oh  ")
         // Line #4: sound(" bd  hh   sd    oh  ")
         // Columns: 123456789012345678901234567890
         //                  ^   ^    ^     ^
-        //                  8   12   17    23
+        //                  9   13   18    24
 
         val locations = events.mapNotNull { it.sourceLocations?.outermost }
         locations shouldHaveSize 4
 
         // "bd" starts at column 8 (after space)
-        locations[0].startColumn shouldBe 8
+        locations[0].startColumn shouldBe 9
 
         // "hh" starts at column 12
-        locations[1].startColumn shouldBe 12
+        locations[1].startColumn shouldBe 13
 
         // "sd" starts at column 17
-        locations[2].startColumn shouldBe 17
+        locations[2].startColumn shouldBe 18
 
         // "oh" starts at column 23
-        locations[3].startColumn shouldBe 23
+        locations[3].startColumn shouldBe 24
     }
 
     "\"bd hh sd oh\".sound() - method call syntax" {
@@ -121,26 +121,26 @@ import * from "strudel"
         // Line 4:  "bd hh sd oh".sound()
         // Columns: 12345678901234567890
         //           ^  ^  ^  ^
-        //           1  4  7  10
+        //           2  5  8  11
 
         val locations = events.mapNotNull { it.sourceLocations?.outermost }
         locations shouldHaveSize 4
 
         // "bd" starts at line 4, column 2
         locations[0].startLine shouldBe 4
-        locations[0].startColumn shouldBe 1
+        locations[0].startColumn shouldBe 2
 
         // "hh" starts at column 5
         locations[1].startLine shouldBe 4
-        locations[1].startColumn shouldBe 4
+        locations[1].startColumn shouldBe 5
 
         // "sd" starts at column 8
         locations[2].startLine shouldBe 4
-        locations[2].startColumn shouldBe 7
+        locations[2].startColumn shouldBe 8
 
         // "oh" starts at column 11
         locations[3].startLine shouldBe 4
-        locations[3].startColumn shouldBe 10
+        locations[3].startColumn shouldBe 11
     }
 
     "sound(`bd hh sd oh`) - multiline string" {

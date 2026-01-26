@@ -48,17 +48,7 @@ internal class FastGapPattern(
     }
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // For static values, we can optimize with a single query
-        if (factorProvider is ControlValueProvider.Static) {
-            val factor = (factorProvider.value.asDouble ?: 1.0).toRational()
-            return queryWithFactor(from, to, ctx, factor)
-        }
-
-        // For control patterns, segment by control events
-        val controlPattern = (factorProvider as? ControlValueProvider.Pattern)?.pattern
-            ?: return queryWithFactor(from, to, ctx, Rational.ONE)
-
-        val factorEvents = controlPattern.queryArcContextual(from, to, ctx)
+        val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
 
         val result = mutableListOf<StrudelPatternEvent>()

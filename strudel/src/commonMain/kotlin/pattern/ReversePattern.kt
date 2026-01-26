@@ -49,23 +49,17 @@ internal class ReversePattern(
     override fun estimateCycleDuration(): Rational = inner.estimateCycleDuration()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // For static n=1, use optimized per-cycle reversal
-        if (nProvider is ControlValueProvider.Static) {
-            val n = nProvider.value.asInt ?: 1
-            if (n <= 1) {
-                return querySimpleReverse(from, to, ctx)
+        val nEvents = nProvider.queryEvents(from, to, ctx)
+        if (nEvents.isEmpty()) return querySimpleReverse(from, to, ctx)
+
+        // Fast-path when provider behaves like a static value over the full range
+        if (nEvents.size == 1 && nEvents[0].begin == from && nEvents[0].end == to) {
+            val n = nEvents[0].data.value?.asInt ?: 1
+            return if (n <= 1) {
+                querySimpleReverse(from, to, ctx)
             } else {
-                return queryMultiCycleReverse(from, to, ctx, n.toRational())
+                queryMultiCycleReverse(from, to, ctx, n.toRational())
             }
-        }
-
-        // For control patterns, segment by control events
-        val controlPattern = (nProvider as? ControlValueProvider.Pattern)?.pattern
-            ?: return querySimpleReverse(from, to, ctx)
-
-        val nEvents = controlPattern.queryArcContextual(from, to, ctx)
-        if (nEvents.isEmpty()) {
-            return emptyList()
         }
 
         val result = mutableListOf<StrudelPatternEvent>()

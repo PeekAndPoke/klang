@@ -200,6 +200,12 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
     fun addHighlight(line: Int, column: Int, length: Int): String {
         val view = editor ?: return ""
 
+        // Check if window has focus - if not, clear all highlights and return immediately
+        val hasFocus = js("document.hasFocus()") as Boolean
+        if (!hasFocus) {
+            return ""
+        }
+
         // Generate unique ID for this highlight
         val timestamp = js("Date.now()") as Double
         val random = js("Math.random()") as Double

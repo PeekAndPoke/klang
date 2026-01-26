@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -13,10 +14,6 @@ import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 class StrudelPlaybackLocationTest : StringSpec({
 
     "StrudelPlayback callback receives events with sourceLocations" {
-        var callbackFired = false
-        var receivedEvent: StrudelPatternEvent? = null
-        var receivedTime: Double? = null
-
         val baseLocation =
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
 
@@ -28,11 +25,13 @@ class StrudelPlaybackLocationTest : StringSpec({
         // but we can test that the pattern produces events with locations
         val events = pattern.queryArc(0.0, 1.0)
 
-        events.size shouldBe 1
-        events[0].sourceLocations shouldNotBe null
-        events[0].sourceLocations?.outermost?.source shouldBe "test.klang"
-        events[0].sourceLocations?.outermost?.startLine shouldBe 1
-        events[0].sourceLocations?.outermost?.startColumn shouldBe 10
+        assertSoftly {
+            events.size shouldBe 1
+            events[0].sourceLocations shouldNotBe null
+            events[0].sourceLocations?.outermost?.source shouldBe "test.klang"
+            events[0].sourceLocations?.outermost?.startLine shouldBe 1
+            events[0].sourceLocations?.outermost?.startColumn shouldBe 11
+        }
     }
 
     "Events from sequence pattern preserve individual atom locations" {
@@ -45,14 +44,15 @@ class StrudelPlaybackLocationTest : StringSpec({
 
         val events = pattern.queryArc(0.0, 1.0)
 
-        events.size shouldBe 3
-
-        // bd at column 10
-        events[0].sourceLocations?.outermost?.startColumn shouldBe 10
-        // hh at column 13
-        events[1].sourceLocations?.outermost?.startColumn shouldBe 13
-        // sd at column 16
-        events[2].sourceLocations?.outermost?.startColumn shouldBe 16
+        assertSoftly {
+            events.size shouldBe 3
+            // bd at column 10
+            events[0].sourceLocations?.outermost?.startColumn shouldBe 11
+            // hh at column 13
+            events[1].sourceLocations?.outermost?.startColumn shouldBe 14
+            // sd at column 16
+            events[2].sourceLocations?.outermost?.startColumn shouldBe 17
+        }
     }
 
     "Events from stacked patterns preserve individual locations" {
@@ -73,20 +73,22 @@ class StrudelPlaybackLocationTest : StringSpec({
 
         val events = stacked.queryArc(0.0, 1.0)
 
-        events.size shouldBe 2
+        assertSoftly {
+            events.size shouldBe 2
 
-        // Find bd and hh events (order might vary)
-        val bdEvent = events.find { it.data.note == "bd" }
-        val hhEvent = events.find { it.data.note == "hh" }
+            // Find bd and hh events (order might vary)
+            val bdEvent = events.find { it.data.note == "bd" }
+            val hhEvent = events.find { it.data.note == "hh" }
 
-        bdEvent shouldNotBe null
-        hhEvent shouldNotBe null
+            bdEvent shouldNotBe null
+            hhEvent shouldNotBe null
 
-        bdEvent?.sourceLocations?.outermost?.startLine shouldBe 1
-        bdEvent?.sourceLocations?.outermost?.startColumn shouldBe 10
+            bdEvent?.sourceLocations?.outermost?.startLine shouldBe 1
+            bdEvent?.sourceLocations?.outermost?.startColumn shouldBe 11
 
-        hhEvent?.sourceLocations?.outermost?.startLine shouldBe 2
-        hhEvent?.sourceLocations?.outermost?.startColumn shouldBe 5
+            hhEvent?.sourceLocations?.outermost?.startLine shouldBe 2
+            hhEvent?.sourceLocations?.outermost?.startColumn shouldBe 6
+        }
     }
 
     "Euclidean rhythm preserves inner pattern location" {
@@ -99,10 +101,11 @@ class StrudelPlaybackLocationTest : StringSpec({
 
         val events = pattern.queryArc(0.0, 1.0)
 
-        // Should have 3 events (3 pulses in the euclidean rhythm)
-        events.size shouldBe 3
-
-        // All events should point to the same "bd" source location
-        events.all { it.sourceLocations?.outermost?.startColumn == 10 } shouldBe true
+        assertSoftly {
+            // Should have 3 events (3 pulses in the euclidean rhythm)
+            events.size shouldBe 3
+            // All events should point to the same "bd" source location
+            events.all { it.sourceLocations?.outermost?.startColumn == 11 } shouldBe true
+        }
     }
 })

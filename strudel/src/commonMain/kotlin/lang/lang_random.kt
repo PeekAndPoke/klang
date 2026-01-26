@@ -4,13 +4,11 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.oneMinusValue
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
 import kotlin.math.floor
@@ -568,66 +566,7 @@ val randL by dslFunction { args, /* callInfo */ _ ->
 
     val staticN = nVal?.asIntOrNull()
 
-    if (staticN != null) {
-        // Static path
-        if (staticN < 1) {
-            silence
-        } else {
-            val atom = AtomicPattern.pure
-            val events = (0..<staticN).map {
-                atom.reinterpret { evt, ctx ->
-                    val fraction = evt.begin - evt.begin.floor()
-                    val seed = (fraction * staticN * 10).toInt()
-                    val random = ctx.getSeededRandom(seed, it, "randL")
-                    val value = random.nextInt(0, 8).asVoiceValue()
-                    evt.copy(data = evt.data.copy(value = value))
-                }
-            }
-            SequencePattern(events)
-        }
-    } else {
-        // Dynamic path: Create a pattern that varies the sequence length
-        object : StrudelPattern {
-            override val weight = 1.0
-            override val steps: Rational = Rational.ONE
-            override fun estimateCycleDuration(): Rational = Rational.ONE
-
-            override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
-                ctx: QueryContext,
-            ): List<StrudelPatternEvent> {
-                val nEvents = nPattern.queryArcContextual(from, to, ctx)
-                if (nEvents.isEmpty()) return emptyList()
-
-                val result = mutableListOf<StrudelPatternEvent>()
-
-                for (nEvent in nEvents) {
-                    val n = nEvent.data.value?.asInt ?: 0
-                    if (n < 1) continue
-
-                    // Create randL(n) for this timespan
-                    val atom = AtomicPattern.pure
-                    val events = (0..<n).map { index ->
-                        atom.reinterpret { evt, ctx ->
-                            val fraction = evt.begin - evt.begin.floor()
-                            val seed = (fraction * n * 10).toInt()
-                            val random = ctx.getSeededRandom(seed, index, "randL")
-                            val value = random.nextInt(0, 8).asVoiceValue()
-                            evt.copy(data = evt.data.copy(value = value))
-                        }
-                    }
-                    val seqPattern = SequencePattern(events)
-
-                    // Query and clip to nEvent timespan
-                    val seqEvents = seqPattern.queryArcContextual(nEvent.begin, nEvent.end, ctx)
-                    result.addAll(seqEvents)
-                }
-
-                return result
-            }
-        }
-    }
+    RandLPattern.create(nPattern, staticN)
 }
 
 // -- randrun() --------------------------------------------------------------------------------------------------------
