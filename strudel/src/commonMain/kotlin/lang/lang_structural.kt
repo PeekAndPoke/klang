@@ -399,12 +399,10 @@ private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = nul
         else pat.fast(targetSteps.toDouble() / steps)
     }
 
-    return StackPattern(adjustedPatterns).let { stack ->
-        object : StrudelPattern by stack {
-            override val steps: Rational = targetSteps.toRational()
-            override fun estimateCycleDuration(): Rational = stack.estimateCycleDuration()
-        }
-    }
+    return StepsOverridePattern(
+        source = StackPattern(adjustedPatterns),
+        steps = targetSteps.toRational()
+    )
 }
 
 /**
