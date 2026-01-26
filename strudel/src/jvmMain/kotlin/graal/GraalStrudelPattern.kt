@@ -200,6 +200,18 @@ class GraalStrudelPattern(
         val bpenv = value.safeGetMember("bpenv").safeNumberOrNull()
             ?: value.safeGetMember("bpe").safeNumberOrNull()
 
+        // Notch filter envelope (not in original Strudel JS implementation)
+        val nfattack = value.safeGetMember("nfattack").safeNumberOrNull()
+            ?: value.safeGetMember("nfa").safeNumberOrNull()
+        val nfdecay = value.safeGetMember("nfdecay").safeNumberOrNull()
+            ?: value.safeGetMember("nfd").safeNumberOrNull()
+        val nfsustain = value.safeGetMember("nfsustain").safeNumberOrNull()
+            ?: value.safeGetMember("nfs").safeNumberOrNull()
+        val nfrelease = value.safeGetMember("nfrelease").safeNumberOrNull()
+            ?: value.safeGetMember("nfr").safeNumberOrNull()
+        val nfenv = value.safeGetMember("nfenv").safeNumberOrNull()
+            ?: value.safeGetMember("nfe").safeNumberOrNull()
+
         // ///////////////////////////////////////////////////////////////////////////////////
         // Sample Manipulation
         val loop = value.safeGetMember("loop")
@@ -276,6 +288,12 @@ class GraalStrudelPattern(
                 bpsustain = bpsustain,
                 bprelease = bprelease,
                 bpenv = bpenv,
+                // Notch filter envelope (not in original Strudel JS implementation)
+                nfattack = nfattack,
+                nfdecay = nfdecay,
+                nfsustain = nfsustain,
+                nfrelease = nfrelease,
+                nfenv = nfenv,
                 // Routing
                 orbit = orbit,
                 // Pan

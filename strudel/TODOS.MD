@@ -254,6 +254,17 @@ and category.
 - [x] **`bprelease()`** - Band pass filter envelope release time (alias: `bpr`)
 - [x] **`bpenv()`** - Band pass filter envelope amount (alias: `bpe`)
 
+#### Filter Envelopes - Notch (⚠️ NOT IN ORIGINAL STRUDEL - KLANG EXTENSION)
+
+**Note:** These features are additional functionality not present in the original Strudel JS implementation.
+They follow the same pattern as the other filter envelopes but are specific to the Klang Kotlin port.
+
+- [x] **`nfattack()`** - Notch filter envelope attack time (alias: `nfa`)
+- [x] **`nfdecay()`** - Notch filter envelope decay time (alias: `nfd`)
+- [x] **`nfsustain()`** - Notch filter envelope sustain level (alias: `nfs`)
+- [x] **`nfrelease()`** - Notch filter envelope release time (alias: `nfr`)
+- [x] **`nfenv()`** - Notch filter envelope amount (alias: `nfe`)
+
 #### Pitch Envelope
 
 - [ ] **`pattack()`** - Pitch envelope attack time (alias: `patt`)

@@ -113,6 +113,18 @@ data class StrudelVoiceData(
     /** Band pass filter envelope depth/amount */
     val bpenv: Double?,
 
+    // Notch filter envelope
+    /** Notch filter envelope attack time */
+    val nfattack: Double?,
+    /** Notch filter envelope decay time */
+    val nfdecay: Double?,
+    /** Notch filter envelope sustain level */
+    val nfsustain: Double?,
+    /** Notch filter envelope release time */
+    val nfrelease: Double?,
+    /** Notch filter envelope depth/amount */
+    val nfenv: Double?,
+
     // Routing
     val orbit: Int?,
 
@@ -185,6 +197,11 @@ data class StrudelVoiceData(
             bpsustain = null,
             bprelease = null,
             bpenv = null,
+            nfattack = null,
+            nfdecay = null,
+            nfsustain = null,
+            nfrelease = null,
+            nfenv = null,
             orbit = null,
             pan = null,
             delay = null,
@@ -274,7 +291,27 @@ data class StrudelVoiceData(
                     )
                 )
             }
-            notchf?.let { add(FilterDef.Notch(cutoffHz = it, q = nresonance)) }
+            notchf?.let { notchfValue ->
+                // Build envelope if any nfattack/nfdecay/nfsustain/nfrelease/nfenv fields are present
+                val envelope =
+                    if (nfattack != null || nfdecay != null || nfsustain != null || nfrelease != null || nfenv != null) {
+                        FilterEnvelope(
+                            attack = nfattack,
+                            decay = nfdecay,
+                            sustain = nfsustain,
+                            release = nfrelease,
+                            depth = nfenv,
+                        )
+                    } else null
+
+                add(
+                    FilterDef.Notch(
+                        cutoffHz = notchfValue,
+                        q = nresonance,
+                        envelope = envelope
+                    )
+                )
+            }
         }
 
         return VoiceData(

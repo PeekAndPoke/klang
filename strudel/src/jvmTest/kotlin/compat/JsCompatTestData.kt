@@ -259,6 +259,23 @@ object JsCompatTestData {
             """s("saw").bpf(1500).bpattack(0.1).bpdecay(0.2).bpsustain(0.8).bprelease(0.5).bpenv(0.7)"""
         ),
 
+        // Filter Envelopes - Notch (NOT IN ORIGINAL STRUDEL JS IMPLEMENTATION)
+        Example("Notch filter with envelope attack", """s("saw").notchf(1500).nfattack(0.1)""", skip = true),
+        Example("Notch filter with envelope alias nfa", """s("saw").notchf(1500).nfa(0.1)""", skip = true),
+        Example("Notch filter with envelope decay", """s("saw").notchf(1500).nfdecay(0.2)""", skip = true),
+        Example("Notch filter with envelope alias nfd", """s("saw").notchf(1500).nfd(0.2)""", skip = true),
+        Example("Notch filter with envelope sustain", """s("saw").notchf(1500).nfsustain(0.8)""", skip = true),
+        Example("Notch filter with envelope alias nfs", """s("saw").notchf(1500).nfs(0.8)""", skip = true),
+        Example("Notch filter with envelope release", """s("saw").notchf(1500).nfrelease(0.5)""", skip = true),
+        Example("Notch filter with envelope alias nfr", """s("saw").notchf(1500).nfr(0.5)""", skip = true),
+        Example("Notch filter with envelope depth", """s("saw").notchf(1500).nfenv(0.5)""", skip = true),
+        Example("Notch filter with envelope alias nfe", """s("saw").notchf(1500).nfe(0.5)""", skip = true),
+        Example(
+            "Notch filter with full envelope",
+            """s("saw").notchf(1500).nfattack(0.1).nfdecay(0.2).nfsustain(0.8).nfrelease(0.5).nfenv(0.7)""",
+            skip = true
+        ),
+
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),
         Example("Distortion alias dist", """note("c").dist(0.5)"""),

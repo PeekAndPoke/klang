@@ -970,3 +970,198 @@ val bpe by dslFunction { args, callInfo -> bpenv(args, callInfo) }
 /** Alias for [bpenv] on a string */
 @StrudelDsl
 val String.bpe by dslStringExtension { p, args, callInfo -> p.bpenv(args, callInfo) }
+
+// -- nfattack() - Notch Filter Envelope Attack (NOT IN ORIGINAL STRUDEL) -------------------------------------------------
+
+private val nfattackMutation = voiceModifier {
+    copy(nfattack = it?.asDoubleOrNull())
+}
+
+private fun applyNfattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = nfattackMutation,
+        getValue = { nfattack },
+        setValue = { v, _ -> copy(nfattack = v) },
+    )
+}
+
+/** Sets the notch filter envelope attack time (not in original Strudel JS implementation). */
+@StrudelDsl
+val StrudelPattern.nfattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfattack(p, args) }
+
+/** Sets the notch filter envelope attack time (not in original Strudel JS implementation). */
+@StrudelDsl
+val nfattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfattackMutation) }
+
+/** Sets the notch filter envelope attack time on a string (not in original Strudel JS implementation). */
+@StrudelDsl
+val String.nfattack by dslStringExtension { p, args, callInfo -> p.nfattack(args, callInfo) }
+
+/** Alias for [nfattack] */
+@StrudelDsl
+val StrudelPattern.nfa by dslPatternExtension { p, args, callInfo -> p.nfattack(args, callInfo) }
+
+/** Alias for [nfattack] */
+@StrudelDsl
+val nfa by dslFunction { args, callInfo -> nfattack(args, callInfo) }
+
+/** Alias for [nfattack] on a string */
+@StrudelDsl
+val String.nfa by dslStringExtension { p, args, callInfo -> p.nfattack(args, callInfo) }
+
+// -- nfdecay() - Notch Filter Envelope Decay (NOT IN ORIGINAL STRUDEL) ---------------------------------------------------
+
+private val nfdecayMutation = voiceModifier {
+    copy(nfdecay = it?.asDoubleOrNull())
+}
+
+private fun applyNfdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = nfdecayMutation,
+        getValue = { nfdecay },
+        setValue = { v, _ -> copy(nfdecay = v) },
+    )
+}
+
+/** Sets the notch filter envelope decay time (not in original Strudel JS implementation). */
+@StrudelDsl
+val StrudelPattern.nfdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfdecay(p, args) }
+
+/** Sets the notch filter envelope decay time (not in original Strudel JS implementation). */
+@StrudelDsl
+val nfdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfdecayMutation) }
+
+/** Sets the notch filter envelope decay time on a string (not in original Strudel JS implementation). */
+@StrudelDsl
+val String.nfdecay by dslStringExtension { p, args, callInfo -> p.nfdecay(args, callInfo) }
+
+/** Alias for [nfdecay] */
+@StrudelDsl
+val StrudelPattern.nfd by dslPatternExtension { p, args, callInfo -> p.nfdecay(args, callInfo) }
+
+/** Alias for [nfdecay] */
+@StrudelDsl
+val nfd by dslFunction { args, callInfo -> nfdecay(args, callInfo) }
+
+/** Alias for [nfdecay] on a string */
+@StrudelDsl
+val String.nfd by dslStringExtension { p, args, callInfo -> p.nfdecay(args, callInfo) }
+
+// -- nfsustain() - Notch Filter Envelope Sustain (NOT IN ORIGINAL STRUDEL) -----------------------------------------------
+
+private val nfsustainMutation = voiceModifier {
+    copy(nfsustain = it?.asDoubleOrNull())
+}
+
+private fun applyNfsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = nfsustainMutation,
+        getValue = { nfsustain },
+        setValue = { v, _ -> copy(nfsustain = v) },
+    )
+}
+
+/** Sets the notch filter envelope sustain level (not in original Strudel JS implementation). */
+@StrudelDsl
+val StrudelPattern.nfsustain by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfsustain(p, args) }
+
+/** Sets the notch filter envelope sustain level (not in original Strudel JS implementation). */
+@StrudelDsl
+val nfsustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfsustainMutation) }
+
+/** Sets the notch filter envelope sustain level on a string (not in original Strudel JS implementation). */
+@StrudelDsl
+val String.nfsustain by dslStringExtension { p, args, callInfo -> p.nfsustain(args, callInfo) }
+
+/** Alias for [nfsustain] */
+@StrudelDsl
+val StrudelPattern.nfs by dslPatternExtension { p, args, callInfo -> p.nfsustain(args, callInfo) }
+
+/** Alias for [nfsustain] */
+@StrudelDsl
+val nfs by dslFunction { args, callInfo -> nfsustain(args, callInfo) }
+
+/** Alias for [nfsustain] on a string */
+@StrudelDsl
+val String.nfs by dslStringExtension { p, args, callInfo -> p.nfsustain(args, callInfo) }
+
+// -- nfrelease() - Notch Filter Envelope Release (NOT IN ORIGINAL STRUDEL) -----------------------------------------------
+
+private val nfreleaseMutation = voiceModifier {
+    copy(nfrelease = it?.asDoubleOrNull())
+}
+
+private fun applyNfrelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = nfreleaseMutation,
+        getValue = { nfrelease },
+        setValue = { v, _ -> copy(nfrelease = v) },
+    )
+}
+
+/** Sets the notch filter envelope release time (not in original Strudel JS implementation). */
+@StrudelDsl
+val StrudelPattern.nfrelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfrelease(p, args) }
+
+/** Sets the notch filter envelope release time (not in original Strudel JS implementation). */
+@StrudelDsl
+val nfrelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfreleaseMutation) }
+
+/** Sets the notch filter envelope release time on a string (not in original Strudel JS implementation). */
+@StrudelDsl
+val String.nfrelease by dslStringExtension { p, args, callInfo -> p.nfrelease(args, callInfo) }
+
+/** Alias for [nfrelease] */
+@StrudelDsl
+val StrudelPattern.nfr by dslPatternExtension { p, args, callInfo -> p.nfrelease(args, callInfo) }
+
+/** Alias for [nfrelease] */
+@StrudelDsl
+val nfr by dslFunction { args, callInfo -> nfrelease(args, callInfo) }
+
+/** Alias for [nfrelease] on a string */
+@StrudelDsl
+val String.nfr by dslStringExtension { p, args, callInfo -> p.nfrelease(args, callInfo) }
+
+// -- nfenv() - Notch Filter Envelope Depth (NOT IN ORIGINAL STRUDEL) -----------------------------------------------------
+
+private val nfenvMutation = voiceModifier {
+    copy(nfenv = it?.asDoubleOrNull())
+}
+
+private fun applyNfenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = nfenvMutation,
+        getValue = { nfenv },
+        setValue = { v, _ -> copy(nfenv = v) },
+    )
+}
+
+/** Sets the notch filter envelope depth/amount (not in original Strudel JS implementation). */
+@StrudelDsl
+val StrudelPattern.nfenv by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfenv(p, args) }
+
+/** Sets the notch filter envelope depth/amount (not in original Strudel JS implementation). */
+@StrudelDsl
+val nfenv by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfenvMutation) }
+
+/** Sets the notch filter envelope depth/amount on a string (not in original Strudel JS implementation). */
+@StrudelDsl
+val String.nfenv by dslStringExtension { p, args, callInfo -> p.nfenv(args, callInfo) }
+
+/** Alias for [nfenv] */
+@StrudelDsl
+val StrudelPattern.nfe by dslPatternExtension { p, args, callInfo -> p.nfenv(args, callInfo) }
+
+/** Alias for [nfenv] */
+@StrudelDsl
+val nfe by dslFunction { args, callInfo -> nfenv(args, callInfo) }
+
+/** Alias for [nfenv] on a string */
+@StrudelDsl
+val String.nfe by dslStringExtension { p, args, callInfo -> p.nfenv(args, callInfo) }

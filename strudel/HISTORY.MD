@@ -336,6 +336,14 @@ All arithmetic operations work on pattern values and can be applied as:
 - `bprelease()` / `bpr()` - BPF envelope release time
 - `bpenv()` / `bpe()` - BPF envelope modulation depth
 
+**Notch Filter Envelope:** (⚠️ NOT IN ORIGINAL STRUDEL JS)
+
+- `nfattack()` / `nfa()` - Notch filter envelope attack time
+- `nfdecay()` / `nfd()` - Notch filter envelope decay time
+- `nfsustain()` / `nfs()` - Notch filter envelope sustain level
+- `nfrelease()` / `nfr()` - Notch filter envelope release time
+- `nfenv()` / `nfe()` - Notch filter envelope modulation depth
+
 ### Spatial Effects ✅
 
 - `room()` - Reverb mix level
