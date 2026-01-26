@@ -233,6 +233,12 @@ and category.
 - [x] **`delay()`** - Delay effect amount
 - [x] **`delaytime()`** - Delay time
 - [x] **`delayfeedback()`** - Delay feedback (aliases: `delayfb`, `dfb`)
+- [ ] **`lpenv`** — Low‑pass filter envelope amount; controls how strongly the LPF envelope affects the cutoff over
+  time. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`hpenv`** — High‑pass filter envelope amount; scales the HPF envelope’s influence on the
+  cutoff. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`bpenv`** — Band‑pass filter envelope amount; scales the BPF envelope’s influence on the
+  cutoff. [[1]](https://strudel.cc/learn/effects/)
 - [ ] **Filter envelopes** - `lpattack`, `lpdecay`, `lpsustain`, `lprelease` (and hp/bp variants)
 - [ ] **`vowel(sound)`** - Vowel filter (a, e, i, o, u)
 - [ ] **`phaser()`** - Phaser effect
