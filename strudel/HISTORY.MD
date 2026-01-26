@@ -240,6 +240,48 @@ All arithmetic operations work on pattern values and can be applied as:
 - `bite(n, indices)` - Slices pattern into n parts and plays according to index pattern (pattern method, string
   extension)
 
+### Pattern Picking & Selection ✅ **NEW!**
+
+**Basic Picking** - Select patterns/values from lists or maps by index/key:
+
+- `pick(lookup, pat)` - Pick patterns/values by index (clamps out-of-bounds, maintains inner timing)
+- `pickmod(lookup, pat)` - Like pick but wraps indices with modulo instead of clamping
+
+**Outer Join Variants** - Preserve outer pattern timing:
+
+- `pickOut(lookup, pat)` - Pick using outer pattern timing (timing from selector, values from picked)
+- `pickmodOut(lookup, pat)` - Outer timing with wrapping
+
+**Restart Variants** - Restart patterns at global time:
+
+- `pickRestart(lookup, pat)` - Pick and restart patterns from cycle 0 at selection time
+- `pickmodRestart(lookup, pat)` - Restart with wrapping
+
+**Reset Variants** - Reset patterns within cycle:
+
+- `pickReset(lookup, pat)` - Pick and reset patterns to cycle position
+- `pickmodReset(lookup, pat)` - Reset with wrapping
+
+**Squeeze/Inhabit** - Compress entire pattern cycles into events:
+
+- `inhabit(lookup, pat)` / `pickSqueeze(lookup, pat)` - Compress picked patterns into selector events
+- `inhabitmod(lookup, pat)` / `pickmodSqueeze(lookup, pat)` - Compress with wrapping
+- `squeeze(pat, xs)` - Direct squeeze with modulo wrapping
+
+All pick functions available as:
+
+- Pattern methods: `"0 1 2 3".pick(["a b", "c d"])`
+- String extensions: `"0 1 2".pick(["bd", "sd"])`
+- Standalone functions: `pick(["bd", "sd"], "0 1 2")`
+
+**Key differences:**
+
+- **pick**: Uses inner pattern timing - selected pattern plays at its own speed
+- **pickOut**: Uses outer pattern timing - selector determines event timing
+- **pickRestart**: Restarts pattern from cycle 0 at current time (global restart)
+- **pickReset**: Resets pattern to cycle position (synchronized with cycle)
+- **inhabit/squeeze**: Compresses entire pattern cycle into each selector event
+
 ### Probabilistic Patterns ✅
 
 **Event Removal:**

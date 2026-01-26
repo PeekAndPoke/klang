@@ -2,10 +2,14 @@ package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
+import io.peekandpoke.klang.strudel.lang.early
+import io.peekandpoke.klang.strudel.lang.fast
+import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.StaticStrudelPattern
+import io.peekandpoke.klang.strudel.pattern.createEventList
 import kotlin.random.Random
 
 /**
@@ -210,3 +214,264 @@ fun StrudelPattern.makeStatic(from: Rational, to: Rational): StaticStrudelPatter
  */
 fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
     makeStatic(from.toRational(), to.toRational())
+
+/**
+ * Flattens a pattern of patterns into a pattern, where the "whole" (duration) comes from the inner (picked) patterns.
+ * This is the standard join operation for pattern-of-patterns.
+ *
+ * When you have a pattern that returns patterns, innerJoin uses the timing from the inner (returned) pattern.
+ * The outer pattern acts as a selector that determines WHICH pattern to play, while the inner pattern
+ * determines WHEN events happen.
+ *
+ * Used by: pick, pickmod, pickReset, pickmodReset
+ */
+fun StrudelPattern.innerJoin(): StrudelPattern {
+    val outerPattern = this
+
+    return object : StrudelPattern {
+        override val weight: Double get() = outerPattern.weight
+        override val steps: Rational? get() = outerPattern.steps
+        override fun estimateCycleDuration(): Rational = outerPattern.estimateCycleDuration()
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            // Get events from outer pattern (which should have StrudelPattern values)
+            val outerEvents = outerPattern.queryArcContextual(from, to, ctx)
+            val result = createEventList()
+
+            for (outerEvent in outerEvents) {
+                // Extract the inner pattern from the outer event's value
+                val innerPattern = when (val data = outerEvent.data) {
+                    is StrudelPattern -> data
+                    else -> continue // Skip if not a pattern
+                }
+
+                // Query the inner pattern for the timespan of the outer event
+                val innerEvents = innerPattern.queryArcContextual(outerEvent.begin, outerEvent.end, ctx)
+
+                // Combine events: use inner event's timing (whole), outer event's context
+                for (innerEvent in innerEvents) {
+                    result.add(
+                        innerEvent.copy(
+                            // Keep inner event's timing (begin, end, dur remain from inner)
+                            data = innerEvent.data.copy(
+                                // Merge contexts if needed
+                            )
+                        )
+                    )
+                }
+            }
+
+            return result
+        }
+    }
+}
+
+/**
+ * Flattens a pattern of patterns into a pattern, where the "whole" (duration) comes from the outer (selecting) pattern.
+ *
+ * When you have a pattern that returns patterns, outerJoin uses the timing from the outer (selecting) pattern.
+ * The inner pattern provides the VALUES, but the outer pattern determines WHEN events happen.
+ *
+ * Used by: pickOut, pickmodOut
+ */
+fun StrudelPattern.outerJoin(): StrudelPattern {
+    val outerPattern = this
+
+    return object : StrudelPattern {
+        override val weight: Double get() = outerPattern.weight
+        override val steps: Rational? get() = outerPattern.steps
+        override fun estimateCycleDuration(): Rational = outerPattern.estimateCycleDuration()
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            val outerEvents = outerPattern.queryArcContextual(from, to, ctx)
+            val result = createEventList()
+
+            for (outerEvent in outerEvents) {
+                val innerPattern = when (val data = outerEvent.data) {
+                    is StrudelPattern -> data
+                    else -> continue
+                }
+
+                // Query the inner pattern
+                val innerEvents = innerPattern.queryArcContextual(outerEvent.begin, outerEvent.end, ctx)
+
+                // Use OUTER timing, inner values
+                for (innerEvent in innerEvents) {
+                    // Calculate intersection of outer and inner timespans
+                    val newBegin = maxOf(outerEvent.begin, innerEvent.begin)
+                    val newEnd = minOf(outerEvent.end, innerEvent.end)
+
+                    if (newEnd > newBegin) {
+                        result.add(
+                            innerEvent.copy(
+                                begin = newBegin,
+                                end = newEnd,
+                                dur = newEnd - newBegin
+                            )
+                        )
+                    }
+                }
+            }
+
+            return result
+        }
+    }
+}
+
+/**
+ * Flattens a pattern of patterns, aligning inner pattern cycles to outer events.
+ *
+ * @param restart If true (restartJoin), align to global time (outer event's begin time).
+ *                If false (resetJoin), align to cycle position (outer event's begin % 1).
+ *
+ * - restart=true (restartJoin): Each selection restarts the pattern from cycle 0 at the current global time
+ * - restart=false (resetJoin): Each selection resets the pattern to the current position within the cycle
+ *
+ * Used by: pickRestart, pickmodRestart (restart=true), pickReset, pickmodReset (restart=false)
+ */
+fun StrudelPattern.resetJoin(restart: Boolean = false): StrudelPattern {
+    val outerPattern = this
+
+    return object : StrudelPattern {
+        override val weight: Double get() = outerPattern.weight
+        override val steps: Rational? get() = outerPattern.steps
+        override fun estimateCycleDuration(): Rational = outerPattern.estimateCycleDuration()
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            val outerEvents = outerPattern.queryArcContextual(from, to, ctx)
+            val result = createEventList()
+
+            for (outerEvent in outerEvents) {
+                val innerPattern = when (val data = outerEvent.data) {
+                    is StrudelPattern -> data
+                    else -> continue
+                }
+
+                // Calculate the time offset for alignment
+                val offset = if (restart) {
+                    // Restart: align to global time (pattern starts at outerEvent.begin)
+                    outerEvent.begin
+                } else {
+                    // Reset: align to cycle position (pattern cycles match outer event's cycle position)
+                    // This keeps the pattern synchronized with cycle boundaries
+                    outerEvent.begin - outerEvent.begin.floor()
+                }
+
+                // Shift the inner pattern by the offset
+                val alignedPattern = innerPattern.late(offset)
+
+                // Query the aligned pattern
+                val innerEvents = alignedPattern.queryArcContextual(outerEvent.begin, outerEvent.end, ctx)
+
+                for (innerEvent in innerEvents) {
+                    // Calculate intersection
+                    val newBegin = maxOf(outerEvent.begin, innerEvent.begin)
+                    val newEnd = minOf(outerEvent.end, innerEvent.end)
+
+                    if (newEnd > newBegin) {
+                        result.add(
+                            innerEvent.copy(
+                                begin = newBegin,
+                                end = newEnd,
+                                dur = newEnd - newBegin
+                            )
+                        )
+                    }
+                }
+            }
+
+            return result
+        }
+    }
+}
+
+/**
+ * Convenience method for resetJoin(true).
+ * Restarts inner patterns from their beginning at the global time of each outer event.
+ */
+fun StrudelPattern.restartJoin(): StrudelPattern = resetJoin(true)
+
+/**
+ * Flattens a pattern of patterns, compressing entire inner pattern cycles into outer event durations.
+ *
+ * This is the "squeeze" or "inhabit" join - it takes the entire first cycle (0 to 1) of the inner pattern
+ * and compresses it to fit within the duration of each outer event. This is fundamentally different from
+ * innerJoin which preserves the temporal resolution of the inner pattern.
+ *
+ * Think of it like this:
+ * - innerJoin: "Play the pattern at its normal speed within this window"
+ * - squeezeJoin: "Squeeze the entire pattern cycle to fit this window"
+ *
+ * Used by: inhabit, pickSqueeze, inhabitmod, pickmodSqueeze, squeeze
+ */
+fun StrudelPattern.squeezeJoin(): StrudelPattern {
+    val outerPattern = this
+
+    return object : StrudelPattern {
+        override val weight: Double get() = outerPattern.weight
+        override val steps: Rational? get() = outerPattern.steps
+        override fun estimateCycleDuration(): Rational = outerPattern.estimateCycleDuration()
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            val outerEvents = outerPattern.queryArcContextual(from, to, ctx)
+            val result = createEventList()
+
+            for (outerEvent in outerEvents) {
+                val innerPattern = when (val data = outerEvent.data) {
+                    is StrudelPattern -> data
+                    else -> continue
+                }
+
+                // Compress the inner pattern's first cycle to fit the outer event's timespan
+                // This is equivalent to: inner._focusSpan(outerEvent.wholeOrPart())
+                // Which does: inner.early(begin.floor()).fast(1/(end-begin)).late(begin)
+
+                val span = outerEvent.end - outerEvent.begin
+                if (span <= Rational.ZERO) continue
+
+                // Apply the focus transformation to compress cycle 0-1 into the outer event's span
+                val compressed = innerPattern
+                    .early(outerEvent.begin.floor()) // Align to cycle start
+                    .fast(Rational.ONE / span)        // Speed up to fit the span
+                    .late(outerEvent.begin)           // Shift to outer event's position
+
+                // Query the compressed pattern
+                val innerEvents = compressed.queryArcContextual(outerEvent.begin, outerEvent.end, ctx)
+
+                for (innerEvent in innerEvents) {
+                    // Calculate intersection
+                    val newBegin = maxOf(outerEvent.begin, innerEvent.begin)
+                    val newEnd = minOf(outerEvent.end, innerEvent.end)
+
+                    if (newEnd > newBegin) {
+                        result.add(
+                            innerEvent.copy(
+                                begin = newBegin,
+                                end = newEnd,
+                                dur = newEnd - newBegin
+                            )
+                        )
+                    }
+                }
+            }
+
+            return result
+        }
+    }
+}

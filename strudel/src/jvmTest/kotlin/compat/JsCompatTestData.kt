@@ -44,12 +44,21 @@ object JsCompatTestData {
 
         // Structure & Control
         Example("Arrange", """arrange([1, note("c")], [2, note("e")])"""),
-        // TODO: pickRestart cannot be used at the top-level in strudel ... need another test patterns here
-        Example(SKIP, "PickRestart", """pickRestart([note("c"), note("e")])"""),
         Example("Cat", """cat(note("c"), note("e"))"""),
         Example("Stack", """stack(note("c"), note("e"))"""),
         Example("Hush", """note("c").hush()"""),
         Example("Gap", """gap(5)"""),
+
+        // Pattern Picking & Selection
+        // pick() - Basic pattern picking with index clamping
+        Example("pick() with list", """pick(["bd", "hh"], "0 1")"""),
+        Example("pick() with list patterns", """pick(["bd hh", "sn cp"], "0 1")"""),
+        Example("pick() with map", """pick({a: "bd", b: "hh"}, "a b")"""),
+        Example("pick() clamps indices", """pick(["bd", "hh"], "0 1 2 3")"""),
+
+        // pickmod() - Pattern picking with modulo wrapping
+        Example("pickmod() wraps indices", """pickmod(["bd", "hh"], "0 1 2 3")"""),
+        Example("pickmod() with patterns", """pickmod(["bd hh", "sn cp"], "0 1 2 3")"""),
 
         // Euclidean Patterns from mini notation
         *(1..8).flatMap { pulses ->

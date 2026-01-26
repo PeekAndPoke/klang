@@ -268,22 +268,6 @@ val sequenceP by dslFunction { args, /* callInfo */ _ ->
     applySeq(args.toListOfPatterns(defaultModifier))
 }
 
-// -- pickRestart() ----------------------------------------------------------------------------------------------------
-
-// pickRestart([a, b, c]) -> picks patterns sequentially per cycle (slowcat)
-// TODO: make this really work. Must be dslMethod -> https://strudel.cc/learn/conditional-modifiers/#pickrestart
-@StrudelDsl
-val pickRestart by dslFunction { args, /* callInfo */ _ ->
-    val patterns = args.toListOfPatterns(defaultModifier)
-    if (patterns.isEmpty()) {
-        silence
-    } else {
-        // seq plays all in 1 cycle. slow(n) makes each take 1 cycle.
-        val s = SequencePattern(patterns)
-        s.slow(patterns.size)
-    }
-}
-
 // -- cat() ------------------------------------------------------------------------------------------------------------
 
 internal fun applyCat(patterns: List<StrudelPattern>): StrudelPattern {
