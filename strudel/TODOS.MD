@@ -217,34 +217,110 @@ and category.
 
 ### Audio Effects ⭐⭐⭐
 
+#### Filter Effects
+
 - [x] **`lpf()`** - Low pass filter (aliases: `cutoff`, `ctf`, `lp`)
+- [x] **`lpq()`** - Low pass filter Q/resonance (alias: `resonance`, `res`)
 - [x] **`hpf()`** - High pass filter (aliases: `hp`, `hcutoff`)
-- [x] **`bandf()` / `bpf()`** - Band pass filter (alias: `bp`)
+- [x] **`hpq()`** - High pass filter Q/resonance (aliases: `hresonance`, `hres`)
+- [x] **`bpf()`** - Band pass filter (aliases: `bandf`, `bp`)
+- [x] **`bpq()`** - Band pass filter Q/resonance (alias: `bandq`)
 - [x] **`notchf()`** - Notch filter
-- [x] **`resonance()` / `res()`** - Filter resonance/Q (alias: `lpq`)
-- [x] **`hresonance()`** - High pass filter resonance (aliases: `hres`, `hpq`)
-- [x] **`bandq()`** - Band pass filter Q (alias: `bpq`)
 - [x] **`nresonance()`** - Notch filter resonance (alias: `nres`)
+- [ ] **`ftype()`** - Filter type (12db, ladder, 24db)
+- [ ] **`vowel()`** - Vowel formant filter (a, e, i, o, u, ae, aa, oe, ue, y, uh, un, en, an, on)
+
+#### Filter Envelopes - Lowpass
+
+- [ ] **`lpattack()`** - Low pass filter envelope attack time (alias: `lpa`)
+- [ ] **`lpdecay()`** - Low pass filter envelope decay time (alias: `lpd`)
+- [ ] **`lpsustain()`** - Low pass filter envelope sustain level (alias: `lps`)
+- [ ] **`lprelease()`** - Low pass filter envelope release time (alias: `lpr`)
+- [ ] **`lpenv()`** - Low pass filter envelope amount (alias: `lpe`)
+
+#### Filter Envelopes - Highpass
+
+- [ ] **`hpattack()`** - High pass filter envelope attack time (alias: `hpa`)
+- [ ] **`hpdecay()`** - High pass filter envelope decay time (alias: `hpd`)
+- [ ] **`hpsustain()`** - High pass filter envelope sustain level (alias: `hps`)
+- [ ] **`hprelease()`** - High pass filter envelope release time (alias: `hpr`)
+- [ ] **`hpenv()`** - High pass filter envelope amount (alias: `hpe`)
+
+#### Filter Envelopes - Bandpass
+
+- [ ] **`bpattack()`** - Band pass filter envelope attack time (alias: `bpa`)
+- [ ] **`bpdecay()`** - Band pass filter envelope decay time (alias: `bpd`)
+- [ ] **`bpsustain()`** - Band pass filter envelope sustain level (alias: `bps`)
+- [ ] **`bprelease()`** - Band pass filter envelope release time (alias: `bpr`)
+- [ ] **`bpenv()`** - Band pass filter envelope amount (alias: `bpe`)
+
+#### Pitch Envelope
+
+- [ ] **`pattack()`** - Pitch envelope attack time (alias: `patt`)
+- [ ] **`pdecay()`** - Pitch envelope decay time (alias: `pdec`)
+- [ ] **`prelease()`** - Pitch envelope release time (alias: `prel`)
+- [ ] **`penv()`** - Pitch envelope amount in semitones
+- [ ] **`pcurve()`** - Pitch envelope curve (0=linear, 1=exponential)
+- [ ] **`panchor()`** - Pitch envelope range anchor (0-1)
+
+#### Waveshaping / Distortion
+
 - [x] **`distort()`** - Distortion effect (alias: `dist`)
-- [x] **`crush()`** - Bit crusher effect
-- [x] **`coarse()`** - Coarse pitch quantization
-- [x] **`room()`** - Reverb room size
-- [x] **`roomsize()` / `rsize()`** - Reverb room size
-- [x] **`delay()`** - Delay effect amount
-- [x] **`delaytime()`** - Delay time
-- [x] **`delayfeedback()`** - Delay feedback (aliases: `delayfb`, `dfb`)
-- [ ] **`lpenv`** — Low‑pass filter envelope amount; controls how strongly the LPF envelope affects the cutoff over
-  time. [[1]](https://strudel.cc/learn/effects/)
-- [ ] **`hpenv`** — High‑pass filter envelope amount; scales the HPF envelope’s influence on the
-  cutoff. [[1]](https://strudel.cc/learn/effects/)
-- [ ] **`bpenv`** — Band‑pass filter envelope amount; scales the BPF envelope’s influence on the
-  cutoff. [[1]](https://strudel.cc/learn/effects/)
-- [ ] **Filter envelopes** - `lpattack`, `lpdecay`, `lpsustain`, `lprelease` (and hp/bp variants)
-- [ ] **`vowel(sound)`** - Vowel filter (a, e, i, o, u)
-- [ ] **`phaser()`** - Phaser effect
-- [ ] **`tremolo`** with full parameters:
-    - `tremolosync()`, `tremolodepth()`, `tremoloskew()`
-    - `tremolophase()`, `tremoloshape()`
+- [x] **`crush()`** - Bit crusher effect (1-16 bits)
+- [x] **`coarse()`** - Sample rate reduction
+- [ ] **`shape()`** - Wave distortion amount
+
+#### Amplitude Modulation / Tremolo
+
+- [ ] **`tremolosync()`** - Tremolo modulation speed in cycles (alias: `tremsync`)
+- [ ] **`tremolodepth()`** - Tremolo depth of modulation (alias: `tremdepth`)
+- [ ] **`tremoloskew()`** - Tremolo waveform shape 0-1 (alias: `tremskew`)
+- [ ] **`tremolophase()`** - Tremolo phase offset in cycles (alias: `tremphase`)
+- [ ] **`tremoloshape()`** - Tremolo waveform type: tri, square, sine, saw, ramp (alias: `tremshape`)
+
+#### Dynamics
+
+- [ ] **`velocity()`** - Volume level 0-1, multiplied with gain
+- [ ] **`postgain()`** - Post-effect gain boost
+- [ ] **`compressor()`** - Dynamic range compression "threshold:ratio:knee:attack:release"
+
+#### Panning
+
+- [ ] **`jux()`** - Apply function to right channel only
+- [ ] **`juxBy()`** - Adjustable stereo width jux (alias: `juxby`; 0=mono, 1=full stereo)
+
+#### Global Effects - Reverb
+
+- [x] **`room()`** - Reverb mix level (0-1)
+- [x] **`roomsize()`** - Reverb room size (0-10) (alias: `rsize`) **MISSING ALIASES: `sz`, `size`**
+- [ ] **`roomfade()`** - Reverb fade time in seconds (alias: `rfade`)
+- [ ] **`roomlp()`** - Reverb lowpass start frequency in Hz (alias: `rlp`)
+- [ ] **`roomdim()`** - Reverb lowpass frequency at -60dB in Hz (alias: `rdim`)
+- [ ] **`iresponse()`** - Impulse response sample (alias: `ir`)
+
+#### Global Effects - Delay
+
+- [x] **`delay()`** - Delay signal level (0-1)
+- [x] **`delaytime()`** - Delay duration
+- [x] **`delayfeedback()`** - Delay feedback amount (aliases: `delayfb`, `dfb`)
+
+#### Global Effects - Phaser
+
+- [ ] **`phaser()`** - Phaser modulation speed (alias: `ph`)
+- [ ] **`phaserdepth()`** - Phaser effect amount 0-1, default 0.75 (aliases: `phd`, `phasdp`)
+- [ ] **`phasercenter()`** - Phaser center frequency in Hz, default 1000 (alias: `phc`)
+- [ ] **`phasersweep()`** - Phaser LFO sweep range in Hz, default 2000 (alias: `phs`)
+
+#### Global Effects - Duck / Sidechain
+
+- [ ] **`duckorbit()`** - Target orbit number for ducking (alias: `duck`)
+- [ ] **`duckattack()`** - Duck return-to-normal time in seconds (alias: `duckatt`)
+- [ ] **`duckdepth()`** - Ducking amount (0-1)
+
+#### Other
+
+- [ ] **`xfade()`** - Cross-fade between signals (0-1)
+- [x] **`orbit()`** - Global effect context grouping **MISSING ALIAS: `o`**
 
 ### Sample Manipulation ⭐⭐⭐
 
@@ -595,7 +671,8 @@ and category.
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
-- **Audio Effects**: ~8 missing (16 completed: filters with aliases, filter resonance, distortion, reverb, delay)
+- **Audio Effects**: ~46 missing + 2 partial (15 completed: filters with full aliases, filter resonance, distortion,
+  reverb, delay; partial: roomsize missing sz/size aliases, orbit missing o alias)
 - **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
   `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
 - **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
@@ -620,9 +697,12 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~54 features remaining (3 marked "won't implement")
+### Total Estimated: ~92 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~205 features! 🎉
+### Completed So Far: ~207 features! 🎉
+
+**Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
+Strudel documentation.
 
 **Major achievements:**
 

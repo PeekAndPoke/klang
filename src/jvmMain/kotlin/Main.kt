@@ -5,11 +5,11 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
-import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.lang.pan
 import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -66,6 +66,17 @@ private suspend fun helloStrudel() {
             registerLibrary(strudelLib)
         }
 
+        val pattern1 = strudel.compile(
+            """
+                note("a b c d")
+                .lpattack(0.1)
+                .lpdecay(0.2)
+                .lpsustain(0.3)
+                .lprelease(0.4)
+                .lpenv(0.5)
+            """.trimIndent()
+        ).await()
+
 //        val result = engine.execute(
 //            """
 //            import * from "stdlib"
@@ -107,15 +118,15 @@ private suspend fun helloStrudel() {
 //            }
 //        }
 //
-//        println("=======================================================================")
-//        println(
-//            pattern.makeStatic(0.0, 8.0).toJson()
-//        )
-//        println("=======================================================================")
+        println("=======================================================================")
+        println(
+            pattern1.makeStatic(0.0, 8.0).toJson()
+        )
+        println("=======================================================================")
 
 //        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
 
-        val pattern1 = StrudelPattern.compile(TestTextPatterns.strangerThingsNetflix)!!
+//        val pattern1 = StrudelPattern.compile(TestTextPatterns.strangerThingsNetflix)!!
 //        val pattern1 = note("c d e f")
 //            .pan(sine.range(0.3, 0.7).mul(-1).slow(4))
 
