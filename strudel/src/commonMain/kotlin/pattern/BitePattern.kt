@@ -3,7 +3,6 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.late
@@ -63,48 +62,20 @@ internal class BitePattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // Check if all values are static - if so, apply directly to the whole range
-        val isAllStatic = nProvider is ControlValueProvider.Static &&
-                indicesProvider is ControlValueProvider.Static
-
-        if (isAllStatic) {
-            val n = (nProvider as ControlValueProvider.Static).value.asInt ?: 4
-            val idx = (indicesProvider as ControlValueProvider.Static).value.asInt ?: 0
-            return queryWithStaticValues(from, to, ctx, n, idx)
-        }
-
-        // At least one parameter is a pattern - sample values and find overlaps
-        val nEvents = when (nProvider) {
-            is ControlValueProvider.Static -> {
-                listOf(
-                    StrudelPatternEvent(
-                        begin = from,
-                        end = to,
-                        dur = to - from,
-                        data = StrudelVoiceData.empty.copy(value = nProvider.value)
-                    )
-                )
-            }
-
-            is ControlValueProvider.Pattern -> nProvider.pattern.queryArcContextual(from, to, ctx)
-        }
-
-        val indexEvents = when (indicesProvider) {
-            is ControlValueProvider.Static -> {
-                listOf(
-                    StrudelPatternEvent(
-                        begin = from,
-                        end = to,
-                        dur = to - from,
-                        data = StrudelVoiceData.empty.copy(value = indicesProvider.value)
-                    )
-                )
-            }
-
-            is ControlValueProvider.Pattern -> indicesProvider.pattern.queryArcContextual(from, to, ctx)
-        }
+        val nEvents = nProvider.queryEvents(from, to, ctx)
+        val indexEvents = indicesProvider.queryEvents(from, to, ctx)
 
         if (nEvents.isEmpty() || indexEvents.isEmpty()) return emptyList()
+
+        // Fast-path when both providers behave like static values over the full range
+        if (nEvents.size == 1 && indexEvents.size == 1 &&
+            nEvents[0].begin == from && nEvents[0].end == to &&
+            indexEvents[0].begin == from && indexEvents[0].end == to
+        ) {
+            val n = nEvents[0].data.value?.asInt ?: 4
+            val idx = indexEvents[0].data.value?.asInt ?: 0
+            return queryWithStaticValues(from, to, ctx, n, idx)
+        }
 
         val result = mutableListOf<StrudelPatternEvent>()
 
@@ -112,7 +83,7 @@ internal class BitePattern(
         for (nEvent in nEvents) {
             for (indexEvent in indexEvents) {
                 // Check if events overlap
-                if (nEvent.end <= indexEvent.begin || indexEvent.end <= indexEvent.begin) continue
+                if (nEvent.end <= indexEvent.begin || indexEvent.end <= nEvent.begin) continue
 
                 val n = nEvent.data.value?.asInt ?: 4
                 if (n <= 0) continue
@@ -188,5 +159,4 @@ internal class BitePattern(
 
         return slice.queryArcContextual(from, to, ctx)
     }
-
 }

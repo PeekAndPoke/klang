@@ -52,61 +52,7 @@ internal class SegmentPattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        // For static values, we could optimize, but segment is typically only used with control patterns
-        if (nProvider is ControlValueProvider.Static) {
-            val n = nProvider.value.asInt ?: 1
-            return queryWithStaticN(from, to, ctx, n)
-        }
-
-        // For control patterns, use time-segmented approach
-        val controlPattern = (nProvider as? ControlValueProvider.Pattern)?.pattern
-            ?: return queryWithStaticN(from, to, ctx, 1)
-
-        return queryWithControlPattern(from, to, ctx, controlPattern)
-    }
-
-    private fun queryWithStaticN(from: Rational, to: Rational, ctx: QueryContext, n: Int): List<StrudelPatternEvent> {
-        if (n <= 0) return emptyList()
-
-        val result = mutableListOf<StrudelPatternEvent>()
-        val duration = to - from
-        val sliceDuration = duration / Rational(n)
-
-        // Create n slices within the query timespan
-        for (i in 0 until n) {
-            val sliceBegin = from + (sliceDuration * Rational(i))
-            val sliceEnd = sliceBegin + sliceDuration
-
-            // Query source for this slice
-            val sourceEvents = source.queryArcContextual(sliceBegin, sliceEnd, ctx)
-
-            for (sourceEvent in sourceEvents) {
-                // Clip source event to slice boundaries
-                val clippedBegin = maxOf(sliceBegin, sourceEvent.begin)
-                val clippedEnd = minOf(sliceEnd, sourceEvent.end)
-
-                if (clippedEnd > clippedBegin) {
-                    result.add(
-                        sourceEvent.copy(
-                            begin = clippedBegin,
-                            end = clippedEnd,
-                            dur = clippedEnd - clippedBegin
-                        )
-                    )
-                }
-            }
-        }
-
-        return result
-    }
-
-    private fun queryWithControlPattern(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-        nPattern: StrudelPattern,
-    ): List<StrudelPatternEvent> {
-        val nEvents = nPattern.queryArcContextual(from, to, ctx)
+        val nEvents = nProvider.queryEvents(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 
         val result = mutableListOf<StrudelPatternEvent>()
