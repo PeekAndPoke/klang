@@ -301,11 +301,14 @@ All arithmetic operations work on pattern values and can be applied as:
 
 ### Filters ✅
 
-- `lpf(freq)` - Low-pass filter
-- `hpf(freq)` - High-pass filter
-- `bandf(freq)` / `bpf(freq)` - Band-pass filter
+- `lpf(freq)` - Low-pass filter (aliases: `cutoff`, `ctf`, `lp`)
+- `hpf(freq)` - High-pass filter (aliases: `hp`, `hcutoff`)
+- `bandf(freq)` / `bpf(freq)` - Band-pass filter (alias: `bp`)
 - `notchf(freq)` - Notch filter
-- `resonance()` / `res()` - Filter resonance/Q factor
+- `resonance()` / `res()` / `lpq()` - Low-pass filter resonance/Q factor
+- `hresonance()` / `hres()` / `hpq()` - High-pass filter resonance/Q factor
+- `bandq()` / `bpq()` - Band-pass filter Q factor
+- `nresonance()` / `nres()` - Notch filter resonance/Q factor
 
 ### Spatial Effects ✅
 
@@ -313,11 +316,11 @@ All arithmetic operations work on pattern values and can be applied as:
 - `roomsize()` / `rsize()` - Reverb room size
 - `delay()` - Delay mix level
 - `delaytime()` - Delay time
-- `delayfeedback()` - Delay feedback amount
+- `delayfeedback()` / `delayfb()` / `dfb()` - Delay feedback amount
 
 ### Distortion & Degradation ✅
 
-- `distort()` - Distortion effect
+- `distort()` / `dist()` - Distortion effect
 - `crush()` - Bit crushing
 - `coarse()` - Sample rate reduction
 
@@ -466,7 +469,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 185+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 198+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 27 core pattern types including:
     - Basic: AtomicPattern, SequencePattern, StackPattern, ArrangementPattern
     - Euclidean: EuclideanPattern, EuclideanPatternWithControl, EuclideanMorphPattern, EuclideanMorphPatternWithControl

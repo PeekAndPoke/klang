@@ -196,19 +196,33 @@ object JsCompatTestData {
 
         // Filters
         Example("LowPass", """s("saw").lpf(333).resonance(0.3)"""),
+        Example("LowPass alias cutoff", """s("saw").cutoff(333)"""),
+        Example("LowPass alias ctf", """s("saw").ctf(333)"""),
+        Example("LowPass alias lp", """s("saw").lp(333)"""),
+        Example("LowPass resonance alias lpq", """s("saw").lpf(333).lpq(0.3)"""),
         Example("HighPass", """s("saw").hpf(444).hresonance(0.7)"""),
+        Example("HighPass alias hp", """s("saw").hp(444)"""),
+        Example("HighPass alias hcutoff", """s("saw").hcutoff(444)"""),
+        Example("HighPass resonance alias hpq", """s("saw").hpf(444).hpq(0.7)"""),
         Example("BandPass", """s("saw").bandf(555).bandq(0.6)"""),
+        Example("BandPass alias bpf", """s("saw").bpf(555)"""),
+        Example("BandPass alias bp", """s("saw").bp(555)"""),
+        Example("BandPass Q alias bpq", """s("saw").bandf(555).bpq(0.6)"""),
         // TODO: notchf does not seem to exist in strudel ... or we need to figure how?
         Example(SKIP, "Notch", """s("saw").notchf(666).nresonance(0.4)"""),
 
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),
+        Example("Distortion alias dist", """note("c").dist(0.5)"""),
         Example("Distortion medium", """note("c").distort(7.0)"""),
         Example("Distortion high", """note("c").distort(50.0)"""),
         Example("Bitcrush", """note("c").crush(4)"""),
         Example("Downsample", """note("c").coarse(4)"""),
         Example("Reverb", """note("c").room(0.5).roomsize(2.0)"""),
+        Example("Reverb alias rsize", """note("c").room(0.5).rsize(2.0)"""),
         Example("Delay", """note("c").delay(0.5).delaytime(0.25).delayfeedback(0.5)"""),
+        Example("Delay alias delayfb", """note("c").delay(0.5).delaytime(0.25).delayfb(0.5)"""),
+        Example("Delay alias dfb", """note("c").delay(0.5).delaytime(0.25).dfb(0.5)"""),
 
         // Sample Manipulation
         Example("Sample Begin", """s("bd").begin(0.5)"""),

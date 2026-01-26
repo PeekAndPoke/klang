@@ -217,20 +217,22 @@ and category.
 
 ### Audio Effects ⭐⭐⭐
 
-- [x] **`lpf()`** - Low pass filter
-- [x] **`hpf()`** - High pass filter
-- [x] **`bandf()` / `bpf()`** - Band pass filter
+- [x] **`lpf()`** - Low pass filter (aliases: `cutoff`, `ctf`, `lp`)
+- [x] **`hpf()`** - High pass filter (aliases: `hp`, `hcutoff`)
+- [x] **`bandf()` / `bpf()`** - Band pass filter (alias: `bp`)
 - [x] **`notchf()`** - Notch filter
-- [x] **`resonance()` / `res()`** - Filter resonance/Q
-- [x] **`distort()`** - Distortion effect
+- [x] **`resonance()` / `res()`** - Filter resonance/Q (alias: `lpq`)
+- [x] **`hresonance()`** - High pass filter resonance (aliases: `hres`, `hpq`)
+- [x] **`bandq()`** - Band pass filter Q (alias: `bpq`)
+- [x] **`nresonance()`** - Notch filter resonance (alias: `nres`)
+- [x] **`distort()`** - Distortion effect (alias: `dist`)
 - [x] **`crush()`** - Bit crusher effect
 - [x] **`coarse()`** - Coarse pitch quantization
 - [x] **`room()`** - Reverb room size
 - [x] **`roomsize()` / `rsize()`** - Reverb room size
 - [x] **`delay()`** - Delay effect amount
 - [x] **`delaytime()`** - Delay time
-- [x] **`delayfeedback()`** - Delay feedback
-- [ ] **`lpq()`, `hpq()`, `bpq()`** - Dedicated Q/resonance for each filter
+- [x] **`delayfeedback()`** - Delay feedback (aliases: `delayfb`, `dfb`)
 - [ ] **Filter envelopes** - `lpattack`, `lpdecay`, `lpsustain`, `lprelease` (and hp/bp variants)
 - [ ] **`vowel(sound)`** - Vowel filter (a, e, i, o, u)
 - [ ] **`phaser()`** - Phaser effect
@@ -255,7 +257,6 @@ and category.
 - [ ] **`striate(portions)`** - Partition samples into portions, trigger progressively
 - [ ] **`fit()`** - Match sample to event duration (for rhythmic loops)
 - [ ] **`scrub(position, speed)`** - Tape-style scrubbing with position/speed control
-
 ### Continuous Signals ⭐⭐
 
 - [x] **`steady(value)`** - Constant value continuous pattern
@@ -588,7 +589,7 @@ and category.
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
-- **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
+- **Audio Effects**: ~8 missing (16 completed: filters with aliases, filter resonance, distortion, reverb, delay)
 - **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
   `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
 - **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
@@ -615,7 +616,7 @@ and category.
 
 ### Total Estimated: ~54 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~202 features! 🎉
+### Completed So Far: ~205 features! 🎉
 
 **Major achievements:**
 

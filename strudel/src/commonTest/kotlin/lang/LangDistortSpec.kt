@@ -54,4 +54,29 @@ class LangDistortSpec : StringSpec({
         // t=0.75: sine(0.75) = 0.0
         events[3].data.distort shouldBe (0.0 plusOrMinus EPSILON)
     }
+
+    // Alias tests
+
+    "dist() is an alias for distort()" {
+        val p = dist("3.0")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.distort shouldBe 3.0
+    }
+
+    "dist() works as pattern extension" {
+        val p = note("c").dist("3.0")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.distort shouldBe 3.0
+    }
+
+    "dist() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").dist("3.0")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.distort shouldBe 3.0
+    }
 })

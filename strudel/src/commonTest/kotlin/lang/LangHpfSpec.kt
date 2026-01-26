@@ -55,4 +55,45 @@ class LangHpfSpec : StringSpec({
         // t=0.75: sine(0.75) = 0.0
         events[3].data.hcutoff shouldBe (0.0 plusOrMinus EPSILON)
     }
+
+    // Alias tests
+
+    "hp() is an alias for hpf()" {
+        val p = hp("800")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.hcutoff shouldBe 800.0
+    }
+
+    "hp() works as pattern extension" {
+        val p = note("c").hp("800")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.hcutoff shouldBe 800.0
+    }
+
+    "hp() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").hp("800")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.hcutoff shouldBe 800.0
+    }
+
+    "hcutoff() is an alias for hpf()" {
+        val p = hcutoff("1200")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.hcutoff shouldBe 1200.0
+    }
+
+    "hcutoff() works as pattern extension" {
+        val p = note("c").hcutoff("1200")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.hcutoff shouldBe 1200.0
+    }
 })
