@@ -211,7 +211,7 @@ private fun applySound(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
             src.copy(
                 sound = ctrl.sound ?: src.sound,
                 soundIndex = ctrl.soundIndex ?: src.soundIndex,
-                gain = ctrl.gain ?: src.gain,
+//                gain = ctrl.gain ?: src.gain,
             )
         }
     }

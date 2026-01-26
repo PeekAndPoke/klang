@@ -78,7 +78,7 @@ val seq by dslFunction { args, /* callInfo */ _ ->
     args.toPattern {
         copy(
             value = it?.asVoiceValue(),
-            gain = 1.0,
+            gain = gain ?: 1.0,
         )
     }
 }
