@@ -69,11 +69,11 @@ private suspend fun helloStrudel() {
         val pattern1 = strudel.compile(
             """
                 note("a b c d")
-                .lpattack(0.1)
-                .lpdecay(0.2)
-                .lpsustain(0.3)
-                .lprelease(0.4)
-                .lpenv(0.5)
+                .hpattack(0.1)
+                .hpdecay(0.2)
+                .hpsustain(0.3)
+                .hprelease(0.4)
+                .hpenv(0.5)
             """.trimIndent()
         ).await()
 

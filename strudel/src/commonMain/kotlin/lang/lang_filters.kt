@@ -385,3 +385,198 @@ val nres by dslFunction { args, callInfo -> nresonance(args, callInfo) }
 /** Alias for [nresonance] on a string */
 @StrudelDsl
 val String.nres by dslStringExtension { p, args, callInfo -> p.nresonance(args, callInfo) }
+
+// -- lpattack() - Low Pass Filter Envelope Attack -----------------------------------------------------------------------
+
+private val lpattackMutation = voiceModifier {
+    copy(lpattack = it?.asDoubleOrNull())
+}
+
+private fun applyLpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = lpattackMutation,
+        getValue = { lpattack },
+        setValue = { v, _ -> copy(lpattack = v) },
+    )
+}
+
+/** Sets the low pass filter envelope attack time. */
+@StrudelDsl
+val StrudelPattern.lpattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpattack(p, args) }
+
+/** Sets the low pass filter envelope attack time. */
+@StrudelDsl
+val lpattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpattackMutation) }
+
+/** Sets the low pass filter envelope attack time on a string. */
+@StrudelDsl
+val String.lpattack by dslStringExtension { p, args, callInfo -> p.lpattack(args, callInfo) }
+
+/** Alias for [lpattack] */
+@StrudelDsl
+val StrudelPattern.lpa by dslPatternExtension { p, args, callInfo -> p.lpattack(args, callInfo) }
+
+/** Alias for [lpattack] */
+@StrudelDsl
+val lpa by dslFunction { args, callInfo -> lpattack(args, callInfo) }
+
+/** Alias for [lpattack] on a string */
+@StrudelDsl
+val String.lpa by dslStringExtension { p, args, callInfo -> p.lpattack(args, callInfo) }
+
+// -- lpdecay() - Low Pass Filter Envelope Decay -------------------------------------------------------------------------
+
+private val lpdecayMutation = voiceModifier {
+    copy(lpdecay = it?.asDoubleOrNull())
+}
+
+private fun applyLpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = lpdecayMutation,
+        getValue = { lpdecay },
+        setValue = { v, _ -> copy(lpdecay = v) },
+    )
+}
+
+/** Sets the low pass filter envelope decay time. */
+@StrudelDsl
+val StrudelPattern.lpdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpdecay(p, args) }
+
+/** Sets the low pass filter envelope decay time. */
+@StrudelDsl
+val lpdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpdecayMutation) }
+
+/** Sets the low pass filter envelope decay time on a string. */
+@StrudelDsl
+val String.lpdecay by dslStringExtension { p, args, callInfo -> p.lpdecay(args, callInfo) }
+
+/** Alias for [lpdecay] */
+@StrudelDsl
+val StrudelPattern.lpd by dslPatternExtension { p, args, callInfo -> p.lpdecay(args, callInfo) }
+
+/** Alias for [lpdecay] */
+@StrudelDsl
+val lpd by dslFunction { args, callInfo -> lpdecay(args, callInfo) }
+
+/** Alias for [lpdecay] on a string */
+@StrudelDsl
+val String.lpd by dslStringExtension { p, args, callInfo -> p.lpdecay(args, callInfo) }
+
+// -- lpsustain() - Low Pass Filter Envelope Sustain ---------------------------------------------------------------------
+
+private val lpsustainMutation = voiceModifier {
+    copy(lpsustain = it?.asDoubleOrNull())
+}
+
+private fun applyLpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = lpsustainMutation,
+        getValue = { lpsustain },
+        setValue = { v, _ -> copy(lpsustain = v) },
+    )
+}
+
+/** Sets the low pass filter envelope sustain level. */
+@StrudelDsl
+val StrudelPattern.lpsustain by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpsustain(p, args) }
+
+/** Sets the low pass filter envelope sustain level. */
+@StrudelDsl
+val lpsustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpsustainMutation) }
+
+/** Sets the low pass filter envelope sustain level on a string. */
+@StrudelDsl
+val String.lpsustain by dslStringExtension { p, args, callInfo -> p.lpsustain(args, callInfo) }
+
+/** Alias for [lpsustain] */
+@StrudelDsl
+val StrudelPattern.lps by dslPatternExtension { p, args, callInfo -> p.lpsustain(args, callInfo) }
+
+/** Alias for [lpsustain] */
+@StrudelDsl
+val lps by dslFunction { args, callInfo -> lpsustain(args, callInfo) }
+
+/** Alias for [lpsustain] on a string */
+@StrudelDsl
+val String.lps by dslStringExtension { p, args, callInfo -> p.lpsustain(args, callInfo) }
+
+// -- lprelease() - Low Pass Filter Envelope Release ---------------------------------------------------------------------
+
+private val lpreleaseMutation = voiceModifier {
+    copy(lprelease = it?.asDoubleOrNull())
+}
+
+private fun applyLprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = lpreleaseMutation,
+        getValue = { lprelease },
+        setValue = { v, _ -> copy(lprelease = v) },
+    )
+}
+
+/** Sets the low pass filter envelope release time. */
+@StrudelDsl
+val StrudelPattern.lprelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyLprelease(p, args) }
+
+/** Sets the low pass filter envelope release time. */
+@StrudelDsl
+val lprelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpreleaseMutation) }
+
+/** Sets the low pass filter envelope release time on a string. */
+@StrudelDsl
+val String.lprelease by dslStringExtension { p, args, callInfo -> p.lprelease(args, callInfo) }
+
+/** Alias for [lprelease] */
+@StrudelDsl
+val StrudelPattern.lpr by dslPatternExtension { p, args, callInfo -> p.lprelease(args, callInfo) }
+
+/** Alias for [lprelease] */
+@StrudelDsl
+val lpr by dslFunction { args, callInfo -> lprelease(args, callInfo) }
+
+/** Alias for [lprelease] on a string */
+@StrudelDsl
+val String.lpr by dslStringExtension { p, args, callInfo -> p.lprelease(args, callInfo) }
+
+// -- lpenv() - Low Pass Filter Envelope Depth ---------------------------------------------------------------------------
+
+private val lpenvMutation = voiceModifier {
+    copy(lpenv = it?.asDoubleOrNull())
+}
+
+private fun applyLpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = lpenvMutation,
+        getValue = { lpenv },
+        setValue = { v, _ -> copy(lpenv = v) },
+    )
+}
+
+/** Sets the low pass filter envelope depth/amount. */
+@StrudelDsl
+val StrudelPattern.lpenv by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpenv(p, args) }
+
+/** Sets the low pass filter envelope depth/amount. */
+@StrudelDsl
+val lpenv by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpenvMutation) }
+
+/** Sets the low pass filter envelope depth/amount on a string. */
+@StrudelDsl
+val String.lpenv by dslStringExtension { p, args, callInfo -> p.lpenv(args, callInfo) }
+
+/** Alias for [lpenv] */
+@StrudelDsl
+val StrudelPattern.lpe by dslPatternExtension { p, args, callInfo -> p.lpenv(args, callInfo) }
+
+/** Alias for [lpenv] */
+@StrudelDsl
+val lpe by dslFunction { args, callInfo -> lpenv(args, callInfo) }
+
+/** Alias for [lpenv] on a string */
+@StrudelDsl
+val String.lpe by dslStringExtension { p, args, callInfo -> p.lpenv(args, callInfo) }

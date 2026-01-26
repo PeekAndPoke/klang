@@ -232,11 +232,11 @@ and category.
 
 #### Filter Envelopes - Lowpass
 
-- [ ] **`lpattack()`** - Low pass filter envelope attack time (alias: `lpa`)
-- [ ] **`lpdecay()`** - Low pass filter envelope decay time (alias: `lpd`)
-- [ ] **`lpsustain()`** - Low pass filter envelope sustain level (alias: `lps`)
-- [ ] **`lprelease()`** - Low pass filter envelope release time (alias: `lpr`)
-- [ ] **`lpenv()`** - Low pass filter envelope amount (alias: `lpe`)
+- [x] **`lpattack()`** - Low pass filter envelope attack time (alias: `lpa`)
+- [x] **`lpdecay()`** - Low pass filter envelope decay time (alias: `lpd`)
+- [x] **`lpsustain()`** - Low pass filter envelope sustain level (alias: `lps`)
+- [x] **`lprelease()`** - Low pass filter envelope release time (alias: `lpr`)
+- [x] **`lpenv()`** - Low pass filter envelope amount (alias: `lpe`)
 
 #### Filter Envelopes - Highpass
 

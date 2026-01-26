@@ -164,6 +164,18 @@ class GraalStrudelPattern(
             ?: value.safeGetMember("notch").safeNumberOrNull()
         val nresonance = value.safeGetMember("nresonance").safeNumberOrNull()
 
+        // Lowpass filter envelope
+        val lpattack = value.safeGetMember("lpattack").safeNumberOrNull()
+            ?: value.safeGetMember("lpa").safeNumberOrNull()
+        val lpdecay = value.safeGetMember("lpdecay").safeNumberOrNull()
+            ?: value.safeGetMember("lpd").safeNumberOrNull()
+        val lpsustain = value.safeGetMember("lpsustain").safeNumberOrNull()
+            ?: value.safeGetMember("lps").safeNumberOrNull()
+        val lprelease = value.safeGetMember("lprelease").safeNumberOrNull()
+            ?: value.safeGetMember("lpr").safeNumberOrNull()
+        val lpenv = value.safeGetMember("lpenv").safeNumberOrNull()
+            ?: value.safeGetMember("lpe").safeNumberOrNull()
+
         // ///////////////////////////////////////////////////////////////////////////////////
         // Sample Manipulation
         val loop = value.safeGetMember("loop")
@@ -222,6 +234,12 @@ class GraalStrudelPattern(
                 bandq = bandq,
                 notchf = notchf,
                 nresonance = nresonance,
+                // Lowpass filter envelope
+                lpattack = lpattack,
+                lpdecay = lpdecay,
+                lpsustain = lpsustain,
+                lprelease = lprelease,
+                lpenv = lpenv,
                 // Routing
                 orbit = orbit,
                 // Pan

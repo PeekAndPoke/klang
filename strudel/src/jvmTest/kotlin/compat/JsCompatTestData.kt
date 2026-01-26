@@ -211,6 +211,22 @@ object JsCompatTestData {
         // TODO: notchf does not seem to exist in strudel ... or we need to figure how?
         Example(SKIP, "Notch", """s("saw").notchf(666).nresonance(0.4)"""),
 
+        // Filter Envelopes
+        Example("LPF with envelope attack", """s("saw").lpf(1000).lpattack(0.1)"""),
+        Example("LPF with envelope alias lpa", """s("saw").lpf(1000).lpa(0.1)"""),
+        Example("LPF with envelope decay", """s("saw").lpf(1000).lpdecay(0.2)"""),
+        Example("LPF with envelope alias lpd", """s("saw").lpf(1000).lpd(0.2)"""),
+        Example("LPF with envelope sustain", """s("saw").lpf(1000).lpsustain(0.8)"""),
+        Example("LPF with envelope alias lps", """s("saw").lpf(1000).lps(0.8)"""),
+        Example("LPF with envelope release", """s("saw").lpf(1000).lprelease(0.5)"""),
+        Example("LPF with envelope alias lpr", """s("saw").lpf(1000).lpr(0.5)"""),
+        Example("LPF with envelope depth", """s("saw").lpf(1000).lpenv(0.5)"""),
+        Example("LPF with envelope alias lpe", """s("saw").lpf(1000).lpe(0.5)"""),
+        Example(
+            "LPF with full envelope",
+            """s("saw").lpf(1000).lpattack(0.1).lpdecay(0.2).lpsustain(0.8).lprelease(0.5).lpenv(0.7)"""
+        ),
+
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),
         Example("Distortion alias dist", """note("c").dist(0.5)"""),

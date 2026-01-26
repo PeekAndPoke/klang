@@ -310,6 +310,16 @@ All arithmetic operations work on pattern values and can be applied as:
 - `bandq()` / `bpq()` - Band-pass filter Q factor
 - `nresonance()` / `nres()` - Notch filter resonance/Q factor
 
+### Filter Envelopes ✅
+
+**Lowpass Filter Envelope:**
+
+- `lpattack()` / `lpa()` - LPF envelope attack time
+- `lpdecay()` / `lpd()` - LPF envelope decay time
+- `lpsustain()` / `lps()` - LPF envelope sustain level
+- `lprelease()` / `lpr()` - LPF envelope release time
+- `lpenv()` / `lpe()` - LPF envelope modulation depth
+
 ### Spatial Effects ✅
 
 - `room()` - Reverb mix level

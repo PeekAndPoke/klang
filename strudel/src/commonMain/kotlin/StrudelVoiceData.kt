@@ -1,9 +1,6 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.*
 import kotlinx.serialization.Serializable
 
 /**
@@ -80,6 +77,18 @@ data class StrudelVoiceData(
     /** Notch filter resonance/Q */
     val nresonance: Double?,
 
+    // Lowpass filter envelope
+    /** Low pass filter envelope attack time */
+    val lpattack: Double?,
+    /** Low pass filter envelope decay time */
+    val lpdecay: Double?,
+    /** Low pass filter envelope sustain level */
+    val lpsustain: Double?,
+    /** Low pass filter envelope release time */
+    val lprelease: Double?,
+    /** Low pass filter envelope depth/amount */
+    val lpenv: Double?,
+
     // Routing
     val orbit: Int?,
 
@@ -137,6 +146,11 @@ data class StrudelVoiceData(
             bandq = null,
             notchf = null,
             nresonance = null,
+            lpattack = null,
+            lpdecay = null,
+            lpsustain = null,
+            lprelease = null,
+            lpenv = null,
             orbit = null,
             pan = null,
             delay = null,
@@ -163,7 +177,27 @@ data class StrudelVoiceData(
     fun toVoiceData(): VoiceData {
         // Build filter list from flat fields, each with its own resonance
         val filters = buildList {
-            cutoff?.let { add(FilterDef.LowPass(cutoffHz = it, q = resonance)) }
+            cutoff?.let { cutoffValue ->
+                // Build envelope if any lpattack/lpdecay/lpsustain/lprelease/lpenv fields are present
+                val envelope =
+                    if (lpattack != null || lpdecay != null || lpsustain != null || lprelease != null || lpenv != null) {
+                        FilterEnvelope(
+                            attack = lpattack,
+                            decay = lpdecay,
+                            sustain = lpsustain,
+                            release = lprelease,
+                            depth = lpenv,
+                        )
+                    } else null
+
+                add(
+                    FilterDef.LowPass(
+                        cutoffHz = cutoffValue,
+                        q = resonance,
+                        envelope = envelope
+                    )
+                )
+            }
             hcutoff?.let { add(FilterDef.HighPass(cutoffHz = it, q = hresonance)) }
             bandf?.let { add(FilterDef.BandPass(cutoffHz = it, q = bandq)) }
             notchf?.let { add(FilterDef.Notch(cutoffHz = it, q = nresonance)) }
