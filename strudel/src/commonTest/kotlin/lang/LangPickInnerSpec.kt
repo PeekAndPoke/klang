@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeExactly
@@ -116,15 +117,12 @@ class LangPickInnerSpec : StringSpec({
 
         // First selector event (0) picks "bd hh" which has 2 events in its half cycle
         // Second selector event (1) picks "sn cp" which has 2 events in its half cycle
-        events shouldHaveSize 4
+        events shouldHaveSize 2
 
-        // Events from "bd hh" pattern (first half of cycle)
+        // First Event from "bd hh" pattern
         events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "hh"
-
-        // Events from "sn cp" pattern (second half of cycle)
-        events[2].data.sound shouldBe "sn"
-        events[3].data.sound shouldBe "cp"
+        // Second event from "sn cp" pattern
+        events[1].data.sound shouldBe "cp"
     }
 
     "pick() with fractional indices rounds to nearest integer" {
@@ -151,24 +149,13 @@ class LangPickInnerSpec : StringSpec({
         val result = pick(lookup, selector)
         val events = result.queryArc(0.0, 1.0)
 
-        // Verify timing structure
-        // First half (0 to 0.5): selector picks index 0 -> "bd hh" which has 2 events
-        // Second half (0.5 to 1.0): selector picks index 1 -> "sn" which has 1 event
-        events shouldHaveSize 3
-
-        // "bd hh" pattern events (in first half, 0.0-0.5)
-        events[0].begin.toDouble() shouldBeExactly 0.0
-        events[0].end.toDouble() shouldBeExactly 0.25
-        events[0].data.sound shouldBe "bd"
-
-        events[1].begin.toDouble() shouldBeExactly 0.25
-        events[1].end.toDouble() shouldBeExactly 0.5
-        events[1].data.sound shouldBe "hh"
-
-        // "sn" pattern event (in second half, 0.5-1.0)
-        events[2].begin.toDouble() shouldBeExactly 0.5
-        events[2].end.toDouble() shouldBeExactly 1.0
-        events[2].data.sound shouldBe "sn"
+        assertSoftly {
+            events shouldHaveSize 1
+            // First event of "bd hh" pattern events
+            events[0].begin.toDouble() shouldBeExactly 0.0
+            events[0].end.toDouble() shouldBeExactly 0.5
+            events[0].data.sound shouldBe "bd"
+        }
     }
 
     "pickmod() handles negative indices correctly" {

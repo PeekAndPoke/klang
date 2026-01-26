@@ -53,6 +53,7 @@ object JsCompatTestData {
         // pick() - Basic pattern picking with index clamping
         Example("pick() with list", """pick(["bd", "hh"], "0 1")"""),
         Example("pick() with list patterns", """pick(["bd hh", "sn cp"], "0 1")"""),
+        Example("pick() different sized list patterns", """pick([sound("bd hh"), sound("sd")], "0 1")"""),
         Example("pick() with map", """pick({a: "bd", b: "hh"}, "a b")"""),
         Example("pick() clamps indices", """pick(["bd", "hh"], "0 1 2 3")"""),
 

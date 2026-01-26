@@ -6,7 +6,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.PickPattern
+import io.peekandpoke.klang.strudel.pattern.PickInnerPattern
 import kotlin.math.floor
 
 /**
@@ -125,7 +125,7 @@ private fun applyPickInner(
     }
 
     // Create and return the pick pattern
-    return PickPattern(
+    return PickInnerPattern(
         selector = pat,
         lookup = reifiedLookup,
         modulo = modulo,

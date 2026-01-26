@@ -12,7 +12,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  * @param modulo If true, wrap out-of-bounds indices; if false, clamp them
  * @param extractKey Function to extract the lookup key from a selector event value
  */
-internal class PickPattern(
+internal class PickSqueezePattern(
     private val selector: StrudelPattern,
     private val lookup: Map<Any, StrudelPattern>,
     private val modulo: Boolean,
