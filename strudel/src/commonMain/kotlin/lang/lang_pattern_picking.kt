@@ -7,6 +7,7 @@ import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.PickInnerPattern
+import io.peekandpoke.klang.strudel.pattern.PickSqueezePattern
 import kotlin.math.floor
 
 /**
@@ -133,30 +134,6 @@ private fun applyPickInner(
     )
 }
 
-// =====================================================================================================================
-// Public pick() Functions
-// =====================================================================================================================
-
-/** Basic pick with List lookup (clamp indices) */
-fun pick(lookup: List<Any>, pat: StrudelPattern): StrudelPattern =
-    applyPickInner(lookup, pat, modulo = false)
-
-/** Basic pick with Map lookup (clamp indices) */
-fun pick(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
-    applyPickInner(lookup, pat, modulo = false)
-
-/** Pick with modulo wrapping - List lookup */
-fun pickmod(lookup: List<Any>, pat: StrudelPattern): StrudelPattern =
-    applyPickInner(lookup, pat, modulo = true)
-
-/** Pick with modulo wrapping - Map lookup */
-fun pickmod(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
-    applyPickInner(lookup, pat, modulo = true)
-
-// =====================================================================================================================
-// DSL Bindings for pick()
-// =====================================================================================================================
-
 /** Helper to dispatch pick calls based on lookup type */
 private fun dispatchPick(lookup: Any?, pat: StrudelPattern, modulo: Boolean): StrudelPattern {
     if (lookup == null) return silence
@@ -198,6 +175,15 @@ val String.pick by dslStringExtension { p, args, callInfo ->
     p.pick(args, callInfo)
 }
 
+/** Basic pick with List lookup (clamp indices) */
+fun pick(lookup: List<Any>, pat: StrudelPattern): StrudelPattern =
+    applyPickInner(lookup, pat, modulo = false)
+
+/** Basic pick with Map lookup (clamp indices) */
+fun pick(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
+    applyPickInner(lookup, pat, modulo = false)
+
+
 // -- pickmod() --------------------------------------------------------------------------------------------------------
 
 /** pickmod() - Pattern extension */
@@ -221,3 +207,130 @@ val pickmod by dslFunction { args, _ ->
 val String.pickmod by dslStringExtension { p, args, callInfo ->
     p.pickmod(args, callInfo)
 }
+
+/** Pick with modulo wrapping - List lookup */
+fun pickmod(lookup: List<Any>, pat: StrudelPattern): StrudelPattern =
+    applyPickInner(lookup, pat, modulo = true)
+
+/** Pick with modulo wrapping - Map lookup */
+fun pickmod(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
+    applyPickInner(lookup, pat, modulo = true)
+
+// -- inhabit() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Implementation of inhabit() / pickSqueeze() - selects patterns and squeezes them into the selector event.
+ */
+private fun applyInhabit(
+    lookup: Any,
+    pat: StrudelPattern,
+    modulo: Boolean,
+): StrudelPattern {
+    // Validate and reify lookup
+    val reifiedLookup = reifyLookup(lookup) ?: return silence
+    val isList = lookup is List<*>
+
+    // Create key extractor function based on list vs map
+    val keyExtractor: (Any?, Boolean, Int) -> Any? = if (isList) {
+        { value, mod, len -> extractIndex(value, mod, len) }
+    } else {
+        { value, _, _ -> extractKey(value) }
+    }
+
+    // Create and return the pick squeeze pattern
+    return PickSqueezePattern(
+        selector = pat,
+        lookup = reifiedLookup,
+        modulo = modulo,
+        extractKey = keyExtractor
+    )
+}
+
+/** Helper to dispatch inhabit calls based on lookup type */
+private fun dispatchInhabit(lookup: Any?, pat: StrudelPattern, modulo: Boolean): StrudelPattern {
+    if (lookup == null) return silence
+
+    return when (lookup) {
+        is List<*> -> {
+            @Suppress("UNCHECKED_CAST")
+            applyInhabit(lookup as List<Any>, pat, modulo)
+        }
+
+        is Map<*, *> -> {
+            @Suppress("UNCHECKED_CAST")
+            applyInhabit(lookup as Map<String, Any>, pat, modulo)
+        }
+
+        else -> silence
+    }
+}
+
+/** inhabit() - Pattern extension */
+@StrudelDsl
+val StrudelPattern.inhabit by dslPatternExtension { p, args, _ ->
+    if (args.isEmpty()) return@dslPatternExtension p
+    dispatchInhabit(args[0].value, p, modulo = false)
+}
+
+/** inhabit() - Standalone function */
+@StrudelDsl
+val inhabit by dslFunction { args, _ ->
+    if (args.size < 2) return@dslFunction silence
+    val lookup = args[0].value
+    val pat = listOf(args[1]).toPattern(defaultModifier)
+    dispatchInhabit(lookup, pat, modulo = false)
+}
+
+/** inhabit() - String extension */
+@StrudelDsl
+val String.inhabit by dslStringExtension { p, args, callInfo ->
+    p.inhabit(args, callInfo)
+}
+
+/** alias pickSqueeze */
+@StrudelDsl
+val StrudelPattern.pickSqueeze by dslPatternExtension { p, args, callInfo -> p.inhabit(args, callInfo) }
+
+/** alias pickSqueeze */
+@StrudelDsl
+val pickSqueeze by dslFunction { args, callInfo -> inhabit(args, callInfo) }
+
+/** alias pickSqueeze */
+@StrudelDsl
+val String.pickSqueeze by dslStringExtension { p, args, callInfo -> p.inhabit(args, callInfo) }
+
+// -- inhabitmod() -----------------------------------------------------------------------------------------------------
+
+/** inhabitmod() - Pattern extension */
+@StrudelDsl
+val StrudelPattern.inhabitmod by dslPatternExtension { p, args, _ ->
+    if (args.isEmpty()) return@dslPatternExtension p
+    dispatchInhabit(args[0].value, p, modulo = true)
+}
+
+/** inhabitmod() - Standalone function */
+@StrudelDsl
+val inhabitmod by dslFunction { args, _ ->
+    if (args.size < 2) return@dslFunction silence
+    val lookup = args[0].value
+    val pat = listOf(args[1]).toPattern(defaultModifier)
+    dispatchInhabit(lookup, pat, modulo = true)
+}
+
+/** inhabitmod() - String extension */
+@StrudelDsl
+val String.inhabitmod by dslStringExtension { p, args, callInfo ->
+    p.inhabitmod(args, callInfo)
+}
+
+/** alias pickmodSqueeze */
+@StrudelDsl
+val StrudelPattern.pickmodSqueeze by dslPatternExtension { p, args, callInfo -> p.inhabitmod(args, callInfo) }
+
+/** alias pickmodSqueeze */
+@StrudelDsl
+val pickmodSqueeze by dslFunction { args, callInfo -> inhabitmod(args, callInfo) }
+
+/** alias pickmodSqueeze */
+@StrudelDsl
+val String.pickmodSqueeze by dslStringExtension { p, args, callInfo -> p.inhabitmod(args, callInfo) }

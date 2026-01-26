@@ -64,8 +64,15 @@ internal class PickSqueezePattern(
             for (innerEvent in innerEvents) {
                 val outerBegin = selectorEvent.begin + (innerEvent.begin * duration)
                 val outerEnd = selectorEvent.begin + (innerEvent.end * duration)
+                val outerDur = outerEnd - outerBegin
 
-                result.add(innerEvent.copy(begin = outerBegin, end = outerEnd))
+                result.add(
+                    innerEvent.copy(
+                        begin = outerBegin,
+                        end = outerEnd,
+                        dur = outerDur
+                    )
+                )
             }
         }
 

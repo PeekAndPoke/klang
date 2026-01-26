@@ -158,21 +158,19 @@ and category.
 - [x] **`wrandcat(...[value, weight])`** - Alias for wchooseCycles (standalone, pattern method, string extension)
 - [x] **`pick(lookup, pat)`** - Picks patterns/values from list (by index) or lookup table (by name) ✅ **IMPLEMENTED**
 - [x] **`pickmod(lookup, pat)`** - Like pick but wraps around when index exceeds list size ✅ **IMPLEMENTED**
-- [ ] **`pickF(lookup, funcs, pat)`** - Use pattern of numbers to pick which function to apply (partially implemented,
-  function picking needs refinement)
-- [ ] **`pickmodF(lookup, funcs, pat)`** - Like pickF but wraps around (partially implemented, function picking needs
-  refinement)
-- [x] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin ✅ **IMPLEMENTED**
-- [x] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around ✅ **IMPLEMENTED**
-- [x] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered ✅ **IMPLEMENTED**
-- [x] **`pickmodRestart(lookup, pat)`** - Like pickRestart but wraps around ✅ **IMPLEMENTED**
-- [x] **`pickReset(lookup, pat)`** - Like pick but resets chosen pattern when triggered ✅ **IMPLEMENTED**
-- [x] **`pickmodReset(lookup, pat)`** - Like pickReset but wraps around ✅ **IMPLEMENTED**
+- [ ] **`pickF(lookup, funcs, pat)`** - Use pattern of numbers to pick which function to apply
+- [ ] **`pickmodF(lookup, funcs, pat)`** - Like pickF but wraps around
+- [ ] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin
+- [ ] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around
+- [ ] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered
+- [ ] **`pickmodRestart(lookup, pat)`** - Like pickRestart but wraps around
+- [ ] **`pickReset(lookup, pat)`** - Like pick but resets chosen pattern when triggered
+- [ ] **`pickmodReset(lookup, pat)`** - Like pickReset but wraps around
 - [x] **`inhabit(lookup, pat)`** / **`pickSqueeze(lookup, pat)`** - Picks and squeezes cycles into target pattern ✅ *
   *IMPLEMENTED**
 - [x] **`inhabitmod(lookup, pat)`** / **`pickmodSqueeze(lookup, pat)`** - Like inhabit but wraps around ✅ **IMPLEMENTED
   **
-- [x] **`squeeze(pat, xs)`** - Pick from list via index, compress selected to fit event duration ✅ **IMPLEMENTED**
+- [ ] **`squeeze(pat, xs)`** - Pick from list via index, compress selected to fit event duration
 
 ### Tonal Functions ⭐⭐⭐
 

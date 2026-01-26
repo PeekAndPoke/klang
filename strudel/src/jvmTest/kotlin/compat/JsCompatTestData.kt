@@ -61,6 +61,21 @@ object JsCompatTestData {
         Example("pickmod() wraps indices", """pickmod(["bd", "hh"], "0 1 2 3")"""),
         Example("pickmod() with patterns", """pickmod(["bd hh", "sn cp"], "0 1 2 3")"""),
 
+        // inhabit() / pickSqueeze()
+        Example("inhabit() with list of patterns", """inhabit([s('bd hh'), s('sd cp')], '0 1')"""),
+        Example("inhabit() with map of patterns", """inhabit({a: s('bd'), b: s('sd')}, 'a b')"""),
+        Example("pickSqueeze() is alias for inhabit()", """pickSqueeze([s('bd hh'), s('sd cp')], '0 1')"""),
+        Example(
+            SKIP,
+            "inhabit() via method call on selector",
+            """'0 1'.inhabit([s('bd hh'), s('sd cp')])"""
+        ), // does not compile in JS
+        Example(
+            SKIP,
+            "inhabit() via method call with map",
+            """'a b'.inhabit({a: s('bd'), b: s('sd')})"""
+        ), // does not compile in JS
+
         // Euclidean Patterns from mini notation
         *(1..8).flatMap { pulses ->
             (pulses..8).map { steps ->
