@@ -117,7 +117,7 @@ and category.
 - [x] **`hurry(factor)`** - Speeds up pattern and multiplies speed parameter, now supports control patterns (standalone,
   pattern method, string
   extension)
-- [ ] **`loopAt(cycles)`** - Fit sample to cycles
+- [x] **`loopAt(cycles)`** - Fit sample to cycles
 - [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
 
 ### Pattern Transformation ⭐⭐⭐
@@ -240,14 +240,21 @@ and category.
 
 ### Sample Manipulation ⭐⭐⭐
 
-- [ ] **`begin(pos)`** - Skip to sample position
-- [ ] **`end(pos)`** - Cut sample at position
-- [ ] **`speed(rate)`** - Playback speed (including negative)
-- [ ] **`loop()`** - Loop sample
-- [ ] **`loopAt(cycles)`** - Fit sample to cycles
-- [ ] **`cut(group)`** - Stop playing samples in cutgroup
-- [ ] **`chop(slices)`** - Granular slicing
-- [ ] **`slice(index)`** - Trigger specific slice
+- [x] **`begin(pos)`** - Skip to sample position (0..1)
+- [x] **`end(pos)`** - Cut sample at position (0..1)
+- [x] **`speed(rate)`** - Playback speed (including negative)
+- [x] **`loop()`** - Loop sample
+- [ ] **`loopBegin()` / `loopb()`** - Set loop start point within sample
+- [ ] **`loopEnd()` / `loope()`** - Set loop end point within sample
+- [x] **`loopAt(cycles)`** - Fit sample to cycles
+- [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
+- [x] **`cut(group)`** - Stop playing samples in cutgroup
+- [ ] **`chop(n)`** - Chop sample into n slices for granular synthesis
+- [x] **`slice(n, index)`** - Play slice index from n slices
+- [ ] **`splice(n, index)`** - Like slice but adjusts speed to match step duration
+- [ ] **`striate(portions)`** - Partition samples into portions, trigger progressively
+- [ ] **`fit()`** - Match sample to event duration (for rhythmic loops)
+- [ ] **`scrub(position, speed)`** - Tape-style scrubbing with position/speed control
 
 ### Continuous Signals ⭐⭐
 
@@ -285,9 +292,12 @@ and category.
 - [x] **`fromBipolar()`** - Convert -1..1 range to 0-1 (pattern method, string extension)
 - [x] **`perlin2`** - Bipolar Perlin noise (-1 to 1)
 - [x] **`berlin2`** - Bipolar Berlin noise (-1 to 1)
-- [ ] **`rangex(min, max)`** - Exponential range scaling
-- [ ] **`range2(min, max)`** - Bipolar range scaling
-- [ ] **`ratio()`** - Get frequency ratio
+- [x] **`rangex(min, max)`** - Exponential range scaling (unipolar 0-1 to min-max with exponential curve)
+- [x] **`range2(min, max)`** - Bipolar range scaling (-1 to 1 to min-max)
+- [x] **`round()`** - Round values to nearest integer
+- [x] **`floor()`** - Floor values to integers
+- [x] **`ceil()`** - Ceil values to integers
+- [x] **`ratio()`** - Divide numbers via list notation using ":" (e.g., "5:4" = 1.25)
 
 ### Random & Seeding ⭐⭐⭐
 
@@ -375,15 +385,17 @@ and category.
   pattern method, string extension)
 - [ ] **`repeatCycles(n)`** - Repeat pattern for n cycles
 
-### Sample Functions
+### Sample Functions (Advanced)
 
-- [ ] **`loopBegin()`** / **`loopEnd()`** - Loop point control
+**Note:** Basic sample functions are listed in HIGH PRIORITY - Sample Manipulation section above.
+
+- [ ] **`loopBegin()` / `loopb()`** - Loop point control
+- [ ] **`loopEnd()` / `loope()`** - Loop point control
 - [ ] **`striate(portions)`** - Progressive sample portions
-- [ ] **`splice(index)`** - Slice with speed adjustment
-- [ ] **`scrub()`** - Tape-like scrubbing
+- [ ] **`splice(n, index)`** - Slice with speed adjustment
+- [ ] **`scrub(position, speed)`** - Tape-like scrubbing
 - [ ] **`fit()`** - Match sample to event duration
 - [ ] **`chop(n)`** - Chop sample into n slices
-- [ ] **`slice(n, index)`** - Play slice index from n slices
 
 ### Synthesis Parameters
 
@@ -564,9 +576,9 @@ and category.
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ~3 missing, 3 won't implement (18 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
-  `compress`, `ply`,
-  `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`,
+- **Time Modification**: ~3 missing, 3 won't implement (20 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
+  `compress`, `focus`, `ply`,
+  `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`, `loopAt`,
   `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support; won't
   implement: `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
 - **Pattern Operations**: ~9 missing (4 completed: `rev`, `palindrome`, `inside`, `outside`)
@@ -577,13 +589,14 @@ and category.
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
 - **Audio Effects**: ~8 missing (13 completed: filters, distortion, reverb, delay)
-- **Sample Manipulation**: ~8 missing (0 completed)
-- **Continuous Signals**: ✅ 0 missing (34 completed, many with control pattern support: `steady`, `signal`, `time`,
+- **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
+  `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
+- **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
   `sine`, `sine2`, `cosine`, `cosine2`,
   `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `perlin2`, `berlin`,
-  `berlin2`, `range`,
+  `berlin2`, `range`, `rangex`, `range2`,
   `rand`, `rand2`, `irand` (control patterns), `randL` (control patterns), `brand`, `brandBy` (control patterns),
-  `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`)
+  `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`, `round`, `floor`, `ceil`, `ratio`)
 - **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
 - **Step-Based Operations**: ~13 missing (1 completed with control pattern support: `bite`)
 - **Conditional & Probabilistic**: ✅ 0 missing (20 completed, with control pattern support: `sometimesBy`, `sometimes`,
@@ -600,9 +613,9 @@ and category.
 - **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
 
-### Total Estimated: ~67 features remaining (3 marked "won't implement")
+### Total Estimated: ~54 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~188 features! 🎉
+### Completed So Far: ~202 features! 🎉
 
 **Major achievements:**
 

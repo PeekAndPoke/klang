@@ -381,10 +381,17 @@ All arithmetic operations work on pattern values and can be applied as:
 ### Signal Processing ✅
 
 - `range(min, max)` - Rescale continuous pattern values (transformation order independent via QueryContext)
+- `rangex(min, max)` - Exponential range scaling for unipolar signals (pattern method, string extension)
+- `range2(min, max)` - Bipolar range scaling for -1 to 1 signals (pattern method, string extension)
 - `segment(n)` / `seg(n)` - Sample continuous signal n times per cycle (pattern method, string extension, typed
   function)
 - `toBipolar()` - Convert 0-1 range to -1..1 (pattern method, string extension)
 - `fromBipolar()` - Convert -1..1 range to 0-1 (pattern method, string extension)
+- `round()` - Round values to nearest integer (pattern method, string extension)
+- `floor()` - Floor values to lower integer (pattern method, string extension)
+- `ceil()` - Ceil values to higher integer (pattern method, string extension)
+- `ratio()` - Divide numbers via colon notation (e.g., "5:4" = 1.25) (standalone function, pattern method, string
+  extension)
 
 ## Context & Routing
 
@@ -459,7 +466,7 @@ Comprehensive voice data structure supporting:
 
 **Total Implemented:**
 
-- 180+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
+- 185+ DSL functions/methods (including arithmetic, bitwise, comparison, and logical operators)
 - 27 core pattern types including:
     - Basic: AtomicPattern, SequencePattern, StackPattern, ArrangementPattern
     - Euclidean: EuclideanPattern, EuclideanPatternWithControl, EuclideanMorphPattern, EuclideanMorphPatternWithControl
@@ -472,10 +479,10 @@ Comprehensive voice data structure supporting:
     - Conditional: FirstOfWithControlPattern, LastOfWithControlPattern
     - Continuous: ContinuousPattern
     - Control: ControlPattern, ReinterpretPattern
-- 34 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
+- 39 continuous oscillators and signal generators (steady, signal, time, sine, sine2, cosine, cosine2, saw, saw2, isaw,
   isaw2, tri, tri2, itri, itri2, square, square2, perlin, perlin2, berlin, berlin2, rand, rand2, irand, randL, randrun,
-  brand, brandBy,
-  segment, seg, toBipolar, fromBipolar) - many with control pattern support
+  brand, brandBy, segment, seg, toBipolar, fromBipolar, rangex, range2, round, floor, ceil, ratio) - many with control
+  pattern support
 - 4 filter types
 - Complete ADSR envelope system
 - Full mini-notation parser with 13 operators/features and caching (including Euclidean rhythms, probabilistic patterns)

@@ -505,6 +505,33 @@ object JsCompatTestData {
             Example("Logical Or #1", """seq("0 1").or("5")"""),
             Example("Logical Or #2", """n("0 1").or("5")"""),
         )//.map { it.ignore("data.gain") }
-            .toTypedArray()
-    )
+            .toTypedArray(),
+
+        // Continuous Range Functions
+        Example("Rangex basic", """sine.rangex(100, 1000)""")
+            .ignore("data.gain"),
+        Example("Rangex with pattern", """note("a b c d").pan(sine.rangex(0.1, 10))"""),
+        Example("Range2 basic", """sine2.range2(0, 100)""")
+            .ignore("data.gain"),
+        Example("Range2 with pattern", """note("a b c d").lpf(sine2.range2(500, 4000))"""),
+
+        // Value Modifiers
+        Example("Round basic", """seq("0.3 1.7 2.51").round()"""),
+        Example("Round with continuous", """sine.range(0, 10).segment(4).round()""")
+            .ignore("data.gain"),
+        Example("Floor basic", """seq("0.9 1.1 2.9").floor()"""),
+        Example("Floor negative", """seq("-1.5 -0.5 0.5 1.5").floor()"""),
+        Example("Ceil basic", """seq("0.1 1.1 2.9").ceil()"""),
+        Example("Ceil negative", """seq("-1.5 -0.5 0.5 1.5").ceil()"""),
+
+        // Ratio Function
+        Example("Ratio basic", """ratio("1 5:4 3:2")"""),
+        Example("Ratio musical intervals", """seq("2:1 3:2 4:3 5:4").ratio().mul(110)"""),
+        Example("Ratio multiple divisions", """seq("12:3:2").ratio()"""),
+        Example("Ratio as pattern method", """seq("5:4 3:2").ratio()"""),
+        // TODO: reactivate when we have freq() implemented
+//        Example("Ratio with freq", """note("a").freq(ratio("5:4").mul(440))"""),
+    ).map {
+        it.recover { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
+    }
 }

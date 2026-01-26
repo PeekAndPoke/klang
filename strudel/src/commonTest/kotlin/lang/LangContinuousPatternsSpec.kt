@@ -704,4 +704,161 @@ class LangContinuousPatternsSpec : StringSpec({
         min.shouldBeBetween(-1.0, -0.3, 0.0)
         max.shouldBeBetween(0.3, 1.0, 0.0)
     }
+
+    "rangex() with exponential scaling" {
+        withClue("rangex in kotlin") {
+            // rangex uses exponential scaling: log(min) to log(max)
+            val pattern = sine.rangex(100.0, 1000.0)
+            val events = pattern.queryArc(0.0, 0.0 + EPSILON)
+
+            // At phase 0, sine is 0.5, which should map to geometric mean
+            val expected = kotlin.math.sqrt(100.0 * 1000.0) // ~316.2
+            events[0].data.value?.asDouble shouldBe (expected plusOrMinus 1.0)
+        }
+
+        withClue("rangex compiled") {
+            val pattern = StrudelPattern.compile("sine.rangex(100, 1000)")!!
+            val events = pattern.queryArc(0.0, 0.0 + EPSILON)
+
+            val expected = kotlin.math.sqrt(100.0 * 1000.0)
+            events[0].data.value?.asDouble shouldBe (expected plusOrMinus 1.0)
+        }
+    }
+
+    "range2() with bipolar input" {
+        withClue("range2 in kotlin") {
+            // sine2 goes from -1 to 1, range2 should scale it to 0-100
+            val pattern = sine2.range2(0.0, 100.0)
+
+            // At phase 0, sine2 is 0 (middle), should map to 50
+            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
+            // At phase 0.25, sine2 is 1, should map to 100
+            pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
+            // At phase 0.75, sine2 is -1, should map to 0
+            pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
+        }
+
+        withClue("range2 compiled") {
+            val pattern = StrudelPattern.compile("sine2.range2(500, 4000)")!!
+
+            // At phase 0, sine2 is 0, should map to middle value 2250
+            pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (2250.0 plusOrMinus EPSILON)
+        }
+    }
+
+    "round() rounds values to nearest integer" {
+        withClue("round in kotlin") {
+            val p = seq("0.5 1.5 2.5").round()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 3
+            events[0].data.value?.asInt shouldBe 0  // 0.5 rounds to 0 (banker's rounding may vary)
+            events[1].data.value?.asInt shouldBe 2  // 1.5 rounds to 2
+            events[2].data.value?.asInt shouldBe 2  // 2.5 rounds to 2
+        }
+
+        withClue("round with string extension") {
+            val p = "0.4 1.6 2.3".round()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 3
+            events[0].data.value?.asInt shouldBe 0
+            events[1].data.value?.asInt shouldBe 2
+            events[2].data.value?.asInt shouldBe 2
+        }
+
+        withClue("round compiled") {
+            val p = StrudelPattern.compile("""seq("0.3 1.7 2.5").round()""")!!
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 3
+            events[0].data.value?.asInt shouldBe 0
+            events[1].data.value?.asInt shouldBe 2
+        }
+    }
+
+    "floor() floors values to lower integer" {
+        withClue("floor in kotlin") {
+            val p = seq("0.9 1.1 2.9").floor()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 3
+            events[0].data.value?.asInt shouldBe 0
+            events[1].data.value?.asInt shouldBe 1
+            events[2].data.value?.asInt shouldBe 2
+        }
+
+        withClue("floor with negative numbers") {
+            val p = seq("-1.5 -0.5 0.5 1.5").floor()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 4
+            events[0].data.value?.asInt shouldBe -2  // floor(-1.5) = -2
+            events[1].data.value?.asInt shouldBe -1  // floor(-0.5) = -1
+            events[2].data.value?.asInt shouldBe 0
+            events[3].data.value?.asInt shouldBe 1
+        }
+
+        withClue("floor with string extension") {
+            val p = "42.1 42.5 43".floor()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 3
+            events[0].data.value?.asInt shouldBe 42
+            events[1].data.value?.asInt shouldBe 42
+            events[2].data.value?.asInt shouldBe 43
+        }
+
+        withClue("floor compiled") {
+            val p = StrudelPattern.compile("""seq("42.7 43.2").floor()""")!!
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 2
+            events[0].data.value?.asInt shouldBe 42
+            events[1].data.value?.asInt shouldBe 43
+        }
+    }
+
+    "ceil() ceils values to higher integer" {
+        withClue("ceil in kotlin") {
+            val p = seq("0.1 1.1 2.9").ceil()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 3
+            events[0].data.value?.asInt shouldBe 1
+            events[1].data.value?.asInt shouldBe 2
+            events[2].data.value?.asInt shouldBe 3
+        }
+
+        withClue("ceil with negative numbers") {
+            val p = seq("-1.5 -0.5 0.5 1.5").ceil()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 4
+            events[0].data.value?.asInt shouldBe -1  // ceil(-1.5) = -1
+            events[1].data.value?.asInt shouldBe 0   // ceil(-0.5) = 0
+            events[2].data.value?.asInt shouldBe 1
+            events[3].data.value?.asInt shouldBe 2
+        }
+
+        withClue("ceil with string extension") {
+            val p = "42.1 42.5 43".ceil()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 3
+            events[0].data.value?.asInt shouldBe 43
+            events[1].data.value?.asInt shouldBe 43
+            events[2].data.value?.asInt shouldBe 43
+        }
+
+        withClue("ceil compiled") {
+            val p = StrudelPattern.compile("""seq("42.2 43.8").ceil()""")!!
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 2
+            events[0].data.value?.asInt shouldBe 43
+            events[1].data.value?.asInt shouldBe 44
+        }
+    }
+
 })

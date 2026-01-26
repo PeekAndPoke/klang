@@ -5,11 +5,12 @@ import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
+import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
+import io.peekandpoke.klang.strudel.pattern.SequencePattern
+import io.peekandpoke.klang.strudel.pattern.WeightedPattern
 
 fun <T> parseMiniNotation(
     input: StrudelDslArg<T>,
@@ -115,7 +116,6 @@ class MiniNotationParser(
             match(TokenType.LITERAL) -> {
                 val token = previous()
                 val text = token.text
-                val parts = text.split(":")
 
                 // Build source location chain for this atom
                 val atomLocation = token.toLocation(baseLocation)
@@ -123,43 +123,8 @@ class MiniNotationParser(
                     SourceLocationChain.single(atomLocation)
                 } else null
 
-                // Check if it matches the pattern name:int[:double]
-                // If parts[1] is not an integer, we treat the whole thing as the atom name (e.g. scale "C4:minor")
-                val index = if (parts.size > 1) parts[1].toIntOrNull() else null
-
-                if (parts.size > 1 && index != null) {
-                    // It looks like name:index syntax
-                    // Always strip the suffix so the atom is clean (e.g. "bd" from "bd:1").
-                    // The index (and gain) will be applied via ControlPattern below.
-                    val atomText = parts[0]
-
-                    var p = atomFactory(atomText, locationChain)
-
-                    // Apply index
-                    p = ControlPattern(
-                        source = p,
-                        control = AtomicPattern(StrudelVoiceData.empty.copy(soundIndex = index)),
-                        mapper = { it },
-                        combiner = { src, ctrl -> src.copy(soundIndex = ctrl.soundIndex ?: src.soundIndex) }
-                    )
-
-                    // Apply gain if present
-                    if (parts.size > 2) {
-                        val gain = parts[2].toDoubleOrNull()
-                        if (gain != null) {
-                            p = ControlPattern(
-                                source = p,
-                                control = AtomicPattern(StrudelVoiceData.empty.copy(gain = gain)),
-                                mapper = { it },
-                                combiner = { src, ctrl -> src.copy(gain = ctrl.gain) }
-                            )
-                        }
-                    }
-                    p
-                } else {
-                    // Treat as single atom
-                    atomFactory(text, locationChain)
-                }
+                // Always treat as a single atom, no special parsing here
+                atomFactory(text, locationChain)
             }
 
             else -> {

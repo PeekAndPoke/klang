@@ -275,8 +275,8 @@ class MiniNotationParserSpec : StringSpec() {
             assertSoftly {
                 events.size shouldBe 1
                 with(events[0]) {
-                    data.note shouldBeEqualIgnoringCase "bd"
-                    data.soundIndex shouldBe 1
+                    data.note shouldBeEqualIgnoringCase "bd:1"
+                    data.soundIndex shouldBe null
                 }
             }
         }
@@ -288,9 +288,8 @@ class MiniNotationParserSpec : StringSpec() {
             assertSoftly {
                 events.size shouldBe 1
                 with(events[0]) {
-                    data.note shouldBeEqualIgnoringCase "bd"
-                    data.soundIndex shouldBe 1
-                    data.gain shouldBe 0.5
+                    data.note shouldBeEqualIgnoringCase "bd:1:0.5"
+                    data.soundIndex shouldBe null
                 }
             }
         }
@@ -302,14 +301,12 @@ class MiniNotationParserSpec : StringSpec() {
             assertSoftly {
                 events.size shouldBe 2
                 with(events[0]) {
-                    data.note shouldBeEqualIgnoringCase "bd"
-                    data.soundIndex shouldBe 1
-                    data.gain shouldBe 0.5
+                    data.note shouldBeEqualIgnoringCase "bd:1:0.5"
+                    data.soundIndex shouldBe null
                 }
                 with(events[1]) {
-                    data.note shouldBeEqualIgnoringCase "bd"
-                    data.soundIndex shouldBe 1
-                    data.gain shouldBe 0.5
+                    data.note shouldBeEqualIgnoringCase "bd:1:0.5"
+                    data.soundIndex shouldBe null
                 }
             }
         }
