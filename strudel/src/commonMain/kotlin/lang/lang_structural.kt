@@ -380,9 +380,9 @@ private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = nul
         else pat.fast(targetSteps.toDouble() / steps)
     }
 
-    return StepsOverridePattern(
+    return PropertyOverridePattern(
         source = StackPattern(adjustedPatterns),
-        steps = targetSteps.toRational()
+        stepsOverride = targetSteps.toRational()
     )
 }
 

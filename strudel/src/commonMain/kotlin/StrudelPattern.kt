@@ -5,7 +5,7 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.pattern.StaticStrudelPattern
+import io.peekandpoke.klang.strudel.pattern.*
 import kotlin.random.Random
 
 /**
@@ -326,5 +326,76 @@ fun StrudelPattern.applyControl(
 fun StrudelPattern.map(
     transform: (List<StrudelPatternEvent>) -> List<StrudelPatternEvent>,
 ): StrudelPattern {
-    return io.peekandpoke.klang.strudel.pattern.MapPattern(this, transform)
+    return MapPattern(source = this, transform)
+}
+
+/**
+ * Creates a pattern that maps individual events.
+ *
+ * This is a convenience extension for transforming each event individually, as opposed
+ * to `map()` which transforms the entire event list. Use this when you need to modify
+ * event properties, add metadata, or transform event data.
+ *
+ * @param transform Function that transforms each event
+ * @return A new pattern that applies the transformation to each event
+ */
+fun StrudelPattern.mapEvents(
+    transform: (StrudelPatternEvent) -> StrudelPatternEvent,
+): StrudelPattern {
+    return ReinterpretPattern(source = this) { evt, _ -> transform(evt) }
+}
+
+/**
+ * Creates a pattern that maps individual events with access to the query context.
+ *
+ * Similar to `mapEvents()` but provides access to the QueryContext, allowing context-aware
+ * transformations (e.g., using random seeds, context keys, etc.).
+ *
+ * @param transform Function that transforms each event with context access
+ * @return A new pattern that applies the transformation to each event
+ */
+fun StrudelPattern.mapEventsWithContext(
+    transform: (StrudelPatternEvent, StrudelPattern.QueryContext) -> StrudelPatternEvent,
+): StrudelPattern {
+    return ReinterpretPattern(source = this, interpret = transform)
+}
+
+/**
+ * Creates a pattern with an overridden weight value.
+ *
+ * Weight is used for proportional time distribution in sequences (e.g., mini-notation @ operator).
+ * This is useful when you need to adjust a pattern's relative duration without modifying
+ * the pattern itself.
+ *
+ * @param weight The new weight value
+ * @return A new pattern with the specified weight
+ */
+fun StrudelPattern.withWeight(weight: Double): StrudelPattern {
+    return PropertyOverridePattern(source = this, weightOverride = weight)
+}
+
+/**
+ * Creates a pattern with an overridden steps value.
+ *
+ * Steps is used for aligning patterns in polymeter. This allows you to override
+ * the number of steps per cycle without modifying the pattern itself.
+ *
+ * @param steps The new steps value
+ * @return A new pattern with the specified steps
+ */
+fun StrudelPattern.withSteps(steps: Rational): StrudelPattern {
+    return PropertyOverridePattern(source = this, stepsOverride = steps)
+}
+
+/**
+ * Stacks this pattern with other patterns, playing all simultaneously.
+ *
+ * This is a convenience method for creating StackPattern instances. All patterns
+ * are queried for the same time range and their events are combined and sorted by time.
+ *
+ * @param others Additional patterns to stack with this one
+ * @return A new pattern that plays all patterns simultaneously
+ */
+fun StrudelPattern.stack(vararg others: StrudelPattern): StrudelPattern {
+    return StackPattern(patterns = listOf(this) + others.toList())
 }
