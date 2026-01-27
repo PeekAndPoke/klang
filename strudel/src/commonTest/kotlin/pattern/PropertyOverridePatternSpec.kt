@@ -16,7 +16,6 @@ class PropertyOverridePatternSpec : StringSpec({
 
     "PropertyOverridePattern should override weight only" {
         val source = seq("a", "b", "c")
-        val originalWeight = source.weight
 
         val pattern = PropertyOverridePattern(
             source = source,
@@ -174,7 +173,6 @@ class PropertyOverridePatternSpec : StringSpec({
         // Query multiple times
         val events1 = pattern.queryArc(0.0, 1.0)
         val events2 = pattern.queryArc(0.0, 1.0)
-        val events3 = pattern.queryArc(0.5, 1.5)
 
         // Properties should remain consistent
         pattern.weight shouldBe 2.5
