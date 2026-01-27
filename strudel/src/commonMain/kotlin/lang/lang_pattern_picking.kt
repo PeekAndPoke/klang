@@ -126,12 +126,13 @@ private fun applyPickInner(
         { data, _, _ -> extractKey(data) }
     }
 
-    // Create and return the pick pattern
-    return PickInnerPattern(
-        selector = pat,
-        lookup = reifiedLookup,
-        modulo = modulo,
-        extractKey = keyExtractor
+    // Create and return the pick pattern using generic BindPattern
+    return BindPattern(
+        outer = pat,
+        transform = { selectorEvent ->
+            val key = keyExtractor(selectorEvent.data, modulo, reifiedLookup.size)
+            if (key != null) reifiedLookup[key] else null
+        }
     )
 }
 
@@ -265,11 +266,13 @@ private fun applyPickOuter(
         { data, _, _ -> extractKey(data) }
     }
 
-    return PickOuterPattern(
-        selector = pat,
-        lookup = reifiedLookup,
-        modulo = modulo,
-        extractKey = keyExtractor
+    // PickOuter currently behaves identically to PickInner (uses bind/innerJoin)
+    return BindPattern(
+        outer = pat,
+        transform = { selectorEvent ->
+            val key = keyExtractor(selectorEvent.data, modulo, reifiedLookup.size)
+            if (key != null) reifiedLookup[key] else null
+        }
     )
 }
 

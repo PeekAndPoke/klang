@@ -307,3 +307,24 @@ fun StrudelPattern.applyControl(
     }
     return result
 }
+
+/**
+ * Creates a pattern that transforms the event list using the given function.
+ *
+ * This is a convenience method for creating MapPattern instances. The resulting pattern
+ * preserves the original pattern's structure and timing while allowing modification of events.
+ *
+ * This operation is useful for:
+ * - Filtering events based on predicates
+ * - Mapping event properties
+ * - Sorting or reordering events
+ * - Any other list transformation
+ *
+ * @param transform Function that transforms the list of events
+ * @return A new pattern that applies the transformation
+ */
+fun StrudelPattern.map(
+    transform: (List<StrudelPatternEvent>) -> List<StrudelPatternEvent>,
+): StrudelPattern {
+    return io.peekandpoke.klang.strudel.pattern.MapPattern(this, transform)
+}

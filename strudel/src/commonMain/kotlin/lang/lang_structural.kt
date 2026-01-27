@@ -2,10 +2,7 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.not
@@ -627,7 +624,7 @@ private fun applyJux(source: StrudelPattern, transform: (StrudelPattern) -> Stru
  * Applies the function to the pattern and pans the result to the right,
  * while panning the original pattern to the left.
  *
- * @param transform Function to apply to the right channel
+ * @param {transform} Function to apply to the right channel
  */
 @StrudelDsl
 val StrudelPattern.jux by dslPatternExtension { p, args, /* callInfo */ _ ->
@@ -661,8 +658,8 @@ private fun applyJuxBy(
 /**
  * Like jux, but with adjustable stereo width.
  *
- * @param amount Stereo width (0 to 1). 1 = full stereo, 0 = mono (center).
- * @param transform Function to apply to the right channel logic
+ * @param {amount} Stereo width (0 to 1). 1 = full stereo, 0 = mono (center).
+ * @param {transform} Function to apply to the right channel logic
  */
 @StrudelDsl
 val StrudelPattern.juxBy by dslPatternExtension { p, args, /* callInfo */ _ ->
@@ -708,7 +705,7 @@ val String.off by dslStringExtension { p, args, callInfo -> p.off(args, callInfo
 // -- filter() ---------------------------------------------------------------------------------------------------------
 
 private fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
-    return FilterPattern(source = source, predicate = predicate)
+    return source.map { events -> events.filter(predicate) }
 }
 
 /** Filters haps using the given function. */
