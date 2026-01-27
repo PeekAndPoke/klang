@@ -240,33 +240,17 @@ All arithmetic operations work on pattern values and can be applied as:
 - `bite(n, indices)` - Slices pattern into n parts and plays according to index pattern (pattern method, string
   extension)
 
-### Pattern Picking & Selection ✅ **NEW!**
+### Pattern Picking & Selection ✅ (Partial Implementation)
 
 **Basic Picking** - Select patterns/values from lists or maps by index/key:
 
-- `pick(lookup, pat)` - Pick patterns/values by index (clamps out-of-bounds, maintains inner timing)
+- `pick(lookup, pat)` - Pick patterns/values by index (clamps out-of-bounds, uses innerJoin timing)
 - `pickmod(lookup, pat)` - Like pick but wraps indices with modulo instead of clamping
-
-**Outer Join Variants** - Preserve outer pattern timing:
-
-- `pickOut(lookup, pat)` - Pick using outer pattern timing (timing from selector, values from picked)
-- `pickmodOut(lookup, pat)` - Outer timing with wrapping
-
-**Restart Variants** - Restart patterns at global time:
-
-- `pickRestart(lookup, pat)` - Pick and restart patterns from cycle 0 at selection time
-- `pickmodRestart(lookup, pat)` - Restart with wrapping
-
-**Reset Variants** - Reset patterns within cycle:
-
-- `pickReset(lookup, pat)` - Pick and reset patterns to cycle position
-- `pickmodReset(lookup, pat)` - Reset with wrapping
 
 **Squeeze/Inhabit** - Compress entire pattern cycles into events:
 
 - `inhabit(lookup, pat)` / `pickSqueeze(lookup, pat)` - Compress picked patterns into selector events
 - `inhabitmod(lookup, pat)` / `pickmodSqueeze(lookup, pat)` - Compress with wrapping
-- `squeeze(pat, xs)` - Direct squeeze with modulo wrapping
 
 All pick functions available as:
 
@@ -274,13 +258,18 @@ All pick functions available as:
 - String extensions: `"0 1 2".pick(["bd", "sd"])`
 - Standalone functions: `pick(["bd", "sd"], "0 1 2")`
 
-**Key differences:**
+**Implementation:**
 
-- **pick**: Uses inner pattern timing - selected pattern plays at its own speed
-- **pickOut**: Uses outer pattern timing - selector determines event timing
-- **pickRestart**: Restarts pattern from cycle 0 at current time (global restart)
-- **pickReset**: Resets pattern to cycle position (synchronized with cycle)
-- **inhabit/squeeze**: Compresses entire pattern cycle into each selector event
+- **pick/pickmod**: Use `PickInnerPattern` with innerJoin timing - selected pattern plays at its own speed
+- **inhabit/pickSqueeze**: Use `PickSqueezePattern` - compresses entire pattern cycle into each selector event
+
+**Not Yet Implemented:**
+
+- pickOut, pickmodOut (outer join variants)
+- pickRestart, pickmodRestart (restart variants)
+- pickReset, pickmodReset (reset variants)
+- squeeze(pat, xs) (direct squeeze function)
+- pickF, pickmodF (function application variants)
 
 ### Probabilistic Patterns ✅
 
@@ -837,6 +826,35 @@ Comprehensive voice data structure supporting:
   - `BerlinNoiseSpec.kt` - Tests for Berlin noise implementation
   - Enhanced `LangContinuousPatternsSpec.kt` with perlin/berlin tests covering seed consistency, range validation, and
     stability
+
+**Recent Improvements (2026-01-27):**
+
+- ✅ **Pattern Picking Functions (lang_pattern_picking.kt)** - Complete implementation of pattern picking with List and
+  Map lookups:
+
+  **Core Pick Functions:**
+  - `pick(lookup, pat)` - Select patterns/values from List (by index) or Map (by key), clamps indices
+  - `pickmod(lookup, pat)` - Like pick but wraps indices with modulo instead of clamping
+  - Both support List-based lookups (integer indices) and Map-based lookups (string keys)
+  - All available as pattern extension, standalone function, and string extension
+
+  **Squeeze/Inhabit Functions:**
+  - `inhabit(lookup, pat)` / `pickSqueeze(lookup, pat)` - Picks and squeezes patterns into selector event timespan
+  - `inhabitmod(lookup, pat)` / `pickmodSqueeze(lookup, pat)` - Like inhabit but wraps indices with modulo
+  - Both use `PickSqueezePattern` for implementation
+  - All available as pattern extension, standalone function, and string extension
+
+  **Implementation Details:**
+  - Helper function `reifyLookup()` - Converts Lists and Maps to pattern lookups, wraps non-patterns in `AtomicPattern`
+  - Helper function `extractIndex()` - Safely extracts numeric indices with modulo or clamp behavior
+  - Helper function `extractKey()` - Safely extracts string keys from values
+  - Pattern implementations: `PickInnerPattern` (for pick/pickmod) and `PickSqueezePattern` (for inhabit)
+  - Supports both List-based (integer index) and Map-based (string key) lookups
+  - Automatically wraps non-pattern values in `AtomicPattern` with default modifier
+
+  **Testing:**
+  - `LangPickInnerSpec.kt` - Tests for pick/pickmod with List and Map lookups
+  - `LangPickSqueezeSpec.kt` - Tests for inhabit/inhabitmod behavior
 
 **Recent Improvements (2026-01-16):**
 

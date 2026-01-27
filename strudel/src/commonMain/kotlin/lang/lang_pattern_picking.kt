@@ -157,7 +157,11 @@ private fun dispatchPick(lookup: Any?, pat: StrudelPattern, modulo: Boolean): St
 @StrudelDsl
 val StrudelPattern.pick by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
-    dispatchPick(args[0].value, p, modulo = false)
+
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+
+    dispatchPick(lookup, p, modulo = false)
 }
 
 /** pick() - Standalone function */
@@ -190,7 +194,11 @@ fun pick(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
 @StrudelDsl
 val StrudelPattern.pickmod by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
-    dispatchPick(args[0].value, p, modulo = true)
+
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+
+    dispatchPick(lookup, p, modulo = true)
 }
 
 /** pickmod() - Standalone function */
@@ -269,7 +277,11 @@ private fun dispatchInhabit(lookup: Any?, pat: StrudelPattern, modulo: Boolean):
 @StrudelDsl
 val StrudelPattern.inhabit by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
-    dispatchInhabit(args[0].value, p, modulo = false)
+
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+
+    dispatchInhabit(lookup, p, modulo = false)
 }
 
 /** inhabit() - Standalone function */
@@ -305,7 +317,11 @@ val String.pickSqueeze by dslStringExtension { p, args, callInfo -> p.inhabit(ar
 @StrudelDsl
 val StrudelPattern.inhabitmod by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
-    dispatchInhabit(args[0].value, p, modulo = true)
+
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+
+    dispatchInhabit(lookup, p, modulo = true)
 }
 
 /** inhabitmod() - Standalone function */

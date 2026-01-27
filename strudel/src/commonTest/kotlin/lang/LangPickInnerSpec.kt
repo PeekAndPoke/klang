@@ -126,7 +126,7 @@ class LangPickInnerSpec : StringSpec({
     }
 
     "pick() with fractional indices rounds to nearest integer" {
-        val lookup: List<Any> = listOf("bd", "hh", "sn")
+        val lookup: List<Any> = listOf("bd", "hh", "sd")
         val selector = seq("0.2 1.5 2.8")
 
         val result = pick(lookup, selector)
@@ -136,13 +136,13 @@ class LangPickInnerSpec : StringSpec({
 
         events[0].data.value?.asString shouldBe "bd"  // 0.2 rounds to 0
         events[1].data.value?.asString shouldBe "hh"  // 1.5 rounds to 2
-        events[2].data.value?.asString shouldBe "sn"  // 2.8 rounds to 3, clamped to 2
+        events[2].data.value?.asString shouldBe "sd"  // 2.8 rounds to 3, clamped to 2
     }
 
     "pick() preserves timing from picked patterns (innerJoin)" {
         val lookup: List<Any> = listOf(
             sound("bd hh"),  // Two events
-            sound("sn")      // One event
+            sound("sd")      // One event
         )
         val selector = seq("0 1")
 
@@ -150,11 +150,15 @@ class LangPickInnerSpec : StringSpec({
         val events = result.queryArc(0.0, 1.0)
 
         assertSoftly {
-            events shouldHaveSize 1
+            events shouldHaveSize 2
             // First event of "bd hh" pattern events
             events[0].begin.toDouble() shouldBeExactly 0.0
             events[0].end.toDouble() shouldBeExactly 0.5
             events[0].data.sound shouldBe "bd"
+
+            events[1].begin.toDouble() shouldBeExactly 0.5
+            events[1].end.toDouble() shouldBeExactly 1.0
+            events[1].data.sound shouldBe "sd"
         }
     }
 

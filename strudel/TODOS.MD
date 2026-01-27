@@ -725,13 +725,13 @@ but the audio engine integration is still pending:
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~11 missing (2 completed: `hush`, `pure`; 3 partial)
+- **Pattern Picking & Selection**: 9 missing (15 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
+  `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`, `pick`, `pickmod`,
+  `inhabit`/`pickSqueeze`, `inhabitmod`/`pickmodSqueeze`)
 
-- **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
-  `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
+### Total Estimated: ~88 features remaining (3 marked "won't implement")
 
-### Total Estimated: ~92 features remaining (3 marked "won't implement")
-
-### Completed So Far: ~207 features! 🎉
+### Completed So Far: ~211 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.
