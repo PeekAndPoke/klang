@@ -64,17 +64,44 @@ class LangPickSqueezeSpec : StringSpec({
 
     "inhabit() works with map lookup" {
         val lookup = mapOf(
-            "a" to seq("bd hh"),
-            "b" to seq("sn cp")
+            "a" to sound("bd hh"),
+            "b" to sound("sn cp")
         )
         val result = "a b".inhabit(lookup)
         val events = result.queryArc(0.0, 1.0)
 
         assertSoftly {
             events shouldHaveSize 4
-            events[0].data.value?.asString shouldBe "bd"
-            events[2].data.value?.asString shouldBe "sn"
+            events[0].data.sound shouldBe "bd"
+            events[2].data.sound shouldBe "sn"
         }
+    }
+
+    "inhabit() supports spread arguments" {
+        // inhabit(pat1, pat2, selector)
+        val result = inhabit(seq("bd hh"), seq("sn cp"), "0 1")
+        val events = result.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events shouldHaveSize 4
+            events[0].data.value?.asString shouldBe "bd"
+            events[3].data.value?.asString shouldBe "cp"
+        }
+    }
+
+    "inhabitmod() supports spread arguments with wrapping" {
+        // inhabitmod(pat1, pat2, selector)
+        // selector "0 1 2" -> 0->pat1, 1->pat2, 2->pat1 (wrap)
+        val result = inhabitmod(seq("bd"), seq("sn"), "0 1 2")
+        val events = result.queryArc(0.0, 1.0)
+
+        // 3 selector events (duration 1/3 each)
+        // Each pattern has 1 event.
+        // Total 3 events.
+        events shouldHaveSize 3
+        events[0].data.value?.asString shouldBe "bd"
+        events[1].data.value?.asString shouldBe "sn"
+        events[2].data.value?.asString shouldBe "bd"
     }
 
     "pickSqueeze() is alias for inhabit()" {

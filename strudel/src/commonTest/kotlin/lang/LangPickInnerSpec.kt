@@ -9,7 +9,7 @@ import io.kotest.matchers.shouldBe
 /**
  * Tests for pick() and pickmod() with innerJoin behavior.
  *
- * InnerJoin means: the timing comes from the PICKED (inner) patterns, not the selector (outer) pattern.
+ * InnerJoin means: the timing comes from the PICKED (inner) patterns, clipped to the selector (outer) pattern.
  */
 class LangPickInnerSpec : StringSpec({
 
@@ -33,6 +33,19 @@ class LangPickInnerSpec : StringSpec({
         events shouldHaveSize 3
 
         // Check note values from picked patterns
+        events[0].data.value?.asString shouldBe "bd"
+        events[1].data.value?.asString shouldBe "hh"
+        events[2].data.value?.asString shouldBe "sn"
+    }
+
+    // New test for spread arguments
+    "pick() supports spread arguments (varargs style)" {
+        // pick("bd", "hh", "sn", "0 1 2")
+        // logic: last arg is selector, rest are lookup list
+        val result = pick("bd", "hh", "sn", "0 1 2")
+        val events = result.queryArc(0.0, 1.0)
+
+        events shouldHaveSize 3
         events[0].data.value?.asString shouldBe "bd"
         events[1].data.value?.asString shouldBe "hh"
         events[2].data.value?.asString shouldBe "sn"
@@ -68,6 +81,18 @@ class LangPickInnerSpec : StringSpec({
         events[2].data.value?.asString shouldBe "bd"  // index 2 % 2 = 0
         events[3].data.value?.asString shouldBe "hh"  // index 3 % 2 = 1
         events[4].data.value?.asString shouldBe "bd"  // index 4 % 2 = 0
+    }
+
+    // New test for spread arguments with pickmod
+    "pickmod() supports spread arguments" {
+        val result = pickmod("bd", "hh", "0 1 2 3")
+        val events = result.queryArc(0.0, 1.0)
+
+        events shouldHaveSize 4
+        events[0].data.value?.asString shouldBe "bd"
+        events[1].data.value?.asString shouldBe "hh"
+        events[2].data.value?.asString shouldBe "bd"
+        events[3].data.value?.asString shouldBe "hh"
     }
 
     "pick() with map picks by string key" {

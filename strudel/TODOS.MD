@@ -160,8 +160,8 @@ and category.
 - [x] **`pickmod(lookup, pat)`** - Like pick but wraps around when index exceeds list size ✅ **IMPLEMENTED**
 - [ ] **`pickF(lookup, funcs, pat)`** - Use pattern of numbers to pick which function to apply
 - [ ] **`pickmodF(lookup, funcs, pat)`** - Like pickF but wraps around
-- [ ] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin
-- [ ] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around
+- [x] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin ✅ **IMPLEMENTED**
+- [x] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around ✅ **IMPLEMENTED**
 - [ ] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered
 - [ ] **`pickmodRestart(lookup, pat)`** - Like pickRestart but wraps around
 - [ ] **`pickReset(lookup, pat)`** - Like pick but resets chosen pattern when triggered
@@ -725,13 +725,14 @@ but the audio engine integration is still pending:
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~11 missing (2 completed: `hush`, `pure`; 3 partial)
-- **Pattern Picking & Selection**: 9 missing (15 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
+- **Pattern Picking & Selection**: 7 missing (17 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`, `pick`, `pickmod`,
-  `inhabit`/`pickSqueeze`, `inhabitmod`/`pickmodSqueeze`)
+  `pickOut`,
+  `pickmodOut`, `inhabit`/`pickSqueeze`, `inhabitmod`/`pickmodSqueeze`)
 
-### Total Estimated: ~88 features remaining (3 marked "won't implement")
+### Total Estimated: ~86 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~211 features! 🎉
+### Completed So Far: ~213 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.

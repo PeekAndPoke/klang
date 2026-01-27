@@ -30,7 +30,7 @@ internal class PickSqueezePattern(
     ): List<StrudelPatternEvent> {
         // Query the selector pattern to get selection events
         val selectorEvents = selector.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = createEventList()
 
         // For each selector event, look up the corresponding pattern and query it
         for (selectorEvent in selectorEvents) {

@@ -242,10 +242,15 @@ All arithmetic operations work on pattern values and can be applied as:
 
 ### Pattern Picking & Selection ✅ (Partial Implementation)
 
-**Basic Picking** - Select patterns/values from lists or maps by index/key:
+**Basic Picking (innerJoin)** - Select patterns/values from lists or maps by index/key:
 
 - `pick(lookup, pat)` - Pick patterns/values by index (clamps out-of-bounds, uses innerJoin timing)
 - `pickmod(lookup, pat)` - Like pick but wraps indices with modulo instead of clamping
+
+**Outer Join Variants** - Preserve outer pattern timing:
+
+- `pickOut(lookup, pat)` - Pick using outer pattern timing (timing from selector, values from picked)
+- `pickmodOut(lookup, pat)` - Outer timing with modulo wrapping
 
 **Squeeze/Inhabit** - Compress entire pattern cycles into events:
 
@@ -261,11 +266,11 @@ All pick functions available as:
 **Implementation:**
 
 - **pick/pickmod**: Use `PickInnerPattern` with innerJoin timing - selected pattern plays at its own speed
+- **pickOut/pickmodOut**: Use `PickOuterPattern` with outerJoin timing - selector determines event timing
 - **inhabit/pickSqueeze**: Use `PickSqueezePattern` - compresses entire pattern cycle into each selector event
 
 **Not Yet Implemented:**
 
-- pickOut, pickmodOut (outer join variants)
 - pickRestart, pickmodRestart (restart variants)
 - pickReset, pickmodReset (reset variants)
 - squeeze(pat, xs) (direct squeeze function)
@@ -832,10 +837,16 @@ Comprehensive voice data structure supporting:
 - ✅ **Pattern Picking Functions (lang_pattern_picking.kt)** - Complete implementation of pattern picking with List and
   Map lookups:
 
-  **Core Pick Functions:**
+  **Core Pick Functions (innerJoin timing):**
   - `pick(lookup, pat)` - Select patterns/values from List (by index) or Map (by key), clamps indices
   - `pickmod(lookup, pat)` - Like pick but wraps indices with modulo instead of clamping
-  - Both support List-based lookups (integer indices) and Map-based lookups (string keys)
+  - Both use `PickInnerPattern` - selected pattern plays at its own speed
+  - All available as pattern extension, standalone function, and string extension
+
+  **Outer Join Pick Functions (outerJoin timing):**
+  - `pickOut(lookup, pat)` - Pick using outer pattern timing (selector determines event timing)
+  - `pickmodOut(lookup, pat)` - Like pickOut but wraps indices with modulo
+  - Both use `PickOuterPattern` - timing from selector, values from picked patterns
   - All available as pattern extension, standalone function, and string extension
 
   **Squeeze/Inhabit Functions:**
@@ -848,7 +859,7 @@ Comprehensive voice data structure supporting:
   - Helper function `reifyLookup()` - Converts Lists and Maps to pattern lookups, wraps non-patterns in `AtomicPattern`
   - Helper function `extractIndex()` - Safely extracts numeric indices with modulo or clamp behavior
   - Helper function `extractKey()` - Safely extracts string keys from values
-  - Pattern implementations: `PickInnerPattern` (for pick/pickmod) and `PickSqueezePattern` (for inhabit)
+  - Pattern implementations: `PickInnerPattern`, `PickOuterPattern`, and `PickSqueezePattern`
   - Supports both List-based (integer index) and Map-based (string key) lookups
   - Automatically wraps non-pattern values in `AtomicPattern` with default modifier
 
