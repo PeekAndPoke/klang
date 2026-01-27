@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.bind
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -29,58 +30,9 @@ internal class PickInnerPattern(
         to: Rational,
         ctx: StrudelPattern.QueryContext,
     ): List<StrudelPatternEvent> {
-        // Query the selector pattern to get selection events
-        val selectorEvents = selector.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
-
-        // For each selector event, look up the corresponding pattern and query it
-        for (selectorEvent in selectorEvents) {
-            // Extract the key/index from the selector event's data
+        return selector.bind(from, to, ctx) { selectorEvent ->
             val key: Any? = extractKey(selectorEvent.data, modulo, lookup.size)
-
-            // Get the pattern from lookup
-            val selectedPattern = if (key != null) lookup[key] else null
-            if (selectedPattern == null) continue
-
-            // Determine the intersection of the query arc and the selector event
-            val intersectStart = maxOf(from, selectorEvent.begin)
-            val intersectEnd = minOf(to, selectorEvent.end)
-
-            if (intersectEnd <= intersectStart) continue
-
-            // Standard innerJoin: query the pattern using the intersection time
-            val selectedEvents = selectedPattern.queryArcContextual(
-                intersectStart,
-                intersectEnd,
-                ctx
-            )
-
-            // Add all events from the selected pattern, clipping them to the selector event's timeframe
-            for (event in selectedEvents) {
-                // We must clip the event to the selector's window to match Strudel JS behavior.
-                // The 'queryArcContextual' might return events that extend beyond the query window
-                // if the pattern doesn't clip them itself.
-
-                val clippedBegin = maxOf(event.begin, selectorEvent.begin)
-                val clippedEnd = minOf(event.end, selectorEvent.end)
-
-                if (clippedEnd > clippedBegin) {
-                    // Only create a new event if it was actually clipped or needs copying
-                    if (clippedBegin != event.begin || clippedEnd != event.end) {
-                        result.add(
-                            event.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin,
-                            )
-                        )
-                    } else {
-                        result.add(event)
-                    }
-                }
-            }
+            if (key != null) lookup[key] else null
         }
-
-        return result
     }
 }

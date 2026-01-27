@@ -210,3 +210,100 @@ fun StrudelPattern.makeStatic(from: Rational, to: Rational): StaticStrudelPatter
  */
 fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
     makeStatic(from.toRational(), to.toRational())
+
+/**
+ * Standard Monadic Bind / Inner Join.
+ *
+ * Queries this pattern (outer), and for each event, generates an inner pattern via [transform].
+ * The inner pattern is queried within the timeframe of the outer event, and results are clipped
+ * to the outer event's boundaries.
+ *
+ * This operation is fundamental to many pattern combinators and centralizes the common
+ * "intersection + clipping" logic.
+ *
+ * @param from Start of query arc
+ * @param to End of query arc
+ * @param ctx Query context to pass down the pattern hierarchy
+ * @param transform Function that generates an inner pattern from each outer event
+ * @return List of events from inner patterns, clipped to outer event boundaries
+ */
+fun StrudelPattern.bind(
+    from: Rational,
+    to: Rational,
+    ctx: StrudelPattern.QueryContext,
+    transform: (StrudelPatternEvent) -> StrudelPattern?,
+): List<StrudelPatternEvent> {
+    val outerEvents = this.queryArcContextual(from, to, ctx)
+    val result = mutableListOf<StrudelPatternEvent>()
+
+    for (outer in outerEvents) {
+        val innerPattern = transform(outer) ?: continue
+
+        // Intersect query arc with outer event
+        val intersectStart = maxOf(from, outer.begin)
+        val intersectEnd = minOf(to, outer.end)
+
+        if (intersectEnd <= intersectStart) continue
+
+        // Query inner pattern
+        val innerEvents = innerPattern.queryArcContextual(intersectStart, intersectEnd, ctx)
+
+        for (inner in innerEvents) {
+            // Clip inner event to outer event boundaries
+            val clippedBegin = maxOf(inner.begin, outer.begin)
+            val clippedEnd = minOf(inner.end, outer.end)
+
+            if (clippedEnd > clippedBegin) {
+                // Optimization: Only copy if boundaries actually changed
+                if (clippedBegin != inner.begin || clippedEnd != inner.end) {
+                    result.add(inner.copy(begin = clippedBegin, end = clippedEnd, dur = clippedEnd - clippedBegin))
+                } else {
+                    result.add(inner)
+                }
+            }
+        }
+    }
+    return result
+}
+
+/**
+ * Applies a control pattern to this pattern (Outer Join).
+ *
+ * Preserves the structure of [this] (source). For each event, samples [control] at the event's
+ * start time and applies the [combiner] function to produce the result event.
+ *
+ * This is used for modifying event values based on another pattern while maintaining the
+ * original timing structure (e.g., applying gain, pitch shifts, effects, etc.).
+ *
+ * @param control The pattern to sample for control values
+ * @param from Start of query arc
+ * @param to End of query arc
+ * @param ctx Query context to pass down the pattern hierarchy
+ * @param combiner Function to combine source event with sampled control event (null if no control event found)
+ * @return List of events with control applied
+ */
+fun StrudelPattern.applyControl(
+    control: StrudelPattern,
+    from: Rational,
+    to: Rational,
+    ctx: StrudelPattern.QueryContext,
+    combiner: (source: StrudelPatternEvent, control: StrudelPatternEvent?) -> StrudelPatternEvent?,
+): List<StrudelPatternEvent> {
+    val sourceEvents = this.queryArcContextual(from, to, ctx)
+    if (sourceEvents.isEmpty()) return emptyList()
+
+    val result = mutableListOf<StrudelPatternEvent>()
+    val epsilon = 1e-5.toRational()
+
+    for (event in sourceEvents) {
+        // Point-query the control pattern at the event's begin time
+        val controlEvents = control.queryArcContextual(event.begin, event.begin + epsilon, ctx)
+        val controlEvent = controlEvents.firstOrNull()
+
+        val combined = combiner(event, controlEvent)
+        if (combined != null) {
+            result.add(combined)
+        }
+    }
+    return result
+}

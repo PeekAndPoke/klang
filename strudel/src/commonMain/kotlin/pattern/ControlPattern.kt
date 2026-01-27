@@ -4,8 +4,8 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.applyControl
 import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * Applies a control pattern to a source pattern.
@@ -22,10 +22,6 @@ internal class ControlPattern(
     val combiner: (StrudelVoiceData, StrudelVoiceData) -> StrudelVoiceData,
 ) : StrudelPattern {
 
-    companion object {
-        private val EPS = 1e-5.toRational()
-    }
-
     // Control patterns wrap a source pattern and should preserve its weight.
     // E.g. (bd@2).gain(0.5) should still have a weight of 2.
     override val weight: Double get() = source.weight
@@ -35,29 +31,14 @@ internal class ControlPattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        val sourceEvents = source.queryArcContextual(from, to, ctx)
-        if (sourceEvents.isEmpty()) return emptyList()
-
-        val result = createEventList()
-
-        for (event in sourceEvents) {
-            val controlEvents: List<StrudelPatternEvent> =
-                control.queryArcContextual(from = event.begin, to = event.begin + EPS, ctx = ctx)
-
-            val match: StrudelPatternEvent? = controlEvents.firstOrNull()
-
-            if (match != null) {
-                // Apply the mapper to the control data BEFORE combining
-                val mappedControlData = mapper(match.data)
-                val newData = combiner(event.data, mappedControlData)
-                result.add(
-                    event.copy(data = newData).prependLocation(match.sourceLocations?.innermost)
-                )
+        return source.applyControl(control, from, to, ctx) { src, ctrl ->
+            if (ctrl != null) {
+                val mappedControl = mapper(ctrl.data)
+                val newData = combiner(src.data, mappedControl)
+                src.copy(data = newData).prependLocation(ctrl.sourceLocations?.innermost)
             } else {
-                result.add(event)
+                src
             }
         }
-
-        return result
     }
 }

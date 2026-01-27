@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.bind
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -26,49 +27,9 @@ internal class PickOuterPattern(
         to: Rational,
         ctx: StrudelPattern.QueryContext,
     ): List<StrudelPatternEvent> {
-        val selectorEvents = selector.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
-
-        for (selectorEvent in selectorEvents) {
+        return selector.bind(from, to, ctx) { selectorEvent ->
             val key: Any? = extractKey(selectorEvent.data, modulo, lookup.size)
-            val selectedPattern = if (key != null) lookup[key] else null
-
-            if (selectedPattern == null) continue
-
-            val intersectStart = maxOf(from, selectorEvent.begin)
-            val intersectEnd = minOf(to, selectorEvent.end)
-
-            if (intersectEnd <= intersectStart) continue
-
-            // Query the pattern using the intersection time
-            val selectedEvents = selectedPattern.queryArcContextual(
-                intersectStart,
-                intersectEnd,
-                ctx
-            )
-
-            // Add all events from the selected pattern, clipping them to the selector event's timeframe
-            // This matches observed JS behavior where pickOut results are clipped to selector duration
-            for (event in selectedEvents) {
-                val clippedBegin = maxOf(event.begin, selectorEvent.begin)
-                val clippedEnd = minOf(event.end, selectorEvent.end)
-
-                if (clippedEnd > clippedBegin) {
-                    if (clippedBegin != event.begin || clippedEnd != event.end) {
-                        result.add(
-                            event.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin,
-                            )
-                        )
-                    } else {
-                        result.add(event)
-                    }
-                }
-            }
+            if (key != null) lookup[key] else null
         }
-
-        return result
     }
 }
