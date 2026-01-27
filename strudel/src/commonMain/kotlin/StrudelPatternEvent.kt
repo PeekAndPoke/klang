@@ -33,9 +33,19 @@ data class StrudelPatternEvent(
         else -> copy(sourceLocations = sourceLocations?.prepend(location) ?: location.asChain())
     }
 
+    fun prependLocations(locations: SourceLocationChain?) = when (locations) {
+        null -> this
+        else -> copy(sourceLocations = sourceLocations?.prepend(locations.locations) ?: locations)
+    }
+
     fun appendLocation(location: SourceLocation?) = when (location) {
         null -> this
         else -> copy(sourceLocations = sourceLocations?.append(location) ?: location.asChain())
+    }
+
+    fun appendLocations(locations: SourceLocationChain?) = when (locations) {
+        null -> this
+        else -> copy(sourceLocations = sourceLocations?.append(locations.locations) ?: locations)
     }
 }
 

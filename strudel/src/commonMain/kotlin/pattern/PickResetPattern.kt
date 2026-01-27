@@ -6,11 +6,10 @@ import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
- * Pattern that selects from a lookup table based on a selector pattern.
- * NOTE: Currently behaves like PickInnerPattern (clips events) to match JS behavior observed in tests.
- * TODO: Verify if/how pickOut differs from pick (outerJoin vs innerJoin)
+ * Pattern that selects from a lookup table and resets the selected pattern at the event start.
+ * "Reset" means the inner pattern cycle start is aligned with the outer event cycle position.
  */
-internal class PickOuterPattern(
+internal class PickResetPattern(
     private val selector: StrudelPattern,
     private val lookup: Map<Any, StrudelPattern>,
     private val modulo: Boolean,
@@ -32,7 +31,6 @@ internal class PickOuterPattern(
         for (selectorEvent in selectorEvents) {
             val key: Any? = extractKey(selectorEvent.data, modulo, lookup.size)
             val selectedPattern = if (key != null) lookup[key] else null
-
             if (selectedPattern == null) continue
 
             val intersectStart = maxOf(from, selectorEvent.begin)
@@ -40,30 +38,38 @@ internal class PickOuterPattern(
 
             if (intersectEnd <= intersectStart) continue
 
-            // Query the pattern using the intersection time
-            val selectedEvents = selectedPattern.queryArcContextual(
-                intersectStart,
-                intersectEnd,
-                ctx
-            )
+            // Reset: Map global time to local time relative to selector event cycle pos
+            // Global: [intersectStart, intersectEnd]
+            // Shift = selectorEvent.begin.frac()
+            // Local:  [intersectStart - shift, intersectEnd - shift]
 
-            // Add all events from the selected pattern, clipping them to the selector event's timeframe
-            // This matches observed JS behavior where pickOut results are clipped to selector duration
-            for (event in selectedEvents) {
-                val clippedBegin = maxOf(event.begin, selectorEvent.begin)
-                val clippedEnd = minOf(event.end, selectorEvent.end)
+            val shift = selectorEvent.begin.frac()
+            val localStart = intersectStart - shift
+            val localEnd = intersectEnd - shift
+
+            val innerEvents = selectedPattern.queryArcContextual(localStart, localEnd, ctx)
+
+            // Shift inner events back to global time
+            for (innerEvent in innerEvents) {
+                // Shift back
+                val globalBegin = innerEvent.begin + shift
+                val globalEnd = innerEvent.end + shift
+
+                // Clip to selector event
+                val clippedBegin = maxOf(globalBegin, selectorEvent.begin)
+                val clippedEnd = minOf(globalEnd, selectorEvent.end)
 
                 if (clippedEnd > clippedBegin) {
-                    if (clippedBegin != event.begin || clippedEnd != event.end) {
+                    if (clippedBegin != globalBegin || clippedEnd != globalEnd) {
                         result.add(
-                            event.copy(
+                            innerEvent.copy(
                                 begin = clippedBegin,
                                 end = clippedEnd,
-                                dur = clippedEnd - clippedBegin,
+                                dur = clippedEnd - clippedBegin
                             )
                         )
                     } else {
-                        result.add(event)
+                        result.add(innerEvent.copy(begin = globalBegin, end = globalEnd))
                     }
                 }
             }

@@ -90,16 +90,16 @@ class LangDegradeBySpec : StringSpec({
 
         assertSoftly {
             withClue("note 'a'") {
-                (buckets["A"]?.size ?: 0) shouldBeInRange 80..100
+                (buckets["a"]?.size ?: 0) shouldBeInRange 80..100
             }
             withClue("note 'b'") {
-                (buckets["B"]?.size ?: 0) shouldBe 0
+                (buckets["b"]?.size ?: 0) shouldBe 0
             }
             withClue("note 'c'") {
-                (buckets["C"]?.size ?: 0) shouldBeInRange 65..95
+                (buckets["c"]?.size ?: 0) shouldBeInRange 65..95
             }
             withClue("note 'd'") {
-                (buckets["D"]?.size ?: 0) shouldBeInRange 0..25
+                (buckets["d"]?.size ?: 0) shouldBeInRange 0..25
             }
         }
     }

@@ -28,12 +28,18 @@ fun applyTimeShift(
     // Handle direct Rational or Number values
     val offsetProvider = when (val argVal = args.getOrNull(0)?.value) {
         is Rational -> {
-            ControlValueProvider.Static(StrudelVoiceValue.Num((argVal * factor).toDouble()))
+            ControlValueProvider.Static(
+                value = StrudelVoiceValue.Num((argVal * factor).toDouble()),
+                location = args.getOrNull(0)?.location
+            )
         }
 
         is Number -> {
             val offset = argVal.toDouble().toRational() * factor
-            ControlValueProvider.Static(StrudelVoiceValue.Num(offset.toDouble()))
+            ControlValueProvider.Static(
+                value = StrudelVoiceValue.Num(offset.toDouble()),
+                location = args.getOrNull(0)?.location
+            )
         }
 
         else -> {

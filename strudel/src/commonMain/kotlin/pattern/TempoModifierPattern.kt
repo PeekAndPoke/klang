@@ -69,7 +69,13 @@ internal class TempoModifierPattern(
         for (factorEvent in factorEvents) {
             val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
             val events = queryWithFactor(factorEvent.begin, factorEvent.end, ctx, factor)
-            result.addAll(events)
+
+            val factorLocation = factorEvent.sourceLocations?.innermost
+            if (factorLocation != null) {
+                result.addAll(events.map { it.prependLocation(factorLocation) })
+            } else {
+                result.addAll(events)
+            }
         }
 
         return result

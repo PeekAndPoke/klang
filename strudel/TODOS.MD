@@ -131,15 +131,14 @@ and category.
 - [x] **`superimpose(function)`** - Layers modified pattern on top
 - [x] **`layer(function)`** - Layers multiple function results
 - [x] **`apply(function)`** - Alias for layer
-- [ ] **`jux(function)`** - Apply function to right channel only
-- [ ] **`juxBy(amount, function)`** - Jux with custom stereo width
-- [ ] **`off(time, function)`** - Copies, shifts, and modifies pattern
+- [x] **`jux(function)`** - Apply function to right channel only ✅ **IMPLEMENTED**
+- [x] **`juxBy(amount, function)`** - Jux with custom stereo width ✅ **IMPLEMENTED**
+- [x] **`off(time, function)`** - Copies, shifts, and modifies pattern ✅ **IMPLEMENTED**
 - [ ] **`applyN(n, func)`** - Apply function n times
 - [ ] **`when(condition, func)`** - Conditionally apply function
 - [ ] **`within(start, end, func)`** - Apply function within time range
 - [ ] **`brak()`** - Make every other cycle syncopated
 - [ ] **`inv()` / `invert()`** - Invert pattern structure
-- [ ] **`off`** - https://strudel.cc/workshop/pattern-effects/#pattern-effects
 
 ### Pattern Picking & Selection ⭐⭐⭐
 
@@ -162,15 +161,15 @@ and category.
 - [ ] **`pickmodF(lookup, funcs, pat)`** - Like pickF but wraps around
 - [x] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin ✅ **IMPLEMENTED**
 - [x] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around ✅ **IMPLEMENTED**
-- [ ] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered
-- [ ] **`pickmodRestart(lookup, pat)`** - Like pickRestart but wraps around
-- [ ] **`pickReset(lookup, pat)`** - Like pick but resets chosen pattern when triggered
-- [ ] **`pickmodReset(lookup, pat)`** - Like pickReset but wraps around
+- [x] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered ✅ **IMPLEMENTED**
+- [x] **`pickmodRestart(lookup, pat)`** - Like pickRestart but wraps around ✅ **IMPLEMENTED**
+- [x] **`pickReset(lookup, pat)`** - Like pick but resets chosen pattern when triggered
+- [x] **`pickmodReset(lookup, pat)`** - Like pickReset but wraps around
 - [x] **`inhabit(lookup, pat)`** / **`pickSqueeze(lookup, pat)`** - Picks and squeezes cycles into target pattern ✅ *
   *IMPLEMENTED**
 - [x] **`inhabitmod(lookup, pat)`** / **`pickmodSqueeze(lookup, pat)`** - Like inhabit but wraps around ✅ **IMPLEMENTED
   **
-- [ ] **`squeeze(pat, xs)`** - Pick from list via index, compress selected to fit event duration
+- [x] **`squeeze(pat, xs)`** - Pick from list via index, compress selected to fit event duration ✅ **IMPLEMENTED**
 
 ### Tonal Functions ⭐⭐⭐
 
@@ -318,8 +317,8 @@ but the audio engine integration is still pending:
 
 #### Panning
 
-- [ ] **`jux()`** - Apply function to right channel only
-- [ ] **`juxBy()`** - Adjustable stereo width jux (alias: `juxby`; 0=mono, 1=full stereo)
+- [x] **`jux()`** - Apply function to right channel only ✅ **IMPLEMENTED**
+- [x] **`juxBy()`** - Adjustable stereo width jux (alias: `juxby`; 0=mono, 1=full stereo) ✅ **IMPLEMENTED**
 
 #### Global Effects - Reverb
 
@@ -697,14 +696,14 @@ but the audio engine integration is still pending:
   `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support; won't
   implement: `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
 - **Pattern Operations**: ~9 missing (4 completed: `rev`, `palindrome`, `inside`, `outside`)
-- **Pattern Transformation**: ~11 missing (7 completed: `struct`, `mask`, `superimpose`, `layer`, `apply`, `structAll`,
-  `maskAll`)
+- **Pattern Transformation**: ~8 missing (10 completed: `struct`, `mask`, `superimpose`, `layer`, `apply`, `structAll`,
+  `maskAll`, `jux`, `juxBy`, `off`)
 - **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
-- **Audio Effects**: ~46 missing + 2 partial (15 completed: filters with full aliases, filter resonance, distortion,
-  reverb, delay; partial: roomsize missing sz/size aliases, orbit missing o alias)
+- **Audio Effects**: ~44 missing + 2 partial (17 completed: filters with full aliases, filter resonance, distortion,
+  reverb, delay, jux, juxBy; partial: roomsize missing sz/size aliases, orbit missing o alias)
 - **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
   `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
 - **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
@@ -725,14 +724,14 @@ but the audio engine integration is still pending:
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~11 missing (2 completed: `hush`, `pure`; 3 partial)
-- **Pattern Picking & Selection**: 7 missing (17 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
+- **Pattern Picking & Selection**: 4 missing (20 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
   `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`, `pick`, `pickmod`,
-  `pickOut`,
-  `pickmodOut`, `inhabit`/`pickSqueeze`, `inhabitmod`/`pickmodSqueeze`)
+  `pickOut`, `pickmodOut`, `pickRestart`, `pickmodRestart`, `squeeze`, `inhabit`/`pickSqueeze`, `inhabitmod`/
+  `pickmodSqueeze`)
 
-### Total Estimated: ~86 features remaining (3 marked "won't implement")
+### Total Estimated: ~83 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~213 features! 🎉
+### Completed So Far: ~216 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.

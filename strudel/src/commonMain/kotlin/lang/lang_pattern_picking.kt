@@ -5,10 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.PickInnerPattern
-import io.peekandpoke.klang.strudel.pattern.PickOuterPattern
-import io.peekandpoke.klang.strudel.pattern.PickSqueezePattern
+import io.peekandpoke.klang.strudel.pattern.*
 import kotlin.math.floor
 
 /**
@@ -57,13 +54,15 @@ private fun reifyLookup(lookup: Any): Map<Any, StrudelPattern>? {
 }
 
 /**
- * Safely extracts an integer index from an event value.
- * Handles various numeric types and returns null for invalid values.
+ * Safely extracts an integer index from an event data.
  */
-private fun extractIndex(value: Any?, modulo: Boolean, len: Int): Int? {
-    if (value == null || len == 0) return null
+private fun extractIndex(data: StrudelVoiceData, modulo: Boolean, len: Int): Int? {
+    if (len == 0) return null
 
-    // Handle various numeric types - DO NOT try to cast ControlPattern or other patterns
+    // Try value, then note (as number?), then soundIndex
+    val value = data.value ?: data.note ?: data.soundIndex ?: return null
+
+    // Handle various numeric types
     val numericValue: Double = when (value) {
         is StrudelVoiceValue -> value.asDouble ?: return null
         is Int -> value.toDouble()
@@ -71,7 +70,6 @@ private fun extractIndex(value: Any?, modulo: Boolean, len: Int): Int? {
         is Double -> value
         is Float -> value.toDouble()
         is String -> value.toDoubleOrNull() ?: return null
-        // Don't handle patterns or complex types - return null
         else -> return null
     }
 
@@ -87,9 +85,11 @@ private fun extractIndex(value: Any?, modulo: Boolean, len: Int): Int? {
 }
 
 /**
- * Safely extracts a string key from an event value.
+ * Safely extracts a string key from an event data.
  */
-private fun extractKey(value: Any?): String {
+private fun extractKey(data: StrudelVoiceData): String {
+    val value = data.value ?: data.note ?: data.soundIndex
+
     return when (value) {
         null -> ""
         is StrudelVoiceValue -> value.asString
@@ -120,10 +120,10 @@ private fun applyPickInner(
     val isList = lookup is List<*>
 
     // Create key extractor function based on list vs map
-    val keyExtractor: (Any?, Boolean, Int) -> Any? = if (isList) {
-        { value, mod, len -> extractIndex(value, mod, len) }
+    val keyExtractor: (StrudelVoiceData, Boolean, Int) -> Any? = if (isList) {
+        { data, mod, len -> extractIndex(data, mod, len) }
     } else {
-        { value, _, _ -> extractKey(value) }
+        { data, _, _ -> extractKey(data) }
     }
 
     // Create and return the pick pattern
@@ -249,9 +249,6 @@ fun pickmod(lookup: List<Any>, pat: StrudelPattern): StrudelPattern =
 fun pickmod(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
     applyPickInner(lookup, pat, modulo = true)
 
-/**
- * Implementation of pickOut() - selects patterns from a lookup and flattens with outerJoin.
- */
 private fun applyPickOuter(
     lookup: Any,
     pat: StrudelPattern,
@@ -262,10 +259,10 @@ private fun applyPickOuter(
     val isList = lookup is List<*>
 
     // Create key extractor
-    val keyExtractor: (Any?, Boolean, Int) -> Any? = if (isList) {
-        { value, mod, len -> extractIndex(value, mod, len) }
+    val keyExtractor: (StrudelVoiceData, Boolean, Int) -> Any? = if (isList) {
+        { data, mod, len -> extractIndex(data, mod, len) }
     } else {
-        { value, _, _ -> extractKey(value) }
+        { data, _, _ -> extractKey(data) }
     }
 
     return PickOuterPattern(
@@ -377,9 +374,6 @@ val String.pickmodOut by dslStringExtension { p, args, callInfo ->
 
 // -- inhabit() --------------------------------------------------------------------------------------------------------
 
-/**
- * Implementation of inhabit() / pickSqueeze() - selects patterns and squeezes them into the selector event.
- */
 private fun applyInhabit(
     lookup: Any,
     pat: StrudelPattern,
@@ -390,10 +384,10 @@ private fun applyInhabit(
     val isList = lookup is List<*>
 
     // Create key extractor function based on list vs map
-    val keyExtractor: (Any?, Boolean, Int) -> Any? = if (isList) {
-        { value, mod, len -> extractIndex(value, mod, len) }
+    val keyExtractor: (StrudelVoiceData, Boolean, Int) -> Any? = if (isList) {
+        { data, mod, len -> extractIndex(data, mod, len) }
     } else {
-        { value, _, _ -> extractKey(value) }
+        { data, _, _ -> extractKey(data) }
     }
 
     // Create and return the pick squeeze pattern
@@ -525,3 +519,273 @@ val pickmodSqueeze by dslFunction { args, callInfo -> inhabitmod(args, callInfo)
 /** alias for [inhabitmod] */
 @StrudelDsl
 val String.pickmodSqueeze by dslStringExtension { p, args, callInfo -> p.inhabitmod(args, callInfo) }
+
+// -- squeeze() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Selects patterns from list `xs` using index pattern `pat`, and squeezes each selected pattern
+ * into the duration of the event that selected it.
+ *
+ * This is effectively `inhabit` with arguments flipped: `squeeze(selector, lookup)`.
+ */
+@StrudelDsl
+val squeeze by dslFunction { args, _ ->
+    // squeeze(selector, lookup...)
+    if (args.size < 2) return@dslFunction silence
+
+    val selectorArg = args[0]
+    // Parse selector if it's a string/value
+    val selector = listOf(selectorArg).toPattern(defaultModifier)
+
+    val secondArg = args[1]
+
+    val lookup = if (secondArg.value is List<*> || secondArg.value is Map<*, *>) {
+        secondArg.value
+    } else {
+        // treat rest of args as list
+        args.drop(1).map { it.value }
+    }
+
+    dispatchInhabit(lookup, selector, modulo = false)
+}
+
+/**
+ * Pattern method for squeeze.
+ * `pat.squeeze(lookup)` -> same as `inhabit(lookup, pat)`
+ */
+@StrudelDsl
+val StrudelPattern.squeeze by dslPatternExtension { p, args, _ ->
+    if (args.isEmpty()) return@dslPatternExtension p
+
+    val first = args[0].value
+    val lookup: Any
+
+    if (first is List<*> || first is Map<*, *>) {
+        lookup = first
+    } else {
+        lookup = args.map { it.value }
+    }
+
+    dispatchInhabit(lookup, p, modulo = false)
+}
+
+@StrudelDsl
+val String.squeeze by dslStringExtension { p, args, callInfo -> p.squeeze(args, callInfo) }
+
+// -- pickRestart() ----------------------------------------------------------------------------------------------------
+
+private fun applyPickRestart(
+    lookup: Any,
+    pat: StrudelPattern,
+    modulo: Boolean,
+): StrudelPattern {
+    val reifiedLookup = reifyLookup(lookup) ?: return silence
+    val isList = lookup is List<*>
+
+    val keyExtractor: (StrudelVoiceData, Boolean, Int) -> Any? = if (isList) {
+        { data, mod, len -> extractIndex(data, mod, len) }
+    } else {
+        { data, _, _ -> extractKey(data) }
+    }
+
+    return PickRestartPattern(
+        selector = pat,
+        lookup = reifiedLookup,
+        modulo = modulo,
+        extractKey = keyExtractor
+    )
+}
+
+private fun dispatchPickRestart(lookup: Any?, pat: StrudelPattern, modulo: Boolean): StrudelPattern {
+    if (lookup == null) return silence
+
+    return when (lookup) {
+        is List<*> -> {
+            @Suppress("UNCHECKED_CAST")
+            applyPickRestart(lookup as List<Any>, pat, modulo)
+        }
+
+        is Map<*, *> -> {
+            @Suppress("UNCHECKED_CAST")
+            applyPickRestart(lookup as Map<String, Any>, pat, modulo)
+        }
+
+        else -> silence
+    }
+}
+
+/**
+ * Like pick but restarts the chosen pattern when triggered.
+ */
+@StrudelDsl
+val StrudelPattern.pickRestart by dslPatternExtension { p, args, _ ->
+    if (args.isEmpty()) return@dslPatternExtension p
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+    dispatchPickRestart(lookup, p, modulo = false)
+}
+
+@StrudelDsl
+val pickRestart by dslFunction { args, _ ->
+    if (args.size < 2) return@dslFunction silence
+    val first = args[0].value
+
+    val lookup: Any
+    val patArg: StrudelDslArg<Any?>
+
+    if (first is List<*> || first is Map<*, *>) {
+        lookup = first
+        patArg = args[1]
+    } else {
+        lookup = args.dropLast(1).map { it.value }
+        patArg = args.last()
+    }
+
+    val pat = listOf(patArg).toPattern(defaultModifier)
+    dispatchPickRestart(lookup, pat, modulo = false)
+}
+
+@StrudelDsl
+val String.pickRestart by dslStringExtension { p, args, callInfo -> p.pickRestart(args, callInfo) }
+
+// -- pickmodRestart() -------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.pickmodRestart by dslPatternExtension { p, args, _ ->
+    if (args.isEmpty()) return@dslPatternExtension p
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+    dispatchPickRestart(lookup, p, modulo = true)
+}
+
+@StrudelDsl
+val pickmodRestart by dslFunction { args, _ ->
+    if (args.size < 2) return@dslFunction silence
+    val first = args[0].value
+
+    val lookup: Any
+    val patArg: StrudelDslArg<Any?>
+
+    if (first is List<*> || first is Map<*, *>) {
+        lookup = first
+        patArg = args[1]
+    } else {
+        lookup = args.dropLast(1).map { it.value }
+        patArg = args.last()
+    }
+
+    val pat = listOf(patArg).toPattern(defaultModifier)
+    dispatchPickRestart(lookup, pat, modulo = true)
+}
+
+@StrudelDsl
+val String.pickmodRestart by dslStringExtension { p, args, callInfo -> p.pickmodRestart(args, callInfo) }
+
+// -- pickReset() ------------------------------------------------------------------------------------------------------
+
+private fun applyPickReset(
+    lookup: Any,
+    pat: StrudelPattern,
+    modulo: Boolean,
+): StrudelPattern {
+    val reifiedLookup = reifyLookup(lookup) ?: return silence
+    val isList = lookup is List<*>
+
+    val keyExtractor: (StrudelVoiceData, Boolean, Int) -> Any? = if (isList) {
+        { data, mod, len -> extractIndex(data, mod, len) }
+    } else {
+        { data, _, _ -> extractKey(data) }
+    }
+
+    return PickResetPattern(
+        selector = pat,
+        lookup = reifiedLookup,
+        modulo = modulo,
+        extractKey = keyExtractor
+    )
+}
+
+private fun dispatchPickReset(lookup: Any?, pat: StrudelPattern, modulo: Boolean): StrudelPattern {
+    if (lookup == null) return silence
+
+    return when (lookup) {
+        is List<*> -> {
+            @Suppress("UNCHECKED_CAST")
+            applyPickReset(lookup as List<Any>, pat, modulo)
+        }
+
+        is Map<*, *> -> {
+            @Suppress("UNCHECKED_CAST")
+            applyPickReset(lookup as Map<String, Any>, pat, modulo)
+        }
+
+        else -> silence
+    }
+}
+
+/**
+ * Like pick but resets the chosen pattern when triggered.
+ */
+@StrudelDsl
+val StrudelPattern.pickReset by dslPatternExtension { p, args, _ ->
+    if (args.isEmpty()) return@dslPatternExtension p
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+    dispatchPickReset(lookup, p, modulo = false)
+}
+
+@StrudelDsl
+val pickReset by dslFunction { args, _ ->
+    if (args.size < 2) return@dslFunction silence
+    val first = args[0].value
+
+    val lookup: Any
+    val patArg: StrudelDslArg<Any?>
+
+    if (first is List<*> || first is Map<*, *>) {
+        lookup = first
+        patArg = args[1]
+    } else {
+        lookup = args.dropLast(1).map { it.value }
+        patArg = args.last()
+    }
+
+    val pat = listOf(patArg).toPattern(defaultModifier)
+    dispatchPickReset(lookup, pat, modulo = false)
+}
+
+@StrudelDsl
+val String.pickReset by dslStringExtension { p, args, callInfo -> p.pickReset(args, callInfo) }
+
+// -- pickmodReset() ---------------------------------------------------------------------------------------------------
+
+@StrudelDsl
+val StrudelPattern.pickmodReset by dslPatternExtension { p, args, _ ->
+    if (args.isEmpty()) return@dslPatternExtension p
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+    dispatchPickReset(lookup, p, modulo = true)
+}
+
+@StrudelDsl
+val pickmodReset by dslFunction { args, _ ->
+    if (args.size < 2) return@dslFunction silence
+    val first = args[0].value
+
+    val lookup: Any
+    val patArg: StrudelDslArg<Any?>
+
+    if (first is List<*> || first is Map<*, *>) {
+        lookup = first
+        patArg = args[1]
+    } else {
+        lookup = args.dropLast(1).map { it.value }
+        patArg = args.last()
+    }
+
+    val pat = listOf(patArg).toPattern(defaultModifier)
+    dispatchPickReset(lookup, pat, modulo = true)
+}
+
+@StrudelDsl
+val String.pickmodReset by dslStringExtension { p, args, callInfo -> p.pickmodReset(args, callInfo) }

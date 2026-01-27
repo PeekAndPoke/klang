@@ -68,24 +68,32 @@ fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): Co
     val argDbl = argVal.asDoubleOrNull()
 
     if (argDbl != null) {
-        return ControlValueProvider.Static(StrudelVoiceValue.Num(argDbl))
+        return ControlValueProvider.Static(
+            value = StrudelVoiceValue.Num(argDbl),
+            location = arg?.location
+        )
     }
 
     if (argVal is Rational) {
-        return ControlValueProvider.Static(StrudelVoiceValue.Num(argVal.toDouble()))
+        return ControlValueProvider.Static(
+            value = StrudelVoiceValue.Num(argVal.toDouble()),
+            location = arg?.location
+        )
     }
 
     val pattern = when (argVal) {
         is StrudelPattern -> argVal
 
-        else -> parseMiniNotation(arg) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        else -> parseMiniNotation(arg) { text, loc ->
+            AtomicPattern(
+                data = StrudelVoiceData.empty.defaultModifier(text),
+                sourceLocations = loc
+            )
         }
     }
 
     return ControlValueProvider.Pattern(pattern)
 }
-
 
 /** Default modifier for patterns that populates VoiceData.value */
 val defaultModifier: VoiceDataModifier = {

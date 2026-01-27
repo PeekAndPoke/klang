@@ -6,11 +6,9 @@ import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
- * Pattern that selects from a lookup table based on a selector pattern.
- * NOTE: Currently behaves like PickInnerPattern (clips events) to match JS behavior observed in tests.
- * TODO: Verify if/how pickOut differs from pick (outerJoin vs innerJoin)
+ * Pattern that selects from a lookup table and restarts the selected pattern at the event start.
  */
-internal class PickOuterPattern(
+internal class PickRestartPattern(
     private val selector: StrudelPattern,
     private val lookup: Map<Any, StrudelPattern>,
     private val modulo: Boolean,
@@ -32,7 +30,6 @@ internal class PickOuterPattern(
         for (selectorEvent in selectorEvents) {
             val key: Any? = extractKey(selectorEvent.data, modulo, lookup.size)
             val selectedPattern = if (key != null) lookup[key] else null
-
             if (selectedPattern == null) continue
 
             val intersectStart = maxOf(from, selectorEvent.begin)
@@ -40,30 +37,41 @@ internal class PickOuterPattern(
 
             if (intersectEnd <= intersectStart) continue
 
-            // Query the pattern using the intersection time
-            val selectedEvents = selectedPattern.queryArcContextual(
-                intersectStart,
-                intersectEnd,
-                ctx
-            )
+            // Restart: Map global time to local time relative to selector event start
+            // Global: [intersectStart, intersectEnd]
+            // Local:  [intersectStart - begin, intersectEnd - begin]
 
-            // Add all events from the selected pattern, clipping them to the selector event's timeframe
-            // This matches observed JS behavior where pickOut results are clipped to selector duration
-            for (event in selectedEvents) {
-                val clippedBegin = maxOf(event.begin, selectorEvent.begin)
-                val clippedEnd = minOf(event.end, selectorEvent.end)
+            val localStart = intersectStart - selectorEvent.begin
+            val localEnd = intersectEnd - selectorEvent.begin
+
+            val innerEvents = selectedPattern.queryArcContextual(localStart, localEnd, ctx)
+
+            // Shift inner events back to global time
+            for (innerEvent in innerEvents) {
+                // We clip to the selector event duration (like pick/innerJoin)
+                // because pickRestart usually implies the pattern lives within the event.
+                // However, does pickRestart clip?
+                // Strudel documentation doesn't explicitly say, but usually it behaves like 'pick' but with reset phase.
+
+                // Shift back
+                val globalBegin = innerEvent.begin + selectorEvent.begin
+                val globalEnd = innerEvent.end + selectorEvent.begin
+
+                // Clip to selector event
+                val clippedBegin = maxOf(globalBegin, selectorEvent.begin)
+                val clippedEnd = minOf(globalEnd, selectorEvent.end)
 
                 if (clippedEnd > clippedBegin) {
-                    if (clippedBegin != event.begin || clippedEnd != event.end) {
+                    if (clippedBegin != globalBegin || clippedEnd != globalEnd) {
                         result.add(
-                            event.copy(
+                            innerEvent.copy(
                                 begin = clippedBegin,
                                 end = clippedEnd,
-                                dur = clippedEnd - clippedBegin,
+                                dur = clippedEnd - clippedBegin
                             )
                         )
                     } else {
-                        result.add(event)
+                        result.add(innerEvent.copy(begin = globalBegin, end = globalEnd))
                     }
                 }
             }

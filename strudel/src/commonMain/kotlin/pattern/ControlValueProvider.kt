@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.pattern
 
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
@@ -21,7 +22,10 @@ sealed interface ControlValueProvider {
     /**
      * Static control value that doesn't change over time.
      */
-    data class Static(val value: StrudelVoiceValue) : ControlValueProvider {
+    data class Static(
+        val value: StrudelVoiceValue,
+        val location: SourceLocation? = null,
+    ) : ControlValueProvider {
         override fun query(
             from: Rational,
             to: Rational,
@@ -41,7 +45,7 @@ sealed interface ControlValueProvider {
                     end = to,
                     dur = to - from,
                     data = StrudelVoiceData.empty.copy(value = value),
-                    sourceLocations = null
+                    sourceLocations = location?.asChain()
                 )
             )
         }

@@ -64,7 +64,7 @@ fun StrudelVoiceData.resolveNote(newIndex: Int? = null): StrudelVoiceData {
     // Case B: Reinterpretation or fallback.
     // If we derived an index 'n' (e.g. from value), we preserve it.
     // We also ensure 'note' is populated (e.g. from 'value' if 'note' is missing).
-    val fallbackNote = (note ?: value?.asString)?.ucFirst()
+    val fallbackNote = note ?: value?.asString
 
     return copy(
         note = fallbackNote,
@@ -540,3 +540,30 @@ val StrudelPattern.transpose by dslPatternExtension { p, args, /* callInfo */ _ 
 /** Transposes a pattern defined by a string */
 @StrudelDsl
 val String.transpose by dslStringExtension { p, args, callInfo -> p.transpose(args, callInfo) }
+
+// -- freq() -----------------------------------------------------------------------------------------------------------
+
+private val freqMutation = voiceModifier {
+    copy(freqHz = it?.asDoubleOrNull())
+}
+
+private fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = freqMutation,
+        getValue = { freqHz },
+        setValue = { v, _ -> copy(freqHz = v) },
+    )
+}
+
+/** Sets the frequency in Hz */
+@StrudelDsl
+val freq by dslFunction { args, /* callInfo */ _ -> args.toPattern(freqMutation) }
+
+/** Sets the frequency in Hz */
+@StrudelDsl
+val StrudelPattern.freq by dslPatternExtension { p, args, /* callInfo */ _ -> applyFreq(p, args) }
+
+/** Sets the frequency in Hz on a string */
+@StrudelDsl
+val String.freq by dslStringExtension { p, args, callInfo -> p.freq(args, callInfo) }

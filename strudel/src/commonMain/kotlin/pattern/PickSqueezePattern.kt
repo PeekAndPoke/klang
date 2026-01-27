@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -16,7 +17,7 @@ internal class PickSqueezePattern(
     private val selector: StrudelPattern,
     private val lookup: Map<Any, StrudelPattern>,
     private val modulo: Boolean,
-    private val extractKey: (Any?, Boolean, Int) -> Any?,
+    private val extractKey: (StrudelVoiceData, Boolean, Int) -> Any?,
 ) : StrudelPattern {
 
     override val weight: Double get() = selector.weight
@@ -30,12 +31,12 @@ internal class PickSqueezePattern(
     ): List<StrudelPatternEvent> {
         // Query the selector pattern to get selection events
         val selectorEvents = selector.queryArcContextual(from, to, ctx)
-        val result = createEventList()
+        val result = mutableListOf<StrudelPatternEvent>()
 
         // For each selector event, look up the corresponding pattern and query it
         for (selectorEvent in selectorEvents) {
             // Extract the key/index from the selector event's value
-            val key: Any? = extractKey(selectorEvent.data.value, modulo, lookup.size)
+            val key: Any? = extractKey(selectorEvent.data, modulo, lookup.size)
 
             // Get the pattern from lookup
             val selectedPattern = if (key != null) lookup[key] else null

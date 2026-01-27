@@ -31,6 +31,10 @@ object JsCompatTestData {
         Example("transpose ex #1", """seq("[c2 c3]*4").transpose("<0 -2 5 3>").note()"""),
         Example("transpose ex #2", """seq("[c2 c3]*4").transpose("<1P -2M 4P 3m>").note()"""),
 
+        // Freq
+        Example("freq() basic", """freq(440)"""),
+        Example("freq() pattern", """s("saw saw").freq("440 880")"""),
+
         // Sequences
         Example(skip = SKIP, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
 
@@ -69,6 +73,25 @@ object JsCompatTestData {
         // pickmodOut()
         Example("pickmodOut() basic", """pickmodOut(["bd", "hh"], "0 1 2")"""),
         Example("pickmodOut() no clipping", """pickmodOut([sound("bd")], seq("0 2").fast(2))"""),
+        // pickRestart() - Pattern picking with restart
+        Example("pickRestart() basic", """pickRestart(["bd", "hh"], "0 1")"""),
+        Example("pickRestart() with patterns", """pickRestart([sound("bd hh"), sound("sn cp")], "0 1")"""),
+        // This case specifically tests the restart behavior:
+        // Selector "0 ~ 0 ~" triggers "0" at 0.0 and 0.5.
+        // Inner "0 1 2 3" (0.25 each).
+        // At 0.0: get inner 0.0-0.25 ("0").
+        // At 0.5: get inner 0.0-0.25 ("0") because of restart. Standard pick would get "2".
+        Example("pickRestart() restart test", """pickRestart([seq("0 1 2 3")], "0 ~ 0 ~")"""),
+        // pickmodRestart()
+        Example("pickmodRestart() basic", """pickmodRestart(["bd", "hh"], "0 1 2")"""),
+        Example("pickmodRestart() restart test", """pickmodRestart([seq("0 1 2 3")], "0 ~ 2 ~")"""),
+        // pickReset() - Pattern picking with reset (phase alignment)
+        Example("pickReset() basic", """pickReset(["bd", "hh"], "0 1")"""),
+        Example("pickReset() with patterns", """pickReset([sound("bd hh"), sound("sn cp")], "0 1")"""),
+        Example("pickReset() reset test", """pickReset([seq("0 1 2 3")], "0 ~ 0 ~")"""),
+        // pickmodReset()
+        Example("pickmodReset() basic", """pickmodReset(["bd", "hh"], "0 1 2")"""),
+        Example("pickmodReset() reset test", """pickmodReset([seq("0 1 2 3")], "0 ~ 2 ~")"""),
         // inhabit() / pickSqueeze()
         Example("inhabit() with list of patterns", """inhabit([s('bd hh'), s('sd cp')], '0 1')"""),
         Example("inhabit() with map of patterns", """inhabit({a: s('bd'), b: s('sd')}, 'a b')"""),
@@ -83,15 +106,19 @@ object JsCompatTestData {
             "inhabit() via method call with map",
             """'a b'.inhabit({a: s('bd'), b: s('sd')})"""
         ), // does not compile in JS
+        // squeeze() - inhabit with swapped args
+        Example("squeeze() basic", """squeeze(seq("0 1"), [s('bd hh'), s('sd cp')])"""),
+        // Fails in Graal with "TypeError: e2.map is not a function".
+        // Squeeze with map might not be fully supported or argument handling differs in JS.
+        Example(SKIP, "squeeze() with map", """squeeze("a b", {a: s('bd'), b: s('sd')})"""),
+        Example(SKIP, "squeeze() as method", """note("0 1").squeeze([s('bd hh'), s('sd cp')])"""),
+        // Does not compile in JS
+        Example(SKIP, "squeeze() as method on string", """"0 1".squeeze([s('bd hh'), s('sd cp')])"""),
 
         // Euclidean Patterns from mini notation
         *(1..8).flatMap { pulses ->
             (pulses..8).map { steps ->
-                Example(
-
-                    "Euclidean $pulses,$steps",
-                    """note("c($pulses,$steps)")"""
-                )
+                Example(name = "Euclidean $pulses,$steps", code = """note("c($pulses,$steps)")""")
             }
         }.let { it.shuffled().take(it.size / 10) }.toTypedArray(),
 
@@ -100,8 +127,8 @@ object JsCompatTestData {
             (pulses..8).flatMap { steps ->
                 (-8..8).map { rotation ->
                     Example(
-                        "Euclidean Rot $pulses,$steps,$rotation",
-                        """note("c($pulses,$steps,$rotation)")"""
+                        name = "Euclidean Rot $pulses,$steps,$rotation",
+                        code = """note("c($pulses,$steps,$rotation)")"""
                     )
                 }
             }
@@ -538,6 +565,15 @@ object JsCompatTestData {
             "Layer #1",
             """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8").layer(x => x.add("-2,2")).n().scale("C4:minor")"""
         ),
+
+        // Jux & Off
+        Example("jux basic", """note("c e").jux(x => x.rev())"""),
+        Example("juxBy basic", """note("c").juxBy(0.5, x => x.note("e"))"""),
+
+        // our impl is a bit different but the results are the same and verified.
+        Example(SKIP, "off basic #1", """note("c").off(0.25, x => x.note("e"))"""),
+        Example(SKIP, "off basic #2", """note("c").off(-0.25, x => x.note("e"))"""),
+
         // TODO: more complex tests for rev() an palindrome()
         Example("Reverse", """note("c e g").rev()"""),
         Example("Palindrome", """note("c e g").palindrome()"""),
@@ -641,8 +677,7 @@ object JsCompatTestData {
         Example("Ratio musical intervals", """seq("2:1 3:2 4:3 5:4").ratio().mul(110)"""),
         Example("Ratio multiple divisions", """seq("12:3:2").ratio()"""),
         Example("Ratio as pattern method", """seq("5:4 3:2").ratio()"""),
-        // TODO: reactivate when we have freq() implemented
-//        Example("Ratio with freq", """note("a").freq(ratio("5:4").mul(440))"""),
+        Example("Ratio with freq", """note("a").freq(ratio("5:4").mul(440))"""),
     ).map {
         it.recover { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
     }

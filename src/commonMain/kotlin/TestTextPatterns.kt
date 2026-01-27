@@ -123,7 +123,6 @@ stack(
         .s("supersaw").unison(10).detune(saw.range(0.001, 0.3).slow(16)).spread(1.0)
         .gain(0.175).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8))
         .distort(0.7)
-        // .lpenv(perlin.slow(3).range(1, 4))
         .lpf(perlin.slow(2).range(100, 2000))
         .hpf(660)
         .adsr("0.03:0.5:0.7:0.3")
@@ -141,22 +140,22 @@ stack(
     ,
     // Perc 2
     sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-        .gain(1.0).pan(0.45)
+        .gain(1.0).pan("[-0.15 -0.15 0.35 0.15]")
         .adsr("0.05:0.8:0.5:1.0")
         .degrade(0.25).fast(2)
         .filterWhen(x => x >= wait * 1)
     ,
     // Perc 1
-    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow(8)
-        .gain(0.9).pan(0.55)
+    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow("[8 8 8 8 8 4 [2 4] 8]/32")
+        .gain(0.75).pan(0.35)
         .degrade(0.25)
         .adsr("0.01:0.5:0.5:1.0").fast(2)
         .filterWhen(x => x >= wait * 0.5)
     ,
     // Wind
-    note("a").fast(16).sound("pink").gain(0.03)
+    note("a").fast(16).sound("pink").gain(0.035)
      .adsr("0.05:1.0:1.0:0.5")
-     .bandf(sine.early(1.7).add(perlin.range(-0.3, 0.3).slow(8)).range(440, 1320).slow(24)).bandq(5)
+     .bandf(sine.early(1.7).add(perlin.range(-0.3, 0.3).slow(8)).range(440, 1120).slow(24)).bandq(5)
      .pan(perlin.early(1.7).range(0.3, 0.7).slow(13))
      
   ,
