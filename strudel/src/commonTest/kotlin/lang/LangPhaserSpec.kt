@@ -13,7 +13,7 @@ class LangPhaserSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.phaser shouldBe 2.0
+        events[0].data.phaserRate shouldBe 2.0
     }
 
     "phaser() alias 'ph' works" {
@@ -21,7 +21,7 @@ class LangPhaserSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.phaser shouldBe 3.0
+        events[0].data.phaserRate shouldBe 3.0
     }
 
     "phaser() works as top-level function" {
@@ -29,7 +29,7 @@ class LangPhaserSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.phaser shouldBe 1.5
+        events[0].data.phaserRate shouldBe 1.5
     }
 
     "phaser() works with control pattern" {
@@ -37,8 +37,8 @@ class LangPhaserSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.phaser shouldBe 1.0
-        events[1].data.phaser shouldBe 2.0
+        events[0].data.phaserRate shouldBe 1.0
+        events[1].data.phaserRate shouldBe 2.0
     }
 
     // -- phaserdepth() ----------------------------------------------------------------------------------------------------
@@ -137,7 +137,7 @@ class LangPhaserSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.phaser shouldBe 2.0
+        events[0].data.phaserRate shouldBe 2.0
         events[0].data.phaserDepth shouldBe 0.8
         events[0].data.phaserCenter shouldBe 500.0
         events[0].data.phaserSweep shouldBe 1000.0
@@ -148,7 +148,7 @@ class LangPhaserSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
-        events[0].data.phaser shouldBe 2.0
+        events[0].data.phaserRate shouldBe 2.0
         events[0].data.phaserDepth shouldBe 0.8
     }
 })

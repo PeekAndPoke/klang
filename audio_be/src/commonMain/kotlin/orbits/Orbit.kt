@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.orbits
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
@@ -27,6 +28,15 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
 
     // phaser (insert effect)
     val phaser = Phaser(sampleRate)
+
+    // Ducking / Sidechain
+    /** Sidechain source orbit ID (which orbit triggers the ducking) */
+    var duckOrbitId: Int? = null
+        private set
+
+    /** Ducking processor instance */
+    var ducking: Ducking? = null
+        private set
 
     // To track if we need to update parameters this block
     private var isActive = false
@@ -63,6 +73,16 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
             phaser.sweepRange = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
             // Feedback usually fixed or tied to depth in simple models, or add a param later
             phaser.feedback = 0.5
+        }
+
+        // Ducking / Sidechain
+        voice.ducking?.let { voiceDucking ->
+            duckOrbitId = voiceDucking.orbitId
+            ducking = Ducking(
+                sampleRate = reverb.sampleRate,
+                attackSeconds = voiceDucking.attackSeconds,
+                depth = voiceDucking.depth
+            )
         }
     }
 

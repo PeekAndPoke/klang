@@ -12,6 +12,7 @@ import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
+import kotlin.system.exitProcess
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -64,11 +65,20 @@ private suspend fun helloStrudel() {
             registerLibrary(strudelLib)
         }
 
-//        val pattern1 = strudel.compile(
-//            """
-//                note("c").off(0.25, x => x.note("e"))
-//            """.trimIndent()
-//        ).await()
+        val compiled = strudel.compile(
+            """
+                note("c").iresponse("hall")
+            """.trimIndent()
+        ).await()
+
+        compiled.queryArc(0.0, 1.0).let { arc ->
+            arc.forEach {
+                println(it)
+            }
+        }
+
+        exitProcess(1)
+
 
 //        val result = engine.execute(
 //            """
@@ -105,11 +115,6 @@ private suspend fun helloStrudel() {
 
 //        val pattern = sound("bd").loop()
 
-//        pattern.queryArc(0.0, 8.0).let { arc ->
-//            arc.forEach {
-//                println(it)
-//            }
-//        }
 //
 //        println("=======================================================================")
 //        println(

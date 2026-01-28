@@ -384,3 +384,112 @@ val o by dslFunction { args, callInfo -> orbit(args, callInfo) }
 /** Alias for [orbit] on a string */
 @StrudelDsl
 val String.o by dslStringExtension { p, args, callInfo -> p.orbit(args, callInfo) }
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Ducking / Sidechain
+// ///
+
+// -- duckorbit() / duck() -----------------------------------------------------------------------------------------
+
+private val duckOrbitMutation = voiceModifier {
+    copy(duckOrbit = it?.asIntOrNull())
+}
+
+private fun applyDuckOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = duckOrbitMutation,
+        getValue = { duckOrbit?.toDouble() },
+        setValue = { v, _ -> copy(duckOrbit = v.toInt()) }
+    )
+}
+
+/** Sets the target orbit to listen to for ducking (sidechain source) */
+@StrudelDsl
+val StrudelPattern.duckorbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
+
+/** Sets the target orbit to listen to for ducking (sidechain source) */
+@StrudelDsl
+val duckorbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
+
+/** Sets the target orbit to listen to for ducking (sidechain source) on a string */
+@StrudelDsl
+val String.duckorbit by dslStringExtension { p, args, callInfo -> p.duckorbit(args, callInfo) }
+
+/** Alias for [duckorbit] */
+@StrudelDsl
+val StrudelPattern.duck by dslPatternExtension { p, args, callInfo -> p.duckorbit(args, callInfo) }
+
+/** Alias for [duckorbit] */
+@StrudelDsl
+val duck by dslFunction { args, callInfo -> duckorbit(args, callInfo) }
+
+/** Alias for [duckorbit] on a string */
+@StrudelDsl
+val String.duck by dslStringExtension { p, args, callInfo -> p.duckorbit(args, callInfo) }
+
+// -- duckattack() / duckatt() -------------------------------------------------------------------------------------
+
+private val duckAttackMutation = voiceModifier {
+    copy(duckAttack = it?.asDoubleOrNull())
+}
+
+private fun applyDuckAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = duckAttackMutation,
+        getValue = { duckAttack },
+        setValue = { v, _ -> copy(duckAttack = v) },
+    )
+}
+
+/** Sets duck return-to-normal time in seconds (attack/release time) */
+@StrudelDsl
+val StrudelPattern.duckattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
+
+/** Sets duck return-to-normal time in seconds (attack/release time) */
+@StrudelDsl
+val duckattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
+
+/** Sets duck return-to-normal time in seconds (attack/release time) on a string */
+@StrudelDsl
+val String.duckattack by dslStringExtension { p, args, callInfo -> p.duckattack(args, callInfo) }
+
+/** Alias for [duckattack] */
+@StrudelDsl
+val StrudelPattern.duckatt by dslPatternExtension { p, args, callInfo -> p.duckattack(args, callInfo) }
+
+/** Alias for [duckattack] */
+@StrudelDsl
+val duckatt by dslFunction { args, callInfo -> duckattack(args, callInfo) }
+
+/** Alias for [duckattack] on a string */
+@StrudelDsl
+val String.duckatt by dslStringExtension { p, args, callInfo -> p.duckattack(args, callInfo) }
+
+// -- duckdepth() --------------------------------------------------------------------------------------------------
+
+private val duckDepthMutation = voiceModifier {
+    copy(duckDepth = it?.asDoubleOrNull())
+}
+
+private fun applyDuckDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = duckDepthMutation,
+        getValue = { duckDepth },
+        setValue = { v, _ -> copy(duckDepth = v) },
+    )
+}
+
+/** Sets ducking amount (0.0 = no ducking, 1.0 = full silence) */
+@StrudelDsl
+val StrudelPattern.duckdepth by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckDepth(p, args) }
+
+/** Sets ducking amount (0.0 = no ducking, 1.0 = full silence) */
+@StrudelDsl
+val duckdepth by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckDepthMutation) }
+
+/** Sets ducking amount (0.0 = no ducking, 1.0 = full silence) on a string */
+@StrudelDsl
+val String.duckdepth by dslStringExtension { p, args, callInfo -> p.duckdepth(args, callInfo) }

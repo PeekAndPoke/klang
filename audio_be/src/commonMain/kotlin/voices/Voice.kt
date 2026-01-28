@@ -93,6 +93,12 @@ sealed interface Voice {
         var currentPhase: Double = 0.0,
     )
 
+    class Ducking(
+        val orbitId: Int,
+        val attackSeconds: Double,
+        val depth: Double,
+    )
+
     class Distort(
         val amount: Double,
     )
@@ -131,6 +137,7 @@ sealed interface Voice {
     val reverb: Reverb
     val phaser: Phaser
     val tremolo: Tremolo
+    val ducking: Ducking?
 
     // global effects
     val distort: Distort

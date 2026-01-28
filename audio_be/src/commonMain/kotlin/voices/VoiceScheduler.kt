@@ -396,6 +396,19 @@ class VoiceScheduler(
             currentPhase = (data.tremoloPhase ?: 0.0) * TWO_PI // Initial phase
         )
 
+        // Ducking / Sidechain
+        val duckOrbitParam = data.duckOrbit
+        val duckAttackParam = data.duckAttack
+        val duckDepthParam = data.duckDepth
+
+        val ducking = if (duckOrbitParam != null && duckDepthParam != null && duckDepthParam > 0.0) {
+            Voice.Ducking(
+                orbitId = duckOrbitParam,
+                attackSeconds = duckAttackParam ?: 0.1,
+                depth = duckDepthParam
+            )
+        } else null
+
         // Effects
         val distort = Voice.Distort(amount = data.distort ?: 0.0)
         val crush = Voice.Crush(amount = data.crush ?: 0.0)
@@ -441,6 +454,7 @@ class VoiceScheduler(
                     reverb = reverb,
                     phaser = phaser,
                     tremolo = tremolo,
+                    ducking = ducking,
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
@@ -547,6 +561,7 @@ class VoiceScheduler(
                     reverb = reverb,
                     phaser = phaser,
                     tremolo = tremolo,
+                    ducking = ducking,
                     distort = distort,
                     crush = crush,
                     coarse = coarse,

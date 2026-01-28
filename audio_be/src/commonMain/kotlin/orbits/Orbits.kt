@@ -25,11 +25,45 @@ class Orbits(
 
     /**
      * Processes all orbits and mixes the results into the given buffer.
+     *
+     * Processing order:
+     * 1. Process all orbit effects (delay, reverb, phaser)
+     * 2. Apply ducking (requires all orbits processed first)
+     * 3. Mix all orbits to master output
      */
     fun processAndMix(masterMix: StereoBuffer) {
+        // Step 1: Process effects on all orbits
         for (orbit in orbits.values) {
             orbit.processEffects()
+        }
 
+        // Step 2: Apply ducking (cross-orbit sidechain)
+        for (orbit in orbits.values) {
+            val ducking = orbit.ducking
+            val duckOrbitId = orbit.duckOrbitId
+
+            if (ducking != null && duckOrbitId != null) {
+                // Get sidechain source orbit
+                val sidechainOrbit = orbits[duckOrbitId]
+
+                if (sidechainOrbit != null) {
+                    // Apply ducking using sidechain orbit's mix as trigger
+                    ducking.process(
+                        input = orbit.mixBuffer.left,
+                        sidechain = sidechainOrbit.mixBuffer.left,
+                        blockSize = blockFrames
+                    )
+                    ducking.process(
+                        input = orbit.mixBuffer.right,
+                        sidechain = sidechainOrbit.mixBuffer.right,
+                        blockSize = blockFrames
+                    )
+                }
+            }
+        }
+
+        // Step 3: Mix all orbits to output
+        for (orbit in orbits.values) {
             run {
                 val masterLeft = masterMix.left
                 val orbitLeft = orbit.mixBuffer.left

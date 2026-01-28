@@ -372,9 +372,11 @@ but the audio engine integration is still pending:~~
 
 #### Global Effects - Duck / Sidechain
 
-- [ ] **`duckorbit()`** - Target orbit number for ducking (alias: `duck`)
-- [ ] **`duckattack()`** - Duck return-to-normal time in seconds (alias: `duckatt`)
-- [ ] **`duckdepth()`** - Ducking amount (0-1)
+- [x] **`duckorbit()`** - Target orbit number for ducking (alias: `duck`) ✅ **FULLY IMPLEMENTED** (DSL + Audio
+  Processing)
+- [x] **`duckattack()`** - Duck return-to-normal time in seconds (alias: `duckatt`) ✅ **FULLY IMPLEMENTED** (DSL + Audio
+  Processing)
+- [x] **`duckdepth()`** - Ducking amount (0-1) ✅ **FULLY IMPLEMENTED** (DSL + Audio Processing)
 
 #### Other
 
@@ -591,6 +593,15 @@ but the audio engine integration is still pending:~~
 - [ ] **`round()`** - Round values to integers
 - [ ] **`floor()`** - Floor values to integers
 - [ ] **`ceil()`** - Ceil values to integers
+
+### Audio Engine Enhancements
+
+- [ ] **Convolution Reverb (FFT-based)** - Implement true convolution reverb to support `iResponse()` parameter with
+  impulse
+  response samples. Current implementation uses Freeverb (algorithmic reverb) which cannot support convolution without a
+  completely different DSP engine. This would require FFT-based convolution processing and impulse response
+  loading/management.
+  This is a significantly larger task than the current reverb implementation.
 
 ### Tempo Control
 

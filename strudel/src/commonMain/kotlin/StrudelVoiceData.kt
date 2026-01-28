@@ -67,7 +67,7 @@ data class StrudelVoiceData(
 
     // Phaser
     /** Phaser modulation speed */
-    val phaser: Double?,
+    val phaserRate: Double?,
     /** Phaser depth (0-1) */
     val phaserDepth: Double?,
     /** Phaser center frequency (Hz) */
@@ -86,6 +86,14 @@ data class StrudelVoiceData(
     val tremoloPhase: Double?,
     /** Tremolo waveform type (tri, square, sine, saw, ramp) */
     val tremoloShape: String?,
+
+    // Ducking / Sidechain
+    /** Target orbit to listen to for ducking (source of sidechain signal) */
+    val duckOrbit: Int?,
+    /** Duck return-to-normal time in seconds (attack/release time) */
+    val duckAttack: Double?,
+    /** Ducking amount (0.0 = no ducking, 1.0 = full silence) */
+    val duckDepth: Double?,
 
     // Filters (flattened) - each filter has its own cutoff and resonance
     /** Low pass filter cutoff frequency */
@@ -216,7 +224,7 @@ data class StrudelVoiceData(
             distort = null,
             coarse = null,
             crush = null,
-            phaser = null,
+            phaserRate = null,
             phaserDepth = null,
             phaserCenter = null,
             phaserSweep = null,
@@ -225,6 +233,9 @@ data class StrudelVoiceData(
             tremoloSkew = null,
             tremoloPhase = null,
             tremoloShape = null,
+            duckOrbit = null,
+            duckAttack = null,
+            duckDepth = null,
             cutoff = null,
             resonance = null,
             hcutoff = null,
@@ -300,7 +311,7 @@ data class StrudelVoiceData(
             distort = other.distort ?: distort,
             coarse = other.coarse ?: coarse,
             crush = other.crush ?: crush,
-            phaser = other.phaser ?: phaser,
+            phaserRate = other.phaserRate ?: phaserRate,
             phaserDepth = other.phaserDepth ?: phaserDepth,
             phaserCenter = other.phaserCenter ?: phaserCenter,
             phaserSweep = other.phaserSweep ?: phaserSweep,
@@ -309,6 +320,9 @@ data class StrudelVoiceData(
             tremoloSkew = other.tremoloSkew ?: tremoloSkew,
             tremoloPhase = other.tremoloPhase ?: tremoloPhase,
             tremoloShape = other.tremoloShape ?: tremoloShape,
+            duckOrbit = other.duckOrbit ?: duckOrbit,
+            duckAttack = other.duckAttack ?: duckAttack,
+            duckDepth = other.duckDepth ?: duckDepth,
             cutoff = other.cutoff ?: cutoff,
             resonance = other.resonance ?: resonance,
             hcutoff = other.hcutoff ?: hcutoff,
@@ -490,7 +504,7 @@ data class StrudelVoiceData(
             distort = distort,
             coarse = coarse,
             crush = crush,
-            phaser = phaser,
+            phaser = phaserRate,
             phaserDepth = phaserDepth,
             phaserCenter = phaserCenter,
             phaserSweep = phaserSweep,
@@ -499,6 +513,9 @@ data class StrudelVoiceData(
             tremoloSkew = tremoloSkew,
             tremoloPhase = tremoloPhase,
             tremoloShape = tremoloShape,
+            duckOrbit = duckOrbit,
+            duckAttack = duckAttack,
+            duckDepth = duckDepth,
             cutoff = cutoff,
             hcutoff = hcutoff,
             bandf = bandf,

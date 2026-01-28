@@ -465,15 +465,15 @@ val String.dfb by dslStringExtension { p, args, callInfo -> p.delayfeedback(args
 // -- phaser() ---------------------------------------------------------------------------------------------------------
 
 private val phaserMutation = voiceModifier {
-    copy(phaser = it?.asDoubleOrNull())
+    copy(phaserRate = it?.asDoubleOrNull())
 }
 
 private fun applyPhaser(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source.applyNumericalParam(
         args = args,
         modify = phaserMutation,
-        getValue = { phaser },
-        setValue = { v, _ -> copy(phaser = v) },
+        getValue = { phaserRate },
+        setValue = { v, _ -> copy(phaserRate = v) },
     )
 }
 

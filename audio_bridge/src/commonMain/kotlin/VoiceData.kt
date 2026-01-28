@@ -70,6 +70,11 @@ data class VoiceData(
     val tremoloPhase: Double?,
     val tremoloShape: String?,
 
+    // Ducking / Sidechain
+    val duckOrbit: Int?,
+    val duckAttack: Double?,
+    val duckDepth: Double?,
+
     // HPF / LPF
     /** Low pass filter cutoff frequency */
     val cutoff: Double?,
@@ -138,6 +143,9 @@ data class VoiceData(
             tremoloSkew = null,
             tremoloPhase = null,
             tremoloShape = null,
+            duckOrbit = null,
+            duckAttack = null,
+            duckDepth = null,
             cutoff = null,
             hcutoff = null,
             bandf = null,

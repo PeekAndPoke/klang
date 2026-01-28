@@ -21,6 +21,7 @@ class SynthVoice(
     override val reverb: Voice.Reverb,
     override val phaser: Phaser,
     override val tremolo: Tremolo,
+    override val ducking: Voice.Ducking?,
     override val distort: Voice.Distort,
     override val crush: Voice.Crush,
     override val coarse: Voice.Coarse,

@@ -143,6 +143,7 @@ class GraalStrudelPattern(
         val roomLp = value.safeGetMember("roomlp").safeNumberOrNull()
         val roomDim = value.safeGetMember("roomdim").safeNumberOrNull()
         val iResponse = value.safeGetMember("iresponse").safeStringOrNull()
+            ?: value.safeGetMember("ir").safeStringOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Distortion
@@ -159,7 +160,7 @@ class GraalStrudelPattern(
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Phaser
-        val phaser = value.safeGetMember("phaser").safeNumberOrNull()
+        val phaserRate = value.safeGetMember("phaserrate").safeNumberOrNull()
         val phaserDepth = value.safeGetMember("phaserdepth").safeNumberOrNull()
         val phaserCenter = value.safeGetMember("phasercenter").safeNumberOrNull()
         val phaserSweep = value.safeGetMember("phasersweep").safeNumberOrNull()
@@ -171,6 +172,14 @@ class GraalStrudelPattern(
         val tremoloSkew = value.safeGetMember("tremoloskew").safeNumberOrNull()
         val tremoloPhase = value.safeGetMember("tremolophase").safeNumberOrNull()
         val tremoloShape = value.safeGetMember("tremoloshape").safeStringOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
+        // Ducking / Sidechain
+        val duckOrbit = value.safeGetMember("duckorbit").safeNumberOrNull()?.toInt()
+            ?: value.safeGetMember("duck").safeNumberOrNull()?.toInt()
+        val duckAttack = value.safeGetMember("duckattack").safeNumberOrNull()
+            ?: value.safeGetMember("duckatt").safeNumberOrNull()
+        val duckDepth = value.safeGetMember("duckdepth").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Filters (flat fields) - each filter has its own cutoff and resonance
@@ -234,6 +243,11 @@ class GraalStrudelPattern(
             ?: value.safeGetMember("nfe").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Vowel
+
+        val vowel = value.safeGetMember("vowel").safeStringOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Sample Manipulation
         val loop = value.safeGetMember("loop")
         sound = loop?.safeGetMember("s")?.safeStringOrNull() ?: sound
@@ -285,7 +299,7 @@ class GraalStrudelPattern(
                 coarse = coarse,
                 crush = crush,
                 // Phaser
-                phaser = phaser,
+                phaserRate = phaserRate,
                 phaserDepth = phaserDepth,
                 phaserCenter = phaserCenter,
                 phaserSweep = phaserSweep,
@@ -295,6 +309,10 @@ class GraalStrudelPattern(
                 tremoloSkew = tremoloSkew,
                 tremoloPhase = tremoloPhase,
                 tremoloShape = tremoloShape,
+                // Ducking / Sidechain
+                duckOrbit = duckOrbit,
+                duckAttack = duckAttack,
+                duckDepth = duckDepth,
                 // Filters (flat fields) - each filter has its own resonance
                 cutoff = cutoff,
                 resonance = resonance,
@@ -350,7 +368,7 @@ class GraalStrudelPattern(
                 loop = sampleLoop,
                 cut = sampleCut,
                 // Voice / Singing
-                vowel = value.safeGetMember("vowel").safeStringOrNull(),
+                vowel = vowel,
                 // Value
                 value = when {
                     value?.isString == true ->
