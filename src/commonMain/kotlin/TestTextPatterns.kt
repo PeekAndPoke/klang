@@ -121,10 +121,9 @@ stack(
     n("<[0 2 4 6 7 6 4 2]>")
         .scale("<[c3:major c3:pentatonic c3:major c3:major]>/16")
         .s("supersaw").unison(10).detune(saw.range(0.001, 0.3).slow(16)).spread(1.0)
-        .gain(0.175).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8))
+        .gain(0.15).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8))
         .distort(0.7)
-        .lpf(perlin.slow(2).range(100, 2000))
-        .hpf(660)
+        .lpenv(perlin.slow(12).range(1, 4)).lpf(perlin.slow(8).range(100, 2000))
         .adsr("0.03:0.5:0.7:0.3")
         .filterWhen(x => x >= wait * 4)
     ,

@@ -59,6 +59,7 @@ class SampleVoiceRenderTest : StringSpec({
             vibrato = Voice.Vibrato(0.0, 0.0),
             filter = dummyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, 1.0), // Always on
+            filterModulators = emptyList(),
             delay = Voice.Delay(0.0, 0.0, 0.0),
             reverb = Voice.Reverb(0.0, 0.0),
             distort = Voice.Distort(0.0),
