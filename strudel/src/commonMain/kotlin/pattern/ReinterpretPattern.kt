@@ -6,7 +6,7 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.math.Rational
 
-class ReinterpretPattern private constructor(
+internal class ReinterpretPattern internal constructor(
     val source: StrudelPattern,
     val interpret: (evt: StrudelPatternEvent, ctx: QueryContext) -> StrudelPatternEvent,
 ) : StrudelPattern {

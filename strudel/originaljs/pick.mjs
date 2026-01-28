@@ -9,21 +9,21 @@ import {Pattern, register, reify, silence} from './pattern.mjs';
 import {_mod, clamp, objectMap} from './util.mjs';
 
 const _pick = function (lookup, pat, modulo = true) {
-    const array = Array.isArray(lookup);
-    const len = Object.keys(lookup).length;
+  const array = Array.isArray(lookup);
+  const len = Object.keys(lookup).length;
 
-    lookup = objectMap(lookup, reify);
+  lookup = objectMap(lookup, reify);
 
-    if (len === 0) {
-        return silence;
+  if (len === 0) {
+    return silence;
+  }
+  return pat.fmap((i) => {
+    let key = i;
+    if (array) {
+      key = modulo ? Math.round(key) % len : clamp(Math.round(key), 0, lookup.length - 1);
     }
-    return pat.fmap((i) => {
-        let key = i;
-        if (array) {
-            key = modulo ? Math.round(key) % len : clamp(Math.round(key), 0, lookup.length - 1);
-        }
-        return lookup[key];
-    });
+    return lookup[key];
+  });
 };
 
 /** * Picks patterns (or plain values) either from a list (by index) or a lookup table (by name).
@@ -42,15 +42,15 @@ const _pick = function (lookup, pat, modulo = true) {
  */
 
 export const pick = function (lookup, pat) {
-    // backward compatibility - the args used to be flipped
-    if (Array.isArray(pat)) {
-        [pat, lookup] = [lookup, pat];
-    }
-    return __pick(lookup, pat);
+  // backward compatibility - the args used to be flipped
+  if (Array.isArray(pat)) {
+    [pat, lookup] = [lookup, pat];
+  }
+  return __pick(lookup, pat);
 };
 
 const __pick = register('pick', function (lookup, pat) {
-    return _pick(lookup, pat, false).innerJoin();
+  return _pick(lookup, pat, false).innerJoin();
 });
 
 /** * The same as `pick`, but if you pick a number greater than the size of the list,
@@ -63,7 +63,7 @@ const __pick = register('pick', function (lookup, pat) {
  */
 
 export const pickmod = register('pickmod', function (lookup, pat) {
-    return _pick(lookup, pat, true).innerJoin();
+  return _pick(lookup, pat, true).innerJoin();
 });
 
 /** * pickF lets you use a pattern of numbers to pick which function to apply to another pattern.
@@ -78,7 +78,7 @@ export const pickmod = register('pickmod', function (lookup, pat) {
  *     .pickF("<0 2> 1", [jux(rev),fast(2),x=>x.lpf(800)])
  */
 export const pickF = register('pickF', function (lookup, funcs, pat) {
-    return pat.apply(pick(lookup, funcs));
+  return pat.apply(pick(lookup, funcs));
 });
 
 /** * The same as `pickF`, but if you pick a number greater than the size of the functions list,
@@ -89,7 +89,7 @@ export const pickF = register('pickF', function (lookup, funcs, pat) {
  * @returns {Pattern}
  */
 export const pickmodF = register('pickmodF', function (lookup, funcs, pat) {
-    return pat.apply(pickmod(lookup, funcs));
+  return pat.apply(pickmod(lookup, funcs));
 });
 
 /** * Similar to `pick`, but it applies an outerJoin instead of an innerJoin.
@@ -98,7 +98,7 @@ export const pickmodF = register('pickmodF', function (lookup, funcs, pat) {
  * @returns {Pattern}
  */
 export const pickOut = register('pickOut', function (lookup, pat) {
-    return _pick(lookup, pat, false).outerJoin();
+  return _pick(lookup, pat, false).outerJoin();
 });
 
 /** * The same as `pickOut`, but if you pick a number greater than the size of the list,
@@ -108,7 +108,7 @@ export const pickOut = register('pickOut', function (lookup, pat) {
  * @returns {Pattern}
  */
 export const pickmodOut = register('pickmodOut', function (lookup, pat) {
-    return _pick(lookup, pat, true).outerJoin();
+  return _pick(lookup, pat, true).outerJoin();
 });
 
 /** * Similar to `pick`, but the choosen pattern is restarted when its index is triggered.
@@ -117,7 +117,7 @@ export const pickmodOut = register('pickmodOut', function (lookup, pat) {
  * @returns {Pattern}
  */
 export const pickRestart = register('pickRestart', function (lookup, pat) {
-    return _pick(lookup, pat, false).restartJoin();
+  return _pick(lookup, pat, false).restartJoin();
 });
 
 /** * The same as `pickRestart`, but if you pick a number greater than the size of the list,
@@ -134,7 +134,7 @@ export const pickRestart = register('pickRestart', function (lookup, pat) {
  }).scale("C:major").s("piano")
  */
 export const pickmodRestart = register('pickmodRestart', function (lookup, pat) {
-    return _pick(lookup, pat, true).restartJoin();
+  return _pick(lookup, pat, true).restartJoin();
 });
 
 /** * Similar to `pick`, but the choosen pattern is reset when its index is triggered.
@@ -143,7 +143,7 @@ export const pickmodRestart = register('pickmodRestart', function (lookup, pat) 
  * @returns {Pattern}
  */
 export const pickReset = register('pickReset', function (lookup, pat) {
-    return _pick(lookup, pat, false).resetJoin();
+  return _pick(lookup, pat, false).resetJoin();
 });
 
 /** * The same as `pickReset`, but if you pick a number greater than the size of the list,
@@ -153,7 +153,7 @@ export const pickReset = register('pickReset', function (lookup, pat) {
  * @returns {Pattern}
  */
 export const pickmodReset = register('pickmodReset', function (lookup, pat) {
-    return _pick(lookup, pat, true).resetJoin();
+  return _pick(lookup, pat, true).resetJoin();
 });
 
 /** Picks patterns (or plain values) either from a list (by index) or a lookup table (by name).
@@ -171,7 +171,7 @@ export const pickmodReset = register('pickmodReset', function (lookup, pat) {
  * s("a@2 [a b] a".inhabit({a: "bd(3,8)", b: "sd sd"})).slow(4)
  */
 export const {inhabit, pickSqueeze} = register(['inhabit', 'pickSqueeze'], function (lookup, pat) {
-    return _pick(lookup, pat, false).squeezeJoin();
+  return _pick(lookup, pat, false).squeezeJoin();
 });
 
 /** * The same as `inhabit`, but if you pick a number greater than the size of the list,
@@ -186,7 +186,7 @@ export const {inhabit, pickSqueeze} = register(['inhabit', 'pickSqueeze'], funct
  */
 
 export const {inhabitmod, pickmodSqueeze} = register(['inhabitmod', 'pickmodSqueeze'], function (lookup, pat) {
-    return _pick(lookup, pat, true).squeezeJoin();
+  return _pick(lookup, pat, true).squeezeJoin();
 });
 
 /**
@@ -200,14 +200,14 @@ export const {inhabitmod, pickmodSqueeze} = register(['inhabitmod', 'pickmodSque
  */
 
 export const squeeze = (pat, xs) => {
-    xs = xs.map(reify);
-    if (xs.length == 0) {
-        return silence;
-    }
-    return pat
-        .fmap((i) => {
-            const key = _mod(Math.round(i), xs.length);
-            return xs[key];
-        })
-        .squeezeJoin();
+  xs = xs.map(reify);
+  if (xs.length == 0) {
+    return silence;
+  }
+  return pat
+      .fmap((i) => {
+        const key = _mod(Math.round(i), xs.length);
+        return xs[key];
+      })
+      .squeezeJoin();
 };

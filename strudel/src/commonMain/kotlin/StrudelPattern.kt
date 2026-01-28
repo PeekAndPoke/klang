@@ -5,7 +5,7 @@ import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.pattern.StaticStrudelPattern
+import io.peekandpoke.klang.strudel.pattern.*
 import kotlin.random.Random
 
 /**
@@ -210,3 +210,192 @@ fun StrudelPattern.makeStatic(from: Rational, to: Rational): StaticStrudelPatter
  */
 fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
     makeStatic(from.toRational(), to.toRational())
+
+/**
+ * Standard Monadic Bind / Inner Join.
+ *
+ * Queries this pattern (outer), and for each event, generates an inner pattern via [transform].
+ * The inner pattern is queried within the timeframe of the outer event, and results are clipped
+ * to the outer event's boundaries.
+ *
+ * This operation is fundamental to many pattern combinators and centralizes the common
+ * "intersection + clipping" logic.
+ *
+ * @param from Start of query arc
+ * @param to End of query arc
+ * @param ctx Query context to pass down the pattern hierarchy
+ * @param transform Function that generates an inner pattern from each outer event
+ * @return List of events from inner patterns, clipped to outer event boundaries
+ */
+fun StrudelPattern.bind(
+    from: Rational,
+    to: Rational,
+    ctx: StrudelPattern.QueryContext,
+    transform: (StrudelPatternEvent) -> StrudelPattern?,
+): List<StrudelPatternEvent> {
+    val outerEvents = this.queryArcContextual(from, to, ctx)
+    val result = mutableListOf<StrudelPatternEvent>()
+
+    for (outer in outerEvents) {
+        val innerPattern = transform(outer) ?: continue
+
+        // Intersect query arc with outer event
+        val intersectStart = maxOf(from, outer.begin)
+        val intersectEnd = minOf(to, outer.end)
+
+        if (intersectEnd <= intersectStart) continue
+
+        // Query inner pattern
+        val innerEvents = innerPattern.queryArcContextual(intersectStart, intersectEnd, ctx)
+
+        for (inner in innerEvents) {
+            // Clip inner event to outer event boundaries
+            val clippedBegin = maxOf(inner.begin, outer.begin)
+            val clippedEnd = minOf(inner.end, outer.end)
+
+            if (clippedEnd > clippedBegin) {
+                // Optimization: Only copy if boundaries actually changed
+                if (clippedBegin != inner.begin || clippedEnd != inner.end) {
+                    result.add(inner.copy(begin = clippedBegin, end = clippedEnd, dur = clippedEnd - clippedBegin))
+                } else {
+                    result.add(inner)
+                }
+            }
+        }
+    }
+    return result
+}
+
+/**
+ * Applies a control pattern to this pattern (Outer Join).
+ *
+ * Preserves the structure of [this] (source). For each event, samples [control] at the event's
+ * start time and applies the [combiner] function to produce the result event.
+ *
+ * This is used for modifying event values based on another pattern while maintaining the
+ * original timing structure (e.g., applying gain, pitch shifts, effects, etc.).
+ *
+ * @param control The pattern to sample for control values
+ * @param from Start of query arc
+ * @param to End of query arc
+ * @param ctx Query context to pass down the pattern hierarchy
+ * @param combiner Function to combine source event with sampled control event (null if no control event found)
+ * @return List of events with control applied
+ */
+fun StrudelPattern.applyControl(
+    control: StrudelPattern,
+    from: Rational,
+    to: Rational,
+    ctx: StrudelPattern.QueryContext,
+    combiner: (source: StrudelPatternEvent, control: StrudelPatternEvent?) -> StrudelPatternEvent?,
+): List<StrudelPatternEvent> {
+    val sourceEvents = this.queryArcContextual(from, to, ctx)
+    if (sourceEvents.isEmpty()) return emptyList()
+
+    val result = mutableListOf<StrudelPatternEvent>()
+    val epsilon = 1e-5.toRational()
+
+    for (event in sourceEvents) {
+        // Point-query the control pattern at the event's begin time
+        val controlEvents = control.queryArcContextual(event.begin, event.begin + epsilon, ctx)
+        val controlEvent = controlEvents.firstOrNull()
+
+        val combined = combiner(event, controlEvent)
+        if (combined != null) {
+            result.add(combined)
+        }
+    }
+    return result
+}
+
+/**
+ * Creates a pattern that transforms the event list using the given function.
+ *
+ * This is a convenience method for creating MapPattern instances. The resulting pattern
+ * preserves the original pattern's structure and timing while allowing modification of events.
+ *
+ * This operation is useful for:
+ * - Filtering events based on predicates
+ * - Mapping event properties
+ * - Sorting or reordering events
+ * - Any other list transformation
+ *
+ * @param transform Function that transforms the list of events
+ * @return A new pattern that applies the transformation
+ */
+fun StrudelPattern.map(
+    transform: (List<StrudelPatternEvent>) -> List<StrudelPatternEvent>,
+): StrudelPattern {
+    return MapPattern(source = this, transform)
+}
+
+/**
+ * Creates a pattern that maps individual events.
+ *
+ * This is a convenience extension for transforming each event individually, as opposed
+ * to `map()` which transforms the entire event list. Use this when you need to modify
+ * event properties, add metadata, or transform event data.
+ *
+ * @param transform Function that transforms each event
+ * @return A new pattern that applies the transformation to each event
+ */
+fun StrudelPattern.mapEvents(
+    transform: (StrudelPatternEvent) -> StrudelPatternEvent,
+): StrudelPattern {
+    return ReinterpretPattern(source = this) { evt, _ -> transform(evt) }
+}
+
+/**
+ * Creates a pattern that maps individual events with access to the query context.
+ *
+ * Similar to `mapEvents()` but provides access to the QueryContext, allowing context-aware
+ * transformations (e.g., using random seeds, context keys, etc.).
+ *
+ * @param transform Function that transforms each event with context access
+ * @return A new pattern that applies the transformation to each event
+ */
+fun StrudelPattern.mapEventsWithContext(
+    transform: (StrudelPatternEvent, StrudelPattern.QueryContext) -> StrudelPatternEvent,
+): StrudelPattern {
+    return ReinterpretPattern(source = this, interpret = transform)
+}
+
+/**
+ * Creates a pattern with an overridden weight value.
+ *
+ * Weight is used for proportional time distribution in sequences (e.g., mini-notation @ operator).
+ * This is useful when you need to adjust a pattern's relative duration without modifying
+ * the pattern itself.
+ *
+ * @param weight The new weight value
+ * @return A new pattern with the specified weight
+ */
+fun StrudelPattern.withWeight(weight: Double): StrudelPattern {
+    return PropertyOverridePattern(source = this, weightOverride = weight)
+}
+
+/**
+ * Creates a pattern with an overridden steps value.
+ *
+ * Steps is used for aligning patterns in polymeter. This allows you to override
+ * the number of steps per cycle without modifying the pattern itself.
+ *
+ * @param steps The new steps value
+ * @return A new pattern with the specified steps
+ */
+fun StrudelPattern.withSteps(steps: Rational): StrudelPattern {
+    return PropertyOverridePattern(source = this, stepsOverride = steps)
+}
+
+/**
+ * Stacks this pattern with other patterns, playing all simultaneously.
+ *
+ * This is a convenience method for creating StackPattern instances. All patterns
+ * are queried for the same time range and their events are combined and sorted by time.
+ *
+ * @param others Additional patterns to stack with this one
+ * @return A new pattern that plays all patterns simultaneously
+ */
+fun StrudelPattern.stack(vararg others: StrudelPattern): StrudelPattern {
+    return StackPattern(patterns = listOf(this) + others.toList())
+}

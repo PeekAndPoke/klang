@@ -6,11 +6,19 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
- * Filters events from a source pattern using a predicate.
+ * Generic pattern that applies a transformation to events after querying the source.
+ *
+ * This is a reusable wrapper for simple event transformations (filtering, mapping, etc.)
+ * that preserves the pattern's structure and delegates all properties to the source.
+ *
+ * This eliminates the need for specific pattern classes that just apply simple transformations.
+ *
+ * @param source The source pattern to query
+ * @param transform Function that transforms the list of events after querying
  */
-internal class FilterPattern(
+internal class MapPattern(
     private val source: StrudelPattern,
-    private val predicate: (StrudelPatternEvent) -> Boolean,
+    private val transform: (List<StrudelPatternEvent>) -> List<StrudelPatternEvent>,
 ) : StrudelPattern {
 
     override val weight: Double get() = source.weight
@@ -22,6 +30,6 @@ internal class FilterPattern(
         to: Rational,
         ctx: QueryContext,
     ): List<StrudelPatternEvent> {
-        return source.queryArcContextual(from, to, ctx).filter(predicate)
+        return transform(source.queryArcContextual(from, to, ctx))
     }
 }

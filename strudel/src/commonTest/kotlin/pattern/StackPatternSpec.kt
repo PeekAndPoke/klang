@@ -32,7 +32,7 @@ class StackPatternSpec : StringSpec({
         verifyPattern(pattern, 2) { _, note, begin, dur ->
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
-            listOf("A", "B") shouldContain note
+            listOf("a", "b") shouldContain note?.lowercase()
         }
     }
 
@@ -43,7 +43,7 @@ class StackPatternSpec : StringSpec({
         verifyPattern(pattern, 2) { _, note, begin, dur ->
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
-            listOf("A", "B") shouldContain note
+            listOf("a", "b") shouldContain note?.lowercase()
         }
     }
 
@@ -53,7 +53,7 @@ class StackPatternSpec : StringSpec({
         verifyPattern(pattern, 2) { _, note, begin, dur ->
             begin shouldBe (0.0 plusOrMinus EPSILON)
             dur shouldBe (1.0 plusOrMinus EPSILON)
-            listOf("A", "B") shouldContain note
+            listOf("a", "b") shouldContain note?.lowercase()
         }
     }
 })

@@ -253,6 +253,51 @@ class VoiceScheduler(
             LowPassHighPassFilters.createNotch(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
     }
 
+    private fun FilterDef.toModulator(
+        filter: AudioFilter,
+        sampleRate: Int,
+    ): Voice.FilterModulator? {
+        // Get the envelope from the FilterDef
+        val envData = when (this) {
+            is FilterDef.LowPass -> this.envelope
+            is FilterDef.HighPass -> this.envelope
+            is FilterDef.BandPass -> this.envelope
+            is FilterDef.Notch -> this.envelope
+        }
+
+        // No envelope? No modulator needed
+        if (envData == null) return null
+
+        // Filter must be tunable
+        if (filter !is AudioFilter.Tunable) return null
+
+        // Get base cutoff
+        val baseCutoff = when (this) {
+            is FilterDef.LowPass -> this.cutoffHz
+            is FilterDef.HighPass -> this.cutoffHz
+            is FilterDef.BandPass -> this.cutoffHz
+            is FilterDef.Notch -> this.cutoffHz
+        }
+
+        // Resolve envelope to concrete values
+        val resolved = envData.resolve()
+
+        // Create Voice.Envelope from resolved FilterEnvelope
+        val envelope = Voice.Envelope(
+            attackFrames = resolved.attack * sampleRate,
+            decayFrames = resolved.decay * sampleRate,
+            sustainLevel = resolved.sustain,
+            releaseFrames = resolved.release * sampleRate
+        )
+
+        return Voice.FilterModulator(
+            filter = filter,
+            envelope = envelope,
+            depth = resolved.depth,
+            baseCutoff = baseCutoff
+        )
+    }
+
     private fun makeVoice(scheduled: ScheduledVoice, nowFrame: Long): Voice? {
         val sampleRate = options.sampleRate
         val data = scheduled.data
@@ -271,8 +316,16 @@ class VoiceScheduler(
         // Calculate new end frames based on the effective gate duration
         val gateEndFrame = startFrame + effectiveGateDuration
 
-        // Bake Filters
-        val bakedFilters = data.filters.filters.map { it.toFilter() }.combine()
+        // Create filters
+        val filters = data.filters.filters.map { it.toFilter() }
+
+        // Create modulators for tunable filters (before combining)
+        val modulators = data.filters.filters.zip(filters).mapNotNull { (def, filter) ->
+            def.toModulator(filter, sampleRate)
+        }
+
+        // Combine filters
+        val bakedFilters = filters.combine()
 
         // Routing
         val orbit = data.orbit ?: 0
@@ -343,6 +396,7 @@ class VoiceScheduler(
                     vibrato = vibrato,
                     filter = bakedFilters,
                     envelope = envelope,
+                    filterModulators = modulators,
                     delay = delay,
                     reverb = reverb,
                     distort = distort,
@@ -446,6 +500,7 @@ class VoiceScheduler(
                     accelerate = accelerate,
                     vibrato = vibrato,
                     envelope = envelope,
+                    filterModulators = modulators,
                     delay = delay,
                     reverb = reverb,
                     distort = distort,

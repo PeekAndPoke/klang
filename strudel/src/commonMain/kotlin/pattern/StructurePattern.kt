@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.bind
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -84,35 +85,10 @@ internal class StructurePattern(
      * We behave like an intersection: clipping source events to the mask's duration.
      */
     private fun queryOut(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        val otherEvents = other.queryArcContextual(from, to, ctx)
-        if (otherEvents.isEmpty()) return emptyList()
-
-        val result = createEventList()
-
-        for (maskEvent in otherEvents) {
+        return other.bind(from, to, ctx) { maskEvent ->
             // If filtering by truthiness, skip falsy mask events
-            if (filterByTruthiness && !maskEvent.data.isTruthy()) continue
-
-            // Query the source for the duration of this specific mask event
-            val sourceEvents = source.queryArcContextual(maskEvent.begin, maskEvent.end, ctx)
-
-            for (sourceEvent in sourceEvents) {
-                // Intersection logic: clip source event to mask event
-                val newBegin = maxOf(maskEvent.begin, sourceEvent.begin)
-                val newEnd = minOf(maskEvent.end, sourceEvent.end)
-
-                if (newEnd > newBegin) {
-                    result.add(
-                        sourceEvent.copy(
-                            begin = newBegin,
-                            end = newEnd,
-                            dur = newEnd - newBegin
-                        )
-                    )
-                }
-            }
+            if (filterByTruthiness && !maskEvent.data.isTruthy()) null else source
         }
-        return result
     }
 
     private fun StrudelVoiceData.isTruthy(): Boolean {

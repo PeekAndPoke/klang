@@ -13,5 +13,12 @@ interface AudioFilter {
         }
     }
 
+    /**
+     * Interface for filters that support runtime cutoff frequency changes.
+     */
+    interface Tunable {
+        fun setCutoff(cutoffHz: Double)
+    }
+
     fun process(buffer: DoubleArray, offset: Int, length: Int)
 }

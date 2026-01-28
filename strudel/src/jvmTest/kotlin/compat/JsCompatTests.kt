@@ -210,7 +210,7 @@ ${comparison.report}
         val errors = mutableListOf<String>()
 
         val rows = mutableListOf<List<Any?>>()
-        rows.add(listOf("", "field", "Graal", "Native"))
+        rows.add(listOf("", "field", "JS (Graal)", "Native"))
 
         allKeys.forEach { key ->
             val gVal = graalFlat[key]

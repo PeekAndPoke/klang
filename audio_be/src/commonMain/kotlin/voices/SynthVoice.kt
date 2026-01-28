@@ -14,6 +14,7 @@ class SynthVoice(
     override val vibrato: Voice.Vibrato,
     override val filter: AudioFilter,
     override val envelope: Voice.Envelope,
+    override val filterModulators: List<Voice.FilterModulator>,
     override val delay: Voice.Delay,
     override val reverb: Voice.Reverb,
     override val distort: Voice.Distort,
@@ -35,6 +36,13 @@ class SynthVoice(
         val vEnd = minOf(blockEnd, endFrame)
         val offset = (vStart - ctx.blockStart).toInt()
         val length = (vEnd - vStart).toInt()
+
+        // Apply filter modulation (control rate - once per block)
+        for (mod in filterModulators) {
+            val envValue = calculateFilterEnvelope(mod.envelope, ctx)
+            val newCutoff = mod.baseCutoff * (1.0 + mod.depth * envValue)
+            mod.filter.setCutoff(newCutoff)
+        }
 
         val modBuffer = fillPitchModulation(ctx, offset, length)
 

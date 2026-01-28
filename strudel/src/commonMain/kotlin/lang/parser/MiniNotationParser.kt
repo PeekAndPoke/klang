@@ -9,8 +9,8 @@ import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
 import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
+import io.peekandpoke.klang.strudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.strudel.pattern.SequencePattern
-import io.peekandpoke.klang.strudel.pattern.WeightedPattern
 
 fun <T> parseMiniNotation(
     input: StrudelDslArg<T>,
@@ -166,7 +166,7 @@ class MiniNotationParser(
             } else if (match(TokenType.AT)) {
                 val weightStr = consume(TokenType.LITERAL, "Expected number after '@'").text
                 val weight = weightStr.toDoubleOrNull() ?: 1.0
-                pattern = WeightedPattern(pattern, weight)
+                pattern = PropertyOverridePattern(pattern, weightOverride = weight)
             } else if (match(TokenType.L_PAREN)) {
                 // Euclidean rhythm: (pulses, steps) or (pulses, steps, rotation)
                 val pulsesStr = consume(TokenType.LITERAL, "Expected pulses number").text

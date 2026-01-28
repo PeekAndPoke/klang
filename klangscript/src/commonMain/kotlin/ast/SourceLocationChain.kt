@@ -45,10 +45,22 @@ data class SourceLocationChain(
         SourceLocationChain(locations + location)
 
     /**
+     * Add a list of locations to the end of the chain
+     */
+    fun append(locations: List<SourceLocation>): SourceLocationChain =
+        SourceLocationChain(this.locations + locations)
+
+    /**
      * Add a location to the beginning of the chain (outermost position)
      */
     fun prepend(location: SourceLocation): SourceLocationChain =
         SourceLocationChain(listOf(location) + locations)
+
+    /**
+     * Add a list of locations to the beginning of the chain
+     */
+    fun prepend(locations: List<SourceLocation>): SourceLocationChain =
+        SourceLocationChain(locations + this.locations)
 
     /**
      * Combine two chains

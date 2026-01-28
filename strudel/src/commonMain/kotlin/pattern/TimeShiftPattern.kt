@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.pattern
 
+import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
@@ -54,13 +55,25 @@ internal class TimeShiftPattern(
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val offsetEvents = offsetProvider.queryEvents(from, to, ctx)
-        if (offsetEvents.isEmpty()) return queryWithStaticOffset(from, to, ctx, Rational.ZERO)
+        if (offsetEvents.isEmpty()) return queryWithStaticOffset(
+            from = from,
+            to = to,
+            ctx = ctx,
+            offset = Rational.ZERO,
+            offsetLocations = null,
+        )
 
         val result = createEventList()
 
         for (offsetEvent in offsetEvents) {
             val offset = (offsetEvent.data.value?.asDouble ?: 0.0).toRational()
-            val events = queryWithStaticOffset(offsetEvent.begin, offsetEvent.end, ctx, offset)
+            val events = queryWithStaticOffset(
+                from = offsetEvent.begin,
+                to = offsetEvent.end,
+                ctx = ctx,
+                offset = offset,
+                offsetLocations = offsetEvent.sourceLocations,
+            )
             result.addAll(events)
         }
 
@@ -72,6 +85,7 @@ internal class TimeShiftPattern(
         to: Rational,
         ctx: QueryContext,
         offset: Rational,
+        offsetLocations: SourceLocationChain?,
     ): List<StrudelPatternEvent> {
         // To shift the pattern by 'offset', we query the source at (from - offset, to - offset)
         // and then shift all resulting events forward by 'offset'
@@ -88,7 +102,7 @@ internal class TimeShiftPattern(
                 ev.copy(
                     begin = mappedBegin,
                     end = mappedEnd,
-                )
+                ).appendLocations(offsetLocations)
             } else {
                 null
             }

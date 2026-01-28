@@ -48,6 +48,13 @@ sealed interface Voice {
         }
     }
 
+    class FilterModulator(
+        val filter: AudioFilter.Tunable,
+        val envelope: Envelope,
+        val depth: Double,
+        val baseCutoff: Double,
+    )
+
     class Delay(
         val amount: Double, // mix amount 0 .. 1
         val time: Double,
@@ -94,6 +101,7 @@ sealed interface Voice {
     // Audio processing
     val filter: AudioFilter
     val envelope: Envelope
+    val filterModulators: List<FilterModulator>
     val delay: Delay
     val reverb: Reverb
 

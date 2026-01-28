@@ -2,10 +2,7 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.not
@@ -268,22 +265,6 @@ val sequenceP by dslFunction { args, /* callInfo */ _ ->
     applySeq(args.toListOfPatterns(defaultModifier))
 }
 
-// -- pickRestart() ----------------------------------------------------------------------------------------------------
-
-// pickRestart([a, b, c]) -> picks patterns sequentially per cycle (slowcat)
-// TODO: make this really work. Must be dslMethod -> https://strudel.cc/learn/conditional-modifiers/#pickrestart
-@StrudelDsl
-val pickRestart by dslFunction { args, /* callInfo */ _ ->
-    val patterns = args.toListOfPatterns(defaultModifier)
-    if (patterns.isEmpty()) {
-        silence
-    } else {
-        // seq plays all in 1 cycle. slow(n) makes each take 1 cycle.
-        val s = SequencePattern(patterns)
-        s.slow(patterns.size)
-    }
-}
-
 // -- cat() ------------------------------------------------------------------------------------------------------------
 
 internal fun applyCat(patterns: List<StrudelPattern>): StrudelPattern {
@@ -399,9 +380,9 @@ private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = nul
         else pat.fast(targetSteps.toDouble() / steps)
     }
 
-    return StepsOverridePattern(
+    return PropertyOverridePattern(
         source = StackPattern(adjustedPatterns),
-        steps = targetSteps.toRational()
+        stepsOverride = targetSteps.toRational()
     )
 }
 
@@ -629,10 +610,102 @@ val StrudelPattern.maskAll by dslPatternExtension { p, args, /* callInfo */ _ ->
 @StrudelDsl
 val String.maskAll by dslStringExtension { p, args, callInfo -> p.maskAll(args, callInfo) }
 
+// -- jux() ------------------------------------------------------------------------------------------------------------
+
+private fun applyJux(source: StrudelPattern, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    // Pan is unipolar (0.0 to 1.0).
+    // jux pans original hard left (0.0) and transformed hard right (1.0).
+    val left = source.pan(0.0)
+    val right = transform(source).pan(1.0)
+    return StackPattern(listOf(left, right))
+}
+
+/**
+ * Applies the function to the pattern and pans the result to the right,
+ * while panning the original pattern to the left.
+ *
+ * @param {transform} Function to apply to the right channel
+ */
+@StrudelDsl
+val StrudelPattern.jux by dslPatternExtension { p, args, /* callInfo */ _ ->
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.firstOrNull()?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+    applyJux(p, transform)
+}
+
+@StrudelDsl
+val String.jux by dslStringExtension { p, args, callInfo -> p.jux(args, callInfo) }
+
+// -- juxBy() ----------------------------------------------------------------------------------------------------------
+
+private fun applyJuxBy(
+    source: StrudelPattern,
+    amount: Double,
+    transform: (StrudelPattern) -> StrudelPattern,
+): StrudelPattern {
+    // Unipolar pan: 0.0 is left, 1.0 is right, 0.5 is center.
+    // amount=1.0 -> 0.0 (L) & 1.0 (R) - full stereo
+    // amount=0.5 -> 0.25 (L) & 0.75 (R) - half stereo width
+    // amount=0.0 -> 0.5 (L) & 0.5 (R) - mono/center
+    val panLeft = 0.5 * (1.0 - amount)
+    val panRight = 0.5 * (1.0 + amount)
+
+    val left = source.pan(panLeft)
+    val right = transform(source).pan(panRight)
+    return StackPattern(listOf(left, right))
+}
+
+/**
+ * Like jux, but with adjustable stereo width.
+ *
+ * @param {amount} Stereo width (0 to 1). 1 = full stereo, 0 = mono (center).
+ * @param {transform} Function to apply to the right channel logic
+ */
+@StrudelDsl
+val StrudelPattern.juxBy by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val amount = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 1.0
+
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+    applyJuxBy(p, amount, transform)
+}
+
+@StrudelDsl
+val String.juxBy by dslStringExtension { p, args, callInfo -> p.juxBy(args, callInfo) }
+
+// -- off() ------------------------------------------------------------------------------------------------------------
+
+private fun applyOff(
+    source: StrudelPattern,
+    time: Double,
+    transform: (StrudelPattern) -> StrudelPattern,
+): StrudelPattern {
+    return OffPattern(source, time, transform)
+}
+
+/**
+ * Layers a modified version of the pattern on top of itself, shifted in time.
+ *
+ * @param {time} Time offset in cycles
+ * @param {transform} Function to apply to the delayed layer
+ */
+@StrudelDsl
+val StrudelPattern.off by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val time = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.25
+
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+
+    applyOff(p, time, transform)
+}
+
+@StrudelDsl
+val String.off by dslStringExtension { p, args, callInfo -> p.off(args, callInfo) }
+
 // -- filter() ---------------------------------------------------------------------------------------------------------
 
 private fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern {
-    return FilterPattern(source = source, predicate = predicate)
+    return source.map { events -> events.filter(predicate) }
 }
 
 /** Filters haps using the given function. */

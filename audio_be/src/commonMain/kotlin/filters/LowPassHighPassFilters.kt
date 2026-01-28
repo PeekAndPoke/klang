@@ -26,11 +26,15 @@ object LowPassHighPassFilters {
 
     // --- Implementations ---
 
-    class OnePoleLPF(cutoffHz: Double, sampleRate: Double) : AudioFilter {
+    class OnePoleLPF(cutoffHz: Double, private val sampleRate: Double) : AudioFilter, AudioFilter.Tunable {
         private var y = 0.0
-        private val lowPass: Double
+        private var lowPass: Double = 0.0
 
         init {
+            setCutoff(cutoffHz)
+        }
+
+        override fun setCutoff(cutoffHz: Double) {
             val nyquist = 0.5 * sampleRate
             val cutoff = cutoffHz.coerceIn(5.0, nyquist - 1.0)
             lowPass = 1.0 - exp(-2.0 * PI * cutoff / sampleRate)
@@ -47,12 +51,16 @@ object LowPassHighPassFilters {
         }
     }
 
-    class OnePoleHPF(cutoffHz: Double, sampleRate: Double) : AudioFilter {
+    class OnePoleHPF(cutoffHz: Double, private val sampleRate: Double) : AudioFilter, AudioFilter.Tunable {
         private var y = 0.0
         private var xPrev = 0.0
-        private val a: Double
+        private var a: Double = 0.0
 
         init {
+            setCutoff(cutoffHz)
+        }
+
+        override fun setCutoff(cutoffHz: Double) {
             val nyquist = 0.5 * sampleRate
             val cutoff = cutoffHz.coerceIn(5.0, nyquist - 1.0)
             a = exp(-2.0 * PI * cutoff / sampleRate)
@@ -71,15 +79,21 @@ object LowPassHighPassFilters {
 
 
     // State Variable Filter (Shared logic)
-    abstract class BaseSvf(cutoffHz: Double, q: Double, sampleRate: Double) : AudioFilter {
+    abstract class BaseSvf(cutoffHz: Double, q: Double, private val sampleRate: Double) : AudioFilter,
+        AudioFilter.Tunable {
         protected var ic1eq = 0.0
         protected var ic2eq = 0.0
-        protected val a1: Double
-        protected val a2: Double
-        protected val a3: Double
-        protected val k: Double
+        protected var a1: Double = 0.0
+        protected var a2: Double = 0.0
+        protected var a3: Double = 0.0
+        protected var k: Double = 0.0
+        private val q: Double = q
 
         init {
+            setCutoff(cutoffHz)
+        }
+
+        override fun setCutoff(cutoffHz: Double) {
             val nyquist = 0.5 * sampleRate
             val fc = cutoffHz.coerceIn(5.0, nyquist - 1.0)
             val Q = q.coerceIn(0.1, 50.0)
@@ -89,6 +103,10 @@ object LowPassHighPassFilters {
             a1 = 1.0 / (1.0 + g * (g + k))
             a2 = g * a1
             a3 = g * a2
+
+            // Reset integrator state to avoid clicks
+            ic1eq = 0.0
+            ic2eq = 0.0
         }
     }
 

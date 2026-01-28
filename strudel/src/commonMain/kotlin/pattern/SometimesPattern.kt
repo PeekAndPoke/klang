@@ -112,7 +112,7 @@ internal class SometimesPattern private constructor(
                 if (onMatch === DISCARD) {
                     // Discard (do nothing)
                 } else if (onMatch != null) {
-                    if (matchEvents == null) matchEvents = mutableListOf()
+                    if (matchEvents == null) matchEvents = createEventList()
                     matchEvents.add(event)
                 } else {
                     // Keep
@@ -123,7 +123,7 @@ internal class SometimesPattern private constructor(
                 if (onMiss === DISCARD) {
                     // Discard (do nothing)
                 } else if (onMiss != null) {
-                    if (missEvents == null) missEvents = mutableListOf()
+                    if (missEvents == null) missEvents = createEventList()
                     missEvents.add(event)
                 } else {
                     // Keep

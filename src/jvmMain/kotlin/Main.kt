@@ -7,9 +7,10 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.pan
+import io.peekandpoke.klang.strudel.lang.sound
 import io.peekandpoke.klang.strudel.lang.strudelLib
-import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -66,16 +67,11 @@ private suspend fun helloStrudel() {
             registerLibrary(strudelLib)
         }
 
-        val pattern1 = strudel.compile(
-            """
-                note("a b c d")
-                .bpattack(0.1)
-                .bpdecay(0.2)
-                .bpsustain(0.3)
-                .bprelease(0.4)
-                .bpenv(0.5)
-            """.trimIndent()
-        ).await()
+//        val pattern1 = strudel.compile(
+//            """
+//                note("c").off(0.25, x => x.note("e"))
+//            """.trimIndent()
+//        ).await()
 
 //        val result = engine.execute(
 //            """
@@ -118,17 +114,16 @@ private suspend fun helloStrudel() {
 //            }
 //        }
 //
-        println("=======================================================================")
-        println(
-            pattern1.makeStatic(0.0, 8.0).toJson()
-        )
-        println("=======================================================================")
+//        println("=======================================================================")
+//        println(
+//            pattern1.makeStatic(0.0, 8.0).toJson()
+//        )
+//        println("=======================================================================")
 
 //        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
 
 //        val pattern1 = StrudelPattern.compile(TestTextPatterns.strangerThingsNetflix)!!
-//        val pattern1 = note("c d e f")
-//            .pan(sine.range(0.3, 0.7).mul(-1).slow(4))
+        val pattern1 = note("c d e f").sound("saw")
 
 //        val pattern1 = StrudelPattern.compile(
 //            """

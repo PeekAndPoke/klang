@@ -172,6 +172,49 @@ fun Voice.fillPitchModulation(ctx: Voice.RenderContext, offset: Int, length: Int
     return out
 }
 
+/**
+ * Calculate filter envelope value at the current block position.
+ * Returns a value from 0.0 to 1.0 representing the envelope's current state.
+ * This is calculated once per block (control rate) for efficiency.
+ */
+fun Voice.calculateFilterEnvelope(env: Voice.Envelope, ctx: Voice.RenderContext): Double {
+    // Calculate position relative to voice start
+    // Use the actual voice start position in the block (handles voices starting mid-block)
+    val currentFrame = maxOf(ctx.blockStart, startFrame)
+    val absPos = currentFrame - startFrame
+    val gateEndPos = gateEndFrame - startFrame
+
+    val envValue = if (absPos >= gateEndPos) {
+        // Release phase
+        val relPos = absPos - gateEndPos
+        val relRate = if (env.releaseFrames > 0) env.sustainLevel / env.releaseFrames else 1.0
+        env.sustainLevel - (relPos * relRate)
+    } else {
+        // Attack/Decay/Sustain phases
+        when {
+            absPos < env.attackFrames -> {
+                // Attack phase
+                val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
+                absPos * attRate
+            }
+
+            absPos < env.attackFrames + env.decayFrames -> {
+                // Decay phase
+                val decPos = absPos - env.attackFrames
+                val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
+                1.0 - (decPos * decRate)
+            }
+
+            else -> {
+                // Sustain phase
+                env.sustainLevel
+            }
+        }
+    }
+
+    return envValue.coerceIn(0.0, 1.0)
+}
+
 //fun Voice.calculateAccelerateMultiplier(absoluteFrame: Long): Double {
 //    val accel = accelerate.amount
 //    if (accel == 0.0) return 1.0

@@ -24,6 +24,7 @@ fun initStrudelLang() {
     strudelLangHelpersInit = true
     strudelLangMiscInit = true
     strudelLangSampleInit = true
+    strudelLangPatternPickingInit = true
     strudelLangRandomInit = true
     strudelLangStructuralInit = true
     strudelLangTempoInit = true

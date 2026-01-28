@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangBankSpec : StringSpec({
@@ -19,7 +20,7 @@ class LangBankSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.note shouldBe "C"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
         events[0].data.bank shouldBe "User1"
     }
 

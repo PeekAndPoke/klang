@@ -131,15 +131,14 @@ and category.
 - [x] **`superimpose(function)`** - Layers modified pattern on top
 - [x] **`layer(function)`** - Layers multiple function results
 - [x] **`apply(function)`** - Alias for layer
-- [ ] **`jux(function)`** - Apply function to right channel only
-- [ ] **`juxBy(amount, function)`** - Jux with custom stereo width
-- [ ] **`off(time, function)`** - Copies, shifts, and modifies pattern
+- [x] **`jux(function)`** - Apply function to right channel only ✅ **IMPLEMENTED**
+- [x] **`juxBy(amount, function)`** - Jux with custom stereo width ✅ **IMPLEMENTED**
+- [x] **`off(time, function)`** - Copies, shifts, and modifies pattern ✅ **IMPLEMENTED**
 - [ ] **`applyN(n, func)`** - Apply function n times
 - [ ] **`when(condition, func)`** - Conditionally apply function
 - [ ] **`within(start, end, func)`** - Apply function within time range
 - [ ] **`brak()`** - Make every other cycle syncopated
 - [ ] **`inv()` / `invert()`** - Invert pattern structure
-- [ ] **`off`** - https://strudel.cc/workshop/pattern-effects/#pattern-effects
 
 ### Pattern Picking & Selection ⭐⭐⭐
 
@@ -156,19 +155,21 @@ and category.
 - [x] **`wchoose(...[value, weight])`** - Weighted random choice (standalone, pattern method, string extension)
 - [x] **`wchooseCycles(...[value, weight])`** - Weighted choice per cycle (standalone, pattern method, string extension)
 - [x] **`wrandcat(...[value, weight])`** - Alias for wchooseCycles (standalone, pattern method, string extension)
-- [ ] **`pick(lookup, pat)`** - Picks patterns/values from list (by index) or lookup table (by name)
-- [ ] **`pickmod(lookup, pat)`** - Like pick but wraps around when index exceeds list size
+- [x] **`pick(lookup, pat)`** - Picks patterns/values from list (by index) or lookup table (by name) ✅ **IMPLEMENTED**
+- [x] **`pickmod(lookup, pat)`** - Like pick but wraps around when index exceeds list size ✅ **IMPLEMENTED**
 - [ ] **`pickF(lookup, funcs, pat)`** - Use pattern of numbers to pick which function to apply
 - [ ] **`pickmodF(lookup, funcs, pat)`** - Like pickF but wraps around
-- [ ] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin
-- [ ] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around
-- [ ] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered
-- [ ] **`pickmodRestart(lookup, pat)`** - Like pickRestart but wraps around
-- [ ] **`pickReset(lookup, pat)`** - Like pick but resets chosen pattern when triggered
-- [ ] **`pickmodReset(lookup, pat)`** - Like pickReset but wraps around
-- [ ] **`inhabit(lookup, pat)`** / **`pickSqueeze(lookup, pat)`** - Picks and squeezes cycles into target pattern
-- [ ] **`inhabitmod(lookup, pat)`** / **`pickmodSqueeze(lookup, pat)`** - Like inhabit but wraps around
-- [ ] **`squeeze(pat, xs)`** - Pick from list via index, compress selected to fit event duration
+- [x] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin ✅ **IMPLEMENTED**
+- [x] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around ✅ **IMPLEMENTED**
+- [x] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered ✅ **IMPLEMENTED**
+- [x] **`pickmodRestart(lookup, pat)`** - Like pickRestart but wraps around ✅ **IMPLEMENTED**
+- [x] **`pickReset(lookup, pat)`** - Like pick but resets chosen pattern when triggered
+- [x] **`pickmodReset(lookup, pat)`** - Like pickReset but wraps around
+- [x] **`inhabit(lookup, pat)`** / **`pickSqueeze(lookup, pat)`** - Picks and squeezes cycles into target pattern ✅ *
+  *IMPLEMENTED**
+- [x] **`inhabitmod(lookup, pat)`** / **`pickmodSqueeze(lookup, pat)`** - Like inhabit but wraps around ✅ **IMPLEMENTED
+  **
+- [x] **`squeeze(pat, xs)`** - Pick from list via index, compress selected to fit event duration ✅ **IMPLEMENTED**
 
 ### Tonal Functions ⭐⭐⭐
 
@@ -265,14 +266,33 @@ They follow the same pattern as the other filter envelopes but are specific to t
 - [x] **`nfrelease()`** - Notch filter envelope release time (alias: `nfr`)
 - [x] **`nfenv()`** - Notch filter envelope amount (alias: `nfe`)
 
+**⚠️ TODO: Audio Engine Implementation**
+
+The DSL functions and data structures for filter envelopes (lowpass, highpass, bandpass, notch) are complete,
+but the audio engine integration is still pending:
+
+- [ ] **Implement filter envelope processing in audio engine** - The `FilterEnvelope` data is passed to the audio
+  engine via `FilterDef` objects, but the actual envelope modulation of filter cutoff frequencies during sound
+  generation needs to be implemented in the audio processing pipeline.
+
 #### Pitch Envelope
 
-- [ ] **`pattack()`** - Pitch envelope attack time (alias: `patt`)
-- [ ] **`pdecay()`** - Pitch envelope decay time (alias: `pdec`)
-- [ ] **`prelease()`** - Pitch envelope release time (alias: `prel`)
-- [ ] **`penv()`** - Pitch envelope amount in semitones
-- [ ] **`pcurve()`** - Pitch envelope curve (0=linear, 1=exponential)
-- [ ] **`panchor()`** - Pitch envelope range anchor (0-1)
+- [ ] **`pattack()`** — *Attack time of the pitch envelope* (synonym: `patt`). Controls how quickly pitch ramps from its
+  start point toward the envelope peak when a note begins; shorter times create a snappier “thwip,” longer times make a
+  slow bend‑up. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`pdecay()`** — *Decay time of the pitch envelope* (synonym: `pdec`). After the peak, this sets how fast pitch
+  falls toward the sustain level; short decay gives a sharp pitch drop, long decay gives a gentle
+  glide. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`prelease()`** — *Release time of the pitch envelope* (synonym: `prel`). Controls how pitch returns when the
+  note ends; longer release makes the tail drift back, shorter release snaps it
+  off. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`penv()`** — *Pitch‑envelope amount* (synonym: `pamt`). Sets the total pitch modulation depth (in semitones);
+  higher values give dramatic swoops, lower values add subtle pitch movement. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`pcurve()`** — *Pitch‑envelope curve shape* (synonym: `pcrv`). Controls how the pitch change is distributed over
+  time (e.g., more linear vs. more exponential), shaping the feel of the bend. [[1]](https://strudel.cc/learn/effects/)
+- [ ] **`panchor()`** — *Pitch‑envelope range anchor* (synonym: `panc`). Sets where the envelope is centered within the
+  pitch range (0–1), so you can bias the bend upward, downward, or centered around the base
+  pitch. [[1]](https://strudel.cc/learn/effects/)
 
 #### Waveshaping / Distortion
 
@@ -297,8 +317,8 @@ They follow the same pattern as the other filter envelopes but are specific to t
 
 #### Panning
 
-- [ ] **`jux()`** - Apply function to right channel only
-- [ ] **`juxBy()`** - Adjustable stereo width jux (alias: `juxby`; 0=mono, 1=full stereo)
+- [x] **`jux()`** - Apply function to right channel only ✅ **IMPLEMENTED**
+- [x] **`juxBy()`** - Adjustable stereo width jux (alias: `juxby`; 0=mono, 1=full stereo) ✅ **IMPLEMENTED**
 
 #### Global Effects - Reverb
 
@@ -676,14 +696,14 @@ They follow the same pattern as the other filter envelopes but are specific to t
   `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support; won't
   implement: `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
 - **Pattern Operations**: ~9 missing (4 completed: `rev`, `palindrome`, `inside`, `outside`)
-- **Pattern Transformation**: ~11 missing (7 completed: `struct`, `mask`, `superimpose`, `layer`, `apply`, `structAll`,
-  `maskAll`)
+- **Pattern Transformation**: ~8 missing (10 completed: `struct`, `mask`, `superimpose`, `layer`, `apply`, `structAll`,
+  `maskAll`, `jux`, `juxBy`, `off`)
 - **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
-- **Audio Effects**: ~46 missing + 2 partial (15 completed: filters with full aliases, filter resonance, distortion,
-  reverb, delay; partial: roomsize missing sz/size aliases, orbit missing o alias)
+- **Audio Effects**: ~44 missing + 2 partial (17 completed: filters with full aliases, filter resonance, distortion,
+  reverb, delay, jux, juxBy; partial: roomsize missing sz/size aliases, orbit missing o alias)
 - **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
   `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
 - **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
@@ -704,13 +724,14 @@ They follow the same pattern as the other filter envelopes but are specific to t
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
 - **System Functions**: ~11 missing (2 completed: `hush`, `pure`; 3 partial)
+- **Pattern Picking & Selection**: 4 missing (20 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
+  `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`, `pick`, `pickmod`,
+  `pickOut`, `pickmodOut`, `pickRestart`, `pickmodRestart`, `squeeze`, `inhabit`/`pickSqueeze`, `inhabitmod`/
+  `pickmodSqueeze`)
 
-- **Pattern Picking & Selection**: ~13 missing (11 completed: `chooseWith`, `chooseInWith`, `choose`, `chooseOut`,
-  `chooseIn`, `choose2`, `chooseCycles`, `randcat`, `wchoose`, `wchooseCycles`, `wrandcat`)
+### Total Estimated: ~83 features remaining (3 marked "won't implement")
 
-### Total Estimated: ~92 features remaining (3 marked "won't implement")
-
-### Completed So Far: ~207 features! 🎉
+### Completed So Far: ~216 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.

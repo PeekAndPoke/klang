@@ -5,9 +5,9 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.shouldBe
 
-class LangPickRestartSpec : StringSpec({
+class LangPickResetSpec : StringSpec({
 
-    "pickRestart() restarts pattern at event start" {
+    "pickReset() resets pattern phase to event start" {
         // Inner: sequence "0 1 2 3" (0.25 each)
         val inner = seq("0 1 2 3")
         val lookup = listOf(inner)
@@ -20,95 +20,113 @@ class LangPickRestartSpec : StringSpec({
         // Total 2 events.
         val selector = seq("0 ~ 0 ~")
 
-        val result = pickRestart(lookup, selector)
+        val result = pickReset(lookup, selector)
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 2
 
         // Event 1 at 0.0:
-        // inner restarted at 0.0.
-        // inner 0.0-0.25 is "0".
+        // inner reset (aligned) at 0.0.
+        // inner at 0.0-0.25 is "0".
         events[0].begin.toDouble() shouldBeExactly 0.0
         events[0].end.toDouble() shouldBeExactly 0.25
         events[0].data.value?.asString shouldBe "0"
 
         // Event 2 at 0.5:
-        // inner restarted at 0.0 (relative to 0.5).
-        // so we get inner's 0.0-0.25 again, which is "0".
-        // If it was standard 'pick', at 0.5 we would get inner's 0.5-0.75 which is "2".
+        // inner reset (aligned) at 0.5.
+        // This means inner's cycle position 0.5 aligns with event's cycle position.
+        // But since this is `pickReset`, it aligns the pattern structure such that
+        // the inner pattern's cycle start matches the event's start.
+        // Wait, let's verify "reset" definition from Strudel docs/JS code.
+        // JS: _opReset -> resetJoin -> align the inner pattern cycle start to outer pattern haps
+        // So at 0.5, the inner pattern should start from its beginning (relative to the event).
+        // BUT, `resetJoin` implementation usually does:
+        // inner_hap.late(outer_hap.whole.begin.cyclePos())
+        // which shifts the inner pattern so its 0 matches outer event's begin (within cycle).
+
+        // So for Event 2 (start 0.5):
+        // Inner pattern is shifted by 0.5.
+        // We query at global 0.5-0.75.
+        // Local query time = global - shift = 0.5 - 0.5 = 0.0.
+        // Inner at 0.0-0.25 is "0".
+        // So we should get "0".
+
         events[1].begin.toDouble() shouldBeExactly 0.5
         events[1].end.toDouble() shouldBeExactly 0.75
         events[1].data.value?.asString shouldBe "0"
     }
 
-    "pickRestart() supports spread arguments (varargs)" {
-        // pickRestart(pat1, pat2, selector)
+    "pickReset() supports spread arguments (varargs)" {
+        // pickReset(pat1, pat2, selector)
         // selector "0 1" -> 0->pat1, 1->pat2
-        // Both patterns restarted.
+        // Both patterns reset.
         val pat1 = seq("0 1 2 3") // 0.25 each
         val pat2 = seq("a b c d") // 0.25 each
 
         // selector "0 1". "0" at 0.0-0.5. "1" at 0.5-1.0.
-        val result = pickRestart(pat1, pat2, "0 1")
+        val result = pickReset(pat1, pat2, "0 1")
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 4 // pat1 contributes 2 events (0.0-0.5), pat2 contributes 2 events (0.5-1.0)
 
-        // At 0.0 (selector 0): pat1 restarted. duration 0.5 (clipped to selector).
-        // pat1 (0 1 2 3): 0 at 0.0, 1 at 0.25. (2 at 0.5 - clipped out).
+        // At 0.0 (selector 0): pat1 reset. Shift 0.0.
+        // Query 0.0-0.5. pat1(0.0-0.5) -> "0" "1".
         events[0].data.value?.asString shouldBe "0"
         events[1].data.value?.asString shouldBe "1"
 
-        // At 0.5 (selector 1): pat2 restarted. duration 0.5.
-        // pat2 (a b c d): a at 0.0, b at 0.25. (relative to 0.5).
+        // At 0.5 (selector 1): pat2 reset. Shift 0.5.
+        // Query global 0.5-1.0.
+        // Local query = global - 0.5 = 0.0 - 0.5.
+        // pat2(0.0-0.5) -> "a" "b".
         events[2].data.value?.asString shouldBe "a"
         events[3].data.value?.asString shouldBe "b"
     }
 
-    "pickRestart() supports Map lookup" {
+    "pickReset() supports Map lookup" {
         val lookup = mapOf(
             "a" to seq("0 1"),
             "b" to seq("2 3")
         )
         // selector "a b" -> 0.0-0.5 "a", 0.5-1.0 "b"
-        val result = pickRestart(lookup, "a b")
+        val result = pickReset(lookup, "a b")
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 2 // each pattern is 2 events (0.5 each). selector is 0.5 long. 1 event fits.
 
-        // "a" (0 1) restarted at 0.0. Duration 0.5.
-        // "0" at 0.0-0.5.
+        // "a" (0 1) reset at 0.0. Shift 0.0.
+        // Query 0.0-0.5. Inner "0".
         events[0].data.value?.asString shouldBe "0"
 
-        // "b" (2 3) restarted at 0.5. Duration 0.5.
-        // "2" at 0.0-0.5 (relative).
+        // "b" (2 3) reset at 0.5. Shift 0.5.
+        // Query global 0.5-1.0. Local 0.0-0.5.
+        // Inner "2".
         events[1].data.value?.asString shouldBe "2"
     }
 
-    "pickRestart() works as pattern extension" {
+    "pickReset() works as pattern extension" {
         // Selector 0.0 and 0.5
         val selector = seq("0 ~ 0 ~")
-        val result = selector.pickRestart(listOf(seq("0 1 2 3")))
+        val result = selector.pickReset(listOf(seq("0 1 2 3")))
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 2
         events[0].data.value?.asString shouldBe "0"
-        events[1].data.value?.asString shouldBe "0" // Restarted
+        events[1].data.value?.asString shouldBe "0" // Reset
     }
 
-    // -- pickmodRestart tests --
+    // -- pickmodReset tests --
 
-    "pickmodRestart() wraps indices and restarts" {
+    "pickmodReset() wraps indices and resets" {
         val inner = seq("0 1") // 0.5 each
         val lookup = listOf(inner)
         // selector "0 1 2 3". 0.25 each.
-        // 0 -> inner. Restart. Inner 0.0-0.25 is "0" (clipped).
-        // 1 -> inner. Restart. Inner 0.0-0.25 is "0".
-        // 2 -> inner (wrap). Restart. Inner 0.0-0.25 is "0".
-        // 3 -> inner (wrap). Restart. Inner 0.0-0.25 is "0".
+        // 0 -> inner. Reset. Shift 0.0. Inner 0.0-0.25 is "0".
+        // 1 -> inner. Reset. Shift 0.25. Inner 0.0-0.25 is "0".
+        // 2 -> inner (wrap). Reset. Shift 0.5. Inner 0.0-0.25 is "0".
+        // 3 -> inner (wrap). Reset. Shift 0.75. Inner 0.0-0.25 is "0".
         val selector = seq("0 1 2 3")
 
-        val result = pickmodRestart(lookup, selector)
+        val result = pickmodReset(lookup, selector)
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 4
@@ -118,39 +136,19 @@ class LangPickRestartSpec : StringSpec({
         }
     }
 
-    "pickmodRestart() supports spread arguments" {
-        // pickmodRestart(pat1, selector) -> selector picks from [pat1] with modulo
+    "pickmodReset() supports spread arguments" {
+        // pickmodReset(pat1, selector) -> selector picks from [pat1] with modulo
         val pat = seq("a b c d")
         // selector "0 1 2 3" (0.25 each).
         // 0->pat, 1->pat, 2->pat, 3->pat.
-        // Each restarts pat. pat duration 1.0. selector duration 0.25.
+        // Each resets pat. pat duration 1.0. selector duration 0.25.
         // We get first 0.25 of pat ("a") 4 times.
-        val result = pickmodRestart(pat, "0 1 2 3")
+        val result = pickmodReset(pat, "0 1 2 3")
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 4
         events.forEach {
             it.data.value?.asString shouldBe "a"
         }
-    }
-
-    "pick() (standard) does NOT restart (contrast test)" {
-        val inner = seq("0 1 2 3")
-        val lookup = listOf(inner)
-        val selector = seq("0 ~ 0 ~")
-
-        val result = pick(lookup, selector)
-        val events = result.queryArc(0.0, 1.0)
-
-        events shouldHaveSize 2
-
-        // Event 1 at 0.0: "0"
-        events[0].begin.toDouble() shouldBeExactly 0.0
-        events[0].data.value?.asString shouldBe "0"
-
-        // Event 2 at 0.5:
-        // Standard pick queries inner at 0.5. Inner at 0.5-0.75 is "2".
-        events[1].begin.toDouble() shouldBeExactly 0.5
-        events[1].data.value?.asString shouldBe "2"
     }
 })

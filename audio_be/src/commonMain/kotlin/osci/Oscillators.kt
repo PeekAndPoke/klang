@@ -89,26 +89,54 @@ class Oscillators private constructor(
         }
 
         fun sawtoothFn(gain: Double = 0.6) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
-            var p = startPhase
+            var p = startPhase / TWO_PI // Normalize to 0..1 for PolyBLEP
+            val inc = phaseInc / TWO_PI
             val end = offset + length
-            val invTwoPi = 1.0 / TWO_PI
+
+            // Warmth State (should be preserved between calls, but local var resets it)
+            // Ideally, OscFn would carry state, but it's a functional interface.
+            // For now, initializing to 0.0 causes a tiny fade-in which helps with clicks.
+            var lastSample = 0.0
+            val warmthFactor = 0.25 // Match Supersaw warmth
 
             if (phaseMod == null) {
                 for (i in offset until end) {
-                    val x = p * invTwoPi
-                    buffer[i] = gain * 2.0 * (x - floor(x + 0.5))
-                    p += phaseInc
-                    if (p >= TWO_PI) p -= TWO_PI
+                    // Naive Saw: 2 * p - 1
+                    var out = 2.0 * p - 1.0
+
+                    // PolyBLEP Correction (Anti-Aliasing)
+                    out -= polyBlep(p, inc)
+
+                    // Apply Gain
+                    val raw = gain * out
+
+                    // Warmth Filter (One-Pole LPF)
+                    // This smooths the perfect saw and the initial click
+                    val smoothed = raw + warmthFactor * (lastSample - raw)
+                    buffer[i] = smoothed
+                    lastSample = smoothed
+
+                    p += inc
+                    if (p >= 1.0) p -= 1.0
                 }
             } else {
                 for (i in offset until end) {
-                    val x = p * invTwoPi
-                    buffer[i] = gain * 2.0 * (x - floor(x + 0.5))
-                    p += phaseInc * phaseMod[i]
-                    if (p >= TWO_PI) p -= TWO_PI
+                    val dt = inc * phaseMod[i]
+
+                    var out = 2.0 * p - 1.0
+                    out -= polyBlep(p, dt)
+
+                    val raw = gain * out
+                    val smoothed = raw + warmthFactor * (lastSample - raw)
+                    buffer[i] = smoothed
+                    lastSample = smoothed
+
+                    p += dt
+                    if (p >= 1.0) p -= 1.0
                 }
             }
-            p
+
+            p * TWO_PI // Denormalize back to radians
         }
 
         fun squareFn(gain: Double = 0.5) = OscFn { buffer, offset, length, startPhase, phaseInc, phaseMod ->
@@ -193,102 +221,116 @@ class Oscillators private constructor(
             // Internal state for supersaw phases (independent of Voice phase)
             val phases = DoubleArray(v) { rng.nextDouble() }
 
-            val g1 = sqrt(1.0 - panSpread.coerceIn(0.0, 1.0))
-            val g2 = sqrt(panSpread.coerceIn(0.0, 1.0))
-            val gainInvV = gain / v.toDouble()
+            // MONO OPTIMIZATION:
+            // In stereo, panSpread splits energy between L/R.
+            // In mono, summing L+R of a coherent signal (same phase) just sums amplitudes.
+            // To prevent volume swelling at center pan (where sqrt(0.5)+sqrt(0.5) > 1),
+            // we ignore panSpread for mono output and just normalize by voice count.
+            val voiceGain = gain / v.toDouble()
 
-            // Pre-calculate detunes and gains per voice
+            // Pre-calculate detunes per voice
             val detunes = DoubleArray(v) { n ->
                 val det = getUnisonDetune(v, freqSpread, n)
                 val freqAdjusted = applySemitoneDetuneToFrequency(baseFreqHz, det)
                 freqAdjusted / sr
             }
 
-            // Pre-compute combined stereo gain: (gainL + gainR) per voice
-            val combinedGains = DoubleArray(v) { n ->
-                val gl = if ((n and 1) == 1) g2 else g1
-                val gr = if ((n and 1) == 1) g1 else g2
-                (gl + gr) * gainInvV
-            }
+            // State for the "Warmth" LPF
+            var lastSample = 0.0
+            // Adjust: 0.0 = bright/harsh (raw math), 0.9 = muffled. 0.25 is a subtle smoothing.
+            val warmthFactor = 0.25
 
             return OscFn { buffer, offset, length, _, _, phaseMod ->
                 val end = offset + length
-                val dets = detunes
-                val cgs = combinedGains
-                val phs = phases
 
+                // 1. GENERATE WAVEFORM
                 if (phaseMod == null) {
-                    // Initialize buffer with voice 0, then accumulate remaining voices.
-                    run {
-                        val dt0 = dets[0]
-                        val cg0 = cgs[0]
-                        var p0 = phs[0]
+                    // OPTIMIZED PATH: No Phase Modulation
 
-                        if (dt0 <= blepMinDt) {
+                    // --- Voice 0 (Write / Overwrite Buffer) ---
+                    // We unroll the first voice to initialize the buffer instead of filling with 0.0 first
+                    run {
+                        var p = phases[0]
+                        val dt = detunes[0]
+
+                        if (dt <= blepMinDt) {
+                            // DC / Low freq path (no blep)
                             for (i in offset until end) {
-                                buffer[i] = (2.0 * p0 - 1.0) * cg0
-                                p0 += dt0
-                                if (p0 >= 1.0) p0 -= 1.0
+                                buffer[i] = (2.0 * p - 1.0) * voiceGain
+                                p += dt
+                                if (p >= 1.0) p -= 1.0
                             }
                         } else {
+                            // Audio rate path (polyBlep)
                             for (i in offset until end) {
-                                val blep = polyBlep(p0, dt0)
-                                buffer[i] = (2.0 * p0 - 1.0 - blep) * cg0
-                                p0 += dt0
-                                if (p0 >= 1.0) p0 -= 1.0
+                                val blep = polyBlep(p, dt)
+                                buffer[i] = (2.0 * p - 1.0 - blep) * voiceGain
+                                p += dt
+                                if (p >= 1.0) p -= 1.0
                             }
                         }
-                        phs[0] = p0
+                        phases[0] = p
                     }
 
+                    // --- Voices 1..v (Accumulate) ---
                     for (n in 1 until v) {
-                        val dt = dets[n]
-                        val cg = cgs[n]
-                        var p = phs[n]
+                        var p = phases[n]
+                        val dt = detunes[n]
 
                         if (dt <= blepMinDt) {
                             for (i in offset until end) {
-                                buffer[i] += (2.0 * p - 1.0) * cg
+                                buffer[i] += (2.0 * p - 1.0) * voiceGain
                                 p += dt
                                 if (p >= 1.0) p -= 1.0
                             }
                         } else {
                             for (i in offset until end) {
                                 val blep = polyBlep(p, dt)
-                                buffer[i] += (2.0 * p - 1.0 - blep) * cg
+                                buffer[i] += (2.0 * p - 1.0 - blep) * voiceGain
                                 p += dt
                                 if (p >= 1.0) p -= 1.0
                             }
                         }
-                        phs[n] = p
+                        phases[n] = p
                     }
+
                 } else {
-                    // When phaseMod is present, we must iterate per-sample.
+                    // MODULATED PATH (Slower, per-sample inner loop)
                     for (i in offset until end) {
                         val mod = phaseMod[i]
                         var sum = 0.0
 
                         for (n in 0 until v) {
-                            val dt = dets[n] * mod
-                            val cg = cgs[n]
+                            var p = phases[n]
+                            // Linear FM: mod is a frequency multiplier (1.0 = no change)
+                            val dt = detunes[n] * mod
 
-                            val p = phs[n]
                             val s = if (dt <= blepMinDt) {
-                                (2.0 * p - 1.0) * cg
+                                (2.0 * p - 1.0)
                             } else {
                                 val blep = polyBlep(p, dt)
-                                (2.0 * p - 1.0 - blep) * cg
+                                (2.0 * p - 1.0 - blep)
                             }
                             sum += s
 
-                            var np = p + dt
-                            if (np >= 1.0) np -= 1.0
-                            phs[n] = np
+                            p += dt
+                            if (p >= 1.0) p -= 1.0
+                            phases[n] = p
                         }
-                        buffer[i] = sum
+                        buffer[i] = sum * voiceGain
                     }
                 }
-                0.0 // Dummy return
+
+                // 2. APPLY WARMTH FILTER (In-place One-Pole LPF)
+                // This tames the infinite harmonics of the calculated sawtooth
+                for (i in offset until end) {
+                    val raw = buffer[i]
+                    val smoothed = raw + warmthFactor * (lastSample - raw)
+                    buffer[i] = smoothed
+                    lastSample = smoothed
+                }
+
+                0.0 // Return value unused for this oscillator type
             }
         }
 
@@ -418,22 +460,21 @@ class Oscillators private constructor(
 
         @Suppress("NOTHING_TO_INLINE")
         @JvmStatic
-        private fun polyBlep(tIn: Double, dt: Double): Double {
-            var t = tIn
-            // 0 <= t < 1
-            if (t < dt) {
-                t /= dt
-                // 2 * (t - t^2/2 - 0.5)  ==  t + t - t*t - 1
-                return t + t - t * t - 1.0
+        fun polyBlep(t: Double, dt: Double): Double {
+            // t = phase (0..1), dt = increment per sample
+            return when {
+                t < dt -> {
+                    val r = t / dt
+                    r + r - r * r - 1.0
+                }
+
+                t > 1.0 - dt -> {
+                    val r = (t - 1.0) / dt
+                    r * r + r + r + 1.0
+                }
+
+                else -> 0.0
             }
-            // -1 < t < 0
-            if (t > 1.0 - dt) {
-                t = (t - 1.0) / dt
-                // 2 * (t^2/2 + t + 0.5) == t*t + t + t + 1
-                return t * t + t + t + 1.0
-            }
-            // 0 otherwise
-            return 0.0
         }
 
         private fun applySemitoneDetuneToFrequency(frequency: Double, detuneSemitones: Double): Double =
