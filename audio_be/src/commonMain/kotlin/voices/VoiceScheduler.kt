@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_be.ONE_OVER_TWELVE
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
+import io.peekandpoke.klang.audio_be.filters.FormantFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.OscFn
@@ -261,6 +262,9 @@ class VoiceScheduler(
 
         is FilterDef.Notch ->
             LowPassHighPassFilters.createNotch(cutoffHz = cutoffHz, q = q, sampleRate = options.sampleRateDouble)
+
+        is FilterDef.Formant ->
+            FormantFilter(bands = bands, sampleRate = options.sampleRateDouble)
     }
 
     private fun FilterDef.toModulator(
@@ -273,6 +277,7 @@ class VoiceScheduler(
             is FilterDef.HighPass -> this.envelope
             is FilterDef.BandPass -> this.envelope
             is FilterDef.Notch -> this.envelope
+            is FilterDef.Formant -> null // Envelope not yet supported for vowel formants
         }
 
         // No envelope? No modulator needed
@@ -287,6 +292,7 @@ class VoiceScheduler(
             is FilterDef.HighPass -> this.cutoffHz
             is FilterDef.BandPass -> this.cutoffHz
             is FilterDef.Notch -> this.cutoffHz
+            is FilterDef.Formant -> 0.0 // Not tunable via single cutoff
         }
 
         // Resolve envelope to concrete values

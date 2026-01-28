@@ -36,4 +36,17 @@ sealed class FilterDef {
         val q: Double?,
         val envelope: FilterEnvelope? = null,
     ) : FilterDef()
+
+    @Serializable
+    @SerialName("formant")
+    data class Formant(
+        val bands: List<Band>,
+    ) : FilterDef() {
+        @Serializable
+        data class Band(
+            val freq: Double,
+            val db: Double,
+            val q: Double,
+        )
+    }
 }

@@ -244,7 +244,9 @@ and category.
 - [x] **`notchf()`** - Notch filter
 - [x] **`nresonance()`** - Notch filter resonance (alias: `nres`)
 - [/] ~~**`ftype()`**~~ - **Won't implement**: Filter types are choosen automatically
-- [ ] **`vowel()`** - Vowel formant filter (a, e, i, o, u, ae, aa, oe, ue, y, uh, un, en, an, on)
+- [x] **`vowel()`** - Vowel formant filter ✅ **IMPLEMENTED** - Supports 5 vowels (a, e, i, o, u) using parallel bandpass
+  filters tuned to formant frequencies. Each vowel has 5 formant bands with precise frequency/gain/Q settings based on
+  acoustic phonetics research. Includes comprehensive test coverage and JsCompatTestData examples.
 
 #### Filter Envelopes - Lowpass
 
@@ -728,8 +730,8 @@ but the audio engine integration is still pending:~~
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
-- **Audio Effects**: ~44 missing + 2 partial (17 completed: filters with full aliases, filter resonance, distortion,
-  reverb, delay, jux, juxBy; partial: roomsize missing sz/size aliases, orbit missing o alias)
+- **Audio Effects**: ~43 missing + 2 partial (18 completed: filters with full aliases, filter resonance, vowel formant,
+  distortion, reverb, delay, jux, juxBy; partial: roomsize missing sz/size aliases, orbit missing o alias)
 - **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
   `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
 - **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
@@ -758,7 +760,7 @@ but the audio engine integration is still pending:~~
 
 ### Total Estimated: ~76 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~225 features! 🎉
+### Completed So Far: ~226 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.
@@ -774,6 +776,8 @@ Strudel documentation.
 - ✅ **Control pattern support for numerical functions** - Major initiative completed!
 - ✅ **Complete tonal functions** - All 11 functions with comprehensive chord notation (112 chord types, 90 Strudel
   notations)
+- ✅ **Vowel formant synthesis** - Full implementation with 5 vowels (a, e, i, o, u) using parallel bandpass filters,
+  precise formant frequencies based on acoustic phonetics
 - ✅ Custom extensions: warmth parameter for oscillator timbre control, morse code rhythm patterns
 
 ---

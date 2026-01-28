@@ -315,6 +315,8 @@ class GraalStrudelPattern(
                 speed = sampleSpeed,
                 loop = sampleLoop,
                 cut = sampleCut,
+                // Voice / Singing
+                vowel = value.safeGetMember("vowel").safeStringOrNull(),
                 // Value
                 value = when {
                     value?.isString == true ->

@@ -31,6 +31,7 @@ fun initStrudelLang() {
     strudelLangStructuralInit = true
     strudelLangTempoInit = true
     strudelLangTonalInit = true
+    strudelLangVowelInit = true
 
     // register non-strudel addon functions
     strudelLangArithmeticAddonsInit = true

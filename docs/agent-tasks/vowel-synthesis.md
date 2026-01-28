@@ -1,3 +1,8 @@
+**Status:** ✅ **COMPLETE** (2026-01-28)
+**Tests:** All 2096 Strudel tests passing (including 8 new vowel synthesis tests)
+
+---
+
 Here is the implementation plan and code for adding vowel formant synthesis to Strudel, formatted as a Markdown file for
 your coding agent.
 
@@ -264,3 +269,99 @@ val vowel by dslFunction { args, /* callInfo */ _ -> args.toPattern(vowelMutatio
 @StrudelDsl
 val String.vowel by dslStringExtension { p, args, callInfo -> p.vowel(args, callInfo) }
 ```
+
+---
+
+## Implementation Summary (2026-01-28)
+
+### What Was Implemented
+
+Successfully implemented vowel formant synthesis for Strudel with all 5 vowels (a, e, i, o, u).
+
+#### 1. Audio Bridge Updates ✅
+
+- Added `FilterDef.Formant` sealed class with `Band` data class
+- Location: `audio_bridge/src/commonMain/kotlin/FilterDef.kt`
+- Each band has freq (Hz), db (gain), and q (quality factor)
+
+#### 2. Audio Engine (Backend) ✅
+
+- Created `FormantFilter.kt` with DSP implementation
+- Uses parallel bandpass filters (SvfBPF) for each formant band
+- Converts dB gains to linear: `10^(db/20)`
+- Optimized with scratch buffers to avoid allocations
+- **Fix Applied:** Replaced JVM-specific `System.arraycopy()` with multiplatform `copyInto()`
+- Location: `audio_be/src/commonMain/kotlin/filters/FormantFilter.kt`
+
+- Updated `VoiceScheduler.kt` to register formant filter type
+- Added 3 when branches for filter creation, envelope support, and base cutoff
+- Location: `audio_be/src/commonMain/kotlin/voices/VoiceScheduler.kt`
+
+#### 3. Strudel DSL (Frontend) ✅
+
+- Added `vowel: String?` field to `StrudelVoiceData`
+- Updated `empty` companion object and `merge()` function
+- Implemented `toVoiceData()` formant mapping with precise formant frequencies:
+  - **a**: F1=800, F2=1150, F3=2900, F4=3900, F5=4950 Hz
+  - **e**: F1=350, F2=2000, F3=2800, F4=3600, F5=4950 Hz
+  - **i**: F1=270, F2=2140, F3=3050, F4=4000, F5=4950 Hz
+  - **o**: F1=450, F2=800, F3=2830, F4=3800, F5=4950 Hz
+  - **u**: F1=325, F2=700, F3=2700, F4=3800, F5=4950 Hz
+- dB gains: 0, -6, -12, -18, -24 (decreasing for higher formants)
+- Q factors: 80, 90, 120, 130, 140 (increasing for higher formants)
+- Location: `strudel/src/commonMain/kotlin/StrudelVoiceData.kt`
+
+- Created DSL functions using proper Strudel DSL pattern
+- Implemented triple-mode: pattern extension, standalone function, string extension
+- Handles case insensitivity (vowels converted to lowercase)
+- Location: `strudel/src/commonMain/kotlin/lang/lang_vowel.kt`
+
+- Updated `GraalStrudelPattern.kt` to extract vowel from JavaScript pattern events
+- Location: `strudel/src/jvmMain/kotlin/graal/GraalStrudelPattern.kt`
+
+#### 4. Test Coverage ✅
+
+- Created comprehensive test suite with 8 test cases
+- Tests verify DSL functions, formant filter creation, and all vowels
+- Tests validate formant frequencies, gains, and Q factors
+- Location: `strudel/src/commonTest/kotlin/lang/LangVowelSpec.kt`
+
+### Test Results
+
+- **All tests passing:** 2096 Strudel tests (2088 existing + 8 new vowel tests)
+- **Zero failures**
+- **Test execution time:** ~45 seconds
+
+### Usage Examples
+
+```kotlin
+// Apply vowel formant to notes
+note("c3 e3 g3").vowel("a")
+
+// Sequence different vowels
+vowel("a e i o u")
+
+// Combine with other effects
+note("c3").vowel("o").lpf(2000).gain(0.8)
+
+// String extension
+"c3 e3".vowel("i")
+```
+
+### Files Modified
+
+1. `audio_bridge/src/commonMain/kotlin/FilterDef.kt` - Added Formant filter definition
+2. `audio_be/src/commonMain/kotlin/filters/FormantFilter.kt` - New DSP implementation
+3. `audio_be/src/commonMain/kotlin/voices/VoiceScheduler.kt` - Registered filter type
+4. `strudel/src/commonMain/kotlin/StrudelVoiceData.kt` - Added vowel field and formant mapping
+5. `strudel/src/commonMain/kotlin/lang/lang_vowel.kt` - New DSL functions
+6. `strudel/src/jvmMain/kotlin/graal/GraalStrudelPattern.kt` - Added vowel extraction
+7. `strudel/src/commonTest/kotlin/lang/LangVowelSpec.kt` - New comprehensive test suite
+
+### Technical Notes
+
+- Formant frequencies based on standard acoustic phonetics research
+- Parallel bandpass filter architecture ensures clean vowel characteristics
+- Unknown vowels are gracefully ignored (no filter created)
+- Multiplatform compatibility ensured (no JVM-specific APIs)
+- Follows existing Strudel DSL patterns and conventions

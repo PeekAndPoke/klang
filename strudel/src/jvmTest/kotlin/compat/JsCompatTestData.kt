@@ -384,6 +384,16 @@ object JsCompatTestData {
             skip = true
         ),
 
+        // Vowel Formant Filter
+        Example("Vowel a", """note("c3").vowel("a")"""),
+        Example("Vowel e", """note("c3").vowel("e")"""),
+        Example("Vowel i", """note("c3").vowel("i")"""),
+        Example("Vowel o", """note("c3").vowel("o")"""),
+        Example("Vowel u", """note("c3").vowel("u")"""),
+        Example("Vowel sequence", """note("c3 e3 g3").vowel("a e i")"""),
+        Example("Vowel with saw", """s("saw").vowel("o")"""),
+        Example("Vowel standalone", """vowel("a e i o u")"""),
+
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),
         Example("Distortion alias dist", """note("c").dist(0.5)"""),
