@@ -75,6 +75,12 @@ class Chord(
             when {
                 letter == "" -> tokenizeBass("", name)
                 letter == "A" && rest == "ug" -> tokenizeBass("", "aug")
+                // Fix: Handle 'sus' chords where 's' was incorrectly parsed as accidental
+                // Note.tokenize includes 's' as a sharp notation, so "Csus" becomes letter=C, acc=s, rest=us
+                (acc == "s" || acc == "f") && rest.startsWith("us") -> {
+                    // Reconstruct: tonic is just the letter, type is "sus" + rest after "us"
+                    tokenizeBass(letter, acc + rest)
+                }
                 else -> tokenizeBass(letter + acc, oct + rest)
             }
         }

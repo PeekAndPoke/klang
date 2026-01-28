@@ -96,12 +96,12 @@ and category.
 - [x] **`focus(start, end)`** - Like compress but keeps cycle timing, now supports control patterns for both
   parameters (
   standalone, pattern method, string extension)
-- [ ] ~~**`focusSpan(span)`**~~ - **Won't implement**: Same reason as compressSpan; use `focus(start, end)` if
+- [/] ~~**`focusSpan(span)`**~~ - **Won't implement**: Same reason as compressSpan; use `focus(start, end)` if
   implemented
 - [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle, now supports control patterns for both
   parameters (pattern method, string extension, typed
   function)
-- [ ] ~~**`zoomArc(arc)`**~~ - **Won't implement**: Requires Arc type not available in KlangScript; use
+- [/] ~~**`zoomArc(arc)`**~~ - **Won't implement**: Requires Arc type not available in KlangScript; use
   `zoom(start, end)` instead
 - [x] **`gap(steps)`** - Create gap with n steps, now supports control patterns via slow()
 - [x] **`fastGap(factor)`** - Speeds up with gaps between, now supports control patterns (standalone, pattern method,
@@ -175,15 +175,30 @@ and category.
 
 - [x] **`note()`** - Set note values
 - [x] **`n()`** - Set note index or sample number
-- [ ] **`freq()`** - Set frequencies in hz
+- [x] **`freq()`** - Set frequencies in hz
 - [x] **`scale()`** - Set scale for note resolution
 - [x] **`sound()` / `s()`** - Set sound/sample bank
 - [x] **`bank()`** - Set sample bank
 - [x] **`transpose(semitones)`** - Transpose notes by semitones
-- [ ] **`scaleTranspose(steps)`** - Transpose within scale
-- [ ] **`chord()`** - Create chord patterns
-- [ ] **`voicing()`** - Generate chord voicings with full parameters
-- [ ] **`rootNotes(octave)`** - Extract root notes from chords
+- [x] **`scaleTranspose(steps)`** - Transpose within scale ✅ **IMPLEMENTED** - Diatonic transposition using scale
+  degrees with control pattern support
+- [x] **`chord()`** - Create chord patterns ✅ **IMPLEMENTED** - Polyphonic chord expansion using tones library with
+  comprehensive chord notation support
+- [x] **`voicing()`** - Generate chord voicings ✅ **IMPLEMENTED** - Stateful voice leading for smooth chord transitions
+- [x] **`rootNotes(octave)`** - Extract root notes from chords ✅ **IMPLEMENTED** - Bass line extraction from chord
+  progressions
+
+**✅ Tonal Functions Complete (2026-01-28)**
+
+- All 11 tonal functions fully implemented with control pattern support
+- **Comprehensive chord parsing**: Fixed 22 chord notation issues - all 90 Strudel chord notations now work correctly
+  - Fixed critical tokenization bug (Csus parsing)
+  - Added 13 missing chord type aliases (CM9, CM13, Cm^7, C-M7, etc.)
+  - Added 6 new chord types (mb6, h9, 7#9b5, 7b9b5, 7susadd3, 7b13sus)
+  - Fixed wrong voicings (7#9b5, 7b9b5 now have correct flat fifths)
+  - Updated chord dictionary: 106 → 112 chord types
+  - All tests passing: 388 tones tests, 2088 strudel tests
+- See: `docs/agent-tasks/chord-parsing-fixes-implemented.md` for details
 
 ### Arithmetic & Math Functions ⭐⭐⭐
 
@@ -228,7 +243,7 @@ and category.
 - [x] **`bpq()`** - Band pass filter Q/resonance (alias: `bandq`)
 - [x] **`notchf()`** - Notch filter
 - [x] **`nresonance()`** - Notch filter resonance (alias: `nres`)
-- [ ] **`ftype()`** - Filter type (12db, ladder, 24db)
+- [/] ~~**`ftype()`**~~ - **Won't implement**: Filter types are choosen automatically
 - [ ] **`vowel()`** - Vowel formant filter (a, e, i, o, u, ae, aa, oe, ue, y, uh, un, en, an, on)
 
 #### Filter Envelopes - Lowpass
@@ -707,7 +722,9 @@ but the audio engine integration is still pending:~~
 - **Pattern Operations**: ~9 missing (4 completed: `rev`, `palindrome`, `inside`, `outside`)
 - **Pattern Transformation**: ~8 missing (10 completed: `struct`, `mask`, `superimpose`, `layer`, `apply`, `structAll`,
   `maskAll`, `jux`, `juxBy`, `off`)
-- **Tonal Functions**: ~4 missing (6 completed: `note`, `n`, `scale`, `sound`, `bank`, `transpose`)
+- **Tonal Functions**: ✅ 0 missing (11 completed: `note`, `n`, `freq`, `scale`, `sound`/`s`, `bank`, `transpose`,
+  `scaleTranspose`, `chord`, `voicing`, `rootNotes` - all with comprehensive chord notation support including 112 chord
+  types)
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
@@ -739,9 +756,9 @@ but the audio engine integration is still pending:~~
   `pickOut`, `pickmodOut`, `pickRestart`, `pickmodRestart`, `squeeze`, `inhabit`/`pickSqueeze`, `inhabitmod`/
   `pickmodSqueeze`)
 
-### Total Estimated: ~81 features remaining (3 marked "won't implement")
+### Total Estimated: ~76 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~220 features! 🎉
+### Completed So Far: ~225 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.
@@ -755,6 +772,8 @@ Strudel documentation.
 - ✅ Full ADSR envelope support including filter envelopes with audio engine integration
 - ✅ Continuous signal generators
 - ✅ **Control pattern support for numerical functions** - Major initiative completed!
+- ✅ **Complete tonal functions** - All 11 functions with comprehensive chord notation (112 chord types, 90 Strudel
+  notations)
 - ✅ Custom extensions: warmth parameter for oscillator timbre control, morse code rhythm patterns
 
 ---

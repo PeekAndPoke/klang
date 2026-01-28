@@ -6,10 +6,12 @@ import io.kotest.matchers.shouldBe
 class ChordTypeTest : StringSpec({
     "names" {
         // sorted by setNum
-        ChordTypeDictionary.names().take(5) shouldBe listOf(
+        // Note: Updated to include new chord type "suspended fourth seventh flat thirteenth" (7b13sus)
+        ChordTypeDictionary.names().take(6) shouldBe listOf(
             "fifth",
             "suspended fourth",
             "suspended fourth seventh",
+            "suspended fourth seventh flat thirteenth",
             "augmented",
             "major seventh flat sixth",
         )
@@ -25,7 +27,8 @@ class ChordTypeTest : StringSpec({
     }
 
     "all returns all chords" {
-        ChordTypeDictionary.all().size shouldBe 106
+        // Updated: added 6 new chord types (mb6, h9, 7#9b5, 7b9b5, 7susadd3, 7b13sus)
+        ChordTypeDictionary.all().size shouldBe 112
     }
 
     "get" {

@@ -325,6 +325,59 @@ class MiniNotationParserSpec : StringSpec() {
             }
         }
 
+        "Parsing chord string 'F/A' (should not split)" {
+            val pattern = parse("F/A")
+            val events = pattern.queryArc(0.0, 1.0)
+
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    data.note shouldBe "F/A"
+                }
+            }
+        }
+
+        "Parsing chord string 'Cmaj7/G' (should not split)" {
+            val pattern = parse("Cmaj7/G")
+            val events = pattern.queryArc(0.0, 1.0)
+
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    data.note shouldBe "Cmaj7/G"
+                }
+            }
+        }
+
+        "Parsing note with slow modifier 'C/2' (should split)" {
+            // C/2 -> C stretched to 2 cycles.
+            val pattern = parse("C/2")
+            val events = pattern.queryArc(0.0, 1.0)
+
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "C"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 2.0
+                }
+            }
+        }
+
+        "Parsing note with slow modifier 'C / 2' (should split)" {
+            val pattern = parse("C / 2")
+            val events = pattern.queryArc(0.0, 1.0)
+
+            assertSoftly {
+                events.size shouldBe 1
+                with(events[0]) {
+                    data.note shouldBeEqualIgnoringCase "C"
+                    begin.toDouble() shouldBe 0.0
+                    end.toDouble() shouldBe 2.0
+                }
+            }
+        }
+
         // ===== Source Location Tracking Tests =====
 
         "Single atom tracks source location" {

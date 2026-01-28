@@ -139,7 +139,6 @@ class MiniNotationParser(
                     check(TokenType.L_PAREN) || check(TokenType.QUESTION) || check(TokenType.PIPE) ||
                     check(TokenType.BANG))
         ) {
-
             if (match(TokenType.STAR)) {
                 val factorStr = consume(TokenType.LITERAL, "Expected number after '*'").text
                 val factor = factorStr.toDoubleOrNull() ?: 1.0
@@ -483,7 +482,18 @@ class MiniNotationParser(
                     val tokenLine = line
                     val tokenColumn = column
                     while (i < input.length) {
-                        if (input[i] in " []<>,*/~@()|?! \t\n\r") break
+                        if (input[i] in " []<>,*~@()|?! \t\n\r") break
+
+                        if (input[i] == '/') {
+                            // Check if this slash is likely a division operator (followed by number or space)
+                            val next = if (i + 1 < input.length) input[i + 1] else null
+                            // If followed by digit, dot (float), or whitespace -> treat as operator
+                            if (next == null || next.isDigit() || next == '.' || next.isWhitespace()) {
+                                break
+                            }
+                            // Otherwise treat as part of the literal (e.g. chord "F/A")
+                        }
+
                         i++
                         column++
                     }

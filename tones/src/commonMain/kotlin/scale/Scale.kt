@@ -90,8 +90,17 @@ data class Scale(
          * Get a Scale from a scale name.
          */
         fun get(src: String): Scale = scaleCache.getOrPut(src) {
-            val (tonicName, typeName) = tokenize(src)
-            val tonic = Note.get(tonicName).name
+            val cleanSrc = src.replace(":", " ")
+            val (tonicNameOriginal, typeName) = tokenize(cleanSrc)
+
+            var tonicNote = Note.get(tonicNameOriginal)
+
+            // If tonic is present but has no octave, default to 3 (e.g. "C" -> "C3")
+            if (!tonicNote.empty && tonicNote.oct == null) {
+                tonicNote = Note.get(tonicNote.pc + "3")
+            }
+
+            val tonic = tonicNote.name
             val st = ScaleTypeDictionary.get(typeName)
 
             // If scale type is not found, return NoScale

@@ -17,20 +17,68 @@ object JsCompatTestData {
         Example(SKIP, "N #2", """"c,eb,g".n()"""),
         Example("N #3", """n(run(4))"""),
         Example("N #4", """run(4).n()"""),
-        Example(SKIP, "N #5", """n(run(4).scale("D4:pentatonic"))"""),
+        Example("N #5", """n(run(4)).scale("D4:pentatonic")"""),
         Example(SKIP, "N #6", """run(4).n().scale("D4:pentatonic"))"""),
         Example(SKIP, "N #7", """run(4).scale("D4:pentatonic")).n()"""),
 
         // Tone / Scale / Tonal
         Example("C-Major notes", """note("c3 d3 e3 f3 g3 a3 b3 c4")"""),
         Example("n() without scale", """n("0 1 2 3")"""),
-        Example("C4:minor scale", """n("0 2 4").scale("C4:minor")"""),
-        Example("C4:major scale", """n("0 2 4").scale("C4:major")"""),
+        Example("n() with C:minor scale", """n("0 2 4").scale("C:minor")"""),
+        Example("n() with C4:minor scale", """n("0 2 4").scale("C4:minor")"""),
+        Example("n() with C:major scale", """n("0 2 4").scale("C:major")"""),
+        Example("n() with C4:major scale", """n("0 2 4").scale("C4:major")"""),
+        // chord / our impl works differently by creating individual voices
+        Example(SKIP, "chord basic", """chord("Cmaj7")"""),
+        Example(SKIP, "chord pattern", """chord("Cmaj7 Dm7 G7")"""),
+        Example(SKIP, "chord slash", """chord("C/G F/A")"""),
+        Example(SKIP, "chord minor", """chord("Cm Fm Gm")"""),
+        // transpose
         Example("transpose positive", """note("c3 e3 g3").transpose(12)"""),
         Example("transpose negative", """note("c4").transpose(-12)"""),
         Example("transpose ex #1", """seq("[c2 c3]*4").transpose("<0 -2 5 3>").note()"""),
         Example("transpose ex #2", """seq("[c2 c3]*4").transpose("<1P -2M 4P 3m>").note()"""),
-
+        // scaleTranspose
+        Example("scaleTranspose basic", """n("0 2 4").scale("C3:major").scaleTranspose(1)"""),
+        Example("scaleTranspose control", """note("C4 E4").scale("C3:major").scaleTranspose("0 1")"""),
+        Example("scaleTranspose negative", """n("0 2 4").scale("C3:minor").scaleTranspose(-1)"""),
+        Example("scaleTranspose pentatonic", """n("0 1 2 3 4").scale("C4:pentatonic").scaleTranspose(1)"""),
+        Example("scaleTranspose dorian", """n("0 2 5").scale("C4:dorian").scaleTranspose(1)"""),
+        Example("scaleTranspose phrygian", """n("0 1 2 3").scale("C5:phrygian").scaleTranspose(1)"""),
+        Example("scaleTranspose lydian", """n("3 4 6").scale("C5:lydian").scaleTranspose(-1)"""),
+        Example("scaleTranspose locrian", """n("0 4 6").scale("C2:locrian").scaleTranspose(1)"""),
+        Example("scaleTranspose chromatic", """n("0 1 2").scale("C3:chromatic").scaleTranspose(2)"""),
+        // rootNotes ... seems to be fine
+        Example(SKIP, "rootNotes no-op", """note("C E G").rootNotes()"""),
+        Example(SKIP, "rootNotes basic", """chord("Cmaj7 Dm7").rootNotes()"""),
+        Example(SKIP, "rootNotes with octave", """chord("Cmaj7 Dm7").rootNotes(3)"""),
+        // voicing ... should be ok
+        Example(SKIP, "voicing basic", """chord("Cmaj7 Dm7 G7").voicing()"""),
+        // Does not compile with js
+        Example(SKIP, "voicing range", """chord("Dm7 G7 Cmaj7").voicing("C3", "C5")"""),
+        // Should be ok
+        Example(
+            SKIP, "voicing all cords", """
+            chord(`<
+                C2 C5 C6 C7 C9 C11 C13 C69
+                Cadd9 Co Ch Csus C^ C- C^7 
+                C-7 C7sus Ch7 Co7 C^9 C^13 
+                C^7#11 C^9#11 C^7#5 C-6 C-69 
+                C-^7 C-^9 C-9 C-add9 C-11 
+                C-7b5 Ch9 C-b6 C-#5 C7b9 
+                C7#9 C7#11 C7b5 C7#5 C9#11 
+                C9b5 C9#5 C7b13 C7#9#5 C7#9b5 
+                C7#9#11 C7b9#11 C7b9b5 C7b9#5 
+                C7b9#9 C7b9b13 C7alt C13#11 
+                C13b9 C13#9 C7b9sus C7susadd3 
+                C9sus C13sus C7b13sus C Caug 
+                CM Cm CM7 Cm7 CM9 CM13 CM7#11 
+                CM9#11 CM7#5 Cm6 Cm69 Cm^7 
+                C-M7 Cm^9 C-M9 Cm9 Cmadd9 
+                Cm11 Cm7b5 Cmb6 Cm#5
+            >`).voicing().room(0.5)
+        """.trimIndent()
+        ),
         // Freq
         Example("freq() basic", """freq(440)"""),
         Example("freq() pattern", """s("saw saw").freq("440 880")"""),

@@ -18,6 +18,8 @@ data class StrudelVoiceData(
     val note: String?,
     val freqHz: Double?,
     val scale: String?,
+    /** Chord name (e.g., "Cmaj7", "Dm7", "F/A") for harmonic context */
+    val chord: String?,
 
     // Gain / Dynamics
     val gain: Double?,
@@ -159,6 +161,7 @@ data class StrudelVoiceData(
             note = null,
             freqHz = null,
             scale = null,
+            chord = null,
             gain = null,
             legato = null,
             bank = null,
@@ -228,6 +231,7 @@ data class StrudelVoiceData(
             note = other.note ?: note,
             freqHz = other.freqHz ?: freqHz,
             scale = other.scale ?: scale,
+            chord = other.chord ?: chord,
             gain = other.gain ?: gain,
             legato = other.legato ?: legato,
             bank = other.bank ?: bank,

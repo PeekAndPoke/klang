@@ -154,8 +154,8 @@ private object ChordsData {
         // == Major ====================================================================================================
         listOf("1P 3M 5P", "major", "M ^  maj"),
         listOf("1P 3M 5P 7M", "major seventh", "maj7 Δ ma7 M7 Maj7 ^7"),
-        listOf("1P 3M 5P 7M 9M", "major ninth", "maj9 Δ9 ^9"),
-        listOf("1P 3M 5P 7M 9M 13M", "major thirteenth", "maj13 Maj13 ^13"),
+        listOf("1P 3M 5P 7M 9M", "major ninth", "maj9 Δ9 ^9 M9"),
+        listOf("1P 3M 5P 7M 9M 13M", "major thirteenth", "maj13 Maj13 ^13 M13"),
         listOf("1P 3M 5P 6M", "sixth", "6 add6 add13 M6"),
         listOf("1P 3M 5P 6M 9M", "sixth added ninth", "6add9 6/9 69 M69"),
         listOf("1P 3M 6m 7M", "major seventh flat sixth", "M7b6 ^7b6"),
@@ -165,10 +165,11 @@ private object ChordsData {
         // '''Normal'''
         listOf("1P 3m 5P", "minor", "m min -"),
         listOf("1P 3m 5P 7m", "minor seventh", "m7 min7 mi7 -7"),
-        listOf("1P 3m 5P 7M", "minor/major seventh", "m/ma7 m/maj7 mM7 mMaj7 m/M7 -Δ7 mΔ -^7 -maj7"),
+        listOf("1P 3m 5P 7M", "minor/major seventh", "m/ma7 m/maj7 mM7 mMaj7 m/M7 -M7 -Δ7 mΔ -^7 m^7 -maj7"),
         listOf("1P 3m 5P 6M", "minor sixth", "m6 -6"),
+        listOf("1P 3m 6m", "minor flat sixth", "mb6 -b6"),
         listOf("1P 3m 5P 7m 9M", "minor ninth", "m9 -9"),
-        listOf("1P 3m 5P 7M 9M", "minor/major ninth", "mM9 mMaj9 -^9"),
+        listOf("1P 3m 5P 7M 9M", "minor/major ninth", "mM9 mMaj9 -M9 -^9 m^9"),
         listOf("1P 3m 5P 7m 9M 11P", "minor eleventh", "m11 -11"),
         listOf("1P 3m 5P 7m 9M 13M", "minor thirteenth", "m13 -13"),
 
@@ -176,6 +177,7 @@ private object ChordsData {
         listOf("1P 3m 5d", "diminished", "dim ° o"),
         listOf("1P 3m 5d 7d", "diminished seventh", "dim7 °7 o7"),
         listOf("1P 3m 5d 7m", "half-diminished", "m7b5 ø -7b5 h7 h"),
+        listOf("1P 3m 5d 7m 9M", "half-diminished ninth", "h9"),
 
         // == Dominant / Seventh =======================================================================================
         // '''Normal'''
@@ -187,6 +189,8 @@ private object ChordsData {
         // '''Altered'''
         listOf("1P 3M 5P 7m 9m", "dominant flat ninth", "7b9"),
         listOf("1P 3M 5P 7m 9A", "dominant sharp ninth", "7#9"),
+        listOf("1P 3M 5d 7m 9A", "dominant sharp ninth flat fifth", "7#9b5 7b5#9"),
+        listOf("1P 3M 5d 7m 9m", "dominant flat ninth flat fifth", "7b9b5 7b5b9"),
         listOf("1P 3M 7m 9m", "altered", "alt7"),
 
         // '''Suspended'''
@@ -200,8 +204,8 @@ private object ChordsData {
         listOf("1P 5P", "fifth", "5"),
         listOf("1P 3M 5A", "augmented", "aug + +5 ^#5"),
         listOf("1P 3m 5A", "minor augmented", "m#5 -#5 m+"),
-        listOf("1P 3M 5A 7M", "augmented seventh", "maj7#5 maj7+5 +maj7 ^7#5"),
-        listOf("1P 3M 5P 7M 9M 11A", "major sharp eleventh (lydian)", "maj9#11 Δ9#11 ^9#11"),
+        listOf("1P 3M 5A 7M", "augmented seventh", "maj7#5 maj7+5 +maj7 ^7#5 M7#5"),
+        listOf("1P 3M 5P 7M 9M 11A", "major sharp eleventh (lydian)", "maj9#11 Δ9#11 ^9#11 M9#11"),
 
         // == Legacy ===================================================================================================
         listOf("1P 2M 4P 5P", "", "sus24 sus4add9"),
@@ -224,7 +228,7 @@ private object ChordsData {
         listOf("1P 3M 5P 7M 9m", "", "M7b9"),
         listOf("1P 3M 5P 7m 11A 13m", "", "7#11b13 7b5b13"),
         listOf("1P 3M 5P 7m 13M", "", "7add6 67 7add13"),
-        listOf("1P 3M 5P 7m 9A 11A", "", "7#9#11 7b5#9 7#9b5"),
+        listOf("1P 3M 5P 7m 9A 11A", "", "7#9#11"),
         listOf("1P 3M 5P 7m 9A 11A 13M", "", "13#9#11"),
         listOf("1P 3M 5P 7m 9A 11A 13m", "", "7#9#11b13"),
         listOf("1P 3M 5P 7m 9A 13M", "", "13#9"),
@@ -232,7 +236,7 @@ private object ChordsData {
         listOf("1P 3M 5P 7m 9M 11A", "", "9#11 9+4 9#4"),
         listOf("1P 3M 5P 7m 9M 11A 13M", "", "13#11 13+4 13#4"),
         listOf("1P 3M 5P 7m 9M 11A 13m", "", "9#11b13 9b5b13"),
-        listOf("1P 3M 5P 7m 9m 11A", "", "7b9#11 7b5b9 7b9b5"),
+        listOf("1P 3M 5P 7m 9m 11A", "", "7b9#11"),
         listOf("1P 3M 5P 7m 9m 11A 13M", "", "13b9#11"),
         listOf("1P 3M 5P 7m 9m 11A 13m", "", "7b9b13#11 7b9#11b13 7b5b9b13"),
         listOf("1P 3M 5P 7m 9m 13M", "", "13b9"),
@@ -255,7 +259,7 @@ private object ChordsData {
         listOf("1P 3m 5P 6m 7M", "", "mMaj7b6"),
         listOf("1P 3m 5P 6m 7M 9M", "", "mMaj9b6"),
         listOf("1P 3m 5P 7m 11P", "", "m7add11 m7add4"),
-        listOf("1P 3m 5P 9M", "", "madd9"),
+        listOf("1P 3m 5P 9M", "", "madd9 -add9"),
         listOf("1P 3m 5d 6M 7M", "", "o7M7"),
         listOf("1P 3m 5d 7M", "", "oM7"),
         listOf("1P 3m 6m 7M", "", "mb6M7"),
@@ -269,8 +273,10 @@ private object ChordsData {
         listOf("1P 4P 5A 7m", "", "7#5sus4"),
         listOf("1P 4P 5P 7M", "", "M7sus4"),
         listOf("1P 4P 5P 7M 9M", "", "M9sus4"),
+        listOf("1P 3M 4P 5P 7m", "suspended fourth seventh with third", "7susadd3"),
         listOf("1P 4P 5P 7m 9M", "", "9sus4 9sus"),
         listOf("1P 4P 5P 7m 9M 13M", "", "13sus4 13sus"),
+        listOf("1P 4P 5P 7m 13m", "suspended fourth seventh flat thirteenth", "7b13sus 7susb13"),
         listOf("1P 4P 5P 7m 9m 13m", "", "7sus4b9b13 7b9b13sus4"),
         listOf("1P 4P 7m 10m", "", "4 quartal"),
         listOf("1P 5P 7m 9m 11P", "", "11b9")

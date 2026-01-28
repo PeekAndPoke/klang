@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.tones.scale
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.tones.utils.TonesRange
@@ -57,11 +58,11 @@ class ScaleExamplesTest : StringSpec({
 
     "Scale.modeNames" {
         Scale.modeNames("C pentatonic") shouldBe listOf(
-            "C" to "major pentatonic",
-            "D" to "egyptian",
-            "E" to "malkos raga",
-            "G" to "ritusen",
-            "A" to "minor pentatonic"
+            "C3" to "major pentatonic",
+            "D3" to "egyptian",
+            "E3" to "malkos raga",
+            "G3" to "ritusen",
+            "A3" to "minor pentatonic"
         )
     }
 
@@ -90,9 +91,16 @@ class ScaleExamplesTest : StringSpec({
         // 1(C4), -1(B3), -2(A3), -3(G3), -4(F3), -5(E3), -6(D3), -7(C3).
         // Yes, C3 is correct for -7. C2 is two octaves down.
 
-        listOf(1, 2, 3).map(Scale.degrees("C major")) shouldBe listOf("C", "D", "E")
-        listOf(1, 2, 3).map(Scale.degrees("C4 major")) shouldBe listOf("C4", "D4", "E4")
-        listOf(-1, -2, -3).map(Scale.degrees("C major")) shouldBe listOf("B", "A", "G")
+        assertSoftly {
+            listOf(1, 2, 3).map(Scale.degrees("C major")) shouldBe
+                    listOf("C3", "D3", "E3")
+
+            listOf(1, 2, 3).map(Scale.degrees("C4 major")) shouldBe
+                    listOf("C4", "D4", "E4")
+
+            listOf(-1, -2, -3).map(Scale.degrees("C major")) shouldBe
+                    listOf("B2", "A2", "G2")
+        }
     }
 
     "Scale.steps" {

@@ -395,6 +395,8 @@ class VoiceScheduler(
                 val osc = data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
                 val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
 
+                // println("making synth voice for freq $freqHz")
+
                 SynthVoice(
                     orbitId = orbit,
                     startFrame = startFrame,

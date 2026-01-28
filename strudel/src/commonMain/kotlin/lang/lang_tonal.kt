@@ -5,12 +5,17 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.pattern.AtomicPattern
+import io.peekandpoke.klang.strudel.pattern.BindPattern
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.klang.strudel.pattern.StackPattern
 import io.peekandpoke.klang.tones.Tones
+import io.peekandpoke.klang.tones.chord.Chord
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.interval.Interval
 import io.peekandpoke.klang.tones.midi.Midi
+import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
 import kotlin.math.pow
 
@@ -22,9 +27,6 @@ var strudelLangTonalInit = false
 
 /** Cleans up the scale name */
 fun String.cleanScaleName() = replace(":", " ")
-
-/** Capitalizes the first character of the string */
-fun String.ucFirst() = replaceFirstChar { it.uppercaseChar() }
 
 /**
  * Resolves the note and frequency based on the index and the current scale.
@@ -567,3 +569,354 @@ val StrudelPattern.freq by dslPatternExtension { p, args, /* callInfo */ _ -> ap
 /** Sets the frequency in Hz on a string */
 @StrudelDsl
 val String.freq by dslStringExtension { p, args, callInfo -> p.freq(args, callInfo) }
+
+// -- scaleTranspose() -------------------------------------------------------------------------------------------------
+
+/**
+ * Transposes notes by a number of scale degrees within the active scale.
+ * If no scale is set, falls back to chromatic transposition.
+ */
+fun StrudelVoiceData.scaleTranspose(steps: Int): StrudelVoiceData {
+    val currentScale = scale?.cleanScaleName()
+
+    // If no scale is set, fallback to chromatic transposition
+    if (currentScale.isNullOrEmpty()) {
+        return transpose(steps)
+    }
+
+    val currentNote = note ?: value?.asString ?: return this
+    if (currentNote.isEmpty()) return this
+
+    try {
+        val scaleObj = Scale.get(currentScale)
+        if (scaleObj.empty) return transpose(steps)
+
+        val scaleNotes = scaleObj.notes
+        if (scaleNotes.isEmpty()) return transpose(steps)
+
+        // Find current note in scale (ignoring octave for matching)
+        val currentNoteObj = Note.get(currentNote)
+        val currentChroma = currentNoteObj.chroma
+
+        // Find the scale degree of the current note
+        val currentDegree = scaleNotes.indexOfFirst { scaleDegreeNote ->
+            Note.get(scaleDegreeNote).chroma == currentChroma
+        }
+
+        if (currentDegree < 0) {
+            // Note not in scale, fallback to chromatic
+            return transpose(steps)
+        }
+
+        if (steps == 0) {
+            return this
+        }
+
+        // Calculate new degree with octave wrapping
+        val scaleSize = scaleNotes.size
+        val newDegree = (currentDegree + steps).mod(scaleSize)
+        val octaveShift = (currentDegree + steps).floorDiv(scaleSize)
+
+        // Get base note from scale
+        val baseNewNote = scaleNotes[newDegree]
+
+        // Apply octave shift
+        val newNoteObj = Note.get(baseNewNote)
+        val currentOctave = currentNoteObj.oct ?: newNoteObj.oct ?: 3
+        val newOctave = currentOctave + octaveShift
+
+        // Construct final note with octave
+        val finalNote = newNoteObj.pc + newOctave.toString()
+
+        return copy(
+            note = finalNote,
+            freqHz = Tones.noteToFreq(finalNote),
+            gain = gain ?: 1.0,
+        )
+    } catch (_: Exception) {
+        // On any error, fallback to chromatic transposition
+        return transpose(steps)
+    }
+}
+
+private fun applyScaleTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // Ensure we parse the argument as mini-notation if it's a string, to get a pattern of values
+    // This allows scaleTranspose("0 1 2") to work as a control pattern
+    val controlPattern = args.toPattern(defaultModifier)
+
+    return ControlPattern(
+        source = source,
+        control = controlPattern,
+        mapper = { it },
+        combiner = { srcData, ctrlData ->
+            // If control pattern has no value, assume 0 steps (identity)
+            val steps = ctrlData.value?.asInt ?: 0
+            srcData.scaleTranspose(steps)
+        }
+    )
+}
+
+/** Transposes by scale degrees within the active scale */
+@StrudelDsl
+val scaleTranspose by dslFunction { args, _ ->
+    val source = args.lastOrNull()?.value as? StrudelPattern
+
+    if (args.size >= 2 && source != null) {
+        applyScaleTranspose(source, args.dropLast(1))
+    } else {
+        // If used as a source pattern (e.g. scaleTranspose(1)), it acts as a value pattern
+        // But usually it's used as a modifier.
+        // If args are just numbers, we can return a pattern of numbers?
+        // Or better, return a modifier pattern that will be applied later?
+        // The current tests seem to expect it to be used as .scaleTranspose(...)
+
+        // If called as `scaleTranspose(1)`, we return a pattern of 1s.
+        // This allows `n("0").scaleTranspose(1)` to work via `ControlPattern` mechanism if `n` supports it?
+        // But `scaleTranspose` is an extension on `StrudelPattern`.
+
+        args.toPattern(defaultModifier)
+    }
+}
+
+/** Transposes by scale degrees within the active scale */
+@StrudelDsl
+val StrudelPattern.scaleTranspose by dslPatternExtension { p, args, _ -> applyScaleTranspose(p, args) }
+
+/** Transposes by scale degrees within the active scale */
+@StrudelDsl
+val String.scaleTranspose by dslStringExtension { p, args, callInfo -> p.scaleTranspose(args, callInfo) }
+
+// -- chord() ----------------------------------------------------------------------------------------------------------
+
+private val chordMutation = voiceModifier { chordName ->
+    val name = chordName?.toString() ?: return@voiceModifier this
+
+    // Set the chord property
+    // We also set the note to the chord root/tonic to ensure it plays something meaningful if voicing is not used
+    // and to provide a base for rootNotes()
+    val chordObj = Chord.get(name)
+    val root = if (!chordObj.empty) chordObj.tonic ?: chordObj.root else null
+
+    if (root != null) {
+        copy(chord = name, note = root, freqHz = Tones.noteToFreq(root))
+    } else {
+        copy(chord = name)
+    }
+}
+
+// REMOVED expandChordToVoiceData and applyChord with BindPattern
+// Instead, chord() is now a simple property setter pattern
+
+/** Creates a pattern of chords */
+@StrudelDsl
+val chord by dslFunction { args, _ ->
+    args.toPattern(chordMutation)
+}
+
+/** Applies chord expansion to a pattern */
+@StrudelDsl
+val StrudelPattern.chord by dslPatternExtension { p, args, _ ->
+    p.applyControlFromParams(args, chordMutation) { src, ctrl ->
+        src.chordMutation(ctrl.chord ?: ctrl.value?.asString)
+    }
+}
+
+/** Applies chord expansion to a string pattern */
+@StrudelDsl
+val String.chord by dslStringExtension { p, args, callInfo -> p.chord(args, callInfo) }
+
+// -- rootNotes() ------------------------------------------------------------------------------------------------------
+
+/**
+ * Extracts the root note from a chord pattern.
+ * If octave is specified, forces the root to that octave.
+ */
+fun StrudelVoiceData.extractRootNote(octave: Int? = null): StrudelVoiceData {
+    // With the new chord() implementation, 'note' is already set to root.
+    // But we might want to force octave or handle cases where note was changed.
+
+    val chordName = chord ?: return this
+
+    try {
+        val chordObj = Chord.get(chordName)
+        if (chordObj.empty) return this
+
+        val tonic = chordObj.tonic
+        if (tonic.isNullOrEmpty()) return this
+
+        val rootNote = if (octave != null) {
+            // Force specific octave
+            val rootPc = Note.get(tonic).pc
+            rootPc + octave.toString()
+        } else {
+            // Use tonic as-is, or add default octave if missing
+            val rootNoteObj = Note.get(tonic)
+            if (rootNoteObj.oct != null) {
+                tonic
+            } else {
+                rootNoteObj.pc + "4" // Default to octave 4
+            }
+        }
+
+        return copy(
+            note = rootNote,
+            freqHz = Tones.noteToFreq(rootNote),
+            gain = gain ?: 1.0,
+        )
+    } catch (_: Exception) {
+        return this
+    }
+}
+
+private fun applyRootNotes(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val octave = args.firstOrNull()?.value?.asIntOrNull()
+
+    // No need for distinct() anymore since chord() doesn't expand
+    return source.reinterpretVoice { voiceData ->
+        voiceData.extractRootNote(octave)
+    }
+}
+
+/** Extracts root notes from chord patterns */
+@StrudelDsl
+val rootNotes by dslFunction { args, _ ->
+    // When used standalone, just returns a pattern that will extract roots when applied
+    args.toPattern(defaultModifier)
+}
+
+/** Extracts root notes from chord patterns */
+@StrudelDsl
+val StrudelPattern.rootNotes by dslPatternExtension { p, args, _ -> applyRootNotes(p, args) }
+
+/** Extracts root notes from chord patterns */
+@StrudelDsl
+val String.rootNotes by dslStringExtension { p, args, callInfo -> p.rootNotes(args, callInfo) }
+
+// -- voicing() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Helper to get voiced notes for a chord.
+ * Attempts to use voice leading, then falls back to intelligent chord structure preservation.
+ */
+internal fun getVoicedNotes(
+    chordName: String,
+    range: List<String>,
+    lastVoicing: List<String>,
+): List<String> {
+    try {
+        // 1. Try strict voice leading within range using the library
+        // This handles cases where we want specific smooth transitions
+        val voicing = io.peekandpoke.klang.tones.voicing.Voicing.get(
+            chord = chordName,
+            range = range,
+            lastVoicing = lastVoicing
+        )
+
+        if (voicing.isNotEmpty()) {
+            return voicing
+        }
+
+        // 2. Fallback: intelligent default voicing
+        // If the library couldn't find a voicing (e.g. strict range or unknown chord shape in dictionary),
+        // we construct the chord manually from its intervals.
+        val chordObj = Chord.get(chordName)
+        val tonic = chordObj.tonic
+
+        if (!chordObj.empty && !tonic.isNullOrEmpty()) {
+            // Chord.notes returns flat pitch classes (e.g. "C", "E"), which loses inversion info.
+            // Also, we cannot reliably parse octaves from chord names (e.g. "C2" is C sus2, not C octave 2).
+            // So we default to Octave 4 as the center.
+            val root = tonic + "4"
+
+            // By transposing intervals from "C4" (or whatever tonic is + 4), we get correct relative pitches
+            // and preserve inversions defined in the Chord definition.
+            return chordObj.intervals.map { interval ->
+                Distance.transpose(root, interval)
+            }
+        }
+
+        // 3. Last resort: raw notes forced to octave 4
+        // This ensures that valid chords (where intervals might be missing for some reason) still play
+        // in a hearable range, instead of defaulting to octave 0/1.
+        if (chordObj.notes.isNotEmpty()) {
+            return chordObj.notes.map { it + "4" }
+        }
+
+        return emptyList()
+    } catch (e: Exception) {
+        return emptyList()
+    }
+}
+
+/**
+ * Applies voice leading to chord patterns.
+ * Uses the Tones library's Voicing module for smooth transitions between chords.
+ */
+private fun applyVoicing(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // Parse optional range arguments
+    val rangeArgs = args.filter { it.value is String }
+    val range = when {
+        rangeArgs.size >= 2 -> listOf(
+            rangeArgs[0].value.toString(),
+            rangeArgs[1].value.toString()
+        )
+
+        else -> listOf("C3", "C5") // Default range
+    }
+
+    // Track last voicing for voice leading
+    var lastVoicing: List<String> = emptyList()
+
+    // No need to collapse to rootSource anymore
+
+    // Use BindPattern to expand events with voice leading
+    return BindPattern(source) { event ->
+        val chordName = event.data.chord
+
+        if (chordName == null) {
+            // No chord, return unchanged
+            AtomicPattern(data = event.data, sourceLocations = event.sourceLocations)
+        } else {
+            // Get voicing (either from voice leading or fallback)
+            val voicedNotes = getVoicedNotes(chordName, range, lastVoicing)
+
+            if (voicedNotes.isEmpty()) {
+                // No voicing and no default notes (invalid chord?), return unchanged (root)
+                AtomicPattern(data = event.data, sourceLocations = event.sourceLocations)
+            } else {
+                // Update last voicing for next iteration
+                // We update it even with fallback notes to reset the voice leading context
+                lastVoicing = voicedNotes
+
+                // Create stack pattern with the voicing notes
+                val voicedEvents = voicedNotes.map { noteName ->
+                    AtomicPattern(
+                        data = event.data.copy(
+                            note = noteName,
+                            freqHz = Tones.noteToFreq(noteName),
+                            chord = null, // Do not preserve chord property to match JS behavior
+                            gain = event.data.gain,
+                        ),
+                        sourceLocations = event.sourceLocations
+                    )
+                }
+                StackPattern(voicedEvents)
+            }
+        }
+    }
+}
+
+/** Applies voice leading to chord patterns */
+@StrudelDsl
+val voicing by dslFunction { args, _ ->
+    // When used standalone, creates a modifier pattern
+    args.toPattern(defaultModifier)
+}
+
+/** Applies voice leading to chord patterns */
+@StrudelDsl
+val StrudelPattern.voicing by dslPatternExtension { p, args, _ -> applyVoicing(p, args) }
+
+/** Applies voice leading to chord patterns */
+@StrudelDsl
+val String.voicing by dslStringExtension { p, args, callInfo -> p.voicing(args, callInfo) }

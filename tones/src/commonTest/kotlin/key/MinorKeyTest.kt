@@ -13,39 +13,39 @@ class MinorKeyTest : StringSpec({
     "natural scale names" {
         val chordScales = Key.minorKey("C").natural.chordScales
         chordScales.map { Scale.get(it).name } shouldBe listOf(
-            "C minor",
-            "D locrian",
-            "Eb major",
-            "F dorian",
-            "G phrygian",
-            "Ab lydian",
-            "Bb mixolydian"
+            "C3 minor",
+            "D3 locrian",
+            "Eb3 major",
+            "F3 dorian",
+            "G3 phrygian",
+            "Ab3 lydian",
+            "Bb3 mixolydian"
         )
     }
 
     "harmonic scale names" {
         val chordScales = Key.minorKey("C").harmonic.chordScales
         chordScales.map { Scale.get(it).name } shouldBe listOf(
-            "C harmonic minor",
-            "D locrian 6",
-            "Eb major augmented",
-            "F lydian diminished",
-            "G phrygian dominant",
-            "Ab lydian #9",
-            "B ultralocrian"
+            "C3 harmonic minor",
+            "D3 locrian 6",
+            "Eb3 major augmented",
+            "F3 lydian diminished",
+            "G3 phrygian dominant",
+            "Ab3 lydian #9",
+            "B3 ultralocrian"
         )
     }
 
     "melodic scale names" {
         val chordScales = Key.minorKey("C").melodic.chordScales
         chordScales.map { Scale.get(it).name } shouldBe listOf(
-            "C melodic minor",
-            "D dorian b2",
-            "Eb lydian augmented",
-            "F lydian dominant",
-            "G mixolydian b6",
-            "A locrian #2",
-            "B altered"
+            "C3 melodic minor",
+            "D3 dorian b2",
+            "Eb3 lydian augmented",
+            "F3 lydian dominant",
+            "G3 mixolydian b6",
+            "A3 locrian #2",
+            "B3 altered"
         )
     }
 

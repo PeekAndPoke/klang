@@ -150,13 +150,20 @@ Complete ADSR envelopes for lowpass, highpass, bandpass, and notch filters (e.g.
 ## 🎼 Tonal & Musical
 
 **Note Control:**
-`note`, `n`, `scale`, `transpose`
+`note`, `n`, `freq`, `scale`, `transpose`, `scaleTranspose`
+
+**Harmonic Functions:**
+`chord` (112 chord types - all Strudel notations), `voicing` (stateful voice leading), `rootNotes` (bass extraction)
 
 **Sound Selection:**
 `sound`/`s`, `bank`, `begin`, `end`, `speed`, `loop`, `cut`, `slice`
 
 **Routing:**
 `orbit`
+
+**Chord Notation Support:**
+All 90 Strudel chord notations including: major (^, M), minor (m, -), diminished (o, dim), half-diminished (h, ø),
+suspended (sus, sus2, sus4), altered dominants (7#9b5, 7b9#9, 7alt), and complex extensions (maj7#11, m^9, -M7, etc.)
 
 ---
 
@@ -184,7 +191,7 @@ Complete ADSR envelopes for lowpass, highpass, bandpass, and notch filters (e.g.
 
 ## 📊 Summary Statistics
 
-**Total Implemented: ~220 features**
+**Total Implemented: ~225 features**
 
 - 27+ core pattern types
 - 39+ continuous oscillators and signal generators
@@ -192,6 +199,8 @@ Complete ADSR envelopes for lowpass, highpass, bandpass, and notch filters (e.g.
 - Complete mini-notation parser (13+ operators)
 - 4 filter types with full envelope support and audio engine integration
 - Full ADSR envelope system for both amplitude and filters
+- 11 complete tonal functions (note, n, freq, scale, sound/s, bank, transpose, scaleTranspose, chord, voicing,
+  rootNotes) with 112 chord types
 - Triple-mode DSL (pattern method + string extension + standalone function) for 50+ functions
 - Custom Klang extensions (warmth, morse, arithmetic addons)
 
@@ -204,11 +213,71 @@ Complete ADSR envelopes for lowpass, highpass, bandpass, and notch filters (e.g.
 - ✅ Complete mini-notation with Euclidean rhythms
 - ✅ Comprehensive pattern picking (83% complete)
 - ✅ Filter envelope modulation fully integrated in audio engine
+- ✅ Advanced tonal functions with chord support and voice leading
+- ✅ Comprehensive chord notation - All 90 Strudel chord notations supported (112 chord types)
 - ✅ Custom Klang extensions (warmth, morse rhythm patterns)
 
 ---
 
 ## 🗓️ Recent Updates
+
+### 2026-01-28: Comprehensive Chord Notation Support
+
+**Chord Parsing Fixes:** Fixed 22 chord notation issues to support all 90 Strudel chord notations. Fixed critical
+tokenization bug where 'Csus' was incorrectly parsed as C-sharp + 'us' due to Note.tokenize() treating 's' as a sharp
+indicator. Added special handling in Chord.tokenize() to detect 'sus' chord patterns.
+
+**Missing Aliases Added:** Extended chord dictionary with 13 missing aliases:
+
+- Major chords with capital M prefix: M9, M13, M7#5, M9#11
+- Minor/major chords with caret notation: m^7, m^9
+- Minor chords with dash notation: -M7, -M9, -add9
+- Standalone minor flat sixth: mb6, -b6
+
+**New Chord Types:** Added 6 completely new chord type definitions:
+
+- mb6/-b6 (minor flat sixth): 1P 3m 6m
+- h9 (half-diminished ninth): 1P 3m 5d 7m 9M
+- 7#9b5 (dominant sharp ninth flat fifth): 1P 3M 5d 7m 9A
+- 7b9b5 (dominant flat ninth flat fifth): 1P 3M 5d 7m 9m
+- 7susadd3 (suspended fourth seventh with third): 1P 3M 4P 5P 7m
+- 7b13sus (suspended fourth seventh flat thirteenth): 1P 4P 5P 7m 13m
+
+**Wrong Voicing Corrections:** Fixed C7#9b5 and C7b9b5 which were incorrectly grouped with 7#9#11 and 7b9#11
+respectively, causing them to return natural fifth (G) instead of flat fifth (Gb). Split these into separate chord type
+entries with correct intervals.
+
+**Chord Dictionary Growth:** Expanded from 106 to 112 chord types, now supporting all major chord notation styles (^, M,
+m, -, o, h) and complex altered dominants.
+
+**Test Coverage:** Updated LangVoicingSpec tests to match implementation behavior (chord property removed after voicing
+to match JS Strudel). All tests passing: 388 tones tests, 2088 strudel tests. Added comprehensive test suite for all 90
+chord notations.
+
+See: `docs/agent-tasks/chord-parsing-fixes-implemented.md` for complete implementation details.
+
+### 2026-01-28: Advanced Tonal Functions
+
+**Chord Support:** Implemented `chord()` function for creating polyphonic chord patterns. Expands chord names (like "
+Cmaj7", "Dm7", "F/A") into multiple simultaneous note events using the tones library's chord definitions. Uses
+BindPattern and StackPattern for proper polyphonic expansion while preserving timing and other voice properties.
+
+**Voice Leading:** Added `voicing()` function with stateful voice leading algorithm for smooth chord transitions.
+Applies proper voice leading to chord progressions within a specified range (default C3-C5), using the tones library's
+Voicing.get() for optimal note selection. Maintains voicing state across events for musically natural progressions.
+
+**Scale Transposition:** Implemented `scaleTranspose()` for diatonic transposition within scales. Transposes notes by
+scale degrees rather than semitones, with proper octave wrapping. Includes control pattern support for dynamic
+transposition values and falls back to chromatic transposition when no scale is set.
+
+**Root Note Extraction:** Added `rootNotes()` utility for extracting root notes from chord patterns with optional octave
+specification. Simplifies bass line creation from chord progressions.
+
+**Data Model Extension:** Added `chord: String?` property to StrudelVoiceData for maintaining harmonic context. This
+enables downstream functions to access chord information while preserving pattern composition capabilities.
+
+All functions implemented with triple-mode DSL support (standalone function, pattern extension, string extension) and
+comprehensive test coverage (41 tests across 4 test suites).
 
 ### 2026-01-28: Audio Engine & Custom Extensions
 

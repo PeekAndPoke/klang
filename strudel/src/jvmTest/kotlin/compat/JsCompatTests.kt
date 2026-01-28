@@ -94,7 +94,7 @@ class JsCompatTests : StringSpec() {
             .flatMap { nativePattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
 
         assertSoftly {
-            withClue("Number of events must match | Graal: ${graalArc.size} VS Native: ${nativeArc.size}") {
+            withClue("Number of events must match | JS (Graal): ${graalArc.size} VS Native: ${nativeArc.size}") {
                 graalArc.size shouldBe nativeArc.size
             }
 
@@ -219,7 +219,7 @@ ${comparison.report}
 
             if (result == ComparisonResult.DIFFERENT) {
                 errors.add(
-                    "'$key': Graal '${gVal?.toString() ?: "null"}' VS Native '${nVal?.toString() ?: "null"}'"
+                    "'$key': JS (Graal) '${gVal?.toString() ?: "null"}' VS Native '${nVal?.toString() ?: "null"}'"
                 )
             }
 

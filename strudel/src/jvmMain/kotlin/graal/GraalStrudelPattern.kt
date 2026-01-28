@@ -70,6 +70,7 @@ class GraalStrudelPattern(
         val note = value.safeGetMember("note").safeToStringOrNull()
         // scale
         val scale = event.safeGetMember("context")?.safeGetMember("scale").safeStringOrNull()
+        val chord = value.safeGetMember("chord").safeStringOrNull()
         // Get or calculate the frequency
         val freq = value.safeGetMember("freq").safeNumberOrNull()
             ?: note?.let { Tones.resolveFreq(note, scale) }
@@ -235,6 +236,7 @@ class GraalStrudelPattern(
                 // Frequency and note
                 note = note,
                 scale = scale,
+                chord = chord,
                 freqHz = freq,
                 // Gain / Dynamics
                 gain = gain,

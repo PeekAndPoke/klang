@@ -16,7 +16,7 @@ class VoiceDataSpec : StringSpec({
 
         val result = voice.resolveNote(newIndex = 0)
 
-        result.note shouldBe "C"
+        result.note shouldBe "C3"
         result.freqHz.let {
             it.shouldNotBeNull()
             it shouldBeGreaterThan 100.0
@@ -45,7 +45,7 @@ class VoiceDataSpec : StringSpec({
 
         val result = voice.resolveNote()
 
-        result.note shouldBe "G"
+        result.note shouldBe "G3"
         result.soundIndex shouldBe null
     }
 
@@ -114,7 +114,7 @@ class VoiceDataSpec : StringSpec({
 
         val result = voice.resolveNote()
 
-        result.note shouldBe "E"
+        result.note shouldBe "E3"
     }
 
     "resolveNote() with empty voice should return empty voice" {
