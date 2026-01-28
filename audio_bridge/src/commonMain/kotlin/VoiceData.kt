@@ -15,6 +15,8 @@ data class VoiceData(
 
     // Gain / Dynamics
     val gain: Double?,
+    val velocity: Double?,
+    val postGain: Double?,
     val legato: Double?,
 
     // Sound, bank, sound index
@@ -110,6 +112,9 @@ data class VoiceData(
     val speed: Double?,
     val loop: Boolean?,
     val cut: Int?,
+
+    // Dynamics / Compression
+    val compressor: String?,
 ) {
     companion object {
         val empty = VoiceData(
@@ -117,6 +122,8 @@ data class VoiceData(
             freqHz = null,
             scale = null,
             gain = null,
+            velocity = null,
+            postGain = null,
             legato = null,
             bank = null,
             sound = null,
@@ -166,6 +173,7 @@ data class VoiceData(
             speed = null,
             loop = null,
             cut = null,
+            compressor = null,
         )
     }
 

@@ -1,10 +1,7 @@
 package io.peekandpoke.klang.audio_be.orbits
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.effects.DelayLine
-import io.peekandpoke.klang.audio_be.effects.Ducking
-import io.peekandpoke.klang.audio_be.effects.Phaser
-import io.peekandpoke.klang.audio_be.effects.Reverb
+import io.peekandpoke.klang.audio_be.effects.*
 import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**
@@ -36,6 +33,11 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
 
     /** Ducking processor instance */
     var ducking: Ducking? = null
+        private set
+
+    // Compressor
+    /** Compressor processor instance */
+    var compressor: Compressor? = null
         private set
 
     // To track if we need to update parameters this block
@@ -84,6 +86,18 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
                 depth = voiceDucking.depth
             )
         }
+
+        // Compressor
+        voice.compressor?.let { compressorSettings ->
+            compressor = Compressor(
+                sampleRate = reverb.sampleRate,
+                thresholdDb = compressorSettings.thresholdDb,
+                ratio = compressorSettings.ratio,
+                kneeDb = compressorSettings.kneeDb,
+                attackSeconds = compressorSettings.attackSeconds,
+                releaseSeconds = compressorSettings.releaseSeconds
+            )
+        }
     }
 
     fun clear() {
@@ -114,5 +128,8 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
         if (phaser.depth > 0.01) {
             phaser.process(mixBuffer, blockFrames)
         }
+
+        // Compressor active? (Insert effect on the mix bus)
+        compressor?.process(mixBuffer.left, mixBuffer.right, blockFrames)
     }
 }

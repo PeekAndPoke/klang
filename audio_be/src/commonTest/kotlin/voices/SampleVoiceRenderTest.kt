@@ -65,6 +65,8 @@ class SampleVoiceRenderTest : StringSpec({
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
             ducking = null,
+            postGain = 1.0,
+            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),

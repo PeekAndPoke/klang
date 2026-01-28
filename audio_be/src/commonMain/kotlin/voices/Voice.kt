@@ -99,6 +99,14 @@ sealed interface Voice {
         val depth: Double,
     )
 
+    class Compressor(
+        val thresholdDb: Double,
+        val ratio: Double,
+        val kneeDb: Double,
+        val attackSeconds: Double,
+        val releaseSeconds: Double,
+    )
+
     class Distort(
         val amount: Double,
     )
@@ -124,6 +132,7 @@ sealed interface Voice {
     // Dynamics
     val gain: Double
     val pan: Double
+    val postGain: Double
 
     // Pitch
     val accelerate: Accelerate
@@ -138,6 +147,7 @@ sealed interface Voice {
     val phaser: Phaser
     val tremolo: Tremolo
     val ducking: Ducking?
+    val compressor: Compressor?
 
     // global effects
     val distort: Distort

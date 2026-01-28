@@ -68,6 +68,108 @@ val pan by dslFunction { args, /* callInfo */ _ -> args.toPattern(panMutation) }
 @StrudelDsl
 val String.pan by dslStringExtension { p, args, callInfo -> p.pan(args, callInfo) }
 
+// -- velocity() -------------------------------------------------------------------------------------------------------
+
+private val velocityMutation = voiceModifier {
+    copy(velocity = it?.asDoubleOrNull())
+}
+
+private fun applyVelocity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = velocityMutation,
+        getValue = { velocity },
+        setValue = { v, _ -> copy(velocity = v) },
+    )
+}
+
+/** Modifies the velocity (volume scaling) of a pattern */
+@StrudelDsl
+val StrudelPattern.velocity by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
+
+/** Creates a pattern with velocity */
+@StrudelDsl
+val velocity by dslFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
+
+/** Modifies the velocity of a pattern defined by a string */
+@StrudelDsl
+val String.velocity by dslStringExtension { p, args, callInfo -> p.velocity(args, callInfo) }
+
+/** Alias for velocity */
+@StrudelDsl
+val StrudelPattern.vel by dslPatternExtension { p, args, callInfo -> p.velocity(args, callInfo) }
+
+/** Alias for velocity */
+@StrudelDsl
+val vel by dslFunction { args, callInfo -> velocity(args, callInfo) }
+
+/** Alias for velocity on a string */
+@StrudelDsl
+val String.vel by dslStringExtension { p, args, callInfo -> p.velocity(args, callInfo) }
+
+// -- postgain() -------------------------------------------------------------------------------------------------------
+
+private val postgainMutation = voiceModifier {
+    copy(postGain = it?.asDoubleOrNull())
+}
+
+private fun applyPostgain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = postgainMutation,
+        getValue = { postGain },
+        setValue = { v, _ -> copy(postGain = v) },
+    )
+}
+
+/** Modifies the post-gain (applied after voice processing) of a pattern */
+@StrudelDsl
+val StrudelPattern.postgain by dslPatternExtension { p, args, /* callInfo */ _ -> applyPostgain(p, args) }
+
+/** Creates a pattern with post-gain */
+@StrudelDsl
+val postgain by dslFunction { args, /* callInfo */ _ -> args.toPattern(postgainMutation) }
+
+/** Modifies the post-gain of a pattern defined by a string */
+@StrudelDsl
+val String.postgain by dslStringExtension { p, args, callInfo -> p.postgain(args, callInfo) }
+
+// -- compressor() -----------------------------------------------------------------------------------------------------
+
+private val compressorMutation = voiceModifier { shape ->
+    copy(compressor = shape?.toString())
+}
+
+private fun applyCompressor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyControlFromParams(args, compressorMutation) { src, ctrl ->
+        src.copy(compressor = ctrl.compressor)
+    }
+}
+
+/** Sets dynamic range compression parameters (threshold:ratio:knee:attack:release) */
+@StrudelDsl
+val StrudelPattern.compressor by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
+
+/** Sets dynamic range compression parameters (threshold:ratio:knee:attack:release) */
+@StrudelDsl
+val compressor by dslFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
+
+/** Sets dynamic range compression parameters on a string */
+@StrudelDsl
+val String.compressor by dslStringExtension { p, args, callInfo -> p.compressor(args, callInfo) }
+
+/** Alias for compressor */
+@StrudelDsl
+val StrudelPattern.comp by dslPatternExtension { p, args, callInfo -> p.compressor(args, callInfo) }
+
+/** Alias for compressor */
+@StrudelDsl
+val comp by dslFunction { args, callInfo -> compressor(args, callInfo) }
+
+/** Alias for compressor on a string */
+@StrudelDsl
+val String.comp by dslStringExtension { p, args, callInfo -> p.compressor(args, callInfo) }
+
 // -- unison() ---------------------------------------------------------------------------------------------------------
 
 private val unisonMutation = voiceModifier {

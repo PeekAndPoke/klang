@@ -24,6 +24,10 @@ data class StrudelVoiceData(
     // Gain / Dynamics
     val gain: Double?,
     val legato: Double?,
+    /** Volume scaling (0-1), multiplies with gain */
+    val velocity: Double?,
+    /** Gain applied after voice processing, before mixing to orbit */
+    val postGain: Double?,
 
     // Sound, bank, sound index
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
@@ -195,6 +199,10 @@ data class StrudelVoiceData(
     /** Vowel formant filter (a, e, i, o, u) */
     val vowel: String?,
 
+    // Dynamics / Compression
+    /** Dynamic range compression settings (threshold:ratio:knee:attack:release) */
+    val compressor: String?,
+
     // Custom value
     val value: StrudelVoiceValue? = null,
 ) {
@@ -206,6 +214,8 @@ data class StrudelVoiceData(
             chord = null,
             gain = null,
             legato = null,
+            velocity = null,
+            postGain = null,
             bank = null,
             sound = null,
             soundIndex = null,
@@ -281,6 +291,7 @@ data class StrudelVoiceData(
             loop = null,
             cut = null,
             vowel = null,
+            compressor = null,
             value = null,
         )
     }
@@ -293,6 +304,8 @@ data class StrudelVoiceData(
             chord = other.chord ?: chord,
             gain = other.gain ?: gain,
             legato = other.legato ?: legato,
+            velocity = other.velocity ?: velocity,
+            postGain = other.postGain ?: postGain,
             bank = other.bank ?: bank,
             sound = other.sound ?: sound,
             soundIndex = other.soundIndex ?: soundIndex,
@@ -368,6 +381,7 @@ data class StrudelVoiceData(
             loop = other.loop ?: loop,
             cut = other.cut ?: cut,
             vowel = other.vowel ?: vowel,
+            compressor = other.compressor ?: compressor,
             value = other.value ?: value
         )
     }
@@ -482,6 +496,8 @@ data class StrudelVoiceData(
             freqHz = freqHz,
             scale = scale,
             gain = gain,
+            velocity = velocity,
+            postGain = postGain,
             legato = legato,
             bank = bank,
             sound = sound,
@@ -537,6 +553,7 @@ data class StrudelVoiceData(
             speed = speed,
             loop = loop,
             cut = cut,
+            compressor = compressor,
         )
     }
 

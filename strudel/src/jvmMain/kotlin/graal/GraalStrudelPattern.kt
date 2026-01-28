@@ -84,6 +84,11 @@ class GraalStrudelPattern(
         val legato = value.safeGetMember("clip").safeNumberOrNull()
             ?: value.safeGetMember("legator").safeNumberOrNull()
 
+        val velocity = value.safeGetMember("velocity").safeNumberOrNull()
+            ?: value.safeGetMember("vel").safeNumberOrNull()
+
+        val postGain = value.safeGetMember("postgain").safeNumberOrNull()
+
         // ///////////////////////////////////////////////////////////////////////////////////
         // Get sound parameters / sample bank and index
         val bank = value.safeGetMember("bank").safeStringOrNull()
@@ -248,6 +253,12 @@ class GraalStrudelPattern(
         val vowel = value.safeGetMember("vowel").safeStringOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Dynamics / Compression
+
+        val compressor = value.safeGetMember("compressor").safeStringOrNull()
+            ?: value.safeGetMember("comp").safeStringOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Sample Manipulation
         val loop = value.safeGetMember("loop")
         sound = loop?.safeGetMember("s")?.safeStringOrNull() ?: sound
@@ -274,6 +285,8 @@ class GraalStrudelPattern(
                 // Gain / Dynamics
                 gain = gain,
                 legato = legato,
+                velocity = velocity,
+                postGain = postGain,
                 // Sound samples
                 bank = bank,
                 sound = sound,
@@ -369,6 +382,8 @@ class GraalStrudelPattern(
                 cut = sampleCut,
                 // Voice / Singing
                 vowel = vowel,
+                // Dynamics / Compression
+                compressor = compressor,
                 // Value
                 value = when {
                     value?.isString == true ->

@@ -132,6 +132,9 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
             wetSignal = tanh(wetSignal * distortionDrive)
         }
 
+        // Apply post-gain
+        wetSignal *= postGain
+
         // 1. Dry Mix (Split to Stereo)
         val left = wetSignal * gainL
         val right = wetSignal * gainR

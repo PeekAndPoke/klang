@@ -409,6 +409,27 @@ class VoiceScheduler(
             )
         } else null
 
+        // Dynamics
+        val baseGain = data.gain ?: 1.0
+        val velocity = data.velocity ?: 1.0
+        val gain = baseGain * velocity
+        val postGain = data.postGain ?: 1.0
+
+        // Compressor
+        val compressorParam = data.compressor
+        val compressor = if (compressorParam != null) {
+            val settings = io.peekandpoke.klang.audio_be.effects.Compressor.parseSettings(compressorParam)
+            settings?.let {
+                Voice.Compressor(
+                    thresholdDb = it.thresholdDb,
+                    ratio = it.ratio,
+                    kneeDb = it.kneeDb,
+                    attackSeconds = it.attackSeconds,
+                    releaseSeconds = it.releaseSeconds
+                )
+            }
+        } else null
+
         // Effects
         val distort = Voice.Distort(amount = data.distort ?: 0.0)
         val crush = Voice.Crush(amount = data.crush ?: 0.0)
@@ -443,8 +464,9 @@ class VoiceScheduler(
                     startFrame = startFrame,
                     endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
-                    gain = data.gain ?: 1.0,
+                    gain = gain,
                     pan = data.pan ?: 0.5,
+                    postGain = postGain,
                     accelerate = accelerate,
                     vibrato = vibrato,
                     filter = bakedFilters,
@@ -455,6 +477,7 @@ class VoiceScheduler(
                     phaser = phaser,
                     tremolo = tremolo,
                     ducking = ducking,
+                    compressor = compressor,
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
@@ -550,8 +573,9 @@ class VoiceScheduler(
                     startFrame = nowFrame, // Start immediately since we ignore lateFrames
                     endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
-                    gain = data.gain ?: 1.0,
+                    gain = gain,
                     pan = data.pan ?: 0.5,
+                    postGain = postGain,
                     filter = bakedFilters,
                     accelerate = accelerate,
                     vibrato = vibrato,
@@ -562,6 +586,7 @@ class VoiceScheduler(
                     phaser = phaser,
                     tremolo = tremolo,
                     ducking = ducking,
+                    compressor = compressor,
                     distort = distort,
                     crush = crush,
                     coarse = coarse,

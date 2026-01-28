@@ -313,9 +313,10 @@ but the audio engine integration is still pending:~~
 
 #### Waveshaping / Distortion
 
-- [x] **`distort()`** - Distortion effect (alias: `dist`)
 - [x] **`crush()`** - Bit crusher effect (1-16 bits)
 - [x] **`coarse()`** - Sample rate reduction
+- [ ] **`distort()`** - Distortion effect (alias: `dist`)
+  - check https://strudel.cc/learn/effects/#distort for additional parameters (especially 3rd "shape")
 - [ ] **`shape()`** - Wave distortion amount
 
 #### Amplitude Modulation / Tremolo
