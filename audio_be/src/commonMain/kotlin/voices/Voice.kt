@@ -66,6 +66,14 @@ sealed interface Voice {
         val room: Double,
         /** room size 0 .. 1 */
         val roomSize: Double,
+        /** reverb fade time (feedback) */
+        val roomFade: Double? = null,
+        /** lowpass filter cutoff */
+        val roomLp: Double? = null,
+        /** dim frequency (currently unused in simple model) */
+        val roomDim: Double? = null,
+        /** impulse response name */
+        val iResponse: String? = null,
     )
 
     class Phaser(

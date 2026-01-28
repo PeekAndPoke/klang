@@ -21,6 +21,94 @@
 
 ## Diary
 
+### (2026-01-28) Strudel - Audio Effects
+
+- phaser
+- tremolo
+- vowel()
+- custom warmth() for synth voices
+- custom morse()
+
+### (2026-01-28) Strudel - Tonal Functions
+
+- tonal functions integration
+
+### (2026-01-28) Klang - Filter Envelopes
+
+- filter envelopes implementation
+
+### (2026-01-27) Strudel - Pattern Refactoring
+
+- major pattern refactoring
+- pattern picking functions
+
+### (2026-01-26) Strudel - DSL & Cleanup
+
+- new dsl functions
+- pattern picking functions
+- pattern code cleanup (createEventList, RandLPattern, FilterPattern, StepsOverridePattern, AlignedPattern, GapPattern,
+  ContextRangeMapPattern)
+- preps for gc free implementation
+
+### (2026-01-25) Strudel - Pattern Cleanup
+
+- pattern code cleanup (TimeShiftPattern, FastGapPattern, HurryPattern)
+
+### (2026-01-23) Klang Studio
+
+- started Klang Studio
+- TempoModifierPattern refactoring
+
+### (2026-01-21) Strudel - Control Patterns
+
+- unifying Pattern and PatternWithControl architecture
+- compress(), ply(), fastGap(), hurry(), focus() with control patterns
+- fix pan() (left = 0.0, right = 1.0)
+
+### (2026-01-21) Klang - Voice Data Separation
+
+- separating StrudelVoiceData from VoiceData
+
+### (2026-01-21) Klang Notebook
+
+- prototype working
+
+### (2026-01-20) KlangStudio - Live Coding
+
+- live coding editor highlighting working
+- KlangScript source location tracking
+
+### (2026-01-19) KlangStudio - Editor
+
+- CodeMirror integration
+- KlangScript source location tracking
+
+### (2026-01-18) Klang - Infrastructure
+
+- infra refactor
+- KlangPlayer refactoring
+- KlangStudio first steps to frontend
+
+### (2026-01-17) KlangPlayer - Performance
+
+- jvm max priority threads for audio backend
+- surface refactoring
+- Strudel sample manipulation (wip)
+
+### (2026-01-16) Strudel - DSL
+
+- pattern creation functions (polyrhythm, stackBy, stackLeft, stackRight, stackCentre, sequenceP)
+- fastcat(), polymeter(), pure(), slowcat()
+- control pattern support for many functions (firstOf, lastOf, brandBy, irand, euclidean patterns, segment, bite, slow,
+  fast, gap, rev)
+- MiniNotationParser cache
+
+### (2026-01-15) Strudel - Euclidean & Binary
+
+- binary(), binaryN(), binaryL(), binaryNL(), euclidish(), eish(), run()
+- euclidean rhythm functions (bjork, euclid, euclidRot, euclidLegato, euclidLegatoRot)
+- n() now populates soundIndex
+
 ### (2026-01-15) Strudel - DSL
 
 - random choice functions

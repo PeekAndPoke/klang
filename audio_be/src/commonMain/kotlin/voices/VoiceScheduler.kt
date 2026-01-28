@@ -372,6 +372,10 @@ class VoiceScheduler(
             // In Strudel, room size is between [0 and 10], so we need to normalize it
             // See https://strudel.cc/learn/effects/#roomsize
             roomSize = (data.roomSize ?: 0.0) / 10.0,
+            roomFade = data.roomFade,
+            roomLp = data.roomLp,
+            roomDim = data.roomDim,
+            iResponse = data.iResponse,
         )
 
         // Phaser

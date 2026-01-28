@@ -139,6 +139,10 @@ class GraalStrudelPattern(
         // Room size is between [0 and 10]
         val room = value.safeGetMember("room").safeNumberOrNull()
         val roomSize = value.safeGetMember("roomsize").safeNumberOrNull()
+        val roomFade = value.safeGetMember("roomfade").safeNumberOrNull()
+        val roomLp = value.safeGetMember("roomlp").safeNumberOrNull()
+        val roomDim = value.safeGetMember("roomdim").safeNumberOrNull()
+        val iResponse = value.safeGetMember("iresponse").safeStringOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // Distortion
@@ -335,6 +339,10 @@ class GraalStrudelPattern(
                 // Reverb
                 room = room,
                 roomSize = roomSize,
+                roomFade = roomFade,
+                roomLp = roomLp,
+                roomDim = roomDim,
+                iResponse = iResponse,
                 // Sample manipulation
                 begin = sampleBeginPos,
                 end = sampleEndPos,

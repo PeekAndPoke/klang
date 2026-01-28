@@ -22,6 +22,12 @@ class Reverb(
     var damp: Double = 0.5     // 0.0 .. 1.0 (High frequency damping)
     var width: Double = 1.0    // 0.0 .. 1.0 (Stereo width) -- Not strictly exposed but useful
 
+    // Extended Strudel Parameters
+    var roomFade: Double? = null
+    var roomLp: Double? = null
+    var roomDim: Double? = null
+    var iResponse: String? = null
+
     fun process(input: StereoBuffer, output: StereoBuffer, length: Int) {
         val inL = input.left
         val inR = input.right
@@ -30,8 +36,25 @@ class Reverb(
 
         // Calculate feedback and damping based on parameters
         // Typical Freeverb ranges: Feedback 0.7..0.98, Damping 0..0.4
-        val feedback = (roomSize * 0.28f) + 0.7f
-        val damping = damp * 0.4f
+
+        // Use roomFade for feedback if available, otherwise fallback to roomSize
+        val effectiveSize = roomFade ?: roomSize
+        val feedback = (effectiveSize * 0.28f) + 0.7f
+
+        // Use roomLp to control damping if available
+        // roomLp (Hz) -> damp (0..1)
+        // High cutoff = low damping (bright)
+        // Low cutoff = high damping (dull)
+        val effectiveDamp = if (roomLp != null) {
+            val nyquist = sampleRate / 2.0
+            // Normalize freq to 0..1 and invert for damping
+            val normalized = (roomLp!! / nyquist).coerceIn(0.0, 1.0)
+            1.0 - normalized
+        } else {
+            damp
+        }
+
+        val damping = effectiveDamp * 0.4f
 
         for (i in 0 until length) {
             val inpL = inL[i]

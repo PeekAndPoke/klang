@@ -94,6 +94,10 @@ data class VoiceData(
     // Reverb
     val room: Double?,
     val roomSize: Double?,
+    val roomFade: Double?,
+    val roomLp: Double?,
+    val roomDim: Double?,
+    val iResponse: String?,
 
     // Sample manipulation
     val begin: Double?,
@@ -145,6 +149,10 @@ data class VoiceData(
             delayFeedback = null,
             room = null,
             roomSize = null,
+            roomFade = null,
+            roomLp = null,
+            roomDim = null,
+            iResponse = null,
             begin = null,
             end = null,
             speed = null,

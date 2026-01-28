@@ -50,6 +50,10 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
         // The mix is handled by how much we write to reverbSendBuffer
         // But we can also modulate damping if needed.
         reverb.roomSize = voice.reverb.roomSize.coerceIn(0.0, 1.0)
+        reverb.roomFade = voice.reverb.roomFade
+        reverb.roomLp = voice.reverb.roomLp
+        reverb.roomDim = voice.reverb.roomDim
+        reverb.iResponse = voice.reverb.iResponse
 
         // Phaser
         if (voice.phaser.depth > 0) {

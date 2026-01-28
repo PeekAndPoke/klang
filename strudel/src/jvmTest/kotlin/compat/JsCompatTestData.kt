@@ -424,7 +424,22 @@ object JsCompatTestData {
         // Missing Aliases
         Example("Room Size Alias sz", """note("c").room(0.5).sz(0.9)"""),
         Example("Room Size Alias size", """note("c").room(0.5).size(0.9)"""),
-        Example("Orbit Alias o", """note("c").o(1)"""),
+        // Does not compile in JS
+        Example(SKIP, "Orbit Alias o", """note("c").o(1)"""),
+
+        // Reverb (Extended)
+        Example("Reverb roomfade", """note("c").room(0.5).roomfade(0.3)"""),
+        Example("Reverb roomfade alias rfade", """note("c").room(0.5).rfade(0.4)"""),
+        Example("Reverb roomlp", """note("c").room(0.5).roomlp(1000)"""),
+        Example("Reverb roomlp alias rlp", """note("c").room(0.5).rlp(2000)"""),
+        Example("Reverb roomdim", """note("c").room(0.5).roomdim(5000)"""),
+        Example("Reverb roomdim alias rdim", """note("c").room(0.5).rdim(6000)"""),
+        Example("Reverb iresponse", """note("c").room(0.5).iresponse("hall")"""),
+        Example("Reverb iresponse alias ir", """note("c").room(0.5).ir("plate")"""),
+        Example(
+            "Reverb full chain",
+            """note("c").room(0.8).roomsize(2).roomfade(0.5).roomlp(1000).roomdim(5000).iresponse("hall")"""
+        ),
 
         // Sample Manipulation
         Example("Sample Begin", """s("bd").begin(0.5)"""),

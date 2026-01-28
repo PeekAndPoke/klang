@@ -167,6 +167,14 @@ data class StrudelVoiceData(
     // Reverb
     val room: Double?,
     val roomSize: Double?,
+    /** Reverb fade time */
+    val roomFade: Double?,
+    /** Reverb lowpass start frequency */
+    val roomLp: Double?,
+    /** Reverb lowpass frequency at -60dB */
+    val roomDim: Double?,
+    /** Impulse response sample */
+    val iResponse: String?,
 
     // Sample manipulation
     val begin: Double?,
@@ -252,6 +260,10 @@ data class StrudelVoiceData(
             delayFeedback = null,
             room = null,
             roomSize = null,
+            roomFade = null,
+            roomLp = null,
+            roomDim = null,
+            iResponse = null,
             begin = null,
             end = null,
             speed = null,
@@ -332,6 +344,10 @@ data class StrudelVoiceData(
             delayFeedback = other.delayFeedback ?: delayFeedback,
             room = other.room ?: room,
             roomSize = other.roomSize ?: roomSize,
+            roomFade = other.roomFade ?: roomFade,
+            roomLp = other.roomLp ?: roomLp,
+            roomDim = other.roomDim ?: roomDim,
+            iResponse = other.iResponse ?: iResponse,
             begin = other.begin ?: begin,
             end = other.end ?: end,
             speed = other.speed ?: speed,
@@ -495,6 +511,10 @@ data class StrudelVoiceData(
             delayFeedback = delayFeedback,
             room = room,
             roomSize = roomSize,
+            roomFade = roomFade,
+            roomLp = roomLp,
+            roomDim = roomDim,
+            iResponse = iResponse,
             begin = begin,
             end = end,
             speed = speed,

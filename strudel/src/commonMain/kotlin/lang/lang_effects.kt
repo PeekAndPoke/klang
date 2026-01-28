@@ -200,6 +200,160 @@ val size by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomSizeMutat
 @StrudelDsl
 val String.size by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 
+// -- roomfade() -------------------------------------------------------------------------------------------------------
+
+private val roomFadeMutation = voiceModifier {
+    copy(roomFade = it?.asDoubleOrNull())
+}
+
+private fun applyRoomFade(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = roomFadeMutation,
+        getValue = { roomFade },
+        setValue = { v, _ -> copy(roomFade = v) },
+    )
+}
+
+/** Sets the reverb fade time */
+@StrudelDsl
+val StrudelPattern.roomfade by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomFade(p, args) }
+
+/** Sets the reverb fade time */
+@StrudelDsl
+val roomfade by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomFadeMutation) }
+
+/** Sets the reverb fade time on a string */
+@StrudelDsl
+val String.roomfade by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomFade(p, args) }
+
+/** Alias for [roomfade] */
+@StrudelDsl
+val StrudelPattern.rfade by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomFade(p, args) }
+
+/** Alias for [roomfade] */
+@StrudelDsl
+val rfade by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomFadeMutation) }
+
+/** Alias for [roomfade] on a string */
+@StrudelDsl
+val String.rfade by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomFade(p, args) }
+
+// -- roomlp() ---------------------------------------------------------------------------------------------------------
+
+private val roomLpMutation = voiceModifier {
+    copy(roomLp = it?.asDoubleOrNull())
+}
+
+private fun applyRoomLp(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = roomLpMutation,
+        getValue = { roomLp },
+        setValue = { v, _ -> copy(roomLp = v) },
+    )
+}
+
+/** Sets the reverb lowpass start frequency */
+@StrudelDsl
+val StrudelPattern.roomlp by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomLp(p, args) }
+
+/** Sets the reverb lowpass start frequency */
+@StrudelDsl
+val roomlp by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomLpMutation) }
+
+/** Sets the reverb lowpass start frequency on a string */
+@StrudelDsl
+val String.roomlp by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomLp(p, args) }
+
+/** Alias for [roomlp] */
+@StrudelDsl
+val StrudelPattern.rlp by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomLp(p, args) }
+
+/** Alias for [roomlp] */
+@StrudelDsl
+val rlp by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomLpMutation) }
+
+/** Alias for [roomlp] on a string */
+@StrudelDsl
+val String.rlp by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomLp(p, args) }
+
+// -- roomdim() --------------------------------------------------------------------------------------------------------
+
+private val roomDimMutation = voiceModifier {
+    copy(roomDim = it?.asDoubleOrNull())
+}
+
+private fun applyRoomDim(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = roomDimMutation,
+        getValue = { roomDim },
+        setValue = { v, _ -> copy(roomDim = v) },
+    )
+}
+
+/** Sets the reverb lowpass frequency at -60dB */
+@StrudelDsl
+val StrudelPattern.roomdim by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomDim(p, args) }
+
+/** Sets the reverb lowpass frequency at -60dB */
+@StrudelDsl
+val roomdim by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomDimMutation) }
+
+/** Sets the reverb lowpass frequency at -60dB on a string */
+@StrudelDsl
+val String.roomdim by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomDim(p, args) }
+
+/** Alias for [roomdim] */
+@StrudelDsl
+val StrudelPattern.rdim by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomDim(p, args) }
+
+/** Alias for [roomdim] */
+@StrudelDsl
+val rdim by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomDimMutation) }
+
+/** Alias for [roomdim] on a string */
+@StrudelDsl
+val String.rdim by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomDim(p, args) }
+
+// -- iresponse() ------------------------------------------------------------------------------------------------------
+
+private val iResponseMutation = voiceModifier { response ->
+    val newResponse = response?.toString()
+    copy(iResponse = newResponse)
+}
+
+private fun applyIResponse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyControlFromParams(args, iResponseMutation) { src, ctrl ->
+        src.copy(iResponse = ctrl.iResponse)
+    }
+}
+
+/** Sets the impulse response sample */
+@StrudelDsl
+val StrudelPattern.iresponse by dslPatternExtension { p, args, /* callInfo */ _ -> applyIResponse(p, args) }
+
+/** Sets the impulse response sample */
+@StrudelDsl
+val iresponse by dslFunction { args, /* callInfo */ _ -> args.toPattern(iResponseMutation) }
+
+/** Sets the impulse response sample on a string */
+@StrudelDsl
+val String.iresponse by dslStringExtension { p, args, /* callInfo */ _ -> applyIResponse(p, args) }
+
+/** Alias for [iresponse] */
+@StrudelDsl
+val StrudelPattern.ir by dslPatternExtension { p, args, /* callInfo */ _ -> applyIResponse(p, args) }
+
+/** Alias for [iresponse] */
+@StrudelDsl
+val ir by dslFunction { args, /* callInfo */ _ -> args.toPattern(iResponseMutation) }
+
+/** Alias for [iresponse] on a string */
+@StrudelDsl
+val String.ir by dslStringExtension { p, args, /* callInfo */ _ -> applyIResponse(p, args) }
+
 // -- delay() ----------------------------------------------------------------------------------------------------------
 
 private val delayMutation = voiceModifier {
