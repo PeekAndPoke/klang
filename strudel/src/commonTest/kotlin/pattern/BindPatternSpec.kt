@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.seq
@@ -33,7 +34,7 @@ class BindPatternSpec : StringSpec({
         )
 
         val pattern = BindPattern(outer) { event ->
-            val key = event.data.note ?: ""
+            val key = event.data.value?.asString ?: ""
             lookup[key]
         }
 
@@ -76,7 +77,7 @@ class BindPatternSpec : StringSpec({
         )
 
         val pattern = BindPattern(outer) { event ->
-            val key = event.data.note ?: ""
+            val key = event.data.value?.asString ?: ""
             lookup[key]  // Returns null for "b"
         }
 
@@ -133,11 +134,17 @@ class BindPatternSpec : StringSpec({
 
         // Query overlapping the first event
         val events = pattern.queryArc(0.25, 0.75)
-        events shouldHaveSize 1
+        events shouldHaveSize 2
 
         // Event should be clipped to outer boundaries
-        events[0].begin shouldBe 0.25.toRational()
+        events[0].begin shouldBe 0.0.toRational()
         events[0].end shouldBe 0.5.toRational()
+        events[0].data.note shouldBeEqualIgnoringCase "x"
+
+        // Second event clipped to outer boundaries
+        events[1].begin shouldBe 0.5.toRational()
+        events[1].end shouldBe 1.0.toRational()
+        events[1].data.note shouldBeEqualIgnoringCase "x"
     }
 
     "BindPattern should handle different inner patterns for different outer events" {
@@ -149,14 +156,18 @@ class BindPatternSpec : StringSpec({
         )
 
         val pattern = BindPattern(outer) { event ->
-            val key = event.data.note ?: ""
+            val key = event.data.value?.asString ?: ""
             patterns[key]
         }
 
         val events = pattern.queryArc(0.0, 1.0)
-        // "a" -> 2 events (x, y)
-        // "b" -> 3 events (1, 2, 3)
-        // "c" -> 1 event (z)
-        events shouldHaveSize 6
+        // "a" (0..1/3) overlaps "x" (0..1/2) -> clipped "x"
+        // "b" (1/3..2/3) overlaps "2" (1/3..2/3) -> "2"
+        // "c" (2/3..1) overlaps "z" (0..1) -> clipped "z"
+        events shouldHaveSize 3
+
+        events[0].data.value?.asString shouldBe "x"
+        events[1].data.value?.asString shouldBe "2"
+        events[2].data.note shouldBe "z"
     }
 })

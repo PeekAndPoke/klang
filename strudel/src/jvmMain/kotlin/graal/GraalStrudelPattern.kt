@@ -97,6 +97,7 @@ class GraalStrudelPattern(
         val voices = value.safeGetMember("unison").safeNumberOrNull()
         val panSpread = value.safeGetMember("spread").safeNumberOrNull()
         val freqSpread = value.safeGetMember("detune").safeNumberOrNull()
+        val warmth = value.safeGetMember("warmth").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // ADSR (flat fields)
@@ -247,6 +248,7 @@ class GraalStrudelPattern(
                 voices = voices,
                 panSpread = panSpread,
                 freqSpread = freqSpread,
+                warmth = warmth,
                 // ADSR (flat fields)
                 attack = attack,
                 decay = decay,

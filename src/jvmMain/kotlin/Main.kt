@@ -7,10 +7,9 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.pan
-import io.peekandpoke.klang.strudel.lang.sound
-import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.lang.addons.morse
+import io.peekandpoke.klang.strudel.lang.addons.warmth
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
@@ -123,7 +122,11 @@ private suspend fun helloStrudel() {
 //        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
 
 //        val pattern1 = StrudelPattern.compile(TestTextPatterns.strangerThingsNetflix)!!
-        val pattern1 = note("c d e f").sound("saw")
+        val pattern1 = stack(
+            note("c5").morse("sos hello we are sinking")
+                .sound("tri").clip(0.5).warmth(0.2),
+            sound("hh hh hh hh")
+        )
 
 //        val pattern1 = StrudelPattern.compile(
 //            """

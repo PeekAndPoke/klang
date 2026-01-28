@@ -448,8 +448,11 @@ private fun applyStruct(source: StrudelPattern, structArg: StrudelDslArg<Any?>?)
 
         is StrudelPattern -> structVal
 
-        else -> parseMiniNotation(input = structArg) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.copy(note = text))
+        else -> parseMiniNotation(input = structArg) { text, loc ->
+            AtomicPattern(
+                data = StrudelVoiceData.empty.copy(note = text),
+                sourceLocations = loc
+            )
         }
     }
 

@@ -103,10 +103,6 @@ object LowPassHighPassFilters {
             a1 = 1.0 / (1.0 + g * (g + k))
             a2 = g * a1
             a3 = g * a2
-
-            // Reset integrator state to avoid clicks
-            ic1eq = 0.0
-            ic2eq = 0.0
         }
     }
 

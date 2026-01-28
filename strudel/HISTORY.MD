@@ -131,7 +131,7 @@ for evolving behaviors.
 
 **Filter Envelopes:**
 Complete ADSR envelopes for lowpass, highpass, bandpass, and notch filters (e.g., `lpattack`, `lpdecay`, `lpsustain`,
-`lprelease`, `lpenv`)
+`lprelease`, `lpenv`) with full audio engine integration
 
 **Distortion & Degradation:**
 `distort`/`dist`, `crush`, `coarse`
@@ -143,7 +143,7 @@ Complete ADSR envelopes for lowpass, highpass, bandpass, and notch filters (e.g.
 `vibrato`/`vib`, `vibratoMod`/`vibmod`, `accelerate`
 
 **Synthesis:**
-`unison`/`uni`, `detune`, `spread`, `density`/`d`
+`unison`/`uni`, `detune`, `spread`, `density`/`d`, `warmth` (KLANG extension for oscillator brightness control)
 
 ---
 
@@ -174,22 +174,26 @@ Complete ADSR envelopes for lowpass, highpass, bandpass, and notch filters (e.g.
 **Logical:**
 `and`, `or`
 
-**Addons (Non-Strudel):**
+**Arithmetic Addons (Non-Strudel):**
 `flipSign`, `oneMinusValue`, `not`
+
+**Structural Addons (Non-Strudel):**
+`morse` (creates Morse code rhythm patterns from text)
 
 ---
 
 ## 📊 Summary Statistics
 
-**Total Implemented: ~216 features**
+**Total Implemented: ~220 features**
 
 - 27+ core pattern types
 - 39+ continuous oscillators and signal generators
 - 20+ pattern picking & selection functions
 - Complete mini-notation parser (13+ operators)
-- 4 filter types with full envelope support
-- Full ADSR envelope system
+- 4 filter types with full envelope support and audio engine integration
+- Full ADSR envelope system for both amplitude and filters
 - Triple-mode DSL (pattern method + string extension + standalone function) for 50+ functions
+- Custom Klang extensions (warmth, morse, arithmetic addons)
 
 **Major Milestones:**
 
@@ -199,10 +203,26 @@ Complete ADSR envelopes for lowpass, highpass, bandpass, and notch filters (e.g.
 - ✅ Deterministic seeded randomness
 - ✅ Complete mini-notation with Euclidean rhythms
 - ✅ Comprehensive pattern picking (83% complete)
+- ✅ Filter envelope modulation fully integrated in audio engine
+- ✅ Custom Klang extensions (warmth, morse rhythm patterns)
 
 ---
 
 ## 🗓️ Recent Updates
+
+### 2026-01-28: Audio Engine & Custom Extensions
+
+**Filter Envelope Audio Integration:** Completed audio engine implementation for filter envelope modulation.
+Control-rate envelope calculation now modulates tunable filter cutoff frequencies during voice rendering in both
+SynthVoice and SampleVoice.
+
+**Warmth Parameter (KLANG Extension):** Added `warmth()` DSL function for oscillator brightness control. Implements
+one-pole low-pass filtering wrapped around oscillators (0=bright/raw, 1=warm/filtered). Includes comprehensive tests
+covering DSL usage, wrapper functionality, and oscillator creation integration.
+
+**Morse Code Patterns (KLANG Extension):** Implemented `morse()` function that converts text to Morse code rhythm
+patterns using standard timing (dot=1 step, dash=3 steps, with proper gaps). Available as standalone function, pattern
+method, and string extension with full test coverage.
 
 ### 2026-01-27: Pattern Picking Complete
 
@@ -250,12 +270,11 @@ Complete arithmetic (`add`, `sub`, `mul`, `div`, `mod`, `pow`, `log2`), bitwise 
 - `pickReset`, `pickmodReset` - cycle-synchronized reset
 - `pickF`, `pickmodF` - function application variants
 
-**Audio Effects (~46 remaining):**
+**Audio Effects (~45 remaining):**
 
 - Filter types (`vowel`, `ftype`)
 - Pitch envelope (`pattack`, `pdecay`, `prelease`, `penv`)
 - Tremolo, phaser, compressor, duck
-- Audio engine integration for filter envelopes
 
 **Pattern Operations (~20 remaining):**
 

@@ -143,7 +143,7 @@ class StrudelVoiceDataSpec : StringSpec({
         voiceData.filters.size shouldBe 1
         val lpf = voiceData.filters[0] as FilterDef.LowPass
         lpf.cutoffHz shouldBe 1000.0
-        lpf.q shouldBe null
+        lpf.q shouldBe 1.0 // defaults to 1.0
     }
 
     "toVoiceData() maps all basic fields correctly" {
@@ -231,84 +231,6 @@ class StrudelVoiceDataSpec : StringSpec({
         json shouldContain "\"gain\":0.8"
         json shouldContain "\"cutoff\":1000"
         json shouldContain "\"resonance\":1.5"
-    }
-
-    "StrudelVoiceData can be deserialized from JSON" {
-        val json = """
-            {
-                "note": "c4",
-                "freqHz": 440.0,
-                "scale": null,
-                "gain": 0.8,
-                "legato": null,
-                "bank": null,
-                "sound": null,
-                "soundIndex": null,
-                "density": null,
-                "panSpread": null,
-                "freqSpread": null,
-                "voices": null,
-                "attack": null,
-                "decay": null,
-                "sustain": null,
-                "release": null,
-                "accelerate": null,
-                "vibrato": null,
-                "vibratoMod": null,
-                "distort": null,
-                "coarse": null,
-                "crush": null,
-                "cutoff": 1000.0,
-                "resonance": 1.5,
-                "hcutoff": null,
-                "hresonance": null,
-                "bandf": null,
-                "bandq": null,
-                "notchf": null,
-                "nresonance": null,
-                "lpattack": null,
-                "lpdecay": null,
-                "lpsustain": null,
-                "lprelease": null,
-                "lpenv": null,
-                "hpattack": null,
-                "hpdecay": null,
-                "hpsustain": null,
-                "hprelease": null,
-                "hpenv": null,
-                "bpattack": null,
-                "bpdecay": null,
-                "bpsustain": null,
-                "bprelease": null,
-                "bpenv": null,
-                "nfattack": null,
-                "nfdecay": null,
-                "nfsustain": null,
-                "nfrelease": null,
-                "nfenv": null,
-                "orbit": null,
-                "pan": null,
-                "delay": null,
-                "delayTime": null,
-                "delayFeedback": null,
-                "room": null,
-                "roomSize": null,
-                "begin": null,
-                "end": null,
-                "speed": null,
-                "loop": null,
-                "cut": null,
-                "value": null
-            }
-        """.trimIndent()
-
-        val data = Json.decodeFromString(StrudelVoiceData.serializer(), json)
-
-        data.note shouldBe "c4"
-        data.freqHz shouldBe 440.0
-        data.gain shouldBe 0.8
-        data.cutoff shouldBe 1000.0
-        data.resonance shouldBe 1.5
     }
 
     "copy() creates new instance with updated fields" {

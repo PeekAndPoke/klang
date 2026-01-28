@@ -35,6 +35,10 @@ data class VoiceData(
     /** Number of voices */
     val voices: Double?,
 
+    // Oscillator warmth (custom addon)
+    /** Controls oscillator warmth (low-pass filtering amount). 0.0 = bright, 1.0 = muffled */
+    val warmth: Double?,
+
     // Filters
     val filters: FilterDefs = FilterDefs.empty,
 
@@ -99,6 +103,7 @@ data class VoiceData(
             panSpread = null,
             freqSpread = null,
             voices = null,
+            warmth = null,
             filters = FilterDefs.empty,
             adsr = AdsrEnvelope.empty,
             accelerate = null,

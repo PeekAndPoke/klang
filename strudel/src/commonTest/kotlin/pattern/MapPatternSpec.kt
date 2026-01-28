@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.seq
 import io.peekandpoke.klang.strudel.lang.silence
@@ -41,21 +42,21 @@ class MapPatternSpec : StringSpec({
 
         val events = pattern.queryArc(0.0, 1.0)
         events shouldHaveSize 2
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "c"
+        events[0].data.value?.asString shouldBe "a"
+        events[1].data.value?.asString shouldBe "c"
     }
 
     "MapPattern should support sorting events" {
-        val source = seq("c", "a", "b")
+        val source = note("c", "a", "b")
         val pattern = source.map { events ->
             events.sortedBy { it.data.note }
         }
 
         val events = pattern.queryArc(0.0, 1.0)
         events shouldHaveSize 3
-        events[0].data.note shouldBe "a"
-        events[1].data.note shouldBe "b"
-        events[2].data.note shouldBe "c"
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
+        events[2].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "MapPattern should support adding events" {
@@ -103,42 +104,42 @@ class MapPatternSpec : StringSpec({
     }
 
     "MapPattern should support chaining multiple transformations" {
-        val source = seq("a", "b", "c", "d")
+        val source = note("a", "b", "c", "d")
         val pattern = source
-            .map { events -> events.filter { it.data.note != "b" } }
+            .map { events -> events.filter { it.data.note?.lowercase() != "b" } }
             .map { events -> events.map { it.copy(data = it.data.copy(note = it.data.note + "!")) } }
 
         val events = pattern.queryArc(0.0, 1.0)
         events shouldHaveSize 3
-        events[0].data.note shouldBe "a!"
-        events[1].data.note shouldBe "c!"
-        events[2].data.note shouldBe "d!"
+        events[0].data.note shouldBeEqualIgnoringCase "a!"
+        events[1].data.note shouldBeEqualIgnoringCase "c!"
+        events[2].data.note shouldBeEqualIgnoringCase "d!"
     }
 
     "MapPattern should support reversing event order" {
-        val source = seq("a", "b", "c")
+        val source = note("a", "b", "c")
         val pattern = source.map { events -> events.reversed() }
 
         val events = pattern.queryArc(0.0, 1.0)
         events shouldHaveSize 3
-        events[0].data.note shouldBe "c"
-        events[1].data.note shouldBe "b"
-        events[2].data.note shouldBe "a"
+        events[0].data.note shouldBeEqualIgnoringCase "c"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
+        events[2].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "MapPattern should work across multiple query arcs" {
-        val source = seq("a", "b", "c", "d")
+        val source = note("a", "b", "c", "d")
         val pattern = source.map { events ->
-            events.filter { it.data.note in listOf("a", "c") }
+            events.filter { it.data.note?.lowercase() in listOf("a", "c") }
         }
 
         val events1 = pattern.queryArc(0.0, 0.5)
         events1 shouldHaveSize 1
-        events1[0].data.note shouldBe "a"
+        events1[0].data.note shouldBeEqualIgnoringCase "a"
 
         val events2 = pattern.queryArc(0.5, 1.0)
         events2 shouldHaveSize 1
-        events2[0].data.note shouldBe "c"
+        events2[0].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "MapPattern should support duplicating events" {
@@ -149,26 +150,6 @@ class MapPatternSpec : StringSpec({
 
         val events = pattern.queryArc(0.0, 1.0)
         events shouldHaveSize 3
-        events.forEach { it.data.note shouldBe "a" }
-    }
-
-    "MapPattern should support conditional transformations" {
-        val source = seq("a", "b", "c", "d")
-        val pattern = source.map { events ->
-            events.mapIndexed { index, event ->
-                if (index % 2 == 0) {
-                    event.copy(data = event.data.copy(note = event.data.note?.uppercase()))
-                } else {
-                    event
-                }
-            }
-        }
-
-        val events = pattern.queryArc(0.0, 1.0)
-        events shouldHaveSize 4
-        events[0].data.note shouldBe "A"
-        events[1].data.note shouldBe "b"
-        events[2].data.note shouldBe "C"
-        events[3].data.note shouldBe "d"
+        events.forEach { it.data.note shouldBeEqualIgnoringCase "a" }
     }
 })

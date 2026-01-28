@@ -26,6 +26,34 @@ fun interface OscFn {
     ): Double
 }
 
+/**
+ * Wraps an [OscFn] with a one-pole low-pass filter to tame harsh harmonics.
+ * @param warmthFactor Amount of filtering (0.0 = none, 1.0 = full).
+ */
+fun OscFn.withWarmth(warmthFactor: Double): OscFn {
+    if (warmthFactor <= 0.0) return this // Optimization: skip if no warmth
+
+    // State is captured here, unique to this wrapper instance
+    var lastSample = 0.0
+    val alpha = warmthFactor.coerceIn(0.0, 0.99)
+
+    return OscFn { buffer, offset, length, phase, phaseInc, phaseMod ->
+        // 1. Generate raw waveform
+        val nextPhase = this.process(buffer, offset, length, phase, phaseInc, phaseMod)
+
+        // 2. Apply One-Pole LPF
+        val end = offset + length
+        for (i in offset until end) {
+            val raw = buffer[i]
+            val smoothed = raw + alpha * (lastSample - raw)
+            buffer[i] = smoothed
+            lastSample = smoothed
+        }
+
+        nextPhase
+    }
+}
+
 typealias NoiseFactory = (rng: Random) -> OscFn
 typealias DustFactory = (sampleRate: Int, density: Double, rng: Random) -> OscFn
 typealias SupersawFactory = (
@@ -93,12 +121,6 @@ class Oscillators private constructor(
             val inc = phaseInc / TWO_PI
             val end = offset + length
 
-            // Warmth State (should be preserved between calls, but local var resets it)
-            // Ideally, OscFn would carry state, but it's a functional interface.
-            // For now, initializing to 0.0 causes a tiny fade-in which helps with clicks.
-            var lastSample = 0.0
-            val warmthFactor = 0.25 // Match Supersaw warmth
-
             if (phaseMod == null) {
                 for (i in offset until end) {
                     // Naive Saw: 2 * p - 1
@@ -108,13 +130,7 @@ class Oscillators private constructor(
                     out -= polyBlep(p, inc)
 
                     // Apply Gain
-                    val raw = gain * out
-
-                    // Warmth Filter (One-Pole LPF)
-                    // This smooths the perfect saw and the initial click
-                    val smoothed = raw + warmthFactor * (lastSample - raw)
-                    buffer[i] = smoothed
-                    lastSample = smoothed
+                    buffer[i] = gain * out
 
                     p += inc
                     if (p >= 1.0) p -= 1.0
@@ -126,10 +142,7 @@ class Oscillators private constructor(
                     var out = 2.0 * p - 1.0
                     out -= polyBlep(p, dt)
 
-                    val raw = gain * out
-                    val smoothed = raw + warmthFactor * (lastSample - raw)
-                    buffer[i] = smoothed
-                    lastSample = smoothed
+                    buffer[i] = gain * out
 
                     p += dt
                     if (p >= 1.0) p -= 1.0
@@ -235,11 +248,6 @@ class Oscillators private constructor(
                 freqAdjusted / sr
             }
 
-            // State for the "Warmth" LPF
-            var lastSample = 0.0
-            // Adjust: 0.0 = bright/harsh (raw math), 0.9 = muffled. 0.25 is a subtle smoothing.
-            val warmthFactor = 0.25
-
             return OscFn { buffer, offset, length, _, _, phaseMod ->
                 val end = offset + length
 
@@ -319,15 +327,6 @@ class Oscillators private constructor(
                         }
                         buffer[i] = sum * voiceGain
                     }
-                }
-
-                // 2. APPLY WARMTH FILTER (In-place One-Pole LPF)
-                // This tames the infinite harmonics of the calculated sawtooth
-                for (i in offset until end) {
-                    val raw = buffer[i]
-                    val smoothed = raw + warmthFactor * (lastSample - raw)
-                    buffer[i] = smoothed
-                    lastSample = smoothed
                 }
 
                 0.0 // Return value unused for this oscillator type

@@ -41,6 +41,10 @@ data class StrudelVoiceData(
     /** Number of voices */
     val voices: Double?,
 
+    // Oscillator warmth (custom addon)
+    /** Controls oscillator warmth (low-pass filtering amount). 0.0 = bright, 1.0 = muffled */
+    val warmth: Double?,
+
     // ADSR (flattened)
     val attack: Double?,
     val decay: Double?,
@@ -164,6 +168,7 @@ data class StrudelVoiceData(
             panSpread = null,
             freqSpread = null,
             voices = null,
+            warmth = null,
             attack = null,
             decay = null,
             sustain = null,
@@ -232,6 +237,7 @@ data class StrudelVoiceData(
             panSpread = other.panSpread ?: panSpread,
             freqSpread = other.freqSpread ?: freqSpread,
             voices = other.voices ?: voices,
+            warmth = other.warmth ?: warmth,
             attack = other.attack ?: attack,
             decay = other.decay ?: decay,
             sustain = other.sustain ?: sustain,
@@ -312,7 +318,7 @@ data class StrudelVoiceData(
                 add(
                     FilterDef.LowPass(
                         cutoffHz = cutoffValue,
-                        q = resonance,
+                        q = resonance ?: 1.0,
                         envelope = envelope
                     )
                 )
@@ -333,7 +339,7 @@ data class StrudelVoiceData(
                 add(
                     FilterDef.HighPass(
                         cutoffHz = hcutoffValue,
-                        q = hresonance,
+                        q = hresonance ?: 1.0,
                         envelope = envelope
                     )
                 )
@@ -354,7 +360,7 @@ data class StrudelVoiceData(
                 add(
                     FilterDef.BandPass(
                         cutoffHz = bandfValue,
-                        q = bandq,
+                        q = bandq ?: 1.0,
                         envelope = envelope
                     )
                 )
@@ -375,7 +381,7 @@ data class StrudelVoiceData(
                 add(
                     FilterDef.Notch(
                         cutoffHz = notchfValue,
-                        q = nresonance,
+                        q = nresonance ?: 1.0,
                         envelope = envelope
                     )
                 )
@@ -395,6 +401,7 @@ data class StrudelVoiceData(
             panSpread = panSpread,
             freqSpread = freqSpread,
             voices = voices,
+            warmth = warmth,
             filters = FilterDefs(filters),
             adsr = AdsrEnvelope(
                 attack = attack,

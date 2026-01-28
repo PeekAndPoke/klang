@@ -266,14 +266,14 @@ They follow the same pattern as the other filter envelopes but are specific to t
 - [x] **`nfrelease()`** - Notch filter envelope release time (alias: `nfr`)
 - [x] **`nfenv()`** - Notch filter envelope amount (alias: `nfe`)
 
-**⚠️ TODO: Audio Engine Implementation**
+~~**⚠️ TODO: Audio Engine Implementation**~~
 
-The DSL functions and data structures for filter envelopes (lowpass, highpass, bandpass, notch) are complete,
-but the audio engine integration is still pending:
+~~The DSL functions and data structures for filter envelopes (lowpass, highpass, bandpass, notch) are complete,
+but the audio engine integration is still pending:~~
 
-- [ ] **Implement filter envelope processing in audio engine** - The `FilterEnvelope` data is passed to the audio
-  engine via `FilterDef` objects, but the actual envelope modulation of filter cutoff frequencies during sound
-  generation needs to be implemented in the audio processing pipeline.
+- [x] **~~Implement filter envelope processing in audio engine~~** ✅ **IMPLEMENTED** - Filter envelope modulation is now
+  fully integrated into the audio engine. The `FilterEnvelope` data is processed during voice rendering with
+  control-rate envelope calculation and applied to tunable filters.
 
 #### Pitch Envelope
 
@@ -525,6 +525,8 @@ but the audio engine integration is still pending:
 - [x] **`density()` / `d()`** - Voice density
 - [x] **`orbit()`** - Audio routing
 - [x] **ADSR envelope**: `attack()`, `decay()`, `sustain()`, `release()`, `adsr()`
+- [x] **`warmth()`** - Oscillator warmth/brightness control (0=bright, 1=warm) ✅ **KLANG EXTENSION** - One-pole low-pass
+  filtering applied to oscillators
 - [ ] **`velocity()`** - MIDI velocity
 - [ ] **`postgain()`** - Post-processing gain
 - [ ] **`partials(list)`** - Additive synthesis partials
@@ -603,6 +605,13 @@ but the audio engine integration is still pending:
   extension)
 - [x] **`oneMinusValue()`** - Calculates 1.0 - value (pattern method, string extension)
 - [x] **`not()`** - Boolean NOT operation on values (pattern method, string extension)
+
+### Structural Addons (Non-Strudel) ✅
+
+**These functions are NOT available in the original Strudel implementation**
+
+- [x] **`morse(text)`** - Creates Morse code rhythm patterns from text (standalone, pattern method, string extension) -
+  Converts text to Morse code with standard timing (dot=1, dash=3, intra-char=1, inter-char=3, word=7 steps)
 
 ### MIDI & OSC
 
@@ -712,7 +721,7 @@ but the audio engine integration is still pending:
   `berlin2`, `range`, `rangex`, `range2`,
   `rand`, `rand2`, `irand` (control patterns), `randL` (control patterns), `brand`, `brandBy` (control patterns),
   `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`, `round`, `floor`, `ceil`, `ratio`)
-- **Synthesis Parameters**: ~13 missing (16 completed: gain, pan, ADSR, vibrato, unison, etc.)
+- **Synthesis Parameters**: ~12 missing (17 completed: gain, pan, ADSR, vibrato, unison, warmth, etc.)
 - **Step-Based Operations**: ~13 missing (1 completed with control pattern support: `bite`)
 - **Conditional & Probabilistic**: ✅ 0 missing (20 completed, with control pattern support: `sometimesBy`, `sometimes`,
   `often`, `rarely`,
@@ -720,6 +729,7 @@ but the audio engine integration is still pending:
   `undegrade`, `firstOf` (control patterns), `every` (control patterns), `lastOf` (control patterns), `filter`,
   `filterWhen`, `bypass`)
 - **Arithmetic Addons (Non-Strudel)**: 0 missing (3 completed: `flipSign`, `oneMinusValue`, `not`)
+- **Structural Addons (Non-Strudel)**: 0 missing (1 completed: `morse`)
 - **Pattern Binding**: ~15 missing (0 completed)
 - **MIDI/OSC**: ~15 missing (0 completed)
 - **Visualization**: ~6 missing (0 completed)
@@ -729,9 +739,9 @@ but the audio engine integration is still pending:
   `pickOut`, `pickmodOut`, `pickRestart`, `pickmodRestart`, `squeeze`, `inhabit`/`pickSqueeze`, `inhabitmod`/
   `pickmodSqueeze`)
 
-### Total Estimated: ~83 features remaining (3 marked "won't implement")
+### Total Estimated: ~81 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~216 features! 🎉
+### Completed So Far: ~220 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.
@@ -742,9 +752,10 @@ Strudel documentation.
 - ✅ All arithmetic, bitwise, and comparison operators
 - ✅ Core pattern creation and transformation
 - ✅ Comprehensive audio effects and synthesis parameters
-- ✅ Full ADSR envelope support
+- ✅ Full ADSR envelope support including filter envelopes with audio engine integration
 - ✅ Continuous signal generators
 - ✅ **Control pattern support for numerical functions** - Major initiative completed!
+- ✅ Custom extensions: warmth parameter for oscillator timbre control, morse code rhythm patterns
 
 ---
 

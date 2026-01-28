@@ -4,7 +4,6 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.bind
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -85,10 +84,50 @@ internal class StructurePattern(
      * We behave like an intersection: clipping source events to the mask's duration.
      */
     private fun queryOut(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        return other.bind(from, to, ctx) { maskEvent ->
+        // Optimization: Inline bind logic to avoid lambda allocation and ReinterpretPattern overhead
+        val maskEvents = other.queryArcContextual(from, to, ctx)
+        val result = createEventList()
+
+        for (maskEvent in maskEvents) {
             // If filtering by truthiness, skip falsy mask events
-            if (filterByTruthiness && !maskEvent.data.isTruthy()) null else source
+            if (filterByTruthiness && !maskEvent.data.isTruthy()) {
+                continue
+            }
+
+            // Intersect query arc with mask event
+            val intersectStart = maxOf(from, maskEvent.begin)
+            val intersectEnd = minOf(to, maskEvent.end)
+
+            if (intersectEnd <= intersectStart) continue
+
+            // Query source pattern within the mask event's duration
+            val sourceEvents = source.queryArcContextual(intersectStart, intersectEnd, ctx)
+
+            for (sourceEvent in sourceEvents) {
+                // Clip source event to mask event boundaries
+                val clippedBegin = maxOf(sourceEvent.begin, maskEvent.begin)
+                val clippedEnd = minOf(sourceEvent.end, maskEvent.end)
+
+                if (clippedEnd > clippedBegin) {
+                    // Create the final event, merging source data with mask location
+                    // We only copy if boundaries changed or we need to add location
+                    val finalEvent =
+                        if (clippedBegin != sourceEvent.begin || clippedEnd != sourceEvent.end || maskEvent.sourceLocations != null) {
+                            sourceEvent.copy(
+                                begin = clippedBegin,
+                                end = clippedEnd,
+                                dur = clippedEnd - clippedBegin
+                            ).prependLocations(maskEvent.sourceLocations)
+                        } else {
+                            sourceEvent
+                        }
+
+                    result.add(finalEvent)
+                }
+            }
         }
+
+        return result
     }
 
     private fun StrudelVoiceData.isTruthy(): Boolean {

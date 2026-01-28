@@ -8,6 +8,7 @@ import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.OscFn
 import io.peekandpoke.klang.audio_be.osci.Oscillators
+import io.peekandpoke.klang.audio_be.osci.withWarmth
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
@@ -80,7 +81,8 @@ class VoiceScheduler(
     fun VoiceData.createOscillator(oscillators: Oscillators, freqHz: Double): OscFn {
         val e = this
 
-        return oscillators.get(
+        // Create base oscillator
+        val rawOsc = oscillators.get(
             name = e.sound,
             freqHz = freqHz,
             density = e.density,
@@ -88,6 +90,14 @@ class VoiceScheduler(
             freqSpread = e.freqSpread,
             panSpread = e.panSpread,
         )
+
+        // Apply warmth wrapper if specified
+        val warmthAmount = e.warmth ?: 0.0
+        return if (warmthAmount > 0.0) {
+            rawOsc.withWarmth(warmthAmount)
+        } else {
+            rawOsc
+        }
     }
 
     fun clear() {
