@@ -176,15 +176,15 @@ private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     )
 }
 
-/** Sets the oscillator density (for supersaw) */
+/** Sets the oscillator density (for supersaw) or noise density (for dust/crackle) */
 @StrudelDsl
 val StrudelPattern.density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
 
-/** Sets the oscillator density (for supersaw) */
+/** Sets the oscillator density (for supersaw) or noise density (for dust/crackle) */
 @StrudelDsl
 val density by dslFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
 
-/** Sets the oscillator density (for supersaw) on a string */
+/** Sets the oscillator density (for supersaw) or noise density (for dust/crackle) on a string */
 @StrudelDsl
 val String.density by dslStringExtension { p, args, callInfo -> p.density(args, callInfo) }
 
@@ -372,3 +372,15 @@ val orbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutatio
 
 @StrudelDsl
 val String.orbit by dslStringExtension { p, args, callInfo -> p.orbit(args, callInfo) }
+
+/** Alias for [orbit] */
+@StrudelDsl
+val StrudelPattern.o by dslPatternExtension { p, args, callInfo -> p.orbit(args, callInfo) }
+
+/** Alias for [orbit] */
+@StrudelDsl
+val o by dslFunction { args, callInfo -> orbit(args, callInfo) }
+
+/** Alias for [orbit] on a string */
+@StrudelDsl
+val String.o by dslStringExtension { p, args, callInfo -> p.orbit(args, callInfo) }

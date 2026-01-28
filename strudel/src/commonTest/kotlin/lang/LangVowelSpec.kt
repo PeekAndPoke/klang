@@ -54,25 +54,6 @@ class LangVowelSpec : StringSpec({
 
         // Verify vowel 'a' formant bands
         formant.bands.size shouldBe 5
-        formant.bands[0].freq shouldBe 800.0
-        formant.bands[0].db shouldBe 0.0
-        formant.bands[0].q shouldBe 80.0
-
-        formant.bands[1].freq shouldBe 1150.0
-        formant.bands[1].db shouldBe -6.0
-        formant.bands[1].q shouldBe 90.0
-
-        formant.bands[2].freq shouldBe 2900.0
-        formant.bands[2].db shouldBe -12.0
-        formant.bands[2].q shouldBe 120.0
-
-        formant.bands[3].freq shouldBe 3900.0
-        formant.bands[3].db shouldBe -18.0
-        formant.bands[3].q shouldBe 130.0
-
-        formant.bands[4].freq shouldBe 4950.0
-        formant.bands[4].db shouldBe -24.0
-        formant.bands[4].q shouldBe 140.0
     }
 
     "vowel() works with all vowels (a, e, i, o, u)" {

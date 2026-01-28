@@ -154,6 +154,21 @@ class GraalStrudelPattern(
         val coarse = value.safeGetMember("coarse").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Phaser
+        val phaser = value.safeGetMember("phaser").safeNumberOrNull()
+        val phaserDepth = value.safeGetMember("phaserdepth").safeNumberOrNull()
+        val phaserCenter = value.safeGetMember("phasercenter").safeNumberOrNull()
+        val phaserSweep = value.safeGetMember("phasersweep").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
+        // Tremolo
+        val tremoloSync = value.safeGetMember("tremolosync").safeNumberOrNull()
+        val tremoloDepth = value.safeGetMember("tremolodepth").safeNumberOrNull()
+        val tremoloSkew = value.safeGetMember("tremoloskew").safeNumberOrNull()
+        val tremoloPhase = value.safeGetMember("tremolophase").safeNumberOrNull()
+        val tremoloShape = value.safeGetMember("tremoloshape").safeStringOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Filters (flat fields) - each filter has its own cutoff and resonance
         val cutoff = value.safeGetMember("cutoff").safeNumberOrNull()
         val resonance = value.safeGetMember("resonance").safeNumberOrNull()
@@ -265,6 +280,17 @@ class GraalStrudelPattern(
                 distort = distort,
                 coarse = coarse,
                 crush = crush,
+                // Phaser
+                phaser = phaser,
+                phaserDepth = phaserDepth,
+                phaserCenter = phaserCenter,
+                phaserSweep = phaserSweep,
+                // Tremolo
+                tremoloSync = tremoloSync,
+                tremoloDepth = tremoloDepth,
+                tremoloSkew = tremoloSkew,
+                tremoloPhase = tremoloPhase,
+                tremoloShape = tremoloShape,
                 // Filters (flat fields) - each filter has its own resonance
                 cutoff = cutoff,
                 resonance = resonance,

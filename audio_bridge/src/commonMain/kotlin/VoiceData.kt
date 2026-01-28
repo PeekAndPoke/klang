@@ -57,6 +57,19 @@ data class VoiceData(
     val coarse: Double?,
     val crush: Double?,
 
+    // Phaser
+    val phaser: Double?,
+    val phaserDepth: Double?,
+    val phaserCenter: Double?,
+    val phaserSweep: Double?,
+
+    // Tremolo
+    val tremoloSync: Double?,
+    val tremoloDepth: Double?,
+    val tremoloSkew: Double?,
+    val tremoloPhase: Double?,
+    val tremoloShape: String?,
+
     // HPF / LPF
     /** Low pass filter cutoff frequency */
     val cutoff: Double?,
@@ -112,6 +125,15 @@ data class VoiceData(
             distort = null,
             coarse = null,
             crush = null,
+            phaser = null,
+            phaserDepth = null,
+            phaserCenter = null,
+            phaserSweep = null,
+            tremoloSync = null,
+            tremoloDepth = null,
+            tremoloSkew = null,
+            tremoloPhase = null,
+            tremoloShape = null,
             cutoff = null,
             hcutoff = null,
             bandf = null,

@@ -374,6 +374,24 @@ class VoiceScheduler(
             roomSize = (data.roomSize ?: 0.0) / 10.0,
         )
 
+        // Phaser
+        val phaser = Voice.Phaser(
+            rate = data.phaser ?: 0.0,
+            depth = data.phaserDepth ?: 0.0,
+            center = data.phaserCenter ?: 1000.0,
+            sweep = data.phaserSweep ?: 1000.0,
+        )
+
+        // Tremolo
+        val tremolo = Voice.Tremolo(
+            rate = data.tremoloSync ?: 0.0,
+            depth = data.tremoloDepth ?: 0.0,
+            skew = data.tremoloSkew ?: 0.0,
+            phase = data.tremoloPhase ?: 0.0,
+            shape = data.tremoloShape,
+            currentPhase = (data.tremoloPhase ?: 0.0) * TWO_PI // Initial phase
+        )
+
         // Effects
         val distort = Voice.Distort(amount = data.distort ?: 0.0)
         val crush = Voice.Crush(amount = data.crush ?: 0.0)
@@ -417,6 +435,8 @@ class VoiceScheduler(
                     filterModulators = modulators,
                     delay = delay,
                     reverb = reverb,
+                    phaser = phaser,
+                    tremolo = tremolo,
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
@@ -521,6 +541,8 @@ class VoiceScheduler(
                     filterModulators = modulators,
                     delay = delay,
                     reverb = reverb,
+                    phaser = phaser,
+                    tremolo = tremolo,
                     distort = distort,
                     crush = crush,
                     coarse = coarse,

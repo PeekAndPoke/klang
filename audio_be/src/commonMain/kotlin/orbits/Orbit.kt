@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.orbits
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.DelayLine
+import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.voices.Voice
 
@@ -23,6 +24,9 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
     // reverb
     val reverbSendBuffer = StereoBuffer(blockFrames)
     val reverb = Reverb(sampleRate)
+
+    // phaser (insert effect)
+    val phaser = Phaser(sampleRate)
 
     // To track if we need to update parameters this block
     private var isActive = false
@@ -46,6 +50,16 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
         // The mix is handled by how much we write to reverbSendBuffer
         // But we can also modulate damping if needed.
         reverb.roomSize = voice.reverb.roomSize.coerceIn(0.0, 1.0)
+
+        // Phaser
+        if (voice.phaser.depth > 0) {
+            phaser.rate = voice.phaser.rate
+            phaser.depth = voice.phaser.depth
+            phaser.centerFreq = if (voice.phaser.center > 0) voice.phaser.center else 1000.0
+            phaser.sweepRange = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
+            // Feedback usually fixed or tied to depth in simple models, or add a param later
+            phaser.feedback = 0.5
+        }
     }
 
     fun clear() {
@@ -55,6 +69,7 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
         mixBuffer.clear()
         delaySendBuffer.clear()
         reverbSendBuffer.clear()
+        // Phaser is insert, no separate buffer needed if processed in-place on mixBuffer
     }
 
     fun processEffects() {
@@ -69,6 +84,11 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
         // Reverb active?
         if (reverb.roomSize > 0.01) {
             reverb.process(reverbSendBuffer, mixBuffer, blockFrames)
+        }
+
+        // Phaser active? (Insert effect on the mix bus)
+        if (phaser.depth > 0.01) {
+            phaser.process(mixBuffer, blockFrames)
         }
     }
 }

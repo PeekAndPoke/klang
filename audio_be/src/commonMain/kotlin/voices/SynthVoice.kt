@@ -2,6 +2,8 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.osci.OscFn
+import io.peekandpoke.klang.audio_be.voices.Voice.Phaser
+import io.peekandpoke.klang.audio_be.voices.Voice.Tremolo
 
 class SynthVoice(
     override val orbitId: Int,
@@ -17,6 +19,8 @@ class SynthVoice(
     override val filterModulators: List<Voice.FilterModulator>,
     override val delay: Voice.Delay,
     override val reverb: Voice.Reverb,
+    override val phaser: Phaser,
+    override val tremolo: Tremolo,
     override val distort: Voice.Distort,
     override val crush: Voice.Crush,
     override val coarse: Voice.Coarse,

@@ -58,6 +58,13 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     val coarseFactor = coarse.amount
     val hasCoarse = coarseFactor > 1.0
 
+    // Tremolo State
+    val tremolo = this.tremolo
+    val hasTremolo = tremolo.depth > 0.0
+    // LFO increment per frame: rate * 2PI / sampleRate
+    val tremoloInc = if (hasTremolo) (tremolo.rate * TWO_PI) / ctx.sampleRate else 0.0
+    var tremoloPhase = tremolo.currentPhase
+
     for (i in 0 until length) {
         val idx = offset + i
         var signal = voiceBuffer[idx]
@@ -99,6 +106,28 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
         // Apply Envelope to signal
         var wetSignal = signal * currentEnv
 
+        // Tremolo (Amplitude Modulation)
+        if (hasTremolo) {
+            // Update phase
+            tremoloPhase += tremoloInc
+            if (tremoloPhase > TWO_PI) tremoloPhase -= TWO_PI
+
+            // Basic Sine LFO (-1.0 .. 1.0)
+            val lfoRaw = sin(tremoloPhase)
+
+            // Shape the LFO based on tremoloShape
+            // TODO: Implement shapes (tri, square, saw, ramp)
+            // For now, sine is default.
+
+            // Apply Depth: (1 - depth) + depth * ((lfo + 1) / 2)
+            // Map LFO from -1..1 to 0..1
+            val lfoNorm = (lfoRaw + 1.0) * 0.5
+            // Gain reduction factor: 1.0 (full volume) down to (1.0 - depth)
+            val tremoloGain = 1.0 - (tremolo.depth * (1.0 - lfoNorm))
+
+            wetSignal *= tremoloGain
+        }
+
         if (hasDistortion) {
             wetSignal = tanh(wetSignal * distortionDrive)
         }
@@ -125,7 +154,11 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
         absPos++
     }
 
+    // Update envelope
     env.level = currentEnv
+
+    // Save Tremolo Phase state for next block
+    tremolo.currentPhase = tremoloPhase
 }
 
 /**

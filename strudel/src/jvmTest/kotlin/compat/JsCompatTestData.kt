@@ -407,6 +407,25 @@ object JsCompatTestData {
         Example("Delay alias delayfb", """note("c").delay(0.5).delaytime(0.25).delayfb(0.5)"""),
         Example("Delay alias dfb", """note("c").delay(0.5).delaytime(0.25).dfb(0.5)"""),
 
+        // Phaser
+        Example("Phaser basic", """note("c").phaser(2).phaserdepth(0.8)"""),
+        Example("Phaser aliases", """note("c").ph(2).phd(0.8)"""),
+        Example("Phaser center/sweep", """note("c").phc(500).phs(1000)"""),
+        Example("Phaser phasdp alias", """note("c").phaser(2).phasdp(0.7)"""),
+
+        // Tremolo
+        Example("Tremolo basic", """note("c").tremolosync(4).tremolodepth(0.5)"""),
+        Example("Tremolo aliases", """note("c").tremsync(4).tremdepth(0.5)"""),
+        Example("Tremolo shape", """note("c").tremoloshape("sine")"""),
+        Example("Tremolo shape alias", """note("c").tremshape("square")"""),
+        Example("Tremolo skew/phase", """note("c").tremoloskew(0.6).tremolophase(0.25)"""),
+        Example("Tremolo skew/phase aliases", """note("c").tremskew(0.6).tremphase(0.25)"""),
+
+        // Missing Aliases
+        Example("Room Size Alias sz", """note("c").room(0.5).sz(0.9)"""),
+        Example("Room Size Alias size", """note("c").room(0.5).size(0.9)"""),
+        Example("Orbit Alias o", """note("c").o(1)"""),
+
         // Sample Manipulation
         Example("Sample Begin", """s("bd").begin(0.5)"""),
         Example("Sample End", """s("bd").end(0.5)"""),

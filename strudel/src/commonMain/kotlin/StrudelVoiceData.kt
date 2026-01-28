@@ -65,6 +65,28 @@ data class StrudelVoiceData(
     val coarse: Double?,
     val crush: Double?,
 
+    // Phaser
+    /** Phaser modulation speed */
+    val phaser: Double?,
+    /** Phaser depth (0-1) */
+    val phaserDepth: Double?,
+    /** Phaser center frequency (Hz) */
+    val phaserCenter: Double?,
+    /** Phaser sweep range (Hz) */
+    val phaserSweep: Double?,
+
+    // Tremolo
+    /** Tremolo modulation speed in cycles */
+    val tremoloSync: Double?,
+    /** Tremolo depth */
+    val tremoloDepth: Double?,
+    /** Tremolo waveform shape/skew (0-1) */
+    val tremoloSkew: Double?,
+    /** Tremolo phase offset in cycles */
+    val tremoloPhase: Double?,
+    /** Tremolo waveform type (tri, square, sine, saw, ramp) */
+    val tremoloShape: String?,
+
     // Filters (flattened) - each filter has its own cutoff and resonance
     /** Low pass filter cutoff frequency */
     val cutoff: Double?,
@@ -186,6 +208,15 @@ data class StrudelVoiceData(
             distort = null,
             coarse = null,
             crush = null,
+            phaser = null,
+            phaserDepth = null,
+            phaserCenter = null,
+            phaserSweep = null,
+            tremoloSync = null,
+            tremoloDepth = null,
+            tremoloSkew = null,
+            tremoloPhase = null,
+            tremoloShape = null,
             cutoff = null,
             resonance = null,
             hcutoff = null,
@@ -257,6 +288,15 @@ data class StrudelVoiceData(
             distort = other.distort ?: distort,
             coarse = other.coarse ?: coarse,
             crush = other.crush ?: crush,
+            phaser = other.phaser ?: phaser,
+            phaserDepth = other.phaserDepth ?: phaserDepth,
+            phaserCenter = other.phaserCenter ?: phaserCenter,
+            phaserSweep = other.phaserSweep ?: phaserSweep,
+            tremoloSync = other.tremoloSync ?: tremoloSync,
+            tremoloDepth = other.tremoloDepth ?: tremoloDepth,
+            tremoloSkew = other.tremoloSkew ?: tremoloSkew,
+            tremoloPhase = other.tremoloPhase ?: tremoloPhase,
+            tremoloShape = other.tremoloShape ?: tremoloShape,
             cutoff = other.cutoff ?: cutoff,
             resonance = other.resonance ?: resonance,
             hcutoff = other.hcutoff ?: hcutoff,
@@ -434,6 +474,15 @@ data class StrudelVoiceData(
             distort = distort,
             coarse = coarse,
             crush = crush,
+            phaser = phaser,
+            phaserDepth = phaserDepth,
+            phaserCenter = phaserCenter,
+            phaserSweep = phaserSweep,
+            tremoloSync = tremoloSync,
+            tremoloDepth = tremoloDepth,
+            tremoloSkew = tremoloSkew,
+            tremoloPhase = tremoloPhase,
+            tremoloShape = tremoloShape,
             cutoff = cutoff,
             hcutoff = hcutoff,
             bandf = bandf,

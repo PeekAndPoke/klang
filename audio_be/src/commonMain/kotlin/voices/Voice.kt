@@ -68,6 +68,23 @@ sealed interface Voice {
         val roomSize: Double,
     )
 
+    class Phaser(
+        val rate: Double,
+        val depth: Double,
+        val center: Double,
+        val sweep: Double,
+    )
+
+    class Tremolo(
+        val rate: Double,
+        val depth: Double,
+        val skew: Double,
+        val phase: Double,
+        val shape: String?,
+        // State
+        var currentPhase: Double = 0.0,
+    )
+
     class Distort(
         val amount: Double,
     )
@@ -104,6 +121,8 @@ sealed interface Voice {
     val filterModulators: List<FilterModulator>
     val delay: Delay
     val reverb: Reverb
+    val phaser: Phaser
+    val tremolo: Tremolo
 
     // global effects
     val distort: Distort

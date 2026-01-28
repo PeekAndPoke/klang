@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import io.peekandpoke.klang.audio_be.voices.Voice.Phaser
+import io.peekandpoke.klang.audio_be.voices.Voice.Tremolo
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import kotlin.math.max
 import kotlin.math.min
@@ -19,6 +21,8 @@ class SampleVoice(
     override val filterModulators: List<Voice.FilterModulator>,
     override val delay: Voice.Delay,
     override val reverb: Voice.Reverb,
+    override val phaser: Phaser,
+    override val tremolo: Tremolo,
     override val distort: Voice.Distort,
     override val crush: Voice.Crush,
     override val coarse: Voice.Coarse,

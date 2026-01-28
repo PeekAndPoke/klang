@@ -320,11 +320,16 @@ but the audio engine integration is still pending:~~
 
 #### Amplitude Modulation / Tremolo
 
-- [ ] **`tremolosync()`** - Tremolo modulation speed in cycles (alias: `tremsync`)
-- [ ] **`tremolodepth()`** - Tremolo depth of modulation (alias: `tremdepth`)
-- [ ] **`tremoloskew()`** - Tremolo waveform shape 0-1 (alias: `tremskew`)
-- [ ] **`tremolophase()`** - Tremolo phase offset in cycles (alias: `tremphase`)
-- [ ] **`tremoloshape()`** - Tremolo waveform type: tri, square, sine, saw, ramp (alias: `tremshape`)
+- [x] **`tremolosync()`** - Tremolo modulation speed in cycles (alias: `tremsync`) ✅ **FULLY IMPLEMENTED** (DSL + Audio
+  Processing)
+- [x] **`tremolodepth()`** - Tremolo depth of modulation (alias: `tremdepth`) ✅ **FULLY IMPLEMENTED** (DSL + Audio
+  Processing)
+- [x] **`tremoloskew()`** - Tremolo waveform shape 0-1 (alias: `tremskew`) ✅ **FULLY IMPLEMENTED** (DSL + Audio
+  Processing)
+- [x] **`tremolophase()`** - Tremolo phase offset in cycles (alias: `tremphase`) ✅ **FULLY IMPLEMENTED** (DSL + Audio
+  Processing)
+- [x] **`tremoloshape()`** - Tremolo waveform type: tri, square, sine, saw, ramp (alias: `tremshape`) ✅ **FULLY
+  IMPLEMENTED** (DSL + Audio Processing)
 
 #### Dynamics
 
@@ -340,7 +345,7 @@ but the audio engine integration is still pending:~~
 #### Global Effects - Reverb
 
 - [x] **`room()`** - Reverb mix level (0-1)
-- [x] **`roomsize()`** - Reverb room size (0-10) (alias: `rsize`) **MISSING ALIASES: `sz`, `size`**
+- [x] **`roomsize()`** - Reverb room size (0-10) (aliases: `rsize`, `sz`, `size`) ✅ **ALL ALIASES IMPLEMENTED**
 - [ ] **`roomfade()`** - Reverb fade time in seconds (alias: `rfade`)
 - [ ] **`roomlp()`** - Reverb lowpass start frequency in Hz (alias: `rlp`)
 - [ ] **`roomdim()`** - Reverb lowpass frequency at -60dB in Hz (alias: `rdim`)
@@ -354,10 +359,13 @@ but the audio engine integration is still pending:~~
 
 #### Global Effects - Phaser
 
-- [ ] **`phaser()`** - Phaser modulation speed (alias: `ph`)
-- [ ] **`phaserdepth()`** - Phaser effect amount 0-1, default 0.75 (aliases: `phd`, `phasdp`)
-- [ ] **`phasercenter()`** - Phaser center frequency in Hz, default 1000 (alias: `phc`)
-- [ ] **`phasersweep()`** - Phaser LFO sweep range in Hz, default 2000 (alias: `phs`)
+- [x] **`phaser()`** - Phaser modulation speed (alias: `ph`) ✅ **FULLY IMPLEMENTED** (DSL + Audio Processing)
+- [x] **`phaserdepth()`** - Phaser effect amount 0-1, default 0.75 (aliases: `phd`, `phasdp`) ✅ **FULLY IMPLEMENTED** (
+  DSL + Audio Processing)
+- [x] **`phasercenter()`** - Phaser center frequency in Hz, default 1000 (alias: `phc`) ✅ **FULLY IMPLEMENTED** (DSL +
+  Audio Processing)
+- [x] **`phasersweep()`** - Phaser LFO sweep range in Hz, default 2000 (alias: `phs`) ✅ **FULLY IMPLEMENTED** (DSL +
+  Audio Processing)
 
 #### Global Effects - Duck / Sidechain
 
@@ -368,7 +376,7 @@ but the audio engine integration is still pending:~~
 #### Other
 
 - [ ] **`xfade()`** - Cross-fade between signals (0-1)
-- [x] **`orbit()`** - Global effect context grouping **MISSING ALIAS: `o`**
+- [x] **`orbit()`** - Global effect context grouping (alias: `o`) ✅ **ALL ALIASES IMPLEMENTED**
 
 ### Sample Manipulation ⭐⭐⭐
 
@@ -559,10 +567,15 @@ but the audio engine integration is still pending:~~
 
 ### Noise Generators
 
-- [ ] **`white`** - White noise
-- [ ] **`pink`** - Pink noise
-- [ ] **`brown`** - Brown noise
-- [ ] **`crackle(density)`** - Crackle noise
+- [x] **`white`** / **`whitenoise`** - White noise ✅ **FULLY IMPLEMENTED** (accessed via `s("white")` or
+  `sound("white")`)
+- [x] **`pink`** / **`pinknoise`** - Pink noise ✅ **FULLY IMPLEMENTED** (accessed via `s("pink")` or `sound("pink")`)
+- [x] **`brown`** / **`brownnoise`** - Brown noise ✅ **FULLY IMPLEMENTED** (accessed via `s("brown")` or
+  `sound("brown")`)
+- [x] **`dust`** - Dust noise ✅ **FULLY IMPLEMENTED** (accessed via `s("dust")` or `sound("dust")`, density controlled
+  via `density()` / `d()`)
+- [x] **`crackle`** - Crackle noise ✅ **FULLY IMPLEMENTED** (accessed via `s("crackle")` or `sound("crackle")`, density
+  controlled via `density()` / `d()`)
 
 ### Audio Effects (Advanced)
 
@@ -730,8 +743,9 @@ but the audio engine integration is still pending:~~
 - **Arithmetic & Math**: ✅ 0 missing (7 completed)
 - **Bitwise Operators**: ✅ 0 missing (5 completed)
 - **Comparison & Logic**: 2 missing (8 completed)
-- **Audio Effects**: ~43 missing + 2 partial (18 completed: filters with full aliases, filter resonance, vowel formant,
-  distortion, reverb, delay, jux, juxBy; partial: roomsize missing sz/size aliases, orbit missing o alias)
+- **Audio Effects**: ~34 missing (27 completed: filters with full aliases, filter resonance, vowel formant,
+  distortion, reverb with all aliases, delay, phaser with all aliases, tremolo with all aliases, jux, juxBy, orbit with
+  all aliases)
 - **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
   `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
 - **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
@@ -741,6 +755,8 @@ but the audio engine integration is still pending:~~
   `rand`, `rand2`, `irand` (control patterns), `randL` (control patterns), `brand`, `brandBy` (control patterns),
   `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`, `round`, `floor`, `ceil`, `ratio`)
 - **Synthesis Parameters**: ~12 missing (17 completed: gain, pan, ADSR, vibrato, unison, warmth, etc.)
+- **Noise Generators**: ✅ 0 missing (5 completed: `white`/`whitenoise`, `pink`/`pinknoise`, `brown`/`brownnoise`,
+  `dust`, `crackle` - all accessed via `s()` or `sound()`, density controlled via `density()`/`d()`)
 - **Step-Based Operations**: ~13 missing (1 completed with control pattern support: `bite`)
 - **Conditional & Probabilistic**: ✅ 0 missing (20 completed, with control pattern support: `sometimesBy`, `sometimes`,
   `often`, `rarely`,
@@ -758,9 +774,9 @@ but the audio engine integration is still pending:~~
   `pickOut`, `pickmodOut`, `pickRestart`, `pickmodRestart`, `squeeze`, `inhabit`/`pickSqueeze`, `inhabitmod`/
   `pickmodSqueeze`)
 
-### Total Estimated: ~76 features remaining (3 marked "won't implement")
+### Total Estimated: ~62 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~226 features! 🎉
+### Completed So Far: ~240 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.
@@ -778,6 +794,12 @@ Strudel documentation.
   notations)
 - ✅ **Vowel formant synthesis** - Full implementation with 5 vowels (a, e, i, o, u) using parallel bandpass filters,
   precise formant frequencies based on acoustic phonetics
+- ✅ **Complete noise generators** - All 5 noise types fully implemented (white, pink, brown, dust, crackle) with proper
+  DSP algorithms and density control for dust/crackle
+- ✅ **Phaser and Tremolo effects** - Complete end-to-end implementation with DSL, data structures, and audio processing.
+  Phaser includes all-pass filter cascade with LFO modulation. Tremolo includes configurable waveforms (tri, square,
+  sine, saw, ramp) with sync, depth, skew, and phase control. All parameters and aliases implemented.
+- ✅ **Complete effect aliases** - All missing aliases implemented (roomsize: sz/size; orbit: o)
 - ✅ Custom extensions: warmth parameter for oscillator timbre control, morse code rhythm patterns
 
 ---
