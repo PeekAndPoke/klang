@@ -124,6 +124,21 @@ class GraalStrudelPattern(
             ?: value.safeGetMember("vibratoMod").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // Pitch envelope
+        val pAttack = value.safeGetMember("pattack").safeNumberOrNull()
+            ?: value.safeGetMember("patt").safeNumberOrNull()
+        val pDecay = value.safeGetMember("pdecay").safeNumberOrNull()
+            ?: value.safeGetMember("pdec").safeNumberOrNull()
+        val pRelease = value.safeGetMember("prelease").safeNumberOrNull()
+            ?: value.safeGetMember("prel").safeNumberOrNull()
+        val pEnv = value.safeGetMember("penv").safeNumberOrNull()
+            ?: value.safeGetMember("pamt").safeNumberOrNull()
+        val pCurve = value.safeGetMember("pcurve").safeNumberOrNull()
+            ?: value.safeGetMember("pcrv").safeNumberOrNull()
+        val pAnchor = value.safeGetMember("panchor").safeNumberOrNull()
+            ?: value.safeGetMember("panc").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Routing
         val orbit = value.safeGetMember("orbit").safeNumberOrNull()?.toInt()
 
@@ -308,18 +323,16 @@ class GraalStrudelPattern(
                 vibrato = vibrato,
                 vibratoMod = vibratoMod,
                 // Pitch envelope
-                pAttack = null,
-                pDecay = null,
-                pRelease = null,
-                pEnv = null,
-                pCurve = null,
-                pAnchor = null,
+                pAttack = pAttack,
+                pDecay = pDecay,
+                pRelease = pRelease,
+                pEnv = pEnv,
+                pCurve = pCurve,
+                pAnchor = pAnchor,
                 // Effects
                 distort = distort,
                 coarse = coarse,
                 crush = crush,
-                distortion = null,
-                shape = null,
                 // Phaser
                 phaserRate = phaserRate,
                 phaserDepth = phaserDepth,

@@ -66,8 +66,6 @@ data class VoiceData(
     val distort: Double?,
     val coarse: Double?,
     val crush: Double?,
-    val distortion: Double?,
-    val shape: Double?,
 
     // Phaser
     val phaser: Double?,
@@ -159,8 +157,6 @@ data class VoiceData(
             distort = null,
             coarse = null,
             crush = null,
-            distortion = null,
-            shape = null,
             phaser = null,
             phaserDepth = null,
             phaserCenter = null,

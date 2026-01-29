@@ -453,6 +453,12 @@ object JsCompatTestData {
         Example("Sample LoopAt #4", """s("bd").loopAt(4)"""),
         Example("Sample Cut", """s("bd").cut(1)"""),
         Example("Sample Slice", """s("bd").slice(4, 1)"""),
+        Example("Sample Splice", """s("bd").splice(4, 1)""", skip = true),
+        Example("Sample Loop Begin", """s("bd").loopBegin(0.25)""", skip = true),
+        Example("Sample Loop Begin alias", """s("bd").loopb(0.25)""", skip = true),
+        Example("Sample Loop End", """s("bd").loopEnd(0.75)""", skip = true),
+        Example("Sample Loop End alias", """s("bd").loope(0.75)""", skip = true),
+        Example("Sample Loop Begin and End", """s("bd").loopBegin(0.25).loopEnd(0.75)""", skip = true),
 
         // Continuous patterns Steady
         *listOf(
@@ -638,6 +644,21 @@ object JsCompatTestData {
         // Modulation
         Example("Vibrato", """note("c").vib(5).vibmod(0.1)"""),
         Example("Accelerate", """note("c").accelerate(1)"""),
+
+        // Pitch Envelope (NOT IN ORIGINAL STRUDEL JS IMPLEMENTATION)
+        Example("Pitch envelope attack", """note("c").pattack(0.1)""", skip = true),
+        Example("Pitch envelope attack alias", """note("c").patt(0.1)""", skip = true),
+        Example("Pitch envelope decay", """note("c").pdecay(0.3)""", skip = true),
+        Example("Pitch envelope decay alias", """note("c").pdec(0.3)""", skip = true),
+        Example("Pitch envelope release", """note("c").prelease(0.5)""", skip = true),
+        Example("Pitch envelope release alias", """note("c").prel(0.5)""", skip = true),
+        Example("Pitch envelope depth", """note("c").penv(12)""", skip = true),
+        Example("Pitch envelope depth alias", """note("c").pamt(12)""", skip = true),
+        Example("Pitch envelope curve", """note("c").pcurve(0.5)""", skip = true),
+        Example("Pitch envelope curve alias", """note("c").pcrv(0.5)""", skip = true),
+        Example("Pitch envelope anchor", """note("c").panchor(0.0)""", skip = true),
+        Example("Pitch envelope anchor alias", """note("c").panc(0.0)""", skip = true),
+        Example("Pitch envelope full", """note("c").pattack(0.1).pdecay(0.3).prelease(0.5).penv(12)""", skip = true),
 
         // Transformation
         Example("Struct #1", """note("c e").struct("x")"""),

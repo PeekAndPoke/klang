@@ -22,14 +22,6 @@ class LangNewFeaturesIntegrationSpec : StringSpec({
         events[0].data.loopEnd shouldBe 0.75
     }
 
-    "All new distortion functions compile and work" {
-        val p = StrudelPattern.compile("""note("c").distortion("0.8").shape("2")""")
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.distortion shouldBe 0.8
-        events[0].data.shape shouldBe 2.0
-    }
-
     "Splice function compiles and works" {
         val p = StrudelPattern.compile("""sound("bd").splice(4, 1)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()

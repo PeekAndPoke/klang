@@ -76,8 +76,6 @@ data class StrudelVoiceData(
     val distort: Double?,
     val coarse: Double?,
     val crush: Double?,
-    val distortion: Double?,
-    val shape: Double?,
 
     // Phaser
     /** Phaser modulation speed */
@@ -252,8 +250,6 @@ data class StrudelVoiceData(
             distort = null,
             coarse = null,
             crush = null,
-            distortion = null,
-            shape = null,
             phaserRate = null,
             phaserDepth = null,
             phaserCenter = null,
@@ -352,8 +348,6 @@ data class StrudelVoiceData(
             distort = other.distort ?: distort,
             coarse = other.coarse ?: coarse,
             crush = other.crush ?: crush,
-            distortion = other.distortion ?: distortion,
-            shape = other.shape ?: shape,
             phaserRate = other.phaserRate ?: phaserRate,
             phaserDepth = other.phaserDepth ?: phaserDepth,
             phaserCenter = other.phaserCenter ?: phaserCenter,
@@ -558,8 +552,6 @@ data class StrudelVoiceData(
             distort = distort,
             coarse = coarse,
             crush = crush,
-            distortion = distortion,
-            shape = shape,
             phaser = phaserRate,
             phaserDepth = phaserDepth,
             phaserCenter = phaserCenter,
