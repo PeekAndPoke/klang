@@ -15,6 +15,7 @@ class SynthVoice(
     override val postGain: Double,
     override val accelerate: Voice.Accelerate,
     override val vibrato: Voice.Vibrato,
+    override val pitchEnvelope: Voice.PitchEnvelope?,
     override val filter: AudioFilter,
     override val envelope: Voice.Envelope,
     override val filterModulators: List<Voice.FilterModulator>,

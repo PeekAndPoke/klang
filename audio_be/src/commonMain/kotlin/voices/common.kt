@@ -165,18 +165,21 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
 }
 
 /**
- * Adjust pitch by combining [Voice.Accelerate] and [Voice.Vibrato]
+ * Adjust pitch by combining [Voice.Accelerate], [Voice.Vibrato], and [Voice.PitchEnvelope]
  * Returns null if no modulation is active.
  */
 fun Voice.fillPitchModulation(ctx: Voice.RenderContext, offset: Int, length: Int): DoubleArray? {
     val vib = vibrato
     val accel = accelerate.amount
+    val pEnv = pitchEnvelope
+
     val hasVibrato = vib.depth > 0.0
     val hasAccelerate = accel != 0.0
+    val hasPitchEnv = pEnv != null
 
     // CRITICAL FIX: Return null instead of a dirty buffer!
     // This tells the voice to use standard playback speed/frequency.
-    if (!hasVibrato && !hasAccelerate) return null
+    if (!hasVibrato && !hasAccelerate && !hasPitchEnv) return null
 
     val out = ctx.freqModBuffer
     val totalFrames = (endFrame - startFrame).toDouble()
@@ -187,6 +190,7 @@ fun Voice.fillPitchModulation(ctx: Voice.RenderContext, offset: Int, length: Int
     for (i in 0 until length) {
         val idx = offset + i
         val absFrame = ctx.blockStart + idx
+        val relPos = (absFrame - startFrame).toDouble()
 
         // 1. Vibrato component
         val vibMod = if (hasVibrato) {
@@ -197,11 +201,30 @@ fun Voice.fillPitchModulation(ctx: Voice.RenderContext, offset: Int, length: Int
 
         // 2. Accelerate component (Exponential pitch change)
         val accelMod = if (hasAccelerate) {
-            val progress = (absFrame - startFrame).toDouble() / totalFrames
+            val progress = relPos / totalFrames
             2.0.pow(accel * progress)
         } else 1.0
 
-        out[idx] = vibMod * accelMod
+        // 3. Pitch Envelope component
+        val pEnvMod = if (hasPitchEnv && pEnv != null) {
+            var envLevel = pEnv.anchor
+
+            if (relPos < pEnv.attackFrames) {
+                // Attack: Anchor -> 1.0
+                val progress = relPos / pEnv.attackFrames
+                envLevel = pEnv.anchor + (1.0 - pEnv.anchor) * progress
+            } else if (relPos < (pEnv.attackFrames + pEnv.decayFrames)) {
+                // Decay: 1.0 -> Anchor
+                val decayProgress = (relPos - pEnv.attackFrames) / pEnv.decayFrames
+                envLevel = 1.0 - (1.0 - pEnv.anchor) * decayProgress
+            }
+            // Else Sustain at Anchor
+
+            // Convert semitone offset to frequency ratio
+            2.0.pow((pEnv.amount * envLevel) / 12.0)
+        } else 1.0
+
+        out[idx] = vibMod * accelMod * pEnvMod
     }
 
     vib.phase = phase

@@ -31,6 +31,15 @@ sealed interface Voice {
         val amount: Double,
     )
 
+    class PitchEnvelope(
+        val attackFrames: Double,
+        val decayFrames: Double,
+        val releaseFrames: Double,
+        val amount: Double, // In semitones
+        val curve: Double,
+        val anchor: Double, // 0.0 .. 1.0 (usually 0.0)
+    )
+
     class Envelope(
         val attackFrames: Double,
         val decayFrames: Double,
@@ -137,6 +146,7 @@ sealed interface Voice {
     // Pitch
     val accelerate: Accelerate
     val vibrato: Vibrato
+    val pitchEnvelope: PitchEnvelope?
 
     // Audio processing
     val filter: AudioFilter

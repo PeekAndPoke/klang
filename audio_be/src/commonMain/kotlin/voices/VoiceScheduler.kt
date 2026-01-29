@@ -358,6 +358,19 @@ class VoiceScheduler(
             rate = if (vibratoDepth > 0.0) data.vibrato ?: 5.0 else 0.0,
         )
 
+        // Pitch Envelope
+        val pEnvAmount = data.pEnv ?: 0.0
+        val pitchEnvelope = if (pEnvAmount != 0.0) {
+            Voice.PitchEnvelope(
+                attackFrames = (data.pAttack ?: 0.0) * sampleRate,
+                decayFrames = (data.pDecay ?: 0.0) * sampleRate,
+                releaseFrames = (data.pRelease ?: 0.0) * sampleRate,
+                amount = pEnvAmount,
+                curve = data.pCurve ?: 1.0,
+                anchor = data.pAnchor ?: 0.0
+            )
+        } else null
+
         // ... (Delay, Reverb, Effects setup is same) ...
         // Delay
         val delay = Voice.Delay(
@@ -469,6 +482,7 @@ class VoiceScheduler(
                     postGain = postGain,
                     accelerate = accelerate,
                     vibrato = vibrato,
+                    pitchEnvelope = pitchEnvelope,
                     filter = bakedFilters,
                     envelope = envelope,
                     filterModulators = modulators,
@@ -579,6 +593,7 @@ class VoiceScheduler(
                     filter = bakedFilters,
                     accelerate = accelerate,
                     vibrato = vibrato,
+                    pitchEnvelope = pitchEnvelope,
                     envelope = envelope,
                     filterModulators = modulators,
                     delay = delay,
