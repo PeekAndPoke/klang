@@ -206,7 +206,7 @@ fun Voice.fillPitchModulation(ctx: Voice.RenderContext, offset: Int, length: Int
         } else 1.0
 
         // 3. Pitch Envelope component
-        val pEnvMod = if (hasPitchEnv && pEnv != null) {
+        val pEnvMod = if (hasPitchEnv) {
             var envLevel = pEnv.anchor
 
             if (relPos < pEnv.attackFrames) {
