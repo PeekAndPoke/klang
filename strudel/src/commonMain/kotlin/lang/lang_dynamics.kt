@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.liftNumericField
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -21,12 +22,7 @@ private val gainMutation = voiceModifier {
 }
 
 private fun applyGain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = gainMutation,
-        getValue = { gain },
-        setValue = { v, _ -> copy(gain = v) },
-    )
+    return source.liftNumericField(args, gainMutation)
 }
 
 /** Modifies the gains of a pattern */
@@ -48,12 +44,7 @@ private val panMutation = voiceModifier {
 }
 
 private fun applyPan(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = panMutation,
-        getValue = { pan },
-        setValue = { v, _ -> copy(pan = v) },
-    )
+    return source.liftNumericField(args, panMutation)
 }
 
 /** Modifies the pans of a pattern */
@@ -75,12 +66,7 @@ private val velocityMutation = voiceModifier {
 }
 
 private fun applyVelocity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = velocityMutation,
-        getValue = { velocity },
-        setValue = { v, _ -> copy(velocity = v) },
-    )
+    return source.liftNumericField(args, velocityMutation)
 }
 
 /** Modifies the velocity (volume scaling) of a pattern */
@@ -114,12 +100,7 @@ private val postgainMutation = voiceModifier {
 }
 
 private fun applyPostgain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = postgainMutation,
-        getValue = { postGain },
-        setValue = { v, _ -> copy(postGain = v) },
-    )
+    return source.liftNumericField(args, postgainMutation)
 }
 
 /** Modifies the post-gain (applied after voice processing) of a pattern */
@@ -177,12 +158,7 @@ private val unisonMutation = voiceModifier {
 }
 
 private fun applyUnison(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = unisonMutation,
-        getValue = { voices },
-        setValue = { v, _ -> copy(voices = v) },
-    )
+    return source.liftNumericField(args, unisonMutation)
 }
 
 /** Modifies the voices of a pattern */
@@ -243,12 +219,7 @@ private val spreadMutation = voiceModifier {
 }
 
 private fun applySpread(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = spreadMutation,
-        getValue = { panSpread },
-        setValue = { v, _ -> copy(panSpread = v) },
-    )
+    return source.liftNumericField(args, spreadMutation)
 }
 
 /** Sets the oscillator pan spread (for supersaw) */
@@ -270,12 +241,7 @@ private val densityMutation = voiceModifier {
 }
 
 private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = densityMutation,
-        getValue = { density },
-        setValue = { v, _ -> copy(density = v) },
-    )
+    return source.liftNumericField(args, densityMutation)
 }
 
 /** Sets the oscillator density (for supersaw) or noise density (for dust/crackle) */
@@ -309,12 +275,7 @@ private val attackMutation = voiceModifier {
 }
 
 private fun applyAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = attackMutation,
-        getValue = { attack },
-        setValue = { v, _ -> copy(attack = v) },
-    )
+    return source.liftNumericField(args, attackMutation)
 }
 
 /** Sets the note envelope attack */
@@ -336,12 +297,7 @@ private val decayMutation = voiceModifier {
 }
 
 private fun applyDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = decayMutation,
-        getValue = { decay },
-        setValue = { v, _ -> copy(decay = v) },
-    )
+    return source.liftNumericField(args, decayMutation)
 }
 
 /** Sets the note envelope decay */
@@ -363,12 +319,7 @@ private val sustainMutation = voiceModifier {
 }
 
 private fun applySustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = sustainMutation,
-        getValue = { sustain },
-        setValue = { v, _ -> copy(sustain = v) },
-    )
+    return source.liftNumericField(args, sustainMutation)
 }
 
 /** Sets the note envelope sustain */
@@ -390,12 +341,7 @@ private val releaseMutation = voiceModifier {
 }
 
 private fun applyRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = releaseMutation,
-        getValue = { release },
-        setValue = { v, _ -> copy(release = v) },
-    )
+    return source.liftNumericField(args, releaseMutation)
 }
 
 /** Sets the note envelope release */
@@ -537,12 +483,7 @@ private val duckAttackMutation = voiceModifier {
 }
 
 private fun applyDuckAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = duckAttackMutation,
-        getValue = { duckAttack },
-        setValue = { v, _ -> copy(duckAttack = v) },
-    )
+    return source.liftNumericField(args, duckAttackMutation)
 }
 
 /** Sets duck return-to-normal time in seconds (attack/release time) */
@@ -576,12 +517,7 @@ private val duckDepthMutation = voiceModifier {
 }
 
 private fun applyDuckDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = duckDepthMutation,
-        getValue = { duckDepth },
-        setValue = { v, _ -> copy(duckDepth = v) },
-    )
+    return source.liftNumericField(args, duckDepthMutation)
 }
 
 /** Sets ducking amount (0.0 = no ducking, 1.0 = full silence) */
