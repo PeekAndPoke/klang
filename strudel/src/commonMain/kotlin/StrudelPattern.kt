@@ -1,3 +1,5 @@
+@file:Suppress("FunctionName")
+
 package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.script.klangScript
@@ -206,225 +208,6 @@ fun StrudelPattern.makeStatic(from: Rational, to: Rational): StaticStrudelPatter
     StaticStrudelPattern(events = queryArc(from, to))
 
 /**
- * Creates a static pattern, that can be stored and used for playback with
- * any life strudel event generator.
- *
- * Acts like recording the arc [from] - [to] for later playback.
- */
-fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
-    makeStatic(from.toRational(), to.toRational())
-
-// =============================================================================
-// Pattern Bind Primitive (Public API)
-// =============================================================================
-
-/**
- * Creates a new pattern by applying [transform] to every event in this pattern.
- *
- * This is the fundamental "Glue" of Strudel (monadic bind / inner join).
- * 1. Queries 'this' pattern (the "outer" or "control" pattern).
- * 2. For each event, generates a new "inner" pattern via [transform].
- * 3. Queries that inner pattern *constrained* to the outer event's time window.
- *
- * By default, metadata (weight, numSteps) is preserved from the outer pattern.
- * This matches the behavior of the underlying BindPattern class.
- *
- * @param transform Function to generate an inner pattern from an outer event.
- *                  Return null to produce silence for that event.
- */
-fun StrudelPattern.bindPattern(
-    transform: (StrudelPatternEvent) -> StrudelPattern?,
-): StrudelPattern = BindPattern(
-    outer = this,
-    preserveMetadata = true,
-    transform = transform,
-)
-
-// =============================================================================
-// Applicative Lifters
-// =============================================================================
-
-/**
- * Lifts a function that accepts a [Double] to work with a Pattern of numbers.
- *
- * Equivalent to `register(name, func)` in JS where arity is 1.
- *
- * PRESERVES metadata (weight, numSteps) from the SOURCE pattern (this@lift).
- * The control pattern drives which values are used, but structure comes from source.
- *
- * @param control The control pattern (e.g. `fast("<2 4>")`)
- * @param transform The function to apply (e.g. `(value, source) -> source.fast(value)`)
- */
-fun StrudelPattern.lift(
-    control: StrudelPattern,
-    transform: (Double, StrudelPattern) -> StrudelPattern,
-): StrudelPattern = object : StrudelPattern {
-    // Preserve metadata from SOURCE pattern
-    override val weight: Double get() = this@lift.weight
-    override val numSteps: Rational? get() = this@lift.numSteps
-    override fun estimateCycleDuration(): Rational = this@lift.estimateCycleDuration()
-
-    // Control pattern drives the structure via bind
-    // LAZY initialization to avoid circular dependencies during construction
-    private val joined = control.bindPattern { event ->
-        val value = event.data.value?.asDouble ?: return@bindPattern null
-        transform(value, this@lift)
-    }
-
-    override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
-        return joined.queryArcContextual(from, to, ctx)
-    }
-}
-
-/**
- * Lifts a control pattern to modify Voice Data.
- * Used for functions like sound(), bank(), vowel(), begin(), end(), etc.
- *
- * It assumes the [control] pattern ALREADY contains the parsed data in its events
- * (e.g. created via args.toPattern(modifier)).
- *
- * It performs an inner join (bind) and merges the control's data onto the source's data.
- */
-fun StrudelPattern.liftData(
-    control: StrudelPattern,
-): StrudelPattern = object : StrudelPattern {
-    // Preserve metadata from the source pattern
-    override val weight: Double get() = this@liftData.weight
-    override val numSteps: Rational? get() = this@liftData.numSteps
-    override fun estimateCycleDuration(): Rational = this@liftData.estimateCycleDuration()
-
-    // Use normalized bindPattern (defaults to preserveMetadata=true, which is redundant here but safe)
-    // LAZY initialization to avoid circular dependencies during construction
-    private val joined = control.bindPattern { controlEvent ->
-
-        // For each control event, we map the source pattern
-        this@liftData.mapEvents { sourceEvent ->
-
-            // MERGE: control data overrides source data (where not null)
-            val mergedData = sourceEvent.data.merge(controlEvent.data)
-
-            sourceEvent.copy(data = mergedData)
-        }
-    }
-
-    override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
-        return joined.queryArcContextual(from, to, ctx)
-    }
-}
-
-/**
- * Lifts a function that accepts a [StrudelVoiceValue] (Number/String/Boolean).
- * Use this for operations that transform the pattern's main value, like arithmetic.
- */
-fun StrudelPattern.liftValue(
-    control: StrudelPattern,
-    transform: (StrudelVoiceValue, StrudelPattern) -> StrudelPattern,
-): StrudelPattern = object : StrudelPattern {
-    override val weight: Double get() = this@liftValue.weight
-    override val numSteps: Rational? get() = this@liftValue.numSteps
-    override fun estimateCycleDuration(): Rational = this@liftValue.estimateCycleDuration()
-
-    // LAZY initialization to avoid circular dependencies during construction
-    private val joined = control.bindPattern { controlEvent ->
-        // Extract the raw value from the control pattern
-        val value = controlEvent.data.value ?: return@bindPattern null
-
-        // Pass it to the transform function (which will usually map the source pattern)
-        transform(value, this@liftValue)
-    }
-
-    override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
-        return joined.queryArcContextual(from, to, ctx)
-    }
-}
-
-fun StrudelPattern.liftNumericField(
-    args: List<StrudelDslArg<Any?>>,
-    update: StrudelVoiceData.(Double?) -> StrudelVoiceData,
-): StrudelPattern {
-    if (args.isEmpty()) return this
-    val control = args.toPattern(voiceValueModifier)
-
-    // Use outer join to sample control at each source event's time
-    return object : StrudelPattern {
-        override val weight: Double get() = this@liftNumericField.weight
-        override val numSteps: Rational? get() = this@liftNumericField.numSteps
-        override fun estimateCycleDuration(): Rational = this@liftNumericField.estimateCycleDuration()
-
-        override fun queryArcContextual(
-            from: Rational,
-            to: Rational,
-            ctx: StrudelPattern.QueryContext,
-        ): List<StrudelPatternEvent> {
-            return this@liftNumericField.applyControl(
-                control = control,
-                from = from,
-                to = to,
-                ctx = ctx,
-                combiner = { sourceEvent, controlEvent ->
-                    val value = controlEvent?.data?.value?.asDouble
-                    sourceEvent.copy(data = sourceEvent.data.update(value))
-                }
-            )
-        }
-    }
-}
-
-/**
- * Applies a control pattern to this pattern (Outer Join).
- *
- * Preserves the structure of [this] (source). For each event, samples [control] at the event's
- * start time and applies the [combiner] function to produce the result event.
- *
- * This is used for modifying event values based on another pattern while maintaining the
- * original timing structure (e.g., applying gain, pitch shifts, effects, etc.).
- *
- * @param control The pattern to sample for control values
- * @param from Start of query arc
- * @param to End of query arc
- * @param ctx Query context to pass down the pattern hierarchy
- * @param combiner Function to combine source event with sampled control event (null if no control event found)
- * @return List of events with control applied
- */
-fun StrudelPattern.applyControl(
-    control: StrudelPattern,
-    from: Rational,
-    to: Rational,
-    ctx: StrudelPattern.QueryContext,
-    combiner: (source: StrudelPatternEvent, control: StrudelPatternEvent?) -> StrudelPatternEvent?,
-): List<StrudelPatternEvent> {
-    val sourceEvents = this.queryArcContextual(from, to, ctx)
-    if (sourceEvents.isEmpty()) return emptyList()
-
-    val result = mutableListOf<StrudelPatternEvent>()
-    val epsilon = 1e-5.toRational()
-
-    for (event in sourceEvents) {
-        // Point-query the control pattern at the event's begin time
-        val controlEvents = control.queryArcContextual(event.begin, event.begin + epsilon, ctx)
-        val controlEvent = controlEvents.firstOrNull()
-
-        val combined = combiner(event, controlEvent)
-        if (combined != null) {
-            result.add(combined)
-        }
-    }
-    return result
-}
-
-/**
  * Creates a pattern that transforms the event list using the given function.
  *
  * This is a convenience method for creating MapPattern instances. The resulting pattern
@@ -499,4 +282,285 @@ fun StrudelPattern.withSteps(steps: Rational): StrudelPattern {
  */
 fun StrudelPattern.stack(vararg others: StrudelPattern): StrudelPattern {
     return StackPattern(patterns = listOf(this) + others.toList())
+}
+
+/**
+ * Creates a static pattern, that can be stored and used for playback with
+ * any life strudel event generator.
+ *
+ * Acts like recording the arc [from] - [to] for later playback.
+ */
+fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
+    makeStatic(from.toRational(), to.toRational())
+
+/**
+ * Creates a new pattern by applying [transform] to every event in this pattern.
+ *
+ * This is the fundamental "Glue" of Strudel (monadic bind / inner join).
+ * 1. Queries 'this' pattern (the "outer" or "control" pattern).
+ * 2. For each event, generates a new "inner" pattern via [transform].
+ * 3. Queries that inner pattern *constrained* to the outer event's time window.
+ *
+ * By default, metadata (weight, numSteps) is preserved from the outer pattern.
+ * This matches the behavior of the underlying BindPattern class.
+ *
+ * @param transform Function to generate an inner pattern from an outer event.
+ *                  Return null to produce silence for that event.
+ */
+fun StrudelPattern._bind(
+    transform: (StrudelPatternEvent) -> StrudelPattern?,
+): StrudelPattern = BindPattern(
+    outer = this,
+    preserveMetadata = true,
+    transform = transform,
+)
+
+/**
+ * Lifts a function that accepts a [Double] to work with a pattern of numbers (INNER JOIN semantics).
+ *
+ * This is the general-purpose applicative lifter for tempo/structural operations that transform
+ * the pattern itself (like fast(), slow(), zoom(), range(), etc.) rather than just modifying
+ * voice data fields.
+ *
+ * Equivalent to `register(name, func)` in JS Strudel where arity is 1.
+ *
+ * **Metadata Preservation:**
+ * Preserves metadata (weight, numSteps) from the SOURCE pattern, not the control pattern.
+ * The control pattern drives which values are used, but the structure comes from the source.
+ *
+ * **Examples:**
+ * ```
+ * note("c3 e3 g3").fast(pure(2))          // Doubles the speed
+ * note("c3 e3 g3").fast("<2 3 4>")        // Variable speed control
+ * note("c3 e3 g3").slow(sine.range(1, 4)) // Continuous speed variation
+ * ```
+ *
+ * @param control The control pattern providing numeric values (e.g., `fast("<2 4>")`)
+ * @param transform Function to apply the value to the source pattern
+ * @return Pattern with inner join applied, preserving source metadata
+ */
+fun StrudelPattern._lift(
+    control: StrudelPattern,
+    transform: (Double, StrudelPattern) -> StrudelPattern,
+): StrudelPattern = object : StrudelPattern {
+    // Preserve metadata from SOURCE pattern
+    override val weight: Double get() = this@_lift.weight
+    override val numSteps: Rational? get() = this@_lift.numSteps
+    override fun estimateCycleDuration(): Rational = this@_lift.estimateCycleDuration()
+
+    // Control pattern drives the structure via bind
+    // LAZY initialization to avoid circular dependencies during construction
+    private val joined = control._bind { event ->
+        val value = event.data.value?.asDouble ?: return@_bind null
+        transform(value, this@_lift)
+    }
+
+    override fun queryArcContextual(
+        from: Rational,
+        to: Rational,
+        ctx: StrudelPattern.QueryContext,
+    ): List<StrudelPatternEvent> {
+        return joined.queryArcContextual(from, to, ctx)
+    }
+}
+
+/**
+ * Lifts a control pattern to modify Voice Data (INNER JOIN semantics).
+ *
+ * Used for functions that set discrete values in voice data: sound(), bank(), vowel(),
+ * as well as sample playback controls like begin(), end(), speed(), loop(), etc.
+ *
+ * This assumes the [control] pattern ALREADY contains the parsed data in its events
+ * (e.g., created via `args.toPattern(modifier)`).
+ *
+ * **Inner Join Behavior:**
+ * - Queries the control pattern first (structure comes from control)
+ * - For each control event's time window, queries the source pattern
+ * - Merges control data onto source data (control values override source values)
+ *
+ * **When to use _liftData vs _liftNumericField:**
+ * - Use `_liftData`: Discrete values, string/enum fields, complex data structures
+ * - Use `_liftNumericField`: Numeric fields that need point-sampling of continuous patterns
+ *
+ * @param control The control pattern containing parsed voice data to merge
+ * @return Pattern with inner join applied, merging control data onto source events
+ */
+fun StrudelPattern._liftData(
+    control: StrudelPattern,
+): StrudelPattern = object : StrudelPattern {
+    // Preserve metadata from the source pattern
+    override val weight: Double get() = this@_liftData.weight
+    override val numSteps: Rational? get() = this@_liftData.numSteps
+    override fun estimateCycleDuration(): Rational = this@_liftData.estimateCycleDuration()
+
+    // Use normalized bindPattern (defaults to preserveMetadata=true, which is redundant here but safe)
+    // LAZY initialization to avoid circular dependencies during construction
+    private val joined = control._bind { controlEvent ->
+
+        // For each control event, we map the source pattern
+        this@_liftData.mapEvents { sourceEvent ->
+
+            // MERGE: control data overrides source data (where not null)
+            val mergedData = sourceEvent.data.merge(controlEvent.data)
+
+            sourceEvent.copy(data = mergedData)
+        }
+    }
+
+    override fun queryArcContextual(
+        from: Rational,
+        to: Rational,
+        ctx: StrudelPattern.QueryContext,
+    ): List<StrudelPatternEvent> {
+        return joined.queryArcContextual(from, to, ctx)
+    }
+}
+
+/**
+ * Lifts a function that accepts a [StrudelVoiceValue] (INNER JOIN semantics).
+ *
+ * Used for operations that transform the pattern's main value field, such as arithmetic
+ * operations (add, subtract, multiply, divide) or other value-based transformations.
+ *
+ * Unlike [_lift] which extracts a Double, this passes the raw [StrudelVoiceValue] which
+ * can be a Number, String, or Boolean, allowing more flexible value handling.
+ *
+ * **Metadata Preservation:**
+ * Preserves metadata (weight, numSteps) from the SOURCE pattern, not the control pattern.
+ *
+ * **Examples:**
+ * ```
+ * note("c3 e3").add(pure(7))      // Transpose up 7 semitones
+ * note("c3 e3").mul(pure(2))      // Multiply note values
+ * ```
+ *
+ * @param control The control pattern providing values to apply
+ * @param transform Function to apply the control value to the source pattern
+ * @return Pattern with inner join applied, preserving source metadata
+ */
+fun StrudelPattern._liftValue(
+    control: StrudelPattern,
+    transform: (StrudelVoiceValue, StrudelPattern) -> StrudelPattern,
+): StrudelPattern = object : StrudelPattern {
+    override val weight: Double get() = this@_liftValue.weight
+    override val numSteps: Rational? get() = this@_liftValue.numSteps
+    override fun estimateCycleDuration(): Rational = this@_liftValue.estimateCycleDuration()
+
+    // LAZY initialization to avoid circular dependencies during construction
+    private val joined = control._bind { controlEvent ->
+        // Extract the raw value from the control pattern
+        val value = controlEvent.data.value ?: return@_bind null
+
+        // Pass it to the transform function (which will usually map the source pattern)
+        transform(value, this@_liftValue)
+    }
+
+    override fun queryArcContextual(
+        from: Rational,
+        to: Rational,
+        ctx: StrudelPattern.QueryContext,
+    ): List<StrudelPatternEvent> {
+        return joined.queryArcContextual(from, to, ctx)
+    }
+}
+
+/**
+ * Lifts a numeric field modifier to work with control patterns (OUTER JOIN semantics).
+ *
+ * This is specifically designed for numeric parameters that need to sample continuous patterns
+ * (like sine, saw, etc.) at each source event's time. Unlike [_liftData] which uses inner join,
+ * this uses outer join to preserve the source pattern's structure and sample the control pattern
+ * at each source event's begin time.
+ *
+ * Use this for functions that set numeric fields in voice data: filters (lpf, hpf), effects
+ * (delay, room), dynamics (gain, pan), synthesis (fmh, fmenv), and tonal parameters (note, octave).
+ *
+ * **Why outer join?**
+ * - Continuous patterns like `sine` produce a single event covering [0,1) with average value
+ * - Inner join would apply that same value to ALL source events
+ * - Outer join samples the control at each event's time, giving different values
+ *
+ * **Example:**
+ * ```
+ * note("a b c d").lpf(sine.range(100, 1000))
+ * // Outer join samples sine at t=0, 0.25, 0.5, 0.75 giving 500, 1000, 500, 100
+ * // Inner join would give all notes lpf=500 (the average)
+ * ```
+ *
+ * @param args DSL arguments to convert to control pattern
+ * @param update Function to update voice data with the numeric value (may be null)
+ * @return Pattern with outer join applied, preserving source structure and metadata
+ */
+fun StrudelPattern._liftNumericField(
+    args: List<StrudelDslArg<Any?>>,
+    update: StrudelVoiceData.(Double?) -> StrudelVoiceData,
+): StrudelPattern {
+    if (args.isEmpty()) return this
+    val control = args.toPattern(voiceValueModifier)
+
+    // Use outer join to sample control at each source event's time
+    return object : StrudelPattern {
+        override val weight: Double get() = this@_liftNumericField.weight
+        override val numSteps: Rational? get() = this@_liftNumericField.numSteps
+        override fun estimateCycleDuration(): Rational = this@_liftNumericField.estimateCycleDuration()
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            return this@_liftNumericField._applyControl(
+                control = control,
+                from = from,
+                to = to,
+                ctx = ctx,
+                combiner = { sourceEvent, controlEvent ->
+                    val value = controlEvent?.data?.value?.asDouble
+                    sourceEvent.copy(data = sourceEvent.data.update(value))
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Applies a control pattern to this pattern (Outer Join).
+ *
+ * Preserves the structure of [this] (source). For each event, samples [control] at the event's
+ * start time and applies the [combiner] function to produce the result event.
+ *
+ * This is used for modifying event values based on another pattern while maintaining the
+ * original timing structure (e.g., applying gain, pitch shifts, effects, etc.).
+ *
+ * @param control The pattern to sample for control values
+ * @param from Start of query arc
+ * @param to End of query arc
+ * @param ctx Query context to pass down the pattern hierarchy
+ * @param combiner Function to combine source event with sampled control event (null if no control event found)
+ * @return List of events with control applied
+ */
+fun StrudelPattern._applyControl(
+    control: StrudelPattern,
+    from: Rational,
+    to: Rational,
+    ctx: StrudelPattern.QueryContext,
+    combiner: (source: StrudelPatternEvent, control: StrudelPatternEvent?) -> StrudelPatternEvent?,
+): List<StrudelPatternEvent> {
+    val sourceEvents = this.queryArcContextual(from, to, ctx)
+    if (sourceEvents.isEmpty()) return emptyList()
+
+    val result = mutableListOf<StrudelPatternEvent>()
+    val epsilon = 1e-5.toRational()
+
+    for (event in sourceEvents) {
+        // Point-query the control pattern at the event's begin time
+        val controlEvents = control.queryArcContextual(event.begin, event.begin + epsilon, ctx)
+        val controlEvent = controlEvents.firstOrNull()
+
+        val combined = combiner(event, controlEvent)
+        if (combined != null) {
+            result.add(combined)
+        }
+    }
+    return result
 }

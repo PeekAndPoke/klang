@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel._liftNumericField
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -38,12 +39,7 @@ private val fmhMutation = voiceModifier {
 }
 
 private fun applyFmh(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = fmhMutation,
-        getValue = { fmh },
-        setValue = { v, _ -> copy(fmh = v) },
-    )
+    return source._liftNumericField(args, fmhMutation)
 }
 
 @StrudelDsl
@@ -78,12 +74,7 @@ private val fmattackMutation = voiceModifier {
 }
 
 private fun applyFmattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = fmattackMutation,
-        getValue = { fmAttack },
-        setValue = { v, _ -> copy(fmAttack = v) },
-    )
+    return source._liftNumericField(args, fmattackMutation)
 }
 
 @StrudelDsl
@@ -126,12 +117,7 @@ private val fmdecayMutation = voiceModifier {
 }
 
 private fun applyFmdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = fmdecayMutation,
-        getValue = { fmDecay },
-        setValue = { v, _ -> copy(fmDecay = v) },
-    )
+    return source._liftNumericField(args, fmdecayMutation)
 }
 
 @StrudelDsl
@@ -178,12 +164,7 @@ private val fmsustainMutation = voiceModifier {
 }
 
 private fun applyFmsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = fmsustainMutation,
-        getValue = { fmSustain },
-        setValue = { v, _ -> copy(fmSustain = v) },
-    )
+    return source._liftNumericField(args, fmsustainMutation)
 }
 
 @StrudelDsl
@@ -234,12 +215,7 @@ private val fmenvMutation = voiceModifier {
 }
 
 private fun applyFmenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = fmenvMutation,
-        getValue = { fmEnv },
-        setValue = { v, _ -> copy(fmEnv = v) },
-    )
+    return source._liftNumericField(args, fmenvMutation)
 }
 
 @StrudelDsl

@@ -5,7 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel.liftValue
+import io.peekandpoke.klang.strudel._liftValue
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
@@ -58,7 +58,7 @@ fun applyArithmetic(
 
     // 2. Lift: Intersection of source + control
     // We use liftValue because arithmetic works on StrudelVoiceValue objects
-    return source.liftValue(control) { controlVal, pattern ->
+    return source._liftValue(control) { controlVal, pattern ->
         // 3. Map events: Apply the operation to the source value
         pattern.reinterpretVoice { voiceData ->
             val sourceVal = voiceData.value ?: return@reinterpretVoice voiceData

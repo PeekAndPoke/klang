@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel._liftNumericField
 import io.peekandpoke.klang.strudel.lang.*
 
 /**
@@ -22,12 +23,7 @@ private val warmthMutation = voiceModifier {
 }
 
 private fun applyWarmth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = warmthMutation,
-        getValue = { warmth },
-        setValue = { v, _ -> copy(warmth = v) },
-    )
+    return source._liftNumericField(args, warmthMutation)
 }
 
 /** Controls the oscillator warmth (low-pass filtering amount). 0.0 = bright, 1.0 = muffled */

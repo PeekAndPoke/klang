@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.bindPattern
+import io.peekandpoke.klang.strudel._bind
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class LangBindPatternSpec : StringSpec({
@@ -13,7 +13,7 @@ class LangBindPatternSpec : StringSpec({
         // Just verify the API exists
         val control = sound("bd hh")
 
-        val result = control.bindPattern { event ->
+        val result = control._bind { event ->
             sound("cp")
         }
 
@@ -25,7 +25,7 @@ class LangBindPatternSpec : StringSpec({
         // Simple test: transform values
         val control = pure(2.0)
 
-        val result = control.bindPattern { event ->
+        val result = control._bind { event ->
             val value = event.data.value?.asDouble ?: 0.0
             pure(value * 2)
         }
@@ -39,7 +39,7 @@ class LangBindPatternSpec : StringSpec({
         // Test with sound() DSL function
         val control = sound("bd")
 
-        val result = control.bindPattern { event ->
+        val result = control._bind { event ->
             sound("hh")
         }
 
@@ -51,7 +51,7 @@ class LangBindPatternSpec : StringSpec({
     "bindPattern() - null produces silence" {
         val control = pure(1.0)
 
-        val result = control.bindPattern { event ->
+        val result = control._bind { event ->
             null  // Return null to produce silence
         }
 
@@ -63,7 +63,7 @@ class LangBindPatternSpec : StringSpec({
         val control = sound("bd").fast(2)
         val originalWeight = control.weight
 
-        val result = control.bindPattern { event ->
+        val result = control._bind { event ->
             sound("hh")
         }
 
@@ -75,7 +75,7 @@ class LangBindPatternSpec : StringSpec({
         // Control has 2 events in one cycle
         val control = sound("bd hh")
 
-        val result = control.bindPattern { event ->
+        val result = control._bind { event ->
             // Inner pattern has 4 events, but should be clipped to outer event bounds
             sound("a b c d")
         }

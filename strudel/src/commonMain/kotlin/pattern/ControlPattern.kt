@@ -4,7 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.applyControl
+import io.peekandpoke.klang.strudel._applyControl
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -31,7 +31,7 @@ internal class ControlPattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        return source.applyControl(control, from, to, ctx) { src, ctrl ->
+        return source._applyControl(control, from, to, ctx) { src, ctrl ->
             if (ctrl != null) {
                 val mappedControl = mapper(ctrl.data)
                 val newData = combiner(src.data, mappedControl)

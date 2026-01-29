@@ -171,37 +171,6 @@ fun StrudelPattern.applyControlFromParams(
 }
 
 /**
- * Specifically for numerical parameters where the control pattern might be a continuous pattern.
- * It checks both the specific field and the generic 'value' field.
- *
- * @param args The arguments passed to the function (e.g. pan("0.5") or pan(sine)).
- * @param modify The modifier to create a StrudelVoiceData from a single argument (string/number).
- * @param getValue Function to extract the specific Double value from the control StrudelVoiceData.
- * @param setValue Function to apply the Double value to the source StrudelVoiceData.
- *                 The first param is the Double value.
- *                 The second param is the full control StrudelVoiceData (useful for merging extra fields like resonance).
- */
-fun StrudelPattern.applyNumericalParam(
-    args: List<StrudelDslArg<Any?>>,
-    modify: VoiceDataModifier,
-    getValue: StrudelVoiceData.() -> Double?,
-    setValue: StrudelVoiceData.(value: Double, control: StrudelVoiceData) -> StrudelVoiceData,
-): StrudelPattern {
-    if (args.isEmpty()) return this
-
-    val control = args.toPattern(modify)
-
-    return this.applyControl(
-        control = control,
-        mapper = { it },
-        combiner = { src, ctrl ->
-            val num = ctrl.getValue() ?: ctrl.value?.asDouble
-            if (num != null) src.setValue(num, ctrl) else src
-        }
-    )
-}
-
-/**
  * Converts a list of arguments into a single StrudelPattern.
  * - Single Pattern arg -> returns it.
  * - Single String/Number -> parses to AtomicPattern using [modify].

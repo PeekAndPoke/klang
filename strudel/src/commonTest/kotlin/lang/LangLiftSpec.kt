@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
-import io.peekandpoke.klang.strudel.lift
+import io.peekandpoke.klang.strudel._lift
 
 class LangLiftSpec : StringSpec({
 
@@ -15,7 +15,7 @@ class LangLiftSpec : StringSpec({
         val source = sound("bd hh")
         val control = pure(2.0)
 
-        val result = source.lift(control) { value, src ->
+        val result = source._lift(control) { value, src ->
             src.fast(value)
         }
 
@@ -29,7 +29,7 @@ class LangLiftSpec : StringSpec({
         val sourceWeight = source.weight
         val sourceNumSteps = source.numSteps
 
-        val result = source.lift(control) { value, src ->
+        val result = source._lift(control) { value, src ->
             src.fast(value)
         }
 
@@ -42,7 +42,7 @@ class LangLiftSpec : StringSpec({
         val source = sound("bd hh")
         val control = pure(2.0)
 
-        val result = source.lift(control) { value, src ->
+        val result = source._lift(control) { value, src ->
             src.fast(value)
         }
 
@@ -57,7 +57,7 @@ class LangLiftSpec : StringSpec({
         val source = sound("bd")
         val control = pure(2.0)
 
-        val result = source.lift(control) { value, src ->
+        val result = source._lift(control) { value, src ->
             transformCalled = true
             src.fast(value)
         }
@@ -70,7 +70,7 @@ class LangLiftSpec : StringSpec({
         val source = sound("bd hh cp sd")
         val control = pure(2.0)
 
-        val result = source.lift(control) { value, src ->
+        val result = source._lift(control) { value, src ->
             src.slow(value)
         }
 
@@ -84,7 +84,7 @@ class LangLiftSpec : StringSpec({
         val source = sound("bd hh")
         val control = pure(2.0)
 
-        val result = source.lift(control) { value, src ->
+        val result = source._lift(control) { value, src ->
             src  // Identity transformation
         }
 

@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel._liftNumericField
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -21,12 +22,7 @@ private val distortMutation = voiceModifier {
 }
 
 private fun applyDistort(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = distortMutation,
-        getValue = { distort },
-        setValue = { v, _ -> copy(distort = v) },
-    )
+    return source._liftNumericField(args, distortMutation)
 }
 
 @StrudelDsl
@@ -59,12 +55,7 @@ val String.dist by dslStringExtension { p, args, callInfo -> p.distort(args, cal
 private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
 
 private fun applyCrush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = crushMutation,
-        getValue = { crush },
-        setValue = { v, _ -> copy(crush = v) },
-    )
+    return source._liftNumericField(args, crushMutation)
 }
 
 @StrudelDsl
@@ -87,12 +78,7 @@ private val coarseMutation = voiceModifier {
 }
 
 private fun applyCoarse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = coarseMutation,
-        getValue = { coarse },
-        setValue = { v, _ -> copy(coarse = v) },
-    )
+    return source._liftNumericField(args, coarseMutation)
 }
 
 @StrudelDsl
@@ -115,12 +101,7 @@ private val roomMutation = voiceModifier {
 }
 
 private fun applyRoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = roomMutation,
-        getValue = { room },
-        setValue = { v, _ -> copy(room = v) },
-    )
+    return source._liftNumericField(args, roomMutation)
 }
 
 @StrudelDsl
@@ -143,12 +124,7 @@ private val roomSizeMutation = voiceModifier {
 }
 
 private fun applyRoomSize(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = roomSizeMutation,
-        getValue = { roomSize },
-        setValue = { v, _ -> copy(roomSize = v) },
-    )
+    return source._liftNumericField(args, roomSizeMutation)
 }
 
 @StrudelDsl
@@ -207,12 +183,7 @@ private val roomFadeMutation = voiceModifier {
 }
 
 private fun applyRoomFade(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = roomFadeMutation,
-        getValue = { roomFade },
-        setValue = { v, _ -> copy(roomFade = v) },
-    )
+    return source._liftNumericField(args, roomFadeMutation)
 }
 
 /** Sets the reverb fade time */
@@ -246,12 +217,7 @@ private val roomLpMutation = voiceModifier {
 }
 
 private fun applyRoomLp(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = roomLpMutation,
-        getValue = { roomLp },
-        setValue = { v, _ -> copy(roomLp = v) },
-    )
+    return source._liftNumericField(args, roomLpMutation)
 }
 
 /** Sets the reverb lowpass start frequency */
@@ -285,12 +251,7 @@ private val roomDimMutation = voiceModifier {
 }
 
 private fun applyRoomDim(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = roomDimMutation,
-        getValue = { roomDim },
-        setValue = { v, _ -> copy(roomDim = v) },
-    )
+    return source._liftNumericField(args, roomDimMutation)
 }
 
 /** Sets the reverb lowpass frequency at -60dB */
@@ -361,12 +322,7 @@ private val delayMutation = voiceModifier {
 }
 
 private fun applyDelay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = delayMutation,
-        getValue = { delay },
-        setValue = { v, _ -> copy(delay = v) },
-    )
+    return source._liftNumericField(args, delayMutation)
 }
 
 @StrudelDsl
@@ -389,12 +345,7 @@ private val delayTimeMutation = voiceModifier {
 }
 
 private fun applyDelayTime(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = delayTimeMutation,
-        getValue = { delayTime },
-        setValue = { v, _ -> copy(delayTime = v) },
-    )
+    return source._liftNumericField(args, delayTimeMutation)
 }
 
 @StrudelDsl
@@ -417,12 +368,7 @@ private val delayFeedbackMutation = voiceModifier {
 }
 
 private fun applyDelayFeedback(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = delayFeedbackMutation,
-        getValue = { delayFeedback },
-        setValue = { v, _ -> copy(delayFeedback = v) },
-    )
+    return source._liftNumericField(args, delayFeedbackMutation)
 }
 
 @StrudelDsl
@@ -469,12 +415,7 @@ private val phaserMutation = voiceModifier {
 }
 
 private fun applyPhaser(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = phaserMutation,
-        getValue = { phaserRate },
-        setValue = { v, _ -> copy(phaserRate = v) },
-    )
+    return source._liftNumericField(args, phaserMutation)
 }
 
 @StrudelDsl
@@ -509,12 +450,7 @@ private val phaserDepthMutation = voiceModifier {
 }
 
 private fun applyPhaserDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = phaserDepthMutation,
-        getValue = { phaserDepth },
-        setValue = { v, _ -> copy(phaserDepth = v) },
-    )
+    return source._liftNumericField(args, phaserDepthMutation)
 }
 
 @StrudelDsl
@@ -561,12 +497,7 @@ private val phaserCenterMutation = voiceModifier {
 }
 
 private fun applyPhaserCenter(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = phaserCenterMutation,
-        getValue = { phaserCenter },
-        setValue = { v, _ -> copy(phaserCenter = v) },
-    )
+    return source._liftNumericField(args, phaserCenterMutation)
 }
 
 @StrudelDsl
@@ -601,12 +532,7 @@ private val phaserSweepMutation = voiceModifier {
 }
 
 private fun applyPhaserSweep(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = phaserSweepMutation,
-        getValue = { phaserSweep },
-        setValue = { v, _ -> copy(phaserSweep = v) },
-    )
+    return source._liftNumericField(args, phaserSweepMutation)
 }
 
 @StrudelDsl
@@ -641,12 +567,7 @@ private val tremoloSyncMutation = voiceModifier {
 }
 
 private fun applyTremoloSync(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = tremoloSyncMutation,
-        getValue = { tremoloSync },
-        setValue = { v, _ -> copy(tremoloSync = v) },
-    )
+    return source._liftNumericField(args, tremoloSyncMutation)
 }
 
 @StrudelDsl
@@ -681,12 +602,7 @@ private val tremoloDepthMutation = voiceModifier {
 }
 
 private fun applyTremoloDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = tremoloDepthMutation,
-        getValue = { tremoloDepth },
-        setValue = { v, _ -> copy(tremoloDepth = v) },
-    )
+    return source._liftNumericField(args, tremoloDepthMutation)
 }
 
 @StrudelDsl
@@ -721,12 +637,7 @@ private val tremoloSkewMutation = voiceModifier {
 }
 
 private fun applyTremoloSkew(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = tremoloSkewMutation,
-        getValue = { tremoloSkew },
-        setValue = { v, _ -> copy(tremoloSkew = v) },
-    )
+    return source._liftNumericField(args, tremoloSkewMutation)
 }
 
 @StrudelDsl
@@ -761,12 +672,7 @@ private val tremoloPhaseMutation = voiceModifier {
 }
 
 private fun applyTremoloPhase(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = tremoloPhaseMutation,
-        getValue = { tremoloPhase },
-        setValue = { v, _ -> copy(tremoloPhase = v) },
-    )
+    return source._liftNumericField(args, tremoloPhaseMutation)
 }
 
 @StrudelDsl

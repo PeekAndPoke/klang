@@ -5,6 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel._liftNumericField
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.BindPattern
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
@@ -280,12 +281,7 @@ private val legatoMutation = voiceModifier {
 }
 
 private fun applyLegato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = legatoMutation,
-        getValue = { legato },
-        setValue = { v, _ -> copy(legato = v) },
-    )
+    return source._liftNumericField(args, legatoMutation)
 }
 
 /** Creates a pattern with legatos */
@@ -319,12 +315,7 @@ private val vibratoMutation = voiceModifier {
 }
 
 private fun applyVibrato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = vibratoMutation,
-        getValue = { vibrato },
-        setValue = { v, _ -> copy(vibrato = v) },
-    )
+    return source._liftNumericField(args, vibratoMutation)
 }
 
 /** Sets the vibrato frequency (speed) in Hz. */
@@ -359,12 +350,7 @@ private val vibratoModMutation = voiceModifier {
 }
 
 private fun applyVibratoMod(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = vibratoModMutation,
-        getValue = { vibratoMod },
-        setValue = { v, _ -> copy(vibratoMod = v) },
-    )
+    return source._liftNumericField(args, vibratoModMutation)
 }
 
 /** Sets the vibratoMod depth (amplitude). */
@@ -399,12 +385,7 @@ private val pAttackMutation = voiceModifier {
 }
 
 private fun applyPAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = pAttackMutation,
-        getValue = { pAttack },
-        setValue = { v, _ -> copy(pAttack = v) },
-    )
+    return source._liftNumericField(args, pAttackMutation)
 }
 
 /** Sets the pitch envelope attack time. */
@@ -438,12 +419,7 @@ private val pDecayMutation = voiceModifier {
 }
 
 private fun applyPDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = pDecayMutation,
-        getValue = { pDecay },
-        setValue = { v, _ -> copy(pDecay = v) },
-    )
+    return source._liftNumericField(args, pDecayMutation)
 }
 
 /** Sets the pitch envelope decay time. */
@@ -477,12 +453,7 @@ private val pReleaseMutation = voiceModifier {
 }
 
 private fun applyPRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = pReleaseMutation,
-        getValue = { pRelease },
-        setValue = { v, _ -> copy(pRelease = v) },
-    )
+    return source._liftNumericField(args, pReleaseMutation)
 }
 
 /** Sets the pitch envelope release time. */
@@ -516,12 +487,7 @@ private val pEnvMutation = voiceModifier {
 }
 
 private fun applyPEnv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = pEnvMutation,
-        getValue = { pEnv },
-        setValue = { v, _ -> copy(pEnv = v) },
-    )
+    return source._liftNumericField(args, pEnvMutation)
 }
 
 /** Sets the pitch envelope depth/amount (in semitones). */
@@ -555,12 +521,7 @@ private val pCurveMutation = voiceModifier {
 }
 
 private fun applyPCurve(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = pCurveMutation,
-        getValue = { pCurve },
-        setValue = { v, _ -> copy(pCurve = v) },
-    )
+    return source._liftNumericField(args, pCurveMutation)
 }
 
 /** Sets the pitch envelope curve shape. */
@@ -594,12 +555,7 @@ private val pAnchorMutation = voiceModifier {
 }
 
 private fun applyPAnchor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = pAnchorMutation,
-        getValue = { pAnchor },
-        setValue = { v, _ -> copy(pAnchor = v) },
-    )
+    return source._liftNumericField(args, pAnchorMutation)
 }
 
 /** Sets the pitch envelope anchor point. */
@@ -633,12 +589,7 @@ private val accelerateMutation = voiceModifier {
 }
 
 private fun applyAccelerate(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = accelerateMutation,
-        getValue = { accelerate },
-        setValue = { v, _ -> copy(accelerate = v) },
-    )
+    return source._liftNumericField(args, accelerateMutation)
 }
 
 @StrudelDsl
@@ -784,12 +735,7 @@ private val freqMutation = voiceModifier {
 }
 
 private fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = freqMutation,
-        getValue = { freqHz },
-        setValue = { v, _ -> copy(freqHz = v) },
-    )
+    return source._liftNumericField(args, freqMutation)
 }
 
 /** Sets the frequency in Hz */

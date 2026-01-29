@@ -2,7 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel.liftData
+import io.peekandpoke.klang.strudel._liftData
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -19,7 +19,7 @@ private fun applyBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     // 1. Create a control pattern where 'begin' is already set correctly
     val control = args.toPattern(beginMutation)
     // 2. Use liftData to MERGE the control data into the source
-    return source.liftData(control)
+    return source._liftData(control)
 }
 
 /** Sets the sample start position (0..1) */
@@ -41,7 +41,7 @@ private val endMutation = voiceModifier { copy(end = it?.asDoubleOrNull()) }
 private fun applyEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.isEmpty()) return source
     val control = args.toPattern(endMutation)
-    return source.liftData(control)
+    return source._liftData(control)
 }
 
 /** Sets the sample end position (0..1) */
@@ -63,7 +63,7 @@ private val speedMutation = voiceModifier { copy(speed = it?.asDoubleOrNull()) }
 private fun applySpeed(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.isEmpty()) return source
     val control = args.toPattern(speedMutation)
-    return source.liftData(control)
+    return source._liftData(control)
 }
 
 /** Sets the sample playback speed */
@@ -85,7 +85,7 @@ private val loopMutation = voiceModifier { copy(loop = it?.asVoiceValue()?.asBoo
 private fun applyLoop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(1.0)) }
     val control = effectiveArgs.toPattern(loopMutation)
-    return source.liftData(control)
+    return source._liftData(control)
 }
 
 /** Enables sample looping */
@@ -107,7 +107,7 @@ private val loopBeginMutation = voiceModifier { copy(loopBegin = it?.asDoubleOrN
 private fun applyLoopBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.isEmpty()) return source
     val control = args.toPattern(loopBeginMutation)
-    return source.liftData(control)
+    return source._liftData(control)
 }
 
 /** Sets the loop start position (0..1) */
@@ -141,7 +141,7 @@ private val loopEndMutation = voiceModifier { copy(loopEnd = it?.asDoubleOrNull(
 private fun applyLoopEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.isEmpty()) return source
     val control = args.toPattern(loopEndMutation)
-    return source.liftData(control)
+    return source._liftData(control)
 }
 
 /** Sets the loop end position (0..1) */
@@ -178,7 +178,7 @@ private val loopAtMutation = voiceModifier {
 private fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.isEmpty()) return source
     val control = args.toPattern(loopAtMutation)
-    return source.liftData(control)
+    return source._liftData(control)
 }
 
 /** Fits the sample to the specified number of cycles */
@@ -200,7 +200,7 @@ private val cutMutation = voiceModifier { copy(cut = it?.asIntOrNull()) }
 private fun applyCut(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(1.0)) }
     val control = effectiveArgs.toPattern(cutMutation)
-    return source.liftData(control)
+    return source._liftData(control)
 }
 
 /** Sets the cut group (choke group) */
