@@ -737,7 +737,7 @@ fun StrudelVoiceData.transpose(amount: Any?): StrudelVoiceData {
 
 private fun applyTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     // We use defaultModifier for args because we just want the 'value'
-    val controlPattern = args.toPattern(defaultModifier)
+    val controlPattern = args.toPattern(voiceValueModifier)
 
     return ControlPattern(
         source = source,
@@ -765,7 +765,7 @@ val transpose by dslFunction { args, /* callInfo */ _ ->
         applyTranspose(source, args.dropLast(1))
     } else {
         // When used as a source (e.g. transpose(12)), it creates a pattern of values
-        args.toPattern(defaultModifier)
+        args.toPattern(voiceValueModifier)
     }
 }
 
@@ -876,7 +876,7 @@ fun StrudelVoiceData.scaleTranspose(steps: Int): StrudelVoiceData {
 private fun applyScaleTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     // Ensure we parse the argument as mini-notation if it's a string, to get a pattern of values
     // This allows scaleTranspose("0 1 2") to work as a control pattern
-    val controlPattern = args.toPattern(defaultModifier)
+    val controlPattern = args.toPattern(voiceValueModifier)
 
     return ControlPattern(
         source = source,
@@ -908,7 +908,7 @@ val scaleTranspose by dslFunction { args, _ ->
         // This allows `n("0").scaleTranspose(1)` to work via `ControlPattern` mechanism if `n` supports it?
         // But `scaleTranspose` is an extension on `StrudelPattern`.
 
-        args.toPattern(defaultModifier)
+        args.toPattern(voiceValueModifier)
     }
 }
 
@@ -1015,7 +1015,7 @@ private fun applyRootNotes(source: StrudelPattern, args: List<StrudelDslArg<Any?
 @StrudelDsl
 val rootNotes by dslFunction { args, _ ->
     // When used standalone, just returns a pattern that will extract roots when applied
-    args.toPattern(defaultModifier)
+    args.toPattern(voiceValueModifier)
 }
 
 /** Extracts root notes from chord patterns */
@@ -1144,7 +1144,7 @@ private fun applyVoicing(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
 @StrudelDsl
 val voicing by dslFunction { args, _ ->
     // When used standalone, creates a modifier pattern
-    args.toPattern(defaultModifier)
+    args.toPattern(voiceValueModifier)
 }
 
 /** Applies voice leading to chord patterns */

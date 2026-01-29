@@ -11,7 +11,6 @@ import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArg
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.*
-import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import kotlin.jvm.JvmName
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -86,7 +85,7 @@ fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): Co
 
         else -> parseMiniNotation(arg) { text, loc ->
             AtomicPattern(
-                data = StrudelVoiceData.empty.defaultModifier(text),
+                data = StrudelVoiceData.empty.voiceValueModifier(text),
                 sourceLocations = loc
             )
         }
@@ -96,7 +95,7 @@ fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): Co
 }
 
 /** Default modifier for patterns that populates VoiceData.value */
-val defaultModifier: VoiceDataModifier = {
+val voiceValueModifier: VoiceDataModifier = {
     copy(value = it?.asVoiceValue())
 }
 
@@ -276,57 +275,6 @@ fun StrudelPattern.applyControl(
     combiner = combiner,
 )
 
-// --- Pattern Operation Helpers ---
-
-/**
- * Helper for applying binary operations to patterns.
- */
-internal fun applyBinaryOp(
-    source: StrudelPattern,
-    args: List<StrudelDslArg<Any?>>,
-    op: (StrudelVoiceValue, StrudelVoiceValue) -> StrudelVoiceValue?,
-): StrudelPattern {
-    // We use defaultModifier for args because we just want the 'value'
-    val controlPattern = args.toPattern(defaultModifier)
-
-    return ControlPattern(
-        source = source,
-        control = controlPattern,
-        mapper = { it }, // No mapping needed
-        combiner = { srcData, ctrlData ->
-            val amount = ctrlData.value
-            val srcValue = srcData.value
-
-            if (amount == null || srcValue == null) {
-                srcData
-            } else {
-                val newValue = op(srcValue, amount)
-                srcData.copy(value = newValue)
-            }
-        }
-    )
-}
-
-/**
- * Helper for applying unary operations to patterns.
- */
-internal fun applyUnaryOp(
-    source: StrudelPattern,
-    op: (StrudelVoiceValue) -> StrudelVoiceValue?,
-): StrudelPattern {
-    // Unary ops (like log2) apply directly to the source values without a control pattern
-    return source.reinterpretVoice { srcData ->
-        val srcValue = srcData.value
-
-        if (srcValue == null) {
-            srcData
-        } else {
-            val newValue = op(srcValue)
-            srcData.copy(value = newValue)
-        }
-    }
-}
-
 // --- Generic Function Delegate (stack, arrange, etc.) ---
 
 class DslFunction(val handler: StrudelDslFn) {
@@ -460,7 +408,7 @@ class DslStringExtensionProvider(
     private fun parse(str: String, baseLocation: SourceLocation?): StrudelPattern {
         return parseMiniNotation(input = str, baseLocation = baseLocation) { text, loc ->
             AtomicPattern(
-                data = StrudelVoiceData.empty.defaultModifier(text),
+                data = StrudelVoiceData.empty.voiceValueModifier(text),
                 sourceLocations = loc,
             )
         }

@@ -3,7 +3,11 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.liftValue
+import io.peekandpoke.klang.strudel.pattern.ControlPattern
+import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -11,11 +15,80 @@ import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
  */
 var strudelLangArithmeticInit = false
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Arithmetic
-// ///
+/**
+ * Helper for applying binary operations to patterns.
+ */
+internal fun applyBinaryOp(
+    source: StrudelPattern,
+    args: List<StrudelDslArg<Any?>>,
+    op: (StrudelVoiceValue, StrudelVoiceValue) -> StrudelVoiceValue?,
+): StrudelPattern {
+    // We use defaultModifier for args because we just want the 'value'
+    val controlPattern = args.toPattern(voiceValueModifier)
 
-// NOTE: applyBinaryOp and applyUnaryOp are already in lang_helpers.kt, so we don't include them here
+    return ControlPattern(
+        source = source,
+        control = controlPattern,
+        mapper = { it }, // No mapping needed
+        combiner = { srcData, ctrlData ->
+            val amount = ctrlData.value
+            val srcValue = srcData.value
+
+            if (amount == null || srcValue == null) {
+                srcData
+            } else {
+                val newValue = op(srcValue, amount)
+                srcData.copy(value = newValue)
+            }
+        }
+    )
+}
+
+// Helper for arithmetic operations that modify the 'value' field
+fun applyArithmetic(
+    source: StrudelPattern,
+    args: List<StrudelDslArg<Any?>>,
+    op: (StrudelVoiceValue, StrudelVoiceValue) -> StrudelVoiceValue?,
+): StrudelPattern {
+    if (args.isEmpty()) return source
+
+    // 1. Convert args to a control pattern
+    // Note: We use defaultModifier because we just want the raw values (numbers/strings)
+    val control = args.toPattern(voiceValueModifier)
+
+    // 2. Lift: Intersection of source + control
+    // We use liftValue because arithmetic works on StrudelVoiceValue objects
+    return source.liftValue(control) { controlVal, pattern ->
+        // 3. Map events: Apply the operation to the source value
+        pattern.reinterpretVoice { voiceData ->
+            val sourceVal = voiceData.value ?: return@reinterpretVoice voiceData
+            // Execute the operation (e.g. source + control)
+            val newVal = op(sourceVal, controlVal)
+            // apply new val
+            voiceData.copy(value = newVal)
+        }
+    }
+}
+
+/**
+ * Helper for applying unary operations to patterns.
+ */
+fun applyUnaryOp(
+    source: StrudelPattern,
+    op: (StrudelVoiceValue) -> StrudelVoiceValue?,
+): StrudelPattern {
+    // Unary ops (like log2) apply directly to the source values without a control pattern
+    return source.reinterpretVoice { srcData ->
+        val srcValue = srcData.value
+
+        if (srcValue == null) {
+            srcData
+        } else {
+            val newValue = op(srcValue)
+            srcData.copy(value = newValue)
+        }
+    }
+}
 
 // -- add() ------------------------------------------------------------------------------------------------------------
 
@@ -25,7 +98,7 @@ var strudelLangArithmeticInit = false
  */
 @StrudelDsl
 val StrudelPattern.add by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a + b }
+    applyArithmetic(p, args) { a, b -> a + b }
 }
 
 /** Adds the given amount to the pattern's value on a string. */
@@ -42,7 +115,7 @@ val add by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.sub by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a - b }
+    applyArithmetic(p, args) { a, b -> a - b }
 }
 
 @StrudelDsl
@@ -55,7 +128,7 @@ val sub by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.mul by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a * b }
+    applyArithmetic(p, args) { a, b -> a * b }
 }
 
 @StrudelDsl
@@ -68,7 +141,7 @@ val mul by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.div by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a / b }
+    applyArithmetic(p, args) { a, b -> a / b }
 }
 
 @StrudelDsl
@@ -81,7 +154,7 @@ val div by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.mod by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a % b }
+    applyArithmetic(p, args) { a, b -> a % b }
 }
 
 @StrudelDsl
@@ -94,7 +167,7 @@ val mod by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.pow by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a pow b }
+    applyArithmetic(p, args) { a, b -> a pow b }
 }
 
 @StrudelDsl
@@ -107,7 +180,7 @@ val pow by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.band by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a band b }
+    applyArithmetic(p, args) { a, b -> a band b }
 }
 
 @StrudelDsl
@@ -120,7 +193,7 @@ val band by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.bor by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a bor b }
+    applyArithmetic(p, args) { a, b -> a bor b }
 }
 
 @StrudelDsl
@@ -133,7 +206,7 @@ val bor by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.bxor by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a bxor b }
+    applyArithmetic(p, args) { a, b -> a bxor b }
 }
 
 @StrudelDsl
@@ -146,7 +219,7 @@ val bxor by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.blshift by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a shl b }
+    applyArithmetic(p, args) { a, b -> a shl b }
 }
 
 @StrudelDsl
@@ -159,7 +232,7 @@ val blshift by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.brshift by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a shr b }
+    applyArithmetic(p, args) { a, b -> a shr b }
 }
 
 @StrudelDsl
@@ -185,7 +258,7 @@ val log2 by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.lt by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a lt b }
+    applyArithmetic(p, args) { a, b -> a lt b }
 }
 
 @StrudelDsl
@@ -198,7 +271,7 @@ val lt by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.gt by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a gt b }
+    applyArithmetic(p, args) { a, b -> a gt b }
 }
 
 @StrudelDsl
@@ -211,7 +284,7 @@ val gt by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.lte by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a lte b }
+    applyArithmetic(p, args) { a, b -> a lte b }
 }
 
 @StrudelDsl
@@ -224,7 +297,7 @@ val lte by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.gte by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a gte b }
+    applyArithmetic(p, args) { a, b -> a gte b }
 }
 
 @StrudelDsl
@@ -237,7 +310,7 @@ val gte by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.eq by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a eq b }
+    applyArithmetic(p, args) { a, b -> a eq b }
 }
 
 @StrudelDsl
@@ -251,7 +324,7 @@ val eq by dslFunction { _, _ -> silence }
 /** Truthiness equality comparison */
 @StrudelDsl
 val StrudelPattern.eqt by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a eqt b }
+    applyArithmetic(p, args) { a, b -> a eqt b }
 }
 
 /** Truthiness equality comparison on a string */
@@ -266,7 +339,7 @@ val eqt by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.ne by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a ne b }
+    applyArithmetic(p, args) { a, b -> a ne b }
 }
 
 @StrudelDsl
@@ -280,7 +353,7 @@ val ne by dslFunction { _, _ -> silence }
 /** Truthiness inequality comparison */
 @StrudelDsl
 val StrudelPattern.net by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a net b }
+    applyArithmetic(p, args) { a, b -> a net b }
 }
 
 /** Truthiness inequality comparison on a string */
@@ -295,7 +368,7 @@ val net by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.and by dslPatternExtension { source, args, /* callInfo */ _ ->
-    applyBinaryOp(source, args) { a, b -> a and b }
+    applyArithmetic(source, args) { a, b -> a and b }
 }
 
 @StrudelDsl
@@ -308,7 +381,7 @@ val and by dslFunction { _, _ -> silence }
 
 @StrudelDsl
 val StrudelPattern.or by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyBinaryOp(p, args) { a, b -> a or b }
+    applyArithmetic(p, args) { a, b -> a or b }
 }
 
 @StrudelDsl

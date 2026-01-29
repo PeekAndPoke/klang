@@ -47,7 +47,7 @@ private fun reifyLookup(lookup: Any): Map<Any, StrudelPattern>? {
             else -> {
                 // Wrap any value (including strings) in atomic pattern with default modifier
                 // This converts strings to note values, numbers to values, etc.
-                AtomicPattern(StrudelVoiceData.empty.defaultModifier(value))
+                AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(value))
             }
         }
     }
@@ -183,7 +183,7 @@ val pick by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
     dispatchPick(lookup, pat, modulo = false)
 }
 
@@ -232,7 +232,7 @@ val pickmod by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
     dispatchPick(lookup, pat, modulo = true)
 }
 
@@ -323,7 +323,7 @@ val pickOut by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
 
     dispatchPickOuter(lookup, pat, modulo = false)
 }
@@ -364,7 +364,7 @@ val pickmodOut by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
 
     dispatchPickOuter(lookup, pat, modulo = true)
 }
@@ -449,7 +449,7 @@ val inhabit by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
     dispatchInhabit(lookup, pat, modulo = false)
 }
 
@@ -501,7 +501,7 @@ val inhabitmod by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
     dispatchInhabit(lookup, pat, modulo = true)
 }
 
@@ -538,7 +538,7 @@ val squeeze by dslFunction { args, _ ->
 
     val selectorArg = args[0]
     // Parse selector if it's a string/value
-    val selector = listOf(selectorArg).toPattern(defaultModifier)
+    val selector = listOf(selectorArg).toPattern(voiceValueModifier)
 
     val secondArg = args[1]
 
@@ -644,7 +644,7 @@ val pickRestart by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
     dispatchPickRestart(lookup, pat, modulo = false)
 }
 
@@ -677,7 +677,7 @@ val pickmodRestart by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
     dispatchPickRestart(lookup, pat, modulo = true)
 }
 
@@ -753,7 +753,7 @@ val pickReset by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
     dispatchPickReset(lookup, pat, modulo = false)
 }
 
@@ -786,7 +786,7 @@ val pickmodReset by dslFunction { args, _ ->
         patArg = args.last()
     }
 
-    val pat = listOf(patArg).toPattern(defaultModifier)
+    val pat = listOf(patArg).toPattern(voiceValueModifier)
     dispatchPickReset(lookup, pat, modulo = true)
 }
 

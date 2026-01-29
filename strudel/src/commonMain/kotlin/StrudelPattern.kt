@@ -262,6 +262,7 @@ fun StrudelPattern.lift(
     override fun estimateCycleDuration(): Rational = this@lift.estimateCycleDuration()
 
     // Control pattern drives the structure via bind
+    // LAZY initialization to avoid circular dependencies during construction
     private val joined = control.bindPattern { event ->
         val value = event.data.value?.asDouble ?: return@bindPattern null
         transform(value, this@lift)
@@ -294,6 +295,7 @@ fun StrudelPattern.liftData(
     override fun estimateCycleDuration(): Rational = this@liftData.estimateCycleDuration()
 
     // Use normalized bindPattern (defaults to preserveMetadata=true, which is redundant here but safe)
+    // LAZY initialization to avoid circular dependencies during construction
     private val joined = control.bindPattern { controlEvent ->
 
         // For each control event, we map the source pattern
@@ -304,6 +306,36 @@ fun StrudelPattern.liftData(
 
             sourceEvent.copy(data = mergedData)
         }
+    }
+
+    override fun queryArcContextual(
+        from: Rational,
+        to: Rational,
+        ctx: StrudelPattern.QueryContext,
+    ): List<StrudelPatternEvent> {
+        return joined.queryArcContextual(from, to, ctx)
+    }
+}
+
+/**
+ * Lifts a function that accepts a [StrudelVoiceValue] (Number/String/Boolean).
+ * Use this for operations that transform the pattern's main value, like arithmetic.
+ */
+fun StrudelPattern.liftValue(
+    control: StrudelPattern,
+    transform: (StrudelVoiceValue, StrudelPattern) -> StrudelPattern,
+): StrudelPattern = object : StrudelPattern {
+    override val weight: Double get() = this@liftValue.weight
+    override val numSteps: Rational? get() = this@liftValue.numSteps
+    override fun estimateCycleDuration(): Rational = this@liftValue.estimateCycleDuration()
+
+    // LAZY initialization to avoid circular dependencies during construction
+    private val joined = control.bindPattern { controlEvent ->
+        // Extract the raw value from the control pattern
+        val value = controlEvent.data.value ?: return@bindPattern null
+
+        // Pass it to the transform function (which will usually map the source pattern)
+        transform(value, this@liftValue)
     }
 
     override fun queryArcContextual(
@@ -392,21 +424,6 @@ fun StrudelPattern.mapEvents(
     transform: (StrudelPatternEvent) -> StrudelPatternEvent,
 ): StrudelPattern {
     return ReinterpretPattern(source = this) { evt, _ -> transform(evt) }
-}
-
-/**
- * Creates a pattern that maps individual events with access to the query context.
- *
- * Similar to `mapEvents()` but provides access to the QueryContext, allowing context-aware
- * transformations (e.g., using random seeds, context keys, etc.).
- *
- * @param transform Function that transforms each event with context access
- * @return A new pattern that applies the transformation to each event
- */
-fun StrudelPattern.mapEventsWithContext(
-    transform: (StrudelPatternEvent, StrudelPattern.QueryContext) -> StrudelPatternEvent,
-): StrudelPattern {
-    return ReinterpretPattern(source = this, interpret = transform)
 }
 
 /**

@@ -30,7 +30,7 @@ private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -122,7 +122,7 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 

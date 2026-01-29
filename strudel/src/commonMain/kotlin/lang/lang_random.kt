@@ -86,7 +86,7 @@ val brandBy by dslFunction { args, /* callInfo */ _ ->
         is StrudelPattern -> probVal
 
         else -> parseMiniNotation(probArg ?: StrudelDslArg.of("0.5")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -142,7 +142,7 @@ val irand by dslFunction { args, /* callInfo */ _ ->
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -200,7 +200,7 @@ private fun applyDegradeBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any
         is StrudelPattern -> probVal
 
         else -> parseMiniNotation(probArg) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -258,7 +258,7 @@ private fun applyUndegradeBy(pattern: StrudelPattern, args: List<StrudelDslArg<A
         is StrudelPattern -> probVal
 
         else -> parseMiniNotation(probArg) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }?.oneMinusValue()
 
@@ -338,7 +338,7 @@ private fun applySometimesBy(
             is Number -> if (probArg == null) probArg = argVal
             is StrudelPattern -> if (probArg == null) probArg = argVal
             is String -> if (probArg == null) probArg = parseMiniNotation(arg) { text, _ ->
-                AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+                AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
             }
 
             is Function1<*, *> -> {
@@ -560,7 +560,7 @@ val randL by dslFunction { args, /* callInfo */ _ ->
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -587,7 +587,7 @@ val randrun: DslFunction by dslFunction { args, /* callInfo */ _ ->
         is StrudelPattern -> nVal
 
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 

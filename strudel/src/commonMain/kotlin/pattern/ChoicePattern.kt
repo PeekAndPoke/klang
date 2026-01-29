@@ -71,10 +71,10 @@ internal class ChoicePattern(
             weights: List<StrudelDslArg<Any?>>? = null,
             mode: StructurePattern.Mode = StructurePattern.Mode.Out,
         ): StrudelPattern {
-            val choicePatterns = choices.toListOfPatterns(defaultModifier)
+            val choicePatterns = choices.toListOfPatterns(voiceValueModifier)
             if (choicePatterns.isEmpty()) return silence
 
-            val weightPatterns = weights?.toListOfPatterns(defaultModifier)
+            val weightPatterns = weights?.toListOfPatterns(voiceValueModifier)
 
             return ChoicePattern(selector, choicePatterns, weightPatterns, mode)
         }

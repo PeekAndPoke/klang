@@ -44,7 +44,7 @@ fun applyTimeShift(
 
         else -> {
             // Pattern case - multiply by factor
-            val controlPattern = args.toPattern(defaultModifier).mul(factor)
+            val controlPattern = args.toPattern(voiceValueModifier).mul(factor)
             ControlValueProvider.Pattern(controlPattern)
         }
     }
@@ -85,7 +85,7 @@ val slow by dslFunction { args, /* callInfo */ _ ->
         sourceParts = args
     }
 
-    val source = sourceParts.toPattern(defaultModifier)
+    val source = sourceParts.toPattern(voiceValueModifier)
     applySlow(source, listOf(factorArg))
 }
 
@@ -122,7 +122,7 @@ val fast by dslFunction { args, /* callInfo */ _ ->
         sourceParts = args
     }
 
-    val source = sourceParts.toPattern(defaultModifier)
+    val source = sourceParts.toPattern(voiceValueModifier)
     applyFast(source, listOf(factorArg))
 }
 
@@ -202,18 +202,20 @@ val String.early by dslStringExtension { p, args, callInfo -> p.early(args, call
 
 // -- late() -----------------------------------------------------------------------------------------------------------
 
+private fun applyLate(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return applyTimeShift(source, args)
+}
+
+@StrudelDsl
+val StrudelPattern.late by dslPatternExtension { p, args, _ -> applyLate(p, args) }
+
+@StrudelDsl
+val String.late by dslStringExtension { p, args, callInfo -> p.late(args, callInfo) }
+
 
 /** Nudges the pattern to start later in time by the given number of cycles */
 @StrudelDsl
 val late by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
-
-@StrudelDsl
-val StrudelPattern.late by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTimeShift(p, args, 1.0.toRational())
-}
-
-@StrudelDsl
-val String.late by dslStringExtension { p, args, callInfo -> p.late(args, callInfo) }
 
 // -- compress() -------------------------------------------------------------------------------------------------------
 
@@ -241,7 +243,7 @@ val compress by dslFunction { args, /* callInfo */ _ ->
 
     val startProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(0.0))
     val endProvider = args[1].asControlValueProvider(StrudelVoiceValue.Num(1.0))
-    val pattern = args.drop(2).toPattern(defaultModifier)
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
 
     CompressPattern(
         source = pattern,
@@ -285,7 +287,7 @@ val focus by dslFunction { args, /* callInfo */ _ ->
 
     val startProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(0.0))
     val endProvider = args[1].asControlValueProvider(StrudelVoiceValue.Num(1.0))
-    val pattern = args.drop(2).toPattern(defaultModifier)
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
 
     FocusPattern(
         source = pattern,
@@ -325,7 +327,7 @@ val ply by dslFunction { args, /* callInfo */ _ ->
     }
 
     val nProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(1.0))
-    val pattern = args.drop(1).toPattern(defaultModifier)
+    val pattern = args.drop(1).toPattern(voiceValueModifier)
 
     PlyPattern(source = pattern, nProvider = nProvider)
 }
@@ -361,7 +363,7 @@ val hurry by dslFunction { args, /* callInfo */ _ ->
     }
 
     val factorProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(1.0))
-    val pattern = args.drop(1).toPattern(defaultModifier)
+    val pattern = args.drop(1).toPattern(voiceValueModifier)
 
     HurryPattern(source = pattern, factorProvider = factorProvider)
 }
@@ -397,7 +399,7 @@ val fastGap by dslFunction { args, /* callInfo */ _ ->
     }
 
     val factor = args[0].value?.asDoubleOrNull() ?: 1.0
-    val pattern = args.drop(1).toPattern(defaultModifier)
+    val pattern = args.drop(1).toPattern(voiceValueModifier)
 
     if (factor <= 0.0 || factor == 1.0) {
         pattern
