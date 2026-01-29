@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.liftData
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -11,17 +12,14 @@ var strudelLangSampleInit = false
 
 // -- begin() ----------------------------------------------------------------------------------------------------------
 
-private val beginMutation = voiceModifier {
-    copy(begin = it?.asDoubleOrNull())
-}
+private val beginMutation = voiceModifier { copy(begin = it?.asDoubleOrNull()) }
 
 private fun applyBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = beginMutation,
-        getValue = { begin },
-        setValue = { v, c -> copy(begin = c.value?.asDouble ?: v) },
-    )
+    if (args.isEmpty()) return source
+    // 1. Create a control pattern where 'begin' is already set correctly
+    val control = args.toPattern(beginMutation)
+    // 2. Use liftData to MERGE the control data into the source
+    return source.liftData(control)
 }
 
 /** Sets the sample start position (0..1) */
