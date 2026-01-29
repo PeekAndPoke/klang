@@ -54,10 +54,20 @@ data class VoiceData(
     val vibrato: Double?,
     val vibratoMod: Double?,
 
+    // Pitch envelope
+    val pAttack: Double?,
+    val pDecay: Double?,
+    val pRelease: Double?,
+    val pEnv: Double?,
+    val pCurve: Double?,
+    val pAnchor: Double?,
+
     // Effects
     val distort: Double?,
     val coarse: Double?,
     val crush: Double?,
+    val distortion: Double?,
+    val shape: Double?,
 
     // Phaser
     val phaser: Double?,
@@ -112,6 +122,8 @@ data class VoiceData(
     val speed: Double?,
     val loop: Boolean?,
     val cut: Int?,
+    val loopBegin: Double?,
+    val loopEnd: Double?,
 
     // Dynamics / Compression
     val compressor: String?,
@@ -138,9 +150,17 @@ data class VoiceData(
             accelerate = null,
             vibrato = null,
             vibratoMod = null,
+            pAttack = null,
+            pDecay = null,
+            pRelease = null,
+            pEnv = null,
+            pCurve = null,
+            pAnchor = null,
             distort = null,
             coarse = null,
             crush = null,
+            distortion = null,
+            shape = null,
             phaser = null,
             phaserDepth = null,
             phaserCenter = null,
@@ -173,6 +193,8 @@ data class VoiceData(
             speed = null,
             loop = null,
             cut = null,
+            loopBegin = null,
+            loopEnd = null,
             compressor = null,
         )
     }

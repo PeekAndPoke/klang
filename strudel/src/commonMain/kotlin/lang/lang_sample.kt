@@ -122,6 +122,84 @@ val StrudelPattern.loop by dslPatternExtension { p, args, /* callInfo */ _ -> ap
 @StrudelDsl
 val String.loop by dslStringExtension { p, args, callInfo -> p.loop(args, callInfo) }
 
+// -- loopBegin() / loopb() --------------------------------------------------------------------------------------------
+
+private val loopBeginMutation = voiceModifier {
+    copy(loopBegin = it?.asDoubleOrNull())
+}
+
+private fun applyLoopBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = loopBeginMutation,
+        getValue = { loopBegin },
+        setValue = { v, _ -> copy(loopBegin = v) },
+    )
+}
+
+/** Sets the loop start position (0..1) */
+@StrudelDsl
+val loopBegin by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopBeginMutation) }
+
+/** Sets the loop start position (0..1) */
+@StrudelDsl
+val StrudelPattern.loopBegin by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopBegin(p, args) }
+
+/** Sets the loop start position (0..1) */
+@StrudelDsl
+val String.loopBegin by dslStringExtension { p, args, _ -> applyLoopBegin(p, args) }
+
+/** Sets the loop start position (0..1) - alias for loopBegin */
+@StrudelDsl
+val StrudelPattern.loopb by dslPatternExtension { p, args, callInfo -> p.loopBegin(args, callInfo) }
+
+/** Sets the loop start position (0..1) - alias for loopBegin */
+@StrudelDsl
+val loopb by dslFunction { args, callInfo -> loopBegin(args, callInfo) }
+
+/** Sets the loop start position (0..1) - alias for loopBegin */
+@StrudelDsl
+val String.loopb by dslStringExtension { p, args, callInfo -> p.loopBegin(args, callInfo) }
+
+// -- loopEnd() / loope() ----------------------------------------------------------------------------------------------
+
+private val loopEndMutation = voiceModifier {
+    copy(loopEnd = it?.asDoubleOrNull())
+}
+
+private fun applyLoopEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = loopEndMutation,
+        getValue = { loopEnd },
+        setValue = { v, _ -> copy(loopEnd = v) },
+    )
+}
+
+/** Sets the loop end position (0..1) */
+@StrudelDsl
+val loopEnd by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopEndMutation) }
+
+/** Sets the loop end position (0..1) */
+@StrudelDsl
+val StrudelPattern.loopEnd by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopEnd(p, args) }
+
+/** Sets the loop end position (0..1) */
+@StrudelDsl
+val String.loopEnd by dslStringExtension { p, args, _ -> applyLoopEnd(p, args) }
+
+/** Sets the loop end position (0..1) - alias for loopEnd */
+@StrudelDsl
+val StrudelPattern.loope by dslPatternExtension { p, args, callInfo -> p.loopEnd(args, callInfo) }
+
+/** Sets the loop end position (0..1) - alias for loopEnd */
+@StrudelDsl
+val loope by dslFunction { args, callInfo -> loopEnd(args, callInfo) }
+
+/** Sets the loop end position (0..1) - alias for loopEnd */
+@StrudelDsl
+val String.loope by dslStringExtension { p, args, callInfo -> p.loopEnd(args, callInfo) }
+
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 
 private val loopAtMutation = voiceModifier {
@@ -219,3 +297,32 @@ val StrudelPattern.slice by dslPatternExtension { p, args, /* callInfo */ _ -> a
  */
 @StrudelDsl
 val String.slice by dslStringExtension { p, args, callInfo -> p.slice(args, callInfo) }
+
+// -- splice() ---------------------------------------------------------------------------------------------------------
+
+private fun applySplice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // Get number of slices (also used as speed multiplier)
+    val nArg = args.getOrNull(0)
+    val nVal = maxOf(1, nArg?.value?.asIntOrNull() ?: 1)
+
+    // Apply slice, then multiply speed by n to maintain timing
+    return source.slice(args).speed(nVal.toDouble())
+}
+
+/**
+ * Plays a slice of the sample at the original tempo.
+ * Combines slice() with speed() to maintain timing.
+ * @param {n} Total number of slices
+ * @param {index} Index of the slice to play (0 to n-1)
+ */
+@StrudelDsl
+val StrudelPattern.splice by dslPatternExtension { p, args, /* callInfo */ _ -> applySplice(p, args) }
+
+/**
+ * Plays a slice of the sample at the original tempo.
+ * Combines slice() with speed() to maintain timing.
+ * @param {n} Total number of slices
+ * @param {index} Index of the slice to play (0 to n-1)
+ */
+@StrudelDsl
+val String.splice by dslStringExtension { p, args, callInfo -> p.splice(args, callInfo) }

@@ -108,6 +108,62 @@ val String.coarse by dslStringExtension { p, args, /* callInfo */ _ ->
     applyCoarse(p, args)
 }
 
+// -- distortion() -----------------------------------------------------------------------------------------------------
+
+private val distortionMutation = voiceModifier {
+    copy(distortion = it?.asDoubleOrNull())
+}
+
+private fun applyDistortion(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = distortionMutation,
+        getValue = { distortion },
+        setValue = { v, _ -> copy(distortion = v) },
+    )
+}
+
+@StrudelDsl
+val StrudelPattern.distortion by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyDistortion(p, args)
+}
+
+@StrudelDsl
+val distortion by dslFunction { args, /* callInfo */ _ -> args.toPattern(distortionMutation) }
+
+@StrudelDsl
+val String.distortion by dslStringExtension { p, args, /* callInfo */ _ ->
+    applyDistortion(p, args)
+}
+
+// -- shape() ----------------------------------------------------------------------------------------------------------
+
+private val shapeMutation = voiceModifier {
+    copy(shape = it?.asDoubleOrNull())
+}
+
+private fun applyShape(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = shapeMutation,
+        getValue = { shape },
+        setValue = { v, _ -> copy(shape = v) },
+    )
+}
+
+@StrudelDsl
+val StrudelPattern.shape by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyShape(p, args)
+}
+
+@StrudelDsl
+val shape by dslFunction { args, /* callInfo */ _ -> args.toPattern(shapeMutation) }
+
+@StrudelDsl
+val String.shape by dslStringExtension { p, args, /* callInfo */ _ ->
+    applyShape(p, args)
+}
+
 // -- room() -----------------------------------------------------------------------------------------------------------
 
 private val roomMutation = voiceModifier {

@@ -392,6 +392,240 @@ val StrudelPattern.vibmod by dslPatternExtension { p, args, callInfo -> p.vibrat
 @StrudelDsl
 val String.vibmod by dslStringExtension { p, args, callInfo -> p.vibratoMod(args, callInfo) }
 
+// -- pattack() / patt() -----------------------------------------------------------------------------------------------
+
+private val pAttackMutation = voiceModifier {
+    copy(pAttack = it?.asDoubleOrNull())
+}
+
+private fun applyPAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = pAttackMutation,
+        getValue = { pAttack },
+        setValue = { v, _ -> copy(pAttack = v) },
+    )
+}
+
+/** Sets the pitch envelope attack time. */
+@StrudelDsl
+val pattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(pAttackMutation) }
+
+/** Sets the pitch envelope attack time. */
+@StrudelDsl
+val StrudelPattern.pattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyPAttack(p, args) }
+
+/** Sets the pitch envelope attack time on a string. */
+@StrudelDsl
+val String.pattack by dslStringExtension { p, args, _ -> applyPAttack(p, args) }
+
+/** Alias for [pattack] */
+@StrudelDsl
+val StrudelPattern.patt by dslPatternExtension { p, args, callInfo -> p.pattack(args, callInfo) }
+
+/** Alias for [pattack] */
+@StrudelDsl
+val patt by dslFunction { args, callInfo -> pattack(args, callInfo) }
+
+/** Alias for [pattack] on a string */
+@StrudelDsl
+val String.patt by dslStringExtension { p, args, callInfo -> p.pattack(args, callInfo) }
+
+// -- pdecay() / pdec() ------------------------------------------------------------------------------------------------
+
+private val pDecayMutation = voiceModifier {
+    copy(pDecay = it?.asDoubleOrNull())
+}
+
+private fun applyPDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = pDecayMutation,
+        getValue = { pDecay },
+        setValue = { v, _ -> copy(pDecay = v) },
+    )
+}
+
+/** Sets the pitch envelope decay time. */
+@StrudelDsl
+val pdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(pDecayMutation) }
+
+/** Sets the pitch envelope decay time. */
+@StrudelDsl
+val StrudelPattern.pdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyPDecay(p, args) }
+
+/** Sets the pitch envelope decay time on a string. */
+@StrudelDsl
+val String.pdecay by dslStringExtension { p, args, _ -> applyPDecay(p, args) }
+
+/** Alias for [pdecay] */
+@StrudelDsl
+val StrudelPattern.pdec by dslPatternExtension { p, args, callInfo -> p.pdecay(args, callInfo) }
+
+/** Alias for [pdecay] */
+@StrudelDsl
+val pdec by dslFunction { args, callInfo -> pdecay(args, callInfo) }
+
+/** Alias for [pdecay] on a string */
+@StrudelDsl
+val String.pdec by dslStringExtension { p, args, callInfo -> p.pdecay(args, callInfo) }
+
+// -- prelease() / prel() ----------------------------------------------------------------------------------------------
+
+private val pReleaseMutation = voiceModifier {
+    copy(pRelease = it?.asDoubleOrNull())
+}
+
+private fun applyPRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = pReleaseMutation,
+        getValue = { pRelease },
+        setValue = { v, _ -> copy(pRelease = v) },
+    )
+}
+
+/** Sets the pitch envelope release time. */
+@StrudelDsl
+val prelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(pReleaseMutation) }
+
+/** Sets the pitch envelope release time. */
+@StrudelDsl
+val StrudelPattern.prelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyPRelease(p, args) }
+
+/** Sets the pitch envelope release time on a string. */
+@StrudelDsl
+val String.prelease by dslStringExtension { p, args, _ -> applyPRelease(p, args) }
+
+/** Alias for [prelease] */
+@StrudelDsl
+val StrudelPattern.prel by dslPatternExtension { p, args, callInfo -> p.prelease(args, callInfo) }
+
+/** Alias for [prelease] */
+@StrudelDsl
+val prel by dslFunction { args, callInfo -> prelease(args, callInfo) }
+
+/** Alias for [prelease] on a string */
+@StrudelDsl
+val String.prel by dslStringExtension { p, args, callInfo -> p.prelease(args, callInfo) }
+
+// -- penv() / pamt() --------------------------------------------------------------------------------------------------
+
+private val pEnvMutation = voiceModifier {
+    copy(pEnv = it?.asDoubleOrNull())
+}
+
+private fun applyPEnv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = pEnvMutation,
+        getValue = { pEnv },
+        setValue = { v, _ -> copy(pEnv = v) },
+    )
+}
+
+/** Sets the pitch envelope depth/amount (in semitones). */
+@StrudelDsl
+val penv by dslFunction { args, /* callInfo */ _ -> args.toPattern(pEnvMutation) }
+
+/** Sets the pitch envelope depth/amount (in semitones). */
+@StrudelDsl
+val StrudelPattern.penv by dslPatternExtension { p, args, /* callInfo */ _ -> applyPEnv(p, args) }
+
+/** Sets the pitch envelope depth/amount (in semitones) on a string. */
+@StrudelDsl
+val String.penv by dslStringExtension { p, args, _ -> applyPEnv(p, args) }
+
+/** Alias for [penv] */
+@StrudelDsl
+val StrudelPattern.pamt by dslPatternExtension { p, args, callInfo -> p.penv(args, callInfo) }
+
+/** Alias for [penv] */
+@StrudelDsl
+val pamt by dslFunction { args, callInfo -> penv(args, callInfo) }
+
+/** Alias for [penv] on a string */
+@StrudelDsl
+val String.pamt by dslStringExtension { p, args, callInfo -> p.penv(args, callInfo) }
+
+// -- pcurve() / pcrv() ------------------------------------------------------------------------------------------------
+
+private val pCurveMutation = voiceModifier {
+    copy(pCurve = it?.asDoubleOrNull())
+}
+
+private fun applyPCurve(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = pCurveMutation,
+        getValue = { pCurve },
+        setValue = { v, _ -> copy(pCurve = v) },
+    )
+}
+
+/** Sets the pitch envelope curve shape. */
+@StrudelDsl
+val pcurve by dslFunction { args, /* callInfo */ _ -> args.toPattern(pCurveMutation) }
+
+/** Sets the pitch envelope curve shape. */
+@StrudelDsl
+val StrudelPattern.pcurve by dslPatternExtension { p, args, /* callInfo */ _ -> applyPCurve(p, args) }
+
+/** Sets the pitch envelope curve shape on a string. */
+@StrudelDsl
+val String.pcurve by dslStringExtension { p, args, _ -> applyPCurve(p, args) }
+
+/** Alias for [pcurve] */
+@StrudelDsl
+val StrudelPattern.pcrv by dslPatternExtension { p, args, callInfo -> p.pcurve(args, callInfo) }
+
+/** Alias for [pcurve] */
+@StrudelDsl
+val pcrv by dslFunction { args, callInfo -> pcurve(args, callInfo) }
+
+/** Alias for [pcurve] on a string */
+@StrudelDsl
+val String.pcrv by dslStringExtension { p, args, callInfo -> p.pcurve(args, callInfo) }
+
+// -- panchor() / panc() -----------------------------------------------------------------------------------------------
+
+private val pAnchorMutation = voiceModifier {
+    copy(pAnchor = it?.asDoubleOrNull())
+}
+
+private fun applyPAnchor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source.applyNumericalParam(
+        args = args,
+        modify = pAnchorMutation,
+        getValue = { pAnchor },
+        setValue = { v, _ -> copy(pAnchor = v) },
+    )
+}
+
+/** Sets the pitch envelope anchor point. */
+@StrudelDsl
+val panchor by dslFunction { args, /* callInfo */ _ -> args.toPattern(pAnchorMutation) }
+
+/** Sets the pitch envelope anchor point. */
+@StrudelDsl
+val StrudelPattern.panchor by dslPatternExtension { p, args, /* callInfo */ _ -> applyPAnchor(p, args) }
+
+/** Sets the pitch envelope anchor point on a string. */
+@StrudelDsl
+val String.panchor by dslStringExtension { p, args, _ -> applyPAnchor(p, args) }
+
+/** Alias for [panchor] */
+@StrudelDsl
+val StrudelPattern.panc by dslPatternExtension { p, args, callInfo -> p.panchor(args, callInfo) }
+
+/** Alias for [panchor] */
+@StrudelDsl
+val panc by dslFunction { args, callInfo -> panchor(args, callInfo) }
+
+/** Alias for [panchor] on a string */
+@StrudelDsl
+val String.panc by dslStringExtension { p, args, callInfo -> p.panchor(args, callInfo) }
+
 // -- accelerate() -----------------------------------------------------------------------------------------------------
 
 private val accelerateMutation = voiceModifier {

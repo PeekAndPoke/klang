@@ -307,10 +307,19 @@ class GraalStrudelPattern(
                 // Vibrato
                 vibrato = vibrato,
                 vibratoMod = vibratoMod,
+                // Pitch envelope
+                pAttack = null,
+                pDecay = null,
+                pRelease = null,
+                pEnv = null,
+                pCurve = null,
+                pAnchor = null,
                 // Effects
                 distort = distort,
                 coarse = coarse,
                 crush = crush,
+                distortion = null,
+                shape = null,
                 // Phaser
                 phaserRate = phaserRate,
                 phaserDepth = phaserDepth,
@@ -380,6 +389,8 @@ class GraalStrudelPattern(
                 speed = sampleSpeed,
                 loop = sampleLoop,
                 cut = sampleCut,
+                loopBegin = null,
+                loopEnd = null,
                 // Voice / Singing
                 vowel = vowel,
                 // Dynamics / Compression
