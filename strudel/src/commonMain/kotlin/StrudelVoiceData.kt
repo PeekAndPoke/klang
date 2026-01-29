@@ -72,6 +72,18 @@ data class StrudelVoiceData(
     val pCurve: Double?,
     val pAnchor: Double?,
 
+    // FM Synthesis
+    /** FM harmonicity ratio (carrier to modulator frequency ratio) */
+    val fmh: Double?,
+    /** FM envelope attack time */
+    val fmAttack: Double?,
+    /** FM envelope decay time */
+    val fmDecay: Double?,
+    /** FM envelope sustain level */
+    val fmSustain: Double?,
+    /** FM modulation depth/amount */
+    val fmEnv: Double?,
+
     // Effects
     val distort: Double?,
     val coarse: Double?,
@@ -247,6 +259,11 @@ data class StrudelVoiceData(
             pEnv = null,
             pCurve = null,
             pAnchor = null,
+            fmh = null,
+            fmAttack = null,
+            fmDecay = null,
+            fmSustain = null,
+            fmEnv = null,
             distort = null,
             coarse = null,
             crush = null,
@@ -345,6 +362,11 @@ data class StrudelVoiceData(
             pEnv = other.pEnv ?: pEnv,
             pCurve = other.pCurve ?: pCurve,
             pAnchor = other.pAnchor ?: pAnchor,
+            fmh = other.fmh ?: fmh,
+            fmAttack = other.fmAttack ?: fmAttack,
+            fmDecay = other.fmDecay ?: fmDecay,
+            fmSustain = other.fmSustain ?: fmSustain,
+            fmEnv = other.fmEnv ?: fmEnv,
             distort = other.distort ?: distort,
             coarse = other.coarse ?: coarse,
             crush = other.crush ?: crush,
@@ -549,6 +571,11 @@ data class StrudelVoiceData(
             pEnv = pEnv,
             pCurve = pCurve,
             pAnchor = pAnchor,
+            fmh = fmh,
+            fmAttack = fmAttack,
+            fmDecay = fmDecay,
+            fmSustain = fmSustain,
+            fmEnv = fmEnv,
             distort = distort,
             coarse = coarse,
             crush = crush,

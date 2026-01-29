@@ -7,10 +7,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.pattern.ArrangementPattern
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.FirstOfPattern
-import io.peekandpoke.klang.strudel.pattern.LastOfPattern
+import io.peekandpoke.klang.strudel.pattern.*
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -190,4 +187,57 @@ val StrudelPattern.lastOf by dslPatternExtension { source, args, /* callInfo */ 
 @StrudelDsl
 val String.lastOf by dslStringExtension { source, args, /* callInfo */ _ ->
     applyLastOf(source, args)
+}
+
+// -- when() -----------------------------------------------------------------------------------------------------------
+
+/**
+ * Conditionally applies a transformation based on a pattern.
+ *
+ * Samples the condition pattern at each event's midpoint. If truthy, applies the transformation;
+ * otherwise, keeps the event unchanged.
+ *
+ * Equivalent to JavaScript: pat.when(condition, func)
+ *
+ * @param condition Pattern to test for truthiness
+ * @param transform Function to apply when condition is true
+ *
+ * @example
+ * note("c d e f").when(pure(1).struct("t ~ t ~")) { it.add(12) }
+ * // Transforms notes on beats 1 and 3 (where struct is truthy)
+ *
+ * @example
+ * s("bd sd").when(pure(1).slowcat(pure(1), pure(0))) { it.fast(2) }
+ * // Doubles speed on alternating cycles
+ */
+@StrudelDsl
+val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
+    val condition = args.getOrNull(0)?.value as? StrudelPattern ?: return@dslPatternExtension silence
+
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern
+        ?: return@dslPatternExtension p
+
+    WhenPattern(p, condition, transform)
+}
+
+/** Direct function call support */
+@StrudelDsl
+fun StrudelPattern.`when`(
+    condition: StrudelPattern,
+    transform: (StrudelPattern) -> StrudelPattern,
+): StrudelPattern {
+    return WhenPattern(this, condition, transform)
+}
+
+@StrudelDsl
+val String.`when` by dslStringExtension { p, args, callInfo -> p.`when`(args, callInfo) }
+
+/** Direct function call support */
+@StrudelDsl
+fun String.`when`(
+    condition: StrudelPattern,
+    transform: (StrudelPattern) -> StrudelPattern,
+): StrudelPattern {
+    return this.`when`(listOf(condition, transform).asStrudelDslArgs())
 }

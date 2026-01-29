@@ -139,6 +139,14 @@ class GraalStrudelPattern(
             ?: value.safeGetMember("panc").safeNumberOrNull()
 
         // ///////////////////////////////////////////////////////////////////////////////////
+        // FM Synthesis
+        val fmh = value.safeGetMember("fmh").safeNumberOrNull()
+        val fmAttack = value.safeGetMember("fmattack").safeNumberOrNull()
+        val fmDecay = value.safeGetMember("fmdecay").safeNumberOrNull()
+        val fmSustain = value.safeGetMember("fmsustain").safeNumberOrNull()
+        val fmEnv = value.safeGetMember("fmenv").safeNumberOrNull()
+
+        // ///////////////////////////////////////////////////////////////////////////////////
         // Routing
         val orbit = value.safeGetMember("orbit").safeNumberOrNull()?.toInt()
 
@@ -329,6 +337,12 @@ class GraalStrudelPattern(
                 pEnv = pEnv,
                 pCurve = pCurve,
                 pAnchor = pAnchor,
+                // FM Synthesis
+                fmh = fmh,
+                fmAttack = fmAttack,
+                fmDecay = fmDecay,
+                fmSustain = fmSustain,
+                fmEnv = fmEnv,
                 // Effects
                 distort = distort,
                 coarse = coarse,

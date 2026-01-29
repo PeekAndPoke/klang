@@ -93,6 +93,8 @@ class JsCompatTests : StringSpec() {
         val nativeArc = (0..<numCycles)
             .flatMap { nativePattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
 
+//        printEventComparison(graalArc, nativeArc)
+
         assertSoftly {
             withClue("Number of events must match | JS (Graal): ${graalArc.size} VS Native: ${nativeArc.size}") {
                 nativeArc.size shouldBe graalArc.size
@@ -245,6 +247,37 @@ ${comparison.report}
             errors = errors.toList(),
             report = rows.formatAsTable()
         )
+    }
+
+    private fun printEventComparison(graalArc: List<StrudelPatternEvent>, nativeArc: List<StrudelPatternEvent>) {
+
+        val zippedArc = graalArc.zipAll(nativeArc).take(32)
+
+        fun Double.toFixed(n: Int) = "%.${n}f".format(this)
+
+        fun StrudelPatternEvent.str(): String {
+            val parts = listOf(
+                "${begin.toDouble().toFixed(3)}-${end.toDouble().toFixed(3)} ",
+                data.value?.asString,
+                data.note,
+                data.sound,
+            )
+
+            return parts.joinToString(" | ")
+        }
+
+        val rows = listOf(listOf("#", "JS (Graal)", "Native"))
+            .plus(
+                zippedArc.mapIndexed { index, (graal, native) ->
+                    listOf(
+                        index,
+                        graal?.str(),
+                        native?.str(),
+                    )
+                }
+            )
+
+        println(rows.formatAsTable())
     }
 
     private fun <T, R> Iterable<T>.zipAll(other: Iterable<R>): List<Pair<T?, R?>> {

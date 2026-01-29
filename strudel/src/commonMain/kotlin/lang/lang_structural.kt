@@ -1070,25 +1070,22 @@ fun String.within(start: Double, end: Double, transform: (StrudelPattern) -> Str
 // -- chunk() ----------------------------------------------------------------------------------------------------------
 
 /**
- * Divides the pattern into n parts and applies a function to one part per cycle (cycling through parts).
+ * Divides a pattern into a given number of parts, then cycles through those parts in turn,
+ * applying the given function to each part in turn (one part per cycle).
  *
- * This creates a higher-order pattern that behaves like slowcat, where each cycle applies the
- * transformation to a different segment of the pattern.
+ * Ported from JavaScript _chunk() implementation in pattern.mjs.
  *
- * @param {n}         Number of chunks to divide the pattern into
- * @param {transform} Function to apply to each chunk
- *
- * @example
- * n("0 1 2 3").chunk(4) { it.add(12) }
- * // Cycle 0: "12 1 2 3"  (first quarter transformed)
- * // Cycle 1: "0 13 2 3"  (second quarter transformed)
- * // Cycle 2: "0 1 14 3"  (third quarter transformed)
- * // Cycle 3: "0 1 2 15"  (fourth quarter transformed)
+ * @param n Number of chunks to divide the pattern into
+ * @param transform Function to apply to each chunk
+ * @param back If true, cycles backward through chunks (default: false)
+ * @param fast If true, doesn't repeat the pattern (default: false)
  *
  * @example
- * s("bd hh sd oh").chunk(2) { it.fast(2) }
- * // Cycle 0: First half doubled in speed
- * // Cycle 1: Second half doubled in speed
+ * note("0 1 2 3").chunk(4) { it.add(7) }
+ * // Cycle 0: "7 1 2 3"  (chunk 0 transformed)
+ * // Cycle 1: "0 8 2 3"  (chunk 1 transformed)
+ * // Cycle 2: "0 1 9 3"  (chunk 2 transformed)
+ * // Cycle 3: "0 1 2 10" (chunk 3 transformed)
  */
 @StrudelDsl
 val StrudelPattern.chunk by dslPatternExtension { p, args, /* callInfo */ _ ->
@@ -1097,66 +1094,44 @@ val StrudelPattern.chunk by dslPatternExtension { p, args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
+    val back = args.getOrNull(2)?.value as? Boolean ?: false
+    val fast = args.getOrNull(3)?.value as? Boolean ?: false
+
     if (n <= 0) {
         silence
     } else {
-        val patterns = (0 until n).map { i ->
-            val start = i.toDouble() / n
-            val end = (i + 1).toDouble() / n
-            val startRat = start.toRational()
-            val endRat = end.toRational()
+        val binary = MutableList(n - 1) { false }
+        binary.add(0, true)  // [true, false, false, false] for n=4
 
-            fun clipToWindow(ev: StrudelPatternEvent): List<StrudelPatternEvent> {
-                val cycle = ev.begin.floor()
+        val binaryPatterns = binary.map { if (it) pure(1) else pure(0) }
+        val binarySequence = applySeq(binaryPatterns)
 
-                fun overlap(wStart: Rational, wEnd: Rational): StrudelPatternEvent? {
-                    val s = maxOf(ev.begin, wStart)
-                    val e = minOf(ev.end, wEnd)
-                    return if (e > s) ev.copy(begin = s, end = e, dur = e - s) else null
-                }
-
-                return listOfNotNull(overlap(cycle + startRat, cycle + endRat))
-            }
-
-            fun subtractWindow(
-                ev: StrudelPatternEvent,
-                wStart: Rational,
-                wEnd: Rational,
-            ): List<StrudelPatternEvent> {
-                val beforeStart = ev.begin
-                val beforeEnd = minOf(ev.end, wStart)
-                val afterStart = maxOf(ev.begin, wEnd)
-                val afterEnd = ev.end
-
-                val result = mutableListOf<StrudelPatternEvent>()
-                if (beforeEnd > beforeStart) {
-                    result.add(ev.copy(begin = beforeStart, end = beforeEnd, dur = beforeEnd - beforeStart))
-                }
-                if (afterEnd > afterStart) {
-                    result.add(ev.copy(begin = afterStart, end = afterEnd, dur = afterEnd - afterStart))
-                }
-                return result
-            }
-
-            fun clipOutsideWindow(ev: StrudelPatternEvent): List<StrudelPatternEvent> {
-                val cycle = ev.begin.floor()
-                return subtractWindow(ev, cycle + startRat, cycle + endRat)
-            }
-
-            val inside = p.map { events -> events.flatMap(::clipToWindow) }
-            val outside = p.map { events -> events.flatMap(::clipOutsideWindow) }
-
-            StackPattern(listOf(transform(inside), outside))
+        val binaryIter = if (back) {
+            applyIterBack(binarySequence, listOf(StrudelDslArg.of(n)).asStrudelDslArgs())  // backward
+        } else {
+            applyIter(binarySequence, listOf(StrudelDslArg.of(n)).asStrudelDslArgs())  // forward (default)
         }
 
-        applyCat(patterns)
+        val pattern = if (!fast) {
+            p.repeatCycles(n)
+        } else {
+            p
+        }
+
+        // return pat.when(binary_pat, func);
+        pattern.`when`(binaryIter, transform)
     }
 }
 
 /** Alias for chunk - supports function call syntax */
 @StrudelDsl
-fun StrudelPattern.chunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
-    return this.chunk(listOf(n, transform).asStrudelDslArgs())
+fun StrudelPattern.chunk(
+    n: Int,
+    transform: (StrudelPattern) -> StrudelPattern,
+    back: Boolean = false,
+    fast: Boolean = false,
+): StrudelPattern {
+    return this.chunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 }
 
 @StrudelDsl
@@ -1164,8 +1139,13 @@ val String.chunk by dslStringExtension { p, args, callInfo -> p.chunk(args, call
 
 /** Alias for chunk - supports function call syntax */
 @StrudelDsl
-fun String.chunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
-    return this.chunk(listOf(n, transform).asStrudelDslArgs())
+fun String.chunk(
+    n: Int,
+    transform: (StrudelPattern) -> StrudelPattern,
+    back: Boolean = false,
+    fast: Boolean = false,
+): StrudelPattern {
+    return this.chunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 }
 
 /** Alias for [chunk] */
@@ -1174,8 +1154,13 @@ val StrudelPattern.slowchunk by dslPatternExtension { p, args, callInfo -> p.chu
 
 /** Alias for [chunk] */
 @StrudelDsl
-fun StrudelPattern.slowchunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
-    return this.chunk(n, transform)
+fun StrudelPattern.slowchunk(
+    n: Int,
+    transform: (StrudelPattern) -> StrudelPattern,
+    back: Boolean = false,
+    fast: Boolean = false,
+): StrudelPattern {
+    return this.chunk(n, transform, back, fast)
 }
 
 /** Alias for [chunk] */
@@ -1184,8 +1169,13 @@ val String.slowchunk by dslStringExtension { p, args, callInfo -> p.chunk(args, 
 
 /** Alias for [chunk] */
 @StrudelDsl
-fun String.slowchunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
-    return this.chunk(n, transform)
+fun String.slowchunk(
+    n: Int,
+    transform: (StrudelPattern) -> StrudelPattern,
+    back: Boolean = false,
+    fast: Boolean = false,
+): StrudelPattern {
+    return this.chunk(n, transform, back, fast)
 }
 
 /** Alias for [chunk] */
@@ -1194,8 +1184,13 @@ val StrudelPattern.slowChunk by dslPatternExtension { p, args, callInfo -> p.chu
 
 /** Alias for [chunk] */
 @StrudelDsl
-fun StrudelPattern.slowChunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
-    return this.chunk(n, transform)
+fun StrudelPattern.slowChunk(
+    n: Int,
+    transform: (StrudelPattern) -> StrudelPattern,
+    back: Boolean = false,
+    fast: Boolean = false,
+): StrudelPattern {
+    return this.chunk(n, transform, back, fast)
 }
 
 /** Alias for [chunk] */
@@ -1204,8 +1199,13 @@ val String.slowChunk by dslStringExtension { p, args, callInfo -> p.chunk(args, 
 
 /** Alias for [chunk] */
 @StrudelDsl
-fun String.slowChunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
-    return this.chunk(n, transform)
+fun String.slowChunk(
+    n: Int,
+    transform: (StrudelPattern) -> StrudelPattern,
+    back: Boolean = false,
+    fast: Boolean = false,
+): StrudelPattern {
+    return this.chunk(n, transform, back, fast)
 }
 
 // -- echo() / stut() --------------------------------------------------------------------------------------------------
@@ -2367,6 +2367,56 @@ val StrudelPattern.extend by dslPatternExtension { p, args, callInfo -> p.fast(a
 @StrudelDsl
 val String.extend by dslStringExtension { p, args, callInfo -> p.fast(args, callInfo) }
 
+// -- slowcat() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Cycles through a list of patterns infinitely, playing one pattern per cycle.
+ *
+ * This mimics the JavaScript `slowcat()` behavior where patterns repeat with period n.
+ * Unlike `applyCat()` which plays patterns sequentially once, this cycles through them infinitely.
+ *
+ * @param patterns List of patterns to cycle through
+ * @return A pattern that cycles through the input patterns using modulo
+ */
+internal fun applySlowcat(patterns: List<StrudelPattern>): StrudelPattern {
+    if (patterns.isEmpty()) return silence
+    if (patterns.size == 1) return patterns[0]
+
+    return object : StrudelPattern {
+        override val weight: Double = patterns.sumOf { it.weight }
+        override val numSteps: Rational? = null // Cannot determine for infinite cyclic pattern
+
+        override fun estimateCycleDuration(): Rational = Rational.ONE * patterns.size
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            val result = mutableListOf<StrudelPatternEvent>()
+            val n = patterns.size
+            var cycle = from.floor()
+
+            while (cycle < to) {
+                val cycleEnd = cycle + Rational.ONE
+                val queryStart = maxOf(from, cycle)
+                val queryEnd = minOf(to, cycleEnd)
+
+                // Select pattern using modulo (cycles infinitely through patterns)
+                val patternIndex = cycle.toInt().mod(n)
+                val pattern = patterns[patternIndex]
+
+                val events = pattern.queryArcContextual(queryStart, queryEnd, ctx)
+                result.addAll(events)
+
+                cycle = cycleEnd
+            }
+
+            return result
+        }
+    }
+}
+
 // -- iter() -----------------------------------------------------------------------------------------------------------
 
 private fun applyIter(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
@@ -2376,15 +2426,17 @@ private fun applyIter(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
 
     if (n <= 0) return silence
 
+    val nRat = n.toRational()
+
     // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.early(Fraction(i).div(times)))
     val patterns = (0 until n).map { i ->
-        val shift = i.toRational() / n.toRational()
+        val shift = i.toRational() / nRat
         // We use early() to shift the view forward (events appear earlier, effectively rotating the pattern left)
-        // early() shifts by negative offset, so we negate the shift
-        TimeShiftPattern.static(source, -shift)
+        source.early(shift)
     }
 
-    return applyCat(patterns)
+    // Use slowcat to cycle through patterns infinitely (matching JS behavior)
+    return applySlowcat(patterns)
 }
 
 /**
@@ -2420,15 +2472,17 @@ private fun applyIterBack(source: StrudelPattern, args: List<StrudelDslArg<Any?>
 
     if (n <= 0) return silence
 
+    val nRat = n.toRational()
+
     // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.late(Fraction(i).div(times)))
     val patterns = (0 until n).map { i ->
-        val shift = i.toRational() / n.toRational()
+        val shift = i.toRational() / nRat
         // We use late() to shift the view backward (events appear later, rotating pattern right)
-        // late() shifts by positive offset
-        TimeShiftPattern.static(source, shift)
+        source.late(shift)
     }
 
-    return applyCat(patterns)
+    // Use slowcat to cycle through patterns infinitely (matching JS behavior)
+    return applySlowcat(patterns)
 }
 
 /**

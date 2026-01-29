@@ -335,20 +335,20 @@ but the audio engine integration is still pending:~~
 
 #### Pitch Envelope
 
-- [ ] **`pattack()`** — *Attack time of the pitch envelope* (synonym: `patt`). Controls how quickly pitch ramps from its
+- [x] **`pattack()`** — *Attack time of the pitch envelope* (synonym: `patt`). Controls how quickly pitch ramps from its
   start point toward the envelope peak when a note begins; shorter times create a snappier “thwip,” longer times make a
   slow bend‑up. [[1]](https://strudel.cc/learn/effects/)
-- [ ] **`pdecay()`** — *Decay time of the pitch envelope* (synonym: `pdec`). After the peak, this sets how fast pitch
+- [x] **`pdecay()`** — *Decay time of the pitch envelope* (synonym: `pdec`). After the peak, this sets how fast pitch
   falls toward the sustain level; short decay gives a sharp pitch drop, long decay gives a gentle
   glide. [[1]](https://strudel.cc/learn/effects/)
-- [ ] **`prelease()`** — *Release time of the pitch envelope* (synonym: `prel`). Controls how pitch returns when the
+- [x] **`prelease()`** — *Release time of the pitch envelope* (synonym: `prel`). Controls how pitch returns when the
   note ends; longer release makes the tail drift back, shorter release snaps it
   off. [[1]](https://strudel.cc/learn/effects/)
-- [ ] **`penv()`** — *Pitch‑envelope amount* (synonym: `pamt`). Sets the total pitch modulation depth (in semitones);
+- [x] **`penv()`** — *Pitch‑envelope amount* (synonym: `pamt`). Sets the total pitch modulation depth (in semitones);
   higher values give dramatic swoops, lower values add subtle pitch movement. [[1]](https://strudel.cc/learn/effects/)
-- [ ] **`pcurve()`** — *Pitch‑envelope curve shape* (synonym: `pcrv`). Controls how the pitch change is distributed over
+- [x] **`pcurve()`** — *Pitch‑envelope curve shape* (synonym: `pcrv`). Controls how the pitch change is distributed over
   time (e.g., more linear vs. more exponential), shaping the feel of the bend. [[1]](https://strudel.cc/learn/effects/)
-- [ ] **`panchor()`** — *Pitch‑envelope range anchor* (synonym: `panc`). Sets where the envelope is centered within the
+- [x] **`panchor()`** — *Pitch‑envelope range anchor* (synonym: `panc`). Sets where the envelope is centered within the
   pitch range (0–1), so you can bias the bend upward, downward, or centered around the base
   pitch. [[1]](https://strudel.cc/learn/effects/)
 
@@ -356,8 +356,8 @@ but the audio engine integration is still pending:~~
 
 - [x] **`crush()`** - Bit crusher effect (1-16 bits)
 - [x] **`coarse()`** - Sample rate reduction
-- [ ] **`distort()`** - Distortion effect (alias: `dist`)
-  - check https://strudel.cc/learn/effects/#distort for additional parameters (especially 3rd "shape")
+- [x] **`distort()`** - Distortion effect (alias: `dist`)
+  - [ ] check https://strudel.cc/learn/effects/#distort for additional parameters (especially 3rd "shape")
 - [ ] **`shape()`** - Wave distortion amount
 
 #### Amplitude Modulation / Tremolo
@@ -619,9 +619,9 @@ JS-compatible semantics
 - [ ] **FM synthesis parameters**:
     - `fmh()` - FM harmonicity ratio
     - `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`
-- [ ] **Pitch envelope** - `pattack`, `pdecay`, `prelease`, `penv`
+- [x] **Pitch envelope** - `pattack`, `pdecay`, `prelease`, `penv`
 - [ ] **Wavetable synthesis** - `wt_` prefix support with loop points
-- [ ] **ZZFX synthesis** - Full parameter set (zrand, curve, slide, etc.)
+- [/] ~~**ZZFX synthesis**~~ - Full parameter set (zrand, curve, slide, etc.)
 - [ ] **`arp()`** - Arpeggiator patterns
 - [ ] **`arpWith(func)`** - Arpeggiator with custom function
 
@@ -643,8 +643,8 @@ JS-compatible semantics
 - [x] **`duck()`** - Ducking/sidechain effect
 - [ ] **`xfade(pos, b)`** - Crossfade between patterns
 - [ ] **`morph(from, to, by)`** - Morph between patterns
-- [ ] **`hsla(h, s, l, a)`** - Create HSLA color pattern
-- [ ] **`hsl(h, s, l)`** - Create HSL color pattern
+- [/] ~~**`hsla(h, s, l, a)`**~~ - Create HSLA color pattern
+- [/] ~~**`hsl(h, s, l)`**~~ - Create HSL color pattern
 
 ### Audio Engine Enhancements
 

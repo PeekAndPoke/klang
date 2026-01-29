@@ -62,6 +62,13 @@ data class VoiceData(
     val pCurve: Double?,
     val pAnchor: Double?,
 
+    // FM Synthesis
+    val fmh: Double?,
+    val fmAttack: Double?,
+    val fmDecay: Double?,
+    val fmSustain: Double?,
+    val fmEnv: Double?,
+
     // Effects
     val distort: Double?,
     val coarse: Double?,
@@ -154,6 +161,11 @@ data class VoiceData(
             pEnv = null,
             pCurve = null,
             pAnchor = null,
+            fmh = null,
+            fmAttack = null,
+            fmDecay = null,
+            fmSustain = null,
+            fmEnv = null,
             distort = null,
             coarse = null,
             crush = null,
