@@ -69,14 +69,14 @@ fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): Co
     if (argDbl != null) {
         return ControlValueProvider.Static(
             value = StrudelVoiceValue.Num(argDbl),
-            location = arg?.location
+            location = arg.location
         )
     }
 
     if (argVal is Rational) {
         return ControlValueProvider.Static(
             value = StrudelVoiceValue.Num(argVal.toDouble()),
-            location = arg?.location
+            location = arg.location
         )
     }
 
@@ -232,6 +232,7 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
 
     return this.flatMap { dslArg ->
         val loc = dslArg.location
+        val locChain = loc?.asChain()
 
         when (val arg = dslArg.value) {
             // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
@@ -239,11 +240,11 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
                 parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
             )
 
-            is Rational -> listOf(atomFactory(arg.toDouble().toString(), loc?.asChain()))
+            is Rational -> listOf(atomFactory(arg.toDouble().toString(), locChain))
 
-            is Number -> listOf(atomFactory(arg.toString(), loc?.asChain()))
+            is Number -> listOf(atomFactory(arg.toString(), locChain))
 
-            is Boolean -> listOf(atomFactory(arg.toString(), loc?.asChain()))
+            is Boolean -> listOf(atomFactory(arg.toString(), locChain))
 
             is StrudelPattern -> listOf(arg)
 

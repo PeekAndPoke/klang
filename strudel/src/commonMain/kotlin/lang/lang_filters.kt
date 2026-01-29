@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.liftNumericField
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -21,12 +22,7 @@ private val lpfMutation = voiceModifier {
 }
 
 private fun applyLpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = lpfMutation,
-        getValue = { cutoff },
-        setValue = { v, _ -> copy(cutoff = v) },
-    )
+    return source.liftNumericField(args, lpfMutation)
 }
 
 /** Adds a Low Pass Filter with the given cutoff frequency. */
@@ -84,12 +80,7 @@ private val hpfMutation = voiceModifier {
 }
 
 private fun applyHpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = hpfMutation,
-        getValue = { hcutoff },
-        setValue = { v, _ -> copy(hcutoff = v) },
-    )
+    return source.liftNumericField(args, hpfMutation)
 }
 
 /** Adds a High Pass Filter with the given cutoff frequency. */
@@ -135,12 +126,7 @@ private val bandfMutation = voiceModifier {
 }
 
 private fun applyBandf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = bandfMutation,
-        getValue = { bandf },
-        setValue = { v, _ -> copy(bandf = v) },
-    )
+    return source.liftNumericField(args, bandfMutation)
 }
 
 /** Adds a Band Pass Filter with the given cutoff frequency. */
@@ -186,12 +172,7 @@ private val notchfMutation = voiceModifier {
 }
 
 private fun applyNotchf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = notchfMutation,
-        getValue = { notchf },
-        setValue = { v, _ -> copy(notchf = v) },
-    )
+    return source.liftNumericField(args, notchfMutation)
 }
 
 /** Adds a Notch Filter with the given cutoff frequency. */
@@ -393,12 +374,7 @@ private val lpattackMutation = voiceModifier {
 }
 
 private fun applyLpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = lpattackMutation,
-        getValue = { lpattack },
-        setValue = { v, _ -> copy(lpattack = v) },
-    )
+    return source.liftNumericField(args, lpattackMutation)
 }
 
 /** Sets the low pass filter envelope attack time. */
@@ -432,12 +408,7 @@ private val lpdecayMutation = voiceModifier {
 }
 
 private fun applyLpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = lpdecayMutation,
-        getValue = { lpdecay },
-        setValue = { v, _ -> copy(lpdecay = v) },
-    )
+    return source.liftNumericField(args, lpdecayMutation)
 }
 
 /** Sets the low pass filter envelope decay time. */
@@ -471,12 +442,7 @@ private val lpsustainMutation = voiceModifier {
 }
 
 private fun applyLpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = lpsustainMutation,
-        getValue = { lpsustain },
-        setValue = { v, _ -> copy(lpsustain = v) },
-    )
+    return source.liftNumericField(args, lpsustainMutation)
 }
 
 /** Sets the low pass filter envelope sustain level. */
@@ -510,12 +476,7 @@ private val lpreleaseMutation = voiceModifier {
 }
 
 private fun applyLprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = lpreleaseMutation,
-        getValue = { lprelease },
-        setValue = { v, _ -> copy(lprelease = v) },
-    )
+    return source.liftNumericField(args, lpreleaseMutation)
 }
 
 /** Sets the low pass filter envelope release time. */
@@ -549,12 +510,7 @@ private val lpenvMutation = voiceModifier {
 }
 
 private fun applyLpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = lpenvMutation,
-        getValue = { lpenv },
-        setValue = { v, _ -> copy(lpenv = v) },
-    )
+    return source.liftNumericField(args, lpenvMutation)
 }
 
 /** Sets the low pass filter envelope depth/amount. */
@@ -588,12 +544,7 @@ private val hpattackMutation = voiceModifier {
 }
 
 private fun applyHpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = hpattackMutation,
-        getValue = { hpattack },
-        setValue = { v, _ -> copy(hpattack = v) },
-    )
+    return source.liftNumericField(args, hpattackMutation)
 }
 
 /** Sets the high pass filter envelope attack time. */
@@ -627,12 +578,7 @@ private val hpdecayMutation = voiceModifier {
 }
 
 private fun applyHpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = hpdecayMutation,
-        getValue = { hpdecay },
-        setValue = { v, _ -> copy(hpdecay = v) },
-    )
+    return source.liftNumericField(args, hpdecayMutation)
 }
 
 /** Sets the high pass filter envelope decay time. */
@@ -666,12 +612,7 @@ private val hpsustainMutation = voiceModifier {
 }
 
 private fun applyHpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = hpsustainMutation,
-        getValue = { hpsustain },
-        setValue = { v, _ -> copy(hpsustain = v) },
-    )
+    return source.liftNumericField(args, hpsustainMutation)
 }
 
 /** Sets the high pass filter envelope sustain level. */
@@ -705,12 +646,7 @@ private val hpreleaseMutation = voiceModifier {
 }
 
 private fun applyHprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = hpreleaseMutation,
-        getValue = { hprelease },
-        setValue = { v, _ -> copy(hprelease = v) },
-    )
+    return source.liftNumericField(args, hpreleaseMutation)
 }
 
 /** Sets the high pass filter envelope release time. */
@@ -744,12 +680,7 @@ private val hpenvMutation = voiceModifier {
 }
 
 private fun applyHpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = hpenvMutation,
-        getValue = { hpenv },
-        setValue = { v, _ -> copy(hpenv = v) },
-    )
+    return source.liftNumericField(args, hpenvMutation)
 }
 
 /** Sets the high pass filter envelope depth/amount. */
@@ -783,12 +714,7 @@ private val bpattackMutation = voiceModifier {
 }
 
 private fun applyBpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = bpattackMutation,
-        getValue = { bpattack },
-        setValue = { v, _ -> copy(bpattack = v) },
-    )
+    return source.liftNumericField(args, bpattackMutation)
 }
 
 /** Sets the band pass filter envelope attack time. */
@@ -822,12 +748,7 @@ private val bpdecayMutation = voiceModifier {
 }
 
 private fun applyBpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = bpdecayMutation,
-        getValue = { bpdecay },
-        setValue = { v, _ -> copy(bpdecay = v) },
-    )
+    return source.liftNumericField(args, bpdecayMutation)
 }
 
 /** Sets the band pass filter envelope decay time. */
@@ -861,12 +782,7 @@ private val bpsustainMutation = voiceModifier {
 }
 
 private fun applyBpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = bpsustainMutation,
-        getValue = { bpsustain },
-        setValue = { v, _ -> copy(bpsustain = v) },
-    )
+    return source.liftNumericField(args, bpsustainMutation)
 }
 
 /** Sets the band pass filter envelope sustain level. */
@@ -900,12 +816,7 @@ private val bpreleaseMutation = voiceModifier {
 }
 
 private fun applyBprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = bpreleaseMutation,
-        getValue = { bprelease },
-        setValue = { v, _ -> copy(bprelease = v) },
-    )
+    return source.liftNumericField(args, bpreleaseMutation)
 }
 
 /** Sets the band pass filter envelope release time. */
@@ -939,12 +850,7 @@ private val bpenvMutation = voiceModifier {
 }
 
 private fun applyBpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = bpenvMutation,
-        getValue = { bpenv },
-        setValue = { v, _ -> copy(bpenv = v) },
-    )
+    return source.liftNumericField(args, bpenvMutation)
 }
 
 /** Sets the band pass filter envelope depth/amount. */
@@ -978,12 +884,7 @@ private val nfattackMutation = voiceModifier {
 }
 
 private fun applyNfattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = nfattackMutation,
-        getValue = { nfattack },
-        setValue = { v, _ -> copy(nfattack = v) },
-    )
+    return source.liftNumericField(args, nfattackMutation)
 }
 
 /** Sets the notch filter envelope attack time (not in original Strudel JS implementation). */
@@ -1017,12 +918,7 @@ private val nfdecayMutation = voiceModifier {
 }
 
 private fun applyNfdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = nfdecayMutation,
-        getValue = { nfdecay },
-        setValue = { v, _ -> copy(nfdecay = v) },
-    )
+    return source.liftNumericField(args, nfdecayMutation)
 }
 
 /** Sets the notch filter envelope decay time (not in original Strudel JS implementation). */
@@ -1056,12 +952,7 @@ private val nfsustainMutation = voiceModifier {
 }
 
 private fun applyNfsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = nfsustainMutation,
-        getValue = { nfsustain },
-        setValue = { v, _ -> copy(nfsustain = v) },
-    )
+    return source.liftNumericField(args, nfsustainMutation)
 }
 
 /** Sets the notch filter envelope sustain level (not in original Strudel JS implementation). */
@@ -1095,12 +986,7 @@ private val nfreleaseMutation = voiceModifier {
 }
 
 private fun applyNfrelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = nfreleaseMutation,
-        getValue = { nfrelease },
-        setValue = { v, _ -> copy(nfrelease = v) },
-    )
+    return source.liftNumericField(args, nfreleaseMutation)
 }
 
 /** Sets the notch filter envelope release time (not in original Strudel JS implementation). */
@@ -1134,12 +1020,7 @@ private val nfenvMutation = voiceModifier {
 }
 
 private fun applyNfenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyNumericalParam(
-        args = args,
-        modify = nfenvMutation,
-        getValue = { nfenv },
-        setValue = { v, _ -> copy(nfenv = v) },
-    )
+    return source.liftNumericField(args, nfenvMutation)
 }
 
 /** Sets the notch filter envelope depth/amount (not in original Strudel JS implementation). */

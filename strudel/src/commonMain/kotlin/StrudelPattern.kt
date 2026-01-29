@@ -2,7 +2,10 @@ package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg
 import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.strudel.lang.toPattern
+import io.peekandpoke.klang.strudel.lang.voiceValueModifier
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
@@ -344,6 +347,38 @@ fun StrudelPattern.liftValue(
         ctx: StrudelPattern.QueryContext,
     ): List<StrudelPatternEvent> {
         return joined.queryArcContextual(from, to, ctx)
+    }
+}
+
+fun StrudelPattern.liftNumericField(
+    args: List<StrudelDslArg<Any?>>,
+    update: StrudelVoiceData.(Double?) -> StrudelVoiceData,
+): StrudelPattern {
+    if (args.isEmpty()) return this
+    val control = args.toPattern(voiceValueModifier)
+
+    // Use outer join to sample control at each source event's time
+    return object : StrudelPattern {
+        override val weight: Double get() = this@liftNumericField.weight
+        override val numSteps: Rational? get() = this@liftNumericField.numSteps
+        override fun estimateCycleDuration(): Rational = this@liftNumericField.estimateCycleDuration()
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            return this@liftNumericField.applyControl(
+                control = control,
+                from = from,
+                to = to,
+                ctx = ctx,
+                combiner = { sourceEvent, controlEvent ->
+                    val value = controlEvent?.data?.value?.asDouble
+                    sourceEvent.copy(data = sourceEvent.data.update(value))
+                }
+            )
+        }
     }
 }
 
