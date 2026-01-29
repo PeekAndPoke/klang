@@ -10,7 +10,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  * Empty pattern, f.e. for [silence]
  */
 object EmptyPattern : StrudelPattern.FixedWeight {
-    override val steps: Rational = Rational.ONE
+    override val numSteps: Rational = Rational.ONE
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 

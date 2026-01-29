@@ -23,7 +23,7 @@ internal class BindPattern(
 ) : StrudelPattern {
 
     override val weight: Double get() = outer.weight
-    override val steps: Rational? get() = outer.steps
+    override val numSteps: Rational? get() = outer.numSteps
     override fun estimateCycleDuration(): Rational = outer.estimateCycleDuration()
 
     override fun queryArcContextual(

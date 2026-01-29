@@ -25,7 +25,7 @@ internal class SequencePattern(
         private val MIN_QUERY_LENGTH = 1e-7.toRational()
     }
 
-    override val steps: Rational get() = patterns.size.toRational()
+    override val numSteps: Rational get() = patterns.size.toRational()
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 

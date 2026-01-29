@@ -25,7 +25,7 @@ internal class OffPattern(
 
     override val weight: Double get() = source.weight
 
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
 
     private val transformed = transform(source.late(time))
 

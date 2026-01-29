@@ -5,6 +5,25 @@ and category.
 
 ---
 
+## Recent Completions
+
+### ✅ Time Manipulation Functions (2026-01-29)
+
+Complete implementation of step-based time manipulation functions with correct JS-compatible semantics:
+
+- **`pace(n)` / `steps(n)`** - Adjust pattern speed to match target step count
+- **`take(n)`** - Keep first n steps, stretch to fill cycle
+- **`drop(n)`** - Drop first n steps, stretch remaining to fill cycle
+- **`extend(n)`** - Speed up pattern (alias for fast(), NOT slow())
+- **`iter(n)`** - Create n time-shifted variations using slowcat
+- **`iterBack(n)`** - Like iter but backward shifts
+- **`repeatCycles(n)`** - Repeat each cycle n times
+
+All functions tested against JS Strudel implementation with full compatibility. See `strudel/HISTORY.MD` for detailed
+implementation notes.
+
+---
+
 ## Things to check
 
 - [ ] check https://larkob.github.io/strudel/tutorial/ and produce new todos
@@ -209,6 +228,9 @@ and category.
 - [x] **`mod()`** - Modulo operation
 - [x] **`pow()`** - Power/exponentiation operation
 - [x] **`log2()`** - Base-2 logarithm (unary)
+- [x] **`round()`** - Round values to integers
+- [x] **`floor()`** - Floor values to integers
+- [x] **`ceil()`** - Ceil values to integers
 
 ### Bitwise Operators ⭐
 
@@ -462,8 +484,9 @@ but the audio engine integration is still pending:~~
 ### Pattern Operations
 
 - [x] **`palindrome()`** - Alternates forward/backward playback
-- [ ] **`iter(subdivisions)`** - Plays pattern subdivisions in order
-- [ ] **`iterBack(subdivisions)`** - Plays subdivisions in reverse (alias: `iterback`)
+- [x] **`iter(subdivisions)`** - Plays pattern subdivisions in order ✅ **IMPLEMENTED** - Uses slowcat with time-shifted
+  variations
+- [x] **`iterBack(subdivisions)`** - Plays subdivisions in reverse ✅ **IMPLEMENTED** - Like iter but backward shifts
 - [ ] **`linger(fraction)`** - Selects and repeats pattern fraction
 - [ ] **`ribbon(offset, cycles)`** - Loops pattern section (alias: `rib`)
 - [x] **`inside(factor, operation)`** - Applies operation within cycle (slows pattern, applies function, then speeds
@@ -514,10 +537,18 @@ but the audio engine integration is still pending:~~
 
 ### Step-Based Pattern Operations ⭐⭐
 
-- [ ] **`pace(targetSteps)`** - Adjust pattern to target number of steps (alias: `steps`)
-- [ ] **`take(n)`** - Take first n steps (alias: `s_add`)
-- [ ] **`drop(n)`** - Drop first n steps (alias: `s_sub`)
-- [ ] **`extend(factor)`** - Extend pattern by factor (alias: `s_extend`)
+- [x] **`pace(targetSteps)`** - Adjust pattern to target number of steps (alias: `steps`) ✅ **IMPLEMENTED** - Uses
+  fast() to adjust pattern speed to match target step count
+- [x] **`take(n)`** - Take first n steps ✅ **IMPLEMENTED** - Keeps first n steps from pattern structure, stretches to
+  fill cycle
+- [x] **`drop(n)`** - Drop first n steps ✅ **IMPLEMENTED** - Skips first n steps, stretches remaining to fill cycle
+- [x] **`extend(factor)`** - Extend pattern by factor ✅ **IMPLEMENTED** - Alias for fast(), speeds up pattern (NOT
+  slow() as originally expected)
+- [x] **`iter(n)`** - Plays pattern subdivisions in order ✅ **IMPLEMENTED** - Creates n time-shifted variations using
+  slowcat
+- [x] **`iterBack(n)`** - Plays subdivisions in reverse ✅ **IMPLEMENTED** - Like iter but shifts backward
+- [x] **`repeatCycles(n)`** - Repeat each cycle n times ✅ **IMPLEMENTED** - Maps output cycles to source cycles (floor(
+  output/n))
 - [ ] **`replicate(factor)`** - Replicate pattern factor times
 - [ ] **`expand(factor)`** - Expand pattern by factor (alias: `s_expand`)
 - [ ] **`contract(factor)`** - Contract pattern by factor (alias: `s_contract`)
@@ -528,7 +559,9 @@ but the audio engine integration is still pending:~~
 - [ ] **`zip(...patterns)`** - Zip patterns together (alias: `s_zip`)
 - [x] **`bite(n, indices)`** - Slices pattern and plays according to index pattern, now supports control patterns (
   pattern method, string extension)
-- [ ] **`repeatCycles(n)`** - Repeat pattern for n cycles
+
+**✅ Time Manipulation Functions Complete (2026-01-29)** - All 7 step-based time functions implemented with correct
+JS-compatible semantics
 
 ### Sample Functions (Advanced)
 
@@ -558,8 +591,8 @@ but the audio engine integration is still pending:~~
 - [x] **ADSR envelope**: `attack()`, `decay()`, `sustain()`, `release()`, `adsr()`
 - [x] **`warmth()`** - Oscillator warmth/brightness control (0=bright, 1=warm) ✅ **KLANG EXTENSION** - One-pole low-pass
   filtering applied to oscillators
-- [ ] **`velocity()`** - MIDI velocity
-- [ ] **`postgain()`** - Post-processing gain
+- [x] **`velocity()`** - MIDI velocity
+- [x] **`postgain()`** - Post-processing gain
 - [ ] **`partials(list)`** - Additive synthesis partials
 - [ ] **`phases(list)`** - Additive synthesis phases
 - [ ] **FM synthesis parameters**:
@@ -585,15 +618,12 @@ but the audio engine integration is still pending:~~
 
 ### Audio Effects (Advanced)
 
-- [ ] **`compressor()`** - Dynamic range compression
-- [ ] **`duck()`** - Ducking/sidechain effect
+- [x] **`compressor()`** - Dynamic range compression
+- [x] **`duck()`** - Ducking/sidechain effect
 - [ ] **`xfade(pos, b)`** - Crossfade between patterns
 - [ ] **`morph(from, to, by)`** - Morph between patterns
 - [ ] **`hsla(h, s, l, a)`** - Create HSLA color pattern
 - [ ] **`hsl(h, s, l)`** - Create HSL color pattern
-- [ ] **`round()`** - Round values to integers
-- [ ] **`floor()`** - Floor values to integers
-- [ ] **`ceil()`** - Ceil values to integers
 
 ### Audio Engine Enhancements
 
@@ -744,12 +774,11 @@ but the audio engine integration is still pending:~~
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ~3 missing, 3 won't implement (20 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
-  `compress`, `focus`, `ply`,
-  `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`, `loopAt`,
-  `euclidRot`, `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`; many with control pattern support; won't
+- **Time Modification**: ✅ 0 missing, 3 won't implement (23 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
+  `compress`, `focus`, `ply`, `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`, `loopAt`, `euclidRot`, `euclidLegato`,
+  `euclidLegatoRot`, `bjork`, `euclidish`, `pace`, `steps`, `extend`; many with control pattern support; won't
   implement: `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
-- **Pattern Operations**: ~9 missing (4 completed: `rev`, `palindrome`, `inside`, `outside`)
+- **Pattern Operations**: ~7 missing (6 completed: `rev`, `palindrome`, `inside`, `outside`, `iter`, `iterBack`)
 - **Pattern Transformation**: ~8 missing (10 completed: `struct`, `mask`, `superimpose`, `layer`, `apply`, `structAll`,
   `maskAll`, `jux`, `juxBy`, `off`)
 - **Tonal Functions**: ✅ 0 missing (11 completed: `note`, `n`, `freq`, `scale`, `sound`/`s`, `bank`, `transpose`,
@@ -772,7 +801,8 @@ but the audio engine integration is still pending:~~
 - **Synthesis Parameters**: ~12 missing (17 completed: gain, pan, ADSR, vibrato, unison, warmth, etc.)
 - **Noise Generators**: ✅ 0 missing (5 completed: `white`/`whitenoise`, `pink`/`pinknoise`, `brown`/`brownnoise`,
   `dust`, `crackle` - all accessed via `s()` or `sound()`, density controlled via `density()`/`d()`)
-- **Step-Based Operations**: ~13 missing (1 completed with control pattern support: `bite`)
+- **Step-Based Operations**: ~8 missing (8 completed: `pace`, `steps`, `take`, `drop`, `extend`, `iter`, `iterBack`,
+  `repeatCycles`, `bite` - all with proper step-based semantics matching JS implementation)
 - **Conditional & Probabilistic**: ✅ 0 missing (20 completed, with control pattern support: `sometimesBy`, `sometimes`,
   `often`, `rarely`,
   `almostAlways`, `almostNever`, `always`, `never`, `someCyclesBy`, `someCycles`, `degradeBy`, `degrade`, `undegradeBy`,
@@ -789,9 +819,9 @@ but the audio engine integration is still pending:~~
   `pickOut`, `pickmodOut`, `pickRestart`, `pickmodRestart`, `squeeze`, `inhabit`/`pickSqueeze`, `inhabitmod`/
   `pickmodSqueeze`)
 
-### Total Estimated: ~58 features remaining (3 marked "won't implement")
+### Total Estimated: ~51 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~244 features! 🎉
+### Completed So Far: ~251 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.

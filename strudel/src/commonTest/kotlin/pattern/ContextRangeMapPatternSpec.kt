@@ -13,7 +13,7 @@ class ContextRangeMapPatternSpec : StringSpec({
 
     "ContextRangeMapPattern remaps min/max in context" {
         val base = object : StrudelPattern.FixedWeight {
-            override val steps: Rational = Rational.ONE
+            override val numSteps: Rational = Rational.ONE
 
             override fun queryArcContextual(
                 from: Rational,

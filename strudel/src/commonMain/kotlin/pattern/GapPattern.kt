@@ -12,7 +12,7 @@ internal class GapPattern(
     stepsValue: Rational,
 ) : StrudelPattern.FixedWeight {
 
-    override val steps: Rational = stepsValue
+    override val numSteps: Rational = stepsValue
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 

@@ -19,7 +19,7 @@ class MapPatternSpec : StringSpec({
         val pattern = source.map { events -> events }
 
         pattern.weight shouldBe source.weight
-        pattern.steps shouldBe source.steps
+        pattern.numSteps shouldBe source.numSteps
         pattern.estimateCycleDuration() shouldBe source.estimateCycleDuration()
     }
 

@@ -87,7 +87,7 @@ internal class ChoicePattern(
 
     override val weight: Double get() = selector.weight
 
-    override val steps: Rational? get() = selector.steps
+    override val numSteps: Rational? get() = selector.numSteps
 
     override fun estimateCycleDuration(): Rational = selector.estimateCycleDuration()
 

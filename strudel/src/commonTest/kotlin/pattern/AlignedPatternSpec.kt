@@ -12,7 +12,7 @@ class AlignedPatternSpec : StringSpec({
 
     "AlignedPattern aligns to left, center, right" {
         val source = object : StrudelPattern.FixedWeight {
-            override val steps: Rational = Rational.ONE
+            override val numSteps: Rational = Rational.ONE
             override fun estimateCycleDuration(): Rational = Rational.ONE
 
             override fun queryArcContextual(

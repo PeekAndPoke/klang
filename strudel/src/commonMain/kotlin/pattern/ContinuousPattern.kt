@@ -27,7 +27,7 @@ class ContinuousPattern private constructor(
             ContinuousPattern(getValue)
     }
 
-    override val steps: Rational = Rational.ONE
+    override val numSteps: Rational = Rational.ONE
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 

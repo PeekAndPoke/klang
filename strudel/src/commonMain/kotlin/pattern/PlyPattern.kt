@@ -47,7 +47,7 @@ internal class PlyPattern(
 
     override val weight: Double get() = source.weight
 
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
 
     override fun estimateCycleDuration(): Rational {
         return source.estimateCycleDuration()

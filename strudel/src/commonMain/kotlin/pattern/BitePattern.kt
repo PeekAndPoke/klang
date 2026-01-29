@@ -57,7 +57,7 @@ internal class BitePattern(
 
     override val weight: Double get() = source.weight
 
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 

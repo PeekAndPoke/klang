@@ -54,7 +54,7 @@ stack(
      .delay("0.2").delaytime(0.25).delayfeedback(0.3),
 ).room(0.025).rsize(5.0)
                 
-            """.trimIndent()
+    """.trimIndent()
 
     val tetris = """
 import * from "stdlib"
@@ -76,7 +76,7 @@ stack(
       .orbit(0).gain(0.275).pan(cosine2.range(0.3, 0.7).oneMinusValue().slow(48))
       .delay(0.3).delaytime(0.15).delayfeedback(0.5)      
       .hpf(600)
-  ,
+    ,
     note(`<
         [[e2 e3]*4]                   [[a2 a3]*4] 
         [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
@@ -90,8 +90,7 @@ stack(
       .orbit(2).gain(0.4).pan(cosine2.slow(48).range(0.3, 0.7))
       .adsr("0.01:0.3:0.4:0.3")
       .superimpose(x => x.bandf(berlin.range(1000, 10000).slow(64)).gain(0.5))
-  ,
-  
+    ,
     sound(`<
         [[bd:2, cr, cr] hh sd hh]   [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
         [[bd, hh] hh sd hh]         [bd hh sd oh]   [bd hh sd hh]             [bd hh [mt mt, sd] [ht ht, oh]]            
@@ -105,7 +104,8 @@ stack(
     >`)
       .orbit(3).gain(0.8).adsr("0.01:0.2:0.8:0.5")
       .fast(2)
-).room(0.02).rsize(2.0)
+).room(0.02).rsize(2.0).swingBy(0.025, 4).compressor("-24:1.2:8:0.03:0.2")
+
     """.trimIndent()
 
     val strangerThingsNetflix = """
@@ -113,51 +113,49 @@ import * from "stdlib"
 import * from "strudel"
 
 // CPS: 0.50
-
 let wait = 16
 
 stack(
+    n("0").scale("C6:major").scaleTranspose("0 -2 2 -5".slow(32))
+        .morse("Schön ist es auf der Welt zu sein!").slow(1)
+        .sound("square").warmth(1.0).gain(0.8).pan(perlin.slow(4))
+        .adsr("0.05:0.5:0.1:1.0")
+        .filterWhen(x => x >= wait * 8)
+    , 
     // Melody
     n("<[0 2 4 6 7 6 4 2]>").scale("<[c3:major c3:pentatonic c3:major c3:major]>/16")
-        .s("supersaw").unison(10).detune(saw.range(0.001, 0.45).slow(16)).spread(1.0)
-        .orbit(0).gain(0.07).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8))
+        .s("supersaw").unison(10).detune(saw.range(0.001, 0.3).slow(16)).spread(1.0)
+        .gain(0.07).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.03:0.5:0.7:0.2")
         .distort(2.0)
-        .lpenv(perlin.slow(3).range(1, 4)).lpf(perlin.slow(8).range(100, 2000))
-        .adsr("0.03:0.5:0.7:0.3")
+        .lpenv(perlin.slow(8).range(1, 4)).lpf(perlin.slow(8).range(100, 2000))        
         .filterWhen(x => x >= wait * 4)
-    ,
+    , 
     // Bass
     note("<a1 [f2 c2 a1 [f2 c2]] [a1 f1 a1 f1] e2>/8").clip(0.75).struct("x*8")
-        .orbit(1).gain(0.65).pan(sine.range(0.3, 0.7).slow(16))
         .s("supersaw").unison(6).detune(saw.range(0.1, 0.45).slow(16))
-        .adsr("0.03:0.5:0.5:0.5")        
+        .gain(0.65).pan(sine.range(0.3, 0.7).slow(16)).adsr("0.03:0.5:0.5:0.5")        
         .lpf(2500)
         .filterWhen(x => x >= wait * 2)
-    ,
+    , 
     // Perc 2
     sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-        .orbit(2).gain(1.0).pan("[0.4 0.4 0.6 0.4]")
-        .adsr("0.05:0.8:0.5:1.0")
-        .degrade(0.25).fast(2)
+        .gain(1.0).pan("[0.3 0.3 0.8 0.3]").adsr("0.05:0.8:0.5:1.0")
+        .fast(2).degrade(0.25)
         .filterWhen(x => x >= wait * 1)
     ,
     // Perc 1
     sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32")
-        .orbit(3).gain(0.8).pan(0.6)
-        .degrade(0.25)
-        .adsr("0.01:0.5:0.5:1.0").fast(2)
+        .gain(0.8).pan(0.6).adsr("0.01:0.5:0.5:1.0")
+        .fast(2).degrade(0.25)        
         .filterWhen(x => x >= wait * 0.5)
     ,
     // Wind
     note("a").fast(16).sound("pink")
-     .orbit(4).gain(0.04)
-     .adsr("0.05:1.0:1.0:0.5")
-     .bandf(sine.early(1.7).add(perlin.range(-0.3, 0.3).slow(8)).range(440, 1120).slow(24)).bandq(5)
-     .pan(perlin.early(1.7).range(0.3, 0.7).slow(13))
-     
+     .gain(0.04).pan(perlin.early(1.7).range(0.3, 0.7).slow(13)).adsr("0.05:1.0:1.0:0.5")
+     .bandf(sine.early(1.7).add(perlin.range(-0.3, 0.3).slow(8)).range(440, 1120).slow(24)).bandq(5)     
   ,
 ).delay(0.15).delaytime(0.25).delayfeedback(0.5)  
-.room(0.02).rsize(5.0)
+.room(0.02).rsize(5.0).compressor("-24:1.2:8:0.03:0.2")
 
    """.trimIndent()
 

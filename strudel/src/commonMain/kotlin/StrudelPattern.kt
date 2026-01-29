@@ -160,7 +160,7 @@ interface StrudelPattern {
      * The number of steps per cycle for this pattern, if defined.
      * Used for aligning patterns in polymeter.
      */
-    val steps: Rational?
+    val numSteps: Rational?
 
     /**
      * Estimates the duration of a cycle for this pattern.

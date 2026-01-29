@@ -27,10 +27,10 @@ internal class StructurePattern(
 
     override val weight: Double = if (mode == Mode.In) source.weight else other.weight
 
-    override val steps: Rational?
+    override val numSteps: Rational?
         get() = when (mode) {
-            Mode.In -> source.steps
-            Mode.Out -> other.steps
+            Mode.In -> source.numSteps
+            Mode.Out -> other.numSteps
         }
 
     override fun estimateCycleDuration(): Rational {

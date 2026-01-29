@@ -12,9 +12,9 @@ import io.peekandpoke.klang.strudel.math.lcm
  */
 internal class StackPattern(val patterns: List<StrudelPattern>) : StrudelPattern.FixedWeight {
 
-    override val steps: Rational?
+    override val numSteps: Rational?
         get() {
-            val allSteps = patterns.mapNotNull { it.steps?.toInt() }
+            val allSteps = patterns.mapNotNull { it.numSteps?.toInt() }
             if (allSteps.isEmpty()) return null
             return lcm(allSteps).takeIf { it > 0 }?.let { Rational(it) }
         }

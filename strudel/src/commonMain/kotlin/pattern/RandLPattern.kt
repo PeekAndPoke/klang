@@ -43,7 +43,7 @@ internal class RandLPattern(
         }
     }
 
-    override val steps: Rational = Rational.ONE
+    override val numSteps: Rational = Rational.ONE
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 

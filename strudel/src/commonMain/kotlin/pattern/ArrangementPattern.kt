@@ -16,7 +16,7 @@ internal class ArrangementPattern(
     private val segmentsRational = segments.map { (dur, pat) -> Rational(dur) to pat }
     private val totalDuration = segmentsRational.fold(Rational.ZERO) { acc, (dur, _) -> acc + dur }
 
-    override val steps: Rational get() = segments.size.toRational()
+    override val numSteps: Rational get() = segments.size.toRational()
 
     override fun estimateCycleDuration(): Rational = totalDuration
 

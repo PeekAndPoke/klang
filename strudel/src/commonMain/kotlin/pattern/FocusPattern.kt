@@ -59,7 +59,7 @@ internal class FocusPattern(
 
     override val weight: Double get() = source.weight
 
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
 
     // Optimization: For pure static values, pre-compute the transformation
     private val staticTransformed: StrudelPattern? by lazy {

@@ -368,14 +368,14 @@ private fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = nul
     if (patterns.isEmpty()) return silence
 
     // Filter for patterns that have steps defined
-    val validPatterns = patterns.filter { it.steps != null }
+    val validPatterns = patterns.filter { it.numSteps != null }
     if (validPatterns.isEmpty()) return silence
 
-    val patternSteps = validPatterns.mapNotNull { it.steps?.toInt() }
+    val patternSteps = validPatterns.mapNotNull { it.numSteps?.toInt() }
     val targetSteps = baseSteps ?: lcm(patternSteps).takeIf { it > 0 } ?: 4
 
     val adjustedPatterns = validPatterns.map { pat ->
-        val steps = pat.steps!!.toInt()
+        val steps = pat.numSteps!!.toInt()
         if (steps == targetSteps) pat
         else pat.fast(targetSteps.toDouble() / steps)
     }
@@ -1665,3 +1665,280 @@ val StrudelPattern.ratio by dslPatternExtension { p, /* args */ _, /* callInfo *
 
 @StrudelDsl
 val String.ratio by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.ratio() }
+
+// -- pace() / steps() -------------------------------------------------------------------------------------------------
+
+private fun applyPace(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val targetSteps = args.firstOrNull()?.value?.asDoubleOrNull() ?: 1.0
+    val currentSteps = source.numSteps?.toDouble() ?: 1.0
+
+    if (targetSteps <= 0.0 || currentSteps <= 0.0) {
+        return source
+    }
+
+    // Calculate speed adjustment: fast(targetSteps / currentSteps)
+    val speedFactor = targetSteps / currentSteps
+
+    return source.fast(speedFactor)
+}
+
+/**
+ * Sets the speed so the pattern completes in n steps.
+ * Adjusts tempo relative to the pattern's natural step count.
+ *
+ * Example: note("c d e f").pace(8) speeds up to fit 8 steps per cycle
+ */
+@StrudelDsl
+val pace by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.drop(1).toPattern(defaultModifier)
+    applyPace(pattern, args.take(1))
+}
+
+@StrudelDsl
+val StrudelPattern.pace by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPace(p, args)
+}
+
+@StrudelDsl
+val String.pace by dslStringExtension { p, args, callInfo -> p.pace(args, callInfo) }
+
+/** Alias for pace */
+@StrudelDsl
+val steps by dslFunction { args, callInfo -> pace(args, callInfo) }
+
+/** Alias for pace */
+@StrudelDsl
+val StrudelPattern.steps by dslPatternExtension { p, args, callInfo -> p.pace(args, callInfo) }
+
+/** Alias for pace */
+@StrudelDsl
+val String.steps by dslStringExtension { p, args, callInfo -> p.pace(args, callInfo) }
+
+// -- take() -----------------------------------------------------------------------------------------------------------
+
+private fun applyTake(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val cyclesArg = args.firstOrNull()
+    val cyclesVal = cyclesArg?.value
+
+    val cyclesPattern: StrudelPattern = when (cyclesVal) {
+        is StrudelPattern -> cyclesVal
+        else -> parseMiniNotation(cyclesArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val staticCycles = cyclesVal?.asDoubleOrNull()
+
+    return if (staticCycles != null) {
+        TakePattern(source, staticCycles.toRational())
+    } else {
+        TakePattern.control(source, cyclesPattern)
+    }
+}
+
+/**
+ * Keeps only the first n cycles of the pattern.
+ * Events after n cycles are filtered out.
+ *
+ * Example: note("c d e f").take(2) plays 2 cycles then silence
+ */
+@StrudelDsl
+val take by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.drop(1).toPattern(defaultModifier)
+    applyTake(pattern, args.take(1))
+}
+
+@StrudelDsl
+val StrudelPattern.take by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyTake(p, args)
+}
+
+@StrudelDsl
+val String.take by dslStringExtension { p, args, callInfo -> p.take(args, callInfo) }
+
+// -- drop() -----------------------------------------------------------------------------------------------------------
+
+private fun applyDrop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val dropArg = args.firstOrNull()
+    val dropVal = dropArg?.value
+
+    val dropPattern: StrudelPattern = when (dropVal) {
+        is StrudelPattern -> dropVal
+        else -> parseMiniNotation(dropArg ?: StrudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val staticDrop = dropVal?.asDoubleOrNull()
+
+    return if (staticDrop != null) {
+        DropPattern(source, staticDrop.toRational())
+    } else {
+        DropPattern.control(source, dropPattern)
+    }
+}
+
+/**
+ * Skips the first n steps of the pattern and stretches the remaining steps to fill the cycle.
+ *
+ * Example: note("c d e f").drop(1) plays "d e f" (3 events stretched to fill the cycle)
+ */
+@StrudelDsl
+val drop by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.drop(1).toPattern(defaultModifier)
+    applyDrop(pattern, args.take(1))
+}
+
+@StrudelDsl
+val StrudelPattern.drop by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyDrop(p, args)
+}
+
+@StrudelDsl
+val String.drop by dslStringExtension { p, args, callInfo -> p.drop(args, callInfo) }
+
+// -- repeatCycles() ---------------------------------------------------------------------------------------------------
+
+private fun applyRepeatCycles(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val repsArg = args.firstOrNull()
+    val repsVal = repsArg?.value
+
+    val repsPattern: StrudelPattern = when (repsVal) {
+        is StrudelPattern -> repsVal
+        else -> parseMiniNotation(repsArg ?: StrudelDslArg.of("1")) { text, _ ->
+            AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+        }
+    }
+
+    val staticReps = repsVal?.asDoubleOrNull()
+
+    return if (staticReps != null) {
+        RepeatCyclesPattern(source, staticReps.toRational())
+    } else {
+        RepeatCyclesPattern.control(source, repsPattern)
+    }
+}
+
+/**
+ * Repeats the pattern n times, then silence.
+ * Useful for creating finite patterns from infinite ones.
+ *
+ * Example: note("c d e f").repeatCycles(3) plays 3 cycles then stops
+ */
+@StrudelDsl
+val repeatCycles by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.drop(1).toPattern(defaultModifier)
+    applyRepeatCycles(pattern, args.take(1))
+}
+
+@StrudelDsl
+val StrudelPattern.repeatCycles by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyRepeatCycles(p, args)
+}
+
+@StrudelDsl
+val String.repeatCycles by dslStringExtension { p, args, callInfo -> p.repeatCycles(args, callInfo) }
+
+// -- extend() ---------------------------------------------------------------------------------------------------------
+
+/**
+ * Speeds up the pattern by the given factor.
+ * This is an alias for fast().
+ *
+ * Example: note("c d e f").extend(2) plays twice as fast (8 steps in a cycle)
+ */
+@StrudelDsl
+val extend by dslFunction { args, callInfo -> fast(args, callInfo) }
+
+@StrudelDsl
+val StrudelPattern.extend by dslPatternExtension { p, args, callInfo -> p.fast(args, callInfo) }
+
+@StrudelDsl
+val String.extend by dslStringExtension { p, args, callInfo -> p.fast(args, callInfo) }
+
+// -- iter() -----------------------------------------------------------------------------------------------------------
+
+private fun applyIter(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val nArg = args.firstOrNull()
+    // iter only supports static integer n because it defines the number of cycles in the sequence
+    val n = nArg?.value?.asIntOrNull() ?: 1
+
+    if (n <= 0) return silence
+
+    // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.early(Fraction(i).div(times)))
+    val patterns = (0 until n).map { i ->
+        val shift = i.toRational() / n.toRational()
+        // We use early() to shift the view forward (events appear earlier, effectively rotating the pattern left)
+        // early() shifts by negative offset, so we negate the shift
+        TimeShiftPattern.static(source, -shift)
+    }
+
+    return applyCat(patterns)
+}
+
+/**
+ * Divides the pattern into n slices and shifts the view forward by 1 slice each cycle.
+ *
+ * Logic: For cycle C, view starts at offset (C % n) / n.
+ *
+ * Example: note("c d e f").iter(4)
+ *   Cycle 0: c d e f
+ *   Cycle 1: d e f c
+ *   Cycle 2: e f c d
+ *   Cycle 3: f c d e
+ */
+@StrudelDsl
+val iter by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.drop(1).toPattern(defaultModifier)
+    applyIter(pattern, args.take(1))
+}
+
+@StrudelDsl
+val StrudelPattern.iter by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyIter(p, args)
+}
+
+@StrudelDsl
+val String.iter by dslStringExtension { p, args, callInfo -> p.iter(args, callInfo) }
+
+// -- iterBack() -------------------------------------------------------------------------------------------------------
+
+private fun applyIterBack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val nArg = args.firstOrNull()
+    val n = nArg?.value?.asIntOrNull() ?: 1
+
+    if (n <= 0) return silence
+
+    // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.late(Fraction(i).div(times)))
+    val patterns = (0 until n).map { i ->
+        val shift = i.toRational() / n.toRational()
+        // We use late() to shift the view backward (events appear later, rotating pattern right)
+        // late() shifts by positive offset
+        TimeShiftPattern.static(source, shift)
+    }
+
+    return applyCat(patterns)
+}
+
+/**
+ * Like iter(), but shifts backward instead of forward.
+ *
+ * Example: note("c d e f").iterBack(4)
+ *   Cycle 0: c d e f
+ *   Cycle 1: f c d e
+ *   Cycle 2: e f c d
+ *   Cycle 3: d e f c
+ */
+@StrudelDsl
+val iterBack by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.drop(1).toPattern(defaultModifier)
+    applyIterBack(pattern, args.take(1))
+}
+
+@StrudelDsl
+val StrudelPattern.iterBack by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyIterBack(p, args)
+}
+
+@StrudelDsl
+val String.iterBack by dslStringExtension { p, args, callInfo -> p.iterBack(args, callInfo) }

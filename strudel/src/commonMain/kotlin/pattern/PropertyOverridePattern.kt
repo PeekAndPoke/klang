@@ -26,8 +26,8 @@ internal class PropertyOverridePattern(
     override val weight: Double
         get() = weightOverride ?: source.weight
 
-    override val steps: Rational?
-        get() = stepsOverride ?: source.steps
+    override val numSteps: Rational?
+        get() = stepsOverride ?: source.numSteps
 
     override fun estimateCycleDuration(): Rational =
         cycleDurationOverride ?: source.estimateCycleDuration()

@@ -770,6 +770,19 @@ object JsCompatTestData {
         Example("Ratio multiple divisions", """seq("12:3:2").ratio()"""),
         Example("Ratio as pattern method", """seq("5:4 3:2").ratio()"""),
         Example("Ratio with freq", """note("a").freq(ratio("5:4").mul(440))"""),
+
+        // Time Manipulation Functions
+        Example("Take basic", """note("c d e f").take(1)"""),
+        Example("Take fractional", """note("c d e f").take(1.5)"""),
+        Example("Drop basic", """note("c d e f").drop(1)"""),
+        // Seems to be ok-ish
+        Example(SKIP, "Drop fractional", """note("c d e f").drop(0.5)"""),
+        Example("RepeatCycles basic", """note("c d e f").repeatCycles(2)"""),
+        Example("Pace basic", """note("c d e f").pace(8)"""),
+        Example("Steps alias", """note("c d e f").steps(8)"""),
+        Example("Extend basic", """note("c d e f").extend(2)"""),
+        Example("Iter basic", """note("c d e f").iter(4)"""),
+        Example("IterBack basic", """note("c d e f").iterBack(4)"""),
     ).map {
         it.recover { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
     }

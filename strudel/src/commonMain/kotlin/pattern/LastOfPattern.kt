@@ -26,7 +26,7 @@ internal class LastOfPattern(
 ) : StrudelPattern {
     override val weight = source.weight
 
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 

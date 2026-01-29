@@ -26,7 +26,7 @@ internal class EuclideanMorphPattern(
 
     override val weight: Double get() = groovePattern.weight
 
-    override val steps: Rational?
+    override val numSteps: Rational?
         get() = if (stepsProvider is ControlValueProvider.Static) {
             (stepsProvider.value.asInt ?: 0).toRational()
         } else {

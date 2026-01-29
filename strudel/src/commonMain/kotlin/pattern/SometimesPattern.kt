@@ -83,7 +83,7 @@ internal class SometimesPattern private constructor(
 
     override val weight: Double get() = source.weight
 
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
@@ -152,7 +152,7 @@ internal class SometimesPattern private constructor(
     ): List<StrudelPatternEvent> {
         val tempPattern = object : StrudelPattern {
             override val weight = 1.0
-            override val steps: Rational = Rational.ONE
+            override val numSteps: Rational = Rational.ONE
 
             override fun estimateCycleDuration(): Rational = Rational.ONE
 

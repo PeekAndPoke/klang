@@ -27,7 +27,7 @@ class StaticStrudelPattern(
         events.maxOfOrNull { it.end } ?: Rational.ZERO
     ).ceil()
 
-    override val steps: Rational = when (totalCycles) {
+    override val numSteps: Rational = when (totalCycles) {
         Rational.ZERO -> Rational.ZERO
         else -> (events.size.toRational() / totalCycles)
     }

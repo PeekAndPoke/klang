@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -315,3 +316,54 @@ val String.or by dslStringExtension { p, args, callInfo -> p.or(args, callInfo) 
 
 @StrudelDsl
 val or by dslFunction { _, _ -> silence }
+
+// -- round() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Rounds all numerical values to the nearest integer.
+ */
+@StrudelDsl
+val StrudelPattern.round by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyUnaryOp(p) { v ->
+        val d = v.asDouble
+        if (d != null) kotlin.math.round(d).asVoiceValue() else v
+    }
+}
+
+@StrudelDsl
+val String.round by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.round() }
+
+// -- floor() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Floors all numerical values to the nearest lower integer.
+ * E.g. 3.7 becomes 3, and -4.2 becomes -5.
+ */
+@StrudelDsl
+val StrudelPattern.floor by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyUnaryOp(p) { v ->
+        val d = v.asDouble
+        if (d != null) kotlin.math.floor(d).asVoiceValue() else v
+    }
+}
+
+@StrudelDsl
+val String.floor by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.floor() }
+
+// -- ceil() -----------------------------------------------------------------------------------------------------------
+
+/**
+ * Ceils all numerical values to the nearest higher integer.
+ * E.g. 3.2 becomes 4, and -4.2 becomes -4.
+ */
+@StrudelDsl
+val StrudelPattern.ceil by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyUnaryOp(p) { v ->
+        val d = v.asDouble
+        if (d != null) kotlin.math.ceil(d).asVoiceValue() else v
+    }
+}
+
+@StrudelDsl
+val String.ceil by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.ceil() }
+

@@ -55,7 +55,7 @@ internal class ZoomPattern(
 
     override val weight: Double get() = inner.weight
 
-    override val steps: Rational? get() = inner.steps
+    override val numSteps: Rational? get() = inner.numSteps
 
     // Optimization: For pure static values, pre-compute the transformation
     private val staticTransformed: StrudelPattern? by lazy {

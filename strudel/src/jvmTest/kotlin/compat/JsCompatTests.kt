@@ -95,7 +95,7 @@ class JsCompatTests : StringSpec() {
 
         assertSoftly {
             withClue("Number of events must match | JS (Graal): ${graalArc.size} VS Native: ${nativeArc.size}") {
-                graalArc.size shouldBe nativeArc.size
+                nativeArc.size shouldBe graalArc.size
             }
 
             val zippedArc = graalArc.zip(nativeArc)

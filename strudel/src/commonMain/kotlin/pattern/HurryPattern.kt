@@ -48,7 +48,7 @@ internal class HurryPattern(
 
     override val weight: Double get() = source.weight
 
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
 
     override fun estimateCycleDuration(): Rational {
         // Use queried value if available, otherwise use 1.0 as estimate

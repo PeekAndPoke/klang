@@ -22,7 +22,7 @@ class BindPatternSpec : StringSpec({
         val pattern = BindPattern(outer) { inner }
 
         pattern.weight shouldBe outer.weight
-        pattern.steps shouldBe outer.steps
+        pattern.numSteps shouldBe outer.numSteps
         pattern.estimateCycleDuration() shouldBe outer.estimateCycleDuration()
     }
 

@@ -42,12 +42,12 @@ internal class EuclideanPattern(
 
     override val weight: Double get() = inner.weight
 
-    override val steps: Rational?
+    override val numSteps: Rational?
         get() {
             return if (stepsProvider is ControlValueProvider.Static) {
                 (stepsProvider.value.asInt ?: 0).toRational()
             } else {
-                inner.steps
+                inner.numSteps
             }
         }
 
@@ -143,7 +143,7 @@ internal class EuclideanPattern(
             val fillAtom = object : StrudelPattern {
                 override val weight = 1.0
 
-                override val steps: Rational = Rational.ONE
+                override val numSteps: Rational = Rational.ONE
 
                 override fun estimateCycleDuration(): Rational = Rational.ONE
 

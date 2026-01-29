@@ -21,7 +21,7 @@ internal class RandrunPattern(
 ) : StrudelPattern {
     override val weight = 1.0
 
-    override val steps: Rational? = null
+    override val numSteps: Rational? = null
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 

@@ -58,7 +58,7 @@ internal class TempoModifierPattern(
 
     override val weight: Double get() = source.weight
 
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         val factorEvents = factorProvider.queryEvents(from, to, ctx)

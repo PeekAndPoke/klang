@@ -13,7 +13,7 @@ class RandLPatternSpec : StringSpec({
 
     "RandLPattern emits n events per control window" {
         val nPattern = object : StrudelPattern.FixedWeight {
-            override val steps: Rational = Rational.ONE
+            override val numSteps: Rational = Rational.ONE
 
             override fun queryArcContextual(
                 from: Rational,

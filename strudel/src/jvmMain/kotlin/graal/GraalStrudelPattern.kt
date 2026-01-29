@@ -21,7 +21,7 @@ class GraalStrudelPattern(
     // Graal patterns are treated as opaque units from the JS side, so we default to weight 1.0.
     override val weight: Double = 1.0
 
-    override val steps: Rational = Rational.ONE
+    override val numSteps: Rational = Rational.ONE
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 

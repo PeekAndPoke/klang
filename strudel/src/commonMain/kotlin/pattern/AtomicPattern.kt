@@ -31,7 +31,7 @@ internal class AtomicPattern(
         fun value(value: Any?) = AtomicPattern(StrudelVoiceData.empty.copy(value = value?.asVoiceValue()))
     }
 
-    override val steps: Rational = Rational.ONE
+    override val numSteps: Rational = Rational.ONE
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 

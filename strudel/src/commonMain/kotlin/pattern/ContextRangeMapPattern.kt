@@ -14,7 +14,7 @@ internal class ContextRangeMapPattern(
     private val transformMax: (Double) -> Double,
 ) : StrudelPattern {
     override val weight: Double get() = source.weight
-    override val steps: Rational? get() = source.steps
+    override val numSteps: Rational? get() = source.numSteps
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {

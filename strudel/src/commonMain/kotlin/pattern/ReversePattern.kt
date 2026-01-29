@@ -44,7 +44,7 @@ internal class ReversePattern(
 
     override val weight: Double get() = inner.weight
 
-    override val steps: Rational? get() = inner.steps
+    override val numSteps: Rational? get() = inner.numSteps
 
     override fun estimateCycleDuration(): Rational = inner.estimateCycleDuration()
 

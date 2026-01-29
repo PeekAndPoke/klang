@@ -23,7 +23,7 @@ class PropertyOverridePatternSpec : StringSpec({
         )
 
         pattern.weight shouldBe 2.5
-        pattern.steps shouldBe source.steps
+        pattern.numSteps shouldBe source.numSteps
         pattern.estimateCycleDuration() shouldBe source.estimateCycleDuration()
 
         // Events should be unchanged
@@ -42,7 +42,7 @@ class PropertyOverridePatternSpec : StringSpec({
         )
 
         pattern.weight shouldBe source.weight
-        pattern.steps shouldBe newSteps
+        pattern.numSteps shouldBe newSteps
         pattern.estimateCycleDuration() shouldBe source.estimateCycleDuration()
     }
 
@@ -56,7 +56,7 @@ class PropertyOverridePatternSpec : StringSpec({
         )
 
         pattern.weight shouldBe source.weight
-        pattern.steps shouldBe source.steps
+        pattern.numSteps shouldBe source.numSteps
         pattern.estimateCycleDuration() shouldBe newDuration
     }
 
@@ -72,7 +72,7 @@ class PropertyOverridePatternSpec : StringSpec({
         )
 
         pattern.weight shouldBe newWeight
-        pattern.steps shouldBe newSteps
+        pattern.numSteps shouldBe newSteps
         pattern.estimateCycleDuration() shouldBe source.estimateCycleDuration()
     }
 
@@ -106,7 +106,7 @@ class PropertyOverridePatternSpec : StringSpec({
         )
 
         pattern.weight shouldBe source.weight
-        pattern.steps shouldBe source.steps
+        pattern.numSteps shouldBe source.numSteps
         pattern.estimateCycleDuration() shouldBe source.estimateCycleDuration()
     }
 
@@ -117,7 +117,7 @@ class PropertyOverridePatternSpec : StringSpec({
         val pattern = source.withWeight(newWeight)
 
         pattern.weight shouldBe newWeight
-        pattern.steps shouldBe source.steps
+        pattern.numSteps shouldBe source.numSteps
 
         // Should be a PropertyOverridePattern
         (pattern is PropertyOverridePattern) shouldBe true
@@ -130,7 +130,7 @@ class PropertyOverridePatternSpec : StringSpec({
         val pattern = source.withSteps(newSteps)
 
         pattern.weight shouldBe source.weight
-        pattern.steps shouldBe newSteps
+        pattern.numSteps shouldBe newSteps
 
         // Should be a PropertyOverridePattern
         (pattern is PropertyOverridePattern) shouldBe true
@@ -144,7 +144,7 @@ class PropertyOverridePatternSpec : StringSpec({
             .withSteps(4.toRational())
 
         pattern.weight shouldBe 2.0
-        pattern.steps shouldBe 4.toRational()
+        pattern.numSteps shouldBe 4.toRational()
     }
 
     "PropertyOverridePattern should work with different source patterns" {
@@ -159,7 +159,7 @@ class PropertyOverridePatternSpec : StringSpec({
             val pattern = source.withWeight(3.5)
 
             pattern.weight shouldBe 3.5
-            pattern.steps shouldBe source.steps
+            pattern.numSteps shouldBe source.numSteps
 
             val events = pattern.queryArc(0.0, 1.0)
             events shouldHaveSize source.queryArc(0.0, 1.0).size
@@ -176,7 +176,7 @@ class PropertyOverridePatternSpec : StringSpec({
 
         // Properties should remain consistent
         pattern.weight shouldBe 2.5
-        pattern.steps shouldBe 8.toRational()
+        pattern.numSteps shouldBe 8.toRational()
 
         events1 shouldHaveSize 4
         events2 shouldHaveSize 4
@@ -199,11 +199,11 @@ class PropertyOverridePatternSpec : StringSpec({
 
     "PropertyOverridePattern should preserve source steps when overriding weight" {
         val source = seq("a", "b", "c")
-        val originalSteps = source.steps
+        val originalSteps = source.numSteps
 
         val pattern = source.withWeight(10.0)
 
-        pattern.steps shouldBe originalSteps
+        pattern.numSteps shouldBe originalSteps
         pattern.weight shouldBe 10.0
     }
 
@@ -214,7 +214,7 @@ class PropertyOverridePatternSpec : StringSpec({
         val pattern = source.withSteps(16.toRational())
 
         pattern.weight shouldBe originalWeight
-        pattern.steps shouldBe 16.toRational()
+        pattern.numSteps shouldBe 16.toRational()
     }
 
     "PropertyOverridePattern should handle zero weight" {
