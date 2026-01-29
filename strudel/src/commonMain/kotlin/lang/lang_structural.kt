@@ -15,6 +15,7 @@ import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinter
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.log2
+import kotlin.math.pow
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -174,6 +175,116 @@ val StrudelPattern.arrange by dslPatternExtension { p, args, /* callInfo */ _ ->
 
 @StrudelDsl
 val String.arrange by dslStringExtension { p, args, callInfo -> p.arrange(args, callInfo) }
+
+// -- stepcat() / timeCat() --------------------------------------------------------------------------------------------
+
+private fun applyStepcat(args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // Parse arguments into weighted patterns
+    val patterns: List<StrudelPattern> = args.mapNotNull { arg ->
+        when (val argVal = arg.value) {
+            // Case: pattern only (defaults to duration 1)
+            is StrudelPattern -> argVal.withWeight(1.0)
+
+            // Case: [duration, pattern]
+            is List<*> if argVal.size >= 2 && argVal[0] is Number -> {
+                val dur = ((argVal[0] as? Number) ?: 1.0).toDouble()
+
+                val pat = when (val patVal = argVal[1]) {
+                    is StrudelPattern -> patVal
+                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
+                        AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+                    }
+                }
+
+                // Only add if duration is positive
+                if (dur > 0.0) pat.withWeight(dur) else null
+            }
+
+            // Case: [pattern] (defaults to duration 1)
+            is List<*> if argVal.size == 1 -> {
+                val pat = when (val patVal = argVal[0]) {
+                    is StrudelPattern -> patVal
+                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
+                        AtomicPattern(StrudelVoiceData.empty.defaultModifier(text))
+                    }
+                }
+
+                pat.withWeight(1.0)
+            }
+
+            // Unknown - skip
+            else -> null
+        }
+    }
+
+    if (patterns.isEmpty()) {
+        return silence
+    }
+
+    // Use SequencePattern which handles weighted time distribution and compression to 1 cycle
+    return SequencePattern(patterns)
+}
+
+/**
+ * Concatenates patterns proportionally by their durations, then compresses the result to fit exactly one cycle.
+ *
+ * Each segment is specified as [duration, pattern]. If only a pattern is given, duration defaults to 1.
+ * The total sum of durations determines how much the sequence is sped up to fit into 1 cycle.
+ *
+ * @example
+ * timeCat([1, "a"], [3, "b"])
+ * // "a" takes 25% (1/4), "b" takes 75% (3/4) of one cycle
+ *
+ * @example
+ * stepcat([2, note("c")], [1, note("e g")])
+ * // "c" takes 66% (2/3), "e g" takes 33% (1/3) of one cycle
+ */
+@StrudelDsl
+val stepcat by dslFunction { args, /* callInfo */ _ -> applyStepcat(args) }
+
+@StrudelDsl
+val StrudelPattern.stepcat by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyStepcat(listOf(StrudelDslArg.of(p)) + args)
+}
+
+@StrudelDsl
+val String.stepcat by dslStringExtension { p, args, callInfo -> p.stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val timeCat by dslFunction { args, callInfo -> stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val StrudelPattern.timeCat by dslPatternExtension { p, args, callInfo -> p.stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val String.timeCat by dslStringExtension { p, args, callInfo -> p.stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val timecat by dslFunction { args, callInfo -> stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val StrudelPattern.timecat by dslPatternExtension { p, args, callInfo -> p.stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val String.timecat by dslStringExtension { p, args, callInfo -> p.stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val s_cat by dslFunction { args, callInfo -> stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val StrudelPattern.s_cat by dslPatternExtension { p, args, callInfo -> p.stepcat(args, callInfo) }
+
+/** Alias for [stepcat] */
+@StrudelDsl
+val String.s_cat by dslStringExtension { p, args, callInfo -> p.stepcat(args, callInfo) }
 
 // -- stackBy() --------------------------------------------------------------------------------------------------------
 
@@ -905,6 +1016,406 @@ val String.zoom by dslStringExtension { p, args, callInfo -> p.zoom(args, callIn
 
 @StrudelDsl
 fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, end)
+
+val StrudelPattern.within by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val start = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
+    val end = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 1.0
+
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.getOrNull(2)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+
+    if (start >= end || start < 0.0 || end > 1.0) {
+        p // Return unchanged if invalid window
+    } else {
+        val startRat = start.toRational()
+        val endRat = end.toRational()
+
+        val isBeginInWindow: (StrudelPatternEvent) -> Boolean = { ev ->
+            val cycle = ev.begin.floor()
+            if (start < end) {
+                val s = cycle + startRat
+                val e = cycle + endRat
+                ev.begin >= s && ev.begin < e
+            } else {
+                val s1 = cycle + startRat
+                val e1 = cycle + Rational.ONE
+                val s2 = cycle
+                val e2 = cycle + endRat
+                (ev.begin >= s1 && ev.begin < e1) || (ev.begin >= s2 && ev.begin < e2)
+            }
+        }
+
+        val inside = p.filter(isBeginInWindow)
+        val outside = p.filter { !isBeginInWindow(it) }
+
+        StackPattern(listOf(transform(inside), outside))
+    }
+}
+
+/** Alias for within - supports function call syntax */
+@StrudelDsl
+fun StrudelPattern.within(start: Double, end: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.within(listOf(start, end, transform).asStrudelDslArgs())
+}
+
+@StrudelDsl
+val String.within by dslStringExtension { p, args, callInfo -> p.within(args, callInfo) }
+
+/** Alias for within - supports function call syntax */
+@StrudelDsl
+fun String.within(start: Double, end: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.within(listOf(start, end, transform).asStrudelDslArgs())
+}
+
+// -- chunk() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Divides the pattern into n parts and applies a function to one part per cycle (cycling through parts).
+ *
+ * This creates a higher-order pattern that behaves like slowcat, where each cycle applies the
+ * transformation to a different segment of the pattern.
+ *
+ * @param {n}         Number of chunks to divide the pattern into
+ * @param {transform} Function to apply to each chunk
+ *
+ * @example
+ * n("0 1 2 3").chunk(4) { it.add(12) }
+ * // Cycle 0: "12 1 2 3"  (first quarter transformed)
+ * // Cycle 1: "0 13 2 3"  (second quarter transformed)
+ * // Cycle 2: "0 1 14 3"  (third quarter transformed)
+ * // Cycle 3: "0 1 2 15"  (fourth quarter transformed)
+ *
+ * @example
+ * s("bd hh sd oh").chunk(2) { it.fast(2) }
+ * // Cycle 0: First half doubled in speed
+ * // Cycle 1: Second half doubled in speed
+ */
+@StrudelDsl
+val StrudelPattern.chunk by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 1
+
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+
+    if (n <= 0) {
+        silence
+    } else {
+        val patterns = (0 until n).map { i ->
+            val start = i.toDouble() / n
+            val end = (i + 1).toDouble() / n
+            val startRat = start.toRational()
+            val endRat = end.toRational()
+
+            fun clipToWindow(ev: StrudelPatternEvent): List<StrudelPatternEvent> {
+                val cycle = ev.begin.floor()
+
+                fun overlap(wStart: Rational, wEnd: Rational): StrudelPatternEvent? {
+                    val s = maxOf(ev.begin, wStart)
+                    val e = minOf(ev.end, wEnd)
+                    return if (e > s) ev.copy(begin = s, end = e, dur = e - s) else null
+                }
+
+                return listOfNotNull(overlap(cycle + startRat, cycle + endRat))
+            }
+
+            fun subtractWindow(
+                ev: StrudelPatternEvent,
+                wStart: Rational,
+                wEnd: Rational,
+            ): List<StrudelPatternEvent> {
+                val beforeStart = ev.begin
+                val beforeEnd = minOf(ev.end, wStart)
+                val afterStart = maxOf(ev.begin, wEnd)
+                val afterEnd = ev.end
+
+                val result = mutableListOf<StrudelPatternEvent>()
+                if (beforeEnd > beforeStart) {
+                    result.add(ev.copy(begin = beforeStart, end = beforeEnd, dur = beforeEnd - beforeStart))
+                }
+                if (afterEnd > afterStart) {
+                    result.add(ev.copy(begin = afterStart, end = afterEnd, dur = afterEnd - afterStart))
+                }
+                return result
+            }
+
+            fun clipOutsideWindow(ev: StrudelPatternEvent): List<StrudelPatternEvent> {
+                val cycle = ev.begin.floor()
+                return subtractWindow(ev, cycle + startRat, cycle + endRat)
+            }
+
+            val inside = p.map { events -> events.flatMap(::clipToWindow) }
+            val outside = p.map { events -> events.flatMap(::clipOutsideWindow) }
+
+            StackPattern(listOf(transform(inside), outside))
+        }
+
+        applyCat(patterns)
+    }
+}
+
+/** Alias for chunk - supports function call syntax */
+@StrudelDsl
+fun StrudelPattern.chunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.chunk(listOf(n, transform).asStrudelDslArgs())
+}
+
+@StrudelDsl
+val String.chunk by dslStringExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+
+/** Alias for chunk - supports function call syntax */
+@StrudelDsl
+fun String.chunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.chunk(listOf(n, transform).asStrudelDslArgs())
+}
+
+/** Alias for [chunk] */
+@StrudelDsl
+val StrudelPattern.slowchunk by dslPatternExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+
+/** Alias for [chunk] */
+@StrudelDsl
+fun StrudelPattern.slowchunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.chunk(n, transform)
+}
+
+/** Alias for [chunk] */
+@StrudelDsl
+val String.slowchunk by dslStringExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+
+/** Alias for [chunk] */
+@StrudelDsl
+fun String.slowchunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.chunk(n, transform)
+}
+
+/** Alias for [chunk] */
+@StrudelDsl
+val StrudelPattern.slowChunk by dslPatternExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+
+/** Alias for [chunk] */
+@StrudelDsl
+fun StrudelPattern.slowChunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.chunk(n, transform)
+}
+
+/** Alias for [chunk] */
+@StrudelDsl
+val String.slowChunk by dslStringExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+
+/** Alias for [chunk] */
+@StrudelDsl
+fun String.slowChunk(n: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.chunk(n, transform)
+}
+
+// -- echo() / stut() --------------------------------------------------------------------------------------------------
+
+/**
+ * Superimposes delayed and decayed versions of the pattern (echo effect).
+ *
+ * Creates {times} copies of the pattern, each delayed by {delay} × copy_number and
+ * with gain reduced by [decay] ^ copy_number.
+ *
+ * @param {times} Number of echoes (including original)
+ * @param {delay} Time offset for each echo (in cycles)
+ * @param {decay} Gain multiplier for each echo (0.0 to 1.0)
+ *
+ * @example
+ * n("0").stut(4, 0.5, 0.5)
+ * // Original at 0.0, echoes at 0.5, 1.0, 1.5 with gain 1.0, 0.5, 0.25, 0.125
+ *
+ * @example
+ * s("bd").echo(3, 0.125, 0.7)
+ * // Original + 2 echoes, 0.125 cycles apart, each 70% quieter than previous
+ */
+@StrudelDsl
+val StrudelPattern.echo by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val times = args.getOrNull(0)?.value?.asIntOrNull() ?: 1
+    val delay = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 0.25
+    val decay = args.getOrNull(2)?.value?.asDoubleOrNull() ?: 0.5
+
+    if (times <= 0) {
+        silence
+    } else if (times == 1) {
+        p // Only original, no echoes
+    } else {
+        // Create layers: original + echoes
+        val layers = (0 until times).map { i ->
+            if (i == 0) {
+                p // Original (no delay, no gain change)
+            } else {
+                // Delayed and decayed echo
+                val gainMultiplier = decay.pow(i)
+                p.late(delay * i).gain(gainMultiplier)
+            }
+        }
+
+        StackPattern(layers)
+    }
+}
+
+/** Alias for echo - supports function call syntax */
+@StrudelDsl
+fun StrudelPattern.echo(times: Int, delay: Double, decay: Double): StrudelPattern {
+    return this.echo(listOf(times, delay, decay).asStrudelDslArgs())
+}
+
+@StrudelDsl
+val String.echo by dslStringExtension { p, args, callInfo -> p.echo(args, callInfo) }
+
+/** Alias for echo - supports function call syntax */
+@StrudelDsl
+fun String.echo(times: Int, delay: Double, decay: Double): StrudelPattern {
+    return this.echo(listOf(times, delay, decay).asStrudelDslArgs())
+}
+
+/** Alias for [echo] */
+@StrudelDsl
+val StrudelPattern.stut by dslPatternExtension { p, args, callInfo -> p.echo(args, callInfo) }
+
+/** Alias for [echo] */
+@StrudelDsl
+fun StrudelPattern.stut(times: Int, delay: Double, decay: Double): StrudelPattern {
+    return this.echo(times, delay, decay)
+}
+
+/** Alias for [echo] */
+@StrudelDsl
+val String.stut by dslStringExtension { p, args, callInfo -> p.echo(args, callInfo) }
+
+/** Alias for [echo] */
+@StrudelDsl
+fun String.stut(times: Int, delay: Double, decay: Double): StrudelPattern {
+    return this.echo(times, delay, decay)
+}
+
+// -- echoWith() / stutWith() ------------------------------------------------------------------------------------------
+
+/**
+ * Superimposes versions of the pattern modified by recursively applying a transform function.
+ *
+ * Unlike [echo], which simply decays gain, this allows arbitrary transformations to be applied
+ * cumulatively to each layer.
+ *
+ * @param {times}     Number of layers (including original)
+ * @param {delay}     Time offset for each layer (in cycles)
+ * @param {transform} Function applied cumulatively to each layer
+ *
+ * @example
+ * n("0").stutWith(4, 0.125) { it.add(2) }
+ * // Layer 0: 0           (at 0.0)
+ * // Layer 1: 2           (at 0.125) - add(2) applied once
+ * // Layer 2: 4           (at 0.25)  - add(2) applied twice
+ * // Layer 3: 6           (at 0.375) - add(2) applied three times
+ *
+ * @example
+ * s("bd").echoWith(3, 0.25) { it.fast(1.5) }
+ * // Layer 0: original    (at 0.0)
+ * // Layer 1: 1.5× faster (at 0.25)
+ * // Layer 2: 2.25× faster (at 0.5) - fast(1.5) applied twice
+ */
+@StrudelDsl
+val StrudelPattern.echoWith by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val times = args.getOrNull(0)?.value?.asIntOrNull() ?: 1
+    val delay = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 0.25
+
+    @Suppress("UNCHECKED_CAST")
+    val transform = args.getOrNull(2)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+
+    if (times <= 0) {
+        silence
+    } else if (times == 1) {
+        p // Only original, no additional layers
+    } else {
+        // Build layers with cumulative transformation
+        val layers = mutableListOf(p) // Layer 0: original
+        var current = p
+
+        repeat(times - 1) { i ->
+            // Apply transform cumulatively
+            current = transform(current)
+            // Delay this layer
+            layers.add(current.late(delay * (i + 1)))
+        }
+
+        StackPattern(layers)
+    }
+}
+
+/** Alias for echoWith - supports function call syntax */
+@StrudelDsl
+fun StrudelPattern.echoWith(times: Int, delay: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.echoWith(listOf(times, delay, transform).asStrudelDslArgs())
+}
+
+@StrudelDsl
+val String.echoWith by dslStringExtension { p, args, callInfo -> p.echoWith(args, callInfo) }
+
+/** Alias for echoWith - supports function call syntax */
+@StrudelDsl
+fun String.echoWith(times: Int, delay: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.echoWith(listOf(times, delay, transform).asStrudelDslArgs())
+}
+
+/** Alias for [echoWith] */
+@StrudelDsl
+val StrudelPattern.stutWith by dslPatternExtension { p, args, callInfo -> p.echoWith(args, callInfo) }
+
+/** Alias for [echoWith] */
+@StrudelDsl
+fun StrudelPattern.stutWith(times: Int, delay: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.echoWith(times, delay, transform)
+}
+
+/** Alias for [echoWith] */
+@StrudelDsl
+val String.stutWith by dslStringExtension { p, args, callInfo -> p.echoWith(args, callInfo) }
+
+/** Alias for [echoWith] */
+@StrudelDsl
+fun String.stutWith(times: Int, delay: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.echoWith(times, delay, transform)
+}
+
+/** Alias for [echoWith] */
+@StrudelDsl
+val StrudelPattern.stutwith by dslPatternExtension { p, args, callInfo -> p.echoWith(args, callInfo) }
+
+/** Alias for [echoWith] */
+@StrudelDsl
+fun StrudelPattern.stutwith(times: Int, delay: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.echoWith(times, delay, transform)
+}
+
+/** Alias for [echoWith] */
+@StrudelDsl
+val String.stutwith by dslStringExtension { p, args, callInfo -> p.echoWith(args, callInfo) }
+
+/** Alias for [echoWith] */
+@StrudelDsl
+fun String.stutwith(times: Int, delay: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.echoWith(times, delay, transform)
+}
+
+/** Alias for [echoWith] */
+@StrudelDsl
+val StrudelPattern.echowith by dslPatternExtension { p, args, callInfo -> p.echoWith(args, callInfo) }
+
+/** Alias for [echoWith] */
+@StrudelDsl
+fun StrudelPattern.echowith(times: Int, delay: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.echoWith(times, delay, transform)
+}
+
+/** Alias for [echoWith] */
+@StrudelDsl
+val String.echowith by dslStringExtension { p, args, callInfo -> p.echoWith(args, callInfo) }
+
+/** Alias for [echoWith] */
+@StrudelDsl
+fun String.echowith(times: Int, delay: Double, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.echoWith(times, delay, transform)
+}
 
 // -- bite() -----------------------------------------------------------------------------------------------------------
 

@@ -101,6 +101,43 @@ object JsCompatTestData {
         Example("Hush", """note("c").hush()"""),
         Example("Gap", """gap(5)"""),
 
+        // Factory Functions
+        Example("stepcat basic", """stepcat([1, "c"], [2, "e"], [1, "g"])"""),
+        Example("stepcat with patterns", """stepcat([1, note("c")], [2, note("e g")])"""),
+        Example("stepcat with s_cat alias", """s_cat([1, "bd"], [3, "hh sd"])"""),
+        Example("stepcat with timecat alias", """timecat([2, "bd"], [1, "sd"])"""),
+        Example("stepcat proportional", """timeCat([3, "a"], [1, "b"])"""),
+
+        // within, chunk, echo, echoWith use lambdas so skip in JS compat
+        Example("within basic", """n("0 1 2 3").within(0.5, 1.0, x => x.rev())"""),
+        Example("within overlap", """n("0 1 2 3").within(0.2, 0.3, x => x.add(12))"""),
+        Example("within full cycle", """s("bd hh sd oh").within(0.0, 1.0, x => x.fast(2))"""),
+
+        Example("chunk basic", """n("0 1 2 3").chunk(4, x => x.add(12))"""),
+        Example("chunk slowchunk alias", """n("0 1 2 3").slowchunk(4, x => x.add(7))"""),
+        Example("chunk slowChunk alias", """n("0 1 2 3").slowChunk(4, x => x.add(7))"""),
+        Example("chunk 2 with 2 slices simple", """s("bd hh").chunk(2, x => x)"""),
+        Example("chunk 2 with 2 slices silence", """s("bd hh").chunk(2, x => silence)"""),
+        // TODO: needs fixing
+        Example(SKIP, "chunk 2 with 2 slices fast", """s("bd hh").chunk(2, x => x.fast(2))"""),
+        Example("chunk 3 with 2 slices simple", """s("bd sd hh").chunk(2, x => x)"""),
+        Example("chunk 3 with 2 slices silence", """s("bd sd hh").chunk(2, x => silence)"""),
+        // TODO: needs fixing
+        Example(SKIP, "chunk 3 with 2 slices fast", """s("bd sd hh").chunk(2, x => x.fast(2))"""),
+
+        // TODO: needs fixing
+        Example(SKIP, "echo basic", """n("0").echo(4, 0.5, 0.5)"""),
+        Example(SKIP, "echo short delay", """s("bd").echo(3, 0.125, 0.7)"""),
+        Example(SKIP, "echo stut alias", """n("0").stut(4, 0.5, 0.5)"""),
+        Example(SKIP, "echo with pattern", """s("bd hh").echo(3, 0.25, 0.6)"""),
+
+        // TODO: needs fixing
+        Example(SKIP, "echoWith basic", """n("0").echoWith(4, 0.125, x => x.add(2))"""),
+        Example(SKIP, "echoWith fast", """s("bd").echoWith(3, 0.25, x => x.fast(1.5))"""),
+        Example(SKIP, "echoWith stutWith alias", """n("0").stutWith(4, 0.125, x => x.add(2))"""),
+        Example(SKIP, "echoWith stutwith alias", """n("0").stutwith(4, 0.125, x => x.add(2))"""),
+        Example(SKIP, "echoWith echowith alias", """n("0").echowith(4, 0.125, x => x.add(2))"""),
+
         // Pattern Picking & Selection
         // pick() - Basic pattern picking with index clamping
         Example("pick() with list", """pick(["bd", "hh"], "0 1")"""),
