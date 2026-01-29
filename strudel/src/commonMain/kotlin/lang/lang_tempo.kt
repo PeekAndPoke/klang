@@ -19,7 +19,7 @@ var strudelLangTempoInit = false
 fun applyTimeShift(
     pattern: StrudelPattern,
     args: List<StrudelDslArg<Any?>>,
-    factor: Rational = 1.0.toRational(),
+    factor: Rational = Rational.ONE,
 ): StrudelPattern {
     if (args.isEmpty()) {
         return pattern
@@ -194,7 +194,7 @@ val early by dslFunction { /* args */ _, /* callInfo */ _ ->
 
 @StrudelDsl
 val StrudelPattern.early by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTimeShift(p, args, (-1.0).toRational())
+    applyTimeShift(pattern = p, args = args, factor = Rational.MINUS_ONE)
 }
 
 @StrudelDsl
@@ -202,12 +202,10 @@ val String.early by dslStringExtension { p, args, callInfo -> p.early(args, call
 
 // -- late() -----------------------------------------------------------------------------------------------------------
 
-private fun applyLate(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return applyTimeShift(source, args)
-}
-
 @StrudelDsl
-val StrudelPattern.late by dslPatternExtension { p, args, _ -> applyLate(p, args) }
+val StrudelPattern.late by dslPatternExtension { p, args, _ ->
+    applyTimeShift(pattern = p, args = args, factor = Rational.ONE)
+}
 
 @StrudelDsl
 val String.late by dslStringExtension { p, args, callInfo -> p.late(args, callInfo) }

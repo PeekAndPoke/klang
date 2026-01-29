@@ -239,6 +239,8 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
                 parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
             )
 
+            is Rational -> listOf(atomFactory(arg.toDouble().toString(), loc?.asChain()))
+
             is Number -> listOf(atomFactory(arg.toString(), loc?.asChain()))
 
             is Boolean -> listOf(atomFactory(arg.toString(), loc?.asChain()))
