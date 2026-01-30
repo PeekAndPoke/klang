@@ -794,14 +794,6 @@ val String.juxBy by dslStringExtension { p, args, callInfo -> p.juxBy(args, call
 
 // -- off() ------------------------------------------------------------------------------------------------------------
 
-private fun applyOff(
-    source: StrudelPattern,
-    time: Double,
-    transform: (StrudelPattern) -> StrudelPattern,
-): StrudelPattern {
-    return OffPattern(source, time, transform)
-}
-
 /**
  * Layers a modified version of the pattern on top of itself, shifted in time.
  *
@@ -816,7 +808,6 @@ val StrudelPattern.off by dslPatternExtension { p, args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-//    applyOff(p, time, transform)
     p.stack(transform(p).late(time))
 }
 
@@ -939,7 +930,7 @@ val StrudelPattern.superimpose by dslPatternExtension { p, args, /* callInfo */ 
     val transform: (StrudelPattern) -> StrudelPattern =
         args.firstOrNull()?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    SuperimposePattern(p, transform)
+    p.stack(transform(p))
 }
 
 @StrudelDsl
