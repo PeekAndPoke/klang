@@ -4,11 +4,12 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel._lift
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 
 /**
@@ -233,14 +234,53 @@ val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
     val transform: (StrudelPattern) -> StrudelPattern = arg1.value as? (StrudelPattern) -> StrudelPattern
         ?: return@dslPatternExtension p
 
-    // The "True" path: Apply transform, then keep only where condition is True
-    val trueBranch = transform(p).mask(condition)
+    // FLIPPED IMPLEMENTATION: Create a pattern that iterates over source events
+    // and checks the condition for each one
+    object : StrudelPattern {
+        override val weight: Double get() = p.weight
+        override val numSteps: io.peekandpoke.klang.strudel.math.Rational? get() = p.numSteps
 
-    // The "False" path: Keep original, but only where condition is False
-    val falseBranch = p.mask(condition.not())
+        private val transformed = transform(p)
 
-    // Combine them
-    trueBranch.stack(falseBranch)
+        override fun queryArcContextual(
+            from: io.peekandpoke.klang.strudel.math.Rational,
+            to: io.peekandpoke.klang.strudel.math.Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            // Query source pattern
+            val sourceEvents = p.queryArcContextual(from, to, ctx)
+
+            val result = mutableListOf<StrudelPatternEvent>()
+
+            for (sourceEvent in sourceEvents) {
+                // Query condition at this source event's time (sample at midpoint)
+                val conditionEvents = condition.queryArcContextual(
+                    from = sourceEvent.begin,
+                    to = sourceEvent.begin + 0.00001.toRational(),
+                    ctx = ctx,
+                )
+
+                // Check if condition is truthy
+                val isTrue = conditionEvents.firstOrNull()?.data?.isTruthy() ?: false
+
+                if (isTrue) {
+                    val transformedEvents = transformed
+                        .queryArcContextual(from = sourceEvent.begin, to = sourceEvent.end, ctx = ctx)
+
+                    result.addAll(transformedEvents)
+                } else {
+                    // Keep source event unchanged
+                    result.add(sourceEvent)
+                }
+            }
+
+            return result
+        }
+
+        override fun estimateCycleDuration(): io.peekandpoke.klang.strudel.math.Rational {
+            return p.estimateCycleDuration()
+        }
+    }
 }
 
 /** Direct function call support */
@@ -249,9 +289,7 @@ fun StrudelPattern.`when`(
     condition: StrudelPattern,
     transform: (StrudelPattern) -> StrudelPattern,
 ): StrudelPattern {
-    val trueBranch = transform(this).mask(condition)
-    val falseBranch = this.mask(condition.not())
-    return trueBranch.stack(falseBranch)
+    return this.`when`(listOf(condition, transform).asStrudelDslArgs())
 }
 
 @StrudelDsl

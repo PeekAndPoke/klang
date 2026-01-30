@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern.Companion.compile
@@ -7,39 +9,65 @@ import io.peekandpoke.klang.strudel.StrudelPattern.Companion.compile
 class LangChunkSpec : FunSpec({
 
     test("chunk(4) should transform each quarter sequentially") {
-        val pat = compile("""seq("0 1 2 3").chunk(4, x => x.add(12))""")!!
+        val pat = seq("0 0 0 0").chunk(4) { it.add(1) }
 
-        // Cycle 0: First quarter transformed (0 -> 12)
-        val events0 = pat.queryArc(0.0, 1.0)
-        events0.map { it.data.value?.asInt } shouldBe listOf(12, 1, 2, 3)
+        assertSoftly {
+            repeat(16) { cycle ->
+                withClue("Cycle $cycle") {
+                    val events = pat.queryArc(cycle.toDouble(), cycle.toDouble() + 1.0)
+                    events.size shouldBe 4
 
-        // Cycle 1: Second quarter transformed (1 -> 13)
-        val events1 = pat.queryArc(1.0, 2.0)
-        events1.map { it.data.value?.asInt } shouldBe listOf(0, 1, 2, 15)
+                    val values = events.map { it.data.value?.asInt }
 
-        // Cycle 2: Third quarter transformed (2 -> 14)
-        val events2 = pat.queryArc(2.0, 3.0)
-        events2.map { it.data.value?.asInt } shouldBe listOf(0, 1, 14, 3)
+                    val expected = when (cycle % 4) {
+                        0 -> listOf(1, 0, 0, 0)
+                        1 -> listOf(0, 1, 0, 0)
+                        2 -> listOf(0, 0, 1, 0)
+                        else -> listOf(0, 0, 0, 1)
+                    }
 
-        // Cycle 3: Fourth quarter transformed (3 -> 15)
-        val events3 = pat.queryArc(3.0, 4.0)
-        events3.map { it.data.value?.asInt } shouldBe listOf(0, 13, 2, 3)
+                    values shouldBe expected
+                }
+            }
+        }
+    }
 
-        // Cycle 4: Fourth quarter transformed (0 -> 12)
-        val events4 = pat.queryArc(4.0, 5.0)
-        events4.map { it.data.value?.asInt } shouldBe listOf(12, 1, 2, 3)
+    test("chunk(4) should transform each quarter sequentially - compiled") {
+        val pat = compile("""seq("0 0 0 0").chunk(4, x => x.add(1))""")!!
+
+        assertSoftly {
+            repeat(16) { cycle ->
+                withClue("Cycle $cycle") {
+                    val events = pat.queryArc(cycle.toDouble(), cycle.toDouble() + 1.0)
+                    events.size shouldBe 4
+
+                    val values = events.map { it.data.value?.asInt }
+
+                    val expected = when (cycle % 4) {
+                        0 -> listOf(1, 0, 0, 0)
+                        1 -> listOf(0, 1, 0, 0)
+                        2 -> listOf(0, 0, 1, 0)
+                        else -> listOf(0, 0, 0, 1)
+                    }
+
+                    values shouldBe expected
+                }
+            }
+        }
     }
 
     test("chunk(2) should transform each half sequentially") {
         val pat = compile("""s("bd hh sd oh").chunk(2, x => x.fast(2))""")!!
 
-        // Cycle 0: First half doubled
-        val events0 = pat.queryArc(0.0, 1.0)
-        events0.size shouldBe 6  // bd bd hh sd oh (bd doubled)
+        assertSoftly {
+            // Cycle 0: First half doubled
+            val events0 = pat.queryArc(0.0, 1.0)
+            events0.size shouldBe 6  // bd bd hh hh sd oh
 
-        // Cycle 1: Second half doubled
-        val events1 = pat.queryArc(1.0, 2.0)
-        events1.size shouldBe 6  // bd hh sd sd oh (sd doubled)
+            // Cycle 1: Second half doubled
+            val events1 = pat.queryArc(1.0, 2.0)
+            events1.size shouldBe 6  // bd hh sd sd oh hh
+        }
     }
 
     test("chunk() aliases should work") {

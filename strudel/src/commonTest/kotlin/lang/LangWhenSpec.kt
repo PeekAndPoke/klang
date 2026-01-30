@@ -6,7 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern.Companion.compile
 
-class LangWhenSimpleSpec : FunSpec({
+class LangWhenSpec : FunSpec({
 
     test("when() works with direct function calls") {
         val pat = note("c3 d3 e3 f3")
@@ -41,10 +41,12 @@ class LangWhenSimpleSpec : FunSpec({
         val events = pat.queryArc(0.0, 1.0)
 
         assertSoftly {
-            events.size shouldBe 2
+            events.size shouldBe 4
             // First and third notes should be transformed
             events[0].data.note shouldBeEqualIgnoringCase "c4"  // c + 12
-            events[1].data.note shouldBeEqualIgnoringCase "e4"  // e + 12
+            events[1].data.note shouldBeEqualIgnoringCase "d3"  // d
+            events[2].data.note shouldBeEqualIgnoringCase "e4"  // e + 12
+            events[3].data.note shouldBeEqualIgnoringCase "f3"  // f
         }
     }
 
@@ -85,5 +87,49 @@ class LangWhenSimpleSpec : FunSpec({
         // Cycle 1: condition is false
         val events1 = pat.queryArc(1.0, 2.0)
         events1.map { it.data.note?.lowercase() } shouldBe listOf("c3", "d3", "e3", "f3")
+    }
+
+    test("when() with cycling binary control [1,0,0,0].iter(4) over 12 cycles") {
+        val source = seq("0 1 2 3").repeatCycles(4)
+        val binaryControl = seq("1 0 0 0").iter(4)
+        val transformed = source.`when`(binaryControl) { it.add(10) }
+
+        println("\n=== when() with cycling binary control ===")
+        for (cycle in 0..11) {
+            val events = transformed.queryArc(cycle.toDouble(), (cycle + 1).toDouble())
+            val values = events.map { it.data.value?.asInt }
+            println("Cycle $cycle: $values")
+
+            events.size shouldBe 4
+
+            // Identify which position was transformed
+            val transformedPositions = values.mapIndexed { idx, value ->
+                if (value != null && value >= 10) idx else null
+            }.filterNotNull()
+
+            println("  -> Transformed positions: $transformedPositions")
+        }
+    }
+
+    test("when() with cycling binary control [1,0,0,0].iterBack(4) over 12 cycles") {
+        val source = seq("0 1 2 3").repeatCycles(4)
+        val binaryControl = seq("1 0 0 0").iterBack(4)
+        val transformed = source.`when`(binaryControl) { it.add(10) }
+
+        println("\n=== when() with iterBack binary control ===")
+        for (cycle in 0..11) {
+            val events = transformed.queryArc(cycle.toDouble(), (cycle + 1).toDouble())
+            val values = events.map { it.data.value?.asInt }
+            println("Cycle $cycle: $values")
+
+            events.size shouldBe 4
+
+            // Identify which position was transformed
+            val transformedPositions = values.mapIndexed { idx, value ->
+                if (value != null && value >= 10) idx else null
+            }.filterNotNull()
+
+            println("  -> Transformed positions: $transformedPositions")
+        }
     }
 })

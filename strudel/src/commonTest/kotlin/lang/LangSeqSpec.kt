@@ -90,4 +90,22 @@ class LangSeqSpec : StringSpec({
         events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
         events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
     }
+
+    "seq(\"0 1 2 3\") produces same pattern over 12 cycles" {
+        val p = seq("0 1 2 3")
+
+        println("\n=== seq(\"0 1 2 3\") consistency test ===")
+        val cycle0Events = p.queryArc(0.0, 1.0)
+        val cycle0Values = cycle0Events.map { it.data.value?.asInt }
+        println("Cycle 0: $cycle0Values")
+
+        for (cycle in 1..11) {
+            val events = p.queryArc(cycle.toDouble(), (cycle + 1).toDouble())
+            val values = events.map { it.data.value?.asInt }
+            println("Cycle $cycle: $values")
+
+            // Should be identical to cycle 0
+            values shouldBe cycle0Values
+        }
+    }
 })

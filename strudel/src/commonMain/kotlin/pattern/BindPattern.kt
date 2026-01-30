@@ -37,6 +37,10 @@ internal class BindPattern(
         val outerEvents = outer.queryArcContextual(from, to, ctx)
         val result = mutableListOf<StrudelPatternEvent>()
 
+        // val f = from
+        // val t = to
+        // println("From: ${f.toDouble()} | To: ${t.toDouble()} | Events: ${outerEvents.map { it.data.value?.asString}}")
+
         for (outerEvent in outerEvents) {
             val innerPattern = transform(outerEvent) ?: continue
 

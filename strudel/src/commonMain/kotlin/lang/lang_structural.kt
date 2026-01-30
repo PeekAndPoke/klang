@@ -254,14 +254,18 @@ private fun applyStackBy(patterns: List<StrudelPattern>, alignment: Double): Str
 
             val segments = mutableListOf<StrudelPattern>()
 
+            // Use EmptyPattern instead of GapPattern for padding.
+            // EmptyPattern occupies time (via weight) but produces NO events.
+            // GapPattern produces "silent events" which pollute the event count.
+
             if (leftGap > Rational.ZERO) {
-                segments.add(GapPattern(leftGap).withWeight(leftGap.toDouble()))
+                segments.add(EmptyPattern.withWeight(leftGap.toDouble()))
             }
 
             segments.add(pat.withWeight(dur.toDouble()))
 
             if (rightGap > Rational.ZERO) {
-                segments.add(GapPattern(rightGap).withWeight(rightGap.toDouble()))
+                segments.add(EmptyPattern.withWeight(rightGap.toDouble()))
             }
 
             // SequencePattern fits total weight into 1 cycle.
@@ -1097,7 +1101,8 @@ fun String.within(start: Double, end: Double, transform: (StrudelPattern) -> Str
 // -- chunk() ----------------------------------------------------------------------------------------------------------
 
 private fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 1
+    val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
+    val n = nArg.value?.asIntOrNull() ?: 1
 
     @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
@@ -1114,14 +1119,14 @@ private fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 
     // Construct binary patterns manually to avoid dependency on 'pure' DSL property order
     val binaryPatterns = binary.map {
-        AtomicPattern(StrudelVoiceData.empty.copy(value = (if (it) 1 else 0).asVoiceValue()))
+        AtomicPattern(StrudelVoiceData.empty.copy(value = it.asVoiceValue()))
     }
     val binarySequence = applySeq(binaryPatterns)
 
     val binaryIter = if (back) {
-        applyIterBack(binarySequence, listOf(StrudelDslArg.of(n)).asStrudelDslArgs())  // backward
+        applyIter(binarySequence, listOf(nArg))  // forward (default)
     } else {
-        applyIter(binarySequence, listOf(StrudelDslArg.of(n)).asStrudelDslArgs())  // forward (default)
+        applyIterBack(binarySequence, listOf(nArg))  // backward
     }
 
     val pattern = if (!fast) {
@@ -1146,7 +1151,7 @@ private fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
  * @param {fast}      If true, doesn't repeat the pattern (default: false)
  *
  * @example
- * note("0 1 2 3").chunk(4) { it.add(7) }
+ * seq("0 1 2 3").chunk(4) { it.add(7) }
  * // Cycle 0: "7 1 2 3"  (chunk 0 transformed)
  * // Cycle 1: "0 8 2 3"  (chunk 1 transformed)
  * // Cycle 2: "0 1 9 3"  (chunk 2 transformed)
@@ -2402,10 +2407,10 @@ private fun applyRepeatCycles(source: StrudelPattern, args: List<StrudelDslArg<A
 }
 
 /**
- * Repeats the pattern n times, then silence.
- * Useful for creating finite patterns from infinite ones.
+ * Repeats each cycle the given number of times.
  *
- * Example: note("c d e f").repeatCycles(3) plays 3 cycles then stops
+ * Example: note("c d e f").repeatCycles(3) repeats each cycle 3 times
+ * (cycle 0 plays 3 times, then cycle 1 plays 3 times, etc.)
  */
 @StrudelDsl
 val repeatCycles by dslFunction { args, /* callInfo */ _ ->

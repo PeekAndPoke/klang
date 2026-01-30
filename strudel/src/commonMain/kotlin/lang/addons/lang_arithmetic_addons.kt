@@ -54,7 +54,7 @@ val String.oneMinusValue by dslStringExtension { pattern, _, _ -> applyOneMinusV
 
 private fun applyNot(pattern: StrudelPattern): StrudelPattern {
     return pattern.reinterpret { evt ->
-        val current = evt.data.value?.asBoolean ?: false
+        val current = evt.data.isTruthy()
         val withNot = !current
 
         evt.copy(data = evt.data.copy(value = withNot.asVoiceValue()))

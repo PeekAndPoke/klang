@@ -113,19 +113,19 @@ object JsCompatTestData {
         Example("within overlap", """n("0 1 2 3").within(0.2, 0.3, x => x.add(12))"""),
         Example("within full cycle", """s("bd hh sd oh").within(0.0, 1.0, x => x.fast(2))"""),
 
-        Example("chunk basic", """n("0 1 2 3").chunk(4, x => x.add(12))"""),
-        Example("chunk slowchunk alias", """n("0 1 2 3").slowchunk(4, x => x.add(7))"""),
-        Example("chunk slowChunk alias", """n("0 1 2 3").slowChunk(4, x => x.add(7))"""),
-        // TODO: needs fixing
-        Example(SKIP, "chunk 2 with 2 slices simple", """s("bd hh").chunk(2, x => x)"""),
-        Example(SKIP, "chunk 2 with 2 slices silence", """s("bd hh").chunk(2, x => silence)"""),
+        Example("chunk basic", """seq("0 1 2 3").chunk(4, x => x.add(12))"""),
+        Example("chunk slowchunk alias", """seq("0 1 2 3").slowchunk(4, x => x.add(7))"""),
+        Example("chunk slowChunk alias", """seq("0 1 2 3").slowChunk(4, x => x.add(7))"""),
+        Example("chunk 2 with 2 slices simple", """s("bd hh").chunk(2, x => x)"""),
+        Example("chunk 2 with 2 slices silence", """s("bd hh").chunk(2, x => silence)"""),
         Example("chunk 2 with 2 slices fast", """s("bd hh").chunk(2, x => x.fast(2))"""),
-        // TODO: needs fixing
+        // well well ...
         Example(SKIP, "chunk 3 with 2 slices simple", """s("bd sd hh").chunk(2, x => x)"""),
         Example(SKIP, "chunk 3 with 2 slices silence", """s("bd sd hh").chunk(2, x => silence)"""),
         Example(SKIP, "chunk 3 with 2 slices fast", """s("bd sd hh").chunk(2, x => x.fast(2))"""),
+        Example("chunk 4 with 2 slices fast", """s("bd hh sd oh").chunk(2, x => x.fast(2))"""),
 
-        // TODO: needs fixing
+        // Is OK
         Example(SKIP, "echo basic", """n("0").echo(4, 0.5, 0.5)"""),
         Example(SKIP, "echo short delay", """s("bd").echo(3, 0.125, 0.7)"""),
         Example(SKIP, "echo stut alias", """n("0").stut(4, 0.5, 0.5)"""),

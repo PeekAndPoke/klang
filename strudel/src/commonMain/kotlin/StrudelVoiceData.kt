@@ -434,6 +434,16 @@ data class StrudelVoiceData(
         )
     }
 
+    fun isTruthy(): Boolean {
+        val noteStr = note ?: ""
+        // "0" and "false" strings are false, "~" is false (but usually filtered out before)
+        val noteTruthy = noteStr.isNotEmpty() && noteStr != "~" && noteStr != "0" && noteStr != "false"
+
+        val valueTruthy = value?.isTruthy() ?: false
+
+        return valueTruthy || noteTruthy
+    }
+
     /**
      * Converts this Strudel-specific voice data to audio engine [VoiceData].
      *
