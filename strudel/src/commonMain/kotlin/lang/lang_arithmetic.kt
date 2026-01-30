@@ -5,7 +5,6 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel._liftValue
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
@@ -14,35 +13,6 @@ import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinter
  * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
  */
 var strudelLangArithmeticInit = false
-
-/**
- * Helper for applying binary operations to patterns.
- */
-internal fun applyBinaryOp(
-    source: StrudelPattern,
-    args: List<StrudelDslArg<Any?>>,
-    op: (StrudelVoiceValue, StrudelVoiceValue) -> StrudelVoiceValue?,
-): StrudelPattern {
-    // We use defaultModifier for args because we just want the 'value'
-    val controlPattern = args.toPattern(voiceValueModifier)
-
-    return ControlPattern(
-        source = source,
-        control = controlPattern,
-        mapper = { it }, // No mapping needed
-        combiner = { srcData, ctrlData ->
-            val amount = ctrlData.value
-            val srcValue = srcData.value
-
-            if (amount == null || srcValue == null) {
-                srcData
-            } else {
-                val newValue = op(srcValue, amount)
-                srcData.copy(value = newValue)
-            }
-        }
-    )
-}
 
 // Helper for arithmetic operations that modify the 'value' field
 fun applyArithmetic(
@@ -56,18 +26,24 @@ fun applyArithmetic(
     // Note: We use defaultModifier because we just want the raw values (numbers/strings)
     val control = args.toPattern(voiceValueModifier)
 
-    // 2. Lift: Intersection of source + control
-    // We use liftValue because arithmetic works on StrudelVoiceValue objects
-    return source._liftValue(control) { controlVal, pattern ->
-        // 3. Map events: Apply the operation to the source value
-        pattern.reinterpretVoice { voiceData ->
-            val sourceVal = voiceData.value ?: return@reinterpretVoice voiceData
+    // 2. Lift & Combine in one step
+    // We use ControlPattern to handle intersection and value combination efficiently
+    return ControlPattern(
+        source = source,
+        control = control,
+        mapper = { it },
+        combiner = { srcData, ctrlData ->
+            // _liftValue behavior: if control has no value, the event is invalid (inner join)
+            val controlVal = ctrlData.value ?: return@ControlPattern srcData
+            // reinterpretVoice behavior: if source has no value, pass it through unmodified
+            val sourceVal = srcData.value ?: return@ControlPattern srcData
+
             // Execute the operation (e.g. source + control)
             val newVal = op(sourceVal, controlVal)
             // apply new val
-            voiceData.copy(value = newVal)
+            srcData.copy(value = newVal)
         }
-    }
+    )
 }
 
 /**

@@ -6,8 +6,12 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.pattern.*
+import io.peekandpoke.klang.strudel.pattern.ArrangementPattern
+import io.peekandpoke.klang.strudel.pattern.AtomicPattern
+import io.peekandpoke.klang.strudel.pattern.FirstOfPattern
+import io.peekandpoke.klang.strudel.pattern.LastOfPattern
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -212,13 +216,23 @@ val String.lastOf by dslStringExtension { source, args, /* callInfo */ _ ->
  */
 @StrudelDsl
 val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
-    val condition = args.getOrNull(0)?.value as? StrudelPattern ?: return@dslPatternExtension silence
+    val arg0 = args.getOrNull(0) ?: return@dslPatternExtension p
+    val arg1 = args.getOrNull(1) ?: return@dslPatternExtension p
+
+    val condition = listOf(arg0).toPattern(voiceValueModifier)
 
     @Suppress("UNCHECKED_CAST")
-    val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern
+    val transform: (StrudelPattern) -> StrudelPattern = arg1.value as? (StrudelPattern) -> StrudelPattern
         ?: return@dslPatternExtension p
 
-    WhenPattern(p, condition, transform)
+    // The "True" path: Apply transform, then keep only where condition is True
+    val trueBranch = transform(p).mask(condition)
+
+    // The "False" path: Keep original, but only where condition is False
+    val falseBranch = p.mask(condition.not())
+
+    // Combine them
+    trueBranch.stack(falseBranch)
 }
 
 /** Direct function call support */
@@ -227,7 +241,9 @@ fun StrudelPattern.`when`(
     condition: StrudelPattern,
     transform: (StrudelPattern) -> StrudelPattern,
 ): StrudelPattern {
-    return WhenPattern(this, condition, transform)
+    val trueBranch = transform(this).mask(condition)
+    val falseBranch = this.mask(condition.not())
+    return trueBranch.stack(falseBranch)
 }
 
 @StrudelDsl

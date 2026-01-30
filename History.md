@@ -20,6 +20,7 @@
 - 28-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
 - 29-01-2026: bought AI credits at Anthropic -> 59.50 USD
 - 29-01-2026: bought AI credits at Anthropic -> 59.50 USD
+- 30-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
 
 ## Diary
 

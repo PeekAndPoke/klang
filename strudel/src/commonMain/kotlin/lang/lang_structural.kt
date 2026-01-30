@@ -766,6 +766,7 @@ private fun applyJuxBy(
 
     val left = source.pan(panLeft)
     val right = transform(source).pan(panRight)
+
     return StackPattern(listOf(left, right))
 }
 
@@ -777,6 +778,7 @@ private fun applyJuxBy(
  */
 @StrudelDsl
 val StrudelPattern.juxBy by dslPatternExtension { p, args, /* callInfo */ _ ->
+    // TODO: we must support control patterns for the first parameter
     val amount = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 1.0
 
     @Suppress("UNCHECKED_CAST")
@@ -805,12 +807,14 @@ private fun applyOff(
  */
 @StrudelDsl
 val StrudelPattern.off by dslPatternExtension { p, args, /* callInfo */ _ ->
+    // TODO: we must support control patterns for the first parameter
     val time = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.25
 
     @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    applyOff(p, time, transform)
+//    applyOff(p, time, transform)
+    p.stack(transform(p).late(time))
 }
 
 @StrudelDsl
@@ -985,10 +989,39 @@ val String.apply by dslStringExtension { p, args, callInfo -> p.apply(args, call
 // -- zoom() -----------------------------------------------------------------------------------------------------------
 
 private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val startProvider = args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(0.0))
-    val endProvider = args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(1.0))
+    if (args.size < 2) {
+        return source
+    }
 
-    return ZoomPattern(inner = source, startProvider = startProvider, endProvider = endProvider)
+    // We convert both arguments to patterns to support dynamic zoom (e.g. zoom("<0 0.5>", "<0.5 1>"))
+    val startCtrl = listOf(args[0]).toPattern(voiceValueModifier)
+    val endCtrl = listOf(args[1]).toPattern(voiceValueModifier)
+
+    // Bind the start pattern...
+    return startCtrl._bind { startEv ->
+        val sVal = startEv.data.value?.asDouble ?: return@_bind null
+
+        // ... then bind the end pattern
+        endCtrl._bind { endEv ->
+            val eVal = endEv.data.value?.asDouble ?: return@_bind null
+
+            val s = sVal.toRational()
+            val e = eVal.toRational()
+
+            if (s >= e) return@_bind null
+
+            val d = e - s
+            val steps = source.numSteps?.let { it * d }
+
+            source._withQueryTime { t -> t * d + s }
+                .mapEvents { ev ->
+                    val begin = (ev.begin - s) / d
+                    val end = (ev.end - s) / d
+                    ev.copy(begin = begin, end = end, dur = end - begin)
+                }
+                .let { if (steps != null) it.withSteps(steps) else it }
+        }
+    }
 }
 
 /**
@@ -1419,18 +1452,57 @@ fun String.echowith(times: Int, delay: Double, transform: (StrudelPattern) -> St
 
 // -- bite() -----------------------------------------------------------------------------------------------------------
 
+//private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+//    if (args.size < 2) {
+//        return silence
+//    }
+//
+//    val nProvider: ControlValueProvider =
+//        args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(4.0))
+//
+//    val indicesProvider: ControlValueProvider =
+//        args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(0.0))
+//
+//    return BitePattern(source = source, nProvider = nProvider, indicesProvider = indicesProvider)
+//}
+
 private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    if (args.size < 2) {
-        return silence
+    if (args.size < 2) return silence
+
+    // 1. Parse N (slices count)
+    // It can be a static number, a string (mini-notation), or a pattern.
+    val nArg = args.getOrNull(0)
+    val staticN = nArg?.value?.asIntOrNull()
+
+    // If not static, convert to pattern (handles strings/patterns)
+    val nPattern = if (staticN != null) null else args.take(1).toPattern(voiceValueModifier)
+
+    // 2. Parse Indices
+    val indicesPattern = args.drop(1).toPattern(voiceValueModifier)
+
+    // 3. Bind to indices
+    return indicesPattern._bind { indexEvent ->
+        val index = indexEvent.data.value?.asDouble ?: return@_bind null
+
+        // Resolve N
+        val n = if (staticN != null) {
+            staticN.toDouble()
+        } else {
+            // If N is dynamic, sample it at the start of the index event
+            // using a tiny epsilon since we need a point value
+            val eps = 0.00001
+            val nEvents = nPattern!!.queryArc(indexEvent.begin.toDouble(), indexEvent.begin.toDouble() + eps)
+            nEvents.firstOrNull()?.data?.value?.asDouble ?: 4.0
+        }
+
+        if (n <= 0.0) return@_bind null
+
+        val start = index / n
+        val end = (index + 1.0) / n
+
+        // Zoom into the specific slice
+        source.zoom(start, end)
     }
-
-    val nProvider: ControlValueProvider =
-        args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(4.0))
-
-    val indicesProvider: ControlValueProvider =
-        args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(0.0))
-
-    return BitePattern(source = source, nProvider = nProvider, indicesProvider = indicesProvider)
 }
 
 /**

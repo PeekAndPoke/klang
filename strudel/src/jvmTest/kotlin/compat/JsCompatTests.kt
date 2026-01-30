@@ -93,7 +93,7 @@ class JsCompatTests : StringSpec() {
         val nativeArc = (0..<numCycles)
             .flatMap { nativePattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
 
-//        printEventComparison(graalArc, nativeArc)
+        printEventComparison(graalArc, nativeArc)
 
         assertSoftly {
             withClue("Number of events must match | JS (Graal): ${graalArc.size} VS Native: ${nativeArc.size}") {

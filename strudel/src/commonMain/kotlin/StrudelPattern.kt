@@ -316,6 +316,32 @@ fun StrudelPattern._bind(
 )
 
 /**
+ * Binds an inner pattern to each event of the outer pattern, "squeezing" the inner pattern
+ * (which usually operates in 0..1 time) to fit exactly within the outer event's duration.
+ *
+ * Equivalent to `pat.fmap(transform).squeezeJoin()` in JS Strudel.
+ */
+fun StrudelPattern._bindSqueeze(
+    transform: (StrudelPatternEvent) -> StrudelPattern?,
+): StrudelPattern = this._bind { outerEvent ->
+    val innerPattern = transform(outerEvent) ?: return@_bind null
+
+    val b = outerEvent.begin
+    val d = outerEvent.end - outerEvent.begin
+
+    if (d == Rational.ZERO) return@_bind null
+
+    // Map query time: t -> (t - b) / d  (map global [b, b+d] to local [0, 1])
+    // Map event time: e -> b + e * d    (map local [0, 1] back to global [b, b+d])
+    innerPattern._withQueryTime { t -> (t - b) / d }
+        .mapEvents { e ->
+            val newBegin = b + e.begin * d
+            val newEnd = b + e.end * d
+            e.copy(begin = newBegin, end = newEnd, dur = newEnd - newBegin)
+        }
+}
+
+/**
  * Lifts a function that accepts a [Double] to work with a pattern of numbers (INNER JOIN semantics).
  *
  * This is the general-purpose applicative lifter for tempo/structural operations that transform
@@ -563,4 +589,18 @@ fun StrudelPattern._applyControl(
         }
     }
     return result
+}
+
+fun StrudelPattern._withQueryTime(transform: (Rational) -> Rational): StrudelPattern = object : StrudelPattern {
+    override val weight: Double get() = this@_withQueryTime.weight
+    override val numSteps: Rational? get() = this@_withQueryTime.numSteps
+    override fun estimateCycleDuration(): Rational = this@_withQueryTime.estimateCycleDuration()
+
+    override fun queryArcContextual(
+        from: Rational,
+        to: Rational,
+        ctx: StrudelPattern.QueryContext,
+    ): List<StrudelPatternEvent> {
+        return this@_withQueryTime.queryArcContextual(transform(from), transform(to), ctx)
+    }
 }

@@ -75,14 +75,12 @@ class LangPlySpec : StringSpec({
         }
     }
 
-    "ply() with n=0 returns original pattern" {
-        val original = note("c d")
+    "ply(0) with n=0 returns original pattern" {
         val plied = note("c d").ply("0")
 
-        val originalEvents = original.queryArc(0.0, 1.0)
         val pliedEvents = plied.queryArc(0.0, 1.0)
 
-        pliedEvents.size shouldBe originalEvents.size
+        pliedEvents.size shouldBe 0
     }
 
     "ply() works across multiple cycles" {

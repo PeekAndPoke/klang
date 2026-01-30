@@ -2,8 +2,7 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
@@ -25,31 +24,29 @@ fun applyTimeShift(
         return pattern
     }
 
-    // Handle direct Rational or Number values
-    val offsetProvider = when (val argVal = args.getOrNull(0)?.value) {
-        is Rational -> {
-            ControlValueProvider.Static(
-                value = StrudelVoiceValue.Num((argVal * factor).toDouble()),
-                location = args.getOrNull(0)?.location
-            )
-        }
+    // Helper for the actual shift logic
+    fun shift(p: StrudelPattern, amount: Rational): StrudelPattern {
+        val offset = amount * factor
 
-        is Number -> {
-            val offset = argVal.toDouble().toRational() * factor
-            ControlValueProvider.Static(
-                value = StrudelVoiceValue.Num(offset.toDouble()),
-                location = args.getOrNull(0)?.location
-            )
-        }
-
-        else -> {
-            // Pattern case - multiply by factor
-            val controlPattern = args.toPattern(voiceValueModifier).mul(factor)
-            ControlValueProvider.Pattern(controlPattern)
-        }
+        // Logic equivalent to:
+        // pat.withQueryTime((t) => t.add(offset)).withHapTime((t) => t.sub(offset))
+        // Note: JS 'early' passes positive offset, we use negative factor, so signs flip naturally.
+        return p._withQueryTime { t -> t - offset }
+            .mapEvents { e -> e.copy(begin = e.begin + offset, end = e.end + offset) }
     }
 
-    return TimeShiftPattern(source = pattern, offsetProvider = offsetProvider)
+    return when (val arg0 = args[0].value) {
+        is Rational -> shift(pattern, arg0)
+        is Number -> shift(pattern, arg0.toRational())
+        else -> {
+            // Pattern case - lift the control pattern
+            val control = args.toPattern(voiceValueModifier)
+            pattern._liftValue(control) { v, pat ->
+                val d = v.asDouble ?: 0.0
+                shift(pat, d.toRational())
+            }
+        }
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,18 +259,48 @@ val String.compress by dslStringExtension { p, args, callInfo -> p.compress(args
 
 // -- focus() ----------------------------------------------------------------------------------------------------------
 
-private fun applyFocus(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    if (args.size < 2) {
-        return pattern
+//private fun applyFocus(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+//    if (args.size < 2) {
+//        return pattern
+//    }
+//
+//    val startProvider: ControlValueProvider =
+//        args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(0.0))
+//
+//    val endProvider: ControlValueProvider =
+//        args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(1.0))
+//
+//    return FocusPattern(source = pattern, startProvider = startProvider, endProvider = endProvider)
+//}
+
+private fun applyFocus(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    if (args.size < 2) return source
+
+    val startCtrl = listOf(args[0]).toPattern(voiceValueModifier)
+    val endCtrl = listOf(args[1]).toPattern(voiceValueModifier)
+
+    return startCtrl._bind { startEv ->
+        val sVal = startEv.data.value?.asDouble ?: return@_bind null
+
+        endCtrl._bind { endEv ->
+            val eVal = endEv.data.value?.asDouble ?: return@_bind null
+
+            val s = sVal.toRational()
+            val e = eVal.toRational()
+
+            if (s >= e) return@_bind null
+
+            val d = e - s
+            val sFloored = s.floor()
+
+            source._withQueryTime { t -> (t - s) / d + sFloored }
+                .mapEvents { ev ->
+                    val begin = (ev.begin - sFloored) * d + s
+                    val end = (ev.end - sFloored) * d + s
+                    ev.copy(begin = begin, end = end, dur = end - begin)
+                }
+        }
     }
-
-    val startProvider: ControlValueProvider =
-        args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(0.0))
-
-    val endProvider: ControlValueProvider =
-        args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(1.0))
-
-    return FocusPattern(source = pattern, startProvider = startProvider, endProvider = endProvider)
 }
 
 /** Focuses on a portion of each cycle, keeping original timing */
@@ -283,15 +310,8 @@ val focus by dslFunction { args, /* callInfo */ _ ->
         return@dslFunction silence
     }
 
-    val startProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(0.0))
-    val endProvider = args[1].asControlValueProvider(StrudelVoiceValue.Num(1.0))
     val pattern = args.drop(2).toPattern(voiceValueModifier)
-
-    FocusPattern(
-        source = pattern,
-        startProvider = startProvider,
-        endProvider = endProvider
-    )
+    applyFocus(pattern, args.take(2))
 }
 
 /** Focuses on a portion of each cycle, keeping original timing */
@@ -311,10 +331,34 @@ private fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         return pattern
     }
 
-    val nProvider: ControlValueProvider =
-        args.firstOrNull().asControlValueProvider(StrudelVoiceValue.Num(1.0))
+    val factorArg = args[0]
 
-    return PlyPattern(source = pattern, nProvider = nProvider)
+    // Calculate new steps if factor is purely static
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toRational()
+    val newSteps = if (staticFactor != null) pattern.numSteps?.times(staticFactor) else null
+
+    // Convert factor to pattern (supports static values and control patterns)
+    val factorPattern = listOf(factorArg).toPattern(voiceValueModifier)
+
+    val result = pattern._bindSqueeze { event ->
+        // pure(x) -> infinite pattern of the event's data
+        val infiniteAtom = AtomicInfinitePattern(event.data)
+
+        // To support "Patterned Ply" (Tidal style) where the factor pattern is aligned with the cycle,
+        // we must project the global factor pattern into the event's local timeframe.
+        // factorPattern.zoom(begin, end) takes the slice of factor corresponding to the event
+        // and stretches it to 0..1, which matches the squeezed context.
+        val localFactor = if (staticFactor == null) {
+            factorPattern.zoom(event.begin.toDouble(), event.end.toDouble())
+        } else {
+            factorPattern
+        }
+
+        // ._fast(factor)
+        applyFast(infiniteAtom, listOf(StrudelDslArg.of(localFactor)))
+    }
+
+    return if (newSteps != null) result.withSteps(newSteps) else result
 }
 
 /** Repeats each event n times within its timespan */
@@ -324,10 +368,8 @@ val ply by dslFunction { args, /* callInfo */ _ ->
         return@dslFunction silence
     }
 
-    val nProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(1.0))
     val pattern = args.drop(1).toPattern(voiceValueModifier)
-
-    PlyPattern(source = pattern, nProvider = nProvider)
+    applyPly(pattern, args.take(1))
 }
 
 /** Repeats each event n times within its timespan */
