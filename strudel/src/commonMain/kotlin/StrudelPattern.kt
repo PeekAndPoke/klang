@@ -604,3 +604,7 @@ fun StrudelPattern._withQueryTime(transform: (Rational) -> Rational): StrudelPat
         return this@_withQueryTime.queryArcContextual(transform(from), transform(to), ctx)
     }
 }
+
+fun StrudelPattern._fastGap(factor: Rational): StrudelPattern {
+    return FastGapPattern.static(this, factor)
+}

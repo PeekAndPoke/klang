@@ -1102,26 +1102,7 @@ fun String.within(start: Double, end: Double, transform: (StrudelPattern) -> Str
 
 // -- chunk() ----------------------------------------------------------------------------------------------------------
 
-/**
- * Divides a pattern into a given number of parts, then cycles through those parts in turn,
- * applying the given function to each part in turn (one part per cycle).
- *
- * Ported from JavaScript _chunk() implementation in pattern.mjs.
- *
- * @param n Number of chunks to divide the pattern into
- * @param transform Function to apply to each chunk
- * @param back If true, cycles backward through chunks (default: false)
- * @param fast If true, doesn't repeat the pattern (default: false)
- *
- * @example
- * note("0 1 2 3").chunk(4) { it.add(7) }
- * // Cycle 0: "7 1 2 3"  (chunk 0 transformed)
- * // Cycle 1: "0 8 2 3"  (chunk 1 transformed)
- * // Cycle 2: "0 1 9 3"  (chunk 2 transformed)
- * // Cycle 3: "0 1 2 10" (chunk 3 transformed)
- */
-@StrudelDsl
-val StrudelPattern.chunk by dslPatternExtension { p, args, /* callInfo */ _ ->
+private fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 1
 
     @Suppress("UNCHECKED_CAST")
@@ -1131,30 +1112,54 @@ val StrudelPattern.chunk by dslPatternExtension { p, args, /* callInfo */ _ ->
     val fast = args.getOrNull(3)?.value as? Boolean ?: false
 
     if (n <= 0) {
-        silence
-    } else {
-        val binary = MutableList(n - 1) { false }
-        binary.add(0, true)  // [true, false, false, false] for n=4
-
-        val binaryPatterns = binary.map { if (it) pure(1) else pure(0) }
-        val binarySequence = applySeq(binaryPatterns)
-
-        val binaryIter = if (back) {
-            applyIterBack(binarySequence, listOf(StrudelDslArg.of(n)).asStrudelDslArgs())  // backward
-        } else {
-            applyIter(binarySequence, listOf(StrudelDslArg.of(n)).asStrudelDslArgs())  // forward (default)
-        }
-
-        val pattern = if (!fast) {
-            p.repeatCycles(n)
-        } else {
-            p
-        }
-
-        // return pat.when(binary_pat, func);
-        pattern.`when`(binaryIter, transform)
+        return silence
     }
+
+    val binary = MutableList(n - 1) { false }
+    binary.add(0, true)  // [true, false, false, false] for n=4
+
+    // Construct binary patterns manually to avoid dependency on 'pure' DSL property order
+    val binaryPatterns = binary.map {
+        AtomicPattern(StrudelVoiceData.empty.copy(value = (if (it) 1 else 0).asVoiceValue()))
+    }
+    val binarySequence = applySeq(binaryPatterns)
+
+    val binaryIter = if (back) {
+        applyIterBack(binarySequence, listOf(StrudelDslArg.of(n)).asStrudelDslArgs())  // backward
+    } else {
+        applyIter(binarySequence, listOf(StrudelDslArg.of(n)).asStrudelDslArgs())  // forward (default)
+    }
+
+    val pattern = if (!fast) {
+        source.repeatCycles(n)
+    } else {
+        source
+    }
+
+    // return pat.when(binary_pat, func);
+    return pattern.`when`(binaryIter, transform)
 }
+
+/**
+ * Divides a pattern into a given number of parts, then cycles through those parts in turn,
+ * applying the given function to each part in turn (one part per cycle).
+ *
+ * Ported from JavaScript _chunk() implementation in pattern.mjs.
+ *
+ * @param {n}         Number of chunks to divide the pattern into
+ * @param {transform} Function to apply to each chunk
+ * @param {back}      If true, cycles backward through chunks (default: false)
+ * @param {fast}      If true, doesn't repeat the pattern (default: false)
+ *
+ * @example
+ * note("0 1 2 3").chunk(4) { it.add(7) }
+ * // Cycle 0: "7 1 2 3"  (chunk 0 transformed)
+ * // Cycle 1: "0 8 2 3"  (chunk 1 transformed)
+ * // Cycle 2: "0 1 9 3"  (chunk 2 transformed)
+ * // Cycle 3: "0 1 2 10" (chunk 3 transformed)
+ */
+@StrudelDsl
+val StrudelPattern.chunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
 
 /** Alias for chunk - supports function call syntax */
 @StrudelDsl
@@ -1164,11 +1169,11 @@ fun StrudelPattern.chunk(
     back: Boolean = false,
     fast: Boolean = false,
 ): StrudelPattern {
-    return this.chunk(listOf(n, transform, back, fast).asStrudelDslArgs())
+    return applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 }
 
 @StrudelDsl
-val String.chunk by dslStringExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+val String.chunk by dslStringExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
 
 /** Alias for chunk - supports function call syntax */
 @StrudelDsl
@@ -1183,7 +1188,7 @@ fun String.chunk(
 
 /** Alias for [chunk] */
 @StrudelDsl
-val StrudelPattern.slowchunk by dslPatternExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+val StrudelPattern.slowchunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
 
 /** Alias for [chunk] */
 @StrudelDsl
@@ -1193,12 +1198,12 @@ fun StrudelPattern.slowchunk(
     back: Boolean = false,
     fast: Boolean = false,
 ): StrudelPattern {
-    return this.chunk(n, transform, back, fast)
+    return applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 }
 
 /** Alias for [chunk] */
 @StrudelDsl
-val String.slowchunk by dslStringExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+val String.slowchunk by dslStringExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
 
 /** Alias for [chunk] */
 @StrudelDsl
@@ -1208,12 +1213,12 @@ fun String.slowchunk(
     back: Boolean = false,
     fast: Boolean = false,
 ): StrudelPattern {
-    return this.chunk(n, transform, back, fast)
+    return this.slowchunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 }
 
 /** Alias for [chunk] */
 @StrudelDsl
-val StrudelPattern.slowChunk by dslPatternExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+val StrudelPattern.slowChunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
 
 /** Alias for [chunk] */
 @StrudelDsl
@@ -1223,12 +1228,12 @@ fun StrudelPattern.slowChunk(
     back: Boolean = false,
     fast: Boolean = false,
 ): StrudelPattern {
-    return this.chunk(n, transform, back, fast)
+    return applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 }
 
 /** Alias for [chunk] */
 @StrudelDsl
-val String.slowChunk by dslStringExtension { p, args, callInfo -> p.chunk(args, callInfo) }
+val String.slowChunk by dslStringExtension { p, args, /*callInfo */ _ -> applyChunk(p, args) }
 
 /** Alias for [chunk] */
 @StrudelDsl
@@ -1238,7 +1243,7 @@ fun String.slowChunk(
     back: Boolean = false,
     fast: Boolean = false,
 ): StrudelPattern {
-    return this.chunk(n, transform, back, fast)
+    return this.slowChunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 }
 
 // -- echo() / stut() --------------------------------------------------------------------------------------------------

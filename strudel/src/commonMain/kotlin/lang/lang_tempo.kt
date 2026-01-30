@@ -219,14 +219,44 @@ private fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?
         return pattern
     }
 
-    val startProvider = args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(0.0))
-    val endProvider = args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(1.0))
+    // We convert both arguments to patterns to support dynamic compress
+    val startCtrl = listOf(args[0]).toPattern(voiceValueModifier)
+    val endCtrl = listOf(args[1]).toPattern(voiceValueModifier)
 
-    return CompressPattern(
-        source = pattern,
-        startProvider = startProvider,
-        endProvider = endProvider
-    )
+    // Bind start...
+    return startCtrl._bind { startEv ->
+        val sVal = startEv.data.value?.asDouble ?: return@_bind null
+
+        // ...bind end
+        endCtrl._bind { endEv ->
+            val eVal = endEv.data.value?.asDouble ?: return@_bind null
+
+            val b = sVal.toRational()
+            val e = eVal.toRational()
+
+            // JS check: if (b.gt(e) || b.gt(1) || e.gt(1) || b.lt(0) || e.lt(0)) return silence
+            if (b > e || b > Rational.ONE || e > Rational.ONE || b < Rational.ZERO || e < Rational.ZERO) {
+                return@_bind null // effectively silence for this event
+            }
+
+            val duration = e - b
+            if (duration == Rational.ZERO) return@_bind null
+
+            val factor = Rational.ONE / duration
+
+            // pat._fastGap(1 / (e - b))._late(b)
+            // Note: using applyTimeShift for 'late' with factor=1.0 (Rational.ONE)
+            val fastGapped = pattern._fastGap(factor)
+
+            // _late(b) is implemented via applyTimeShift with factor=1
+            // But we can just use the internal logic directly or call the helper
+            // Here we use internal logic for efficiency inside the bind loop
+
+            // _late(b) -> shift time +b
+            fastGapped._withQueryTime { t -> t - b }
+                .mapEvents { ev -> ev.copy(begin = ev.begin + b, end = ev.end + b) }
+        }
+    }
 }
 
 /** Compresses pattern into the given timespan, leaving a gap */
@@ -236,15 +266,8 @@ val compress by dslFunction { args, /* callInfo */ _ ->
         return@dslFunction silence
     }
 
-    val startProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(0.0))
-    val endProvider = args[1].asControlValueProvider(StrudelVoiceValue.Num(1.0))
     val pattern = args.drop(2).toPattern(voiceValueModifier)
-
-    CompressPattern(
-        source = pattern,
-        startProvider = startProvider,
-        endProvider = endProvider
-    )
+    applyCompress(pattern, args.take(2))
 }
 
 /** Compresses pattern into the given timespan, leaving a gap */
