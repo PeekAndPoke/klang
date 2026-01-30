@@ -6,7 +6,6 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.struct
 import io.peekandpoke.klang.strudel.math.Rational
@@ -163,19 +162,21 @@ internal class EuclideanPattern(
                 }
             }
 
-            val segments = ArrayList<Pair<Double, StrudelPattern>>()
+            val patterns = ArrayList<StrudelPattern>()
             val wrappedOnsets = onsets + (onsets[0] + steps)
 
             for (i in 0 until onsets.size) {
                 val current = wrappedOnsets[i]
                 val next = wrappedOnsets[i + 1]
                 val duration = (next - current).toDouble()
-                // Use fillAtom directly. ArrangementPattern will query it for the full segment duration,
-                // and it will return a single event filling that duration.
-                segments.add(duration to fillAtom)
+
+                // Instead of (duration to pattern), we use weighted patterns.
+                // PropertyOverridePattern is used directly to avoid import issues with .withWeight extension
+                patterns.add(PropertyOverridePattern(fillAtom, weightOverride = duration))
             }
 
-            val structure = ArrangementPattern(segments).fast(steps.toDouble())
+            // SequencePattern automatically squeezes the sequence into 1 cycle allocating time proportional to weights
+            val structure = SequencePattern(patterns)
 
             val rotatedStructure = if (rotation != 0) {
                 structure.late(rotation.toDouble() / steps)
