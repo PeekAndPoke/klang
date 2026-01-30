@@ -147,7 +147,47 @@ fun dslStringExtension(handler: StrudelDslExtFn<StrudelPattern>) = DslStringExte
  */
 fun <T : Any> dslObject(handler: () -> T) = DslObjectProvider(handler)
 
-// --- Argument to Pattern Helpers ---
+fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPattern>> {
+    val args = this
+
+    return args.mapNotNull { arg ->
+        when (val argVal = arg.value) {
+            // Case: pattern (defaults to 1 cycle)
+            is StrudelPattern -> 1.0 to argVal
+
+            // Case: [duration, pattern] or [pattern]
+            is List<*> -> {
+                if (argVal.isEmpty()) return@mapNotNull null
+
+                var dur = 1.0
+                var patVal: Any? = null
+
+                // Check for [number, pattern] format
+                if (argVal.size >= 2 && argVal[0] is Number) {
+                    dur = (argVal[0] as Number).toDouble()
+                    patVal = argVal[1]
+                } else {
+                    // Fallback to [pattern] (defaults to duration 1.0)
+                    patVal = argVal[0]
+                }
+
+                // Filter out non-positive durations
+                if (dur <= 0.0) return@mapNotNull null
+
+                val pat = when (patVal) {
+                    is StrudelPattern -> patVal
+                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
+                        AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+                    }
+                }
+
+                dur to pat
+            }
+            // Unknown type
+            else -> null
+        }
+    }
+}
 
 /**
  * Applies a modification to the pattern using the provided arguments.

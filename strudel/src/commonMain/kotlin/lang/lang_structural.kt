@@ -127,47 +127,15 @@ val String.stack by dslStringExtension { p, args, callInfo -> p.stack(args, call
 // -- arrange() --------------------------------------------------------------------------------------------------------
 
 private fun applyArrange(args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val segments: List<Pair<Double, StrudelPattern>> = args.map { arg ->
-        when (val argVal = arg.value) {
-            // Case: pattern (defaults to 1 cycle)
-            is StrudelPattern -> 1.0 to argVal
-            // Case: [2, pattern]
-            is List<*> if argVal.size >= 2 && argVal[0] is Number && argVal[1] is StrudelPattern -> {
-                val dur = ((argVal[0] as? Number) ?: 1.0).toDouble()
-
-                val pat = when (val patVal = argVal[1]) {
-                    is StrudelPattern -> patVal
-                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-                    }
-                }
-
-                dur to pat
-            }
-            // Case: [pattern] (defaults to 1 cycle)
-            is List<*> if argVal.size == 1 -> {
-                val pat = when (val patVal = argVal[0]) {
-                    is StrudelPattern -> patVal
-                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-                    }
-                }
-
-                1.0 to pat
-            }
-            // Unknown
-            else -> 0.0 to silence
-        }
-    }.filter { it.first > 0.0 }
+    val segments = args.parseWeightedArgs()
 
     if (segments.isEmpty()) return silence
 
     val totalDuration = segments.sumOf { it.first }
 
-    // Matches JS implementation:
     // 1. fast(dur) speeds up the pattern to play 'dur' times in 1 cycle
     // 2. withWeight(dur) tells SequencePattern to allocate 'dur' proportional space
-    // 3. SequencePattern compresses it to fit that space (effectively slowing it back down relative to other segments)
+    // 3. SequencePattern compresses it to fit that space
     // 4. slow(total) stretches the whole 1-cycle sequence to the total duration
     val processedPatterns = segments.map { (dur, pat) ->
         pat.fast(dur).withWeight(dur)
@@ -176,7 +144,6 @@ private fun applyArrange(args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return SequencePattern(processedPatterns).slow(totalDuration)
 }
 
-// arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
 @StrudelDsl
 val arrange by dslFunction { args, /* callInfo */ _ -> applyArrange(args) }
 
@@ -191,46 +158,13 @@ val String.arrange by dslStringExtension { p, args, callInfo -> p.arrange(args, 
 // -- stepcat() / timeCat() --------------------------------------------------------------------------------------------
 
 private fun applyStepcat(args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val segments = args.parseWeightedArgs()
+
+    if (segments.isEmpty()) return silence
+
     // Parse arguments into weighted patterns
-    val patterns: List<StrudelPattern> = args.mapNotNull { arg ->
-        when (val argVal = arg.value) {
-            // Case: pattern only (defaults to duration 1)
-            is StrudelPattern -> argVal.withWeight(1.0)
-
-            // Case: [duration, pattern]
-            is List<*> if argVal.size >= 2 && argVal[0] is Number -> {
-                val dur = ((argVal[0] as? Number) ?: 1.0).toDouble()
-
-                val pat = when (val patVal = argVal[1]) {
-                    is StrudelPattern -> patVal
-                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-                    }
-                }
-
-                // Only add if duration is positive
-                if (dur > 0.0) pat.withWeight(dur) else null
-            }
-
-            // Case: [pattern] (defaults to duration 1)
-            is List<*> if argVal.size == 1 -> {
-                val pat = when (val patVal = argVal[0]) {
-                    is StrudelPattern -> patVal
-                    else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-                    }
-                }
-
-                pat.withWeight(1.0)
-            }
-
-            // Unknown - skip
-            else -> null
-        }
-    }
-
-    if (patterns.isEmpty()) {
-        return silence
+    val patterns = segments.map { (dur, pat) ->
+        pat.withWeight(dur)
     }
 
     // Use SequencePattern which handles weighted time distribution and compression to 1 cycle
@@ -307,17 +241,32 @@ private fun applyStackBy(patterns: List<StrudelPattern>, alignment: Double): Str
     val durations = patterns.map { it.estimateCycleDuration() }
     val maxDur = durations.maxOrNull() ?: Rational.ONE
 
-    // Align patterns by time-shifting them
+    val alignmentRat = alignment.toRational()
+
+    // Align patterns by padding them with gaps to match maxDur
     val alignedPatterns = patterns.zip(durations).map { (pat, dur) ->
         if (dur == maxDur) {
             pat
         } else {
-            AlignedPattern(
-                source = pat,
-                sourceDuration = dur,
-                targetDuration = maxDur,
-                alignment = alignment
-            )
+            val diff = maxDur - dur
+            val leftGap = diff * alignmentRat
+            val rightGap = diff - leftGap
+
+            val segments = mutableListOf<StrudelPattern>()
+
+            if (leftGap > Rational.ZERO) {
+                segments.add(GapPattern(leftGap).withWeight(leftGap.toDouble()))
+            }
+
+            segments.add(pat.withWeight(dur.toDouble()))
+
+            if (rightGap > Rational.ZERO) {
+                segments.add(GapPattern(rightGap).withWeight(rightGap.toDouble()))
+            }
+
+            // SequencePattern fits total weight into 1 cycle.
+            // We slow it down by maxDur to restore original speeds and placement within the larger cycle.
+            SequencePattern(segments).slow(maxDur.toDouble())
         }
     }
 
