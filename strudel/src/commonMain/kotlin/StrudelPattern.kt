@@ -342,6 +342,79 @@ fun StrudelPattern._bindSqueeze(
 }
 
 /**
+ * Binds an inner pattern, adjusting its speed based on the ratio of outer steps to inner steps.
+ * Equivalent to `pat.fmap(transform).polyJoin()` in JS Strudel.
+ */
+fun StrudelPattern._bindPoly(
+    transform: (StrudelPatternEvent) -> StrudelPattern?,
+): StrudelPattern {
+    val outerSteps = this.numSteps ?: return this._bind(transform)
+
+    return this._bind { outerEvent ->
+        val innerPattern = transform(outerEvent) ?: return@_bind null
+        val innerSteps = innerPattern.numSteps
+
+        if (innerSteps != null && innerSteps != Rational.ZERO) {
+            val factor = outerSteps / innerSteps
+            // p.extend(factor) -> p.fast(factor) (steps are preserved by _bind)
+
+            // Map query time: t -> t * factor
+            // Map event time: e -> e / factor
+            innerPattern._withQueryTime { t -> t * factor }
+                .mapEvents { e ->
+                    val newBegin = e.begin / factor
+                    val newEnd = e.end / factor
+                    e.copy(begin = newBegin, end = newEnd, dur = newEnd - newBegin)
+                }
+        } else {
+            innerPattern
+        }
+    }
+}
+
+/**
+ * Binds an inner pattern, resetting it to the start of the cycle for each outer event.
+ * Equivalent to `pat.fmap(transform).resetJoin()` in JS Strudel.
+ */
+fun StrudelPattern._bindReset(
+    transform: (StrudelPatternEvent) -> StrudelPattern?,
+): StrudelPattern = this._bind { outerEvent ->
+    val innerPattern = transform(outerEvent) ?: return@_bind null
+
+    // Align inner pattern cycle start to outer event start
+    // late(outerEvent.begin.cyclePos())
+    val shift = outerEvent.begin % Rational.ONE
+
+    innerPattern._withQueryTime { t -> t - shift }
+        .mapEvents { e ->
+            val newBegin = e.begin + shift
+            val newEnd = e.end + shift
+            e.copy(begin = newBegin, end = newEnd) // dur unchanged
+        }
+}
+
+/**
+ * Binds an inner pattern, restarting it from 0 for each outer event.
+ * Equivalent to `pat.fmap(transform).restartJoin()` in JS Strudel.
+ */
+fun StrudelPattern._bindRestart(
+    transform: (StrudelPatternEvent) -> StrudelPattern?,
+): StrudelPattern = this._bind { outerEvent ->
+    val innerPattern = transform(outerEvent) ?: return@_bind null
+
+    // Align inner pattern start (0) to outer event start
+    // late(outerEvent.begin)
+    val shift = outerEvent.begin
+
+    innerPattern._withQueryTime { t -> t - shift }
+        .mapEvents { e ->
+            val newBegin = e.begin + shift
+            val newEnd = e.end + shift
+            e.copy(begin = newBegin, end = newEnd) // dur unchanged
+        }
+}
+
+/**
  * Lifts a function that accepts a [Double] to work with a pattern of numbers (INNER JOIN semantics).
  *
  * This is the general-purpose applicative lifter for tempo/structural operations that transform
@@ -602,6 +675,60 @@ fun StrudelPattern._withQueryTime(transform: (Rational) -> Rational): StrudelPat
         ctx: StrudelPattern.QueryContext,
     ): List<StrudelPatternEvent> {
         return this@_withQueryTime.queryArcContextual(transform(from), transform(to), ctx)
+    }
+}
+
+/**
+ * Creates a pattern where the time of each event is transformed by the given function.
+ *
+ * This is the counterpart to [_withQueryTime]. While [_withQueryTime] transforms the input query range
+ * (affecting WHEN we look for events), [_withHapTime] transforms the output events
+ * (affecting WHERE events appear in time).
+ */
+fun StrudelPattern._withHapTime(transform: (Rational) -> Rational): StrudelPattern = mapEvents { event ->
+    val newBegin = transform(event.begin)
+    val newEnd = transform(event.end)
+    event.copy(
+        begin = newBegin,
+        end = newEnd,
+        dur = newEnd - newBegin
+    )
+}
+
+/**
+ * Returns a new pattern that splits queries at cycle boundaries.
+ *
+ * This ensures that the pattern's logic is applied per-cycle, even if the requested
+ * arc spans multiple cycles. This is crucial for patterns that depend on cycle position
+ * (like `rev`, `zoom`) or need to maintain structure within cycles.
+ */
+fun StrudelPattern._splitQueries(): StrudelPattern = object : StrudelPattern {
+    override val weight: Double get() = this@_splitQueries.weight
+    override val numSteps: Rational? get() = this@_splitQueries.numSteps
+    override fun estimateCycleDuration(): Rational = this@_splitQueries.estimateCycleDuration()
+
+    override fun queryArcContextual(
+        from: Rational,
+        to: Rational,
+        ctx: StrudelPattern.QueryContext,
+    ): List<StrudelPatternEvent> {
+        val result = mutableListOf<StrudelPatternEvent>()
+
+        val startCycle = from.floor().toInt()
+        val endCycle = to.ceil().toInt()
+
+        for (cycle in startCycle until endCycle) {
+            val cycleStart = Rational(cycle)
+            val cycleEnd = cycleStart + Rational.ONE
+
+            val queryStart = maxOf(from, cycleStart)
+            val queryEnd = minOf(to, cycleEnd)
+
+            if (queryEnd > queryStart) {
+                result.addAll(this@_splitQueries.queryArcContextual(queryStart, queryEnd, ctx))
+            }
+        }
+        return result
     }
 }
 

@@ -5,13 +5,11 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel._lift
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.pattern.ArrangementPattern
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.FirstOfPattern
-import io.peekandpoke.klang.strudel.pattern.LastOfPattern
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -29,32 +27,37 @@ private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     val transform: (StrudelPattern) -> StrudelPattern =
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    // Parse n as a pattern
+    // Optimize for static integer N
+    val staticN = nVal?.asIntOrNull()
+    if (staticN != null) {
+        if (staticN <= 1) return transform(source)
+
+        val patterns = ArrayList<StrudelPattern>(staticN)
+        patterns.add(transform(source))
+        repeat(staticN - 1) { patterns.add(source) }
+
+        return applySlowcatPrime(patterns)
+    }
+
+    // Dynamic path: Lift the pattern N
     val nPattern = when (nVal) {
         is StrudelPattern -> nVal
-
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
             AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val staticN = nVal?.asIntOrNull()
-
-    if (staticN != null) {
-        // Static path
-        if (staticN <= 1) return transform(source)
-
-        // Construct a list of patterns: [transform(source), source, source, ... (n-1 times)]
-        val patterns = ArrayList<Pair<Double, StrudelPattern>>(staticN)
-        patterns.add(1.0 to transform(source))
-        repeat(staticN - 1) {
-            patterns.add(1.0 to source)
+    // Use _lift to handle the control pattern logic automatically
+    return source._lift(nPattern) { nDouble, pat ->
+        val n = nDouble.toInt()
+        if (n <= 1) {
+            transform(pat)
+        } else {
+            val patterns = ArrayList<StrudelPattern>(n)
+            patterns.add(transform(pat))
+            repeat(n - 1) { patterns.add(pat) }
+            applySlowcatPrime(patterns)
         }
-
-        return ArrangementPattern(patterns)
-    } else {
-        // Dynamic path: Use FirstOfWithControl
-        return FirstOfPattern(source, nPattern, transform)
     }
 }
 
@@ -121,32 +124,37 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     val transform: (StrudelPattern) -> StrudelPattern =
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    // Parse n as a pattern
+    // Optimize for static integer N
+    val staticN = nVal?.asIntOrNull()
+    if (staticN != null) {
+        if (staticN <= 1) return transform(source)
+
+        val patterns = ArrayList<StrudelPattern>(staticN)
+        repeat(staticN - 1) { patterns.add(source) }
+        patterns.add(transform(source))
+
+        return applySlowcatPrime(patterns)
+    }
+
+    // Dynamic path: Lift the pattern N
     val nPattern = when (nVal) {
         is StrudelPattern -> nVal
-
         else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
             AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val staticN = nVal?.asIntOrNull()
-
-    if (staticN != null) {
-        // Static path
-        if (staticN <= 1) return transform(source)
-
-        // Construct a list of patterns: [source, source, ... (n-1 times), transform(source)]
-        val patterns = ArrayList<Pair<Double, StrudelPattern>>(staticN)
-        repeat(staticN - 1) {
-            patterns.add(1.0 to source)
+    // Use _lift
+    return source._lift(nPattern) { nDouble, pat ->
+        val n = nDouble.toInt()
+        if (n <= 1) {
+            transform(pat)
+        } else {
+            val patterns = ArrayList<StrudelPattern>(n)
+            repeat(n - 1) { patterns.add(pat) }
+            patterns.add(transform(pat))
+            applySlowcatPrime(patterns)
         }
-        patterns.add(1.0 to transform(source))
-
-        return ArrangementPattern(patterns)
-    } else {
-        // Dynamic path: Use LastOfWithControl
-        return LastOfPattern(source, nPattern, transform)
     }
 }
 

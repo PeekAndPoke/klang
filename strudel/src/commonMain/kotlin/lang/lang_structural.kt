@@ -97,6 +97,9 @@ val mini by dslFunction { args, /* callInfo */ _ ->
     args.toPattern(voiceValueModifier)
 }
 
+/** Parses input as mini-notation. Effectively an alias for `seq`. */
+val String.mini by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p }
+
 // -- stack() ----------------------------------------------------------------------------------------------------------
 
 private fun applyStack(patterns: List<StrudelPattern>): StrudelPattern {
@@ -157,11 +160,20 @@ private fun applyArrange(args: List<StrudelDslArg<Any?>>): StrudelPattern {
         }
     }.filter { it.first > 0.0 }
 
-    return if (segments.isEmpty()) {
-        silence
-    } else {
-        ArrangementPattern(segments)
+    if (segments.isEmpty()) return silence
+
+    val totalDuration = segments.sumOf { it.first }
+
+    // Matches JS implementation:
+    // 1. fast(dur) speeds up the pattern to play 'dur' times in 1 cycle
+    // 2. withWeight(dur) tells SequencePattern to allocate 'dur' proportional space
+    // 3. SequencePattern compresses it to fit that space (effectively slowing it back down relative to other segments)
+    // 4. slow(total) stretches the whole 1-cycle sequence to the total duration
+    val processedPatterns = segments.map { (dur, pat) ->
+        pat.fast(dur).withWeight(dur)
     }
+
+    return SequencePattern(processedPatterns).slow(totalDuration)
 }
 
 // arrange([2, a], b) -> 2 cycles of a, 1 cycle of b.
@@ -455,19 +467,64 @@ val String.slowcat by dslStringExtension { p, args, callInfo -> p.slowcat(args, 
 // -- slowcatPrime() ---------------------------------------------------------------------------------------------------
 
 /**
- * Like slowcat but maintains relative timing.
- * In this implementation, `cat` already maintains relative timing (using absolute time), so this is an alias.
+ * Cycles through a list of patterns infinitely, playing one pattern per cycle.
+ * Preserves absolute time (does not reset pattern time to 0 for each cycle).
  *
- * @param {patterns} patterns to concatenate
+ * This corresponds to 'slowcatPrime' in JS.
+ */
+internal fun applySlowcatPrime(patterns: List<StrudelPattern>): StrudelPattern {
+    if (patterns.isEmpty()) return silence
+    if (patterns.size == 1) return patterns[0]
+
+    return object : StrudelPattern {
+        override val weight: Double = patterns.sumOf { it.weight }
+        override val numSteps: Rational? = null
+
+        override fun estimateCycleDuration(): Rational = Rational.ONE * patterns.size
+
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: StrudelPattern.QueryContext,
+        ): List<StrudelPatternEvent> {
+            val result = mutableListOf<StrudelPatternEvent>()
+            val n = patterns.size
+            var cycle = from.floor()
+
+            while (cycle < to) {
+                val cycleEnd = cycle + Rational.ONE
+                val queryStart = maxOf(from, cycle)
+                val queryEnd = minOf(to, cycleEnd)
+
+                // Select pattern using modulo (cycles infinitely through patterns)
+                val patternIndex = cycle.toInt().mod(n)
+                val pattern = patterns[patternIndex]
+
+                // Crucial: We query at absolute time (queryStart), not relative time.
+                // This is what makes it "Prime".
+                if (queryEnd > queryStart) {
+                    result.addAll(pattern.queryArcContextual(queryStart, queryEnd, ctx))
+                }
+
+                cycle = cycleEnd
+            }
+
+            return result
+        }
+    }
+}
+
+/**
+ * Like slowcat but maintains relative timing.
  */
 @StrudelDsl
 val slowcatPrime by dslFunction { args, /* callInfo */ _ ->
-    applyCat(patterns = args.toListOfPatterns(voiceValueModifier))
+    applySlowcatPrime(patterns = args.toListOfPatterns(voiceValueModifier))
 }
 
 @StrudelDsl
 val StrudelPattern.slowcatPrime by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyCat(patterns = listOf(p) + args.toListOfPatterns(voiceValueModifier))
+    applySlowcatPrime(patterns = listOf(p) + args.toListOfPatterns(voiceValueModifier))
 }
 
 @StrudelDsl
@@ -2512,8 +2569,9 @@ private fun applyIter(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         source.early(shift)
     }
 
-    // Use slowcat to cycle through patterns infinitely (matching JS behavior)
-    return applySlowcat(patterns)
+    // JS uses slowcat (standard) here, but since iter slices are time-shifted manually above,
+    // we can use slowcatPrime logic to sequence them without double-shifting.
+    return applySlowcatPrime(patterns)
 }
 
 /**
@@ -2558,8 +2616,7 @@ private fun applyIterBack(source: StrudelPattern, args: List<StrudelDslArg<Any?>
         source.late(shift)
     }
 
-    // Use slowcat to cycle through patterns infinitely (matching JS behavior)
-    return applySlowcat(patterns)
+    return applySlowcatPrime(patterns)
 }
 
 /**
