@@ -159,7 +159,11 @@ val String.rev by dslStringExtension { p, args, callInfo -> p.rev(args, callInfo
 // -- palindrome() -----------------------------------------------------------------------------------------------------
 
 private fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
-    return applyCat(listOf(pattern, applyRev(pattern, listOf(StrudelDslArg(1, null)))))
+    // Palindrome needs to play the pattern forward, then backward.
+    // Critically, it must use ABSOLUTE time (Prime behavior) so that the 'rev' version
+    // reverses the content of the *second* cycle, not the first cycle played again.
+    // Matches JS: pat.lastOf(2, rev) -> equivalent to slowcatPrime(pat, rev(pat))
+    return applySlowcatPrime(listOf(pattern, applyRev(pattern, listOf(StrudelDslArg(1, null)))))
 }
 
 /** Plays the pattern forward then backward over two cycles */

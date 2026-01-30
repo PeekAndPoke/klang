@@ -391,11 +391,8 @@ val sequenceP by dslFunction { args, /* callInfo */ _ ->
 // -- cat() ------------------------------------------------------------------------------------------------------------
 
 internal fun applyCat(patterns: List<StrudelPattern>): StrudelPattern {
-    return when (patterns.size) {
-        0 -> silence
-        1 -> patterns.first()
-        else -> ArrangementPattern(patterns.map { 1.0 to it })
-    }
+    // cat is an alias for slowcat (infinite cycling, relative time)
+    return applySlowcat(patterns)
 }
 
 @StrudelDsl
@@ -2505,50 +2502,16 @@ val String.extend by dslStringExtension { p, args, callInfo -> p.fast(args, call
 
 /**
  * Cycles through a list of patterns infinitely, playing one pattern per cycle.
+ * This mimics the JavaScript `slowcat()` behavior.
  *
- * This mimics the JavaScript `slowcat()` behavior where patterns repeat with period n.
- * Unlike `applyCat()` which plays patterns sequentially once, this cycles through them infinitely.
- *
- * @param patterns List of patterns to cycle through
- * @return A pattern that cycles through the input patterns using modulo
+ * Relative Time: Each pattern starts at 0.0 when it is its turn.
  */
 internal fun applySlowcat(patterns: List<StrudelPattern>): StrudelPattern {
     if (patterns.isEmpty()) return silence
-    if (patterns.size == 1) return patterns[0]
-
-    return object : StrudelPattern {
-        override val weight: Double = patterns.sumOf { it.weight }
-        override val numSteps: Rational? = null // Cannot determine for infinite cyclic pattern
-
-        override fun estimateCycleDuration(): Rational = Rational.ONE * patterns.size
-
-        override fun queryArcContextual(
-            from: Rational,
-            to: Rational,
-            ctx: StrudelPattern.QueryContext,
-        ): List<StrudelPatternEvent> {
-            val result = mutableListOf<StrudelPatternEvent>()
-            val n = patterns.size
-            var cycle = from.floor()
-
-            while (cycle < to) {
-                val cycleEnd = cycle + Rational.ONE
-                val queryStart = maxOf(from, cycle)
-                val queryEnd = minOf(to, cycleEnd)
-
-                // Select pattern using modulo (cycles infinitely through patterns)
-                val patternIndex = cycle.toInt().mod(n)
-                val pattern = patterns[patternIndex]
-
-                val events = pattern.queryArcContextual(queryStart, queryEnd, ctx)
-                result.addAll(events)
-
-                cycle = cycleEnd
-            }
-
-            return result
-        }
-    }
+    // We use SequencePattern (which squeezes) and slow() to achieve this.
+    // [A, B] -> Sequence(A, B) fits in 1 cycle -> slow(2) stretches to 2 cycles.
+    // Effectively A plays 0..1 (local time 0..1), B plays 1..2 (local time 0..1).
+    return SequencePattern(patterns.map { it.withWeight(1.0) }).slow(patterns.size.toDouble())
 }
 
 // -- iter() -----------------------------------------------------------------------------------------------------------
