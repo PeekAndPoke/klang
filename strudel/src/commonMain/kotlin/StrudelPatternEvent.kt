@@ -71,6 +71,7 @@ data class StrudelPatternEvent(
 
     /** Check if this event has an onset (should be played) */
     fun hasOnset(): Boolean = whole != null && whole.begin == part.begin
+
     fun prependLocation(location: SourceLocation?) = when (location) {
         null -> this
         else -> copy(sourceLocations = sourceLocations?.prepend(location) ?: location.asChain())

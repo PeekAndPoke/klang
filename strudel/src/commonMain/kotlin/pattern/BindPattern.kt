@@ -14,7 +14,6 @@ import io.peekandpoke.klang.strudel.math.Rational
  */
 internal class BindPattern(
     private val outer: StrudelPattern,
-    private val clip: Boolean = true,
     private val preserveMetadata: Boolean = true,
     private val transform: (StrudelPatternEvent) -> StrudelPattern?,
 ) : StrudelPattern {
@@ -52,22 +51,14 @@ internal class BindPattern(
 
             val innerEvents = innerPattern.queryArcContextual(intersectStart, intersectEnd, ctx)
 
-            if (!clip) {
-                result.addAll(
-                    innerEvents.filter { it.begin >= outerEvent.begin && it.begin <= outerEvent.end }
-                )
-            } else {
-                for (innerEvent in innerEvents) {
-                    val clippedPart = innerEvent.part.clipTo(outerEvent.part)
+            for (innerEvent in innerEvents) {
+                val clippedPart = innerEvent.part.clipTo(outerEvent.part)
 
-                    if (clippedPart != null) {
-                        result.add(
-                            innerEvent.copy(
-                                part = clippedPart
-                                // CRITICAL: preserve whole - don't modify it!
-                            )
-                        )
-                    }
+                if (clippedPart != null) {
+                    result.add(
+                        // CRITICAL: preserve whole - don't modify it!
+                        innerEvent.copy(part = clippedPart)
+                    )
                 }
             }
         }

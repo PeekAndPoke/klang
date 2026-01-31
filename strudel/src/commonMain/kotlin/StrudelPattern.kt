@@ -310,11 +310,9 @@ fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
  *                  Return null to produce silence for that event.
  */
 fun StrudelPattern._bind(
-    clip: Boolean = true,
     transform: (StrudelPatternEvent) -> StrudelPattern?,
 ): StrudelPattern = BindPattern(
     outer = this,
-    clip = clip,
     preserveMetadata = true,
     transform = transform,
 )
@@ -352,7 +350,7 @@ fun StrudelPattern._bindSqueeze(
 fun StrudelPattern._bindPoly(
     transform: (StrudelPatternEvent) -> StrudelPattern?,
 ): StrudelPattern {
-    val outerSteps = this.numSteps ?: return this._bind(clip = true, transform)
+    val outerSteps = this.numSteps ?: return this._bind(transform)
 
     return this._bind { outerEvent ->
         val innerPattern = transform(outerEvent) ?: return@_bind null
@@ -439,13 +437,11 @@ fun StrudelPattern._bindRestart(
  * ```
  *
  * @param control   The control pattern providing numeric values (e.g., `fast("<2 4>")`)
- * @param clip      Whether to clip to the control events
  * @param transform Function to apply the value to the source pattern
  * @return Pattern with inner join applied, preserving source metadata
  */
 fun StrudelPattern._lift(
     control: StrudelPattern,
-    clip: Boolean = true,
     transform: (Double, StrudelPattern) -> StrudelPattern,
 ): StrudelPattern = object : StrudelPattern {
     // Preserve metadata from SOURCE pattern
@@ -455,7 +451,7 @@ fun StrudelPattern._lift(
 
     // Control pattern drives the structure via bind
     // LAZY initialization to avoid circular dependencies during construction
-    private val joined = control._bind(clip = clip) { event ->
+    private val joined = control._bind { event ->
         val value = event.data.value?.asDouble ?: return@_bind null
         transform(value, this@_lift)
     }
