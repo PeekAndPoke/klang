@@ -39,11 +39,14 @@ sealed interface ControlValueProvider {
             to: Rational,
             ctx: StrudelPattern.QueryContext,
         ): List<StrudelPatternEvent> {
+            val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
+                begin = from,
+                end = to
+            )
             return listOf(
                 StrudelPatternEvent(
-                    begin = from,
-                    end = to,
-                    dur = to - from,
+                    part = timeSpan,
+                    whole = timeSpan,
                     data = StrudelVoiceData.empty.copy(value = value),
                     sourceLocations = location?.asChain()
                 )

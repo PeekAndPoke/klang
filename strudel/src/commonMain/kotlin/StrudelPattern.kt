@@ -339,9 +339,9 @@ fun StrudelPattern._bindSqueeze(
     // Map event time: e -> b + e * d    (map local [0, 1] back to global [b, b+d])
     innerPattern._withQueryTime { t -> (t - b) / d }
         .mapEvents { e ->
-            val newBegin = b + e.begin * d
-            val newEnd = b + e.end * d
-            e.copy(begin = newBegin, end = newEnd, dur = newEnd - newBegin)
+            val scaledPart = e.part.scale(d).shift(b)
+            val scaledWhole = e.whole?.scale(d)?.shift(b)
+            e.copy(part = scaledPart, whole = scaledWhole)
         }
 }
 
@@ -366,9 +366,9 @@ fun StrudelPattern._bindPoly(
             // Map event time: e -> e / factor
             innerPattern._withQueryTime { t -> t * factor }
                 .mapEvents { e ->
-                    val newBegin = e.begin / factor
-                    val newEnd = e.end / factor
-                    e.copy(begin = newBegin, end = newEnd, dur = newEnd - newBegin)
+                    val scaledPart = e.part.scale(Rational.ONE / factor)
+                    val scaledWhole = e.whole?.scale(Rational.ONE / factor)
+                    e.copy(part = scaledPart, whole = scaledWhole)
                 }
         } else {
             innerPattern
@@ -391,9 +391,9 @@ fun StrudelPattern._bindReset(
 
     innerPattern._withQueryTime { t -> t - shift }
         .mapEvents { e ->
-            val newBegin = e.begin + shift
-            val newEnd = e.end + shift
-            e.copy(begin = newBegin, end = newEnd) // dur unchanged
+            val shiftedPart = e.part.shift(shift)
+            val shiftedWhole = e.whole?.shift(shift)
+            e.copy(part = shiftedPart, whole = shiftedWhole)
         }
 }
 
@@ -412,9 +412,9 @@ fun StrudelPattern._bindRestart(
 
     innerPattern._withQueryTime { t -> t - shift }
         .mapEvents { e ->
-            val newBegin = e.begin + shift
-            val newEnd = e.end + shift
-            e.copy(begin = newBegin, end = newEnd) // dur unchanged
+            val shiftedPart = e.part.shift(shift)
+            val shiftedWhole = e.whole?.shift(shift)
+            e.copy(part = shiftedPart, whole = shiftedWhole)
         }
 }
 
@@ -699,12 +699,17 @@ fun StrudelPattern._withQueryTime(transform: (Rational) -> Rational): StrudelPat
  * (affecting WHERE events appear in time).
  */
 fun StrudelPattern._withHapTime(transform: (Rational) -> Rational): StrudelPattern = mapEvents { event ->
-    val newBegin = transform(event.begin)
-    val newEnd = transform(event.end)
+    val newPartBegin = transform(event.begin)
+    val newPartEnd = transform(event.end)
+    val newPart = TimeSpan(newPartBegin, newPartEnd)
+    val newWhole = event.whole?.let {
+        val newWholeBegin = transform(it.begin)
+        val newWholeEnd = transform(it.end)
+        TimeSpan(newWholeBegin, newWholeEnd)
+    }
     event.copy(
-        begin = newBegin,
-        end = newEnd,
-        dur = newEnd - newBegin
+        part = newPart,
+        whole = newWhole
     )
 }
 

@@ -51,26 +51,20 @@ internal class PickResetPattern(
 
             // Shift inner events back to global time
             for (innerEvent in innerEvents) {
-                // Shift back
-                val globalBegin = innerEvent.begin + shift
-                val globalEnd = innerEvent.end + shift
+                // Shift back to global time
+                val shiftedPart = innerEvent.part.shift(shift)
+                val shiftedWhole = innerEvent.whole?.shift(shift)
 
                 // Clip to selector event
-                val clippedBegin = maxOf(globalBegin, selectorEvent.begin)
-                val clippedEnd = minOf(globalEnd, selectorEvent.end)
+                val clippedPart = shiftedPart.clipTo(selectorEvent.part)
 
-                if (clippedEnd > clippedBegin) {
-                    if (clippedBegin != globalBegin || clippedEnd != globalEnd) {
-                        result.add(
-                            innerEvent.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin
-                            )
+                if (clippedPart != null) {
+                    result.add(
+                        innerEvent.copy(
+                            part = clippedPart,
+                            whole = shiftedWhole  // Preserve whole with shift applied
                         )
-                    } else {
-                        result.add(innerEvent.copy(begin = globalBegin, end = globalEnd))
-                    }
+                    )
                 }
             }
         }

@@ -34,11 +34,14 @@ class AtomicInfinitePattern(val data: StrudelVoiceData) : StrudelPattern {
 
             // Check for overlap
             if (cycleStart < to && cycleEnd > from) {
+                val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
+                    begin = cycleStart,
+                    end = cycleEnd
+                )
                 result.add(
                     StrudelPatternEvent(
-                        begin = cycleStart,
-                        end = cycleEnd,
-                        dur = Rational.ONE,
+                        part = timeSpan,
+                        whole = timeSpan,
                         data = data
                     )
                 )

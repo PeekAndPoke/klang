@@ -166,11 +166,14 @@ internal class EuclideanMorphPattern(
                     val intersectEnd = minOf(windowEnd, arcEndAbs)
 
                     if (intersectEnd > intersectStart) {
+                        val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
+                            begin = intersectStart,
+                            end = intersectEnd
+                        )
                         result.add(
                             StrudelPatternEvent(
-                                begin = intersectStart,
-                                end = intersectEnd,
-                                dur = intersectEnd - intersectStart,
+                                part = timeSpan,
+                                whole = timeSpan,
                                 data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
                             )
                         )

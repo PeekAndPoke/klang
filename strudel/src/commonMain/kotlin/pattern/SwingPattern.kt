@@ -72,32 +72,41 @@ internal class SwingPattern(
 
             if (isFirstHalf) {
                 // First half: scale position proportionally within [0, firstPartRatio * subdivisionDuration)
-                // Original range: [0, halfDuration)
-                // New range: [0, firstPartRatio * subdivisionDuration)
                 val scaleFactor = firstPartRatio / 0.5.toRational()
 
                 val newPosInSubdivision = posInSubdivision * scaleFactor
-                val newDuration = eventDuration * scaleFactor
-
                 val newBegin = cycle + subdivisionStart + newPosInSubdivision
-                val newEnd = newBegin + newDuration
+                val newEnd = newBegin + (eventDuration * scaleFactor)
 
-                ev.copy(begin = newBegin, end = newEnd, dur = newDuration)
+                val newPart = io.peekandpoke.klang.strudel.TimeSpan(newBegin, newEnd)
+                val newWhole = ev.whole?.let { whole ->
+                    val wholePos = whole.begin - cycle - subdivisionStart
+                    val newWholeBegin = cycle + subdivisionStart + (wholePos * scaleFactor)
+                    val newWholeEnd = newWholeBegin + (whole.duration * scaleFactor)
+                    io.peekandpoke.klang.strudel.TimeSpan(newWholeBegin, newWholeEnd)
+                }
+
+                ev.copy(part = newPart, whole = newWhole)
             } else {
                 // Second half: scale position proportionally within [firstPartRatio * subdivisionDuration, subdivisionDuration)
-                // Original range: [halfDuration, subdivisionDuration)
-                // New range: [firstPartRatio * subdivisionDuration, subdivisionDuration)
                 val scaleFactor = secondPartRatio / 0.5.toRational()
 
                 val posWithinSecondHalf = posInSubdivision - halfDuration
                 val newPosInSecondHalf = posWithinSecondHalf * scaleFactor
-                val newDuration = eventDuration * scaleFactor
 
                 val firstPartDuration = subdivisionDuration * firstPartRatio
                 val newBegin = cycle + subdivisionStart + firstPartDuration + newPosInSecondHalf
-                val newEnd = newBegin + newDuration
+                val newEnd = newBegin + (eventDuration * scaleFactor)
 
-                ev.copy(begin = newBegin, end = newEnd, dur = newDuration)
+                val newPart = io.peekandpoke.klang.strudel.TimeSpan(newBegin, newEnd)
+                val newWhole = ev.whole?.let { whole ->
+                    val wholePos = whole.begin - cycle - subdivisionStart - halfDuration
+                    val newWholeBegin = cycle + subdivisionStart + firstPartDuration + (wholePos * scaleFactor)
+                    val newWholeEnd = newWholeBegin + (whole.duration * scaleFactor)
+                    io.peekandpoke.klang.strudel.TimeSpan(newWholeBegin, newWholeEnd)
+                }
+
+                ev.copy(part = newPart, whole = newWhole)
             }
         }
     }

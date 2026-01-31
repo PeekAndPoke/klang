@@ -26,10 +26,12 @@ private fun applyStretchBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any
         val factor = controlEvent?.data?.value?.asDouble ?: 1.0
         val factorRat = factor.toRational()
 
-        sourceEvent.copy(
-            end = sourceEvent.begin + sourceEvent.dur * factorRat,
-            dur = sourceEvent.dur * factorRat
+        val newPart = io.peekandpoke.klang.strudel.TimeSpan(
+            begin = sourceEvent.begin,
+            end = sourceEvent.begin + sourceEvent.dur * factorRat
         )
+
+        sourceEvent.copy(part = newPart)
     }
 }
 

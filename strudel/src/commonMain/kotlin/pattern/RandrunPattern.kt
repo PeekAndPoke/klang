@@ -57,11 +57,14 @@ internal class RandrunPattern(
                 val eventEnd = eventBegin + stepSize
                 val value = permutation[index].asVoiceValue()
 
+                val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
+                    begin = eventBegin,
+                    end = eventEnd
+                )
                 result.add(
                     StrudelPatternEvent(
-                        begin = eventBegin,
-                        end = eventEnd,
-                        dur = stepSize,
+                        part = timeSpan,
+                        whole = timeSpan,
                         data = StrudelVoiceData.empty.copy(value = value)
                     )
                 )

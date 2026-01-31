@@ -53,14 +53,20 @@ class GraalStrudelPattern(
     fun Value.toStrudelEvent(): StrudelPatternEvent {
         val event = this
 
-        val part = event.safeGetMember("part")
+        val partJs = event.safeGetMember("part")
+        val wholeJs = event.safeGetMember("whole")
 
-        // Begin
-        val begin = Rational(part?.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
-        // End
-        val end = Rational(part?.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
-        // Get duration
-        val dur = end - begin
+        // Extract part TimeSpan
+        val partBegin = Rational(partJs?.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
+        val partEnd = Rational(partJs?.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
+        val part = io.peekandpoke.klang.strudel.TimeSpan(partBegin, partEnd)
+
+        // Extract whole TimeSpan (null for continuous patterns)
+        val whole = wholeJs?.let {
+            val wholeBegin = Rational(it.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
+            val wholeEnd = Rational(it.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
+            io.peekandpoke.klang.strudel.TimeSpan(wholeBegin, wholeEnd)
+        }
 
         // Get details from "value" field
         val value = event.safeGetMember("value")
@@ -295,9 +301,8 @@ class GraalStrudelPattern(
         // add event
         return StrudelPatternEvent(
             // Strudel Timing
-            begin = begin,
-            end = end,
-            dur = dur,
+            part = part,
+            whole = whole,
             // Voice data
             data = StrudelVoiceData(
                 // Frequency and note

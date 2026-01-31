@@ -98,15 +98,14 @@ internal class FastGapPattern(
 
             // Map each event from source cycle [0,1) to compressed region [start, start+span)
             for (ev in sourceEvents) {
-                val (mappedBegin, mappedEnd, mappedDur) = mapEventTimeBySpan(ev, cycleRat, compressedStart, span)
+                val (mappedPart, mappedWhole) = mapEventTimeBySpan(ev, cycleRat, compressedStart, span)
 
                 // Only include if it intersects with our query range
-                if (hasOverlap(mappedBegin, mappedEnd, from, to)) {
+                if (hasOverlap(mappedPart.begin, mappedPart.end, from, to)) {
                     result.add(
                         ev.copy(
-                            begin = mappedBegin,
-                            end = mappedEnd,
-                            dur = mappedDur
+                            part = mappedPart,
+                            whole = mappedWhole
                         )
                     )
                 }

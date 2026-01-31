@@ -91,17 +91,16 @@ internal class HurryPattern(
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
         return innerEvents.mapNotNull { ev ->
-            val (mappedBegin, mappedEnd, mappedDur) = mapEventTimeByScale(ev, scale)
+            val (scaledPart, scaledWhole) = mapEventTimeByScale(ev, scale)
 
-            if (hasOverlap(mappedBegin, mappedEnd, from, to)) {
+            if (hasOverlap(scaledPart.begin, scaledPart.end, from, to)) {
                 // Multiply the speed parameter by the factor
                 val currentSpeed = ev.data.speed ?: 1.0
                 val newSpeed = currentSpeed * factor.toDouble()
 
                 ev.copy(
-                    begin = mappedBegin,
-                    end = mappedEnd,
-                    dur = mappedDur,
+                    part = scaledPart,
+                    whole = scaledWhole,
                     data = ev.data.copy(speed = newSpeed)
                 )
             } else {

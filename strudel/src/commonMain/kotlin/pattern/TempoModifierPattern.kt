@@ -100,13 +100,12 @@ internal class TempoModifierPattern(
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
         return innerEvents.mapNotNull { ev ->
-            val (mappedBegin, mappedEnd, mappedDur) = mapEventTimeByScale(ev, scale)
+            val (scaledPart, scaledWhole) = mapEventTimeByScale(ev, scale)
 
-            if (hasOverlap(mappedBegin, mappedEnd, from, to)) {
+            if (hasOverlap(scaledPart.begin, scaledPart.end, from, to)) {
                 ev.copy(
-                    begin = mappedBegin,
-                    end = mappedEnd,
-                    dur = mappedDur
+                    part = scaledPart,
+                    whole = scaledWhole
                 )
             } else {
                 null

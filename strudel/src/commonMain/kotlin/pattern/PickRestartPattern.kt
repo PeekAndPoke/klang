@@ -48,31 +48,20 @@ internal class PickRestartPattern(
 
             // Shift inner events back to global time
             for (innerEvent in innerEvents) {
-                // We clip to the selector event duration (like pick/innerJoin)
-                // because pickRestart usually implies the pattern lives within the event.
-                // However, does pickRestart clip?
-                // Strudel documentation doesn't explicitly say, but usually it behaves like 'pick' but with reset phase.
-
-                // Shift back
-                val globalBegin = innerEvent.begin + selectorEvent.begin
-                val globalEnd = innerEvent.end + selectorEvent.begin
+                // Shift back to global time
+                val shiftedPart = innerEvent.part.shift(selectorEvent.begin)
+                val shiftedWhole = innerEvent.whole?.shift(selectorEvent.begin)
 
                 // Clip to selector event
-                val clippedBegin = maxOf(globalBegin, selectorEvent.begin)
-                val clippedEnd = minOf(globalEnd, selectorEvent.end)
+                val clippedPart = shiftedPart.clipTo(selectorEvent.part)
 
-                if (clippedEnd > clippedBegin) {
-                    if (clippedBegin != globalBegin || clippedEnd != globalEnd) {
-                        result.add(
-                            innerEvent.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin
-                            )
+                if (clippedPart != null) {
+                    result.add(
+                        innerEvent.copy(
+                            part = clippedPart,
+                            whole = shiftedWhole  // Preserve whole with shift applied
                         )
-                    } else {
-                        result.add(innerEvent.copy(begin = globalBegin, end = globalEnd))
-                    }
+                    )
                 }
             }
         }

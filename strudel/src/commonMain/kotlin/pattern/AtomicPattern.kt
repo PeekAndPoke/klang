@@ -44,11 +44,14 @@ internal class AtomicPattern(
             val begin = Rational(i)
             // Strudel events are usually triggered if their start time is within the query arc.
             if (begin >= from || begin < to) {
+                val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
+                    begin = begin,
+                    end = begin + Rational.ONE
+                )
                 events.add(
                     StrudelPatternEvent(
-                        begin = begin,
-                        end = begin + Rational.ONE, // Default duration is 1 cycle
-                        dur = Rational.ONE,
+                        part = timeSpan,
+                        whole = timeSpan,
                         data = data,
                         sourceLocations = sourceLocations
                     )

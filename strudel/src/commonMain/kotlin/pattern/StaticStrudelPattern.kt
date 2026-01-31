@@ -49,7 +49,9 @@ class StaticStrudelPattern(
                 evt.begin >= fromMod && evt.begin < toMod
             }
             .map {
-                it.copy(begin = it.begin + offset, end = it.end + offset)
+                val shiftedPart = it.part.shift(offset)
+                val shiftedWhole = it.whole?.shift(offset)
+                it.copy(part = shiftedPart, whole = shiftedWhole)
             }
     }
 

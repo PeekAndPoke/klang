@@ -77,13 +77,12 @@ internal class SequencePattern(
                     val innerEvents = pattern.queryArcContextual(innerFrom, innerTo, ctx)
 
                     events.addAll(innerEvents.mapNotNull { ev ->
-                        // Map back to outer time
-                        val mappedBegin = (ev.begin - cycleOffset) * stepSize + stepStart
-                        val mappedEnd = (ev.end - cycleOffset) * stepSize + stepStart
-                        val mappedDur = mappedEnd - mappedBegin // Duration also scales
+                        // Map back to outer time - scale and shift both part and whole
+                        val scaledPart = ev.part.shift(-cycleOffset).scale(stepSize).shift(stepStart)
+                        val scaledWhole = ev.whole?.shift(-cycleOffset)?.scale(stepSize)?.shift(stepStart)
 
-                        if (mappedEnd > from) {
-                            ev.copy(begin = mappedBegin, end = mappedEnd, dur = mappedDur)
+                        if (scaledPart.end > from) {
+                            ev.copy(part = scaledPart, whole = scaledWhole)
                         } else {
                             null
                         }

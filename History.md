@@ -21,8 +21,19 @@
 - 29-01-2026: bought AI credits at Anthropic -> 59.50 USD
 - 29-01-2026: bought AI credits at Anthropic -> 59.50 USD
 - 30-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
+- 31-01-2026: bought AI credits at Anthropic -> 59.50 USD
 
 ## Diary
+
+### (2026-01-31) Strudel - Part/Whole Refactoring
+
+- Implemented part/whole structure for StrudelPatternEvent to match JavaScript Strudel behavior
+- Added TimeSpan data class with helper methods (shift, scale, clipTo)
+- Updated all pattern operations to preserve whole through clipping operations
+- Added hasOnset() filter in StrudelPlayback to only play onset events
+- Continuous patterns (sine, saw) now use whole = null and always play
+- Updated JavaScript interop to extract both part and whole from JS events
+- Critical fix: prevents incorrect event playback for clipped patterns
 
 ### (2026-01-28) Strudel - Audio Effects
 

@@ -104,22 +104,14 @@ internal class StructurePattern(
 
             for (sourceEvent in sourceEvents) {
                 // Clip source event to mask event boundaries
-                val clippedBegin = maxOf(sourceEvent.begin, maskEvent.begin)
-                val clippedEnd = minOf(sourceEvent.end, maskEvent.end)
+                val clippedPart = sourceEvent.part.clipTo(maskEvent.part)
 
-                if (clippedEnd > clippedBegin) {
+                if (clippedPart != null) {
                     // Create the final event, merging source data with mask location
-                    // We only copy if boundaries changed or we need to add location
-                    val finalEvent =
-                        if (clippedBegin != sourceEvent.begin || clippedEnd != sourceEvent.end || maskEvent.sourceLocations != null) {
-                            sourceEvent.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin
-                            ).prependLocations(maskEvent.sourceLocations)
-                        } else {
-                            sourceEvent
-                        }
+                    val finalEvent = sourceEvent.copy(
+                        part = clippedPart
+                        // CRITICAL: preserve whole - don't modify it!
+                    ).prependLocations(maskEvent.sourceLocations)
 
                     result.add(finalEvent)
                 }

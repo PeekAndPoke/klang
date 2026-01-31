@@ -1013,9 +1013,9 @@ private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
 
             source._withQueryTime { t -> t * d + s }
                 .mapEvents { ev ->
-                    val begin = (ev.begin - s) / d
-                    val end = (ev.end - s) / d
-                    ev.copy(begin = begin, end = end, dur = end - begin)
+                    val scaledPart = ev.part.shift(-s).scale(io.peekandpoke.klang.strudel.math.Rational.ONE / d)
+                    val scaledWhole = ev.whole?.shift(-s)?.scale(io.peekandpoke.klang.strudel.math.Rational.ONE / d)
+                    ev.copy(part = scaledPart, whole = scaledWhole)
                 }
                 .let { if (steps != null) it.withSteps(steps) else it }
         }

@@ -151,11 +151,14 @@ internal class EuclideanPattern(
                     to: Rational,
                     ctx: QueryContext,
                 ): List<StrudelPatternEvent> {
+                    val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
+                        begin = from,
+                        end = to
+                    )
                     return listOf(
                         StrudelPatternEvent(
-                            begin = from,
-                            end = to,
-                            dur = to - from,
+                            part = timeSpan,
+                            whole = timeSpan,
                             data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
                         )
                     )
@@ -247,16 +250,21 @@ internal class EuclideanPattern(
         val stepsEvents = stepsProvider.queryEvents(from, to, ctx)
 
         val rotationEvents = rotationProvider?.queryEvents(from, to, ctx)
-            ?: listOf(
-                StrudelPatternEvent(
+            ?: run {
+                val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
                     begin = from,
-                    end = to,
-                    dur = to - from,
-                    data = StrudelVoiceData.empty.copy(
-                        value = StrudelVoiceValue.Num(0.0),
+                    end = to
+                )
+                listOf(
+                    StrudelPatternEvent(
+                        part = timeSpan,
+                        whole = timeSpan,
+                        data = StrudelVoiceData.empty.copy(
+                            value = StrudelVoiceValue.Num(0.0),
+                        )
                     )
                 )
-            )
+            }
 
         if (pulsesEvents.isEmpty() || stepsEvents.isEmpty() || rotationEvents.isEmpty()) {
             return emptyList()
@@ -344,9 +352,10 @@ internal class EuclideanPattern(
 
                         events.addAll(innerEvents.map { ev ->
                             ev.copy(
-                                begin = intersectStart,
-                                end = intersectEnd,
-                                dur = intersectEnd - intersectStart,
+                                part = io.peekandpoke.klang.strudel.TimeSpan(
+                                    begin = intersectStart,
+                                    end = intersectEnd
+                                )
                             )
                         })
                     }

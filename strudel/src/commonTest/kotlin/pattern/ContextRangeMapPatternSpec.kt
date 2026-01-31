@@ -2,11 +2,8 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 
 class ContextRangeMapPatternSpec : StringSpec({
@@ -24,10 +21,9 @@ class ContextRangeMapPatternSpec : StringSpec({
                 val max = ctx.getOrDefault(ContinuousPattern.maxKey, 0.0)
 
                 return listOf(
-                    StrudelPatternEvent(
+                    testEvent(
                         begin = from,
                         end = to,
-                        dur = to - from,
                         data = StrudelVoiceData.empty.copy(
                             value = StrudelVoiceValue.Num(min + max)
                         )

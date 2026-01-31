@@ -73,13 +73,13 @@ class DropPattern(
                 val relativeBegin = event.begin - keepWindowStart
                 val relativeEnd = event.end - keepWindowStart
 
-                val scaledBegin = cycleStart + (relativeBegin / keepFraction)
-                val scaledEnd = cycleStart + (relativeEnd / keepFraction)
+                val scaleFactor = Rational.ONE / keepFraction
+                val scaledPart = event.part.shift(-cycleStart).scale(scaleFactor).shift(cycleStart)
+                val scaledWhole = event.whole?.shift(-cycleStart)?.scale(scaleFactor)?.shift(cycleStart)
 
                 event.copy(
-                    begin = scaledBegin,
-                    end = scaledEnd,
-                    dur = scaledEnd - scaledBegin
+                    part = scaledPart,
+                    whole = scaledWhole
                 )
             }
 
@@ -106,9 +106,11 @@ class DropPattern(
         val events = source.queryArcContextual(shiftedBegin, shiftedEnd, ctx)
 
         return events.map { event ->
+            val shiftedPart = event.part.shift(-n)
+            val shiftedWhole = event.whole?.shift(-n)
             event.copy(
-                begin = event.begin - n,
-                end = event.end - n
+                part = shiftedPart,
+                whole = shiftedWhole
             )
         }
     }

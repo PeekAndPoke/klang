@@ -101,9 +101,18 @@ internal class ReversePattern(
                 val innerFrom = Rational.ONE + (cycle * Rational(2)) - intersectEnd
 
                 inner.queryArcContextual(innerFrom, innerTo, ctx).forEach { ev ->
-                    val mappedBegin = Rational.ONE + (cycle * Rational(2)) - ev.end
-                    val mappedEnd = Rational.ONE + (cycle * Rational(2)) - ev.begin
-                    events.add(ev.copy(begin = mappedBegin, end = mappedEnd))
+                    val pivot = Rational.ONE + (cycle * Rational(2))
+                    val reversedPart = io.peekandpoke.klang.strudel.TimeSpan(
+                        begin = pivot - ev.part.end,
+                        end = pivot - ev.part.begin
+                    )
+                    val reversedWhole = ev.whole?.let {
+                        io.peekandpoke.klang.strudel.TimeSpan(
+                            begin = pivot - it.end,
+                            end = pivot - it.begin
+                        )
+                    }
+                    events.add(ev.copy(part = reversedPart, whole = reversedWhole))
                 }
             }
         }

@@ -74,15 +74,14 @@ internal class SegmentPattern(
 
                 for (sourceEvent in sourceEvents) {
                     // Clip source event to slice boundaries
-                    val clippedBegin = maxOf(sliceBegin, sourceEvent.begin)
-                    val clippedEnd = minOf(sliceEnd, sourceEvent.end)
+                    val sliceSpan = io.peekandpoke.klang.strudel.TimeSpan(sliceBegin, sliceEnd)
+                    val clippedPart = sourceEvent.part.clipTo(sliceSpan)
 
-                    if (clippedEnd > clippedBegin) {
+                    if (clippedPart != null) {
                         result.add(
                             sourceEvent.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin
+                                part = clippedPart
+                                // Preserve whole unchanged
                             )
                         )
                     }

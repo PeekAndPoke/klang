@@ -58,21 +58,15 @@ internal class BindPattern(
                 )
             } else {
                 for (innerEvent in innerEvents) {
-                    val clippedBegin = maxOf(innerEvent.begin, outerEvent.begin)
-                    val clippedEnd = minOf(innerEvent.end, outerEvent.end)
+                    val clippedPart = innerEvent.part.clipTo(outerEvent.part)
 
-                    if (clippedEnd > clippedBegin) {
-                        if (clippedBegin != innerEvent.begin || clippedEnd != innerEvent.end) {
-                            result.add(
-                                innerEvent.copy(
-                                    begin = clippedBegin,
-                                    end = clippedEnd,
-                                    dur = clippedEnd - clippedBegin
-                                )
+                    if (clippedPart != null) {
+                        result.add(
+                            innerEvent.copy(
+                                part = clippedPart
+                                // CRITICAL: preserve whole - don't modify it!
                             )
-                        } else {
-                            result.add(innerEvent)
-                        }
+                        )
                     }
                 }
             }
