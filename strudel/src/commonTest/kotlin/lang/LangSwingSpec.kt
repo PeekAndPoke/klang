@@ -1,68 +1,95 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 
 class LangSwingSpec : StringSpec({
 
     "note(\"c d e f\").swing(2) produces events" {
-        val p = note("c d e f").swing(2)
-        val events = p.queryArc(0.0, 1.0)
+        val subject = note("c d e f").swing(2)
 
         assertSoftly {
-            // Should produce events with swing timing
-            events.size shouldBe 4
+            repeat(12) { cycle ->
 
-            events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            events[0].end.toDouble() shouldBe (0.3333333333 plusOrMinus EPSILON)
+                withClue("Cycle $cycle") {
+                    val cycleDbl = cycle.toDouble()
+                    val events = subject.queryArc(cycleDbl, cycleDbl + 1)
+                    val values = events.map {
+                        listOf(it.begin.toDouble(), it.end.toDouble(), it.data.note)
+                    }
 
-            events[1].begin.toDouble() shouldBe (0.3333333333 plusOrMinus EPSILON)
-            events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+                    println("Cycle $cycle | ${events.size} events | $values")
 
-            events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            events[2].end.toDouble() shouldBe (0.8333333333 plusOrMinus EPSILON)
+                    // Should produce events with swing timing
+                    events.size shouldBe 4
 
-            events[3].begin.toDouble() shouldBe (0.8333333333 plusOrMinus EPSILON)
-            events[3].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+                    events[0].data.note shouldBeEqualIgnoringCase "c"
+                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
 
-            events.forEach {
-                (it.end - it.begin).toDouble() shouldBe (it.dur.toDouble() plusOrMinus EPSILON)
+                    events[1].data.note shouldBeEqualIgnoringCase "d"
+                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
+                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+
+                    events[2].data.note shouldBeEqualIgnoringCase "e"
+                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
+
+                    events[3].data.note shouldBeEqualIgnoringCase "f"
+                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
+                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+
+                    events.forEach {
+                        (it.end - it.begin).toDouble() shouldBe (it.dur.toDouble() plusOrMinus EPSILON)
+                    }
+                }
             }
         }
     }
 
-    "note(\"[c c] d e [f f]\").swing(2) produces events" {
-        val p = note("[c c] d e [f f]").swing(2)
-        val events = p.queryArc(0.0, 1.0)
+    "note(\"c d e f\").swing(4) produces events" {
+        val subject = note("c d e f").swing(4)
 
         assertSoftly {
-            // Should produce events with swing timing
-            events.size shouldBe 6
+            repeat(12) { cycle ->
 
-            events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            events[0].end.toDouble() shouldBe (0.16666666666 plusOrMinus EPSILON)
+                withClue("Cycle $cycle") {
+                    val cycleDbl = cycle.toDouble()
+                    val events = subject.queryArc(cycleDbl, cycleDbl + 1)
+                    val values = events.map {
+                        listOf(it.begin.toDouble(), it.end.toDouble(), it.data.note)
+                    }
 
-            events[1].begin.toDouble() shouldBe (0.1666666666 plusOrMinus EPSILON)
-            events[1].end.toDouble() shouldBe (0.3333333333 plusOrMinus EPSILON)
+                    println("Cycle $cycle | ${events.size} events | $values")
 
-            events[2].begin.toDouble() shouldBe (0.3333333333 plusOrMinus EPSILON)
-            events[2].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+                    events.size shouldBe 4
 
-            events[3].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            events[3].end.toDouble() shouldBe (0.8333333333 plusOrMinus EPSILON)
+                    events[0].data.note shouldBeEqualIgnoringCase "c"
+                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
 
-            events[4].begin.toDouble() shouldBe (0.8333333333 plusOrMinus EPSILON)
-            events[4].end.toDouble() shouldBe (0.9166666666 plusOrMinus EPSILON)
+                    events[1].data.note shouldBeEqualIgnoringCase "d"
+                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.583333333333) plusOrMinus EPSILON)
 
-            events[5].begin.toDouble() shouldBe (0.9166666666 plusOrMinus EPSILON)
-            events[5].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+                    events[2].data.note shouldBeEqualIgnoringCase "e"
+                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.83333333333) plusOrMinus EPSILON)
 
-            events.forEach {
-                (it.end - it.begin).toDouble() shouldBe (it.dur.toDouble() plusOrMinus EPSILON)
+                    events[3].data.note shouldBeEqualIgnoringCase "f"
+                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.08333333333) plusOrMinus EPSILON)
+
+                    events.forEach {
+                        (it.end - it.begin).toDouble() shouldBe (it.dur.toDouble() plusOrMinus EPSILON)
+                    }
+                }
             }
         }
     }
@@ -93,27 +120,35 @@ class LangSwingSpec : StringSpec({
     }
 
     "note(\"c d e f\").swingBy(\"[0.5 0.0]\", 2) produces events" {
-        val p = note("c d e f").swingBy("[0.5 0.0]", 2)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.forEach {
-            println("${it.begin} ${it.end}")
-        }
+        val subject = note("c d e f").swingBy("[0.5 0.0]", 2)
 
         assertSoftly {
-            events.size shouldBe 4
+            repeat(12) { cycle ->
 
-            events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            events[0].end.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+                withClue("Cycle $cycle") {
+                    val cycleDbl = cycle.toDouble()
+                    val events = subject.queryArc(cycleDbl, cycleDbl + 1)
+                    val values = events.map {
+                        listOf(it.begin.toDouble(), it.end.toDouble(), it.data.note)
+                    }
 
-            events[1].begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
-            events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+                    println("Cycle $cycle | ${events.size} events | $values")
 
-            events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            events[2].end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+                    events.size shouldBe 4
 
-            events[3].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
-            events[3].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
+
+                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
+                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+
+                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+
+                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                }
+            }
         }
     }
 

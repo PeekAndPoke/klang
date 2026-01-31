@@ -5,6 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.lang.addons.strudelLangArithmeticAddonsInit
 import io.peekandpoke.klang.strudel.lang.addons.strudelLangOscAddonsInit
 import io.peekandpoke.klang.strudel.lang.addons.strudelLangStructuralAddonsInit
+import io.peekandpoke.klang.strudel.lang.addons.strudelLangTempoAddonsInit
 
 @DslMarker
 annotation class StrudelDsl
@@ -38,4 +39,5 @@ fun initStrudelLang() {
     strudelLangArithmeticAddonsInit = true
     strudelLangOscAddonsInit = true
     strudelLangStructuralAddonsInit = true
+    strudelLangTempoAddonsInit = true
 }

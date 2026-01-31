@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.strudel.lang.addons.stretchBy
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
@@ -20,32 +21,20 @@ fun applyTimeShift(
     args: List<StrudelDslArg<Any?>>,
     factor: Rational = Rational.ONE,
 ): StrudelPattern {
-    if (args.isEmpty()) {
-        return pattern
-    }
+    if (args.isEmpty()) return pattern
 
-    // Helper for the actual shift logic
-    fun shift(p: StrudelPattern, amount: Rational): StrudelPattern {
-        val offset = amount * factor
+    val control = args[0].toPattern(voiceValueModifier)
 
-        // Logic equivalent to:
-        // pat.withQueryTime((t) => t.add(offset)).withHapTime((t) => t.sub(offset))
-        // Note: JS 'early' passes positive offset, we use negative factor, so signs flip naturally.
-        return p._withQueryTime { t -> t - offset }
-            .mapEvents { e -> e.copy(begin = e.begin + offset, end = e.end + offset) }
-    }
+    // Inner join: control drives structure; transform uses numeric offset
+    return control._bind { controlEvent ->
+        val v = controlEvent.data.value?.asDouble ?: return@_bind null
+        val offset = v.toRational() * factor
 
-    return when (val arg0 = args[0].value) {
-        is Rational -> shift(pattern, arg0)
-        is Number -> shift(pattern, arg0.toRational())
-        else -> {
-            // Pattern case - lift the control pattern
-            val control = args.toPattern(voiceValueModifier)
-            pattern._liftValue(control) { v, pat ->
-                val d = v.asDouble ?: 0.0
-                shift(pat, d.toRational())
+        // This is the core early/late logic:
+        pattern._withQueryTime { t -> t - offset }
+            .mapEvents { e ->
+                e.copy(begin = e.begin + offset, end = e.end + offset)
             }
-        }
     }
 }
 
@@ -382,7 +371,7 @@ private fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         }
 
         // ._fast(factor)
-        applyFast(infiniteAtom, listOf(StrudelDslArg.of(localFactor)))
+        infiniteAtom.fast(localFactor)
     }
 
     return if (newSteps != null) result.withSteps(newSteps) else result
@@ -499,6 +488,22 @@ val String.densityGap by dslStringExtension { p, args, callInfo -> p.fastGap(arg
 
 // -- inside() ---------------------------------------------------------------------------------------------------------
 
+// -- inside() ---------------------------------------------------------------------------------------------------------
+
+fun applyInside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    if (args.size < 2) return pattern
+
+    val factorArg = args[0]
+
+    @Suppress("UNCHECKED_CAST")
+    val func = args[1].value as? (StrudelPattern) -> StrudelPattern ?: return pattern
+
+    val slowed = pattern.slow(factorArg)
+    val transformed = func(slowed)
+
+    return transformed.fast(factorArg)
+}
+
 /**
  * Carries out an operation 'inside' a cycle.
  * Slows the pattern by factor, applies the function, then speeds it back up.
@@ -506,23 +511,27 @@ val String.densityGap by dslStringExtension { p, args, callInfo -> p.fastGap(arg
  */
 @StrudelDsl
 val StrudelPattern.inside by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyInside(p, args)
+}
+
+// -- outside() --------------------------------------------------------------------------------------------------------
+
+fun applyOutside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.size < 2) {
-        return@dslPatternExtension p
+        return pattern
     }
 
     val factor = args[0].value?.asDoubleOrNull() ?: 1.0
 
     @Suppress("UNCHECKED_CAST")
     val func: (StrudelPattern) -> StrudelPattern =
-        args[1].value as? (StrudelPattern) -> StrudelPattern ?: return@dslPatternExtension p
+        args[1].value as? (StrudelPattern) -> StrudelPattern ?: return pattern
 
-    val slowed = p.slow(factor)
-    val transformed = func(slowed)
+    val sped = pattern.fast(factor)
+    val transformed = func(sped)
 
-    transformed.fast(factor)
+    return transformed.slow(factor)
 }
-
-// -- outside() --------------------------------------------------------------------------------------------------------
 
 /**
  * Carries out an operation 'outside' a cycle.
@@ -531,20 +540,7 @@ val StrudelPattern.inside by dslPatternExtension { p, args, /* callInfo */ _ ->
  */
 @StrudelDsl
 val StrudelPattern.outside by dslPatternExtension { p, args, /* callInfo */ _ ->
-    if (args.size < 2) {
-        return@dslPatternExtension p
-    }
-
-    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
-
-    @Suppress("UNCHECKED_CAST")
-    val func: (StrudelPattern) -> StrudelPattern =
-        args[1].value as? (StrudelPattern) -> StrudelPattern ?: return@dslPatternExtension p
-
-    val sped = p.fast(factor)
-    val transformed = func(sped)
-
-    transformed.slow(factor)
+    applyOutside(p, args)
 }
 
 // -- swingBy() --------------------------------------------------------------------------------------------------------
@@ -572,13 +568,24 @@ val StrudelPattern.swingBy by dslPatternExtension { p, args, /* callInfo */ _ ->
         return@dslPatternExtension p
     }
 
-    val swing = args.getOrNull(0)
-        .asControlValueProvider(StrudelVoiceValue.Num(0.0))
+    val swingArg = args[0]
+    val nArg = args[1]
 
-    val n = args.getOrNull(1)
-        .asControlValueProvider(StrudelVoiceValue.Num(1.0))
+    // swing / 2
+    val swing = swingArg.toPattern(voiceValueModifier)
+    val swingHalf = swing.div(2)
+    val timing = seq(0, swingHalf)
+    val stretch = seq(
+        steady(1).add(swing),
+        steady(1).sub(swing),
+    )
 
-    SwingPattern(source = p, swingProvider = swing, nProvider = n)
+    // pat.inside(n, late(shiftPattern))
+    val transform: (StrudelPattern) -> StrudelPattern = { innerPat ->
+        innerPat.late(timing).stretchBy(stretch)
+    }
+
+    p.inside(nArg, transform)
 }
 
 @StrudelDsl

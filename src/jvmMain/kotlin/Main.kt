@@ -7,11 +7,15 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.strudel.lang.pan
+import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.strudel.lang.swingBy
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
 import org.graalvm.polyglot.Context
+import kotlin.system.exitProcess
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -64,19 +68,19 @@ private suspend fun helloStrudel() {
             registerLibrary(strudelLib)
         }
 
-//        val compiled = strudel.compile(
-//            """
-//                note("c").iresponse("hall")
-//            """.trimIndent()
-//        ).await()
-//
-//        compiled.queryArc(0.0, 1.0).let { arc ->
-//            arc.forEach {
-//                println(it)
-//            }
-//        }
-//
-//        exitProcess(1)
+        val compiled = strudel.compile(
+            """
+                note("c").off(0.25, x => x.note("e"))
+            """.trimIndent()
+        ).await()
+
+        compiled.queryArc(0.0, 1.0).let { arc ->
+            arc.forEach {
+                println(it)
+            }
+        }
+
+        exitProcess(1)
 
 
 //        val result = engine.execute(
@@ -124,7 +128,8 @@ private suspend fun helloStrudel() {
 //        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
 
 //        val pattern1 = StrudelPattern.compile(TestTextPatterns.strangerThingsNetflix)!!
-        val pattern1 = s("bd hh sd oh").chunk(2, { x -> x.fast(2) }).slow(2)
+//        val pattern1 = s("bd hh sd oh").chunk(2, { x -> x.fast(2) }).slow(2)
+        val pattern1 = note("c d e f").swingBy("[0.5 0.0]", 2)
 
 //        val pattern1 = StrudelPattern.compile(
 //            """

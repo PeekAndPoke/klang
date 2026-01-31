@@ -14,6 +14,7 @@ import io.peekandpoke.klang.strudel.math.Rational
  */
 internal class BindPattern(
     private val outer: StrudelPattern,
+    private val clip: Boolean = true,
     private val preserveMetadata: Boolean = true,
     private val transform: (StrudelPatternEvent) -> StrudelPattern?,
 ) : StrudelPattern {
@@ -51,25 +52,32 @@ internal class BindPattern(
 
             val innerEvents = innerPattern.queryArcContextual(intersectStart, intersectEnd, ctx)
 
-            for (innerEvent in innerEvents) {
-                val clippedBegin = maxOf(innerEvent.begin, outerEvent.begin)
-                val clippedEnd = minOf(innerEvent.end, outerEvent.end)
+            if (!clip) {
+                result.addAll(
+                    innerEvents.filter { it.begin >= outerEvent.begin && it.begin <= outerEvent.end }
+                )
+            } else {
+                for (innerEvent in innerEvents) {
+                    val clippedBegin = maxOf(innerEvent.begin, outerEvent.begin)
+                    val clippedEnd = minOf(innerEvent.end, outerEvent.end)
 
-                if (clippedEnd > clippedBegin) {
-                    if (clippedBegin != innerEvent.begin || clippedEnd != innerEvent.end) {
-                        result.add(
-                            innerEvent.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin
+                    if (clippedEnd > clippedBegin) {
+                        if (clippedBegin != innerEvent.begin || clippedEnd != innerEvent.end) {
+                            result.add(
+                                innerEvent.copy(
+                                    begin = clippedBegin,
+                                    end = clippedEnd,
+                                    dur = clippedEnd - clippedBegin
+                                )
                             )
-                        )
-                    } else {
-                        result.add(innerEvent)
+                        } else {
+                            result.add(innerEvent)
+                        }
                     }
                 }
             }
         }
+
         return result
     }
 }

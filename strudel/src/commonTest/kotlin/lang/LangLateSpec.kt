@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -71,10 +72,12 @@ class LangLateSpec : StringSpec({
         val p = note("c d").late(0.25)
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-        // Original: cycle -1: d(-0.5-0); cycle 0: c(0-0.5), d(0.5-1.0)
-        // After late(0.25): cycle -1: d(-0.25-0.25); cycle 0: c(0.25-0.75), d(0.75-1.25)
-        // In range 0-1: partial d(0-0.25), c(0.25-0.75), partial d(0.75-1)
-        events.size shouldBe 3
+        assertSoftly {
+            events.size shouldBe 3
+            events[0].data.note shouldBeEqualIgnoringCase "d"
+            events[1].data.note shouldBeEqualIgnoringCase "c"
+            events[2].data.note shouldBeEqualIgnoringCase "d"
+        }
     }
 
     "late() works as extension on String" {
@@ -112,7 +115,12 @@ class LangLateSpec : StringSpec({
         val p = StrudelPattern.compile(""""c d".late(0.25)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
-        events.size shouldBe 3
+        assertSoftly {
+            events.size shouldBe 3
+            events[0].data.value?.asString shouldBeEqualIgnoringCase "d"
+            events[1].data.value?.asString shouldBeEqualIgnoringCase "c"
+            events[2].data.value?.asString shouldBeEqualIgnoringCase "d"
+        }
     }
 
     "late() with fractional cycles" {

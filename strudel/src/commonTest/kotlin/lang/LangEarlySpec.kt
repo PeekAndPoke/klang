@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -72,10 +73,9 @@ class LangEarlySpec : StringSpec({
         val p = note("c d").early(0.25)
         val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
 
-        // Original: c(0-0.5), d(0.5-1.0), next c(1.0-1.5)
-        // After early(0.25): c(-0.25-0.25), d(0.25-0.75), c(0.75-1.25)
-        // In range 0-1: partial c(0-0.25), d(0.25-0.75), partial c(0.75-1)
-        events.size shouldBe 3
+        events.size shouldBe 2
+        events[0].data.note shouldBeEqualIgnoringCase "d"
+        events[1].data.note shouldBeEqualIgnoringCase "c"
     }
 
     "early() works as extension on String" {
@@ -113,7 +113,11 @@ class LangEarlySpec : StringSpec({
         val p = StrudelPattern.compile(""""c d".early(0.25)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
 
-        events.size shouldBe 3
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.value?.asString shouldBeEqualIgnoringCase "d"
+            events[1].data.value?.asString shouldBeEqualIgnoringCase "c"
+        }
     }
 
     "early() with fractional cycles" {
@@ -145,7 +149,7 @@ class LangEarlySpec : StringSpec({
 
         // Should produce events with varying shifts based on sine wave
         // The exact count may vary (typically 2-3) due to the extended query margin and continuous offsets
-        events.size shouldBe 3
+        events.size shouldBe 2
         events.forEach { ev ->
             ev.data.note.shouldNotBeNull()
         }

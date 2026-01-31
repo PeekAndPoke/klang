@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -206,30 +207,39 @@ class LangPlySpec : StringSpec({
     }
 
     "ply() with control pattern" {
-        val p = note("c d e f").ply("2 3")
-        val events = p.queryArc(0.0, 1.0)
+        val subject = note("c d e f").ply("2 3")
 
-        // First event (c) uses 2, second (d) uses 3, third (e) uses 2, fourth (f) uses 3
-        // 2 + 3 + 2 + 3 = 10 total events
-        events.size shouldBe 10
+        assertSoftly {
+            repeat(12) { cycle ->
 
-        // c repeated 2 times
-        events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[1].data.note shouldBeEqualIgnoringCase "c"
+                val cycleDbl = cycle.toDouble()
+                val events = subject.queryArc(cycleDbl, cycleDbl + 1)
+                val values = events.map {
+                    listOf(it.begin.toDouble(), it.end.toDouble(), it.data.note)
+                }
 
-        // d repeated 3 times
-        events[2].data.note shouldBeEqualIgnoringCase "d"
-        events[3].data.note shouldBeEqualIgnoringCase "d"
+                println("Cycle $cycle | ${events.size} events | $values")
 
-        // e repeated 2 times
-        events[4].data.note shouldBeEqualIgnoringCase "e"
-        events[5].data.note shouldBeEqualIgnoringCase "e"
-        events[6].data.note shouldBeEqualIgnoringCase "e"
+                events.size shouldBe 10
+                // c repeated 2 times
+                events[0].data.note shouldBeEqualIgnoringCase "c"
+                events[1].data.note shouldBeEqualIgnoringCase "c"
 
-        // f repeated 3 times
-        events[7].data.note shouldBeEqualIgnoringCase "f"
-        events[8].data.note shouldBeEqualIgnoringCase "f"
-        events[9].data.note shouldBeEqualIgnoringCase "f"
+                // d repeated 3 times
+                events[2].data.note shouldBeEqualIgnoringCase "d"
+                events[3].data.note shouldBeEqualIgnoringCase "d"
+
+                // e repeated 2 times
+                events[4].data.note shouldBeEqualIgnoringCase "e"
+                events[5].data.note shouldBeEqualIgnoringCase "e"
+                events[6].data.note shouldBeEqualIgnoringCase "e"
+
+                // f repeated 3 times
+                events[7].data.note shouldBeEqualIgnoringCase "f"
+                events[8].data.note shouldBeEqualIgnoringCase "f"
+                events[9].data.note shouldBeEqualIgnoringCase "f"
+            }
+        }
     }
 
     "ply() with control pattern in compiled code" {

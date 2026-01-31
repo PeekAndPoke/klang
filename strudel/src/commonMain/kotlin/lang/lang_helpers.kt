@@ -211,6 +211,12 @@ fun StrudelPattern.applyControlFromParams(
 }
 
 /**
+ * Converts a single argument into a StrudelPattern.
+ */
+fun StrudelDslArg<Any?>.toPattern(modify: VoiceDataModifier): StrudelPattern =
+    listOf(this).toPattern(modify)
+
+/**
  * Converts a list of arguments into a single StrudelPattern.
  * - Single Pattern arg -> returns it.
  * - Single String/Number -> parses to AtomicPattern using [modify].
