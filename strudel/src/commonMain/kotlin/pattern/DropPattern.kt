@@ -64,28 +64,26 @@ class DropPattern(
 
             // Keep only events that start after the drop window
             val keptEvents = sourceEvents.filter { event ->
-                event.begin >= keepWindowStart
+                event.part.begin >= keepWindowStart
             }
 
             // Scale events to fill the full cycle
             // Map from [keepWindowStart, keepWindowEnd] to [cycleStart, cycleEnd]
             val scaledEvents = keptEvents.map { event ->
-                val relativeBegin = event.begin - keepWindowStart
-                val relativeEnd = event.end - keepWindowStart
-
-                val scaledBegin = cycleStart + (relativeBegin / keepFraction)
-                val scaledEnd = cycleStart + (relativeEnd / keepFraction)
+                val scaleFactor = Rational.ONE / keepFraction
+                // Shift events from keepWindowStart to origin, scale, then shift to cycleStart
+                val scaledPart = event.part.shift(-keepWindowStart).scale(scaleFactor).shift(cycleStart)
+                val scaledWhole = event.whole?.shift(-keepWindowStart)?.scale(scaleFactor)?.shift(cycleStart)
 
                 event.copy(
-                    begin = scaledBegin,
-                    end = scaledEnd,
-                    dur = scaledEnd - scaledBegin
+                    part = scaledPart,
+                    whole = scaledWhole
                 )
             }
 
             // Filter to query range
             result.addAll(scaledEvents.filter { event ->
-                event.end > from && event.begin < to
+                event.part.end > from && event.part.begin < to
             })
         }
 
@@ -106,9 +104,11 @@ class DropPattern(
         val events = source.queryArcContextual(shiftedBegin, shiftedEnd, ctx)
 
         return events.map { event ->
+            val shiftedPart = event.part.shift(-n)
+            val shiftedWhole = event.whole?.shift(-n)
             event.copy(
-                begin = event.begin - n,
-                end = event.end - n
+                part = shiftedPart,
+                whole = shiftedWhole
             )
         }
     }

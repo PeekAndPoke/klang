@@ -11,16 +11,16 @@ class LangPureSpec : StringSpec({
         val p = pure("foo")
 
         // Query across multiple cycles
-        val events = p.queryArc(0.0, 3.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 3.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         events[0].data.value?.asString shouldBe "foo"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
 
         events[1].data.value?.asString shouldBe "foo"
-        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
         events[2].data.value?.asString shouldBe "foo"
-        events[2].begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 })

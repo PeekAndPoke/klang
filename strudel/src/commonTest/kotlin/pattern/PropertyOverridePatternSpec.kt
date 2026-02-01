@@ -89,8 +89,8 @@ class PropertyOverridePatternSpec : StringSpec({
 
         patternEvents shouldHaveSize sourceEvents.size
         patternEvents.forEachIndexed { index, event ->
-            event.begin shouldBe sourceEvents[index].begin
-            event.end shouldBe sourceEvents[index].end
+            event.part.begin shouldBe sourceEvents[index].part.begin
+            event.part.end shouldBe sourceEvents[index].part.end
             event.data.note shouldBe sourceEvents[index].data.note
         }
     }

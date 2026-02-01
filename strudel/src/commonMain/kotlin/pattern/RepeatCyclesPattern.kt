@@ -60,10 +60,11 @@ class RepeatCyclesPattern(
                 // Map events back to output time
                 // T_out = cycleStart + (T_src - sourceCycleStart)
                 events.forEach { event ->
-                    val newBegin = cycleStart + (event.begin - sourceCycleStart)
-                    val newEnd = cycleStart + (event.end - sourceCycleStart)
+                    val offset = cycleStart - sourceCycleStart
+                    val shiftedPart = event.part.shift(offset)
+                    val shiftedWhole = event.whole?.shift(offset)
 
-                    result.add(event.copy(begin = newBegin, end = newEnd))
+                    result.add(event.copy(part = shiftedPart, whole = shiftedWhole))
                 }
             }
 

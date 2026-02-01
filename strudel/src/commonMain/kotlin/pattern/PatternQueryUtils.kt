@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlin.math.floor
 
@@ -103,16 +104,16 @@ internal inline fun calculateOverlapRange(
  * Maps event time coordinates by dividing by a scale factor.
  *
  * Used for patterns that compress time (faster playback).
- * Returns (mappedBegin, mappedEnd, mappedDur).
+ * Scales both part and whole by the same factor.
+ * Returns (scaledPart, scaledWhole).
  */
 internal inline fun mapEventTimeByScale(
     event: StrudelPatternEvent,
     scale: Rational,
-): Triple<Rational, Rational, Rational> {
-    return Triple(
-        event.begin / scale,
-        event.end / scale,
-        event.dur / scale
+): Pair<TimeSpan, TimeSpan?> {
+    return Pair(
+        event.part.scale(Rational.ONE / scale),
+        event.whole?.scale(Rational.ONE / scale)
     )
 }
 
@@ -120,15 +121,15 @@ internal inline fun mapEventTimeByScale(
  * Maps event time coordinates by adding an offset.
  *
  * Used for patterns that shift time (early/late).
- * Returns (mappedBegin, mappedEnd).
+ * Returns (shiftedPart, shiftedWhole).
  */
 internal inline fun offsetEventTime(
     event: StrudelPatternEvent,
     offset: Rational,
-): Pair<Rational, Rational> {
+): Pair<TimeSpan, TimeSpan?> {
     return Pair(
-        event.begin + offset,
-        event.end + offset
+        event.part.shift(offset),
+        event.whole?.shift(offset)
     )
 }
 
@@ -141,22 +142,18 @@ internal inline fun offsetEventTime(
  * @param cycleBase The cycle start (e.g., cycle number as Rational)
  * @param compressedStart The start of the compressed region
  * @param span The span of the compressed region (end - start)
- * @return (mappedBegin, mappedEnd, mappedDur)
+ * @return (mappedPart, mappedWhole)
  */
 internal inline fun mapEventTimeBySpan(
     event: StrudelPatternEvent,
     cycleBase: Rational,
     compressedStart: Rational,
     span: Rational,
-): Triple<Rational, Rational, Rational> {
-    val relativeBegin = event.begin - cycleBase
-    val relativeEnd = event.end - cycleBase
+): Pair<TimeSpan, TimeSpan?> {
+    val mappedPart = event.part.shift(-cycleBase).scale(span).shift(compressedStart)
+    val mappedWhole = event.whole?.shift(-cycleBase)?.scale(span)?.shift(compressedStart)
 
-    val mappedBegin = compressedStart + (relativeBegin * span)
-    val mappedEnd = compressedStart + (relativeEnd * span)
-    val mappedDur = event.dur * span
-
-    return Triple(mappedBegin, mappedEnd, mappedDur)
+    return Pair(mappedPart, mappedWhole)
 }
 
 /**
@@ -171,24 +168,6 @@ internal inline fun scaleTimeRange(
     scale: Rational,
 ): Pair<Rational, Rational> {
     return Pair(from * scale, to * scale)
-}
-
-/**
- * Scales a time range by a factor with epsilon adjustment.
- *
- * Expands the range outward by epsilon to avoid boundary precision issues.
- * Returns (scaledFrom + epsilon, scaledTo - epsilon).
- */
-internal inline fun scaleTimeRangeWithEpsilon(
-    from: Rational,
-    to: Rational,
-    scale: Rational,
-    epsilon: Rational,
-): Pair<Rational, Rational> {
-    return Pair(
-        (from * scale) + epsilon,
-        (to * scale) - epsilon
-    )
 }
 
 // ============================================================================

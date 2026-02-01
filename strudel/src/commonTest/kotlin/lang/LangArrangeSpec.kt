@@ -13,17 +13,17 @@ class LangArrangeSpec : StringSpec({
         val p = arrange(sound("bd"), sound("hh"))
 
         // When querying two cycles
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // Then each pattern takes 1 cycle
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
         events[1].data.sound shouldBe "hh"
-        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
     "arrange() with duration specification [2, pattern]" {
@@ -31,30 +31,30 @@ class LangArrangeSpec : StringSpec({
         val p = arrange(listOf(2, sound("bd")), sound("hh"))
 
         // When querying three cycles
-        val events = p.queryArc(0.0, 3.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 3.0).sortedBy { it.part.begin }
 
         // Then bd plays for 2 cycles, hh for 1
         events.size shouldBe 3
 
         // First two cycles: bd
         events[0].data.sound shouldBe "bd"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[1].data.sound shouldBe "bd"
-        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
 
         // Third cycle: hh
         events[2].data.sound shouldBe "hh"
-        events[2].begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (3.0 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[2].part.end.toDouble() shouldBe (3.0 plusOrMinus EPSILON)
     }
 
     "arrange() works as method on StrudelPattern" {
         // sound("bd").arrange(sound("hh")) -> arrange(sound("bd"), sound("hh"))
         val p = sound("bd").arrange(sound("hh"))
 
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
@@ -70,7 +70,7 @@ class LangArrangeSpec : StringSpec({
 
         val p = "bd".arrange("hh")
 
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         // "bd" -> value="bd" (as VoiceValue.Text)
@@ -85,7 +85,7 @@ class LangArrangeSpec : StringSpec({
 
     "arrange() works in compiled code" {
         val p = StrudelPattern.compile("""arrange(sound("bd"), sound("hh"))""")
-        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
@@ -94,7 +94,7 @@ class LangArrangeSpec : StringSpec({
 
     "arrange() works as method in compiled code" {
         val p = StrudelPattern.compile("""sound("bd").arrange(sound("hh"))""")
-        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"

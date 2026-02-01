@@ -13,8 +13,8 @@ class LangScaleTransposeSpec : StringSpec({
         val without = note("C E").scale("C3:major")
         val with = note("C E").scale("C3:major").scaleTranspose("0")
 
-        val withoutEvents = without.queryArc(0.0, 1.0).sortedBy { it.begin }
-        val withEvents = with.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val withoutEvents = without.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+        val withEvents = with.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         assertSoftly {
             withoutEvents.shouldNotBeEmpty()
@@ -22,8 +22,8 @@ class LangScaleTransposeSpec : StringSpec({
 
             withoutEvents.zip(withEvents).forEachIndexed { index, (e1, e2) ->
                 withClue("Event $index") {
-                    e1.begin shouldBe e2.begin
-                    e1.end shouldBe e2.end
+                    e1.part.begin shouldBe e2.part.begin
+                    e1.part.end shouldBe e2.part.end
                     e1.data.freqHz shouldBe e2.data.freqHz
                 }
             }
@@ -32,7 +32,7 @@ class LangScaleTransposeSpec : StringSpec({
 
     "scaleTranspose() transposes by scale degrees" {
         val p = n("0 2").scale("C:major").scaleTranspose("1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         // 0 in C major is C, +1 degree = D
@@ -43,7 +43,7 @@ class LangScaleTransposeSpec : StringSpec({
 
     "scaleTranspose() handles negative steps" {
         val p = n("2 4").scale("C:major").scaleTranspose("-1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         // 2 in C major is E, -1 degree = D
@@ -63,7 +63,7 @@ class LangScaleTransposeSpec : StringSpec({
 
     "scaleTranspose() works with note names" {
         val p = note("C E").scale("C:major").scaleTranspose("2")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         // C +2 degrees = E
@@ -74,7 +74,7 @@ class LangScaleTransposeSpec : StringSpec({
 
     "scaleTranspose() falls back to chromatic when no scale set" {
         val p = note("C4 E4").scaleTranspose("2")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         // C4 + 2 semitones = D4 (chromatic)
@@ -85,7 +85,7 @@ class LangScaleTransposeSpec : StringSpec({
 
     "scaleTranspose() works with control patterns" {
         val p = note("C").scale("C:major").scaleTranspose("0 1 2")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 1
         // C +0 = C, C +1 = D, C +2 = E
@@ -94,7 +94,7 @@ class LangScaleTransposeSpec : StringSpec({
 
     "scaleTranspose() as pattern extension" {
         val p = note("C D").scale("C:major").scaleTranspose("1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.note shouldBe "D3"
@@ -103,7 +103,7 @@ class LangScaleTransposeSpec : StringSpec({
 
     "scaleTranspose() as string extension" {
         val p = "C E".scale("C:major").scaleTranspose("1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         // Values interpreted as notes via scale
@@ -112,7 +112,7 @@ class LangScaleTransposeSpec : StringSpec({
 
     "scaleTranspose() works in compiled code" {
         val p = StrudelPattern.compile("""n("0 2").scale("C:major").scaleTranspose(1)""")
-        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.note shouldBe "D3"
@@ -131,7 +131,7 @@ class LangScaleTransposeSpec : StringSpec({
     "scaleTranspose() with minor scale" {
         // C minor: C, D, Eb, F, G, Ab, Bb
         val p = n("0 2 4").scale("C:minor").scaleTranspose("1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         // 0 (C) + 1 = D (D4)
@@ -145,7 +145,7 @@ class LangScaleTransposeSpec : StringSpec({
     "scaleTranspose() with pentatonic scale" {
         // C pentatonic: C, D, E, G, A
         val p = n("0 1 2 3 4").scale("C:pentatonic").scaleTranspose("1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 5
         // 0 (C) + 1 = D
@@ -163,7 +163,7 @@ class LangScaleTransposeSpec : StringSpec({
     "scaleTranspose() with dorian scale" {
         // C dorian: C, D, Eb, F, G, A, Bb
         val p = n("0 2 5").scale("C:dorian").scaleTranspose("-1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         // 0 (C) - 1 = Bb (Bb3, down octave)
@@ -178,7 +178,7 @@ class LangScaleTransposeSpec : StringSpec({
         // C phrygian: C, Db, Eb, F, G, Ab, Bb
         // Intervals: 1P 2m 3m 4P 5P 6m 7m
         val p = n("0 1 2 3").scale("C:phrygian").scaleTranspose("1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 4
         // 0 (C) -> Db
@@ -195,7 +195,7 @@ class LangScaleTransposeSpec : StringSpec({
         // C lydian: C, D, E, F#, G, A, B
         // Intervals: 1P 2M 3M 4A 5P 6M 7M
         val p = n("3 4 6").scale("C:lydian").scaleTranspose("-1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         // 3 (F#) -> E
@@ -210,7 +210,7 @@ class LangScaleTransposeSpec : StringSpec({
         // C locrian: C, Db, Eb, F, Gb, Ab, Bb
         // Intervals: 1P 2m 3m 4P 5d 6m 7m
         val p = n("0 4 6").scale("C:locrian").scaleTranspose("1")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         // 0 (C) -> Db
@@ -224,7 +224,7 @@ class LangScaleTransposeSpec : StringSpec({
     "scaleTranspose() with chromatic scale" {
         // C chromatic: C, Db, D, Eb, E, F, Gb, G, Ab, A, Bb, B
         val p = n("0 1 2").scale("C:chromatic").scaleTranspose("2")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         // 0 (C) -> D (index 2)

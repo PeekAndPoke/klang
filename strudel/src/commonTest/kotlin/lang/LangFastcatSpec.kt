@@ -11,20 +11,20 @@ class LangFastcatSpec : StringSpec({
     "fastcat() squashes patterns into one cycle" {
         // fastcat("a", "b") should play "a" then "b" within a single cycle (0.0 to 1.0)
         val p = fastcat(note("a"), note("b"))
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "a"
-        events[0].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "b"
-        events[1].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "fastcat() works as a string extension" {
         val p = "a".fastcat("b")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.value?.asString shouldBeEqualIgnoringCase "a"

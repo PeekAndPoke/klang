@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -61,12 +62,13 @@ class TakePattern(
 
             // Keep only events that start within the take window
             val takenEvents = sourceEvents.filter { event ->
-                event.begin >= takeWindowStart && event.begin < takeWindowEnd
-            }.map { event ->
+                event.part.begin >= takeWindowStart && event.part.begin < takeWindowEnd
+            }.mapNotNull { event ->
                 // Clip event end to take window boundary
-                if (event.end > takeWindowEnd) {
-                    val newEnd = takeWindowEnd
-                    event.copy(end = newEnd, dur = newEnd - event.begin)
+                if (event.part.end > takeWindowEnd) {
+                    val takeWindow = TimeSpan(takeWindowStart, takeWindowEnd)
+                    val clippedPart = event.part.clipTo(takeWindow)
+                    clippedPart?.let { event.copy(part = it) }
                 } else {
                     event
                 }
@@ -75,22 +77,19 @@ class TakePattern(
             // Scale events to fill the full cycle
             // Map from [cycleStart, cycleStart + stepFraction] to [cycleStart, cycleStart + 1]
             val scaledEvents = takenEvents.map { event ->
-                val relativeBegin = event.begin - cycleStart
-                val relativeEnd = event.end - cycleStart
-
-                val scaledBegin = cycleStart + (relativeBegin / stepFraction)
-                val scaledEnd = cycleStart + (relativeEnd / stepFraction)
+                val scaleFactor = Rational.ONE / stepFraction
+                val scaledPart = event.part.shift(-cycleStart).scale(scaleFactor).shift(cycleStart)
+                val scaledWhole = event.whole?.shift(-cycleStart)?.scale(scaleFactor)?.shift(cycleStart)
 
                 event.copy(
-                    begin = scaledBegin,
-                    end = scaledEnd,
-                    dur = scaledEnd - scaledBegin
+                    part = scaledPart,
+                    whole = scaledWhole
                 )
             }
 
             // Filter to query range
             result.addAll(scaledEvents.filter { event ->
-                event.end > from && event.begin < to
+                event.part.end > from && event.part.begin < to
             })
         }
 
@@ -110,9 +109,11 @@ class TakePattern(
         val clampedEnd = minOf(to, n)
         val events = source.queryArcContextual(from, clampedEnd, ctx)
 
-        return events.filter { it.begin < n }.map { event ->
-            if (event.end > n) {
-                event.copy(end = n, dur = n - event.begin)
+        return events.filter { it.part.begin < n }.mapNotNull { event ->
+            if (event.part.end > n) {
+                val boundary = TimeSpan(Rational.ZERO, n)
+                val clippedPart = event.part.clipTo(boundary)
+                clippedPart?.let { event.copy(part = it) }
             } else {
                 event
             }

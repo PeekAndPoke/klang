@@ -87,8 +87,8 @@ class LangBindPatternSpec : StringSpec({
 
         // All events should be within the cycle
         events.forEach { event ->
-            (event.begin >= 0.0.toRational()) shouldBe true
-            (event.end <= 1.0.toRational()) shouldBe true
+            (event.part.begin >= 0.0.toRational()) shouldBe true
+            (event.part.end <= 1.0.toRational()) shouldBe true
         }
     }
 })

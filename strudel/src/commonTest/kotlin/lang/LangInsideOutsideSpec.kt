@@ -20,8 +20,8 @@ class LangInsideOutsideSpec : StringSpec({
         insideEvents.size shouldBe manualEvents.size
         insideEvents.zip(manualEvents).forEach { (ie, me) ->
             ie.data.note shouldBeEqualIgnoringCase me.data.note!!
-            ie.begin.toDouble() shouldBe (me.begin.toDouble() plusOrMinus EPSILON)
-            ie.end.toDouble() shouldBe (me.end.toDouble() plusOrMinus EPSILON)
+            ie.part.begin.toDouble() shouldBe (me.part.begin.toDouble() plusOrMinus EPSILON)
+            ie.part.end.toDouble() shouldBe (me.part.end.toDouble() plusOrMinus EPSILON)
         }
     }
 
@@ -50,8 +50,8 @@ class LangInsideOutsideSpec : StringSpec({
         outsideEvents.size shouldBe manualEvents.size
         outsideEvents.zip(manualEvents).forEach { (oe, me) ->
             oe.data.note shouldBeEqualIgnoringCase me.data.note!!
-            oe.begin.toDouble() shouldBe (me.begin.toDouble() plusOrMinus EPSILON)
-            oe.end.toDouble() shouldBe (me.end.toDouble() plusOrMinus EPSILON)
+            oe.part.begin.toDouble() shouldBe (me.part.begin.toDouble() plusOrMinus EPSILON)
+            oe.part.end.toDouble() shouldBe (me.part.end.toDouble() plusOrMinus EPSILON)
         }
     }
 

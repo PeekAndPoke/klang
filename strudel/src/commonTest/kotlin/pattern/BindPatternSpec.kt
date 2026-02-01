@@ -54,18 +54,18 @@ class BindPatternSpec : StringSpec({
         events shouldHaveSize 4  // Each outer event contains 2 inner events
 
         // First outer event (0.0 - 0.5) should have 2 inner events clipped to it
-        events[0].begin shouldBe 0.toRational()
-        events[0].end shouldBe (1.0 / 4.0).toRational()
+        events[0].part.begin shouldBe 0.toRational()
+        events[0].part.end shouldBe (1.0 / 4.0).toRational()
 
-        events[1].begin shouldBe (1.0 / 4.0).toRational()
-        events[1].end shouldBe (1.0 / 2.0).toRational()
+        events[1].part.begin shouldBe (1.0 / 4.0).toRational()
+        events[1].part.end shouldBe (1.0 / 2.0).toRational()
 
         // Second outer event (0.5 - 1.0) should have 2 inner events clipped to it
-        events[2].begin shouldBe (1.0 / 2.0).toRational()
-        events[2].end shouldBe (3.0 / 4.0).toRational()
+        events[2].part.begin shouldBe (1.0 / 2.0).toRational()
+        events[2].part.end shouldBe (3.0 / 4.0).toRational()
 
-        events[3].begin shouldBe (3.0 / 4.0).toRational()
-        events[3].end shouldBe 1.toRational()
+        events[3].part.begin shouldBe (3.0 / 4.0).toRational()
+        events[3].part.end shouldBe 1.toRational()
     }
 
     "BindPattern should handle null transform results (skip events)" {
@@ -97,8 +97,8 @@ class BindPatternSpec : StringSpec({
         val events = pattern.queryArc(0.25, 0.75)
         events shouldHaveSize 2  // Should get events "b" and "c"
 
-        events[0].begin shouldBe 0.25.toRational()
-        events[1].begin shouldBe 0.5.toRational()
+        events[0].part.begin shouldBe 0.25.toRational()
+        events[1].part.begin shouldBe 0.5.toRational()
     }
 
     "BindPattern should handle empty outer pattern" {
@@ -137,13 +137,13 @@ class BindPatternSpec : StringSpec({
         events shouldHaveSize 2
 
         // Event should be clipped to outer boundaries
-        events[0].begin shouldBe 0.0.toRational()
-        events[0].end shouldBe 0.5.toRational()
+        events[0].part.begin shouldBe 0.0.toRational()
+        events[0].part.end shouldBe 0.5.toRational()
         events[0].data.note shouldBeEqualIgnoringCase "x"
 
         // Second event clipped to outer boundaries
-        events[1].begin shouldBe 0.5.toRational()
-        events[1].end shouldBe 1.0.toRational()
+        events[1].part.begin shouldBe 0.5.toRational()
+        events[1].part.end shouldBe 1.0.toRational()
         events[1].data.note shouldBeEqualIgnoringCase "x"
     }
 

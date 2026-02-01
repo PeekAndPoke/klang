@@ -28,16 +28,16 @@ class LangPickRestartSpec : StringSpec({
         // Event 1 at 0.0:
         // inner restarted at 0.0.
         // inner 0.0-0.25 is "0".
-        events[0].begin.toDouble() shouldBeExactly 0.0
-        events[0].end.toDouble() shouldBeExactly 0.25
+        events[0].part.begin.toDouble() shouldBeExactly 0.0
+        events[0].part.end.toDouble() shouldBeExactly 0.25
         events[0].data.value?.asString shouldBe "0"
 
         // Event 2 at 0.5:
         // inner restarted at 0.0 (relative to 0.5).
         // so we get inner's 0.0-0.25 again, which is "0".
         // If it was standard 'pick', at 0.5 we would get inner's 0.5-0.75 which is "2".
-        events[1].begin.toDouble() shouldBeExactly 0.5
-        events[1].end.toDouble() shouldBeExactly 0.75
+        events[1].part.begin.toDouble() shouldBeExactly 0.5
+        events[1].part.end.toDouble() shouldBeExactly 0.75
         events[1].data.value?.asString shouldBe "0"
     }
 
@@ -145,12 +145,12 @@ class LangPickRestartSpec : StringSpec({
         events shouldHaveSize 2
 
         // Event 1 at 0.0: "0"
-        events[0].begin.toDouble() shouldBeExactly 0.0
+        events[0].part.begin.toDouble() shouldBeExactly 0.0
         events[0].data.value?.asString shouldBe "0"
 
         // Event 2 at 0.5:
         // Standard pick queries inner at 0.5. Inner at 0.5-0.75 is "2".
-        events[1].begin.toDouble() shouldBeExactly 0.5
+        events[1].part.begin.toDouble() shouldBeExactly 0.5
         events[1].data.value?.asString shouldBe "2"
     }
 })

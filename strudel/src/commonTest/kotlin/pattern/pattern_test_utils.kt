@@ -12,7 +12,7 @@ fun verifyPattern(
 ) {
     pattern.shouldNotBeNull()
 
-    val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+    val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
     events.size shouldBe expectedCount
 
@@ -20,8 +20,8 @@ fun verifyPattern(
         check(
             index,
             event.data.note,
-            event.begin.toDouble(),
-            event.dur.toDouble(),
+            event.part.begin.toDouble(),
+            event.part.duration.toDouble(),
         )
     }
 }

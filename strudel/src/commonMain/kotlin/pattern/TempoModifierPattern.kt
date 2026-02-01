@@ -23,7 +23,11 @@ internal class TempoModifierPattern(
     val invertPattern: Boolean = false,
 ) : StrudelPattern {
     companion object {
-        private val epsilon = 1e-7.toRational()
+        /**
+         * Minimum query length to avoid Rational precision issues with very small numbers.
+         * Queries smaller than this are skipped.
+         */
+        private val MIN_OVERLAP = 1e-7.toRational()
 
         /**
          * Create a TempoModifierPattern with a static factor value.
@@ -68,7 +72,7 @@ internal class TempoModifierPattern(
 
         for (factorEvent in factorEvents) {
             val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
-            val events = queryWithFactor(factorEvent.begin, factorEvent.end, ctx, factor)
+            val events = queryWithFactor(factorEvent.part.begin, factorEvent.part.end, ctx, factor)
 
             val factorLocation = factorEvent.sourceLocations?.innermost
             if (factorLocation != null) {
@@ -95,19 +99,23 @@ internal class TempoModifierPattern(
             Rational.ONE / maxOf(0.001.toRational(), factor)
         }
 
-        val (innerFrom, innerTo) = scaleTimeRangeWithEpsilon(from, to, scale, epsilon)
+        val (innerFrom, innerTo) = scaleTimeRange(from, to, scale)
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
         return innerEvents.mapNotNull { ev ->
-            val (mappedBegin, mappedEnd, mappedDur) = mapEventTimeByScale(ev, scale)
+            val (scaledPart, scaledWhole) = mapEventTimeByScale(ev, scale)
 
-            if (hasOverlap(mappedBegin, mappedEnd, from, to)) {
-                ev.copy(
-                    begin = mappedBegin,
-                    end = mappedEnd,
-                    dur = mappedDur
-                )
+            val hasOverlap = hasOverlapWithEpsilon(
+                eventBegin = scaledPart.begin,
+                eventEnd = scaledPart.end,
+                queryFrom = from,
+                queryTo = to,
+                epsilon = MIN_OVERLAP,
+            )
+
+            if (hasOverlap) {
+                ev.copy(part = scaledPart, whole = scaledWhole)
             } else {
                 null
             }

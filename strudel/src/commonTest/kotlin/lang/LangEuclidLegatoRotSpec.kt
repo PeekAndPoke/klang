@@ -26,25 +26,25 @@ class LangEuclidLegatoRotSpec : StringSpec({
         // 4. 0.875 to 1.0   (Head of Event 3)
 
         val p = note("a").euclidLegatoRot(3, 8, 1)
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 4
 
         // Wrapped part
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
         // Event 1
-        events[1].begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         // Event 2
-        events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].part.end.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
 
         // Event 3 (head)
-        events[3].begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
-        events[3].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[3].part.begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
+        events[3].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "euclidLegatoRot works as top-level function" {

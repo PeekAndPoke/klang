@@ -13,7 +13,7 @@ class LangPolymeterSpec : StringSpec({
         // "a b" fits into 6 steps -> repeats 3 times in 1 cycle
         // "c d e" fits into 6 steps -> repeats 2 times in 1 cycle
         val p = polymeter(note("a b"), note("c d e"))
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // Expected: a b a b a b (6 events) + c d e c d e (6 events) = 12 events total
         events.size shouldBe 12
@@ -25,15 +25,15 @@ class LangPolymeterSpec : StringSpec({
         cEvents.size shouldBe 2 // "c" appears 2 times
 
         // Check timing of first "a" and "c" - should start together
-        aEvents[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        cEvents[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        aEvents[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        cEvents[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
     }
 
     "polymeter() preserves structure for single patterns" {
         // "a b" (2 steps) aligned to LCM(2) = 2 steps
         // Should play "a b" in 1 cycle, not sped up to 4
         val p = polymeter(note("a b"))
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "a"
@@ -46,7 +46,7 @@ class LangPolymeterSpec : StringSpec({
         // gap(3) -> repeats 2 times (0 events, just silence)
         // Total visible events: 6
         val p = polymeter(note("a b"), gap(3))
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 6
         events.map { it.data.note?.lowercase() } shouldBe listOf("a", "b", "a", "b", "a", "b")
@@ -71,7 +71,7 @@ class LangPolymeterSpec : StringSpec({
         // pure("a") -> repeats 2 times -> "a a"
         // "b c" -> repeats 1 time -> "b c"
         val p = polymeter(pure("a"), note("b c"))
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 4
         val aEvents = events.filter { it.data.value?.asString == "a" }
@@ -84,14 +84,14 @@ class LangPolymeterSpec : StringSpec({
         // "a b" (2 steps) aligned to explicit 2 steps
         // Should play normally "a b" once in 1 cycle
         val p = polymeterSteps(2, note("a b"))
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "a"
-        events[0].dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "b"
-        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "polymeterSteps() speeds up pattern to fit higher step count" {
@@ -112,7 +112,7 @@ class LangPolymeterSpec : StringSpec({
         // So "a b c d" becomes length 2 cycles.
         // In 1 cycle (0..1), we should hear "a b"
         val p = polymeterSteps(2, note("a b c d"))
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "a"

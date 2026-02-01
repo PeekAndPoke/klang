@@ -31,7 +31,7 @@ internal class RandLPattern(
             val atom = AtomicPattern.pure
             val events = (0 until n).map { index ->
                 atom.reinterpret { evt, ctx ->
-                    val fraction = evt.begin - evt.begin.floor()
+                    val fraction = evt.part.begin - evt.part.begin.floor()
                     val seed = (fraction * n * 10).toInt()
                     val random = ctx.getSeededRandom(seed, index, "randL")
                     val value = random.nextInt(0, 8).asVoiceValue()
@@ -64,7 +64,7 @@ internal class RandLPattern(
 
             val events = (0 until n).map { index ->
                 atom.reinterpret { evt, ctx2 ->
-                    val fraction = evt.begin - evt.begin.floor()
+                    val fraction = evt.part.begin - evt.part.begin.floor()
                     val seed = (fraction * n * 10).toInt()
                     val random = ctx2.getSeededRandom(seed, index, "randL")
                     val value = random.nextInt(0, 8).asVoiceValue()
@@ -73,7 +73,7 @@ internal class RandLPattern(
             }
 
             val seqPattern = SequencePattern(events)
-            val seqEvents = seqPattern.queryArcContextual(nEvent.begin, nEvent.end, ctx)
+            val seqEvents = seqPattern.queryArcContextual(nEvent.part.begin, nEvent.part.end, ctx)
             result.addAll(seqEvents)
         }
 

@@ -20,12 +20,12 @@ class LangStackSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "a"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "b"
-        events[1].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "stack() works as method on StrudelPattern" {

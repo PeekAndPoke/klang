@@ -27,7 +27,7 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 1000) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 4
 
@@ -37,11 +37,11 @@ class WeightDebugTest : StringSpec({
                 // Check note
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[index]
                 // Check start time (should start exactly where previous ended)
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
                 // Check duration
-                event.dur.toDouble() shouldBe (expectedDurations[index] plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDurations[index] plusOrMinus EPSILON)
                 // remember last end
-                lastEnd = event.end
+                lastEnd = event.part.end
             }
 
             // Ensure the last event ends exactly at the end of the cycle
@@ -58,16 +58,16 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDur plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDur plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
         }
@@ -87,16 +87,16 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
         }
@@ -114,16 +114,16 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
         }
@@ -143,16 +143,16 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
         }
@@ -171,7 +171,7 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 4 // a, b, c, d
 
@@ -182,20 +182,20 @@ class WeightDebugTest : StringSpec({
             val d = events.find { it.data.note?.lowercase() == "d" }!!
 
             // Layer 1
-            a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
-            b.dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+            b.part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
             // b starts after a
-            b.begin.toDouble() shouldBe (a.end.toDouble() plusOrMinus EPSILON)
+            b.part.begin.toDouble() shouldBe (a.part.end.toDouble() plusOrMinus EPSILON)
 
             // Layer 2
-            c.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            d.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            c.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            d.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
             // d starts after c
-            d.begin.toDouble() shouldBe (c.end.toDouble() plusOrMinus EPSILON)
+            d.part.begin.toDouble() shouldBe (c.part.end.toDouble() plusOrMinus EPSILON)
 
             // Both layers start at beginning of cycle (relative to cycle start)
-            (a.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            (c.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            (a.part.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            (c.part.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         }
     }
 
@@ -206,18 +206,18 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toDouble()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             val a = events[0]
             val b = events[1]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
             a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBeEqualIgnoringCase "b"
-            b.dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+            b.part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
             b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
@@ -236,19 +236,19 @@ class WeightDebugTest : StringSpec({
         for (startCycle in 0 until 100 step 2) {
             val from = startCycle.toDouble()
             val to = from + 2.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             val a = events[0]
             val b = events[1]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
-            a.dur.toDouble() shouldBe (1.5 plusOrMinus EPSILON) // 0.75 * 2
+            a.part.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (1.5 plusOrMinus EPSILON) // 0.75 * 2
 
             b.data.note shouldBeEqualIgnoringCase "b"
-            b.begin.toDouble() shouldBe (from + 1.5 plusOrMinus EPSILON)
-            b.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON) // 0.25 * 2
+            b.part.begin.toDouble() shouldBe (from + 1.5 plusOrMinus EPSILON)
+            b.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON) // 0.25 * 2
         }
     }
 
@@ -264,7 +264,7 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toDouble()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 4 // a, b, a, b
 
@@ -275,15 +275,15 @@ class WeightDebugTest : StringSpec({
 
             // 1st iteration
             a1.data.note shouldBeEqualIgnoringCase "a"
-            a1.dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+            a1.part.duration.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
             b1.data.note shouldBeEqualIgnoringCase "b"
-            b1.dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            b1.part.duration.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
             // 2nd iteration
             a2.data.note shouldBeEqualIgnoringCase "a"
-            a2.dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+            a2.part.duration.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
             b2.data.note shouldBeEqualIgnoringCase "b"
-            b2.dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            b2.part.duration.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
         }
     }
 
@@ -297,18 +297,18 @@ class WeightDebugTest : StringSpec({
         for (startCycle in 0 until 100 step 2) {
             val from = startCycle.toDouble()
             val to = from + 2.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             val a = events[0]
             val b = events[1]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.dur.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
             a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBeEqualIgnoringCase "b"
-            b.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            b.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
             b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
@@ -324,16 +324,16 @@ class WeightDebugTest : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toDouble()
             val to = from + 0.5
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 1
             val a = events[0]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
+            a.part.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
             // Note: queryArc typically returns events that *overlap* the arc.
             // The event's duration property describes the event itself, usually not clipped to query.
-            a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         }
     }
 })

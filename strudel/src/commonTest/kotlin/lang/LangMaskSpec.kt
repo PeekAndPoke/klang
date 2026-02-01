@@ -13,12 +13,12 @@ class LangMaskSpec : StringSpec({
         // note("c e").mask("x ~") -> should only keep "c"
         val p = note("c e").mask("x ~")
 
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 1
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "mask() works with boolean patterns" {
@@ -31,11 +31,11 @@ class LangMaskSpec : StringSpec({
         //   - First half "0": drops "c" (1.0-1.5)
         //   - Second half "1": keeps "[eb,g]" (1.5-2.0) -> 2 events
         // Total should be 5 events
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         events.size shouldBe 5
-        events.filter { it.begin.toDouble() < 1.0 }.size shouldBe 3
-        events.filter { it.begin.toDouble() >= 1.0 }.size shouldBe 2
+        events.filter { it.part.begin.toDouble() < 1.0 }.size shouldBe 3
+        events.filter { it.part.begin.toDouble() >= 1.0 }.size shouldBe 2
     }
 
     "mask() top-level function works" {

@@ -56,7 +56,7 @@ class LangChordSpec : StringSpec({
 
     "chord() works with multiple chords" {
         val p = chord("C F G")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         assertSoftly {
             events.size shouldBe 3
@@ -69,7 +69,7 @@ class LangChordSpec : StringSpec({
 
     "chord() as pattern extension" {
         val p = s("piano").chord("C F")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 1
         events[0].data.chord shouldBe "C"

@@ -18,20 +18,20 @@ class ReversePatternSpec : StringSpec({
         )
         val reversed = ReversePattern(inner)
 
-        val events = reversed.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = reversed.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // Should have 2 events
         events.size shouldBe 2
 
         // First event should be "b" (from 0.5-1.0 reversed to 0.0-0.5)
         events[0].data.note shouldBe "b"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         // Second event should be "a" (from 0.0-0.5 reversed to 0.5-1.0)
         events[1].data.note shouldBe "a"
-        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "ReversePattern reverses each cycle independently" {
@@ -45,7 +45,7 @@ class ReversePatternSpec : StringSpec({
         val reversed = ReversePattern(inner)
 
         // Query two cycles
-        val events = reversed.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = reversed.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // Should have 4 events (2 per cycle)
         events.size shouldBe 4
@@ -71,7 +71,7 @@ class ReversePatternSpec : StringSpec({
         val reversed = ReversePattern(inner)
 
         // Query only the middle portion (0.25 to 0.75)
-        val events = reversed.queryArc(0.25, 0.75).sortedBy { it.begin }
+        val events = reversed.queryArc(0.25, 0.75).sortedBy { it.part.begin }
 
         // Should get events that fall in this range after reversal
         // Original: a(0-0.25), b(0.25-0.5), c(0.5-0.75), d(0.75-1.0)

@@ -32,47 +32,36 @@ internal class PickRestartPattern(
             val selectedPattern = if (key != null) lookup[key] else null
             if (selectedPattern == null) continue
 
-            val intersectStart = maxOf(from, selectorEvent.begin)
-            val intersectEnd = minOf(to, selectorEvent.end)
+            val intersectStart = maxOf(from, selectorEvent.part.begin)
+            val intersectEnd = minOf(to, selectorEvent.part.end)
 
             if (intersectEnd <= intersectStart) continue
 
             // Restart: Map global time to local time relative to selector event start
             // Global: [intersectStart, intersectEnd]
-            // Local:  [intersectStart - begin, intersectEnd - begin]
+            // Local:  [intersectStart - part.begin, intersectEnd - part.begin]
 
-            val localStart = intersectStart - selectorEvent.begin
-            val localEnd = intersectEnd - selectorEvent.begin
+            val localStart = intersectStart - selectorEvent.part.begin
+            val localEnd = intersectEnd - selectorEvent.part.begin
 
             val innerEvents = selectedPattern.queryArcContextual(localStart, localEnd, ctx)
 
             // Shift inner events back to global time
             for (innerEvent in innerEvents) {
-                // We clip to the selector event duration (like pick/innerJoin)
-                // because pickRestart usually implies the pattern lives within the event.
-                // However, does pickRestart clip?
-                // Strudel documentation doesn't explicitly say, but usually it behaves like 'pick' but with reset phase.
-
-                // Shift back
-                val globalBegin = innerEvent.begin + selectorEvent.begin
-                val globalEnd = innerEvent.end + selectorEvent.begin
+                // Shift back to global time
+                val shiftedPart = innerEvent.part.shift(selectorEvent.part.begin)
+                val shiftedWhole = innerEvent.whole?.shift(selectorEvent.part.begin) ?: shiftedPart
 
                 // Clip to selector event
-                val clippedBegin = maxOf(globalBegin, selectorEvent.begin)
-                val clippedEnd = minOf(globalEnd, selectorEvent.end)
+                val clippedPart = shiftedPart.clipTo(selectorEvent.part)
 
-                if (clippedEnd > clippedBegin) {
-                    if (clippedBegin != globalBegin || clippedEnd != globalEnd) {
-                        result.add(
-                            innerEvent.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin
-                            )
+                if (clippedPart != null) {
+                    result.add(
+                        innerEvent.copy(
+                            part = clippedPart,
+                            whole = shiftedWhole  // Preserve whole with shift applied
                         )
-                    } else {
-                        result.add(innerEvent.copy(begin = globalBegin, end = globalEnd))
-                    }
+                    )
                 }
             }
         }

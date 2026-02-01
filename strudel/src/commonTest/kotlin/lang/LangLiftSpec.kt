@@ -49,7 +49,7 @@ class LangLiftSpec : StringSpec({
         val events = result.queryArc(0.0, 0.5)
         events shouldHaveSize 2
         events[0].data.sound shouldBe "bd"
-        events[0].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "lift() - transform function is called" {

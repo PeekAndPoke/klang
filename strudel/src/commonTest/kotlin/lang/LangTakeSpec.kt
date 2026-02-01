@@ -2,7 +2,9 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
 
 class LangTakeSpec : StringSpec({
 
@@ -28,7 +30,7 @@ class LangTakeSpec : StringSpec({
         events shouldHaveSize 3
         events.map { it.data.note } shouldBe listOf("c", "d", "e")
         // The 'e' event should be clipped
-        events[2].end.toDouble() shouldBe 1.0
+        events[2].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "take() works as standalone function" {

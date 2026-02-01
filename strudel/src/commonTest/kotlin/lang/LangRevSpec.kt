@@ -13,18 +13,18 @@ class LangRevSpec : StringSpec({
         val p = sound("a b").rev()
 
         // When querying one cycle
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // Then "b" should be first and "a" second
         events.size shouldBe 2
 
         events[0].data.sound shouldBe "b"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         events[1].data.sound shouldBe "a"
-        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "rev(n) reverses every n-th cycle" {
@@ -34,7 +34,7 @@ class LangRevSpec : StringSpec({
         val p = sound("a b").rev(2)
 
         // Querying the first cycle of the 2-cycle reversal
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // In a 2-cycle reverse of "a b a b":
         // 0.0-0.5 (a) -> 1.5-2.0
@@ -48,7 +48,7 @@ class LangRevSpec : StringSpec({
 
     "rev() works as a standalone function" {
         val p = rev(sound("bd hh"))
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "hh"
@@ -56,7 +56,7 @@ class LangRevSpec : StringSpec({
 
     "rev() works as extension on String" {
         val p = "bd hh".rev()
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.value?.asString shouldBe "hh"
@@ -64,7 +64,7 @@ class LangRevSpec : StringSpec({
 
     "rev() works in compiled code" {
         val p = StrudelPattern.compile("""sound("bd hh").rev()""")
-        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "hh"
@@ -72,7 +72,7 @@ class LangRevSpec : StringSpec({
 
     "rev(n) works in compiled code" {
         val p = StrudelPattern.compile("""sound("a b").rev(2)""")
-        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "b"
@@ -83,7 +83,7 @@ class LangRevSpec : StringSpec({
         // The control pattern "1 2 1 2" creates 4 events (quarters)
         // For each quarter, we apply reversal with the corresponding n value
         val p = sound("bd hh").rev("1 2 1 2")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // Should have events from the reversed pattern
         // With 4 control events, we get events for each quarter
@@ -113,8 +113,8 @@ class LangRevSpec : StringSpec({
         val p1 = sound("a b c d").rev(2)
         val p2 = sound("a b c d").rev(steady(2))
 
-        val events1 = p1.queryArc(0.0, 2.0).sortedBy { it.begin }
-        val events2 = p2.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events1 = p1.queryArc(0.0, 2.0).sortedBy { it.part.begin }
+        val events2 = p2.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // Both should have same number of events
         events1.size shouldBe events2.size

@@ -33,7 +33,10 @@ fun applyTimeShift(
         // This is the core early/late logic:
         pattern._withQueryTime { t -> t - offset }
             .mapEvents { e ->
-                e.copy(begin = e.begin + offset, end = e.end + offset)
+                val shiftedPart = e.part.shift(offset)
+                // If whole is null (continuous pattern), set whole = part to create discrete event
+                val shiftedWhole = e.whole?.shift(offset) ?: shiftedPart
+                e.copy(part = shiftedPart, whole = shiftedWhole)
             }
     }
 }
@@ -247,7 +250,11 @@ private fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?
 
             // _late(b) -> shift time +b
             fastGapped._withQueryTime { t -> t - b }
-                .mapEvents { ev -> ev.copy(begin = ev.begin + b, end = ev.end + b) }
+                .mapEvents { ev ->
+                    val shiftedPart = ev.part.shift(b)
+                    val shiftedWhole = ev.whole?.shift(b)
+                    ev.copy(part = shiftedPart, whole = shiftedWhole)
+                }
         }
     }
 }
@@ -311,9 +318,9 @@ private fun applyFocus(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
 
             source._withQueryTime { t -> (t - s) / d + sFloored }
                 .mapEvents { ev ->
-                    val begin = (ev.begin - sFloored) * d + s
-                    val end = (ev.end - sFloored) * d + s
-                    ev.copy(begin = begin, end = end, dur = end - begin)
+                    val scaledPart = ev.part.shift(-sFloored).scale(d).shift(s)
+                    val scaledWhole = ev.whole?.shift(-sFloored)?.scale(d)?.shift(s)
+                    ev.copy(part = scaledPart, whole = scaledWhole)
                 }
         }
     }
@@ -365,7 +372,7 @@ private fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         // factorPattern.zoom(begin, end) takes the slice of factor corresponding to the event
         // and stretches it to 0..1, which matches the squeezed context.
         val localFactor = if (staticFactor == null) {
-            factorPattern.zoom(event.begin.toDouble(), event.end.toDouble())
+            factorPattern.zoom(event.part.begin.toDouble(), event.part.end.toDouble())
         } else {
             factorPattern
         }

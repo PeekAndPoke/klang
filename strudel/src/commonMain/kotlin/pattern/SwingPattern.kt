@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -48,16 +49,16 @@ internal class SwingPattern(
         val subdivisionDuration = Rational.ONE / nRat
 
         return events.map { ev ->
-            val swing = (swingProvider.query(from = ev.begin, ctx = ctx)?.asDouble ?: 0.0).coerceIn(-1.0, 1.0)
+            val swing = (swingProvider.query(from = ev.part.begin, ctx = ctx)?.asDouble ?: 0.0).coerceIn(-1.0, 1.0)
             val firstPartRatio = ((1.0 + swing) / 2.0).toRational()
             val secondPartRatio = ((1.0 - swing) / 2.0).toRational()
 
             // Get the cycle this event is in
-            val cycle = ev.begin.floor()
+            val cycle = ev.part.begin.floor()
 
             // Position within the cycle [0, 1)
-            val cyclePos = ev.begin - cycle
-            val eventDuration = ev.end - ev.begin
+            val cyclePos = ev.part.begin - cycle
+            val eventDuration = ev.part.duration
 
             // Which subdivision does this event belong to?
             val subdivisionIndex = (cyclePos / subdivisionDuration).floor()
@@ -72,32 +73,41 @@ internal class SwingPattern(
 
             if (isFirstHalf) {
                 // First half: scale position proportionally within [0, firstPartRatio * subdivisionDuration)
-                // Original range: [0, halfDuration)
-                // New range: [0, firstPartRatio * subdivisionDuration)
                 val scaleFactor = firstPartRatio / 0.5.toRational()
 
                 val newPosInSubdivision = posInSubdivision * scaleFactor
-                val newDuration = eventDuration * scaleFactor
-
                 val newBegin = cycle + subdivisionStart + newPosInSubdivision
-                val newEnd = newBegin + newDuration
+                val newEnd = newBegin + (eventDuration * scaleFactor)
 
-                ev.copy(begin = newBegin, end = newEnd, dur = newDuration)
+                val newPart = TimeSpan(newBegin, newEnd)
+                val newWhole = ev.whole?.let { whole ->
+                    val wholePos = whole.begin - cycle - subdivisionStart
+                    val newWholeBegin = cycle + subdivisionStart + (wholePos * scaleFactor)
+                    val newWholeEnd = newWholeBegin + (whole.duration * scaleFactor)
+                    TimeSpan(newWholeBegin, newWholeEnd)
+                }
+
+                ev.copy(part = newPart, whole = newWhole)
             } else {
                 // Second half: scale position proportionally within [firstPartRatio * subdivisionDuration, subdivisionDuration)
-                // Original range: [halfDuration, subdivisionDuration)
-                // New range: [firstPartRatio * subdivisionDuration, subdivisionDuration)
                 val scaleFactor = secondPartRatio / 0.5.toRational()
 
                 val posWithinSecondHalf = posInSubdivision - halfDuration
                 val newPosInSecondHalf = posWithinSecondHalf * scaleFactor
-                val newDuration = eventDuration * scaleFactor
 
                 val firstPartDuration = subdivisionDuration * firstPartRatio
                 val newBegin = cycle + subdivisionStart + firstPartDuration + newPosInSecondHalf
-                val newEnd = newBegin + newDuration
+                val newEnd = newBegin + (eventDuration * scaleFactor)
 
-                ev.copy(begin = newBegin, end = newEnd, dur = newDuration)
+                val newPart = TimeSpan(newBegin, newEnd)
+                val newWhole = ev.whole?.let { whole ->
+                    val wholePos = whole.begin - cycle - subdivisionStart - halfDuration
+                    val newWholeBegin = cycle + subdivisionStart + firstPartDuration + (wholePos * scaleFactor)
+                    val newWholeEnd = newWholeBegin + (whole.duration * scaleFactor)
+                    TimeSpan(newWholeBegin, newWholeEnd)
+                }
+
+                ev.copy(part = newPart, whole = newWhole)
             }
         }
     }

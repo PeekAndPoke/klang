@@ -255,8 +255,8 @@ val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
             for (sourceEvent in sourceEvents) {
                 // Query condition at this source event's time (sample at midpoint)
                 val conditionEvents = condition.queryArcContextual(
-                    from = sourceEvent.begin,
-                    to = sourceEvent.begin + 0.00001.toRational(),
+                    from = sourceEvent.part.begin,
+                    to = sourceEvent.part.begin + 0.00001.toRational(),
                     ctx = ctx,
                 )
 
@@ -265,7 +265,7 @@ val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
 
                 if (isTrue) {
                     val transformedEvents = transformed
-                        .queryArcContextual(from = sourceEvent.begin, to = sourceEvent.end, ctx = ctx)
+                        .queryArcContextual(from = sourceEvent.part.begin, to = sourceEvent.part.end, ctx = ctx)
 
                     result.addAll(transformedEvents)
                 } else {

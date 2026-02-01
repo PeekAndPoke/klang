@@ -127,8 +127,8 @@ class RandrunPatternSpec : StringSpec({
 
         // Check that events are evenly distributed
         events.forEachIndexed { index, event ->
-            event.begin.toDouble() shouldBe (index.toDouble() / 4)
-            event.end.toDouble() shouldBe ((index + 1).toDouble() / 4)
+            event.part.begin.toDouble() shouldBe (index.toDouble() / 4)
+            event.part.end.toDouble() shouldBe ((index + 1).toDouble() / 4)
         }
     }
 })

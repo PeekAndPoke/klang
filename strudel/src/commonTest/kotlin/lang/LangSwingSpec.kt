@@ -21,7 +21,7 @@ class LangSwingSpec : StringSpec({
                     val cycleDbl = cycle.toDouble()
                     val events = subject.queryArc(cycleDbl, cycleDbl + 1)
                     val values = events.map {
-                        listOf(it.begin.toDouble(), it.end.toDouble(), it.data.note)
+                        listOf(it.part.begin.toDouble(), it.part.end.toDouble(), it.data.note)
                     }
 
                     println("Cycle $cycle | ${events.size} events | $values")
@@ -30,24 +30,20 @@ class LangSwingSpec : StringSpec({
                     events.size shouldBe 4
 
                     events[0].data.note shouldBeEqualIgnoringCase "c"
-                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
+                    events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
 
                     events[1].data.note shouldBeEqualIgnoringCase "d"
-                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
-                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
+                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                     events[2].data.note shouldBeEqualIgnoringCase "e"
-                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
+                    events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
 
                     events[3].data.note shouldBeEqualIgnoringCase "f"
-                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
-                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
-
-                    events.forEach {
-                        (it.end - it.begin).toDouble() shouldBe (it.dur.toDouble() plusOrMinus EPSILON)
-                    }
+                    events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
+                    events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -63,7 +59,7 @@ class LangSwingSpec : StringSpec({
                     val cycleDbl = cycle.toDouble()
                     val events = subject.queryArc(cycleDbl, cycleDbl + 1)
                     val values = events.map {
-                        listOf(it.begin.toDouble(), it.end.toDouble(), it.data.note)
+                        listOf(it.part.begin.toDouble(), it.part.end.toDouble(), it.data.note)
                     }
 
                     println("Cycle $cycle | ${events.size} events | $values")
@@ -71,24 +67,20 @@ class LangSwingSpec : StringSpec({
                     events.size shouldBe 4
 
                     events[0].data.note shouldBeEqualIgnoringCase "c"
-                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
+                    events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
 
                     events[1].data.note shouldBeEqualIgnoringCase "d"
-                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
-                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.583333333333) plusOrMinus EPSILON)
+                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.583333333333) plusOrMinus EPSILON)
 
                     events[2].data.note shouldBeEqualIgnoringCase "e"
-                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.83333333333) plusOrMinus EPSILON)
+                    events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.83333333333) plusOrMinus EPSILON)
 
                     events[3].data.note shouldBeEqualIgnoringCase "f"
-                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.08333333333) plusOrMinus EPSILON)
-
-                    events.forEach {
-                        (it.end - it.begin).toDouble() shouldBe (it.dur.toDouble() plusOrMinus EPSILON)
-                    }
+                    events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.08333333333) plusOrMinus EPSILON)
                 }
             }
         }
@@ -99,23 +91,23 @@ class LangSwingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.forEach {
-            println("${it.begin} ${it.end}")
+            println("${it.part.begin} ${it.part.end}")
         }
 
         assertSoftly {
             events.size shouldBe 4
 
-            events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            events[0].end.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+            events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            events[0].part.end.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
 
-            events[1].begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
-            events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[1].part.begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+            events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-            events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            events[2].end.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
+            events[2].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[2].part.end.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
 
-            events[3].begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
-            events[3].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+            events[3].part.begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
+            events[3].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 
@@ -129,24 +121,24 @@ class LangSwingSpec : StringSpec({
                     val cycleDbl = cycle.toDouble()
                     val events = subject.queryArc(cycleDbl, cycleDbl + 1)
                     val values = events.map {
-                        listOf(it.begin.toDouble(), it.end.toDouble(), it.data.note)
+                        listOf(it.part.begin.toDouble(), it.part.end.toDouble(), it.data.note)
                     }
 
                     println("Cycle $cycle | ${events.size} events | $values")
 
                     events.size shouldBe 4
 
-                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
+                    events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
 
-                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
-                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
+                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
-                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
 
-                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -158,23 +150,23 @@ class LangSwingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.forEach {
-            println("${it.begin} ${it.end}")
+            println("${it.part.begin} ${it.part.end}")
         }
 
         assertSoftly {
             events.size shouldBe 4
 
-            events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            events[0].end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            events[0].part.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
-            events[1].begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
-            events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[1].part.begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-            events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            events[2].end.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+            events[2].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[2].part.end.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
 
-            events[3].begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
-            events[3].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+            events[3].part.begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+            events[3].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 
@@ -189,8 +181,8 @@ class LangSwingSpec : StringSpec({
             swingEvents.size shouldBe swingByEvents.size
 
             swingEvents.zip(swingByEvents).forEach { (se, sbe) ->
-                se.begin shouldBe sbe.begin
-                se.end shouldBe sbe.end
+                se.part.begin shouldBe sbe.part.begin
+                se.part.end shouldBe sbe.part.end
             }
         }
     }

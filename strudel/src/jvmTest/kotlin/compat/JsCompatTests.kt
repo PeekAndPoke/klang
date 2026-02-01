@@ -80,7 +80,7 @@ class JsCompatTests : StringSpec() {
 
         fun List<StrudelPatternEvent>.sort() = sortedWith(
             compareBy(
-                { it.begin.toDouble() },
+                { it.part.begin.toDouble() },
                 { it.data.note },
             )
         )
@@ -257,7 +257,7 @@ ${comparison.report}
 
         fun StrudelPatternEvent.str(): String {
             val parts = listOf(
-                "${begin.toDouble().toFixed(3)}-${end.toDouble().toFixed(3)} ",
+                "${part.begin.toDouble().toFixed(3)}-${part.end.toDouble().toFixed(3)} ",
                 data.value?.asString,
                 data.note,
                 data.sound,

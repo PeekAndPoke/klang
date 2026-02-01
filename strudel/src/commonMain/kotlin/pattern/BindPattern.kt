@@ -14,7 +14,6 @@ import io.peekandpoke.klang.strudel.math.Rational
  */
 internal class BindPattern(
     private val outer: StrudelPattern,
-    private val clip: Boolean = true,
     private val preserveMetadata: Boolean = true,
     private val transform: (StrudelPatternEvent) -> StrudelPattern?,
 ) : StrudelPattern {
@@ -45,35 +44,21 @@ internal class BindPattern(
         for (outerEvent in outerEvents) {
             val innerPattern = transform(outerEvent) ?: continue
 
-            val intersectStart = maxOf(from, outerEvent.begin)
-            val intersectEnd = minOf(to, outerEvent.end)
+            val intersectStart = maxOf(from, outerEvent.part.begin)
+            val intersectEnd = minOf(to, outerEvent.part.end)
 
             if (intersectEnd <= intersectStart) continue
 
             val innerEvents = innerPattern.queryArcContextual(intersectStart, intersectEnd, ctx)
 
-            if (!clip) {
-                result.addAll(
-                    innerEvents.filter { it.begin >= outerEvent.begin && it.begin <= outerEvent.end }
-                )
-            } else {
-                for (innerEvent in innerEvents) {
-                    val clippedBegin = maxOf(innerEvent.begin, outerEvent.begin)
-                    val clippedEnd = minOf(innerEvent.end, outerEvent.end)
+            for (innerEvent in innerEvents) {
+                val clippedPart = innerEvent.part.clipTo(outerEvent.part)
 
-                    if (clippedEnd > clippedBegin) {
-                        if (clippedBegin != innerEvent.begin || clippedEnd != innerEvent.end) {
-                            result.add(
-                                innerEvent.copy(
-                                    begin = clippedBegin,
-                                    end = clippedEnd,
-                                    dur = clippedEnd - clippedBegin
-                                )
-                            )
-                        } else {
-                            result.add(innerEvent)
-                        }
-                    }
+                if (clippedPart != null) {
+                    result.add(
+                        // CRITICAL: preserve whole - don't modify it!
+                        innerEvent.copy(part = clippedPart)
+                    )
                 }
             }
         }

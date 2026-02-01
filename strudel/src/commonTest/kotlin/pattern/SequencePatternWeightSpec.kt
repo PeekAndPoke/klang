@@ -26,7 +26,7 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 1000) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 4
 
@@ -34,9 +34,9 @@ class SequencePatternWeightSpec : StringSpec({
 
             events.forEachIndexed { index, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[index]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDurations[index] plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDurations[index] plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
 
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
@@ -51,16 +51,16 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDur plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDur plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
         }
@@ -76,16 +76,16 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
         }
@@ -100,16 +100,16 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
         }
@@ -124,16 +124,16 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
             var lastEnd = from
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
-                event.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
-                event.dur.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
-                lastEnd = event.end
+                event.part.begin.toDouble() shouldBe (lastEnd.toDouble() plusOrMinus EPSILON)
+                event.part.duration.toDouble() shouldBe (expectedDurs[i] plusOrMinus EPSILON)
+                lastEnd = event.part.end
             }
             lastEnd.toDouble() shouldBe (to.toDouble() plusOrMinus EPSILON)
         }
@@ -148,7 +148,7 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toRational()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 4 // a, b, c, d
 
@@ -158,17 +158,17 @@ class SequencePatternWeightSpec : StringSpec({
             val d = events.find { it.data.note?.lowercase() == "d" }!!
 
             // Layer 1 (a@3 b -> 3/4, 1/4)
-            a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
-            b.dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-            b.begin.toDouble() shouldBe (a.end.toDouble() plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+            b.part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+            b.part.begin.toDouble() shouldBe (a.part.end.toDouble() plusOrMinus EPSILON)
 
             // Layer 2 (c d -> 1/2, 1/2)
-            c.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            d.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            d.begin.toDouble() shouldBe (c.end.toDouble() plusOrMinus EPSILON)
+            c.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            d.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            d.part.begin.toDouble() shouldBe (c.part.end.toDouble() plusOrMinus EPSILON)
 
-            (a.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            (c.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            (a.part.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            (c.part.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         }
     }
 
@@ -178,18 +178,18 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toDouble()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             val a = events[0]
             val b = events[1]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
             a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBeEqualIgnoringCase "b"
-            b.dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+            b.part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
             b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
@@ -200,19 +200,19 @@ class SequencePatternWeightSpec : StringSpec({
         for (startCycle in 0 until 100 step 2) {
             val from = startCycle.toDouble()
             val to = from + 2.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             val a = events[0]
             val b = events[1]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
-            a.dur.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
+            a.part.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
 
             b.data.note shouldBeEqualIgnoringCase "b"
-            b.begin.toDouble() shouldBe (from + 1.5 plusOrMinus EPSILON)
-            b.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            b.part.begin.toDouble() shouldBe (from + 1.5 plusOrMinus EPSILON)
+            b.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
 
@@ -222,7 +222,7 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toDouble()
             val to = from + 1.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 4 // a, b, a, b
 
@@ -232,14 +232,14 @@ class SequencePatternWeightSpec : StringSpec({
             val b2 = events[3]
 
             a1.data.note shouldBeEqualIgnoringCase "a"
-            a1.dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+            a1.part.duration.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
             b1.data.note shouldBeEqualIgnoringCase "b"
-            b1.dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            b1.part.duration.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
             a2.data.note shouldBeEqualIgnoringCase "a"
-            a2.dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+            a2.part.duration.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
             b2.data.note shouldBeEqualIgnoringCase "b"
-            b2.dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            b2.part.duration.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
         }
     }
 
@@ -249,18 +249,18 @@ class SequencePatternWeightSpec : StringSpec({
         for (startCycle in 0 until 100 step 2) {
             val from = startCycle.toDouble()
             val to = from + 2.0
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             val a = events[0]
             val b = events[1]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.dur.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
             a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBeEqualIgnoringCase "b"
-            b.dur.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            b.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
             b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
@@ -271,14 +271,14 @@ class SequencePatternWeightSpec : StringSpec({
         for (cycle in 0 until 100) {
             val from = cycle.toDouble()
             val to = from + 0.5
-            val events = pattern.queryArc(from, to).sortedBy { it.begin }
+            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 1
             val a = events[0]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
-            a.dur.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+            a.part.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
+            a.part.duration.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         }
     }
 })

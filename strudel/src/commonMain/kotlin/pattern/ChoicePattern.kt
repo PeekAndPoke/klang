@@ -5,7 +5,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.strudel.sampleAt
 
 internal class ChoicePattern(
     val selector: StrudelPattern,
@@ -106,11 +106,8 @@ internal class ChoicePattern(
                 // Weighted choice
                 // We map weights to double values at the start of the event
                 val currentWeights = weights.map { wp ->
-                    // Sample weight at event start.
-                    // Using a tiny epsilon to ensure we are "inside" the event if it starts exactly at `from`.
-                    val eps = 0.0001.toRational()
-                    val wEvs = wp.queryArcContextual(ev.begin, ev.begin + eps, ctx)
-                    wEvs.firstOrNull()?.data?.value?.asDouble ?: 0.0
+                    // Sample weight at event start
+                    wp.sampleAt(ev.part.begin, ctx)?.data?.value?.asDouble ?: 0.0
                 }
 
                 val totalWeight = currentWeights.sum()
@@ -140,7 +137,7 @@ internal class ChoicePattern(
             // where the selector was active.
             // We pass the selector event's timeframe to query the chosen pattern.
 
-            chosenPat.queryArcContextual(ev.begin, ev.end, ctx)
+            chosenPat.queryArcContextual(ev.part.begin, ev.part.end, ctx)
         }
     }
 }

@@ -5,27 +5,25 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.strudel.testEvent
 
 class StaticStrudelPatternSpec : StringSpec({
 
     "StaticStrudelPattern: Direct Instantiation" {
         // Manually create two events in a 1-cycle window
         val events = listOf(
-            StrudelPatternEvent(
+            testEvent(
                 begin = 0.0.toRational(),
                 end = 0.5.toRational(),
-                dur = 0.5.toRational(),
                 data = StrudelVoiceData.empty.copy(note = "a"),
             ),
-            StrudelPatternEvent(
+            testEvent(
                 begin = 0.5.toRational(),
                 end = 1.0.toRational(),
-                dur = 0.5.toRational(),
                 data = StrudelVoiceData.empty.copy(note = "b"),
             )
         )
@@ -48,10 +46,9 @@ class StaticStrudelPatternSpec : StringSpec({
 
     "StaticStrudelPattern: query multiple cycles (looping)" {
         val events = listOf(
-            StrudelPatternEvent(
+            testEvent(
                 begin = 0.0.toRational(),
                 end = 1.0.toRational(),
-                dur = 1.0.toRational(),
                 data = StrudelVoiceData.empty.copy(note = "kick"),
             )
         )
@@ -60,7 +57,7 @@ class StaticStrudelPatternSpec : StringSpec({
         // Query cycle 5
         val result = pattern.queryArc(5.0, 6.0)
         result.size shouldBe 1
-        result[0].begin.toDouble() shouldBe (5.0 plusOrMinus EPSILON)
+        result[0].part.begin.toDouble() shouldBe (5.0 plusOrMinus EPSILON)
         result[0].data.note shouldBe "kick"
     }
 
@@ -72,12 +69,12 @@ class StaticStrudelPatternSpec : StringSpec({
         frozen shouldBe io.kotest.matchers.types.beInstanceOf<StaticStrudelPattern>()
 
         // Query the frozen pattern at a different cycle offset
-        val events = frozen.queryArc(10.0, 11.0).sortedBy { it.begin }
+        val events = frozen.queryArc(10.0, 11.0).sortedBy { it.part.begin }
 
         events.size shouldBe 4
         events[0].data.note shouldBeEqualIgnoringCase "a"
-        events[0].begin.toDouble() shouldBe (10.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (10.0 plusOrMinus EPSILON)
         events[3].data.note shouldBeEqualIgnoringCase "d"
-        events[3].begin.toDouble() shouldBe (10.75 plusOrMinus EPSILON)
+        events[3].part.begin.toDouble() shouldBe (10.75 plusOrMinus EPSILON)
     }
 })

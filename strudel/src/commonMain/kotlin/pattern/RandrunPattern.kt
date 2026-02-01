@@ -5,6 +5,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -43,25 +44,26 @@ internal class RandrunPattern(
             val updatedCtx = ctx.update {
                 setIfAbsent(QueryContext.randomSeed, 0)
             }
-            val cycle = nEvent.begin.floor()
+            val cycle = nEvent.part.begin.floor()
             val random = updatedCtx.getSeededRandom(cycle, "randrun")
             val permutation = (0 until n).toMutableList()
             permutation.shuffle(random)
 
             // Create n evenly-spaced events in the control event's timespan
-            val duration = nEvent.end - nEvent.begin
+            val duration = nEvent.part.duration
             val stepSize = duration / Rational(n)
 
             for (index in 0 until n) {
-                val eventBegin = nEvent.begin + (stepSize * Rational(index))
+                val eventBegin = nEvent.part.begin + (stepSize * Rational(index))
                 val eventEnd = eventBegin + stepSize
                 val value = permutation[index].asVoiceValue()
 
+                val timeSpan = TimeSpan(begin = eventBegin, end = eventEnd)
+
                 result.add(
                     StrudelPatternEvent(
-                        begin = eventBegin,
-                        end = eventEnd,
-                        dur = stepSize,
+                        part = timeSpan,
+                        whole = timeSpan,
                         data = StrudelVoiceData.empty.copy(value = value)
                     )
                 )

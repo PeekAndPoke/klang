@@ -1,10 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -128,11 +125,11 @@ internal class EuclideanMorphPattern(
         for (grooveEvent in grooveEvents) {
             // Get pulses and steps values for this groove event's timespan
             val pulses = pulsesEvents
-                .firstOrNull { it.begin < grooveEvent.end && it.end > grooveEvent.begin }
+                .firstOrNull { it.part.begin < grooveEvent.part.end && it.part.end > grooveEvent.part.begin }
                 ?.data?.value?.asInt ?: 0
 
             val steps = stepsEvents
-                .firstOrNull { it.begin < grooveEvent.end && it.end > grooveEvent.begin }
+                .firstOrNull { it.part.begin < grooveEvent.part.end && it.part.end > grooveEvent.part.begin }
                 ?.data?.value?.asInt ?: 0
 
             if (pulses <= 0 || steps <= 0) continue
@@ -143,16 +140,16 @@ internal class EuclideanMorphPattern(
             val arcs = calculateMorphedArcs(pulses, steps, perc)
 
             // Generate events from arcs that intersect with the groove event
-            val startCycle = grooveEvent.begin.floor().toInt()
-            val endCycle = grooveEvent.end.ceil().toInt()
+            val startCycle = grooveEvent.part.begin.floor().toInt()
+            val endCycle = grooveEvent.part.end.ceil().toInt()
 
             for (cycle in startCycle until endCycle) {
                 val cycleStart = Rational(cycle)
                 val cycleEnd = cycleStart + Rational.ONE
 
                 // Effective window for this cycle is intersection of cycle and groove event
-                val windowStart = maxOf(grooveEvent.begin, cycleStart)
-                val windowEnd = minOf(grooveEvent.end, cycleEnd)
+                val windowStart = maxOf(grooveEvent.part.begin, cycleStart)
+                val windowEnd = minOf(grooveEvent.part.end, cycleEnd)
 
                 if (windowStart >= windowEnd) continue
 
@@ -166,11 +163,12 @@ internal class EuclideanMorphPattern(
                     val intersectEnd = minOf(windowEnd, arcEndAbs)
 
                     if (intersectEnd > intersectStart) {
+                        val timeSpan = TimeSpan(begin = intersectStart, end = intersectEnd)
+
                         result.add(
                             StrudelPatternEvent(
-                                begin = intersectStart,
-                                end = intersectEnd,
-                                dur = intersectEnd - intersectStart,
+                                part = timeSpan,
+                                whole = timeSpan,
                                 data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
                             )
                         )

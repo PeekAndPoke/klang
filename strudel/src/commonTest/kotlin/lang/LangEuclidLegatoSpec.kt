@@ -17,18 +17,18 @@ class LangEuclidLegatoSpec : StringSpec({
         val p = note("a").euclidLegato(3, 8)
         val events = p.queryArc(0.0, 1.0)
 
-        events.forEach { println("${it.begin} -> ${it.dur}") }
+        events.forEach { println("${it.part.begin} -> ${it.part.duration}") }
 
         events.size shouldBe 3
 
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.duration.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
 
-        events[1].begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
-        events[1].dur.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+        events[1].part.duration.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
 
-        events[2].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
-        events[2].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[2].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "euclidLegato works as top-level function" {

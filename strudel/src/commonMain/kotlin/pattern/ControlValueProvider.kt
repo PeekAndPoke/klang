@@ -1,10 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -39,11 +36,12 @@ sealed interface ControlValueProvider {
             to: Rational,
             ctx: StrudelPattern.QueryContext,
         ): List<StrudelPatternEvent> {
+            val timeSpan = TimeSpan(begin = from, end = to)
+
             return listOf(
                 StrudelPatternEvent(
-                    begin = from,
-                    end = to,
-                    dur = to - from,
+                    part = timeSpan,
+                    whole = timeSpan,
                     data = StrudelVoiceData.empty.copy(value = value),
                     sourceLocations = location?.asChain()
                 )

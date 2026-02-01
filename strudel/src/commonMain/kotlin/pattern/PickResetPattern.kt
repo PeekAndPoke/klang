@@ -33,17 +33,17 @@ internal class PickResetPattern(
             val selectedPattern = if (key != null) lookup[key] else null
             if (selectedPattern == null) continue
 
-            val intersectStart = maxOf(from, selectorEvent.begin)
-            val intersectEnd = minOf(to, selectorEvent.end)
+            val intersectStart = maxOf(from, selectorEvent.part.begin)
+            val intersectEnd = minOf(to, selectorEvent.part.end)
 
             if (intersectEnd <= intersectStart) continue
 
             // Reset: Map global time to local time relative to selector event cycle pos
             // Global: [intersectStart, intersectEnd]
-            // Shift = selectorEvent.begin.frac()
-            // Local:  [intersectStart - shift, intersectEnd - shift]
-
-            val shift = selectorEvent.begin.frac()
+            // NOTE: Using whole.begin (onset time) for cycle position calculation.
+            // This matches musical semantics. See accessor-replacement notes.
+            val eventBegin = selectorEvent.whole?.begin ?: selectorEvent.part.begin
+            val shift = eventBegin.frac()
             val localStart = intersectStart - shift
             val localEnd = intersectEnd - shift
 
@@ -51,26 +51,20 @@ internal class PickResetPattern(
 
             // Shift inner events back to global time
             for (innerEvent in innerEvents) {
-                // Shift back
-                val globalBegin = innerEvent.begin + shift
-                val globalEnd = innerEvent.end + shift
+                // Shift back to global time
+                val shiftedPart = innerEvent.part.shift(shift)
+                val shiftedWhole = innerEvent.whole?.shift(shift) ?: shiftedPart
 
                 // Clip to selector event
-                val clippedBegin = maxOf(globalBegin, selectorEvent.begin)
-                val clippedEnd = minOf(globalEnd, selectorEvent.end)
+                val clippedPart = shiftedPart.clipTo(selectorEvent.part)
 
-                if (clippedEnd > clippedBegin) {
-                    if (clippedBegin != globalBegin || clippedEnd != globalEnd) {
-                        result.add(
-                            innerEvent.copy(
-                                begin = clippedBegin,
-                                end = clippedEnd,
-                                dur = clippedEnd - clippedBegin
-                            )
+                if (clippedPart != null) {
+                    result.add(
+                        innerEvent.copy(
+                            part = clippedPart,
+                            whole = shiftedWhole  // Preserve whole with shift applied
                         )
-                    } else {
-                        result.add(innerEvent.copy(begin = globalBegin, end = globalEnd))
-                    }
+                    )
                 }
             }
         }

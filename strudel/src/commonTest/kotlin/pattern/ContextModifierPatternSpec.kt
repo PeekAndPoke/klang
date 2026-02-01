@@ -9,6 +9,7 @@ import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
+import io.peekandpoke.klang.strudel.testEvent
 
 class ContextModifierPatternSpec : StringSpec({
 
@@ -26,7 +27,7 @@ class ContextModifierPatternSpec : StringSpec({
             ): List<StrudelPatternEvent> {
                 val testVal = ctx.getOrNull(testKey) ?: "none"
                 return listOf(
-                    StrudelPatternEvent(from, to, to - from, StrudelVoiceData.empty.copy(note = testVal))
+                    testEvent(from, to, StrudelVoiceData.empty.copy(note = testVal))
                 )
             }
         }

@@ -9,6 +9,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.strudel.sampleAt
 
 class LangContinuousPatternsSpec : StringSpec({
 
@@ -858,6 +860,194 @@ class LangContinuousPatternsSpec : StringSpec({
             events.size shouldBe 2
             events[0].data.value?.asInt shouldBe 43
             events[1].data.value?.asInt shouldBe 44
+        }
+    }
+
+    "note(\"a b\").pan(sine) - multiple notes with continuous pattern" {
+        // First, let's test if multiple notes work with sine (no slow)
+        val pattern = note("a b").pan(sine)
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        withClue("Should have 2 events") {
+            events.size shouldBe 2
+        }
+
+        withClue("Event 0 should have pan") {
+            events[0].data.pan.shouldNotBeNull()
+        }
+
+        withClue("Event 1 should have pan") {
+            events[1].data.pan.shouldNotBeNull()
+        }
+    }
+
+    "note(\"a\").pan(sine) - apply continuous pattern to property" {
+        // Test that continuous patterns can be used to set properties
+        // sine oscillates between -1 and 1
+        val pattern = note("a").pan(sine)
+
+        val events = pattern.queryArc(0.0, 1.0)
+
+        withClue("Should have 1 event") {
+            events.size shouldBe 1
+        }
+
+        val event = events[0]
+        withClue("Should have note 'a'") {
+            event.data.note shouldBe "a"
+        }
+
+        withClue("Should have pan value from sine at event start") {
+            // sine at 0.0: sin(0) = 0, normalized: (0 + 1.0) / 2.0 = 0.5
+            event.data.pan shouldNotBe null
+            event.data.pan!! shouldBe (0.5 plusOrMinus EPSILON)
+        }
+    }
+
+    "sine.slow(8) generates events" {
+        // First verify that sine.slow(8) itself works
+        val pattern = sine.slow(8.0)
+        val events = pattern.queryArc(0.0, 1.0)
+
+        withClue("sine.slow(8) should generate events") {
+            events.size shouldBe 1
+            events[0].data.value.shouldNotBeNull()
+            events[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)  // At t=0, sine = 0.5
+        }
+    }
+
+    "sine.slow(8) can be sampled with sampleAt()" {
+        // Verify that sampleAt works on sine.slow(8)
+        val pattern = sine.slow(8.0)
+        val ctx = StrudelPattern.QueryContext.empty
+
+        val event0 = pattern.sampleAt(0.0.toRational(), ctx)
+        withClue("sampleAt(0.0) should return event") {
+            event0.shouldNotBeNull()
+            event0.data.value.shouldNotBeNull()
+            event0.data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
+        }
+
+        val event05 = pattern.sampleAt(0.5.toRational(), ctx)
+        withClue("sampleAt(0.5) should return event") {
+            event05.shouldNotBeNull()
+            event05.data.value.shouldNotBeNull()
+        }
+    }
+
+    "note(\"a b\").pan(sine.slow(8)) - apply slowed continuous pattern to multiple notes" {
+        // Test continuous pattern with tempo modification applied to multiple events
+        val pattern = note("a b").pan(sine.slow(8))
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        withClue("Should have 2 events") {
+            events.size shouldBe 2
+        }
+
+        // Event 0: note "a" at [0.0, 0.5)
+        withClue("Event 0 - note a") {
+            events[0].data.note shouldBe "a"
+            events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+
+            // Pan should be sampled from sine.slow(8) at event start (0.0)
+            // sine.slow(8) at 0.0: phase = 0.0, sine(0) = 0.5
+            events[0].data.pan.shouldNotBeNull()
+            events[0].data.pan shouldBe (0.5 plusOrMinus EPSILON)
+        }
+
+        // Event 1: note "b" at [0.5, 1.0)
+        withClue("Event 1 - note b") {
+            events[1].data.note shouldBe "b"
+            events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+
+            // Pan should be sampled from sine.slow(8) at event start (0.5)
+            // sine.slow(8) at 0.5: phase = 0.5/8 = 0.0625
+            // sine(0.0625) = (sin(0.0625 * 2π) + 1) / 2 = (sin(0.3927) + 1) / 2 ≈ (0.383 + 1) / 2 ≈ 0.691
+            events[1].data.pan.shouldNotBeNull()
+            events[1].data.pan shouldBe (0.691 plusOrMinus 0.01)  // Allow some tolerance
+        }
+    }
+
+    "note(\"c d e\").gain(sine.range(0.5, 1.0)) - apply ranged continuous pattern to gain" {
+        // Test continuous pattern with range transformation
+        val pattern = note("c d e").gain(sine.range(0.5, 1.0))
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        withClue("Should have 3 events") {
+            events.size shouldBe 3
+        }
+
+        // All events should have gain values between 0.5 and 1.0
+        events.forEachIndexed { i, event ->
+            withClue("Event $i") {
+                event.data.gain.shouldNotBeNull()
+                val gainValue = event.data.gain ?: 0.0
+                gainValue.shouldBeBetween(0.5, 1.0, tolerance = 0.01)
+            }
+        }
+    }
+
+    "sound(\"bd hh\").pan(saw) - apply saw wave to pan" {
+        // Test saw wave (ramps from 0 to 1)
+        val pattern = sound("bd hh").pan(saw)
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        withClue("Should have 2 events") {
+            events.size shouldBe 2
+        }
+
+        events.forEachIndexed { i, event ->
+            withClue("Event $i") {
+                event.data.pan.shouldNotBeNull()
+                // Saw values should be between -1 and 1 (after normalization)
+                val panValue = event.data.pan ?: 0.0
+                panValue.shouldBeBetween(-1.0, 1.0, tolerance = 0.01)
+            }
+        }
+    }
+
+    "note(\"a\").cutoff(sine.range(200, 2000)) - apply continuous pattern to filter cutoff" {
+        // Test applying continuous pattern to filter frequency
+        val pattern = note("a").cutoff(sine.range(200.0, 2000.0))
+
+        val events = pattern.queryArc(0.0, 1.0)
+
+        withClue("Should have 1 event") {
+            events.size shouldBe 1
+        }
+
+        val event = events[0]
+        withClue("Should have cutoff value") {
+            event.data.cutoff.shouldNotBeNull()
+            val cutoffValue = event.data.cutoff ?: 0.0
+            // sine.range(200, 2000) at 0.0: sine(0) = 0 → range(0) = 1100 (midpoint)
+            cutoffValue.shouldBeBetween(200.0, 2000.0, tolerance = 0.01)
+        }
+    }
+
+    "compiled: note(\"a b\").pan(sine.slow(4)) - continuous pattern from compiled code" {
+        // Test that compiled patterns also work with continuous properties
+        val pattern = StrudelPattern.compile("""note("a b").pan(sine.slow(4))""")
+
+        pattern.shouldNotBeNull()
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        withClue("Should have 2 events") {
+            events.size shouldBe 2
+        }
+
+        events.forEach { event ->
+            withClue("Event at ${event.part.begin}") {
+                event.data.pan.shouldNotBeNull()
+                val panValue = event.data.pan ?: 0.0
+                panValue.shouldBeBetween(-1.0, 1.0, tolerance = 0.01)
+            }
         }
     }
 

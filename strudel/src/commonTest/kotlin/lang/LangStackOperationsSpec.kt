@@ -19,19 +19,19 @@ class LangStackOperationsSpec : StringSpec({
         // p1 should start at (2.0 - 1.0) * 0.5 = 0.5
         val p = stackBy(0.5, p1, p2)
 
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
 
         // e starts at 0.0, ends at 2.0
         val eEvent = events.find { it.data.note?.lowercase() == "e" }!!
-        eEvent.begin shouldBe Rational.ZERO
-        eEvent.end shouldBe Rational(2)
+        eEvent.part.begin shouldBe Rational.ZERO
+        eEvent.part.end shouldBe Rational(2)
 
         // c starts at 0.5, ends at 1.5
         val cEvent = events.find { it.data.note?.lowercase() == "c" }!!
-        cEvent.begin shouldBe 0.5.toRational()
-        cEvent.end shouldBe 1.5.toRational()
+        cEvent.part.begin shouldBe 0.5.toRational()
+        cEvent.part.end shouldBe 1.5.toRational()
     }
 
     "stackLeft() aligns to the start" {
@@ -39,11 +39,11 @@ class LangStackOperationsSpec : StringSpec({
         val p2 = note("e").slow(2)
 
         val p = stackLeft(p1, p2)
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // Both start at 0.0
-        events.find { it.data.note?.lowercase() == "e" }!!.begin shouldBe Rational.ZERO
-        events.find { it.data.note?.lowercase() == "c" }!!.begin shouldBe Rational.ZERO
+        events.find { it.data.note?.lowercase() == "e" }!!.part.begin shouldBe Rational.ZERO
+        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe Rational.ZERO
     }
 
     "stackRight() aligns to the end" {
@@ -51,13 +51,13 @@ class LangStackOperationsSpec : StringSpec({
         val p2 = note("e").slow(2)
 
         val p = stackRight(p1, p2)
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // p2 (dur=2) starts at 0.0
-        events.find { it.data.note?.lowercase() == "e" }!!.begin shouldBe Rational.ZERO
+        events.find { it.data.note?.lowercase() == "e" }!!.part.begin shouldBe Rational.ZERO
 
         // p1 (dur=1) should start at 1.0 so it ends at 2.0
-        events.find { it.data.note?.lowercase() == "c" }!!.begin shouldBe Rational.ONE
+        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe Rational.ONE
     }
 
     "stackCentre() aligns to the center" {
@@ -65,10 +65,10 @@ class LangStackOperationsSpec : StringSpec({
         val p2 = note("e").slow(2)
 
         val p = stackCentre(p1, p2)
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // p1 (dur=1) should start at 0.5
-        events.find { it.data.note?.lowercase() == "c" }!!.begin shouldBe 0.5.toRational()
+        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe 0.5.toRational()
     }
 
     "stackBy works with ArrangementPattern" {
@@ -79,10 +79,10 @@ class LangStackOperationsSpec : StringSpec({
 
         // Align p2 to the center of p1
         val p = stackCentre(p1, p2)
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // p1 starts at 0.0, dur 2.0
         // p2 (dur 1) should start at 0.5 relative to p1
-        events.find { it.data.note?.lowercase() == "c" }!!.begin shouldBe 0.5.toRational()
+        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe 0.5.toRational()
     }
 })

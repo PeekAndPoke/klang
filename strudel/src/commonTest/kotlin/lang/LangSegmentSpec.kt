@@ -13,11 +13,11 @@ class LangSegmentSpec : StringSpec({
         events.size shouldBe 4
 
         // Check timing
-        events[0].begin.toDouble() shouldBe 0.0
-        events[0].end.toDouble() shouldBe 0.25
+        events[0].part.begin.toDouble() shouldBe 0.0
+        events[0].part.end.toDouble() shouldBe 0.25
 
-        events[3].begin.toDouble() shouldBe 0.75
-        events[3].end.toDouble() shouldBe 1.0
+        events[3].part.begin.toDouble() shouldBe 0.75
+        events[3].part.end.toDouble() shouldBe 1.0
     }
 
     "segment(n) works on discrete patterns" {
@@ -65,16 +65,16 @@ class LangSegmentSpec : StringSpec({
         events.size shouldBe 6
 
         // First half should have 2 segments (each 0.25 duration)
-        events[0].begin.toDouble() shouldBe 0.0
-        events[0].end.toDouble() shouldBe 0.25
-        events[1].begin.toDouble() shouldBe 0.25
-        events[1].end.toDouble() shouldBe 0.5
+        events[0].part.begin.toDouble() shouldBe 0.0
+        events[0].part.end.toDouble() shouldBe 0.25
+        events[1].part.begin.toDouble() shouldBe 0.25
+        events[1].part.end.toDouble() shouldBe 0.5
 
         // Second half should have 4 segments (each 0.125 duration)
-        events[2].begin.toDouble() shouldBe 0.5
-        events[2].end.toDouble() shouldBe 0.625
-        events[5].begin.toDouble() shouldBe 0.875
-        events[5].end.toDouble() shouldBe 1.0
+        events[2].part.begin.toDouble() shouldBe 0.5
+        events[2].part.end.toDouble() shouldBe 0.625
+        events[5].part.begin.toDouble() shouldBe 0.875
+        events[5].part.end.toDouble() shouldBe 1.0
     }
 
     "segment() with continuous pattern control (sine)" {
@@ -95,8 +95,8 @@ class LangSegmentSpec : StringSpec({
 
         events1.size shouldBe events2.size
         events1.zip(events2).forEach { (e1, e2) ->
-            e1.begin shouldBe e2.begin
-            e1.end shouldBe e2.end
+            e1.part.begin shouldBe e2.part.begin
+            e1.part.end shouldBe e2.part.end
         }
     }
 })

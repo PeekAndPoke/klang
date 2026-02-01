@@ -1,10 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.struct
@@ -151,11 +148,12 @@ internal class EuclideanPattern(
                     to: Rational,
                     ctx: QueryContext,
                 ): List<StrudelPatternEvent> {
+                    val timeSpan = TimeSpan(begin = from, end = to)
+
                     return listOf(
                         StrudelPatternEvent(
-                            begin = from,
-                            end = to,
-                            dur = to - from,
+                            part = timeSpan,
+                            whole = timeSpan,
                             data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
                         )
                     )
@@ -247,16 +245,19 @@ internal class EuclideanPattern(
         val stepsEvents = stepsProvider.queryEvents(from, to, ctx)
 
         val rotationEvents = rotationProvider?.queryEvents(from, to, ctx)
-            ?: listOf(
-                StrudelPatternEvent(
-                    begin = from,
-                    end = to,
-                    dur = to - from,
-                    data = StrudelVoiceData.empty.copy(
-                        value = StrudelVoiceValue.Num(0.0),
+            ?: run {
+                val timeSpan = TimeSpan(begin = from, end = to)
+
+                listOf(
+                    StrudelPatternEvent(
+                        part = timeSpan,
+                        whole = timeSpan,
+                        data = StrudelVoiceData.empty.copy(
+                            value = StrudelVoiceValue.Num(0.0),
+                        )
                     )
                 )
-            )
+            }
 
         if (pulsesEvents.isEmpty() || stepsEvents.isEmpty() || rotationEvents.isEmpty()) {
             return emptyList()
@@ -269,10 +270,10 @@ internal class EuclideanPattern(
             for (stepsEvent in stepsEvents) {
                 for (rotationEvent in rotationEvents) {
                     val overlapBegin: Rational =
-                        maxOf(pulsesEvent.begin, stepsEvent.begin, rotationEvent.begin)
+                        maxOf(pulsesEvent.part.begin, stepsEvent.part.begin, rotationEvent.part.begin)
 
                     val overlapEnd: Rational =
-                        minOf(pulsesEvent.end, stepsEvent.end, rotationEvent.end)
+                        minOf(pulsesEvent.part.end, stepsEvent.part.end, rotationEvent.part.end)
 
                     if (overlapEnd <= overlapBegin) continue
 
@@ -339,14 +340,15 @@ internal class EuclideanPattern(
 
                     if (intersectEnd > intersectStart) {
                         val innerEvents = inner.queryArcContextual(intersectStart, intersectEnd, ctx)
-                            .sortedBy { it.begin }
+                            .sortedBy { it.part.begin }
                             .take(1)
 
                         events.addAll(innerEvents.map { ev ->
+                            val timeSpan = TimeSpan(begin = intersectStart, end = intersectEnd)
+
                             ev.copy(
-                                begin = intersectStart,
-                                end = intersectEnd,
-                                dur = intersectEnd - intersectStart,
+                                part = timeSpan,
+                                whole = timeSpan  // Each Euclidean hit is independent
                             )
                         })
                     }

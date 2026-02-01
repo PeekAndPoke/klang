@@ -50,8 +50,8 @@ class LangHurrySpec : StringSpec({
         events.size shouldBe 12
 
         // Check timing - each repetition should be 1/3 of a cycle
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (1.0 / 12.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (1.0 / 12.0 plusOrMinus EPSILON)
 
         // All should have speed = 3.0
         events.forEach { event ->
@@ -64,7 +64,7 @@ class LangHurrySpec : StringSpec({
         val events = p.queryArc(0.0, 2.0)
 
         // Pattern plays at half speed, so only 2 events in first cycle
-        val firstCycleEvents = events.filter { it.begin < 1.0.toRational() }
+        val firstCycleEvents = events.filter { it.part.begin < 1.0.toRational() }
         firstCycleEvents.size shouldBe 2
 
         // Speed should be 0.5
@@ -84,8 +84,8 @@ class LangHurrySpec : StringSpec({
 
         hurriedEvents.zip(originalEvents).forEach { (h, o) ->
             h.data.note shouldBeEqualIgnoringCase (o.data.note ?: "")
-            h.begin shouldBe o.begin
-            h.end shouldBe o.end
+            h.part.begin shouldBe o.part.begin
+            h.part.end shouldBe o.part.end
             // Speed should remain unchanged (null)
             h.data.speed shouldBe o.data.speed
         }

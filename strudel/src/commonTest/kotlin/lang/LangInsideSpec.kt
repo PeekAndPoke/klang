@@ -5,6 +5,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -29,12 +30,12 @@ class LangInsideSpec : StringSpec({
                     events.shouldHaveSize(2)
 
                     events[0].data.value?.asInt shouldBe 0
-                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                     events[1].data.value?.asInt shouldBe 1
-                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[1].end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -60,20 +61,20 @@ class LangInsideSpec : StringSpec({
                     events.shouldHaveSize(4)
 
                     events[0].data.value?.asInt shouldBe 0
-                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                    events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
 
                     events[1].data.value?.asInt shouldBe 1
-                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
-                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                     events[2].data.value?.asInt shouldBe 12
-                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
 
                     events[3].data.value?.asInt shouldBe 13
-                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -92,27 +93,64 @@ class LangInsideSpec : StringSpec({
                 withClue("Cycle $cycle") {
                     val cycleDbl = cycle.toDouble()
                     val events = subject.queryArc(cycleDbl, cycleDbl + 1)
-                    val values = events.map { it.data.value?.asInt }
 
-                    println("Cycle $cycle: $values")
+                    // Expect 5 events: tail from previous cycle + 4 new events
+                    events.shouldHaveSize(5)
 
-                    events.shouldHaveSize(4)
+                    // Event 0: value=3 tail from previous cycle (no onset)
+                    withClue("Event 0 (tail of 3)") {
+                        events[0].data.value?.asInt shouldBe 3
+                        events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                        events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
+                        events[0].whole.shouldNotBeNull()
+                        events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl - 0.15) plusOrMinus EPSILON)
+                        events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
+                        events[0].hasOnset() shouldBe false  // Tail, no onset
+                    }
 
-                    events[0].data.value?.asInt shouldBe 0
-                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0 + 0.1) plusOrMinus EPSILON)
-                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.25 + 0.1) plusOrMinus EPSILON)
+                    // Event 1: value=0 (has onset)
+                    withClue("Event 1 (value 0)") {
+                        events[1].data.value?.asInt shouldBe 0
+                        events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
+                        events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.35) plusOrMinus EPSILON)
+                        events[1].whole.shouldNotBeNull()
+                        events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
+                        events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.35) plusOrMinus EPSILON)
+                        events[1].hasOnset() shouldBe true
+                    }
 
-                    events[1].data.value?.asInt shouldBe 1
-                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.25 + 0.1) plusOrMinus EPSILON)
-                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.5 + 0.1) plusOrMinus EPSILON)
+                    // Event 2: value=1 (has onset)
+                    withClue("Event 2 (value 1)") {
+                        events[2].data.value?.asInt shouldBe 1
+                        events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.35) plusOrMinus EPSILON)
+                        events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[2].whole.shouldNotBeNull()
+                        events[2].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.35) plusOrMinus EPSILON)
+                        events[2].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[2].hasOnset() shouldBe true
+                    }
 
-                    events[2].data.value?.asInt shouldBe 2
-                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5 + 0.1) plusOrMinus EPSILON)
-                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.75 + 0.1) plusOrMinus EPSILON)
+                    // Event 3: value=2 (has onset)
+                    withClue("Event 3 (value 2)") {
+                        events[3].data.value?.asInt shouldBe 2
+                        events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[3].part.end.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
+                        events[3].whole.shouldNotBeNull()
+                        events[3].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[3].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
+                        events[3].hasOnset() shouldBe true
+                    }
 
-                    events[3].data.value?.asInt shouldBe 3
-                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.75 + 0.1) plusOrMinus EPSILON)
-                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.0 + 0.1) plusOrMinus EPSILON)
+                    // Event 4: value=3 (has onset, but clipped)
+                    withClue("Event 4 (value 3)") {
+                        events[4].data.value?.asInt shouldBe 3
+                        events[4].part.begin.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
+                        events[4].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                        events[4].whole.shouldNotBeNull()
+                        events[4].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
+                        events[4].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.1) plusOrMinus EPSILON)
+                        events[4].hasOnset() shouldBe true
+                    }
                 }
             }
         }
@@ -131,29 +169,64 @@ class LangInsideSpec : StringSpec({
                 withClue("Cycle $cycle") {
                     val cycleDbl = cycle.toDouble()
                     val events = subject.queryArc(cycleDbl, cycleDbl + 1)
-                    val values = events.map {
-                        listOf(it.begin.toDouble(), it.end.toDouble(), it.data.value?.asInt)
+
+                    // Expect 5 events: late("0 0.1") creates overlapping delayed versions
+                    events.shouldHaveSize(5)
+
+                    // Event 0: value=0, no delay
+                    withClue("Event 0 (value 0, no delay)") {
+                        events[0].data.value?.asInt shouldBe 0
+                        events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                        events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                        events[0].whole.shouldNotBeNull()
+                        events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                        events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                        events[0].hasOnset() shouldBe true
                     }
 
-                    println("Cycle $cycle | ${events.size} events | $values")
+                    // Event 1: value=1, no delay
+                    withClue("Event 1 (value 1, no delay)") {
+                        events[1].data.value?.asInt shouldBe 1
+                        events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                        events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                        events[1].whole.shouldNotBeNull()
+                        events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                        events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                        events[1].hasOnset() shouldBe true
+                    }
 
-                    events.shouldHaveSize(4)
+                    // Event 2: value=1, delayed by 0.1, clipped tail (no onset!)
+                    withClue("Event 2 (value 1, delayed by 0.1, tail)") {
+                        events[2].data.value?.asInt shouldBe 1
+                        events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                        events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[2].whole.shouldNotBeNull()
+                        events[2].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.35) plusOrMinus EPSILON)
+                        events[2].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[2].hasOnset() shouldBe false  // Tail, no onset
+                    }
 
-                    events[0].data.value?.asInt shouldBe 0
-                    events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0 + 0.0) plusOrMinus EPSILON)
-                    events[0].end.toDouble() shouldBe ((cycleDbl + 0.25 + 0.0) plusOrMinus EPSILON)
+                    // Event 3: value=2, no delay
+                    withClue("Event 3 (value 2, no delay)") {
+                        events[3].data.value?.asInt shouldBe 2
+                        events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[3].part.end.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
+                        events[3].whole.shouldNotBeNull()
+                        events[3].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[3].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
+                        events[3].hasOnset() shouldBe true
+                    }
 
-                    events[1].data.value?.asInt shouldBe 1
-                    events[1].begin.toDouble() shouldBe ((cycleDbl + 0.25 + 0.0) plusOrMinus EPSILON)
-                    events[1].end.toDouble() shouldBe ((cycleDbl + 0.5 + 0.0) plusOrMinus EPSILON)
-
-                    events[2].data.value?.asInt shouldBe 2
-                    events[2].begin.toDouble() shouldBe ((cycleDbl + 0.5 + 0.1) plusOrMinus EPSILON)
-                    events[2].end.toDouble() shouldBe ((cycleDbl + 0.75 + 0.1) plusOrMinus EPSILON)
-
-                    events[3].data.value?.asInt shouldBe 3
-                    events[3].begin.toDouble() shouldBe ((cycleDbl + 0.75 + 0.1) plusOrMinus EPSILON)
-                    events[3].end.toDouble() shouldBe ((cycleDbl + 1.0 + 0.1) plusOrMinus EPSILON)
+                    // Event 4: value=3, delayed by 0.1, clipped
+                    withClue("Event 4 (value 3, delayed by 0.1)") {
+                        events[4].data.value?.asInt shouldBe 3
+                        events[4].part.begin.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
+                        events[4].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                        events[4].whole.shouldNotBeNull()
+                        events[4].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
+                        events[4].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.1) plusOrMinus EPSILON)
+                        events[4].hasOnset() shouldBe true
+                    }
                 }
             }
         }

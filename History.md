@@ -21,8 +21,35 @@
 - 29-01-2026: bought AI credits at Anthropic -> 59.50 USD
 - 29-01-2026: bought AI credits at Anthropic -> 59.50 USD
 - 30-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
+- 31-01-2026: bought AI credits at Anthropic -> 59.50 USD
 
 ## Diary
+
+### (2026-01-31) Strudel - Part/Whole Refactoring & Verification
+
+**Implementation Phase (Morning):**
+- Implemented part/whole structure for StrudelPatternEvent to match JavaScript Strudel behavior
+- Added TimeSpan data class with helper methods (shift, scale, clipTo)
+- Updated all pattern operations to preserve whole through clipping operations
+- Added hasOnset() filter in StrudelPlayback to only play onset events
+- Continuous patterns (sine, saw) now use whole = null and always play
+- Updated JavaScript interop to extract both part and whole from JS events
+- Critical fix: prevents incorrect event playback for clipped patterns
+- Build status: ✅ Compiles successfully
+- Test status: ✅ 96% passing (2374/2476 tests, 102 failures in timing edge cases)
+
+**Verification Phase (Afternoon):**
+
+- Created comprehensive verification plan for 33 pattern classes and 14 helper methods
+- **Phase 1 Verification Completed** - verified 16 pattern classes and 7 helper methods
+- Critical fix: Removed default value `= true` from BindPattern clip parameter (user-reported bug)
+- Verified patterns: ControlPattern, ChoicePattern, StackPattern, GapPattern, SometimesPattern, RandLPattern,
+  MapPattern, ReinterpretPattern, ContextModifierPattern, ContextRangeMapPattern, PropertyOverridePattern, EmptyPattern,
+  and 4 others
+- Verified helper methods: _bind, _outerJoin, _applyControl, _lift, _liftData, _liftValue, _liftNumericField
+- Result: Zero part/whole violations found - all patterns follow correct principles
+- Documentation: Updated implementation and verification plan documents with detailed results
+- Next: Address 102 failing tests and add comprehensive unit test coverage
 
 ### (2026-01-28) Strudel - Audio Effects
 

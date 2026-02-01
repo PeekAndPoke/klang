@@ -2,7 +2,6 @@ package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
-import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -11,12 +10,10 @@ import kotlinx.serialization.Transient
  */
 @Serializable
 data class StrudelPatternEvent(
-    /** The begin of the note (in cycles) */
-    val begin: Rational,
-    /** The end of the note (in cycles) */
-    val end: Rational,
-    /** The duration of the note (in cycles) */
-    val dur: Rational,
+    /** Visible portion after clipping */
+    val part: TimeSpan,
+    /** Original complete event (null for continuous patterns) */
+    val whole: TimeSpan?,
     /** The voice data */
     val data: StrudelVoiceData,
     /**
@@ -28,6 +25,9 @@ data class StrudelPatternEvent(
     @Transient
     val sourceLocations: SourceLocationChain? = null,
 ) {
+    /** Check if this event has an onset (should be played) */
+    fun hasOnset(): Boolean = whole != null && whole.begin == part.begin
+
     fun prependLocation(location: SourceLocation?) = when (location) {
         null -> this
         else -> copy(sourceLocations = sourceLocations?.prepend(location) ?: location.asChain())
