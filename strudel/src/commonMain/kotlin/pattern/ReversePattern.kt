@@ -53,7 +53,7 @@ internal class ReversePattern(
         if (nEvents.isEmpty()) return querySimpleReverse(from, to, ctx)
 
         // Fast-path when provider behaves like a static value over the full range
-        if (nEvents.size == 1 && nEvents[0].begin == from && nEvents[0].end == to) {
+        if (nEvents.size == 1 && nEvents[0].part.begin == from && nEvents[0].part.end == to) {
             val n = nEvents[0].data.value?.asInt ?: 1
             return if (n <= 1) {
                 querySimpleReverse(from, to, ctx)
@@ -70,10 +70,10 @@ internal class ReversePattern(
 
             val events = if (n <= 1) {
                 // Simple per-cycle reversal
-                querySimpleReverse(nEvent.begin, nEvent.end, ctx)
+                querySimpleReverse(nEvent.part.begin, nEvent.part.end, ctx)
             } else {
                 // Multi-cycle reversal
-                queryMultiCycleReverse(nEvent.begin, nEvent.end, ctx, n.toRational())
+                queryMultiCycleReverse(nEvent.part.begin, nEvent.part.end, ctx, n.toRational())
             }
 
             result.addAll(events)

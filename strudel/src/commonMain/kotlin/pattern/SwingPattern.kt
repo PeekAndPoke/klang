@@ -48,16 +48,16 @@ internal class SwingPattern(
         val subdivisionDuration = Rational.ONE / nRat
 
         return events.map { ev ->
-            val swing = (swingProvider.query(from = ev.begin, ctx = ctx)?.asDouble ?: 0.0).coerceIn(-1.0, 1.0)
+            val swing = (swingProvider.query(from = ev.part.begin, ctx = ctx)?.asDouble ?: 0.0).coerceIn(-1.0, 1.0)
             val firstPartRatio = ((1.0 + swing) / 2.0).toRational()
             val secondPartRatio = ((1.0 - swing) / 2.0).toRational()
 
             // Get the cycle this event is in
-            val cycle = ev.begin.floor()
+            val cycle = ev.part.begin.floor()
 
             // Position within the cycle [0, 1)
-            val cyclePos = ev.begin - cycle
-            val eventDuration = ev.end - ev.begin
+            val cyclePos = ev.part.begin - cycle
+            val eventDuration = ev.part.duration
 
             // Which subdivision does this event belong to?
             val subdivisionIndex = (cyclePos / subdivisionDuration).floor()

@@ -61,10 +61,10 @@ class TakePattern(
 
             // Keep only events that start within the take window
             val takenEvents = sourceEvents.filter { event ->
-                event.begin >= takeWindowStart && event.begin < takeWindowEnd
+                event.part.begin >= takeWindowStart && event.part.begin < takeWindowEnd
             }.mapNotNull { event ->
                 // Clip event end to take window boundary
-                if (event.end > takeWindowEnd) {
+                if (event.part.end > takeWindowEnd) {
                     val takeWindow = io.peekandpoke.klang.strudel.TimeSpan(takeWindowStart, takeWindowEnd)
                     val clippedPart = event.part.clipTo(takeWindow)
                     clippedPart?.let { event.copy(part = it) }
@@ -88,7 +88,7 @@ class TakePattern(
 
             // Filter to query range
             result.addAll(scaledEvents.filter { event ->
-                event.end > from && event.begin < to
+                event.part.end > from && event.part.begin < to
             })
         }
 
@@ -108,8 +108,8 @@ class TakePattern(
         val clampedEnd = minOf(to, n)
         val events = source.queryArcContextual(from, clampedEnd, ctx)
 
-        return events.filter { it.begin < n }.mapNotNull { event ->
-            if (event.end > n) {
+        return events.filter { it.part.begin < n }.mapNotNull { event ->
+            if (event.part.end > n) {
                 val boundary = io.peekandpoke.klang.strudel.TimeSpan(Rational.ZERO, n)
                 val clippedPart = event.part.clipTo(boundary)
                 clippedPart?.let { event.copy(part = it) }

@@ -47,7 +47,49 @@ data class StrudelPatternEvent(
 ```
 
 **Status**: Implementation complete, 40+ files updated, compiles successfully
-**Test Status**: 98 out of 2476 tests failing (96% pass rate)
+**Test Status**: 85 out of 2476 tests failing (97% pass rate) - improved after struct fixes
+
+### Critical Discovery: Struct and Shared Whole Semantics (2026-02-01)
+
+**Problem**: Understanding how `struct()` affects `whole` and onset detection.
+
+**Key Findings**:
+
+1. **Struct sets whole to mask boundaries** (verified against JS Strudel)
+   ```kotlin
+   note("c e").struct("x")  // "x" covers [0, 1)
+   // Event c: part=[0, 0.5), whole=[0, 1.0)
+   // Event e: part=[0.5, 1.0), whole=[0, 1.0)  ← Same whole!
+   ```
+
+2. **Multiple events can share the same whole**
+   - Both events have `whole=[0, 1.0)` (the struct mask)
+   - But only first event has onset: `hasOnset() = (whole.begin == part.begin)`
+   - Event c: 0.0 == 0.0 → true ✓ plays
+   - Event e: 0.0 != 0.5 → false ✗ doesn't play
+
+3. **Only the first event in a shared whole triggers**
+   - This is correct behavior! Struct can filter/gate events
+   - The mask creates a temporal boundary, and only events starting at the boundary trigger
+
+4. **Independent pulses create independent wholes**
+   ```kotlin
+   note("c").struct("x*2")  // Two separate "x" pulses
+   // Event 0: part=[0, 0.5), whole=[0, 0.5), hasOnset=true ✓
+   // Event 1: part=[0.5, 1.0), whole=[0.5, 1.0), hasOnset=true ✓
+   // Both play because each pulse is independent!
+   ```
+
+5. **Use case: late() creates tails without onset**
+   ```kotlin
+   note("c").late(0.5)
+   // Cycle 0: part=[0.5, 1.0), whole=[0.5, 1.5), hasOnset=true ✓
+   // Cycle 1: part=[1.0, 1.5), whole=[0.5, 1.5), hasOnset=false ✗ (tail)
+   ```
+
+**Implementation**: `StructurePattern.kt` sets `whole = maskEvent.whole` for all clipped events.
+
+**Verification**: Live strudel.cc testing confirmed this behavior matches JavaScript.
 
 ### TimeSpan Helper Class
 
@@ -64,7 +106,46 @@ data class TimeSpan(
 }
 ```
 
-## Current Priority: Accessor Removal 🚧 IN PROGRESS
+## Current Priority: Test Failure Investigation 🚧 IN PROGRESS
+
+**Status**: Down to 82 failing tests from 98 (16 tests fixed)
+
+**Recent fixes** (2026-02-01):
+
+- ✅ Fixed DropPattern scaling bug (was shifting by wrong offset)
+- ✅ Fixed accessor usages in test files (LangDropSpec, LangOffSpec, LangTakeSpec, LangInsideSpec)
+- ✅ Added comprehensive tests with part/whole assertions for drop() and off()
+
+**Remaining**: 82 failures (~60 Euclidean, 5 Swing, 3 LoopAt, 2 Inside, 2 Songs, others)
+
+## Future Refactoring TODO
+
+**Replace DropPattern and TakePattern with functional implementations** (2026-02-01)
+
+JavaScript Strudel implements `drop()` and `take()` using `stepJoin()` for structural transformations:
+
+```javascript
+export const drop = stepRegister('drop', function (i, pat) {
+   if (!pat.hasSteps) return nothing;
+   i = Fraction(i);
+   if (i.lt(0)) {
+      return pat.take(pat._steps.add(i));
+   }
+   return pat.take(Fraction(0).sub(pat._steps.sub(i)));
+});
+```
+
+Instead of dedicated pattern classes, these should be:
+
+1. Implement `StrudelPattern._stepJoin()` helper (structural join operation)
+2. Replace `DropPattern` class with a function that uses `take()` + `_stepJoin()`
+3. Replace `TakePattern` class with a simpler functional implementation
+
+This would match JavaScript architecture and simplify the codebase.
+
+**Status**: Postponed - current implementations work correctly, refactor later for architectural consistency
+
+## Accessor Removal 🚧 PAUSED
 
 **Why**: Convenience accessors (`begin`, `end`, `dur`) hide whether we're accessing `part` or `whole`, making
 correctness verification impossible.
@@ -75,7 +156,16 @@ correctness verification impossible.
 2. Comment out accessors to catch any missed usages
 3. Verify compilation and tests
 
-**Status**: Plan created, ready to execute
+**Status**: Tier 1 complete (25 usages fixed), paused to focus on test failures
+**Progress**:
+
+- ✅ StrudelPattern.kt (6 usages) - Added QUERY_EPSILON + sampleAt() helper
+- ✅ PickSqueezePattern.kt (7 usages)
+- ✅ PickRestartPattern.kt (6 usages)
+- ✅ StructurePattern.kt (3 usages) - Also fixed struct whole semantics
+- ✅ PickResetPattern.kt (3 usages)
+- ⬜ Remaining ~88 usages in Tiers 2-5
+
 **Documents**: See `docs/agent-tasks/accessor-replacement-execution.md`
 
 ## THE SIX GOLDEN RULES (Critical - Never Break These!)
@@ -301,24 +391,30 @@ Each pattern should have tests verifying:
 
 ## Current Test Status
 
-**Overall**: 2476 tests, 98 failures (96% pass rate)
+**Overall**: 2479 tests, 82 failures (97% pass rate) - up from 98 failures!
 
-**Fixed Recently** (2026-01-31):
+**Fixed Recently** (2026-02-01):
+
+- ✅ LangDropSpec - Fixed DropPattern scaling bug, added comprehensive test
+- ✅ LangOffSpec - Fixed test assertions for part/whole
+- ✅ LangTakeSpec - Added EPSILON tolerance
+- ✅ LangInsideSpec - Fixed accessor usages (2 of 4 tests passing)
+- ✅ JsCompatTest "Drop basic" - Now passing with DropPattern fix
+- ✅ Struct operations (2026-01-31) - Fixed struct whole semantics
+
+**Fixed Earlier** (2026-01-31):
 
 - ✅ LangEarlySpec - All 3 tests now pass
 - ✅ Added comprehensive part/whole verification to early() tests
 
 **Remaining Failures** (by category):
 
-- 76 tests: Euclidean patterns
-- 7 tests: Struct operations
-- 5 tests: Swing operations
+- ~60 tests: Euclidean patterns
+- 5 tests: Swing operations (implementation error mentioned)
 - 3 tests: Sample LoopAt
-- 2 tests: Drop operations
-- 2 tests: Pick operations (pickOut)
-- 2 tests: Inside operations
-- 1 test: Off operation
-- 1 test: Take operation
+- 2 tests: Inside operations (still need investigation)
+- 2 tests: Song tests (effects)
+- Others: Various patterns
 
 Most failures are timing edge cases in complex patterns, not fundamental part/whole issues.
 
@@ -472,6 +568,7 @@ When reporting issues or progress, note:
 
 ---
 
-**Last Updated**: 2026-01-31
-**Status**: Part/whole refactoring complete, accessor removal in progress
-**Test Status**: 2476 tests, 98 failures (96% pass rate)
+**Last Updated**: 2026-02-01
+**Status**: Part/whole refactoring complete, DropPattern bug fixed, test failure investigation ongoing
+**Test Status**: 2479 tests, 82 failures (97% pass rate) - 16 tests fixed today!
+**Next**: Continue investigating remaining failures (Inside, Swing, Euclidean, etc.)

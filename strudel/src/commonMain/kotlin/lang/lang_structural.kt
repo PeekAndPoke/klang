@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.not
@@ -867,7 +868,7 @@ val filterWhen by dslFunction { args, /* callInfo */ _ ->
 
     val pat: StrudelPattern = args.getOrNull(1)?.value as? StrudelPattern ?: silence
 
-    if (predicate != null) applyFilter(pat) { predicate(it.begin.toDouble()) } else pat
+    if (predicate != null) applyFilter(pat) { predicate(it.part.begin.toDouble()) } else pat
 }
 
 @Suppress("unused")
@@ -879,12 +880,12 @@ val StrudelPattern.filterWhen by dslPatternExtension { source, args, /* callInfo
     @Suppress("UNCHECKED_CAST")
     val predicate: ((Double) -> Boolean)? = args.firstOrNull()?.value as? (Double) -> Boolean
 
-    if (predicate != null) applyFilter(source = source) { predicate(it.begin.toDouble()) } else source
+    if (predicate != null) applyFilter(source = source) { predicate(it.part.begin.toDouble()) } else source
 }
 
 @StrudelDsl
 fun StrudelPattern.filterWhen(predicate: (Double) -> Boolean): StrudelPattern =
-    applyFilter(source = this) { predicate(it.begin.toDouble()) }
+    applyFilter(source = this) { predicate(it.part.begin.toDouble()) }
 
 @StrudelDsl
 val String.filterWhen by dslStringExtension { source, args, callInfo -> source.filterWhen(args, callInfo) }
@@ -1062,17 +1063,17 @@ val StrudelPattern.within by dslPatternExtension { p, args, /* callInfo */ _ ->
         val endRat = end.toRational()
 
         val isBeginInWindow: (StrudelPatternEvent) -> Boolean = { ev ->
-            val cycle = ev.begin.floor()
+            val cycle = ev.part.begin.floor()
             if (start < end) {
                 val s = cycle + startRat
                 val e = cycle + endRat
-                ev.begin >= s && ev.begin < e
+                ev.part.begin >= s && ev.part.begin < e
             } else {
                 val s1 = cycle + startRat
                 val e1 = cycle + Rational.ONE
                 val s2 = cycle
                 val e2 = cycle + endRat
-                (ev.begin >= s1 && ev.begin < e1) || (ev.begin >= s2 && ev.begin < e2)
+                (ev.part.begin >= s1 && ev.part.begin < e1) || (ev.part.begin >= s2 && ev.part.begin < e2)
             }
         }
 
@@ -1493,10 +1494,7 @@ private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
             staticN.toDouble()
         } else {
             // If N is dynamic, sample it at the start of the index event
-            // using a tiny epsilon since we need a point value
-            val eps = 0.00001
-            val nEvents = nPattern!!.queryArc(indexEvent.begin.toDouble(), indexEvent.begin.toDouble() + eps)
-            nEvents.firstOrNull()?.data?.value?.asDouble ?: 4.0
+            nPattern!!.sampleAt(indexEvent.part.begin, QueryContext.empty)?.data?.value?.asDouble ?: 4.0
         }
 
         if (n <= 0.0) return@_bind null

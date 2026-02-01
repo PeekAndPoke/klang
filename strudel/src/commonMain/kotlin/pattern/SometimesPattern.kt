@@ -5,6 +5,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.strudel.sampleAt
 
 /**
  * A pattern that probabilistically routes events to a transformation or keeps/discards them.
@@ -98,8 +99,7 @@ internal class SometimesPattern private constructor(
 
         for (event in sourceEvents) {
             val p = if (probabilityPattern != null) {
-                val pEvents = probabilityPattern.queryArcContextual(event.begin, event.begin + EPS, ctx)
-                pEvents.firstOrNull()?.data?.value?.asDouble ?: probabilityValue
+                probabilityPattern.sampleAt(event.part.begin, ctx)?.data?.value?.asDouble ?: probabilityValue
             } else {
                 probabilityValue
             }

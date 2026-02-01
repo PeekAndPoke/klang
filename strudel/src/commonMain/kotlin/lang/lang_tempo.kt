@@ -372,7 +372,7 @@ private fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         // factorPattern.zoom(begin, end) takes the slice of factor corresponding to the event
         // and stretches it to 0..1, which matches the squeezed context.
         val localFactor = if (staticFactor == null) {
-            factorPattern.zoom(event.begin.toDouble(), event.end.toDouble())
+            factorPattern.zoom(event.part.begin.toDouble(), event.part.end.toDouble())
         } else {
             factorPattern
         }

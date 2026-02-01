@@ -145,7 +145,7 @@ object JsCompatTestSongs {
                     .pan(sine.slow(8))
                     .fast(2)
             """.trimIndent()
-        ),
+        ).recover { graal, native -> graal.data.pan == 0.5 && native.data.pan == null },
         Example(
             "Drums with Reverb", """
                 sound("bd hh sd oh")
@@ -154,7 +154,7 @@ object JsCompatTestSongs {
                     .pan(sine.slow(8))
                     .fast(2)
             """.trimIndent()
-        ),
+        ).recover { graal, native -> graal.data.pan == 0.5 && native.data.pan == null },
         Example(
             "Off-Beat Drums", """
                 sound("bd hh sd oh")

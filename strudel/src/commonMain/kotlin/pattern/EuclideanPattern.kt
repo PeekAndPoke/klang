@@ -347,15 +347,17 @@ internal class EuclideanPattern(
 
                     if (intersectEnd > intersectStart) {
                         val innerEvents = inner.queryArcContextual(intersectStart, intersectEnd, ctx)
-                            .sortedBy { it.begin }
+                            .sortedBy { it.part.begin }
                             .take(1)
 
                         events.addAll(innerEvents.map { ev ->
+                            val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
+                                begin = intersectStart,
+                                end = intersectEnd
+                            )
                             ev.copy(
-                                part = io.peekandpoke.klang.strudel.TimeSpan(
-                                    begin = intersectStart,
-                                    end = intersectEnd
-                                )
+                                part = timeSpan,
+                                whole = timeSpan  // Each Euclidean hit is independent
                             )
                         })
                     }

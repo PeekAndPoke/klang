@@ -64,18 +64,16 @@ class DropPattern(
 
             // Keep only events that start after the drop window
             val keptEvents = sourceEvents.filter { event ->
-                event.begin >= keepWindowStart
+                event.part.begin >= keepWindowStart
             }
 
             // Scale events to fill the full cycle
             // Map from [keepWindowStart, keepWindowEnd] to [cycleStart, cycleEnd]
             val scaledEvents = keptEvents.map { event ->
-                val relativeBegin = event.begin - keepWindowStart
-                val relativeEnd = event.end - keepWindowStart
-
                 val scaleFactor = Rational.ONE / keepFraction
-                val scaledPart = event.part.shift(-cycleStart).scale(scaleFactor).shift(cycleStart)
-                val scaledWhole = event.whole?.shift(-cycleStart)?.scale(scaleFactor)?.shift(cycleStart)
+                // Shift events from keepWindowStart to origin, scale, then shift to cycleStart
+                val scaledPart = event.part.shift(-keepWindowStart).scale(scaleFactor).shift(cycleStart)
+                val scaledWhole = event.whole?.shift(-keepWindowStart)?.scale(scaleFactor)?.shift(cycleStart)
 
                 event.copy(
                     part = scaledPart,
@@ -85,7 +83,7 @@ class DropPattern(
 
             // Filter to query range
             result.addAll(scaledEvents.filter { event ->
-                event.end > from && event.begin < to
+                event.part.end > from && event.part.begin < to
             })
         }
 
