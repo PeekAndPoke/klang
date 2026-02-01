@@ -169,24 +169,6 @@ internal inline fun scaleTimeRange(
     return Pair(from * scale, to * scale)
 }
 
-/**
- * Scales a time range by a factor with epsilon adjustment.
- *
- * Expands the range outward by epsilon to avoid boundary precision issues.
- * Returns (scaledFrom + epsilon, scaledTo - epsilon).
- */
-internal inline fun scaleTimeRangeWithEpsilon(
-    from: Rational,
-    to: Rational,
-    scale: Rational,
-    epsilon: Rational,
-): Pair<Rational, Rational> {
-    return Pair(
-        (from * scale) + epsilon,
-        (to * scale) - epsilon
-    )
-}
-
 // ============================================================================
 // Multi-Cycle Iteration
 // ============================================================================

@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -74,7 +75,7 @@ internal class SegmentPattern(
 
                 for (sourceEvent in sourceEvents) {
                     // Clip source event to slice boundaries
-                    val sliceSpan = io.peekandpoke.klang.strudel.TimeSpan(sliceBegin, sliceEnd)
+                    val sliceSpan = TimeSpan(sliceBegin, sliceEnd)
                     val clippedPart = sourceEvent.part.clipTo(sliceSpan)
 
                     if (clippedPart != null) {

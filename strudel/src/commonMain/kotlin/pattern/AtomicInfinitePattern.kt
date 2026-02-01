@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -34,16 +35,10 @@ class AtomicInfinitePattern(val data: StrudelVoiceData) : StrudelPattern {
 
             // Check for overlap
             if (cycleStart < to && cycleEnd > from) {
-                val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
-                    begin = cycleStart,
-                    end = cycleEnd
-                )
+                val timeSpan = TimeSpan(begin = cycleStart, end = cycleEnd)
+
                 result.add(
-                    StrudelPatternEvent(
-                        part = timeSpan,
-                        whole = timeSpan,
-                        data = data
-                    )
+                    StrudelPatternEvent(part = timeSpan, whole = timeSpan, data = data)
                 )
             }
         }

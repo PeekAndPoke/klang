@@ -1,10 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -166,10 +163,8 @@ internal class EuclideanMorphPattern(
                     val intersectEnd = minOf(windowEnd, arcEndAbs)
 
                     if (intersectEnd > intersectStart) {
-                        val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
-                            begin = intersectStart,
-                            end = intersectEnd
-                        )
+                        val timeSpan = TimeSpan(begin = intersectStart, end = intersectEnd)
+
                         result.add(
                             StrudelPatternEvent(
                                 part = timeSpan,

@@ -1,10 +1,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.struct
@@ -151,10 +148,8 @@ internal class EuclideanPattern(
                     to: Rational,
                     ctx: QueryContext,
                 ): List<StrudelPatternEvent> {
-                    val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
-                        begin = from,
-                        end = to
-                    )
+                    val timeSpan = TimeSpan(begin = from, end = to)
+
                     return listOf(
                         StrudelPatternEvent(
                             part = timeSpan,
@@ -251,10 +246,8 @@ internal class EuclideanPattern(
 
         val rotationEvents = rotationProvider?.queryEvents(from, to, ctx)
             ?: run {
-                val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
-                    begin = from,
-                    end = to
-                )
+                val timeSpan = TimeSpan(begin = from, end = to)
+
                 listOf(
                     StrudelPatternEvent(
                         part = timeSpan,
@@ -351,10 +344,8 @@ internal class EuclideanPattern(
                             .take(1)
 
                         events.addAll(innerEvents.map { ev ->
-                            val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
-                                begin = intersectStart,
-                                end = intersectEnd
-                            )
+                            val timeSpan = TimeSpan(begin = intersectStart, end = intersectEnd)
+
                             ev.copy(
                                 part = timeSpan,
                                 whole = timeSpan  // Each Euclidean hit is independent

@@ -6,6 +6,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -44,10 +45,8 @@ internal class AtomicPattern(
             val begin = Rational(i)
             // Strudel events are usually triggered if their start time is within the query arc.
             if (begin >= from || begin < to) {
-                val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
-                    begin = begin,
-                    end = begin + Rational.ONE
-                )
+                val timeSpan = TimeSpan(begin = begin, end = begin + Rational.ONE)
+
                 events.add(
                     StrudelPatternEvent(
                         part = timeSpan,

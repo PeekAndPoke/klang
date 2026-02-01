@@ -5,6 +5,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -57,10 +58,8 @@ internal class RandrunPattern(
                 val eventEnd = eventBegin + stepSize
                 val value = permutation[index].asVoiceValue()
 
-                val timeSpan = io.peekandpoke.klang.strudel.TimeSpan(
-                    begin = eventBegin,
-                    end = eventEnd
-                )
+                val timeSpan = TimeSpan(begin = eventBegin, end = eventEnd)
+
                 result.add(
                     StrudelPatternEvent(
                         part = timeSpan,
