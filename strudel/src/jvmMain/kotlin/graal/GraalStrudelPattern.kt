@@ -5,6 +5,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeGetMember
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
@@ -59,13 +60,13 @@ class GraalStrudelPattern(
         // Extract part TimeSpan
         val partBegin = Rational(partJs?.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
         val partEnd = Rational(partJs?.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
-        val part = io.peekandpoke.klang.strudel.TimeSpan(partBegin, partEnd)
+        val part = TimeSpan(partBegin, partEnd)
 
         // Extract whole TimeSpan (null for continuous patterns)
         val whole = wholeJs?.let {
             val wholeBegin = Rational(it.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
             val wholeEnd = Rational(it.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
-            io.peekandpoke.klang.strudel.TimeSpan(wholeBegin, wholeEnd)
+            TimeSpan(wholeBegin, wholeEnd)
         }
 
         // Get details from "value" field

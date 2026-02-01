@@ -480,11 +480,12 @@ object Deps {
                 findByName("test") as? org.gradle.api.tasks.testing.Test,
                 findByName("jvmTest") as? org.gradle.api.tasks.testing.Test,
             ).firstOrNull()?.apply {
-                useJUnitPlatform { }
-
-                filter {
-                    isFailOnNoMatchingTests = false
+                useJUnitPlatform {
                 }
+
+//                filter {
+//                    isFailOnNoMatchingTests = false
+//                }
 
 //                testLogging {
 //                    showExceptions = true

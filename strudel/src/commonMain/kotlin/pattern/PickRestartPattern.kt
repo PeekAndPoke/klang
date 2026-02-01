@@ -32,25 +32,25 @@ internal class PickRestartPattern(
             val selectedPattern = if (key != null) lookup[key] else null
             if (selectedPattern == null) continue
 
-            val intersectStart = maxOf(from, selectorEvent.begin)
-            val intersectEnd = minOf(to, selectorEvent.end)
+            val intersectStart = maxOf(from, selectorEvent.part.begin)
+            val intersectEnd = minOf(to, selectorEvent.part.end)
 
             if (intersectEnd <= intersectStart) continue
 
             // Restart: Map global time to local time relative to selector event start
             // Global: [intersectStart, intersectEnd]
-            // Local:  [intersectStart - begin, intersectEnd - begin]
+            // Local:  [intersectStart - part.begin, intersectEnd - part.begin]
 
-            val localStart = intersectStart - selectorEvent.begin
-            val localEnd = intersectEnd - selectorEvent.begin
+            val localStart = intersectStart - selectorEvent.part.begin
+            val localEnd = intersectEnd - selectorEvent.part.begin
 
             val innerEvents = selectedPattern.queryArcContextual(localStart, localEnd, ctx)
 
             // Shift inner events back to global time
             for (innerEvent in innerEvents) {
                 // Shift back to global time
-                val shiftedPart = innerEvent.part.shift(selectorEvent.begin)
-                val shiftedWhole = innerEvent.whole?.shift(selectorEvent.begin)
+                val shiftedPart = innerEvent.part.shift(selectorEvent.part.begin)
+                val shiftedWhole = innerEvent.whole?.shift(selectorEvent.part.begin) ?: shiftedPart
 
                 // Clip to selector event
                 val clippedPart = shiftedPart.clipTo(selectorEvent.part)

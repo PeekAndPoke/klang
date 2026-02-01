@@ -70,7 +70,7 @@ private suspend fun helloStrudel() {
 
         val compiled = strudel.compile(
             """
-                note("c").off(0.25, x => x.note("e"))
+                note("c").late("0.5")
             """.trimIndent()
         ).await()
 

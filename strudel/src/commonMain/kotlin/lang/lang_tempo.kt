@@ -34,7 +34,8 @@ fun applyTimeShift(
         pattern._withQueryTime { t -> t - offset }
             .mapEvents { e ->
                 val shiftedPart = e.part.shift(offset)
-                val shiftedWhole = e.whole?.shift(offset)
+                // If whole is null (continuous pattern), set whole = part to create discrete event
+                val shiftedWhole = e.whole?.shift(offset) ?: shiftedPart
                 e.copy(part = shiftedPart, whole = shiftedWhole)
             }
     }

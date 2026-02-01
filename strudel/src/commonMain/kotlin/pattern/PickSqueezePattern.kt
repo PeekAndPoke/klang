@@ -43,28 +43,28 @@ internal class PickSqueezePattern(
             if (selectedPattern == null) continue
 
             // Determine the intersection of the query arc and the selector event
-            val intersectStart = maxOf(from, selectorEvent.begin)
-            val intersectEnd = minOf(to, selectorEvent.end)
+            val intersectStart = maxOf(from, selectorEvent.part.begin)
+            val intersectEnd = minOf(to, selectorEvent.part.end)
 
             if (intersectEnd <= intersectStart) continue
 
             // Squeeze the inner pattern into the selector event's duration.
             // We map the outer time 't' to inner time 't'' such that:
-            // selectorEvent.begin -> 0
-            // selectorEvent.end -> 1 (assuming 1 cycle for inner pattern)
+            // selectorEvent.part.begin -> 0
+            // selectorEvent.part.end -> 1 (assuming 1 cycle for inner pattern)
 
-            val duration = selectorEvent.end - selectorEvent.begin
+            val duration = selectorEvent.part.duration
             if (duration == Rational.ZERO) continue
 
-            val innerStart = (intersectStart - selectorEvent.begin) / duration
-            val innerEnd = (intersectEnd - selectorEvent.begin) / duration
+            val innerStart = (intersectStart - selectorEvent.part.begin) / duration
+            val innerEnd = (intersectEnd - selectorEvent.part.begin) / duration
 
             val innerEvents = selectedPattern.queryArcContextual(innerStart, innerEnd, ctx)
 
             // Map inner events back to outer time
             for (innerEvent in innerEvents) {
-                val scaledPart = innerEvent.part.scale(duration).shift(selectorEvent.begin)
-                val scaledWhole = innerEvent.whole?.scale(duration)?.shift(selectorEvent.begin)
+                val scaledPart = innerEvent.part.scale(duration).shift(selectorEvent.part.begin)
+                val scaledWhole = innerEvent.whole?.scale(duration)?.shift(selectorEvent.part.begin) ?: scaledPart
 
                 result.add(
                     innerEvent.copy(

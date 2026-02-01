@@ -19,6 +19,9 @@ import kotlin.random.Random
  */
 interface StrudelPattern {
     companion object {
+        /** Small epsilon value for point queries (sampling control patterns at a specific time) */
+        val QUERY_EPSILON = 1e-6.toRational()
+
         fun compile(code: String): StrudelPattern? {
             val code = """
                 import * from "stdlib"
@@ -201,6 +204,20 @@ interface StrudelPattern {
 }
 
 /**
+ * Samples the pattern at a specific point in time.
+ *
+ * This performs a point query using a small epsilon window and returns the first event found,
+ * or null if no event exists at that time. Commonly used for sampling continuous control patterns
+ * (like sine, saw) at discrete event times.
+ *
+ * @param time The time to sample at
+ * @param ctx Query context
+ * @return The first event at the sample time, or null if none exists
+ */
+fun StrudelPattern.sampleAt(time: Rational, ctx: QueryContext): StrudelPatternEvent? =
+    queryArcContextual(time, time + StrudelPattern.QUERY_EPSILON, ctx).firstOrNull()
+
+/**
  * Creates a static pattern, that can be stored and used for playback with
  * any life strudel event generator.
  *
@@ -328,8 +345,8 @@ fun StrudelPattern._bindSqueeze(
 ): StrudelPattern = this._bind { outerEvent ->
     val innerPattern = transform(outerEvent) ?: return@_bind null
 
-    val b = outerEvent.begin
-    val d = outerEvent.end - outerEvent.begin
+    val b = outerEvent.part.begin
+    val d = outerEvent.part.duration
 
     if (d == Rational.ZERO) return@_bind null
 
@@ -338,7 +355,7 @@ fun StrudelPattern._bindSqueeze(
     innerPattern._withQueryTime { t -> (t - b) / d }
         .mapEvents { e ->
             val scaledPart = e.part.scale(d).shift(b)
-            val scaledWhole = e.whole?.scale(d)?.shift(b)
+            val scaledWhole = e.whole?.scale(d)?.shift(b) ?: scaledPart
             e.copy(part = scaledPart, whole = scaledWhole)
         }
 }
@@ -384,13 +401,16 @@ fun StrudelPattern._bindReset(
     val innerPattern = transform(outerEvent) ?: return@_bind null
 
     // Align inner pattern cycle start to outer event start
-    // late(outerEvent.begin.cyclePos())
-    val shift = outerEvent.begin % Rational.ONE
+    // NOTE: Using whole.begin (onset time) for cycle position, not part.begin (visible start).
+    // This matches musical semantics where the event's cycle position is determined by its onset.
+    // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
+    val eventBegin = outerEvent.whole?.begin ?: outerEvent.part.begin
+    val shift = eventBegin % Rational.ONE
 
     innerPattern._withQueryTime { t -> t - shift }
         .mapEvents { e ->
             val shiftedPart = e.part.shift(shift)
-            val shiftedWhole = e.whole?.shift(shift)
+            val shiftedWhole = e.whole?.shift(shift) ?: shiftedPart
             e.copy(part = shiftedPart, whole = shiftedWhole)
         }
 }
@@ -405,13 +425,16 @@ fun StrudelPattern._bindRestart(
     val innerPattern = transform(outerEvent) ?: return@_bind null
 
     // Align inner pattern start (0) to outer event start
-    // late(outerEvent.begin)
-    val shift = outerEvent.begin
+    // NOTE: Using whole.begin (onset time) for alignment, not part.begin (visible start).
+    // This matches musical semantics where the event conceptually starts at its onset.
+    // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
+    val eventBegin = outerEvent.whole?.begin ?: outerEvent.part.begin
+    val shift = eventBegin
 
     innerPattern._withQueryTime { t -> t - shift }
         .mapEvents { e ->
             val shiftedPart = e.part.shift(shift)
-            val shiftedWhole = e.whole?.shift(shift)
+            val shiftedWhole = e.whole?.shift(shift) ?: shiftedPart
             e.copy(part = shiftedPart, whole = shiftedWhole)
         }
 }
@@ -658,12 +681,14 @@ fun StrudelPattern._applyControl(
     if (sourceEvents.isEmpty()) return emptyList()
 
     val result = mutableListOf<StrudelPatternEvent>()
-    val epsilon = 1e-5.toRational()
 
     for (event in sourceEvents) {
-        // Point-query the control pattern at the event's begin time
-        val controlEvents = control.queryArcContextual(event.begin, event.begin + epsilon, ctx)
-        val controlEvent = controlEvents.firstOrNull()
+        // Sample the control pattern at the event's begin time
+        // NOTE: Using whole.begin (onset time) for sampling, not part.begin (visible start).
+        // This ensures control patterns are sampled at the musical onset, not at visible clip boundaries.
+        // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
+        val sampleTime = event.whole?.begin ?: event.part.begin
+        val controlEvent = control.sampleAt(sampleTime, ctx)
 
         val combined = combiner(event, controlEvent)
         if (combined != null) {
@@ -695,8 +720,8 @@ fun StrudelPattern._withQueryTime(transform: (Rational) -> Rational): StrudelPat
  * (affecting WHERE events appear in time).
  */
 fun StrudelPattern._withHapTime(transform: (Rational) -> Rational): StrudelPattern = mapEvents { event ->
-    val newPartBegin = transform(event.begin)
-    val newPartEnd = transform(event.end)
+    val newPartBegin = transform(event.part.begin)
+    val newPartEnd = transform(event.part.end)
     val newPart = TimeSpan(newPartBegin, newPartEnd)
     val newWhole = event.whole?.let {
         val newWholeBegin = transform(it.begin)

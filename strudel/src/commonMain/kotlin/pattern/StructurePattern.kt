@@ -4,7 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.strudel.sampleAt
 
 /**
  * Handles structure combination logic (In/Out) with optional filtering.
@@ -54,21 +54,18 @@ internal class StructurePattern(
         val sourceEvents = source.queryArcContextual(from, to, ctx)
         val result = createEventList()
 
-        // Use a tiny epsilon for point queries to ensure we catch events in discrete patterns
-        val epsilon = 1e-6.toRational()
-
         for (sourceEvent in sourceEvents) {
-            val mid = (sourceEvent.begin + sourceEvent.end) / Rational(2)
+            val mid = (sourceEvent.part.begin + sourceEvent.part.end) / Rational(2)
 
-            // Sample the other pattern at the midpoint.
-            val otherEvents = other.queryArcContextual(mid, mid + epsilon, ctx)
+            // Sample the other pattern at the midpoint
+            val otherEvent = other.sampleAt(mid, ctx)
 
             val keep = if (filterByTruthiness) {
                 // keepif: keep only if overlapping event is truthy
-                otherEvents.any { it.data.isTruthy() }
+                otherEvent?.data?.isTruthy() == true
             } else {
                 // keep: keep if any overlapping event exists
-                otherEvents.isNotEmpty()
+                otherEvent != null
             }
 
             if (keep) {
@@ -94,8 +91,8 @@ internal class StructurePattern(
             }
 
             // Intersect query arc with mask event
-            val intersectStart = maxOf(from, maskEvent.begin)
-            val intersectEnd = minOf(to, maskEvent.end)
+            val intersectStart = maxOf(from, maskEvent.part.begin)
+            val intersectEnd = minOf(to, maskEvent.part.end)
 
             if (intersectEnd <= intersectStart) continue
 
@@ -107,10 +104,12 @@ internal class StructurePattern(
                 val clippedPart = sourceEvent.part.clipTo(maskEvent.part)
 
                 if (clippedPart != null) {
-                    // Create the final event, merging source data with mask location
+                    // Create the final event with mask's whole
+                    // JS Strudel semantics: struct "rebirths" events within mask boundaries
+                    // so whole is set to mask boundaries, not preserved from source
                     val finalEvent = sourceEvent.copy(
-                        part = clippedPart
-                        // CRITICAL: preserve whole - don't modify it!
+                        part = clippedPart,
+                        whole = maskEvent.whole  // Set to mask's whole (JS behavior)
                     ).prependLocations(maskEvent.sourceLocations)
 
                     result.add(finalEvent)
