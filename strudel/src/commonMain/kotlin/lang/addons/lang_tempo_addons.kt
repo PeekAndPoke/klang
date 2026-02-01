@@ -32,7 +32,14 @@ private fun applyStretchBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any
             end = sourceEvent.part.begin + sourceEvent.part.duration * factorRat
         )
 
-        sourceEvent.copy(part = newPart)
+        val newWhole = sourceEvent.whole?.let {
+            TimeSpan(
+                begin = it.begin,
+                end = it.begin + it.duration * factorRat
+            )
+        }
+
+        sourceEvent.copy(part = newPart, whole = newWhole)
     }
 }
 

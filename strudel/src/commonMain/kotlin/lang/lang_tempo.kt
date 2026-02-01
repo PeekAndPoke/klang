@@ -23,22 +23,13 @@ fun applyTimeShift(
 ): StrudelPattern {
     if (args.isEmpty()) return pattern
 
-    val control = args[0].toPattern(voiceValueModifier)
+    val control = args[0].asControlValueProvider(StrudelVoiceValue.Num(0.0))
 
-    // Inner join: control drives structure; transform uses numeric offset
-    return control._bind { controlEvent ->
-        val v = controlEvent.data.value?.asDouble ?: return@_bind null
-        val offset = v.toRational() * factor
-
-        // This is the core early/late logic:
-        pattern._withQueryTime { t -> t - offset }
-            .mapEvents { e ->
-                val shiftedPart = e.part.shift(offset)
-                // If whole is null (continuous pattern), set whole = part to create discrete event
-                val shiftedWhole = e.whole?.shift(offset) ?: shiftedPart
-                e.copy(part = shiftedPart, whole = shiftedWhole)
-            }
-    }
+    return TimeShiftPattern(
+        source = pattern,
+        offsetProvider = control,
+        factor = factor,
+    )
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -552,6 +543,35 @@ val StrudelPattern.outside by dslPatternExtension { p, args, /* callInfo */ _ ->
 
 // -- swingBy() --------------------------------------------------------------------------------------------------------
 
+fun applySwingBy(
+    pattern: StrudelPattern,
+    args: List<StrudelDslArg<Any?>>,
+): StrudelPattern {
+    if (args.size < 2) return pattern
+
+    val swingPattern = args[0].toPattern(voiceValueModifier)
+    val nArg = args[1]
+
+    // Inner join: swing drives structure; transform uses numeric swing value
+    return swingPattern._bind { swingEvent ->
+        val swing = swingEvent.data.value?.asDouble ?: return@_bind null
+
+        val timing = seq(0, swing / 2)
+        val stretch = seq(1 + swing, 1 - swing)
+
+        // Apply inside with the transform
+        val transform: (StrudelPattern) -> StrudelPattern = { innerPat ->
+            if (swing >= 0) {
+                innerPat.late(timing).stretchBy(stretch)
+            } else {
+                innerPat.stretchBy(stretch).late(timing)
+            }
+        }
+
+        pattern.inside(nArg, transform)
+    }
+}
+
 /**
  * Creates a swing or shuffle rhythm by adjusting event timing and duration within subdivisions.
  *
@@ -571,28 +591,7 @@ val StrudelPattern.outside by dslPatternExtension { p, args, /* callInfo */ _ ->
  */
 @StrudelDsl
 val StrudelPattern.swingBy by dslPatternExtension { p, args, /* callInfo */ _ ->
-    if (args.size < 2) {
-        return@dslPatternExtension p
-    }
-
-    val swingArg = args[0]
-    val nArg = args[1]
-
-    // swing / 2
-    val swing = swingArg.toPattern(voiceValueModifier)
-    val swingHalf = swing.div(2)
-    val timing = seq(0, swingHalf)
-    val stretch = seq(
-        steady(1).add(swing),
-        steady(1).sub(swing),
-    )
-
-    // pat.inside(n, late(shiftPattern))
-    val transform: (StrudelPattern) -> StrudelPattern = { innerPat ->
-        innerPat.late(timing).stretchBy(stretch)
-    }
-
-    p.inside(nArg, transform)
+    applySwingBy(p, args)
 }
 
 @StrudelDsl

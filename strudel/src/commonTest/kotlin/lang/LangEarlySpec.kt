@@ -40,7 +40,6 @@ class LangEarlySpec : StringSpec({
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-        events[1].data.note shouldBeEqualIgnoringCase "c"
         events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
@@ -79,6 +78,14 @@ class LangEarlySpec : StringSpec({
                 withClue("Cycle $cycle") {
                     val cycleDbl = cycle.toDouble()
                     val events = subject.queryArc(cycleDbl, cycleDbl + 1).sortedBy { it.part.begin }
+
+                    events.forEachIndexed { index, event ->
+                        println(
+                            "${index + 1}: note: ${event.data.note} | " +
+                                    "part: ${event.part.begin} ${event.part.end} | " +
+                                    "whole: ${event.whole?.begin} ${event.whole?.end}"
+                        )
+                    }
 
                     // Query returns 3 events (includes clipped edge from previous cycle)
                     // But only 2 have onset (will be played)

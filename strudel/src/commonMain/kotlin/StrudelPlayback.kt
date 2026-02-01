@@ -200,8 +200,10 @@ class StrudelPlayback internal constructor(
         val voiceEvents = mutableListOf<ScheduledVoiceEvent>()
 
         val voices = events.map { event ->
-            val relativeStartTime = (event.part.begin * secPerCycle).toDouble()
-            val duration = (event.part.duration * secPerCycle).toDouble()
+            // Use whole for scheduling (complete event), not part (clipped portion)
+            val timeSpan = event.whole ?: event.part
+            val relativeStartTime = (timeSpan.begin * secPerCycle).toDouble()
+            val duration = (timeSpan.duration * secPerCycle).toDouble()
 
             // Convert to absolute time
             val absoluteStartTime = playbackStartTimeSec + relativeStartTime
