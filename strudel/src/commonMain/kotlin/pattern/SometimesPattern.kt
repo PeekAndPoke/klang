@@ -15,7 +15,7 @@ internal class SometimesPattern private constructor(
     val source: StrudelPattern,
     val probabilityPattern: StrudelPattern? = null,
     val probabilityValue: Double = 0.5,
-    val seedStrategy: (StrudelPatternEvent) -> Any = { it.begin },
+    val seedStrategy: (StrudelPatternEvent) -> Any = { it.part.begin },
     val onMatch: ((StrudelPattern) -> StrudelPattern)? = null,
     val onMiss: ((StrudelPattern) -> StrudelPattern)? = null,
 ) : StrudelPattern {
@@ -35,7 +35,7 @@ internal class SometimesPattern private constructor(
             source: StrudelPattern,
             probabilityPattern: StrudelPattern? = null,
             probabilityValue: Double = 0.5,
-            seedStrategy: (StrudelPatternEvent) -> Any = { it.begin },
+            seedStrategy: (StrudelPatternEvent) -> Any = { it.part.begin },
             onMatch: (StrudelPattern) -> StrudelPattern,
         ) = SometimesPattern(
             source = source,
@@ -54,7 +54,7 @@ internal class SometimesPattern private constructor(
             source: StrudelPattern,
             probabilityPattern: StrudelPattern? = null,
             probabilityValue: Double = 0.5,
-            seedStrategy: (StrudelPatternEvent) -> Any = { it.begin },
+            seedStrategy: (StrudelPatternEvent) -> Any = { it.part.begin },
         ) = SometimesPattern(
             source = source,
             probabilityPattern = probabilityPattern,
@@ -72,7 +72,7 @@ internal class SometimesPattern private constructor(
             source: StrudelPattern,
             probabilityPattern: StrudelPattern? = null,
             probabilityValue: Double = 0.5,
-            seedStrategy: (StrudelPatternEvent) -> Any = { it.begin },
+            seedStrategy: (StrudelPatternEvent) -> Any = { it.part.begin },
         ) = SometimesPattern(
             source = source,
             probabilityPattern = probabilityPattern,
@@ -161,7 +161,7 @@ internal class SometimesPattern private constructor(
                 to: Rational,
                 ctx: QueryContext,
             ): List<StrudelPatternEvent> {
-                return events.filter { it.begin < to && it.end > from }
+                return events.filter { it.part.begin < to && it.part.end > from }
             }
         }
 

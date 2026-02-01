@@ -2,43 +2,8 @@ package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
-import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-
-/**
- * Represents a time span with begin and end points
- */
-@Serializable
-data class TimeSpan(
-    val begin: Rational,
-    val end: Rational,
-) {
-    init {
-        require(end >= begin) { "TimeSpan end ($end) must be >= begin ($begin)" }
-    }
-
-    val duration: Rational get() = end - begin
-
-    /** Shift this timespan by an offset */
-    fun shift(offset: Rational): TimeSpan =
-        TimeSpan(begin + offset, end + offset)
-
-    /** Scale this timespan by a factor (for tempo operations) */
-    fun scale(factor: Rational): TimeSpan =
-        TimeSpan(begin * factor, end * factor)
-
-    /** Clip this timespan to bounds (for clipping operations) */
-    fun clipTo(bounds: TimeSpan): TimeSpan? {
-        val clippedBegin = maxOf(begin, bounds.begin)
-        val clippedEnd = minOf(end, bounds.end)
-        return if (clippedEnd > clippedBegin) {
-            TimeSpan(clippedBegin, clippedEnd)
-        } else {
-            null
-        }
-    }
-}
 
 /**
  * Voice Data used to create a Voice.
@@ -60,15 +25,6 @@ data class StrudelPatternEvent(
     @Transient
     val sourceLocations: SourceLocationChain? = null,
 ) {
-    /** Convenience accessor for begin time */
-    val begin: Rational get() = part.begin
-
-    /** Convenience accessor for end time */
-    val end: Rational get() = part.end
-
-    /** Convenience accessor for duration */
-    val dur: Rational get() = part.duration
-
     /** Check if this event has an onset (should be played) */
     fun hasOnset(): Boolean = whole != null && whole.begin == part.begin
 

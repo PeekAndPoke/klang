@@ -123,7 +123,7 @@ class LangSeedSpec : StringSpec({
         events1.size shouldBe events2.size
         events1.zip(events2).forEach { (e1, e2) ->
             e1.data.sound shouldBe e2.data.sound
-            e1.begin shouldBe e2.begin
+            e1.part.begin shouldBe e2.part.begin
         }
     }
 })

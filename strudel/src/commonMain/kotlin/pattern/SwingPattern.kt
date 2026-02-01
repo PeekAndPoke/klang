@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -78,12 +79,12 @@ internal class SwingPattern(
                 val newBegin = cycle + subdivisionStart + newPosInSubdivision
                 val newEnd = newBegin + (eventDuration * scaleFactor)
 
-                val newPart = io.peekandpoke.klang.strudel.TimeSpan(newBegin, newEnd)
+                val newPart = TimeSpan(newBegin, newEnd)
                 val newWhole = ev.whole?.let { whole ->
                     val wholePos = whole.begin - cycle - subdivisionStart
                     val newWholeBegin = cycle + subdivisionStart + (wholePos * scaleFactor)
                     val newWholeEnd = newWholeBegin + (whole.duration * scaleFactor)
-                    io.peekandpoke.klang.strudel.TimeSpan(newWholeBegin, newWholeEnd)
+                    TimeSpan(newWholeBegin, newWholeEnd)
                 }
 
                 ev.copy(part = newPart, whole = newWhole)
@@ -98,12 +99,12 @@ internal class SwingPattern(
                 val newBegin = cycle + subdivisionStart + firstPartDuration + newPosInSecondHalf
                 val newEnd = newBegin + (eventDuration * scaleFactor)
 
-                val newPart = io.peekandpoke.klang.strudel.TimeSpan(newBegin, newEnd)
+                val newPart = TimeSpan(newBegin, newEnd)
                 val newWhole = ev.whole?.let { whole ->
                     val wholePos = whole.begin - cycle - subdivisionStart - halfDuration
                     val newWholeBegin = cycle + subdivisionStart + firstPartDuration + (wholePos * scaleFactor)
                     val newWholeEnd = newWholeBegin + (whole.duration * scaleFactor)
-                    io.peekandpoke.klang.strudel.TimeSpan(newWholeBegin, newWholeEnd)
+                    TimeSpan(newWholeBegin, newWholeEnd)
                 }
 
                 ev.copy(part = newPart, whole = newWhole)

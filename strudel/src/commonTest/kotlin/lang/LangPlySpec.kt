@@ -19,29 +19,29 @@ class LangPlySpec : StringSpec({
 
         // First event "c" at [0, 0.5) gets split into 3 parts
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (1.0 / 6.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (1.0 / 6.0 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "c"
-        events[1].begin.toDouble() shouldBe (1.0 / 6.0 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (2.0 / 6.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (1.0 / 6.0 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (2.0 / 6.0 plusOrMinus EPSILON)
 
         events[2].data.note shouldBeEqualIgnoringCase "c"
-        events[2].begin.toDouble() shouldBe (2.0 / 6.0 plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (3.0 / 6.0 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (2.0 / 6.0 plusOrMinus EPSILON)
+        events[2].part.end.toDouble() shouldBe (3.0 / 6.0 plusOrMinus EPSILON)
 
         // Second event "d" at [0.5, 1.0) gets split into 3 parts
         events[3].data.note shouldBeEqualIgnoringCase "d"
-        events[3].begin.toDouble() shouldBe (3.0 / 6.0 plusOrMinus EPSILON)
-        events[3].end.toDouble() shouldBe (4.0 / 6.0 plusOrMinus EPSILON)
+        events[3].part.begin.toDouble() shouldBe (3.0 / 6.0 plusOrMinus EPSILON)
+        events[3].part.end.toDouble() shouldBe (4.0 / 6.0 plusOrMinus EPSILON)
 
         events[4].data.note shouldBeEqualIgnoringCase "d"
-        events[4].begin.toDouble() shouldBe (4.0 / 6.0 plusOrMinus EPSILON)
-        events[4].end.toDouble() shouldBe (5.0 / 6.0 plusOrMinus EPSILON)
+        events[4].part.begin.toDouble() shouldBe (4.0 / 6.0 plusOrMinus EPSILON)
+        events[4].part.end.toDouble() shouldBe (5.0 / 6.0 plusOrMinus EPSILON)
 
         events[5].data.note shouldBeEqualIgnoringCase "d"
-        events[5].begin.toDouble() shouldBe (5.0 / 6.0 plusOrMinus EPSILON)
-        events[5].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[5].part.begin.toDouble() shouldBe (5.0 / 6.0 plusOrMinus EPSILON)
+        events[5].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "ply() with n=2 doubles each event" {
@@ -53,12 +53,12 @@ class LangPlySpec : StringSpec({
 
         // First event "c" at [0, 0.25) becomes two events
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "c"
-        events[1].begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "ply() with n=1 returns original pattern" {
@@ -71,8 +71,8 @@ class LangPlySpec : StringSpec({
         pliedEvents.size shouldBe originalEvents.size
         pliedEvents.zip(originalEvents).forEach { (p, o) ->
             p.data.note shouldBeEqualIgnoringCase (o.data.note ?: "")
-            p.begin shouldBe o.begin
-            p.end shouldBe o.end
+            p.part.begin shouldBe o.part.begin
+            p.part.end shouldBe o.part.end
         }
     }
 
@@ -93,21 +93,21 @@ class LangPlySpec : StringSpec({
 
         // Cycle 0
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "c"
-        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
         // Cycle 1
         events[2].data.note shouldBeEqualIgnoringCase "c"
-        events[2].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[2].part.end.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
 
         events[3].data.note shouldBeEqualIgnoringCase "c"
-        events[3].begin.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
-        events[3].end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[3].part.begin.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
+        events[3].part.end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
     "ply() with high repetition count" {
@@ -119,8 +119,8 @@ class LangPlySpec : StringSpec({
         // Each repetition should be 1/8 of a cycle
         for (i in 0 until 8) {
             events[i].data.note shouldBeEqualIgnoringCase "c"
-            events[i].begin.toDouble() shouldBe (i / 8.0 plusOrMinus EPSILON)
-            events[i].end.toDouble() shouldBe ((i + 1) / 8.0 plusOrMinus EPSILON)
+            events[i].part.begin.toDouble() shouldBe (i / 8.0 plusOrMinus EPSILON)
+            events[i].part.end.toDouble() shouldBe ((i + 1) / 8.0 plusOrMinus EPSILON)
         }
     }
 
@@ -215,7 +215,7 @@ class LangPlySpec : StringSpec({
                 val cycleDbl = cycle.toDouble()
                 val events = subject.queryArc(cycleDbl, cycleDbl + 1)
                 val values = events.map {
-                    listOf(it.begin.toDouble(), it.end.toDouble(), it.data.note)
+                    listOf(it.part.begin.toDouble(), it.part.end.toDouble(), it.data.note)
                 }
 
                 println("Cycle $cycle | ${events.size} events | $values")

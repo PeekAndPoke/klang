@@ -125,11 +125,11 @@ internal class EuclideanMorphPattern(
         for (grooveEvent in grooveEvents) {
             // Get pulses and steps values for this groove event's timespan
             val pulses = pulsesEvents
-                .firstOrNull { it.begin < grooveEvent.end && it.end > grooveEvent.begin }
+                .firstOrNull { it.part.begin < grooveEvent.part.end && it.part.end > grooveEvent.part.begin }
                 ?.data?.value?.asInt ?: 0
 
             val steps = stepsEvents
-                .firstOrNull { it.begin < grooveEvent.end && it.end > grooveEvent.begin }
+                .firstOrNull { it.part.begin < grooveEvent.part.end && it.part.end > grooveEvent.part.begin }
                 ?.data?.value?.asInt ?: 0
 
             if (pulses <= 0 || steps <= 0) continue
@@ -140,16 +140,16 @@ internal class EuclideanMorphPattern(
             val arcs = calculateMorphedArcs(pulses, steps, perc)
 
             // Generate events from arcs that intersect with the groove event
-            val startCycle = grooveEvent.begin.floor().toInt()
-            val endCycle = grooveEvent.end.ceil().toInt()
+            val startCycle = grooveEvent.part.begin.floor().toInt()
+            val endCycle = grooveEvent.part.end.ceil().toInt()
 
             for (cycle in startCycle until endCycle) {
                 val cycleStart = Rational(cycle)
                 val cycleEnd = cycleStart + Rational.ONE
 
                 // Effective window for this cycle is intersection of cycle and groove event
-                val windowStart = maxOf(grooveEvent.begin, cycleStart)
-                val windowEnd = minOf(grooveEvent.end, cycleEnd)
+                val windowStart = maxOf(grooveEvent.part.begin, cycleStart)
+                val windowEnd = minOf(grooveEvent.part.end, cycleEnd)
 
                 if (windowStart >= windowEnd) continue
 

@@ -27,6 +27,6 @@ internal class StackPattern(val patterns: List<StrudelPattern>) : StrudelPattern
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         return patterns
             .flatMap { it.queryArcContextual(from, to, ctx) }
-            .sortedBy { it.begin } // Sort them to keep order nice (optional but good for debugging)
+            .sortedBy { it.part.begin } // Sort them to keep order nice (optional but good for debugging)
     }
 }

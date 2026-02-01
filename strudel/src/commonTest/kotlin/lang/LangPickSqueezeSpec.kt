@@ -26,23 +26,23 @@ class LangPickSqueezeSpec : StringSpec({
 
         // 1st quarter: bd (from 1st pattern, squeezed into 0.0-0.5)
         events[0].data.value?.asString shouldBe "bd"
-        events[0].begin.toDouble() shouldBe 0.0
-        events[0].end.toDouble() shouldBe 0.25
+        events[0].part.begin.toDouble() shouldBe 0.0
+        events[0].part.end.toDouble() shouldBe 0.25
 
         // 2nd quarter: hh
         events[1].data.value?.asString shouldBe "hh"
-        events[1].begin.toDouble() shouldBe 0.25
-        events[1].end.toDouble() shouldBe 0.5
+        events[1].part.begin.toDouble() shouldBe 0.25
+        events[1].part.end.toDouble() shouldBe 0.5
 
         // 3rd quarter: sn (from 2nd pattern, squeezed into 0.5-1.0)
         events[2].data.value?.asString shouldBe "sn"
-        events[2].begin.toDouble() shouldBe 0.5
-        events[2].end.toDouble() shouldBe 0.75
+        events[2].part.begin.toDouble() shouldBe 0.5
+        events[2].part.end.toDouble() shouldBe 0.75
 
         // 4th quarter: cp
         events[3].data.value?.asString shouldBe "cp"
-        events[3].begin.toDouble() shouldBe 0.75
-        events[3].end.toDouble() shouldBe 1.0
+        events[3].part.begin.toDouble() shouldBe 0.75
+        events[3].part.end.toDouble() shouldBe 1.0
     }
 
     "inhabit() works with string pattern method" {

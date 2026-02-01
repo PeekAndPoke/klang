@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel._outerJoin
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -26,9 +27,9 @@ private fun applyStretchBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any
         val factor = controlEvent?.data?.value?.asDouble ?: 1.0
         val factorRat = factor.toRational()
 
-        val newPart = io.peekandpoke.klang.strudel.TimeSpan(
-            begin = sourceEvent.begin,
-            end = sourceEvent.begin + sourceEvent.dur * factorRat
+        val newPart = TimeSpan(
+            begin = sourceEvent.part.begin,
+            end = sourceEvent.part.begin + sourceEvent.part.duration * factorRat
         )
 
         sourceEvent.copy(part = newPart)

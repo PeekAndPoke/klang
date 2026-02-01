@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -65,7 +66,7 @@ class TakePattern(
             }.mapNotNull { event ->
                 // Clip event end to take window boundary
                 if (event.part.end > takeWindowEnd) {
-                    val takeWindow = io.peekandpoke.klang.strudel.TimeSpan(takeWindowStart, takeWindowEnd)
+                    val takeWindow = TimeSpan(takeWindowStart, takeWindowEnd)
                     val clippedPart = event.part.clipTo(takeWindow)
                     clippedPart?.let { event.copy(part = it) }
                 } else {
@@ -110,7 +111,7 @@ class TakePattern(
 
         return events.filter { it.part.begin < n }.mapNotNull { event ->
             if (event.part.end > n) {
-                val boundary = io.peekandpoke.klang.strudel.TimeSpan(Rational.ZERO, n)
+                val boundary = TimeSpan(Rational.ZERO, n)
                 val clippedPart = event.part.clipTo(boundary)
                 clippedPart?.let { event.copy(part = it) }
             } else {

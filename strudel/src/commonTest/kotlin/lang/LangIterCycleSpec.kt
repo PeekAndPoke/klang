@@ -21,12 +21,15 @@ class LangIterCycleSpec : FunSpec({
         events shouldHaveSize 8 // 2 events per cycle
 
         // Check that cycles 0 and 2 have the same timing (both no shift)
-        val cycle0Events = events.filter { it.begin.toDouble() < 1.0 }
-        val cycle2Events = events.filter { it.begin.toDouble() >= 2.0 && it.begin.toDouble() < 3.0 }
+        val cycle0Events =
+            events.filter { it.part.begin.toDouble() < 1.0 }
+
+        val cycle2Events =
+            events.filter { it.part.begin.toDouble() >= 2.0 && it.part.begin.toDouble() < 3.0 }
 
         // Shift timing should match
-        cycle0Events[0].begin.toDouble() shouldBe cycle2Events[0].begin.toDouble() - 2.0
-        cycle0Events[1].begin.toDouble() shouldBe cycle2Events[1].begin.toDouble() - 2.0
+        cycle0Events[0].part.begin.toDouble() shouldBe cycle2Events[0].part.begin.toDouble() - 2.0
+        cycle0Events[1].part.begin.toDouble() shouldBe cycle2Events[1].part.begin.toDouble() - 2.0
     }
 
     test("iterBack(2) cycles after 2 cycles") {
@@ -38,12 +41,15 @@ class LangIterCycleSpec : FunSpec({
         events shouldHaveSize 8
 
         // Check that cycles 0 and 2 have the same timing
-        val cycle0Events = events.filter { it.begin.toDouble() < 1.0 }
-        val cycle2Events = events.filter { it.begin.toDouble() >= 2.0 && it.begin.toDouble() < 3.0 }
+        val cycle0Events =
+            events.filter { it.part.begin.toDouble() < 1.0 }
+
+        val cycle2Events =
+            events.filter { it.part.begin.toDouble() >= 2.0 && it.part.begin.toDouble() < 3.0 }
 
         // Timing should repeat
-        cycle0Events[0].begin.toDouble() shouldBe cycle2Events[0].begin.toDouble() - 2.0
-        cycle0Events[1].begin.toDouble() shouldBe cycle2Events[1].begin.toDouble() - 2.0
+        cycle0Events[0].part.begin.toDouble() shouldBe cycle2Events[0].part.begin.toDouble() - 2.0
+        cycle0Events[1].part.begin.toDouble() shouldBe cycle2Events[1].part.begin.toDouble() - 2.0
     }
 
     test("iter(3) cycles after 3 cycles") {
@@ -53,15 +59,15 @@ class LangIterCycleSpec : FunSpec({
         val events = result.queryArc(0.0, 6.0)
 
         // The pattern should repeat every 3 cycles
-        val cycle0to2 = events.filter { it.begin.toDouble() < 3.0 }
-        val cycle3to5 = events.filter { it.begin.toDouble() >= 3.0 }
+        val cycle0to2 = events.filter { it.part.begin.toDouble() < 3.0 }
+        val cycle3to5 = events.filter { it.part.begin.toDouble() >= 3.0 }
 
         // Should have same number of events
         cycle0to2.size shouldBe cycle3to5.size
 
         // Verify timing pattern repeats (shifted by 3 cycles)
         for (i in cycle0to2.indices) {
-            cycle0to2[i].begin.toDouble() shouldBe cycle3to5[i].begin.toDouble() - 3.0
+            cycle0to2[i].part.begin.toDouble() shouldBe cycle3to5[i].part.begin.toDouble() - 3.0
         }
     }
 
@@ -77,8 +83,8 @@ class LangIterCycleSpec : FunSpec({
         cycle2 shouldHaveSize 2
 
         // The relative timing should be the same (modulo the 2-cycle offset)
-        val c0Timings = cycle0.map { it.begin.toDouble() }
-        val c2Timings = cycle2.map { it.begin.toDouble() - 2.0 }
+        val c0Timings = cycle0.map { it.part.begin.toDouble() }
+        val c2Timings = cycle2.map { it.part.begin.toDouble() - 2.0 }
 
         c0Timings shouldBe c2Timings
     }

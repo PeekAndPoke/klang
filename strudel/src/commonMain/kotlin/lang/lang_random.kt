@@ -367,7 +367,7 @@ private fun applySometimesBy(
         source = pattern,
         probabilityPattern = pPat,
         probabilityValue = pVal,
-        seedStrategy = if (seedByCycle) { it -> it.begin.floor() } else { it -> it.begin },
+        seedStrategy = if (seedByCycle) { it -> it.part.begin.floor() } else { it -> it.part.begin },
         onMatch = func
     )
 }
@@ -604,7 +604,7 @@ val randrun: DslFunction by dslFunction { args, /* callInfo */ _ ->
                     val ctx = ctx.update {
                         setIfAbsent(QueryContext.randomSeed, 0)
                     }
-                    val cycle = evt.begin.floor()
+                    val cycle = evt.part.begin.floor()
                     val random = ctx.getSeededRandom(cycle, "randrun")
                     val permutation = (0 until staticN).toMutableList()
                     permutation.shuffle(random)

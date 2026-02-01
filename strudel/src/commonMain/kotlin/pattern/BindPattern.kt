@@ -44,8 +44,8 @@ internal class BindPattern(
         for (outerEvent in outerEvents) {
             val innerPattern = transform(outerEvent) ?: continue
 
-            val intersectStart = maxOf(from, outerEvent.begin)
-            val intersectEnd = minOf(to, outerEvent.end)
+            val intersectStart = maxOf(from, outerEvent.part.begin)
+            val intersectEnd = minOf(to, outerEvent.part.end)
 
             if (intersectEnd <= intersectStart) continue
 

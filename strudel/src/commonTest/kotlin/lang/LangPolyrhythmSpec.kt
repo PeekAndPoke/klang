@@ -13,6 +13,6 @@ class LangPolyrhythmSpec : StringSpec({
 
         events.size shouldBe 2
         // Both play full cycle
-        events.all { it.dur == Rational.ONE } shouldBe true
+        events.all { it.part.duration == Rational.ONE } shouldBe true
     }
 })

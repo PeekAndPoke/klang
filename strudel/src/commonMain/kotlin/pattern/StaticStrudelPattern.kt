@@ -24,7 +24,7 @@ class StaticStrudelPattern(
 
     private val totalCycles: Rational = maxOf(
         Rational.ONE,
-        events.maxOfOrNull { it.end } ?: Rational.ZERO
+        events.maxOfOrNull { it.part.end } ?: Rational.ZERO
     ).ceil()
 
     override val numSteps: Rational = when (totalCycles) {
@@ -46,7 +46,7 @@ class StaticStrudelPattern(
 
         return events
             .filter { evt ->
-                evt.begin >= fromMod && evt.begin < toMod
+                evt.part.begin >= fromMod && evt.part.begin < toMod
             }
             .map {
                 val shiftedPart = it.part.shift(offset)

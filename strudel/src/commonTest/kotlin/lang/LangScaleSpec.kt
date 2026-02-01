@@ -41,7 +41,7 @@ class LangScaleSpec : StringSpec({
     "scale() defaults to octave 3 when no octave is specified" {
         // "C:minor" should be treated as "C3:minor"
         val p = n("0 2 4").scale("C:minor")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         events[0].data.note shouldBe "C3"
@@ -107,7 +107,7 @@ class LangScaleSpec : StringSpec({
     "scale() with minor scale (numbers)" {
         // C4 minor: C4, D4, Eb4, F4, G4, Ab4, Bb4, C5
         val p = n("0 1 2 3 4 5 6 7").scale("C4:minor")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 8
         events[0].data.note shouldBe "C4"
@@ -133,7 +133,7 @@ class LangScaleSpec : StringSpec({
         // If I say `note("a b").scale("C minor")`, it sets the scale property.
 
         val p = n("0 1 2").scale("C4:minor")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         events[0].data.note shouldBe "C4"
@@ -144,7 +144,7 @@ class LangScaleSpec : StringSpec({
     "scale() with pentatonic scale" {
         // C major pentatonic: C, D, E, G, A
         val p = n("0 1 2 3 4 5").scale("C4:pentatonic")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 6
         events[0].data.note shouldBe "C4"
@@ -158,7 +158,7 @@ class LangScaleSpec : StringSpec({
     "scale() with mixolydian scale" {
         // C mixolydian: C, D, E, F, G, A, Bb
         val p = n("0 1 2 3 4 5 6 7").scale("C4:mixolydian")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 8
         events[6].data.note shouldBe "Bb4"
@@ -168,7 +168,7 @@ class LangScaleSpec : StringSpec({
     "scale() with accidentals in tonic" {
         // C# major: C#, D#, E#, F#, G#, A#, B#
         val p = n("0 1 2 3").scale("C#4:major")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events[0].data.note shouldBe "C#4"
         events[1].data.note shouldBe "D#4"
@@ -179,7 +179,7 @@ class LangScaleSpec : StringSpec({
     "scale() with flats in tonic" {
         // Eb minor: Eb, F, Gb, Ab, Bb, Cb, Db
         val p = n("0 1 2").scale("Eb4:minor")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events[0].data.note shouldBe "Eb4"
         events[1].data.note shouldBe "F4"
@@ -188,7 +188,7 @@ class LangScaleSpec : StringSpec({
 
     "scale() with chromatic scale" {
         val p = n("0 1 2").scale("C4:chromatic")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events[0].data.note shouldBe "C4"
         events[1].data.note shouldBe "Db4" // or C#4

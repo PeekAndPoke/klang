@@ -22,8 +22,8 @@ class ContinuousPatternSpec : StringSpec({
         events.size shouldBe 1
         val event = events[0]
 
-        event.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        event.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        event.part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        event.part.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         // The value is sampled at the 'from' time
         event.data.value?.asDouble shouldBe (0.25 plusOrMinus EPSILON)
     }

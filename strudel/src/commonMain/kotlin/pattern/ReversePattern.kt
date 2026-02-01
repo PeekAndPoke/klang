@@ -4,6 +4,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -102,12 +103,12 @@ internal class ReversePattern(
 
                 inner.queryArcContextual(innerFrom, innerTo, ctx).forEach { ev ->
                     val pivot = Rational.ONE + (cycle * Rational(2))
-                    val reversedPart = io.peekandpoke.klang.strudel.TimeSpan(
+                    val reversedPart = TimeSpan(
                         begin = pivot - ev.part.end,
                         end = pivot - ev.part.begin
                     )
                     val reversedWhole = ev.whole?.let {
-                        io.peekandpoke.klang.strudel.TimeSpan(
+                        TimeSpan(
                             begin = pivot - it.end,
                             end = pivot - it.begin
                         )

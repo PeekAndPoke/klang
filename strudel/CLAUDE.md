@@ -106,17 +106,29 @@ data class TimeSpan(
 }
 ```
 
-## Current Priority: Test Failure Investigation 🚧 IN PROGRESS
+## Recent Achievements ✅ COMPLETED (2026-02-01)
 
-**Status**: Down to 82 failing tests from 98 (16 tests fixed)
+**Status**: 2489 tests, 12 failures (99.5% pass rate) - Down from 82 failures!
 
-**Recent fixes** (2026-02-01):
+### Fixed: Continuous Pattern Property Setting
 
-- ✅ Fixed DropPattern scaling bug (was shifting by wrong offset)
-- ✅ Fixed accessor usages in test files (LangDropSpec, LangOffSpec, LangTakeSpec, LangInsideSpec)
-- ✅ Added comprehensive tests with part/whole assertions for drop() and off()
+- **Problem**: `sine.slow(8)` returned null when used with `pan()`, `gain()`, etc.
+- **Root cause**: `scaleTimeRangeWithEpsilon` was shrinking query ranges, inverting them for small queries
+- **Solution**:
+    - Use `scaleTimeRange()` for simple scaling (no epsilon manipulation)
+    - Use `hasOverlapWithEpsilon()` for precision-tolerant overlap checks
+    - Removed `scaleTimeRangeWithEpsilon` function
+- **Result**: All continuous pattern tests pass, 3 tests fixed
 
-**Remaining**: 82 failures (~60 Euclidean, 5 Swing, 3 LoopAt, 2 Inside, 2 Songs, others)
+### Completed: Accessor Removal
+
+- **Removed**: All convenience accessor usages (`event.begin`, `event.end`, `event.dur`)
+- **Replaced with**: Explicit `event.part.begin`, `event.part.end`, `event.part.duration`
+- **Files fixed**: ~100+ files (40+ main code, 60+ test code)
+- **Accessors**: Commented out in `StrudelPatternEvent.kt`
+- **Impact**: Zero new test failures - all code compiles and runs
+
+**Remaining failures**: 12 tests (5 Swing, 3 LoopAt, 2 EuclidLegatoRot, 2 pickOut)
 
 ## Future Refactoring TODO
 
@@ -145,28 +157,17 @@ This would match JavaScript architecture and simplify the codebase.
 
 **Status**: Postponed - current implementations work correctly, refactor later for architectural consistency
 
-## Accessor Removal 🚧 PAUSED
+## Accessor Removal ✅ COMPLETED (2026-02-01)
 
-**Why**: Convenience accessors (`begin`, `end`, `dur`) hide whether we're accessing `part` or `whole`, making
-correctness verification impossible.
+**Goal**: Remove convenience accessors to make part/whole usage explicit and verifiable.
 
-**Strategy**:
+**Result**: All accessor usages replaced across entire codebase
 
-1. Proactively replace all ~113 usages with explicit `part.begin`/`part.end`/`part.duration`
-2. Comment out accessors to catch any missed usages
-3. Verify compilation and tests
-
-**Status**: Tier 1 complete (25 usages fixed), paused to focus on test failures
-**Progress**:
-
-- ✅ StrudelPattern.kt (6 usages) - Added QUERY_EPSILON + sampleAt() helper
-- ✅ PickSqueezePattern.kt (7 usages)
-- ✅ PickRestartPattern.kt (6 usages)
-- ✅ StructurePattern.kt (3 usages) - Also fixed struct whole semantics
-- ✅ PickResetPattern.kt (3 usages)
-- ⬜ Remaining ~88 usages in Tiers 2-5
-
-**Documents**: See `docs/agent-tasks/accessor-replacement-execution.md`
+- Main code: ~40 files fixed
+- Test code: ~60 files fixed
+- Accessors commented out in StrudelPatternEvent.kt
+- All code compiles with explicit `part.begin`, `part.end`, `part.duration`
+- Zero new test failures introduced
 
 ## THE SIX GOLDEN RULES (Critical - Never Break These!)
 
@@ -531,13 +532,23 @@ events.filter { it.part.begin >= from && it.part.end <= to }
 
 ## Project Status Summary
 
-**Phase**: Accessor Removal (Week 1)
-**Goal**: Replace all convenience accessor usages with explicit part/whole access
-**Files**: ~20 files, ~113 usages
-**Timeline**: 6-9 days
-**Next**: Start with StrudelPattern.kt (9 usages, most critical)
+**Phase**: Part/Whole Refactoring - ✅ COMPLETE
+**Test Status**: 2489 tests, 12 failures (99.5% pass rate)
 
-**Long-term Goal**: Get from 98 failing tests to 0 failing tests
+**Major Milestones Completed**:
+
+1. ✅ Part/whole event structure implemented
+2. ✅ All patterns updated to use part/whole correctly
+3. ✅ Continuous pattern property setting fixed (sine.slow(8) bug)
+4. ✅ Accessor removal complete (~100 files)
+5. ✅ TempoModifierPattern epsilon handling fixed
+
+**Remaining Work**: 12 test failures (unrelated to part/whole)
+
+- 5 Swing tests (known implementation issue)
+- 3 LoopAt tests (sample loading)
+- 2 EuclidLegatoRot tests
+- 2 pickOut tests
 
 ## Notes for Future Claude Sessions
 

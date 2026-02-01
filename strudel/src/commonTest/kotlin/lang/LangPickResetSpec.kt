@@ -28,8 +28,8 @@ class LangPickResetSpec : StringSpec({
         // Event 1 at 0.0:
         // inner reset (aligned) at 0.0.
         // inner at 0.0-0.25 is "0".
-        events[0].begin.toDouble() shouldBeExactly 0.0
-        events[0].end.toDouble() shouldBeExactly 0.25
+        events[0].part.begin.toDouble() shouldBeExactly 0.0
+        events[0].part.end.toDouble() shouldBeExactly 0.25
         events[0].data.value?.asString shouldBe "0"
 
         // Event 2 at 0.5:
@@ -51,8 +51,8 @@ class LangPickResetSpec : StringSpec({
         // Inner at 0.0-0.25 is "0".
         // So we should get "0".
 
-        events[1].begin.toDouble() shouldBeExactly 0.5
-        events[1].end.toDouble() shouldBeExactly 0.75
+        events[1].part.begin.toDouble() shouldBeExactly 0.5
+        events[1].part.end.toDouble() shouldBeExactly 0.75
         events[1].data.value?.asString shouldBe "0"
     }
 

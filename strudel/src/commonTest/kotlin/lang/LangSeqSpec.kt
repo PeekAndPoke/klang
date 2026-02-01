@@ -14,35 +14,35 @@ class LangSeqSpec : StringSpec({
     "seq() with single argument creates a sequence from mini-notation" {
         // seq("a b") -> sequence of a then b
         val p = seq("a b")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.value?.asString shouldBe "a"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         events[1].data.value?.asString shouldBe "b"
-        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "seq() with multiple arguments sequences them" {
         // seq("a", "b") -> sequence of a then b
         val p = seq("a", "b")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.value?.asString shouldBe "a"
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         events[1].data.value?.asString shouldBe "b"
-        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "seq() works as method on StrudelPattern" {
         // note("a").seq("b") -> sequence of a then b
         val p = note("a").seq("b")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // Note: note("a") sets note="a". "b" via seq default modifier sets value="b" (and note="b").
         // But note("a") puts it in 'note' field.
@@ -56,7 +56,7 @@ class LangSeqSpec : StringSpec({
     "seq() works as extension on String" {
         // "a".seq("b")
         val p = "a".seq("b")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         // "a" parsed via seq default modifier -> value="a"
@@ -66,7 +66,7 @@ class LangSeqSpec : StringSpec({
 
     "seq() works in compiled code" {
         val p = StrudelPattern.compile("""seq("a", "b")""")
-        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
@@ -76,7 +76,7 @@ class LangSeqSpec : StringSpec({
     "seq() works as method in compiled code" {
         // note("a").seq("b")
         val p = StrudelPattern.compile("""note("a").seq("b")""")
-        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "a"
@@ -86,7 +86,7 @@ class LangSeqSpec : StringSpec({
     "seq() works as string extension in compiled code" {
         // "a".seq("b")
         val p = StrudelPattern.compile(""""a".seq("b")""")
-        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
@@ -124,12 +124,12 @@ class LangSeqSpec : StringSpec({
                 events.shouldHaveSize(2)
 
                 events[0].data.value?.asInt shouldBe 0
-                events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                events[0].end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                 events[1].data.value?.asInt shouldBe 1
-                events[1].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                events[1].end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
             }
         }
     }
@@ -146,16 +146,16 @@ class LangSeqSpec : StringSpec({
                 events.shouldHaveSize(3)
 
                 events[0].data.value?.asInt shouldBe 0
-                events[0].begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                events[0].end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                 events[1].data.value?.asInt shouldBe 1
-                events[1].begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                events[1].end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
 
                 events[2].data.value?.asInt shouldBe 2
-                events[2].begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                events[2].end.toDouble() shouldBe ((cycleDbl + 1.00) plusOrMinus EPSILON)
+                events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.00) plusOrMinus EPSILON)
             }
         }
     }

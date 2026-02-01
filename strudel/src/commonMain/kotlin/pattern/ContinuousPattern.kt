@@ -5,6 +5,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -54,7 +55,7 @@ class ContinuousPattern private constructor(
             val nextFrom = minOf(to, currentFrom + granularity)
 
             val event = StrudelPatternEvent(
-                part = io.peekandpoke.klang.strudel.TimeSpan(
+                part = TimeSpan(
                     begin = currentFrom,
                     end = nextFrom
                 ),

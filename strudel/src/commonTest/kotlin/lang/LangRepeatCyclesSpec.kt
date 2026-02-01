@@ -37,7 +37,7 @@ class LangRepeatCyclesSpec : StringSpec({
             println("\n=== Cycle $cycle ===")
             events.forEachIndexed { idx, event ->
                 val noteValue = event.data.note ?: "null"
-                println("Event $idx: note=$noteValue, begin=${event.begin}, end=${event.end}")
+                println("Event $idx: note=$noteValue, begin=${event.part.begin}, end=${event.part.end}")
             }
 
             // Each cycle should have 2 notes
@@ -54,11 +54,11 @@ class LangRepeatCyclesSpec : StringSpec({
             events[1].data.note shouldBe expectedNotes[1]
 
             // Check timing within the cycle
-            events[0].begin.toDouble() shouldBe cycle.toDouble()
-            events[0].end.toDouble() shouldBe cycle + 0.5
+            events[0].part.begin.toDouble() shouldBe cycle.toDouble()
+            events[0].part.end.toDouble() shouldBe cycle + 0.5
 
-            events[1].begin.toDouble() shouldBe cycle + 0.5
-            events[1].end.toDouble() shouldBe cycle + 1.0
+            events[1].part.begin.toDouble() shouldBe cycle + 0.5
+            events[1].part.end.toDouble() shouldBe cycle + 1.0
         }
     }
 })

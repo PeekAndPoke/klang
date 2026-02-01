@@ -16,15 +16,15 @@ class LangZoomSpec : StringSpec({
         // First event should be "2", stretched to fill 0.0-0.5
         with(events[0]) {
             data.soundIndex shouldBe 2
-            begin.toDouble() shouldBe 0.0
-            end.toDouble() shouldBe 0.5
+            part.begin.toDouble() shouldBe 0.0
+            part.end.toDouble() shouldBe 0.5
         }
 
         // Second event should be "3", stretched to fill 0.5-1.0
         with(events[1]) {
             data.soundIndex shouldBe 3
-            begin.toDouble() shouldBe 0.5
-            end.toDouble() shouldBe 1.0
+            part.begin.toDouble() shouldBe 0.5
+            part.end.toDouble() shouldBe 1.0
         }
     }
 
@@ -50,8 +50,8 @@ class LangZoomSpec : StringSpec({
         events.size shouldBe 1
         with(events[0]) {
             data.soundIndex shouldBe 1
-            begin.toDouble() shouldBe 0.0
-            end.toDouble() shouldBe 1.0
+            part.begin.toDouble() shouldBe 0.0
+            part.end.toDouble() shouldBe 1.0
         }
     }
 

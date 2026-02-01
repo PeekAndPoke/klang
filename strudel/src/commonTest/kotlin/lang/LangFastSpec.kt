@@ -20,60 +20,60 @@ class LangFastSpec : StringSpec({
         // Let's assume standard behavior: it speeds up time.
 
         // When querying 0.5 cycles
-        val events = p.queryArc(0.0, 0.5).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 0.5).sortedBy { it.part.begin }
 
         // It should contain the full "bd hh" sequence in 0.5 time
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
 
         events[1].data.sound shouldBe "hh"
-        events[1].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "fast() works as a standalone function" {
         val p = fast(2, sound("bd hh"))
-        val events = p.queryArc(0.0, 0.5).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 0.5).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[0].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "fast() works as extension on String" {
         val p = "bd hh".fast(2)
-        val events = p.queryArc(0.0, 0.5).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 0.5).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         // "bd hh" -> note("bd hh") by default
         events[0].data.value?.asString shouldBe "bd"
-        events[0].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "fast() works in compiled code" {
         val p = StrudelPattern.compile("""sound("bd hh").fast(2)""")
-        val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[0].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "fast() as function works in compiled code" {
         val p = StrudelPattern.compile("""fast(2, sound("bd hh"))""")
-        val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[0].dur.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "fast() with discrete pattern control" {
         // sound("bd hh").fast("2 4") - pattern-controlled fast
         val p = sound("bd hh").fast("2 4")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // With "2 4" control pattern: first half fast by 2, second half by 4
         // First half: bd hh played twice (4 events) in 0.5 cycle
@@ -102,13 +102,13 @@ class LangFastSpec : StringSpec({
         val p1 = sound("bd hh").fast(2)
         val p2 = sound("bd hh").fast(steady(2))
 
-        val events1 = p1.queryArc(0.0, 0.5).sortedBy { it.begin }
-        val events2 = p2.queryArc(0.0, 0.5).sortedBy { it.begin }
+        val events1 = p1.queryArc(0.0, 0.5).sortedBy { it.part.begin }
+        val events2 = p2.queryArc(0.0, 0.5).sortedBy { it.part.begin }
 
         events1.size shouldBe events2.size
         events1.zip(events2).forEach { (e1, e2) ->
-            e1.begin shouldBe e2.begin
-            e1.end shouldBe e2.end
+            e1.part.begin shouldBe e2.part.begin
+            e1.part.end shouldBe e2.part.end
             e1.data.sound shouldBe e2.data.sound
         }
     }

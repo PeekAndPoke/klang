@@ -150,9 +150,9 @@ class LangPickOuterSpec : StringSpec({
 
         assertSoftly {
             events shouldHaveSize 1
-            events[0].begin.toDouble() shouldBeExactly 0.0
+            events[0].part.begin.toDouble() shouldBeExactly 0.0
             // Event IS clipped to selector end (0.5)
-            events[0].end.toDouble() shouldBeExactly 0.5
+            events[0].part.end.toDouble() shouldBeExactly 0.5
             events[0].data.sound shouldBe "bd"
         }
     }

@@ -18,12 +18,12 @@ class LangFocusSpec : StringSpec({
         events.size shouldBe 8  // 2 full cycles of 4 notes each
 
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "focus() compresses pattern into second half of cycle" {
@@ -35,12 +35,12 @@ class LangFocusSpec : StringSpec({
 
         // The "focused" events in [0.5, 1) range
         events[4].data.note shouldBeEqualIgnoringCase "c"
-        events[4].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[4].end.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+        events[4].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[4].part.end.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
 
         events[5].data.note shouldBeEqualIgnoringCase "d"
-        events[5].begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
-        events[5].end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[5].part.begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+        events[5].part.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
     }
 
     "focus() compresses pattern into middle of cycle" {
@@ -52,12 +52,12 @@ class LangFocusSpec : StringSpec({
 
         // Check first event (wraps around from previous cycle)
         events[0].data.note shouldBeEqualIgnoringCase "e"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
         // The focused range [0.25, 0.75) contains a full cycle starting with c
         events[2].data.note shouldBeEqualIgnoringCase "c"
-        events[2].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "focus() compresses pattern with gaps before and after" {
@@ -88,10 +88,10 @@ class LangFocusSpec : StringSpec({
         val secondCycle = events.drop(8)
 
         firstCycle[0].data.note shouldBeEqualIgnoringCase "e"
-        firstCycle[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        firstCycle[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
 
         secondCycle[0].data.note shouldBeEqualIgnoringCase "e"
-        secondCycle[0].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        secondCycle[0].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "focus() works with very small range" {
@@ -104,8 +104,8 @@ class LangFocusSpec : StringSpec({
 
         // First event starts near 0 (wrap-around)
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus 0.001)
-        events[0].end.toDouble() shouldBe (0.05 plusOrMinus 0.001)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus 0.001)
+        events[0].part.end.toDouble() shouldBe (0.05 plusOrMinus 0.001)
     }
 
     "focus() works as pattern extension" {
@@ -167,8 +167,8 @@ class LangFocusSpec : StringSpec({
         focusedEvents.size shouldBe originalEvents.size
         focusedEvents.zip(originalEvents).forEach { (fe, oe) ->
             fe.data.note?.lowercase() shouldBe oe.data.note?.lowercase()
-            fe.begin.toDouble() shouldBe (oe.begin.toDouble() plusOrMinus EPSILON)
-            fe.end.toDouble() shouldBe (oe.end.toDouble() plusOrMinus EPSILON)
+            fe.part.begin.toDouble() shouldBe (oe.part.begin.toDouble() plusOrMinus EPSILON)
+            fe.part.end.toDouble() shouldBe (oe.part.end.toDouble() plusOrMinus EPSILON)
         }
     }
 
@@ -213,7 +213,7 @@ class LangFocusSpec : StringSpec({
         events.size shouldBe 3
         events[0].data.note shouldBeEqualIgnoringCase "c"
         events[1].data.note shouldBeEqualIgnoringCase "c"
-        events[1].begin.toDouble() shouldBe (0.1 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.9 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.1 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.9 plusOrMinus EPSILON)
     }
 })

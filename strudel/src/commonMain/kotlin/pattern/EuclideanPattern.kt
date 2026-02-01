@@ -270,10 +270,10 @@ internal class EuclideanPattern(
             for (stepsEvent in stepsEvents) {
                 for (rotationEvent in rotationEvents) {
                     val overlapBegin: Rational =
-                        maxOf(pulsesEvent.begin, stepsEvent.begin, rotationEvent.begin)
+                        maxOf(pulsesEvent.part.begin, stepsEvent.part.begin, rotationEvent.part.begin)
 
                     val overlapEnd: Rational =
-                        minOf(pulsesEvent.end, stepsEvent.end, rotationEvent.end)
+                        minOf(pulsesEvent.part.end, stepsEvent.part.end, rotationEvent.part.end)
 
                     if (overlapEnd <= overlapBegin) continue
 

@@ -17,9 +17,9 @@ class LangVoicingSpec : StringSpec({
         events.size shouldBe 4
 
         // All events should be simultaneous
-        val firstBegin = events[0].begin
-        val firstEnd = events[0].end
-        events.all { it.begin == firstBegin && it.end == firstEnd } shouldBe true
+        val firstBegin = events[0].part.begin
+        val firstEnd = events[0].part.end
+        events.all { it.part.begin == firstBegin && it.part.end == firstEnd } shouldBe true
 
         // Chord property is removed after voicing (matches JS behavior)
         events.all { it.data.chord == null } shouldBe true
@@ -34,7 +34,7 @@ class LangVoicingSpec : StringSpec({
 
     "voicing() with voice leading" {
         val p = chord("Cmaj7 Dm7 G7 Cmaj7").voicing()
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // 4 chords with 4 notes each = 16 events
         events.size shouldBe 16
@@ -43,7 +43,7 @@ class LangVoicingSpec : StringSpec({
         events.all { it.data.chord == null } shouldBe true
 
         // Instead, verify we have 4 groups of 4 simultaneous notes
-        val groups = events.groupBy { it.begin }
+        val groups = events.groupBy { it.part.begin }
         groups.size shouldBe 4
         groups.values.all { it.size == 4 } shouldBe true
     }
@@ -69,7 +69,7 @@ class LangVoicingSpec : StringSpec({
 
     "voicing() as pattern extension" {
         val p = chord("Dm7 G7").voicing()
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // 2 chords with 4 notes each
         events.size shouldBe 8
@@ -78,7 +78,7 @@ class LangVoicingSpec : StringSpec({
         events.all { it.data.chord == null } shouldBe true
 
         // Verify we have 2 groups of 4 simultaneous notes
-        val groups = events.groupBy { it.begin }
+        val groups = events.groupBy { it.part.begin }
         groups.size shouldBe 2
         groups.values.all { it.size == 4 } shouldBe true
     }
@@ -96,13 +96,13 @@ class LangVoicingSpec : StringSpec({
 
     "voicing() timing preservation" {
         val p = chord("C F").voicing().fast("2")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // 2 chords at doubled speed: 4 occurrences, 3 notes each = 12 events
         events.size shouldNotBe 0
 
         // Each chord event should be short (at fast(2))
-        val duration = events[0].end - events[0].begin
+        val duration = events[0].part.end - events[0].part.begin
         duration.toDouble() shouldBe 0.25
     }
 
@@ -137,7 +137,7 @@ class LangVoicingSpec : StringSpec({
         events.size shouldBe 4
 
         // All simultaneous
-        val begin = events[0].begin
-        events.all { it.begin == begin } shouldBe true
+        val begin = events[0].part.begin
+        events.all { it.part.begin == begin } shouldBe true
     }
 })

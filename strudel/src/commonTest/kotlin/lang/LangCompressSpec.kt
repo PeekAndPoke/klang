@@ -18,13 +18,13 @@ class LangCompressSpec : StringSpec({
 
         // First note at the start of compression
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
 
         // Second note in the middle
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "compress() compresses pattern into second half of cycle" {
@@ -35,12 +35,12 @@ class LangCompressSpec : StringSpec({
         events.size shouldBe 2
 
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
     "compress() compresses pattern into middle of cycle" {
@@ -52,20 +52,20 @@ class LangCompressSpec : StringSpec({
 
         // Each note should be 1/4 of the compressed span (0.5 / 4 = 0.125)
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         events[2].data.note shouldBeEqualIgnoringCase "e"
-        events[2].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].part.end.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
 
         events[3].data.note shouldBeEqualIgnoringCase "f"
-        events[3].begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
-        events[3].end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[3].part.begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+        events[3].part.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
     }
 
     "compress() leaves gaps before and after compressed region" {
@@ -93,13 +93,13 @@ class LangCompressSpec : StringSpec({
 
         // First cycle
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
 
         // Second cycle
         events[1].data.note shouldBeEqualIgnoringCase "c"
-        events[1].begin.toDouble() shouldBe (1.25 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.75 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (1.25 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.75 plusOrMinus EPSILON)
     }
 
     "compress() works with very small compression range" {
@@ -110,12 +110,12 @@ class LangCompressSpec : StringSpec({
 
         // Compressed into 0.2 of the cycle
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.4 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.4 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.6 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.6 plusOrMinus EPSILON)
     }
 
     "compress() works as pattern extension" {
@@ -154,9 +154,9 @@ class LangCompressSpec : StringSpec({
         // Compressed into [0.25, 0.75) with span 0.5:
         // c maps to [0.25, 0.5), d maps to [0.5, 0.75)
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "compress() handles zero span gracefully" {
@@ -185,8 +185,8 @@ class LangCompressSpec : StringSpec({
         compressedEvents.size shouldBe originalEvents.size
         compressedEvents.zip(originalEvents).forEach { (ce, oe) ->
             ce.data.note?.lowercase() shouldBe oe.data.note?.lowercase()
-            ce.begin.toDouble() shouldBe (oe.begin.toDouble() plusOrMinus EPSILON)
-            ce.end.toDouble() shouldBe (oe.end.toDouble() plusOrMinus EPSILON)
+            ce.part.begin.toDouble() shouldBe (oe.part.begin.toDouble() plusOrMinus EPSILON)
+            ce.part.end.toDouble() shouldBe (oe.part.end.toDouble() plusOrMinus EPSILON)
         }
     }
 

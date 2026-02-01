@@ -18,26 +18,26 @@ class MiniNotationBangSpec : StringSpec() {
         "Simple repetition 'a!2'" {
             val pattern = parse("a!2")
             // a!2 is equivalent to "a a"
-            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
             events.size shouldBe 2
 
             with(events[0]) {
                 data.note shouldBeEqualIgnoringCase "a"
-                begin.toDouble() shouldBe 0.0
-                end.toDouble() shouldBe 0.5
+                part.begin.toDouble() shouldBe 0.0
+                part.end.toDouble() shouldBe 0.5
             }
             with(events[1]) {
                 data.note shouldBeEqualIgnoringCase "a"
-                begin.toDouble() shouldBe 0.5
-                end.toDouble() shouldBe 1.0
+                part.begin.toDouble() shouldBe 0.5
+                part.end.toDouble() shouldBe 1.0
             }
         }
 
         "Repetition with default count 'a!'" {
             // a! defaults to a!2
             val pattern = parse("a!")
-            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
             events.size shouldBe 2
             events[0].data.note shouldBeEqualIgnoringCase "a"
@@ -56,27 +56,27 @@ class MiniNotationBangSpec : StringSpec() {
             pattern.shouldBeInstanceOf<SequencePattern>()
             pattern.patterns.size shouldBe 4
 
-            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
             events.size shouldBe 4 // a, b, b, c
 
             events[0].data.note shouldBeEqualIgnoringCase "a"
-            events[0].dur.toDouble() shouldBe (1.0 / 4.0)
+            events[0].part.duration.toDouble() shouldBe (1.0 / 4.0)
 
             // b!2 takes the middle third. so each b takes 1/6
             events[1].data.note shouldBeEqualIgnoringCase "b"
-            events[1].dur.toDouble() shouldBe (1.0 / 4.0)
+            events[1].part.duration.toDouble() shouldBe (1.0 / 4.0)
             events[2].data.note shouldBeEqualIgnoringCase "b"
-            events[2].dur.toDouble() shouldBe (1.0 / 4.0)
+            events[2].part.duration.toDouble() shouldBe (1.0 / 4.0)
 
             events[3].data.note shouldBeEqualIgnoringCase "c"
-            events[3].dur.toDouble() shouldBe (1.0 / 4.0)
+            events[3].part.duration.toDouble() shouldBe (1.0 / 4.0)
         }
 
         "Repetition of group '[a b]!2'" {
             // [a b]!2 -> [a b] [a b]
             val pattern = parse("[a b]!2")
-            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
             events.size shouldBe 4 // a b a b
 
@@ -99,7 +99,7 @@ class MiniNotationBangSpec : StringSpec() {
             // So we hear "a a a a" in 1 cycle.
 
             val pattern = parse("a!2*2")
-            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.begin }
+            val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
             events.size shouldBe 4
             events.map { it.data.note?.lowercase() } shouldContainOnly listOf("a")
@@ -112,7 +112,7 @@ class MiniNotationBangSpec : StringSpec() {
             // So it should play 3 events per cycle.
 
             val pattern = parse("<a!3>")
-            val events = pattern.queryArc(0.0, 3.0).sortedBy { it.begin }
+            val events = pattern.queryArc(0.0, 3.0).sortedBy { it.part.begin }
 
             events.size shouldBe 3
             events.map { it.data.note?.lowercase() } shouldContainOnly listOf("a")
@@ -150,27 +150,33 @@ class MiniNotationBangSpec : StringSpec() {
             // a, a, a (3 notes)
             // Total 9 notes.
 
-            val events = pattern.queryArc(0.0, 2.0).sortedBy { it.begin }
+            val events = pattern.queryArc(0.0, 2.0).sortedBy { it.part.begin }
             events.size shouldBe 9
 
             // Check timing
             // Step 0 (a): 0.0 .. 0.125
             events[0].data.note shouldBeEqualIgnoringCase "a"
-            events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            events[0].end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            events[0].part.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
             // Step 8 (first of a!3): 8 * 0.125 = 1.0
             // It should be a full step now!
-            val step8 = events.find { it.begin.toDouble() >= 0.999 && it.begin.toDouble() < 1.001 }!!
+            val step8 =
+                events.find { it.part.begin.toDouble() >= 0.999 && it.part.begin.toDouble() < 1.001 }!!
+
             step8.data.note shouldBeEqualIgnoringCase "a"
-            step8.dur.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            step8.part.duration.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
             // Step 9 (second of a!3): 1.125
-            val step9 = events.find { it.begin.toDouble() >= 1.124 && it.begin.toDouble() < 1.126 }!!
+            val step9 =
+                events.find { it.part.begin.toDouble() >= 1.124 && it.part.begin.toDouble() < 1.126 }!!
+
             step9.data.note shouldBeEqualIgnoringCase "a"
 
             // Step 10 (third of a!3): 1.25
-            val step10 = events.find { it.begin.toDouble() >= 1.249 && it.begin.toDouble() < 1.251 }!!
+            val step10 =
+                events.find { it.part.begin.toDouble() >= 1.249 && it.part.begin.toDouble() < 1.251 }!!
+
             step10.data.note shouldBeEqualIgnoringCase "a"
 
             // Rests follow from 1.375 onwards.

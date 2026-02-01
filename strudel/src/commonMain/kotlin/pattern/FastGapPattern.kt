@@ -54,7 +54,7 @@ internal class FastGapPattern(
 
         for (factorEvent in factorEvents) {
             val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
-            val events = queryWithFactor(factorEvent.begin, factorEvent.end, ctx, factor)
+            val events = queryWithFactor(factorEvent.part.begin, factorEvent.part.end, ctx, factor)
             result.addAll(events)
         }
 

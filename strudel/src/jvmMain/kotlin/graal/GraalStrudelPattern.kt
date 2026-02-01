@@ -45,7 +45,7 @@ class GraalStrudelPattern(
 //            println("${event.note} ${event.scale}")
         }
 
-        return events.sortedBy { it.begin }
+        return events.sortedBy { it.part.begin }
     }
 
     /**

@@ -13,7 +13,7 @@ class LangStructAllSpec : StringSpec({
         // Struct: "x" (active 0-1.0)
         val p = "c e".structAll("x")
 
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // Unlike struct() which would pick only 'c', structAll keeps both
         events.size shouldBe 2
@@ -30,7 +30,7 @@ class LangStructAllSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.value?.asString shouldBe "c"
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "structAll() works as standalone function" {

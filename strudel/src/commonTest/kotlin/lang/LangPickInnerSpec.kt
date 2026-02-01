@@ -177,12 +177,12 @@ class LangPickInnerSpec : StringSpec({
         assertSoftly {
             events shouldHaveSize 2
             // First event of "bd hh" pattern events
-            events[0].begin.toDouble() shouldBeExactly 0.0
-            events[0].end.toDouble() shouldBeExactly 0.5
+            events[0].part.begin.toDouble() shouldBeExactly 0.0
+            events[0].part.end.toDouble() shouldBeExactly 0.5
             events[0].data.sound shouldBe "bd"
 
-            events[1].begin.toDouble() shouldBeExactly 0.5
-            events[1].end.toDouble() shouldBeExactly 1.0
+            events[1].part.begin.toDouble() shouldBeExactly 0.5
+            events[1].part.end.toDouble() shouldBeExactly 1.0
             events[1].data.sound shouldBe "sd"
         }
     }

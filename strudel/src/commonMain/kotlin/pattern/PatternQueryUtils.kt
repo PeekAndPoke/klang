@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlin.math.floor
 
@@ -109,7 +110,7 @@ internal inline fun calculateOverlapRange(
 internal inline fun mapEventTimeByScale(
     event: StrudelPatternEvent,
     scale: Rational,
-): Pair<io.peekandpoke.klang.strudel.TimeSpan, io.peekandpoke.klang.strudel.TimeSpan?> {
+): Pair<TimeSpan, TimeSpan?> {
     return Pair(
         event.part.scale(Rational.ONE / scale),
         event.whole?.scale(Rational.ONE / scale)
@@ -125,7 +126,7 @@ internal inline fun mapEventTimeByScale(
 internal inline fun offsetEventTime(
     event: StrudelPatternEvent,
     offset: Rational,
-): Pair<io.peekandpoke.klang.strudel.TimeSpan, io.peekandpoke.klang.strudel.TimeSpan?> {
+): Pair<TimeSpan, TimeSpan?> {
     return Pair(
         event.part.shift(offset),
         event.whole?.shift(offset)
@@ -148,7 +149,7 @@ internal inline fun mapEventTimeBySpan(
     cycleBase: Rational,
     compressedStart: Rational,
     span: Rational,
-): Pair<io.peekandpoke.klang.strudel.TimeSpan, io.peekandpoke.klang.strudel.TimeSpan?> {
+): Pair<TimeSpan, TimeSpan?> {
     val mappedPart = event.part.shift(-cycleBase).scale(span).shift(compressedStart)
     val mappedWhole = event.whole?.shift(-cycleBase)?.scale(span)?.shift(compressedStart)
 

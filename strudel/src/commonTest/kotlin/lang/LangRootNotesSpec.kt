@@ -28,7 +28,7 @@ class LangRootNotesSpec : StringSpec({
 
     "rootNotes() extracts from multiple chords" {
         val p = chord("C F G").rootNotes()
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         events[0].data.note shouldBe "C4"
@@ -38,7 +38,7 @@ class LangRootNotesSpec : StringSpec({
 
     "rootNotes() with specific octave" {
         val p = chord("C F G").rootNotes("3")
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         events[0].data.note shouldBe "C3"
@@ -66,19 +66,19 @@ class LangRootNotesSpec : StringSpec({
 
     "rootNotes() timing preservation" {
         val p = chord("C F G C").fast("2").rootNotes()
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // 4 chords at doubled speed = 8 root notes
         events.size shouldBe 8
 
         // Each event should be 1/8 of a cycle
-        val duration = events[0].end - events[0].begin
+        val duration = events[0].part.end - events[0].part.begin
         duration.toDouble() shouldBe 0.125
     }
 
     "rootNotes() as pattern extension" {
         val p = chord("Dm7 G7 Cmaj7").rootNotes()
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         events[0].data.note shouldBe "D4"
@@ -96,7 +96,7 @@ class LangRootNotesSpec : StringSpec({
 
     "rootNotes() with octave in compiled code" {
         val p = StrudelPattern.compile("""chord("Dm7 G7 Cmaj7").rootNotes(3)""")
-        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.begin } ?: emptyList()
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 3
         events[0].data.note shouldBe "D3"

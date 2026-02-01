@@ -62,12 +62,12 @@ internal class SegmentPattern(
             val n = nEvent.data.value?.asInt ?: 1
             if (n <= 0) continue
 
-            val duration = nEvent.end - nEvent.begin
+            val duration = nEvent.part.duration
             val sliceDuration = duration / Rational(n)
 
             // Create n slices within this timespan
             for (i in 0 until n) {
-                val sliceBegin = nEvent.begin + (sliceDuration * Rational(i))
+                val sliceBegin = nEvent.part.begin + (sliceDuration * Rational(i))
                 val sliceEnd = sliceBegin + sliceDuration
 
                 // Query source for this slice

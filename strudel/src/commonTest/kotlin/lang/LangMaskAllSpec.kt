@@ -11,7 +11,7 @@ class LangMaskAllSpec : StringSpec({
         // note("c e").maskAll("x 0") -> keeps both because '0' is still an event
         val p = note("c e").maskAll("x 0")
 
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "c"

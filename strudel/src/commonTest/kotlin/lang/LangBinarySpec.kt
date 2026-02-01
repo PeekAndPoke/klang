@@ -10,7 +10,7 @@ class LangBinarySpec : StringSpec({
     "binary(5) generates 1 0 1" {
         // 5 is 101 in binary
         val p = binary(5)
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
         events[0].data.value?.asInt shouldBe 1
@@ -21,7 +21,7 @@ class LangBinarySpec : StringSpec({
     "binaryN(5, 4) generates 0 1 0 1" {
         // 5 is 101, padded to 4 bits -> 0101
         val p = binaryN(5, 4)
-        val events = p.queryArc(0.0, 1.0).sortedBy { it.begin }
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 4
         events[0].data.value?.asInt shouldBe 0

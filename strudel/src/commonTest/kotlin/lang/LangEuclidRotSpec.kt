@@ -15,22 +15,22 @@ class LangEuclidRotSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events[0].begin.toDouble() shouldBe 0.125
-        events[1].begin.toDouble() shouldBe 0.5
-        events[2].begin.toDouble() shouldBe 0.875
+        events[0].part.begin.toDouble() shouldBe 0.125
+        events[1].part.begin.toDouble() shouldBe 0.5
+        events[2].part.begin.toDouble() shouldBe 0.875
     }
 
     "euclidRot works as top-level function" {
         val p = euclidRot(3, 8, 1, note("a"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 3
-        events[0].begin.toDouble() shouldBe 0.125
+        events[0].part.begin.toDouble() shouldBe 0.125
     }
 
     "euclidRot works as string extension" {
         val p = "a".euclidRot(3, 8, 1)
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 3
-        events[0].begin.toDouble() shouldBe 0.125
+        events[0].part.begin.toDouble() shouldBe 0.125
     }
 })

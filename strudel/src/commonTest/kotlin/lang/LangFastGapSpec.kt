@@ -17,12 +17,12 @@ class LangFastGapSpec : StringSpec({
         events.size shouldBe 2
 
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
     "fastGap() with factor 3 compresses into first third" {
@@ -33,16 +33,16 @@ class LangFastGapSpec : StringSpec({
         events.size shouldBe 3
 
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (1.0 / 9.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (1.0 / 9.0 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (1.0 / 9.0 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (2.0 / 9.0 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (1.0 / 9.0 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (2.0 / 9.0 plusOrMinus EPSILON)
 
         events[2].data.note shouldBeEqualIgnoringCase "e"
-        events[2].begin.toDouble() shouldBe (2.0 / 9.0 plusOrMinus EPSILON)
-        events[2].end.toDouble() shouldBe (1.0 / 3.0 plusOrMinus EPSILON)
+        events[2].part.begin.toDouble() shouldBe (2.0 / 9.0 plusOrMinus EPSILON)
+        events[2].part.end.toDouble() shouldBe (1.0 / 3.0 plusOrMinus EPSILON)
     }
 
     "fastGap() leaves gap in remaining cycle" {
@@ -70,13 +70,13 @@ class LangFastGapSpec : StringSpec({
 
         // First cycle
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
         // Second cycle
         events[1].data.note shouldBeEqualIgnoringCase "c"
-        events[1].begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
     }
 
     "fastGap() with factor 4 compresses into first quarter" {
@@ -86,12 +86,12 @@ class LangFastGapSpec : StringSpec({
         events.size shouldBe 2
 
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
-        events[1].end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "fastGap() with sound patterns" {
@@ -106,7 +106,7 @@ class LangFastGapSpec : StringSpec({
 
         // All should be in first half
         events.forEach { event ->
-            (event.end.toDouble() <= 0.5) shouldBe true
+            (event.part.end.toDouble() <= 0.5) shouldBe true
         }
     }
 
@@ -143,9 +143,9 @@ class LangFastGapSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[1].data.note shouldBeEqualIgnoringCase "d"
-        events[1].begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        events[1].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
     "densityGap() alias works" {
