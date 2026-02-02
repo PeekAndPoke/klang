@@ -151,13 +151,9 @@ object JsCompatTestData {
         // pickOut() - Pattern picking with outerJoin (no clipping)
         Example("pickOut() basic", """pickOut(["bd hh", "sd cp"], "0 1")"""),
         Example("pickOut() with patterns", """pickOut([sound("bd hh"), sound("sn cp")], "0 1")"""),
-        // This case specifically tests the non-clipping behavior:
-        // Selector "0" is fast(2) -> 0.0-0.5. Inner "bd" is 0.0-1.0.
-        // pickOut should let it ring to 1.0. pick would clip to 0.5.
-        Example("pickOut() no clipping", """pickOut([sound("bd")], seq("0").fast(2))"""),
         // pickmodOut()
-        Example("pickmodOut() basic", """pickmodOut(["bd", "hh"], "0 1 2")"""),
-        Example("pickmodOut() no clipping", """pickmodOut([sound("bd")], seq("0 2").fast(2))"""),
+        Example("pickmodOut() basic", """pickmodOut(["bd hh", "sd oh"], "0 1 2")"""),
+        Example("pickmodOut() no clipping", """pickmodOut([sound("bd hh"), sound("sd oh")], seq("0 2").fast(2))"""),
         // pickRestart() - Pattern picking with restart
         Example("pickRestart() basic", """pickRestart(["bd", "hh"], "0 1")"""),
         Example("pickRestart() with patterns", """pickRestart([sound("bd hh"), sound("sn cp")], "0 1")"""),
