@@ -15,6 +15,67 @@ var strudelLangSynthesisInit = false
 // FM Synthesis
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+To listen to the FM synthesis implementation, you can write KlangScript patterns using the new DSL functions (`fmh`, `fmenv`, `fmatt`, etc.).
+
+Here are a few recipes to try out different FM characters. For the cleanest results, start with a sine wave carrier (`s("sine")`), as complex waves like sawtooths can get muddy quickly when modulated.
+
+### 1. The Classic FM Bell
+This is the "Hello World" of FM synthesis. Non-integer ratios create inharmonic partials that sound metallic.
+
+```javascript
+// A ratio of ~1.4 creates distinct bell tones
+// High modulation depth + long decay = ringing sound
+note("c3 e3 g3 b3")
+  .s("sine")
+  .fmh(1.4)          // Inharmonic ratio
+  .fmenv(1000)       // Heavy modulation depth (Hz)
+  .fmatt(0.01)       // Instant attack
+  .fmdec(2.0)        // Long decay
+  .fmsus(0.0)        // No sustain (percussive)
+```
+
+### 2. Aggressive "Growl" Bass
+Using integer ratios creates harmonic, rich spectra useful for bass.
+
+```javascript
+note("c2 c2 [c2*2] c2")
+  .s("triangle")
+  .fmh(1)            // 1:1 ratio adds square-like harmonics
+  .fmenv(500)        // Moderate depth adds "grit"
+  .lpf(2000)         // Tame the harsh highs
+```
+
+### 3. Evolving Textures
+You can use continuous patterns (LFOs) to modulate the FM parameters over time.
+
+```javascript
+note("c3")
+  .s("sine")
+  .dur(4)
+  .fmh(sine.range(0.5, 4.0))   // Sweep the ratio slowly
+  .fmenv(saw.range(0, 800))    // Sweep the depth
+```
+
+### 4. Sequencing Timbre
+You can sequence the FM parameters just like notes to create a melody of timbres.
+
+```javascript
+// Changing the ratio per step changes the "material" of the sound
+note("c3*4")
+  .s("sine")
+  .fmh("<1 2 3.5 0.5>")
+  .fmenv(600)
+```
+
+**DSL Reference:**
+*   **`fmh(ratio)`**: Harmonicity ratio (Carrier / Modulator).
+    *   `1, 2, 3` = Harmonic (cleaner).
+    *   `1.4, 2.7` = Inharmonic (metallic/bells).
+*   **`fmenv(depth)`**: Modulation amount in Hz. Higher = brighter/noisier.
+*   **`fmatt(sec)`**, **`fmdec(sec)`**, **`fmsus(0..1)`**: Shaping the "brightness" envelope independent of the volume envelope.
+ */
+
 // -- fmh() ------------------------------------------------------------------------------------------------------------
 
 /**

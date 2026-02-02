@@ -2297,22 +2297,32 @@ val String.steps by dslStringExtension { p, args, callInfo -> p.pace(args, callI
 // -- take() -----------------------------------------------------------------------------------------------------------
 
 private fun applyTake(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val cyclesArg = args.firstOrNull()
-    val cyclesVal = cyclesArg?.value
+    val takeArg = args.firstOrNull() ?: return source
 
-    val cyclesPattern: StrudelPattern = when (cyclesVal) {
-        is StrudelPattern -> cyclesVal
-        else -> parseMiniNotation(cyclesArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
+    val control: ControlValueProvider = takeArg.asControlValueProvider(StrudelVoiceValue.Num(1.0))
+
+    val takePattern = when (control) {
+        is ControlValueProvider.Static -> AtomicPattern(StrudelVoiceData.empty.copy(value = control.value))
+        is ControlValueProvider.Pattern -> control.pattern
     }
 
-    val staticCycles = cyclesVal?.asDoubleOrNull()
+    return takePattern._stepJoin { event ->
+        val n = event.data.value?.asDouble ?: return@_stepJoin null
+        val steps = source.numSteps?.toDouble()
 
-    return if (staticCycles != null) {
-        TakePattern(source, staticCycles.toRational())
-    } else {
-        TakePattern.control(source, cyclesPattern)
+        if (steps != null && steps > 0) {
+            val ratN = n.toRational()
+            val ratSteps = steps.toRational()
+            val end = ratN / ratSteps
+
+            if (end <= Rational.ZERO) return@_stepJoin silence
+            if (end >= Rational.ONE) return@_stepJoin source
+            // Take(n) keeps first n steps.
+            // Zoom window [0, end] to [0, 1]
+            source._withQueryTime { t -> t * end }.withSteps(ratN)
+        } else {
+            silence
+        }
     }
 }
 
@@ -2339,22 +2349,44 @@ val String.take by dslStringExtension { p, args, callInfo -> p.take(args, callIn
 // -- drop() -----------------------------------------------------------------------------------------------------------
 
 private fun applyDrop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val dropArg = args.firstOrNull()
-    val dropVal = dropArg?.value
+    val dropArg = args.firstOrNull() ?: return source
 
-    val dropPattern: StrudelPattern = when (dropVal) {
-        is StrudelPattern -> dropVal
-        else -> parseMiniNotation(dropArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
+    val control: ControlValueProvider = dropArg.asControlValueProvider(StrudelVoiceValue.Num(0.0))
+
+    val dropPattern = when (control) {
+        is ControlValueProvider.Static -> AtomicPattern(StrudelVoiceData.empty.copy(value = control.value))
+        is ControlValueProvider.Pattern -> control.pattern
     }
 
-    val staticDrop = dropVal?.asDoubleOrNull()
+    return dropPattern._stepJoin { event ->
+        val n = event.data.value?.asDouble ?: return@_stepJoin null
+        val steps = source.numSteps?.toDouble()
 
-    return if (staticDrop != null) {
-        DropPattern(source, staticDrop.toRational())
-    } else {
-        DropPattern.control(source, dropPattern)
+        if (steps != null && steps > 0) {
+            val ratN = n.toRational()
+            val ratSteps = steps.toRational()
+
+            if (ratN > Rational.ZERO) {
+                // drop from start: zoom(n/steps, 1)
+                val start = ratN / ratSteps
+                if (start >= Rational.ONE) return@_stepJoin silence
+                // Zoom window [start, 1] to [0, 1]
+                // Map query t in [0, 1] to [start, 1] -> t' = start + t * (1 - start)
+                val duration = Rational.ONE - start
+
+                source._withQueryTime { t -> start + t * duration }.withSteps(ratSteps - ratN)
+            } else {
+                // drop from end: zoom(0, (steps+n)/steps)
+                // n is negative
+                val end = (ratSteps + ratN) / ratSteps
+                if (end <= Rational.ZERO) return@_stepJoin silence
+                // Zoom window [0, end] to [0, 1]
+                // Map query t in [0, 1] to [0, end] -> t' = t * end
+                source._withQueryTime { t -> t * end }.withSteps(ratSteps + ratN)
+            }
+        } else {
+            silence
+        }
     }
 }
 

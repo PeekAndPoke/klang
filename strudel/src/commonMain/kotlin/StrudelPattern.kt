@@ -360,6 +360,14 @@ fun StrudelPattern._bindSqueeze(
 }
 
 /**
+ * Binds an inner pattern, squeezing it into the outer event's duration (step).
+ * Alias for _bindSqueeze. Matches JS stepJoin().
+ */
+fun StrudelPattern._stepJoin(
+    transform: (StrudelPatternEvent) -> StrudelPattern?,
+): StrudelPattern = _bindSqueeze(transform)
+
+/**
  * Binds an inner pattern, adjusting its speed based on the ratio of outer steps to inner steps.
  * Equivalent to `pat.fmap(transform).polyJoin()` in JS Strudel.
  */
