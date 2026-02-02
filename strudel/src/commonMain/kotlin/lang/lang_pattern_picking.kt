@@ -7,7 +7,6 @@ import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
-import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.*
 import kotlin.math.floor
@@ -310,11 +309,7 @@ private fun applyPickOuter(
             // Wrap the picked pattern to set whole to selector's whole
             pickedPattern?.let { pattern ->
                 MapPattern(pattern) { events ->
-                    events.map { event ->
-                        event.copy(
-                            whole = selectorEvent.whole ?: TimeSpan(selectorEvent.part.begin, selectorEvent.part.end)
-                        )
-                    }
+                    events.map { event -> event.copy(whole = selectorEvent.whole) }
                 }
             }
         }

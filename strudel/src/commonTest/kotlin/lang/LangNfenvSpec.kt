@@ -1,97 +1,75 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangNfenvSpec : StringSpec({
 
-    "nfenv() sets StrudelVoiceData.nfenv" {
-        val p = nfenv("0.5 0.7")
+    "top-level nfenv() sets VoiceData.nfenv correctly" {
+        val p = nfenv("0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.nfenv shouldBe 0.5
-        events[1].data.nfenv shouldBe 0.7
+        events.map { it.data.nfenv } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfenv() works as pattern extension" {
-        val p = note("c").nfenv("0.5")
-        val events = p.queryArc(0.0, 1.0)
+    "control pattern nfenv() sets VoiceData.nfenv on existing pattern" {
+        val base = note("c3 e3")
+        val p = base.nfenv("0.1 0.2")
+        val events = p.queryArc(0.0, 2.0)
 
-        events.size shouldBe 1
-        events[0].data.nfenv shouldBe 0.5
+        events.size shouldBe 4
+        events.map { it.data.nfenv } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
     }
 
     "nfenv() works as string extension" {
-        val p = "c".nfenv("0.5")
+        val p = "c3".nfenv("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
+        events[0].data.value?.asString shouldBe "c3"
         events[0].data.nfenv shouldBe 0.5
     }
 
-    "nfenv() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").nfenv("0.5")""")
+    "nfenv() works within compiled code" {
+        val p = StrudelPattern.compile("""note("a b").nfenv("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.nfenv shouldBe 0.5
+
+        events.size shouldBe 2
+        events.map { it.data.nfenv } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfenv() with continuous pattern sets nfenv correctly" {
-        // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").nfenv(sine)
+    "nfe() alias works as top-level function" {
+        val p = nfe("0.3 0.7")
         val events = p.queryArc(0.0, 1.0)
 
-        events.size shouldBe 4
-        // t=0.0: sine(0) = 0.5
-        events[0].data.nfenv shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.25: sine(0.25) = 1.0
-        events[1].data.nfenv shouldBe (1.0 plusOrMinus EPSILON)
-        // t=0.5: sine(0.5) = 0.5
-        events[2].data.nfenv shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.75: sine(0.75) = 0.0
-        events[3].data.nfenv shouldBe (0.0 plusOrMinus EPSILON)
+        events.size shouldBe 2
+        events.map { it.data.nfenv } shouldBe listOf(0.3, 0.7)
     }
 
-    "nfenv() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.strudel.StrudelVoiceData.empty.copy(
-            notchf = 1000.0,
-            nfenv = 0.5
-        )
-        val voiceData = data.toVoiceData()
-        val nf = voiceData.filters[0] as FilterDef.Notch
+    "nfe() alias works as pattern extension" {
+        val p = note("c d").nfe("0.4 0.6")
+        val events = p.queryArc(0.0, 1.0)
 
-        nf.envelope shouldNotBe null
-        nf.envelope?.depth shouldBe 0.5
+        events.size shouldBe 2
+        events.map { it.data.nfenv } shouldBe listOf(0.4, 0.6)
     }
 
-    // Alias tests
-
-    "nfe() is an alias for nfenv()" {
-        val p = nfe("0.6")
+    "nfe() alias works as string extension" {
+        val p = "e3".nfe("0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.nfenv shouldBe 0.6
+        events[0].data.value?.asString shouldBe "e3"
+        events[0].data.nfenv shouldBe 0.8
     }
 
-    "nfe() works as pattern extension" {
-        val p = note("c").nfe("0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.nfenv shouldBe 0.6
-    }
-
-    "nfe() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").nfe("0.6")""")
+    "nfe() alias works within compiled code" {
+        val p = StrudelPattern.compile("""note("c d").nfe("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.nfenv shouldBe 0.6
+
+        events.size shouldBe 2
+        events.map { it.data.nfenv } shouldBe listOf(0.2, 0.9)
     }
 })

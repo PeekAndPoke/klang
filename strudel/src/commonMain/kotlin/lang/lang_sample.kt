@@ -177,8 +177,17 @@ private val loopAtMutation = voiceModifier {
 
 private fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.isEmpty()) return source
+
+    // Get the loopAt factor
+    val factor = args[0].value?.asDoubleOrNull() ?: return source
+
+    // Apply slow() to stretch the events to the desired duration
+    // loopAt(2) stretches events to 2 cycles, loopAt(0.5) compresses to 0.5 cycles
+    val slowed = source.slow(factor)
+
+    // Then set the speed parameter to compensate for sample playback
     val control = args.toPattern(loopAtMutation)
-    return source._liftData(control)
+    return slowed._liftData(control)
 }
 
 /** Fits the sample to the specified number of cycles */

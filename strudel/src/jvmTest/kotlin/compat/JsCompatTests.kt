@@ -39,7 +39,7 @@ class JsCompatTests : StringSpec() {
     init {
         // Testing that simple pattern code produces the same results
         JsCompatTestData.patterns.forEachIndexed { index, example ->
-            "Simple Pattern ${index + 1}: ${example.name}" {
+            "Pattern ${index + 1}: ${example.name}" {
                 if (!example.skip) {
                     runComparison(example)
                 } else {

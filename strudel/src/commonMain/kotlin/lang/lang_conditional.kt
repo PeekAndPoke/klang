@@ -212,8 +212,8 @@ val String.lastOf by dslStringExtension { source, args, /* callInfo */ _ ->
  *
  * Equivalent to JavaScript: pat.when(condition, func)
  *
- * @param condition Pattern to test for truthiness
- * @param transform Function to apply when condition is true
+ * @param {condition} Pattern to test for truthiness
+ * @param {transform} Function to apply when condition is true
  *
  * @example
  * note("c d e f").when(pure(1).struct("t ~ t ~")) { it.add(12) }

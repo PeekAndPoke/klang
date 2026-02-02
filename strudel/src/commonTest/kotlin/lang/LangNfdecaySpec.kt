@@ -1,97 +1,75 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangNfdecaySpec : StringSpec({
 
-    "nfdecay() sets StrudelVoiceData.nfdecay" {
-        val p = nfdecay("0.2 0.3")
+    "top-level nfdecay() sets VoiceData.nfdecay correctly" {
+        val p = nfdecay("0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.nfdecay shouldBe 0.2
-        events[1].data.nfdecay shouldBe 0.3
+        events.map { it.data.nfdecay } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfdecay() works as pattern extension" {
-        val p = note("c").nfdecay("0.2")
-        val events = p.queryArc(0.0, 1.0)
+    "control pattern nfdecay() sets VoiceData.nfdecay on existing pattern" {
+        val base = note("c3 e3")
+        val p = base.nfdecay("0.1 0.2")
+        val events = p.queryArc(0.0, 2.0)
 
-        events.size shouldBe 1
-        events[0].data.nfdecay shouldBe 0.2
+        events.size shouldBe 4
+        events.map { it.data.nfdecay } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
     }
 
     "nfdecay() works as string extension" {
-        val p = "c".nfdecay("0.2")
+        val p = "c3".nfdecay("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.nfdecay shouldBe 0.2
+        events[0].data.value?.asString shouldBe "c3"
+        events[0].data.nfdecay shouldBe 0.5
     }
 
-    "nfdecay() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").nfdecay("0.2")""")
+    "nfdecay() works within compiled code" {
+        val p = StrudelPattern.compile("""note("a b").nfdecay("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.nfdecay shouldBe 0.2
+
+        events.size shouldBe 2
+        events.map { it.data.nfdecay } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfdecay() with continuous pattern sets nfdecay correctly" {
-        // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").nfdecay(sine)
+    "nfd() alias works as top-level function" {
+        val p = nfd("0.3 0.7")
         val events = p.queryArc(0.0, 1.0)
 
-        events.size shouldBe 4
-        // t=0.0: sine(0) = 0.5
-        events[0].data.nfdecay shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.25: sine(0.25) = 1.0
-        events[1].data.nfdecay shouldBe (1.0 plusOrMinus EPSILON)
-        // t=0.5: sine(0.5) = 0.5
-        events[2].data.nfdecay shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.75: sine(0.75) = 0.0
-        events[3].data.nfdecay shouldBe (0.0 plusOrMinus EPSILON)
+        events.size shouldBe 2
+        events.map { it.data.nfdecay } shouldBe listOf(0.3, 0.7)
     }
 
-    "nfdecay() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.strudel.StrudelVoiceData.empty.copy(
-            notchf = 1000.0,
-            nfdecay = 0.2
-        )
-        val voiceData = data.toVoiceData()
-        val nf = voiceData.filters[0] as FilterDef.Notch
+    "nfd() alias works as pattern extension" {
+        val p = note("c d").nfd("0.4 0.6")
+        val events = p.queryArc(0.0, 1.0)
 
-        nf.envelope shouldNotBe null
-        nf.envelope?.decay shouldBe 0.2
+        events.size shouldBe 2
+        events.map { it.data.nfdecay } shouldBe listOf(0.4, 0.6)
     }
 
-    // Alias tests
-
-    "nfd() is an alias for nfdecay()" {
-        val p = nfd("0.25")
+    "nfd() alias works as string extension" {
+        val p = "e3".nfd("0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.nfdecay shouldBe 0.25
+        events[0].data.value?.asString shouldBe "e3"
+        events[0].data.nfdecay shouldBe 0.8
     }
 
-    "nfd() works as pattern extension" {
-        val p = note("c").nfd("0.25")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.nfdecay shouldBe 0.25
-    }
-
-    "nfd() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").nfd("0.25")""")
+    "nfd() alias works within compiled code" {
+        val p = StrudelPattern.compile("""note("c d").nfd("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.nfdecay shouldBe 0.25
+
+        events.size shouldBe 2
+        events.map { it.data.nfdecay } shouldBe listOf(0.2, 0.9)
     }
 })

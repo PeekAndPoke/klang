@@ -59,7 +59,7 @@ val String.fmh by dslStringExtension { p, args, callInfo -> p.fmh(args, callInfo
  * Controls how quickly the FM modulation depth rises from 0 to its peak when a note starts.
  * Shorter times create percussive attacks, longer times create gradual pitch sweeps.
  *
- * @param seconds Attack time in seconds (typical range 0.0 to 2.0)
+ * @param {seconds} Attack time in seconds (typical range 0.0 to 2.0)
  *
  * @example
  * note("c3").fmattack(0.01).fmenv(100)
@@ -106,7 +106,7 @@ val String.fmatt by dslStringExtension { p, args, callInfo -> p.fmattack(args, c
  * Controls how quickly the FM modulation depth falls from its peak to the sustain level.
  * Affects the brightness evolution of the sound.
  *
- * @param seconds Decay time in seconds (typical range 0.0 to 2.0)
+ * @param {seconds} Decay time in seconds (typical range 0.0 to 2.0)
  *
  * @example
  * note("c3").fmattack(0.01).fmdecay(0.1).fmsustain(0.3).fmenv(100)
@@ -149,7 +149,7 @@ val String.fmdec by dslStringExtension { p, args, callInfo -> p.fmdecay(args, ca
  * Determines the FM modulation depth after the attack and decay phases, while the note is held.
  * Value is typically between 0.0 (no sustain) and 1.0 (full modulation).
  *
- * @param level Sustain level (0.0 to 1.0)
+ * @param {level} Sustain level (0.0 to 1.0)
  *
  * @example
  * note("c3").fmsustain(0.0).fmenv(100)
@@ -196,7 +196,7 @@ val String.fmsus by dslStringExtension { p, args, callInfo -> p.fmsustain(args, 
  * This is the primary control for FM synthesis intensity. Higher values create more complex,
  * metallic, or noise-like timbres. Typically measured in Hz or as a modulation index.
  *
- * @param depth Modulation depth (typical range 0 to 1000+ Hz)
+ * @param {depth} Modulation depth (typical range 0 to 1000+ Hz)
  *
  * @example
  * note("c3").fmh(2).fmenv(50)

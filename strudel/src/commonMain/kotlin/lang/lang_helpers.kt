@@ -160,7 +160,7 @@ fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPatt
                 if (argVal.isEmpty()) return@mapNotNull null
 
                 var dur = 1.0
-                var patVal: Any? = null
+                var patVal: Any?
 
                 // Check for [number, pattern] format
                 if (argVal.size >= 2 && argVal[0] is Number) {

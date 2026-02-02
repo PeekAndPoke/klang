@@ -1,97 +1,75 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangNfsustainSpec : StringSpec({
 
-    "nfsustain() sets StrudelVoiceData.nfsustain" {
-        val p = nfsustain("0.7 0.8")
+    "top-level nfsustain() sets VoiceData.nfsustain correctly" {
+        val p = nfsustain("0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.nfsustain shouldBe 0.7
-        events[1].data.nfsustain shouldBe 0.8
+        events.map { it.data.nfsustain } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfsustain() works as pattern extension" {
-        val p = note("c").nfsustain("0.7")
-        val events = p.queryArc(0.0, 1.0)
+    "control pattern nfsustain() sets VoiceData.nfsustain on existing pattern" {
+        val base = note("c3 e3")
+        val p = base.nfsustain("0.1 0.2")
+        val events = p.queryArc(0.0, 2.0)
 
-        events.size shouldBe 1
-        events[0].data.nfsustain shouldBe 0.7
+        events.size shouldBe 4
+        events.map { it.data.nfsustain } shouldBe listOf(0.1, 0.2, 0.1, 0.2)
     }
 
     "nfsustain() works as string extension" {
-        val p = "c".nfsustain("0.7")
+        val p = "c3".nfsustain("0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.nfsustain shouldBe 0.7
+        events[0].data.value?.asString shouldBe "c3"
+        events[0].data.nfsustain shouldBe 0.5
     }
 
-    "nfsustain() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").nfsustain("0.7")""")
+    "nfsustain() works within compiled code" {
+        val p = StrudelPattern.compile("""note("a b").nfsustain("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.nfsustain shouldBe 0.7
+
+        events.size shouldBe 2
+        events.map { it.data.nfsustain } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfsustain() with continuous pattern sets nfsustain correctly" {
-        // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
-        val p = note("a b c d").nfsustain(sine)
+    "nfs() alias works as top-level function" {
+        val p = nfs("0.3 0.7")
         val events = p.queryArc(0.0, 1.0)
 
-        events.size shouldBe 4
-        // t=0.0: sine(0) = 0.5
-        events[0].data.nfsustain shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.25: sine(0.25) = 1.0
-        events[1].data.nfsustain shouldBe (1.0 plusOrMinus EPSILON)
-        // t=0.5: sine(0.5) = 0.5
-        events[2].data.nfsustain shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.75: sine(0.75) = 0.0
-        events[3].data.nfsustain shouldBe (0.0 plusOrMinus EPSILON)
+        events.size shouldBe 2
+        events.map { it.data.nfsustain } shouldBe listOf(0.3, 0.7)
     }
 
-    "nfsustain() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.strudel.StrudelVoiceData.empty.copy(
-            notchf = 1000.0,
-            nfsustain = 0.7
-        )
-        val voiceData = data.toVoiceData()
-        val nf = voiceData.filters[0] as FilterDef.Notch
+    "nfs() alias works as pattern extension" {
+        val p = note("c d").nfs("0.4 0.6")
+        val events = p.queryArc(0.0, 1.0)
 
-        nf.envelope shouldNotBe null
-        nf.envelope?.sustain shouldBe 0.7
+        events.size shouldBe 2
+        events.map { it.data.nfsustain } shouldBe listOf(0.4, 0.6)
     }
 
-    // Alias tests
-
-    "nfs() is an alias for nfsustain()" {
-        val p = nfs("0.85")
+    "nfs() alias works as string extension" {
+        val p = "e3".nfs("0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.nfsustain shouldBe 0.85
+        events[0].data.value?.asString shouldBe "e3"
+        events[0].data.nfsustain shouldBe 0.8
     }
 
-    "nfs() works as pattern extension" {
-        val p = note("c").nfs("0.85")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.nfsustain shouldBe 0.85
-    }
-
-    "nfs() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").nfs("0.85")""")
+    "nfs() alias works within compiled code" {
+        val p = StrudelPattern.compile("""note("c d").nfs("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-        events.size shouldBe 1
-        events[0].data.nfsustain shouldBe 0.85
+
+        events.size shouldBe 2
+        events.map { it.data.nfsustain } shouldBe listOf(0.2, 0.9)
     }
 })

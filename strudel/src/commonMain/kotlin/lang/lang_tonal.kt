@@ -1023,7 +1023,7 @@ internal fun getVoicedNotes(
         }
 
         return emptyList()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         return emptyList()
     }
 }
