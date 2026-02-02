@@ -1,11 +1,18 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.TWO_PI
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shared Logic Extensions
 
+/**
+ * Simplified mixing function - handles only post-gain, panning, and buffer summing.
+ * All effects (crush, coarse, distortion, tremolo, etc.) are now handled in the voice's render pipeline.
+ */
 fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     val orbit = ctx.orbits.getOrInit(orbitId, this)
 
@@ -27,141 +34,41 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     val reverbSendL = orbit.reverbSendBuffer.left
     val reverbSendR = orbit.reverbSendBuffer.right
 
-    val env = envelope
-    val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
-    val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
-    val relRate = if (env.releaseFrames > 0) env.sustainLevel / env.releaseFrames else 1.0
-
-    // Frame position relative to the start of the voice
-    var absPos = (ctx.blockStart + offset) - startFrame
-    val gateEndPos = gateEndFrame - startFrame
-    var currentEnv = env.level
-
-    // Delay
+    // Delay and Reverb send amounts
     val delayAmount = delay.amount
     val sendToDelay = delayAmount > 0.0
-
-    // Reverb
     val reverbAmount = reverb.room
     val sendToReverb = reverbAmount > 0.0
 
-    // Distortion: Drive factor: 1.0 (no distortion) to ~11.0 (heavy distortion)
-    val hasDistortion = this@mixToOrbit.distort.amount > 0.0
-    val distortionDrive = 1.0 + (this@mixToOrbit.distort.amount * 10.0)
-
-    // Crush
-    val crushBits = crush.amount
-    val hasCrush = crushBits > 0.0
-    val crushLevels = if (hasCrush) 2.0.pow(crushBits).toInt().toDouble() else 0.0
-
-    // Coarse
-    val coarseFactor = coarse.amount
-    val hasCoarse = coarseFactor > 1.0
-
-    // Tremolo State
-    val tremolo = this.tremolo
-    val hasTremolo = tremolo.depth > 0.0
-    // LFO increment per frame: rate * 2PI / sampleRate
-    val tremoloInc = if (hasTremolo) (tremolo.rate * TWO_PI) / ctx.sampleRate else 0.0
-    var tremoloPhase = tremolo.currentPhase
-
     for (i in 0 until length) {
         val idx = offset + i
+
+        // Read processed signal from voice buffer
+        // (All effects have already been applied in the voice's render pipeline)
         var signal = voiceBuffer[idx]
 
-        // 1. Bitcrushing (Crush)
-        if (hasCrush) {
-            signal = if (crushLevels > 1) {
-                floor(signal * (crushLevels / 2.0)) / (crushLevels / 2.0)
-            } else signal
-        }
-
-        // 2. Downsampling (Coarse)
-        if (hasCoarse) {
-            if (coarse.coarseCounter >= 1.0 || i == 0 && coarse.coarseCounter == 0.0) {
-                coarse.lastCoarseValue = signal
-                coarse.coarseCounter -= 1.0
-            }
-            signal = coarse.lastCoarseValue
-            coarse.coarseCounter += (1.0 / coarseFactor)
-        }
-
-        // Envelope Logic
-        if (absPos >= gateEndPos) {
-            val relPos = absPos - gateEndPos
-            currentEnv = env.sustainLevel - (relPos * relRate)
-        } else {
-            if (absPos < env.attackFrames) {
-                currentEnv = absPos * attRate
-            } else if (absPos < env.attackFrames + env.decayFrames) {
-                val decPos = absPos - env.attackFrames
-                currentEnv = 1.0 - (decPos * decRate)
-            } else {
-                currentEnv = env.sustainLevel
-            }
-        }
-
-        if (currentEnv < 0.0) currentEnv = 0.0
-
-        // Apply Envelope to signal
-        var wetSignal = signal * currentEnv
-
-        // Tremolo (Amplitude Modulation)
-        if (hasTremolo) {
-            // Update phase
-            tremoloPhase += tremoloInc
-            if (tremoloPhase > TWO_PI) tremoloPhase -= TWO_PI
-
-            // Basic Sine LFO (-1.0 .. 1.0)
-            val lfoRaw = sin(tremoloPhase)
-
-            // Shape the LFO based on tremoloShape
-            // TODO: Implement shapes (tri, square, saw, ramp)
-            // For now, sine is default.
-
-            // Apply Depth: (1 - depth) + depth * ((lfo + 1) / 2)
-            // Map LFO from -1..1 to 0..1
-            val lfoNorm = (lfoRaw + 1.0) * 0.5
-            // Gain reduction factor: 1.0 (full volume) down to (1.0 - depth)
-            val tremoloGain = 1.0 - (tremolo.depth * (1.0 - lfoNorm))
-
-            wetSignal *= tremoloGain
-        }
-
-        if (hasDistortion) {
-            wetSignal = tanh(wetSignal * distortionDrive)
-        }
-
         // Apply post-gain
-        wetSignal *= postGain
+        signal *= postGain
 
-        // 1. Dry Mix (Split to Stereo)
-        val left = wetSignal * gainL
-        val right = wetSignal * gainR
+        // Split to Stereo with panning
+        val left = signal * gainL
+        val right = signal * gainR
 
+        // Sum to orbit mix buffer
         outL[idx] += left
         outR[idx] += right
 
-        // 2. Delay Send (Wet)
+        // Send to effects buses
         if (sendToDelay) {
             delaySendL[idx] += left * delayAmount
             delaySendR[idx] += right * delayAmount
         }
 
-        // 3. Reverb Send (Wet)
         if (sendToReverb) {
             reverbSendL[idx] += left * reverbAmount
             reverbSendR[idx] += right * reverbAmount
         }
-
-        absPos++
     }
-
-    // Update envelope
-    env.level = currentEnv
-
-    // Save Tremolo Phase state for next block
-    tremolo.currentPhase = tremoloPhase
 }
 
 /**
@@ -274,18 +181,6 @@ fun Voice.calculateFilterEnvelope(env: Voice.Envelope, ctx: Voice.RenderContext)
     return envValue.coerceIn(0.0, 1.0)
 }
 
-//fun Voice.calculateAccelerateMultiplier(absoluteFrame: Long): Double {
-//    val accel = accelerate.amount
-//    if (accel == 0.0) return 1.0
-//
-//    val totalFrames = endFrame - startFrame
-//    if (totalFrames <= 0) return 1.0
-//
-//    val progress = (absoluteFrame - startFrame).toDouble() / totalFrames
-//    // Strudel style: freq * 2^(accel * progress)
-//    return 2.0.pow(accel * progress)
-//}
-//
 fun Voice.fillVibrato(ctx: Voice.RenderContext, offset: Int, length: Int): DoubleArray? {
     if (vibrato.depth <= 0.0) return null
 
