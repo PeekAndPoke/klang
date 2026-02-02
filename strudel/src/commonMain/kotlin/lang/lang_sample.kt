@@ -2,8 +2,8 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel._innerJoin
 import io.peekandpoke.klang.strudel._liftData
-import io.peekandpoke.klang.strudel._outerJoin
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
@@ -231,28 +231,16 @@ val String.loopAt by dslStringExtension { p, args, callInfo -> p.loopAt(args, ca
 
 // -- loopAtCps() ------------------------------------------------------------------------------------------------------
 
-private fun applyLoopAtCps(
-    source: StrudelPattern,
-    args: List<StrudelDslArg<Any?>>,
-): StrudelPattern {
-    if (args.isEmpty()) {
-        return source
-    }
+private fun applyLoopAtCps(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source._innerJoin(args) { pat, factorValue, cpsValue ->
+        val factor = factorValue?.asDouble ?: return@_innerJoin silence
+        val cps = cpsValue?.asDouble ?: 0.5
 
-    val factor = args.getOrNull(0)?.toPattern(voiceValueModifier) ?: return source
-    val cps = args.getOrNull(1)?.toPattern(voiceValueModifier) ?: return source
+        // Calculate speed: (1 / factor) * cps
+        val speed = (1.0 / factor) * cps
 
-    // Calculate speed as a pattern: (1 / factor) * cps
-    val speedControl = steady(1.0).div(factor).mul(cps)
-
-    // Apply unit and slow to stretch the events to the desired duration
-    // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
-    val slowed = source.unit("c").slow(factor)
-
-    // Use outer join to set the speed parameter from the speedControl pattern
-    return slowed._outerJoin(speedControl) { sourceEvent, speedEvent ->
-        val speedValue = speedEvent?.data?.value?.asDoubleOrNull()
-        sourceEvent.copy(data = sourceEvent.data.copy(speed = speedValue))
+        // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
+        pat.speed(speed).unit("c").slow(factor)
     }
 }
 
