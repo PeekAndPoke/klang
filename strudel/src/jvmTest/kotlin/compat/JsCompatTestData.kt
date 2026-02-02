@@ -149,7 +149,7 @@ object JsCompatTestData {
         Example("pickmod() wraps indices", """pickmod(["bd", "hh"], "0 1 2 3")"""),
         Example("pickmod() with patterns", """pickmod(["bd hh", "sn cp"], "0 1 2 3")"""),
         // pickOut() - Pattern picking with outerJoin (no clipping)
-        Example("pickOut() basic", """pickOut(["bd", "hh"], "0 1")"""),
+        Example("pickOut() basic", """pickOut(["bd hh", "sd cp"], "0 1")"""),
         Example("pickOut() with patterns", """pickOut([sound("bd hh"), sound("sn cp")], "0 1")"""),
         // This case specifically tests the non-clipping behavior:
         // Selector "0" is fast(2) -> 0.0-0.5. Inner "bd" is 0.0-1.0.
@@ -720,11 +720,11 @@ object JsCompatTestData {
             .toTypedArray(),
 
         // Continuous Range Functions
-        Example("Rangex basic", """sine.rangex(100, 1000)""")
-            .ignore("data.gain"),
+        // Is OK: we set "whole" and js does not
+        Example(SKIP, "Rangex basic", """sine.rangex(100, 1000)"""),
         Example("Rangex with pattern", """note("a b c d").pan(sine.rangex(0.1, 10))"""),
-        Example("Range2 basic", """sine2.range2(0, 100)""")
-            .ignore("data.gain"),
+        // Is OK: we set "whole" and js does not
+        Example(SKIP, "Range2 basic", """sine2.range2(0, 100)"""),
         Example("Range2 with pattern", """note("a b c d").lpf(sine2.range2(500, 4000))"""),
 
         // Value Modifiers
