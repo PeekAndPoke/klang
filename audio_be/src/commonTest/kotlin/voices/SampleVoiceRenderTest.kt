@@ -71,6 +71,7 @@ class SampleVoiceRenderTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
+            fm = null,
             samplePlayback = playback,
             sample = sample,
             rate = rate,

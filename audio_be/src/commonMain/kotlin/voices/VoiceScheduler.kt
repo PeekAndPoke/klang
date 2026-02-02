@@ -448,6 +448,22 @@ class VoiceScheduler(
         val crush = Voice.Crush(amount = data.crush ?: 0.0)
         val coarse = Voice.Coarse(amount = data.coarse ?: 0.0)
 
+        // FM Synthesis
+        val fm = if (data.fmh != null || (data.fmEnv ?: 0.0) != 0.0) {
+            val ratio = data.fmh ?: 1.0
+            val depth = data.fmEnv ?: 0.0
+
+            // FM Envelope (similar to Filter Modulator envelope logic)
+            val fmEnv = Voice.Envelope(
+                attackFrames = (data.fmAttack ?: 0.0) * sampleRate,
+                decayFrames = (data.fmDecay ?: 0.0) * sampleRate,
+                sustainLevel = data.fmSustain ?: 1.0,
+                releaseFrames = 0.0 // Simplified for now
+            )
+
+            Voice.Fm(ratio, depth, fmEnv)
+        } else null
+
         // Decision
         val freqHz = data.freqHz
         val sound = data.sound
@@ -496,6 +512,7 @@ class VoiceScheduler(
                     crush = crush,
                     coarse = coarse,
                     osc = osc,
+                    fm = fm,
                     freqHz = freqHz,
                     phaseInc = phaseInc,
                 )
@@ -605,6 +622,7 @@ class VoiceScheduler(
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
+                    fm = null, // Samples don't support FM in this path currently
                     samplePlayback = samplePlayback,
                     sample = sample,
                     rate = rate,

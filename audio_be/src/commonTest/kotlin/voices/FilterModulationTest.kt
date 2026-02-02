@@ -83,6 +83,7 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            fm = null,
             freqHz = 440.0,
             phaseInc = 0.1
         )
@@ -135,6 +136,7 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            fm = null,
             freqHz = 440.0,
             phaseInc = 0.1
         )
@@ -190,6 +192,7 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            fm = null,
             freqHz = 440.0,
             phaseInc = 0.1
         )
@@ -245,6 +248,7 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            fm = null,
             freqHz = 440.0,
             phaseInc = 0.1
         )
@@ -313,6 +317,7 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            fm = null,
             freqHz = 440.0,
             phaseInc = 0.1
         )
@@ -370,6 +375,7 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
+            fm = null,
             samplePlayback = SampleVoice.SamplePlayback.default,
             sample = createSample(),
             rate = 1.0,
@@ -419,6 +425,7 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            fm = null,
             freqHz = 440.0,
             phaseInc = 0.1
         )
@@ -477,6 +484,7 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            fm = null,
             freqHz = 440.0,
             phaseInc = 0.1
         )
@@ -533,6 +541,7 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            fm = null,
             freqHz = 440.0,
             phaseInc = 0.1
         )

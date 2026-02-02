@@ -30,6 +30,7 @@ class SampleVoice(
     override val distort: Voice.Distort,
     override val crush: Voice.Crush,
     override val coarse: Voice.Coarse,
+    override val fm: Voice.Fm?,
     val samplePlayback: SamplePlayback,
     val sample: MonoSamplePcm,
     val rate: Double,

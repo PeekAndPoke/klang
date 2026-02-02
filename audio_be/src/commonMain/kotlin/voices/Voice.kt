@@ -130,6 +130,14 @@ sealed interface Voice {
         var coarseCounter: Double = 0.0,
     )
 
+    class Fm(
+        val ratio: Double,
+        val depth: Double, // Hz amount
+        val envelope: Envelope,
+        // State
+        var modPhase: Double = 0.0,
+    )
+
     // Timing
     val startFrame: Long
     val endFrame: Long
@@ -163,6 +171,9 @@ sealed interface Voice {
     val distort: Distort
     val crush: Crush
     val coarse: Coarse
+
+    // Synthesis
+    val fm: Fm?
 
     /**
      * Renders the voice into the context's buffers.

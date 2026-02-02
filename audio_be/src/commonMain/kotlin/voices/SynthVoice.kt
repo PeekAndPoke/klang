@@ -29,6 +29,7 @@ class SynthVoice(
     override val crush: Voice.Crush,
     override val coarse: Voice.Coarse,
     val osc: OscFn,
+    override val fm: Voice.Fm?,
     val freqHz: Double,
     val phaseInc: Double,
     var phase: Double = 0.0,
@@ -52,7 +53,45 @@ class SynthVoice(
             mod.filter.setCutoff(newCutoff)
         }
 
-        val modBuffer = fillPitchModulation(ctx, offset, length)
+        // 1. Calculate base pitch modulation (Vibrato, Pitch Env, Slide)
+        // returns a reusable buffer with frequency multipliers (nominal 1.0)
+        // If null, it means no pitch modulation is active.
+        var modBuffer = fillPitchModulation(ctx, offset, length)
+
+        // 2. Apply FM (Frequency Modulation)
+        // We inject this into the modBuffer (creating it if necessary)
+        if (fm != null && fm.depth != 0.0) {
+            val buf = modBuffer ?: ctx.freqModBuffer
+            // If modBuffer was null, we must initialize it to 1.0s before multiplying FM
+            if (modBuffer == null) {
+                for (i in 0 until length) buf[offset + i] = 1.0
+                modBuffer = buf
+            }
+
+            // Calculate Modulator Parameters
+            val modFreq = freqHz * fm.ratio
+            val modInc = (io.peekandpoke.klang.audio_be.TWO_PI * modFreq) / ctx.sampleRate
+            var modPhase = fm.modPhase
+
+            // Calculate FM Envelope for this block
+            val envLevel = calculateFilterEnvelope(fm.envelope, ctx)
+            val effectiveDepth = fm.depth * envLevel
+
+            for (i in 0 until length) {
+                // Modulator Oscillator (Sine)
+                val modSignal = kotlin.math.sin(modPhase) * effectiveDepth
+                modPhase += modInc
+
+                // Apply modulation: F_new = F_carrier + modSignal
+                // Multiplier = (F_carrier + modSignal) / F_carrier = 1 + modSignal / F_carrier
+                val fmMult = 1.0 + (modSignal / freqHz)
+
+                // Apply to existing pitch modulation
+                buf[offset + i] *= fmMult
+            }
+            // Save state
+            fm.modPhase = modPhase
+        }
 
         // Generate
         phase = osc.process(
