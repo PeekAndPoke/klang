@@ -150,8 +150,8 @@ implementation notes.
 - [x] **`swing(n)`** - Swing with default 1/3 swing amount (custom implementation using swingBy)
 - [x] **`ply(n)`** - Repeats each event n times within its timespan, now supports control patterns (standalone, pattern
   method, string extension)
-- [ ] **`plyWith(n, func)`** - Repeats with function applied
-- [ ] **`plyForEach(n, func)`** - Repeats with function applied per repetition
+- [x] **`plyWith(n, func)`** - Repeats with function applied
+- [x] **`plyForEach(n, func)`** - Repeats with function applied per repetition
 - [x] **`hurry(factor)`** - Speeds up pattern and multiplies speed parameter, now supports control patterns (standalone,
   pattern method, string
   extension)

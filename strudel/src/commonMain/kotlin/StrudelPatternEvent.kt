@@ -25,8 +25,8 @@ data class StrudelPatternEvent(
     @Transient
     val sourceLocations: SourceLocationChain? = null,
 ) {
-    /** Check if this event has an onset (should be played) */
-    fun hasOnset(): Boolean = whole.begin == part.begin
+    /** Check if this event is an onset event (should be played) */
+    val isOnset: Boolean = whole.begin == part.begin
 
     fun prependLocation(location: SourceLocation?) = when (location) {
         null -> this

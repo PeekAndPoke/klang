@@ -4,13 +4,13 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel._mapRangeContext
 import io.peekandpoke.klang.strudel.math.BerlinNoise
 import io.peekandpoke.klang.strudel.math.PerlinNoise
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
-import io.peekandpoke.klang.strudel.pattern.ContextRangeMapPattern
 import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.strudel.pattern.EmptyPattern
 import kotlin.math.PI
@@ -24,16 +24,6 @@ var strudelLangContinuousInit = false
 
 // -- Helpers ----------------------------------------------------------------------------------------------------------
 
-private fun StrudelPattern.mapRangeContext(
-    transformMin: (Double) -> Double,
-    transformMax: (Double) -> Double,
-): StrudelPattern {
-    return ContextRangeMapPattern(
-        source = this,
-        transformMin = transformMin,
-        transformMax = transformMax,
-    )
-}
 /**
  * Maps a pattern in the range 0..1 to -1..1.
  */
@@ -42,7 +32,7 @@ private fun StrudelPattern.mapRangeContext(
  */
 @StrudelDsl
 val StrudelPattern.toBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
-    val contextAware = p.mapRangeContext(
+    val contextAware = p._mapRangeContext(
         transformMin = { (it + 1.0) / 2.0 },
         transformMax = { (it + 1.0) / 2.0 }
     )
@@ -61,7 +51,7 @@ val String.toBipolar by dslStringExtension { p, /* args */ _, /* callInfo */ _ -
  */
 @StrudelDsl
 val StrudelPattern.fromBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
-    val contextAware = p.mapRangeContext(
+    val contextAware = p._mapRangeContext(
         transformMin = { it * 2.0 - 1.0 },
         transformMax = { it * 2.0 - 1.0 }
     )

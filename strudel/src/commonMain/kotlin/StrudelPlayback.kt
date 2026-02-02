@@ -187,10 +187,15 @@ class StrudelPlayback internal constructor(
         val fromRational = Rational(from)
         val toRational = Rational(to)
 
-        val events = pattern.queryArcContextual(from = fromRational, to = toRational, QueryContext.empty)
-            .filter { it.part.begin >= fromRational && it.part.begin < toRational }
-            .filter { it.hasOnset() }  // Allow continuous OR onset events
-            .sortedBy { it.part.begin }
+        val ctx: QueryContext = QueryContext.empty.update {
+            set(QueryContext.cpsKey, cyclesPerSecond)
+        }
+
+        val events: List<StrudelPatternEvent> =
+            pattern.queryArcContextual(from = fromRational, to = toRational, ctx = ctx)
+                .filter { it.part.begin >= fromRational && it.part.begin < toRational }
+                .filter { it.isOnset }  // Allow continuous OR onset events
+                .sortedBy { it.part.begin }
 
         // Transform to ScheduledVoice using absolute time from KlangTime epoch
         val secPerCycle = 1.0 / cyclesPerSecond
@@ -232,8 +237,8 @@ class StrudelPlayback internal constructor(
                 voiceEvents
                     .distinctBy { it.startTime to it.sourceLocations }
                     .forEach { event ->
-                    onVoiceScheduled?.invoke(event)
-                }
+                        onVoiceScheduled?.invoke(event)
+                    }
             }
         }
 

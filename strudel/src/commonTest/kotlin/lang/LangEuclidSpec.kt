@@ -4,7 +4,6 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 
@@ -39,7 +38,7 @@ class LangEuclidSpec : StringSpec({
                         events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.2) plusOrMinus EPSILON)
 
                         // Onset: first event has onset
-                        events[0].hasOnset() shouldBe true
+                        events[0].isOnset shouldBe true
                     }
 
                     // Event 1: Second hit at position 2/5
@@ -55,7 +54,7 @@ class LangEuclidSpec : StringSpec({
                         events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
 
                         // Onset: has onset
-                        events[1].hasOnset() shouldBe true
+                        events[1].isOnset shouldBe true
                     }
 
                     // Event 2: Third hit at position 4/5
@@ -71,7 +70,7 @@ class LangEuclidSpec : StringSpec({
                         events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Onset: has onset
-                        events[2].hasOnset() shouldBe true
+                        events[2].isOnset shouldBe true
                     }
                 }
             }

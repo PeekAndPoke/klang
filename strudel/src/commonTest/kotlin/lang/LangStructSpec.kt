@@ -4,7 +4,6 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
@@ -41,7 +40,7 @@ class LangStructSpec : StringSpec({
                         events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                         // Onset: first pulse starts at its beginning
-                        events[0].hasOnset() shouldBe true
+                        events[0].isOnset shouldBe true
                     }
 
                     // Event 1: Second "c" note (second half of cycle)
@@ -57,7 +56,7 @@ class LangStructSpec : StringSpec({
                         events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Onset: second pulse starts at its beginning
-                        events[1].hasOnset() shouldBe true
+                        events[1].isOnset shouldBe true
                     }
                 }
             }
@@ -93,7 +92,7 @@ class LangStructSpec : StringSpec({
                         events[0].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Onset: part.begin == whole.begin → true
-                        events[0].hasOnset() shouldBe true
+                        events[0].isOnset shouldBe true
                     }
 
                     // Event 1: "e" note (NO onset - continuation of same whole)
@@ -109,7 +108,7 @@ class LangStructSpec : StringSpec({
                         events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // No onset: part.begin (0.5) != whole.begin (0.0)
-                        events[1].hasOnset() shouldBe false
+                        events[1].isOnset shouldBe false
                     }
                 }
             }

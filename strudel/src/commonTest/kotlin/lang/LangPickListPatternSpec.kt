@@ -31,14 +31,14 @@ class LangPickListPatternSpec : StringSpec({
                     allEvents.forEachIndexed { index, event ->
                         println(
                             "$index: value=${event.data.value?.asString} | " +
-                                    "onset=${event.hasOnset()} | " +
+                                    "onset=${event.isOnset} | " +
                                     "part=[${event.part.begin}, ${event.part.end}) | " +
                                     "whole=${event.whole?.let { "[${it.begin}, ${it.end})" } ?: "null"}"
                         )
                     }
 
                     // Filter to only events with onset (should be played)
-                    val events = allEvents.filter { it.hasOnset() }
+                    val events = allEvents.filter { it.isOnset }
 
                     println("--- Events with onset (${events.size}) ---")
                     events.forEachIndexed { index, event ->
@@ -71,7 +71,7 @@ class LangPickListPatternSpec : StringSpec({
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[0].hasOnset() shouldBe true
+                    events[0].isOnset shouldBe true
 
                     // Event 1: "cp" from second pattern
                     events[1].data.value?.asString shouldBe "cp"
@@ -79,7 +79,7 @@ class LangPickListPatternSpec : StringSpec({
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                     events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
-                    events[1].hasOnset() shouldBe true
+                    events[1].isOnset shouldBe true
                 }
             }
         }

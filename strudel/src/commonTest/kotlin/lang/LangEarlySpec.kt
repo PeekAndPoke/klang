@@ -90,7 +90,7 @@ class LangEarlySpec : StringSpec({
                     // Query returns 3 events (includes clipped edge from previous cycle)
                     // But only 2 have onset (will be played)
                     events.size shouldBe 3
-                    val onsetEvents = events.filter { it.hasOnset() }
+                    val onsetEvents = events.filter { it.isOnset }
                     onsetEvents.size shouldBe 3
 
                     // Event 0: Clipped "c" from previous cycle (NO onset - part.begin != whole.begin)
@@ -99,7 +99,7 @@ class LangEarlySpec : StringSpec({
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl - 0.25) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
-                    events[0].hasOnset() shouldBe true
+                    events[0].isOnset shouldBe true
 
                     // Event 1: "d" with onset
                     events[1].data.note shouldBeEqualIgnoringCase "d"
@@ -107,7 +107,7 @@ class LangEarlySpec : StringSpec({
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[1].hasOnset() shouldBe true
+                    events[1].isOnset shouldBe true
 
                     // Event 2: "c" with onset
                     events[2].data.note shouldBeEqualIgnoringCase "c"
@@ -115,7 +115,7 @@ class LangEarlySpec : StringSpec({
                     events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.25) plusOrMinus EPSILON)
                     events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.25) plusOrMinus EPSILON)
-                    events[2].hasOnset() shouldBe true
+                    events[2].isOnset shouldBe true
                 }
             }
         }
@@ -172,7 +172,7 @@ class LangEarlySpec : StringSpec({
 
                     events.size shouldBe 3
 
-                    val onsetEvents = events.filter { it.hasOnset() }
+                    val onsetEvents = events.filter { it.isOnset }
                     onsetEvents.size shouldBe 3
 
                     // Event 0: Clipped "c" from previous cycle (NO onset)
@@ -181,7 +181,7 @@ class LangEarlySpec : StringSpec({
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl - 0.25) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
-                    events[0].hasOnset() shouldBe true
+                    events[0].isOnset shouldBe true
 
                     // Event 1: "d" with onset
                     events[1].data.value?.asString shouldBeEqualIgnoringCase "d"
@@ -189,7 +189,7 @@ class LangEarlySpec : StringSpec({
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[1].hasOnset() shouldBe true
+                    events[1].isOnset shouldBe true
 
                     // Event 2: "c" with onset
                     events[2].data.value?.asString shouldBeEqualIgnoringCase "c"
@@ -197,7 +197,7 @@ class LangEarlySpec : StringSpec({
                     events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.25) plusOrMinus EPSILON)
                     events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.25) plusOrMinus EPSILON)
-                    events[2].hasOnset() shouldBe true
+                    events[2].isOnset shouldBe true
                 }
             }
         }
@@ -273,7 +273,7 @@ class LangEarlySpec : StringSpec({
 
                             // hasOnset() depends on whether part.begin == whole.begin
                             val expectedOnset = (ev.part.begin == ev.whole.begin)
-                            ev.hasOnset() shouldBe expectedOnset
+                            ev.isOnset shouldBe expectedOnset
 
                             // Whole should contain part (whole.begin <= part.begin <= part.end <= whole.end)
                             // Note: Events can be clipped at END even with onset, so durations may differ
@@ -283,7 +283,7 @@ class LangEarlySpec : StringSpec({
                     }
 
                     // Count events with onset
-                    val onsetEvents = events.filter { it.hasOnset() }
+                    val onsetEvents = events.filter { it.isOnset }
                     withClue("Should have at least 1 onset event per cycle") {
                         onsetEvents.size shouldBeGreaterThan 0
                     }

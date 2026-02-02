@@ -118,7 +118,7 @@ class BindPatternSpec : StringSpec({
         val pattern = BindPattern(outer) { inner }
 
         val ctx = StrudelPattern.QueryContext().update {
-            set(StrudelPattern.QueryContext.randomSeed, 12345L)
+            set(StrudelPattern.QueryContext.randomSeedKey, 12345L)
         }
 
         val events = pattern.queryArcContextual(0.0, 1.0, ctx)

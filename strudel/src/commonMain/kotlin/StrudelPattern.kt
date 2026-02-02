@@ -12,6 +12,7 @@ import io.peekandpoke.klang.strudel.lang.voiceValueModifier
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
+import kotlin.jvm.JvmName
 import kotlin.random.Random
 
 /**
@@ -49,7 +50,8 @@ interface StrudelPattern {
      */
     class QueryContext(data: Map<Key<*>, Any?> = emptyMap()) {
         companion object {
-            val randomSeed = Key<Long>("randomSeed")
+            val randomSeedKey = Key<Long>("randomSeed")
+            val cpsKey = Key<Double>("cps")
 
             val empty = QueryContext()
         }
@@ -139,7 +141,7 @@ interface StrudelPattern {
         fun update(block: Updater.() -> Unit): QueryContext = Updater(this).runBlock(block)
 
         /** Gets the random generator for this context. */
-        fun getRandom(): Random = getOrNull(randomSeed)?.let { Random(it) } ?: Random.Default
+        fun getRandom(): Random = getOrNull(randomSeedKey)?.let { Random(it) } ?: Random.Default
 
         /** Gets a new random generator seeded with the context's random seed and the given seed. */
         fun getSeededRandom(seed: Any, vararg seeds: Any): Random {
@@ -147,6 +149,9 @@ interface StrudelPattern {
 
             return Random((s * 2862933555777941757L) + 3037000493L)
         }
+
+        /** Gets the cycles per second (cps) for this context. */
+        fun getCps() = getOrDefault(cpsKey, 0.5)
 
         /** Makes a copy of the context. */
         private fun clone(): QueryContext = QueryContext(data)
@@ -311,6 +316,160 @@ fun StrudelPattern.stack(vararg others: StrudelPattern): StrudelPattern {
  */
 fun StrudelPattern.makeStatic(from: Double, to: Double): StaticStrudelPattern =
     makeStatic(from.toRational(), to.toRational())
+
+/**
+ * Maps the rango context, useful for mapping between bipolar and unipolar ranges
+ */
+fun StrudelPattern._mapRangeContext(
+    transformMin: (Double) -> Double,
+    transformMax: (Double) -> Double,
+): StrudelPattern {
+    return ContextRangeMapPattern(
+        source = this,
+        transformMin = transformMin,
+        transformMax = transformMax,
+    )
+}
+
+/**
+ * Inner join with one argument pattern.
+ * The transform receives the source pattern and the value from arg1.
+ */
+fun StrudelPattern._innerJoin(
+    arg1: StrudelPattern,
+    transform: (source: StrudelPattern, val1: StrudelVoiceValue?) -> StrudelPattern,
+): StrudelPattern {
+    val sourcePattern = this
+    return arg1._bind { event ->
+        transform(sourcePattern, event.data.value)
+    }
+}
+
+/**
+ * Inner join with one argument pattern.
+ */
+@JvmName("_innerJoin_args1")
+fun <T> StrudelPattern._innerJoin(
+    args: List<StrudelDslArg<T>>,
+    transform: (source: StrudelPattern, v1: StrudelVoiceValue?) -> StrudelPattern,
+): StrudelPattern {
+    return this._innerJoin(
+        arg1 = args.getOrNull(0)?.toPattern(voiceValueModifier) ?: return this,
+        transform = transform,
+    )
+}
+
+/**
+ * Inner join with two argument patterns.
+ * The transform receives the source pattern and the values from arg1 and arg2.
+ */
+fun StrudelPattern._innerJoin(
+    arg1: StrudelPattern,
+    arg2: StrudelPattern,
+    transform: (source: StrudelPattern, v1: StrudelVoiceValue?, v2: StrudelVoiceValue?) -> StrudelPattern,
+): StrudelPattern {
+    val sourcePattern = this
+    return arg1._bind { event1 ->
+        arg2._bind { event2 ->
+            transform(sourcePattern, event1.data.value, event2.data.value)
+        }
+    }
+}
+
+/**
+ * Inner join with one argument pattern.
+ */
+@JvmName("_innerJoin_args1")
+fun <T> StrudelPattern._innerJoin(
+    args: List<StrudelDslArg<T>>,
+    transform: (source: StrudelPattern, v1: StrudelVoiceValue?, v2: StrudelVoiceValue?) -> StrudelPattern,
+): StrudelPattern {
+    return this._innerJoin(
+        arg1 = args.getOrNull(0)?.toPattern(voiceValueModifier) ?: return this,
+        arg2 = args.getOrNull(1)?.toPattern(voiceValueModifier) ?: return this,
+        transform = transform,
+    )
+}
+
+/**
+ * Inner join with three argument patterns.
+ * The transform receives the source pattern and the values from arg1, arg2, and arg3.
+ */
+fun StrudelPattern._innerJoin(
+    arg1: StrudelPattern,
+    arg2: StrudelPattern,
+    arg3: StrudelPattern,
+    transform: (
+        source: StrudelPattern, val1: StrudelVoiceValue?, val2: StrudelVoiceValue?, val3: StrudelVoiceValue?,
+    ) -> StrudelPattern,
+): StrudelPattern {
+    val sourcePattern = this
+    return arg1._bind { event1 ->
+        arg2._bind { event2 ->
+            arg3._bind { event3 ->
+                transform(sourcePattern, event1.data.value, event2.data.value, event3.data.value)
+            }
+        }
+    }
+}
+
+/**
+ * Inner join with one argument pattern.
+ */
+@JvmName("_innerJoin_args1")
+fun <T> StrudelPattern._innerJoin(
+    args: List<StrudelDslArg<T>>,
+    transform: (source: StrudelPattern, v1: StrudelVoiceValue?, v2: StrudelVoiceValue?, v3: StrudelVoiceValue?) -> StrudelPattern,
+): StrudelPattern {
+    return this._innerJoin(
+        arg1 = args.getOrNull(0)?.toPattern(voiceValueModifier) ?: return this,
+        arg2 = args.getOrNull(1)?.toPattern(voiceValueModifier) ?: return this,
+        arg3 = args.getOrNull(2)?.toPattern(voiceValueModifier) ?: return this,
+        transform = transform,
+    )
+}
+
+
+/**
+ * Inner join that passes argument patterns' values and the source pattern to a transform function.
+ * This matches JavaScript Strudel's register() behavior with innerJoin.
+ *
+ * The structure is driven by the argument patterns - for each combination of values
+ * from the argument patterns, the transform function is called with those values
+ * and the source pattern.
+ *
+ * @param argPatterns List of patterns whose values will be extracted
+ * @param transform Function that receives (argument values, source pattern) and returns a pattern
+ */
+fun StrudelPattern._innerJoin(
+    argPatterns: List<StrudelPattern>,
+    transform: (source: StrudelPattern, values: List<StrudelVoiceValue?>) -> StrudelPattern,
+): StrudelPattern {
+    if (argPatterns.isEmpty()) {
+        return transform(this, emptyList())
+    }
+
+    val sourcePattern = this
+
+    // Recursively bind through all argument patterns to collect their values
+    fun bindAll(patterns: List<StrudelPattern>, accumulatedValues: List<StrudelVoiceValue?>): StrudelPattern {
+        if (patterns.isEmpty()) {
+            // All argument values collected, call transform with values and source pattern
+            return transform(sourcePattern, accumulatedValues)
+        }
+
+        val currentPattern = patterns.first()
+        val remainingPatterns = patterns.drop(1)
+
+        // Bind the current pattern to extract its value
+        return currentPattern._bind { event ->
+            val value = event.data.value
+            bindAll(remainingPatterns, accumulatedValues + value)
+        }
+    }
+
+    return bindAll(argPatterns, emptyList())
+}
 
 /**
  * Creates a new pattern by applying [transform] to every event in this pattern.

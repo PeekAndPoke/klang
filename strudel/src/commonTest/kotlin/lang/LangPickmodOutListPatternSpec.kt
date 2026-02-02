@@ -33,14 +33,14 @@ class LangPickmodOutListPatternSpec : StringSpec({
                     allEvents.forEachIndexed { index, event ->
                         println(
                             "$index: value=${event.data.value?.asString} | " +
-                                    "onset=${event.hasOnset()} | " +
+                                    "onset=${event.isOnset} | " +
                                     "part=[${event.part.begin}, ${event.part.end}) | " +
                                     "whole=${event.whole?.let { "[${it.begin}, ${it.end})" } ?: "null"}"
                         )
                     }
 
                     // Filter to only events with onset (should be played)
-                    val events = allEvents.filter { it.hasOnset() }
+                    val events = allEvents.filter { it.isOnset }
 
                     println("--- Events with onset (${events.size}) ---")
                     events.forEachIndexed { index, event ->
@@ -76,7 +76,7 @@ class LangPickmodOutListPatternSpec : StringSpec({
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
                     events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
-                    events[0].hasOnset() shouldBe true
+                    events[0].isOnset shouldBe true
 
                     // Event 1: "sd" from second pattern (index 1)
                     events[1].data.value?.asString shouldBe "sd"
@@ -84,7 +84,7 @@ class LangPickmodOutListPatternSpec : StringSpec({
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
                     events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
-                    events[1].hasOnset() shouldBe true
+                    events[1].isOnset shouldBe true
 
                     // Event 2: "hh" from first pattern (index 2 % 2 = 0, wraps to "bd hh")
                     events[2].data.value?.asString shouldBe "hh"
@@ -92,7 +92,7 @@ class LangPickmodOutListPatternSpec : StringSpec({
                     events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                     events[2].whole!!.begin.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
                     events[2].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
-                    events[2].hasOnset() shouldBe true
+                    events[2].isOnset shouldBe true
                 }
             }
         }

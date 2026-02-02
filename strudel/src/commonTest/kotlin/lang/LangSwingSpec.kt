@@ -21,7 +21,7 @@ class LangSwingSpec : StringSpec({
                     val cycleDbl = cycle.toDouble()
                     val allEvents = subject.queryArc(cycleDbl, cycleDbl + 1)
                     // Filter to only events with onset (should be played)
-                    val events = allEvents.filter { it.hasOnset() }
+                    val events = allEvents.filter { it.isOnset }
 
                     events.forEachIndexed { index, event ->
                         println(
@@ -64,12 +64,12 @@ class LangSwingSpec : StringSpec({
                     val cycleDbl = cycle.toDouble()
                     val allEvents = subject.queryArc(cycleDbl, cycleDbl + 1)
                     // Filter to only events with onset (should be played)
-                    val events = allEvents.filter { it.hasOnset() }
+                    val events = allEvents.filter { it.isOnset }
 
                     events.forEachIndexed { index, event ->
                         println(
                             "${index + 1}: note: ${event.data.note} | " +
-                                    "onset: ${event.hasOnset()} | " +
+                                    "onset: ${event.isOnset} | " +
                                     "part: ${event.part.begin} ${event.part.end} | " +
                                     "whole: ${event.whole.begin} ${event.whole.end}"
                         )
@@ -101,7 +101,7 @@ class LangSwingSpec : StringSpec({
         val p = note("c d e f").swingBy(0.5, 2)
         val allEvents = p.queryArc(0.0, 1.0)
         // Filter to only events with onset (should be played)
-        val events = allEvents.filter { it.hasOnset() }
+        val events = allEvents.filter { it.isOnset }
 
         events.forEach {
             println("${it.part.begin} ${it.part.end}")
@@ -138,7 +138,7 @@ class LangSwingSpec : StringSpec({
                     val cycleDbl = cycle.toDouble()
                     val allEvents = subject.queryArc(cycleDbl, cycleDbl + 1)
                     // Filter to only events with onset (should be played)
-                    val events = allEvents.filter { it.hasOnset() }
+                    val events = allEvents.filter { it.isOnset }
 
                     events.forEachIndexed { index, event ->
                         println(
@@ -175,7 +175,7 @@ class LangSwingSpec : StringSpec({
         val p = note("c d e f").swingBy(-0.5, 2)
         val allEvents = p.queryArc(0.0, 1.0)
         // Filter to only events with onset (should be played)
-        val events = allEvents.filter { it.hasOnset() }
+        val events = allEvents.filter { it.isOnset }
 
         events.forEachIndexed { index, event ->
             println(
@@ -210,8 +210,8 @@ class LangSwingSpec : StringSpec({
         val withSwing = note("c d e f").swing(2)
         val withSwingBy = note("c d e f").swingBy(1.0 / 3.0, 2)
 
-        val swingEvents = withSwing.queryArc(0.0, 1.0).filter { it.hasOnset() }
-        val swingByEvents = withSwingBy.queryArc(0.0, 1.0).filter { it.hasOnset() }
+        val swingEvents = withSwing.queryArc(0.0, 1.0).filter { it.isOnset }
+        val swingByEvents = withSwingBy.queryArc(0.0, 1.0).filter { it.isOnset }
 
         assertSoftly {
             swingEvents.size shouldBe swingByEvents.size

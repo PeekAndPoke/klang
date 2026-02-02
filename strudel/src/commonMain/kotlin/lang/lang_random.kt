@@ -26,9 +26,9 @@ private fun applyRandomSeed(pattern: StrudelPattern, args: List<StrudelDslArg<An
 
     return ContextModifierPattern(source = pattern) {
         if (seed != null) {
-            set(QueryContext.randomSeed, seed)
+            set(QueryContext.randomSeedKey, seed)
         } else {
-            remove(QueryContext.randomSeed)
+            remove(QueryContext.randomSeedKey)
         }
     }
 }
@@ -602,7 +602,7 @@ val randrun: DslFunction by dslFunction { args, /* callInfo */ _ ->
             val events = (0..<staticN).map { index ->
                 atom.reinterpret { evt, ctx ->
                     val ctx = ctx.update {
-                        setIfAbsent(QueryContext.randomSeed, 0)
+                        setIfAbsent(QueryContext.randomSeedKey, 0)
                     }
                     val cycle = evt.part.begin.floor()
                     val random = ctx.getSeededRandom(cycle, "randrun")

@@ -40,7 +40,7 @@ class LangDropSpec : StringSpec({
                         events[0].whole.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
 
                         // Onset: first event in cycle
-                        events[0].hasOnset() shouldBe true
+                        events[0].isOnset shouldBe true
                     }
 
                     // Event 1: "e" note
@@ -56,7 +56,7 @@ class LangDropSpec : StringSpec({
                         events[1].whole.end.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
 
                         // Onset: starts at its part.begin
-                        events[1].hasOnset() shouldBe true
+                        events[1].isOnset shouldBe true
                     }
 
                     // Event 2: "f" note
@@ -72,7 +72,7 @@ class LangDropSpec : StringSpec({
                         events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Onset: starts at its part.begin
-                        events[2].hasOnset() shouldBe true
+                        events[2].isOnset shouldBe true
                     }
                 }
             }

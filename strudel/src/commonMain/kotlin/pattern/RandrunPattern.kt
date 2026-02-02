@@ -42,7 +42,7 @@ internal class RandrunPattern(
 
             // Generate shuffled permutation for this cycle
             val updatedCtx = ctx.update {
-                setIfAbsent(QueryContext.randomSeed, 0)
+                setIfAbsent(QueryContext.randomSeedKey, 0)
             }
             val cycle = nEvent.part.begin.floor()
             val random = updatedCtx.getSeededRandom(cycle, "randrun")

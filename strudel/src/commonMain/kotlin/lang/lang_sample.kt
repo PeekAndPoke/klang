@@ -3,6 +3,8 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel._liftData
+import io.peekandpoke.klang.strudel._outerJoin
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -77,6 +79,28 @@ val StrudelPattern.speed by dslPatternExtension { p, args, /* callInfo */ _ -> a
 /** Sets the sample playback speed */
 @StrudelDsl
 val String.speed by dslStringExtension { p, args, callInfo -> p.speed(args, callInfo) }
+
+// -- unit() -----------------------------------------------------------------------------------------------------------
+
+private val unitMutation = voiceModifier { copy(unit = it?.asVoiceValue()?.asString) }
+
+private fun applyUnit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    if (args.isEmpty()) return source
+    val control = args.toPattern(unitMutation)
+    return source._liftData(control)
+}
+
+/** Sets the time unit for sample playback (e.g., 'c' for cycles) */
+@StrudelDsl
+val unit by dslFunction { args, /* callInfo */ _ -> args.toPattern(unitMutation) }
+
+/** Sets the time unit for sample playback (e.g., 'c' for cycles) */
+@StrudelDsl
+val StrudelPattern.unit by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnit(p, args) }
+
+/** Sets the time unit for sample playback (e.g., 'c' for cycles) */
+@StrudelDsl
+val String.unit by dslStringExtension { p, args, callInfo -> p.unit(args, callInfo) }
 
 // -- loop() -----------------------------------------------------------------------------------------------------------
 
@@ -170,7 +194,7 @@ val String.loope by dslStringExtension { p, args, callInfo -> p.loopEnd(args, ca
 
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 
-private val loopAtMutation = voiceModifier {
+private val loopAtSpeedMutation = voiceModifier {
     val value = it?.asDoubleOrNull()
     if (value == null) copy(speed = null) else copy(speed = 1.0 / (2.0 * value))
 }
@@ -183,16 +207,19 @@ private fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 
     // Apply slow() to stretch the events to the desired duration
     // loopAt(2) stretches events to 2 cycles, loopAt(0.5) compresses to 0.5 cycles
-    val slowed = source.slow(factor)
+    val slowed = source.unit("c").slow(factor)
 
-    // Then set the speed parameter to compensate for sample playback
-    val control = args.toPattern(loopAtMutation)
-    return slowed._liftData(control)
+    // Then set the speed parameter and unit to compensate for sample playback
+    // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
+    // With default cps=0.5: speed = 1/(2*factor)
+    val speedControl = args.toPattern(loopAtSpeedMutation)
+
+    return slowed._liftData(speedControl)
 }
 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
-val loopAt by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopAtMutation) }
+val loopAt by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopAtSpeedMutation) }
 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
@@ -201,6 +228,92 @@ val StrudelPattern.loopAt by dslPatternExtension { p, args, /* callInfo */ _ -> 
 /** Fits the sample to the specified number of cycles */
 @StrudelDsl
 val String.loopAt by dslStringExtension { p, args, callInfo -> p.loopAt(args, callInfo) }
+
+// -- loopAtCps() ------------------------------------------------------------------------------------------------------
+
+private fun applyLoopAtCps(
+    source: StrudelPattern,
+    args: List<StrudelDslArg<Any?>>,
+): StrudelPattern {
+    if (args.isEmpty()) {
+        return source
+    }
+
+    val factor = args.getOrNull(0)?.toPattern(voiceValueModifier) ?: return source
+    val cps = args.getOrNull(1)?.toPattern(voiceValueModifier) ?: return source
+
+    // Calculate speed as a pattern: (1 / factor) * cps
+    val speedControl = steady(1.0).div(factor).mul(cps)
+
+    // Apply unit and slow to stretch the events to the desired duration
+    // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
+    val slowed = source.unit("c").slow(factor)
+
+    // Use outer join to set the speed parameter from the speedControl pattern
+    return slowed._outerJoin(speedControl) { sourceEvent, speedEvent ->
+        val speedValue = speedEvent?.data?.value?.asDoubleOrNull()
+        sourceEvent.copy(data = sourceEvent.data.copy(speed = speedValue))
+    }
+}
+
+/** Makes the sample fit the given number of cycles and cps value, by changing the speed */
+@StrudelDsl
+val loopAtCps by dslFunction { args, /* callInfo */ _ ->
+    if (args.isEmpty()) {
+        return@dslFunction silence
+    }
+
+    // In JavaScript: function (factor, cps, pat)
+    // So args are: [factor, cps, ...pattern parts]
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
+    applyLoopAtCps(pattern, args.take(2))
+}
+
+/** Makes the sample fit the given number of cycles and cps value, by changing the speed */
+@StrudelDsl
+val StrudelPattern.loopAtCps by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyLoopAtCps(p, args)
+}
+
+/** Convenience function that takes numeric arguments directly */
+@StrudelDsl
+fun StrudelPattern.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern {
+    return this.loopAtCps(listOf(factor, cps).asStrudelDslArgs())
+}
+
+/** Makes the sample fit the given number of cycles and cps value, by changing the speed */
+@StrudelDsl
+val String.loopAtCps by dslStringExtension { p, args, callInfo -> p.loopAtCps(args, callInfo) }
+
+/** Convenience function that takes numeric arguments directly */
+@StrudelDsl
+fun String.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern {
+    return this.loopAtCps(listOf(factor, cps).asStrudelDslArgs())
+}
+
+/** Alias for loopAtCps */
+@StrudelDsl
+val loopatcps by dslFunction { args, callInfo -> loopAtCps(args, callInfo) }
+
+/** Alias for loopAtCps */
+@StrudelDsl
+val StrudelPattern.loopatcps by dslPatternExtension { p, args, callInfo -> p.loopAtCps(args, callInfo) }
+
+/** Alias for loopAtCps */
+@StrudelDsl
+fun StrudelPattern.loopatcps(factor: Number, cps: Number = 0.5): StrudelPattern {
+    return this.loopAtCps(factor, cps)
+}
+
+/** Alias for loopAtCps */
+@StrudelDsl
+val String.loopatcps by dslStringExtension { p, args, callInfo -> p.loopAtCps(args, callInfo) }
+
+/** Alias for loopAtCps */
+@StrudelDsl
+fun String.loopatcps(factor: Number, cps: Number = 0.5): StrudelPattern {
+    return this.loopAtCps(factor, cps)
+}
 
 // -- cut() ------------------------------------------------------------------------------------------------------------
 

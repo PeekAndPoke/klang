@@ -1452,53 +1452,22 @@ fun String.echowith(times: Int, delay: Double, transform: (StrudelPattern) -> St
 
 // -- bite() -----------------------------------------------------------------------------------------------------------
 
-//private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-//    if (args.size < 2) {
-//        return silence
-//    }
-//
-//    val nProvider: ControlValueProvider =
-//        args.getOrNull(0).asControlValueProvider(StrudelVoiceValue.Num(4.0))
-//
-//    val indicesProvider: ControlValueProvider =
-//        args.getOrNull(1).asControlValueProvider(StrudelVoiceValue.Num(0.0))
-//
-//    return BitePattern(source = source, nProvider = nProvider, indicesProvider = indicesProvider)
-//}
-
 private fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.size < 2) return silence
 
-    // 1. Parse N (slices count)
-    // It can be a static number, a string (mini-notation), or a pattern.
-    val nArg = args.getOrNull(0)
-    val staticN = nArg?.value?.asIntOrNull()
-
-    // If not static, convert to pattern (handles strings/patterns)
-    val nPattern = if (staticN != null) null else args.take(1).toPattern(voiceValueModifier)
-
-    // 2. Parse Indices
+    val nPattern = args.take(1).toPattern(voiceValueModifier)
     val indicesPattern = args.drop(1).toPattern(voiceValueModifier)
 
-    // 3. Bind to indices
-    return indicesPattern._bind { indexEvent ->
-        val index = indexEvent.data.value?.asDouble ?: return@_bind null
+    return source._innerJoin(nPattern, indicesPattern) { src, nValue, indexValue ->
+        val n = nValue?.asDouble ?: 4.0
+        val index = indexValue?.asDouble ?: return@_innerJoin silence
 
-        // Resolve N
-        val n = if (staticN != null) {
-            staticN.toDouble()
-        } else {
-            // If N is dynamic, sample it at the start of the index event
-            nPattern!!.sampleAt(indexEvent.part.begin, QueryContext.empty)?.data?.value?.asDouble ?: 4.0
-        }
-
-        if (n <= 0.0) return@_bind null
+        if (n <= 0.0) return@_innerJoin silence
 
         val start = index / n
         val end = (index + 1.0) / n
 
-        // Zoom into the specific slice
-        source.zoom(start, end)
+        src.zoom(start, end)
     }
 }
 

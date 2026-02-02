@@ -96,7 +96,7 @@ class LangInsideSpec : StringSpec({
                     events.forEachIndexed { index, event ->
                         println(
                             "${index + 1}: note: ${event.data.value?.asString} | " +
-                                    "onset: ${event.hasOnset()} | " +
+                                    "onset: ${event.isOnset} | " +
                                     "part: ${event.part.begin} ${event.part.end} | " +
                                     "whole: ${event.whole.begin} ${event.whole.end}"
                         )
@@ -112,7 +112,7 @@ class LangInsideSpec : StringSpec({
                         events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
                         events[0].whole.begin.toDouble() shouldBe ((cycleDbl - 0.15) plusOrMinus EPSILON)
                         events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
-                        events[0].hasOnset() shouldBe true
+                        events[0].isOnset shouldBe true
                     }
 
                     // Event 1: value=0 (has onset)
@@ -122,7 +122,7 @@ class LangInsideSpec : StringSpec({
                         events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.35) plusOrMinus EPSILON)
                         events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
                         events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.35) plusOrMinus EPSILON)
-                        events[1].hasOnset() shouldBe true
+                        events[1].isOnset shouldBe true
                     }
 
                     // Event 2: value=1 (has onset)
@@ -132,7 +132,7 @@ class LangInsideSpec : StringSpec({
                         events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
                         events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.35) plusOrMinus EPSILON)
                         events[2].whole.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
-                        events[2].hasOnset() shouldBe true
+                        events[2].isOnset shouldBe true
                     }
 
                     // Event 3: value=2 (has onset)
@@ -142,7 +142,7 @@ class LangInsideSpec : StringSpec({
                         events[3].part.end.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
                         events[3].whole.begin.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
                         events[3].whole.end.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
-                        events[3].hasOnset() shouldBe true
+                        events[3].isOnset shouldBe true
                     }
 
                     // Event 4: value=3 (has onset, but clipped)
@@ -152,7 +152,7 @@ class LangInsideSpec : StringSpec({
                         events[4].part.end.toDouble() shouldBe ((cycleDbl + 1.1) plusOrMinus EPSILON)
                         events[4].whole.begin.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
                         events[4].whole.end.toDouble() shouldBe ((cycleDbl + 1.1) plusOrMinus EPSILON)
-                        events[4].hasOnset() shouldBe true
+                        events[4].isOnset shouldBe true
                     }
                 }
             }
@@ -176,7 +176,7 @@ class LangInsideSpec : StringSpec({
                     events.forEachIndexed { index, event ->
                         println(
                             "${index + 1}: note: ${event.data.value?.asString} | " +
-                                    "onset: ${event.hasOnset()} | " +
+                                    "onset: ${event.isOnset} | " +
                                     "part: ${event.part.begin} ${event.part.end} | " +
                                     "whole: ${event.whole.begin} ${event.whole.end}"
                         )
@@ -191,7 +191,7 @@ class LangInsideSpec : StringSpec({
                         events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
                         events[0].whole.begin.toDouble() shouldBe ((cycleDbl - 0.15) plusOrMinus EPSILON)
                         events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.1) plusOrMinus EPSILON)
-                        events[0].hasOnset() shouldBe true
+                        events[0].isOnset shouldBe true
                     }
 
                     withClue("Event 1 (value 0, no delay)") {
@@ -200,7 +200,7 @@ class LangInsideSpec : StringSpec({
                         events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                         events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                         events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
-                        events[1].hasOnset() shouldBe true
+                        events[1].isOnset shouldBe true
                     }
 
                     withClue("Event 2 (value 1, no delay") {
@@ -209,7 +209,7 @@ class LangInsideSpec : StringSpec({
                         events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                         events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                         events[2].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                        events[2].hasOnset() shouldBe true
+                        events[2].isOnset shouldBe true
                     }
 
                     withClue("Event 3 (value 2, delay by 0.1)") {
@@ -218,7 +218,7 @@ class LangInsideSpec : StringSpec({
                         events[3].part.end.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
                         events[3].whole.begin.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
                         events[3].whole.end.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
-                        events[3].hasOnset() shouldBe true
+                        events[3].isOnset shouldBe true
                     }
 
                     withClue("Event 4 (value 3, delayed by 0.1)") {
@@ -227,7 +227,7 @@ class LangInsideSpec : StringSpec({
                         events[4].part.end.toDouble() shouldBe ((cycleDbl + 1.1) plusOrMinus EPSILON)
                         events[4].whole.begin.toDouble() shouldBe ((cycleDbl + 0.85) plusOrMinus EPSILON)
                         events[4].whole.end.toDouble() shouldBe ((cycleDbl + 1.1) plusOrMinus EPSILON)
-                        events[4].hasOnset() shouldBe true
+                        events[4].isOnset shouldBe true
                     }
                 }
             }

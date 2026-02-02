@@ -297,6 +297,7 @@ class GraalStrudelPattern(
         val sampleBeginPos = value.safeGetMember("begin").safeNumberOrNull()
         val sampleEndPos = value.safeGetMember("end").safeNumberOrNull()
         val sampleSpeed = value.safeGetMember("speed").safeNumberOrNull()
+        val sampleUnit = value.safeGetMember("unit").safeStringOrNull()
         val sampleCut = value.safeGetMember("cut").safeNumberOrNull()?.toInt()
 
         // add event
@@ -420,6 +421,7 @@ class GraalStrudelPattern(
                 begin = sampleBeginPos,
                 end = sampleEndPos,
                 speed = sampleSpeed,
+                unit = sampleUnit,
                 loop = sampleLoop,
                 cut = sampleCut,
                 loopBegin = null,

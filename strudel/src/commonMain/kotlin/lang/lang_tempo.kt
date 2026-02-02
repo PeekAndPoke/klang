@@ -771,32 +771,23 @@ val StrudelPattern.outside by dslPatternExtension { p, args, /* callInfo */ _ ->
 
 // -- swingBy() --------------------------------------------------------------------------------------------------------
 
-fun applySwingBy(
-    pattern: StrudelPattern,
-    args: List<StrudelDslArg<Any?>>,
-): StrudelPattern {
-    if (args.size < 2) return pattern
+fun applySwingBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return pattern._innerJoin(args) { source, swing, n ->
+        val swingValue = swing?.asDouble ?: return@_innerJoin silence
+        val nVal = n?.asDouble ?: 1.0
 
-    val swingPattern = args[0].toPattern(voiceValueModifier)
-    val nArg = args[1]
+        val timing = seq(0, swingValue / 2)
+        val stretch = seq(1 + swingValue, 1 - swingValue)
 
-    // Inner join: swing drives structure; transform uses numeric swing value
-    return swingPattern._bind { swingEvent ->
-        val swing = swingEvent.data.value?.asDouble ?: return@_bind null
-
-        val timing = seq(0, swing / 2)
-        val stretch = seq(1 + swing, 1 - swing)
-
-        // Apply inside with the transform
         val transform: (StrudelPattern) -> StrudelPattern = { innerPat ->
-            if (swing >= 0) {
+            if (swingValue >= 0) {
                 innerPat.late(timing).stretchBy(stretch)
             } else {
                 innerPat.stretchBy(stretch).late(timing)
             }
         }
 
-        pattern.inside(nArg, transform)
+        source.inside(nVal, transform)
     }
 }
 

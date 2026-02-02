@@ -22,7 +22,7 @@ class LangLoopAtDebugSpec : StringSpec({
                     "  $index: " +
                             "part=[${event.part.begin.toDouble()}, ${event.part.end.toDouble()}) " +
                             "whole=${event.whole?.let { "[${it.begin.toDouble()}, ${it.end.toDouble()})" } ?: "null"} " +
-                            "hasOnset=${event.hasOnset()} " +
+                            "hasOnset=${event.isOnset} " +
                             "speed=${event.data.speed}"
                 )
             }

@@ -13,7 +13,7 @@ class LangBindPatternSpec : StringSpec({
         // Just verify the API exists
         val control = sound("bd hh")
 
-        val result = control._bind { event ->
+        val result = control._bind { _ ->
             sound("cp")
         }
 
@@ -39,7 +39,7 @@ class LangBindPatternSpec : StringSpec({
         // Test with sound() DSL function
         val control = sound("bd")
 
-        val result = control._bind { event ->
+        val result = control._bind { _ ->
             sound("hh")
         }
 
@@ -51,7 +51,7 @@ class LangBindPatternSpec : StringSpec({
     "bindPattern() - null produces silence" {
         val control = pure(1.0)
 
-        val result = control._bind { event ->
+        val result = control._bind { _ ->
             null  // Return null to produce silence
         }
 
@@ -63,7 +63,7 @@ class LangBindPatternSpec : StringSpec({
         val control = sound("bd").fast(2)
         val originalWeight = control.weight
 
-        val result = control._bind { event ->
+        val result = control._bind { _ ->
             sound("hh")
         }
 
@@ -75,7 +75,7 @@ class LangBindPatternSpec : StringSpec({
         // Control has 2 events in one cycle
         val control = sound("bd hh")
 
-        val result = control._bind { event ->
+        val result = control._bind { _ ->
             // Inner pattern has 4 events, but should be clipped to outer event bounds
             sound("a b c d")
         }

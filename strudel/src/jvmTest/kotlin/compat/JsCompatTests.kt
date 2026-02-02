@@ -90,11 +90,11 @@ class JsCompatTests : StringSpec() {
 
         val graalArc = (0..<numCycles)
             .flatMap { graalPattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
-            .filter { it.hasOnset() }
+            .filter { it.isOnset }
 
         val nativeArc = (0..<numCycles)
             .flatMap { nativePattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
-            .filter { it.hasOnset() }
+            .filter { it.isOnset }
 
         printEventComparison(graalArc, nativeArc)
 
