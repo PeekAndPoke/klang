@@ -4,10 +4,8 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel._innerJoin
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -62,7 +60,6 @@ val firstOf by dslFunction { args, _ ->
     val transform: (StrudelPattern) -> StrudelPattern =
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    // TODO: parse mini
     val pat = args.getOrNull(2)?.toPattern() ?: silence
 
     applyFirstOf(pat, listOf(n, transform).asStrudelDslArgs())
@@ -135,8 +132,7 @@ val lastOf by dslFunction { args, /* callInfo */ _ ->
     val transform: (StrudelPattern) -> StrudelPattern =
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    // TODO: parse mini
-    val pat = args.getOrNull(2)?.value as? StrudelPattern ?: silence
+    val pat = args.getOrNull(2)?.toPattern() ?: silence
 
     applyLastOf(pat, listOf(n, transform).asStrudelDslArgs())
 }
@@ -174,60 +170,15 @@ val String.lastOf by dslStringExtension { source, args, /* callInfo */ _ ->
  */
 @StrudelDsl
 val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
-    val arg0 = args.getOrNull(0) ?: return@dslPatternExtension p
-    val arg1 = args.getOrNull(1) ?: return@dslPatternExtension p
-
-    val condition = listOf(arg0).toPattern()
-
     @Suppress("UNCHECKED_CAST")
-    val transform: (StrudelPattern) -> StrudelPattern = arg1.value as? (StrudelPattern) -> StrudelPattern
-        ?: return@dslPatternExtension p
+    val transform: (StrudelPattern) -> StrudelPattern =
+        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    // FLIPPED IMPLEMENTATION: Create a pattern that iterates over source events
-    // and checks the condition for each one
-    object : StrudelPattern {
-        override val weight: Double get() = p.weight
-        override val numSteps: io.peekandpoke.klang.strudel.math.Rational? get() = p.numSteps
-
-        private val transformed = transform(p)
-
-        override fun queryArcContextual(
-            from: io.peekandpoke.klang.strudel.math.Rational,
-            to: io.peekandpoke.klang.strudel.math.Rational,
-            ctx: StrudelPattern.QueryContext,
-        ): List<StrudelPatternEvent> {
-            // Query source pattern
-            val sourceEvents = p.queryArcContextual(from, to, ctx)
-
-            val result = mutableListOf<StrudelPatternEvent>()
-
-            for (sourceEvent in sourceEvents) {
-                // Query condition at this source event's time (sample at midpoint)
-                val conditionEvents = condition.queryArcContextual(
-                    from = sourceEvent.part.begin,
-                    to = sourceEvent.part.begin + 0.00001.toRational(),
-                    ctx = ctx,
-                )
-
-                // Check if condition is truthy
-                val isTrue = conditionEvents.firstOrNull()?.data?.isTruthy() ?: false
-
-                if (isTrue) {
-                    val transformedEvents = transformed
-                        .queryArcContextual(from = sourceEvent.part.begin, to = sourceEvent.part.end, ctx = ctx)
-
-                    result.addAll(transformedEvents)
-                } else {
-                    // Keep source event unchanged
-                    result.add(sourceEvent)
-                }
-            }
-
-            return result
-        }
-
-        override fun estimateCycleDuration(): io.peekandpoke.klang.strudel.math.Rational {
-            return p.estimateCycleDuration()
+    // JavaScript: when(on, func, pat) => on ? func(pat) : pat
+    p._innerJoin(args.take(1)) { src, onValue ->
+        when (onValue?.isTruthy()) {
+            true -> transform(src)
+            else -> src
         }
     }
 }

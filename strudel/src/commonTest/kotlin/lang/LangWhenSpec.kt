@@ -36,7 +36,7 @@ class LangWhenSpec : FunSpec({
 
     test("when() should apply transformation when condition is truthy") {
         val pat = note("c3 d3 e3 f3")
-            .`when`(pure(1).struct("t ~ t ~")) { it.transpose(12) }
+            .`when`(seq("1 0 1 0")) { it.transpose(12) }
 
         val events = pat.queryArc(0.0, 1.0)
 
