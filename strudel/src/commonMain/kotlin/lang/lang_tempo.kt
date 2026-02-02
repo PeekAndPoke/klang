@@ -397,14 +397,17 @@ val String.ply by dslStringExtension { p, args, callInfo -> p.ply(args, callInfo
 // -- hurry() ----------------------------------------------------------------------------------------------------------
 
 private fun applyHurry(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    if (args.isEmpty()) {
-        return pattern
+    val factorArg = args.firstOrNull() ?: return pattern
+
+    // 1. fast(factor)
+    val spedUp = applyFast(pattern, listOf(factorArg))
+
+    // 2. speed = speed * factor
+    return spedUp._liftNumericField(listOf(factorArg)) { factor ->
+        val f = factor ?: 1.0
+        val currentSpeed = speed ?: 1.0
+        copy(speed = currentSpeed * f)
     }
-
-    val factorProvider: ControlValueProvider =
-        args.firstOrNull().asControlValueProvider(StrudelVoiceValue.Num(1.0))
-
-    return HurryPattern(source = pattern, factorProvider = factorProvider)
 }
 
 /** Speeds up pattern and increases speed parameter by the same factor */
@@ -414,10 +417,8 @@ val hurry by dslFunction { args, /* callInfo */ _ ->
         return@dslFunction silence
     }
 
-    val factorProvider = args[0].asControlValueProvider(StrudelVoiceValue.Num(1.0))
     val pattern = args.drop(1).toPattern(voiceValueModifier)
-
-    HurryPattern(source = pattern, factorProvider = factorProvider)
+    applyHurry(pattern, args.take(1))
 }
 
 /** Speeds up pattern and increases speed parameter by the same factor */

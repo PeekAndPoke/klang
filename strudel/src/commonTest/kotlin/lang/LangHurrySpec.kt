@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
@@ -87,7 +88,8 @@ class LangHurrySpec : StringSpec({
             h.part.begin shouldBe o.part.begin
             h.part.end shouldBe o.part.end
             // Speed should remain unchanged (null)
-            h.data.speed shouldBe o.data.speed
+            o.data.speed.shouldBeNull()
+            h.data.speed shouldBe 1.0
         }
     }
 
