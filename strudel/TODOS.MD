@@ -156,7 +156,7 @@ implementation notes.
   pattern method, string
   extension)
 - [x] **`loopAt(cycles)`** - Fit sample to cycles
-- [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
+- [x] **`loopAtCps(cps)`** - Fit sample to cycles per second
 
 ### Pattern Transformation ⭐⭐⭐
 

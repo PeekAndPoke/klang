@@ -5,7 +5,8 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel.pattern.ControlPattern
+import io.peekandpoke.klang.strudel._innerJoin
+import io.peekandpoke.klang.strudel.mapEvents
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
 /**
@@ -20,30 +21,16 @@ fun applyArithmetic(
     args: List<StrudelDslArg<Any?>>,
     op: (StrudelVoiceValue, StrudelVoiceValue) -> StrudelVoiceValue?,
 ): StrudelPattern {
-    if (args.isEmpty()) return source
+    return source._innerJoin(args) { src, controlValue ->
+        val controlVal = controlValue ?: return@_innerJoin silence
 
-    // 1. Convert args to a control pattern
-    // Note: We use defaultModifier because we just want the raw values (numbers/strings)
-    val control = args.toPattern(voiceValueModifier)
-
-    // 2. Lift & Combine in one step
-    // We use ControlPattern to handle intersection and value combination efficiently
-    return ControlPattern(
-        source = source,
-        control = control,
-        mapper = { it },
-        combiner = { srcData, ctrlData ->
-            // _liftValue behavior: if control has no value, the event is invalid (inner join)
-            val controlVal = ctrlData.value ?: return@ControlPattern srcData
-            // reinterpretVoice behavior: if source has no value, pass it through unmodified
-            val sourceVal = srcData.value ?: return@ControlPattern srcData
-
-            // Execute the operation (e.g. source + control)
+        // Apply the operation to each event in the source pattern
+        src.mapEvents { event ->
+            val sourceVal = event.data.value ?: return@mapEvents event
             val newVal = op(sourceVal, controlVal)
-            // apply new val
-            srcData.copy(value = newVal)
+            event.copy(data = event.data.copy(value = newVal))
         }
-    )
+    }
 }
 
 /**
