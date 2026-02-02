@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.stretchBy
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -393,6 +394,234 @@ val StrudelPattern.ply by dslPatternExtension { p, args, /* callInfo */ _ ->
 /** Repeats each event n times within its timespan */
 @StrudelDsl
 val String.ply by dslStringExtension { p, args, callInfo -> p.ply(args, callInfo) }
+
+// -- plyWith() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Helper function to apply a function n times to a value.
+ * Equivalent to JS applyN(n, func, p).
+ */
+private fun applyFunctionNTimes(
+    n: Int,
+    func: (StrudelPattern) -> StrudelPattern,
+    pattern: StrudelPattern,
+): StrudelPattern {
+    var result = pattern
+    repeat(n) {
+        result = func(result)
+    }
+    return result
+}
+
+private fun applyPlyWith(
+    pattern: StrudelPattern,
+    args: List<StrudelDslArg<Any?>>,
+): StrudelPattern {
+    if (args.size < 2) {
+        return pattern
+    }
+
+    val factorArg = args[0]
+    val funcArg = args[1]
+
+    // Extract the function from the argument
+    val func = funcArg.value as? ((StrudelPattern) -> StrudelPattern) ?: return pattern
+
+    // Calculate new steps if factor is purely static
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toInt()
+    val newSteps = if (staticFactor != null) {
+        pattern.numSteps?.times(staticFactor.toRational())
+    } else {
+        null
+    }
+
+    val result = pattern._bindSqueeze { event ->
+        val factor = staticFactor ?: event.data.value?.asDoubleOrNull()?.toInt() ?: 1
+
+        if (factor <= 0) {
+            return@_bindSqueeze null
+        }
+
+        // Create factor number of patterns, applying func 0, 1, 2, ... (factor-1) times
+        // Equivalent to: cat(...listRange(0, factor - 1).map((i) => applyN(i, func, x)))
+        val patterns = (0 until factor).map { i ->
+            val atomPattern = AtomicInfinitePattern(event.data)
+            applyFunctionNTimes(i, func, atomPattern)
+        }
+
+        // Concatenate all patterns - SequencePattern squashes them into one cycle
+        // _bindSqueeze will squeeze this into the event's timespan
+        if (patterns.size == 1) patterns.first() else SequencePattern(patterns)
+    }
+
+    return if (newSteps != null) result.withSteps(newSteps) else result
+}
+
+/** Repeats each event n times, applying function cumulatively (0, 1, 2... times) */
+@StrudelDsl
+val plyWith by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 3) {
+        return@dslFunction silence
+    }
+
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
+    applyPlyWith(pattern, args.take(2))
+}
+
+/** Repeats each event n times, applying function cumulatively (0, 1, 2... times) */
+@StrudelDsl
+val StrudelPattern.plyWith by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPlyWith(p, args)
+}
+
+/** Convenience function that takes lambda directly */
+@StrudelDsl
+fun StrudelPattern.plyWith(factor: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.plyWith(listOf(factor, transform).asStrudelDslArgs())
+}
+
+/** Repeats each event n times, applying function cumulatively (0, 1, 2... times) */
+@StrudelDsl
+val String.plyWith by dslStringExtension { p, args, callInfo -> p.plyWith(args, callInfo) }
+
+/** Convenience function that takes lambda directly */
+@StrudelDsl
+fun String.plyWith(factor: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.plyWith(listOf(factor, transform).asStrudelDslArgs())
+}
+
+/** Alias for plyWith */
+@StrudelDsl
+val plywith by dslFunction { args, callInfo -> plyWith(args, callInfo) }
+
+/** Alias for plyWith */
+@StrudelDsl
+val StrudelPattern.plywith by dslPatternExtension { p, args, callInfo -> p.plyWith(args, callInfo) }
+
+/** Alias for plyWith */
+@StrudelDsl
+fun StrudelPattern.plywith(factor: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.plyWith(factor, transform)
+}
+
+/** Alias for plyWith */
+@StrudelDsl
+val String.plywith by dslStringExtension { p, args, callInfo -> p.plyWith(args, callInfo) }
+
+/** Alias for plyWith */
+@StrudelDsl
+fun String.plywith(factor: Int, transform: (StrudelPattern) -> StrudelPattern): StrudelPattern {
+    return this.plyWith(factor, transform)
+}
+
+// -- plyForEach() -----------------------------------------------------------------------------------------------------
+
+private fun applyPlyForEach(
+    pattern: StrudelPattern,
+    args: List<StrudelDslArg<Any?>>,
+): StrudelPattern {
+    if (args.size < 2) {
+        return pattern
+    }
+
+    val factorArg = args[0]
+    val funcArg = args[1]
+
+    // Extract the function from the argument
+    val func = funcArg.value as? ((StrudelPattern, Int) -> StrudelPattern) ?: return pattern
+
+    // Calculate new steps if factor is purely static
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toInt()
+    val newSteps = if (staticFactor != null) {
+        pattern.numSteps?.times(staticFactor.toRational())
+    } else {
+        null
+    }
+
+    val result = pattern._bindSqueeze { event ->
+        val factor = staticFactor ?: event.data.value?.asDoubleOrNull()?.toInt() ?: 1
+
+        if (factor <= 0) {
+            return@_bindSqueeze null
+        }
+
+        // Start with the original value, then add transformed versions for i = 1 to factor-1
+        // Equivalent to: cat(pure(x), ...listRange(1, factor - 1).map((i) => func(pure(x), i)))
+        val atomPattern = AtomicInfinitePattern(event.data)
+
+        val patterns = buildList {
+            // First pattern is the original
+            add(atomPattern)
+            // Then add transformed patterns for i = 1 to factor-1
+            for (i in 1 until factor) {
+                add(func(atomPattern, i))
+            }
+        }
+
+        // Concatenate all patterns - SequencePattern squashes them into one cycle
+        // _bindSqueeze will squeeze this into the event's timespan
+        if (patterns.size == 1) patterns.first() else SequencePattern(patterns)
+    }
+
+    return if (newSteps != null) result.withSteps(newSteps) else result
+}
+
+/** Repeats each event n times, passing iteration index to function */
+@StrudelDsl
+val plyForEach by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 3) {
+        return@dslFunction silence
+    }
+
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
+    applyPlyForEach(pattern, args.take(2))
+}
+
+/** Repeats each event n times, passing iteration index to function */
+@StrudelDsl
+val StrudelPattern.plyForEach by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPlyForEach(p, args)
+}
+
+/** Convenience function that takes lambda directly */
+@StrudelDsl
+fun StrudelPattern.plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern {
+    return this.plyForEach(listOf(factor, transform).asStrudelDslArgs())
+}
+
+/** Repeats each event n times, passing iteration index to function */
+@StrudelDsl
+val String.plyForEach by dslStringExtension { p, args, callInfo -> p.plyForEach(args, callInfo) }
+
+/** Convenience function that takes lambda directly */
+@StrudelDsl
+fun String.plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern {
+    return this.plyForEach(listOf(factor, transform).asStrudelDslArgs())
+}
+
+/** Alias for plyForEach */
+@StrudelDsl
+val plyforeach by dslFunction { args, callInfo -> plyForEach(args, callInfo) }
+
+/** Alias for plyForEach */
+@StrudelDsl
+val StrudelPattern.plyforeach by dslPatternExtension { p, args, callInfo -> p.plyForEach(args, callInfo) }
+
+/** Alias for plyForEach */
+@StrudelDsl
+fun StrudelPattern.plyforeach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern {
+    return this.plyForEach(factor, transform)
+}
+
+/** Alias for plyForEach */
+@StrudelDsl
+val String.plyforeach by dslStringExtension { p, args, callInfo -> p.plyForEach(args, callInfo) }
+
+/** Alias for plyForEach */
+@StrudelDsl
+fun String.plyforeach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern {
+    return this.plyForEach(factor, transform)
+}
 
 // -- hurry() ----------------------------------------------------------------------------------------------------------
 
