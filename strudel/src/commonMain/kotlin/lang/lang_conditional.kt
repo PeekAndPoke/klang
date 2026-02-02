@@ -5,12 +5,9 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel._lift
+import io.peekandpoke.klang.strudel._innerJoin
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -20,43 +17,19 @@ var strudelLangConditionalInit = false
 
 // -- firstOf() --------------------------------------------------------------------------------------------------------
 
-private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val nArg = args.firstOrNull()
-    val nVal = nArg?.value
-
+fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     @Suppress("UNCHECKED_CAST")
     val transform: (StrudelPattern) -> StrudelPattern =
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    // Optimize for static integer N
-    val staticN = nVal?.asIntOrNull()
-    if (staticN != null) {
-        if (staticN <= 1) return transform(source)
-
-        val patterns = ArrayList<StrudelPattern>(staticN)
-        patterns.add(transform(source))
-        repeat(staticN - 1) { patterns.add(source) }
-
-        return applySlowcatPrime(patterns)
-    }
-
-    // Dynamic path: Lift the pattern N
-    val nPattern = when (nVal) {
-        is StrudelPattern -> nVal
-        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
-    }
-
-    // Use _lift to handle the control pattern logic automatically
-    return source._lift(nPattern) { nDouble, pat ->
-        val n = nDouble.toInt()
+    return source._innerJoin(args.take(1)) { src, nValue ->
+        val n = nValue?.asInt ?: 1
         if (n <= 1) {
-            transform(pat)
+            transform(src)
         } else {
             val patterns = ArrayList<StrudelPattern>(n)
-            patterns.add(transform(pat))
-            repeat(n - 1) { patterns.add(pat) }
+            patterns.add(transform(src))
+            repeat(n - 1) { patterns.add(src) }
             applySlowcatPrime(patterns)
         }
     }
@@ -90,7 +63,7 @@ val firstOf by dslFunction { args, _ ->
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
     // TODO: parse mini
-    val pat = args.getOrNull(2)?.value as? StrudelPattern ?: silence
+    val pat = args.getOrNull(2)?.toPattern() ?: silence
 
     applyFirstOf(pat, listOf(n, transform).asStrudelDslArgs())
 }
@@ -118,42 +91,18 @@ val String.every by dslStringExtension { source, args, callInfo -> source.firstO
 // -- lastOf() ---------------------------------------------------------------------------------------------------------
 
 private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val nArg = args.firstOrNull()
-    val nVal = nArg?.value
-
     @Suppress("UNCHECKED_CAST")
     val transform: (StrudelPattern) -> StrudelPattern =
         args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
 
-    // Optimize for static integer N
-    val staticN = nVal?.asIntOrNull()
-    if (staticN != null) {
-        if (staticN <= 1) return transform(source)
-
-        val patterns = ArrayList<StrudelPattern>(staticN)
-        repeat(staticN - 1) { patterns.add(source) }
-        patterns.add(transform(source))
-
-        return applySlowcatPrime(patterns)
-    }
-
-    // Dynamic path: Lift the pattern N
-    val nPattern = when (nVal) {
-        is StrudelPattern -> nVal
-        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("1")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
-    }
-
-    // Use _lift
-    return source._lift(nPattern) { nDouble, pat ->
-        val n = nDouble.toInt()
+    return source._innerJoin(args.take(1)) { src, nValue ->
+        val n = nValue?.asInt ?: 1
         if (n <= 1) {
-            transform(pat)
+            transform(src)
         } else {
             val patterns = ArrayList<StrudelPattern>(n)
-            repeat(n - 1) { patterns.add(pat) }
-            patterns.add(transform(pat))
+            repeat(n - 1) { patterns.add(src) }
+            patterns.add(transform(src))
             applySlowcatPrime(patterns)
         }
     }
@@ -228,7 +177,7 @@ val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
     val arg0 = args.getOrNull(0) ?: return@dslPatternExtension p
     val arg1 = args.getOrNull(1) ?: return@dslPatternExtension p
 
-    val condition = listOf(arg0).toPattern(voiceValueModifier)
+    val condition = listOf(arg0).toPattern()
 
     @Suppress("UNCHECKED_CAST")
     val transform: (StrudelPattern) -> StrudelPattern = arg1.value as? (StrudelPattern) -> StrudelPattern

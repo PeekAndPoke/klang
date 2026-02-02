@@ -213,7 +213,7 @@ fun StrudelPattern.applyControlFromParams(
 /**
  * Converts a single argument into a StrudelPattern.
  */
-fun StrudelDslArg<Any?>.toPattern(modify: VoiceDataModifier): StrudelPattern =
+fun StrudelDslArg<Any?>.toPattern(modify: VoiceDataModifier = voiceValueModifier): StrudelPattern =
     listOf(this).toPattern(modify)
 
 /**
@@ -222,7 +222,7 @@ fun StrudelDslArg<Any?>.toPattern(modify: VoiceDataModifier): StrudelPattern =
  * - Single String/Number -> parses to AtomicPattern using [modify].
  * - Multiple args -> returns a SequencePattern of the parsed items.
  */
-fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceDataModifier): StrudelPattern {
+fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceDataModifier = voiceValueModifier): StrudelPattern {
     val patterns = this.toListOfPatterns(modify)
 
     return when {

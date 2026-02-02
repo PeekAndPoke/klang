@@ -8,7 +8,6 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.lang.toPattern
-import io.peekandpoke.klang.strudel.lang.voiceValueModifier
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
@@ -354,7 +353,7 @@ fun <T> StrudelPattern._innerJoin(
     transform: (source: StrudelPattern, v1: StrudelVoiceValue?) -> StrudelPattern,
 ): StrudelPattern {
     return this._innerJoin(
-        arg1 = args.getOrNull(0)?.toPattern(voiceValueModifier) ?: return this,
+        arg1 = args.getOrNull(0)?.toPattern() ?: return this,
         transform = transform,
     )
 }
@@ -385,8 +384,8 @@ fun <T> StrudelPattern._innerJoin(
     transform: (source: StrudelPattern, v1: StrudelVoiceValue?, v2: StrudelVoiceValue?) -> StrudelPattern,
 ): StrudelPattern {
     return this._innerJoin(
-        arg1 = args.getOrNull(0)?.toPattern(voiceValueModifier) ?: return this,
-        arg2 = args.getOrNull(1)?.toPattern(voiceValueModifier) ?: return this,
+        arg1 = args.getOrNull(0)?.toPattern() ?: return this,
+        arg2 = args.getOrNull(1)?.toPattern() ?: return this,
         transform = transform,
     )
 }
@@ -422,9 +421,9 @@ fun <T> StrudelPattern._innerJoin(
     transform: (source: StrudelPattern, v1: StrudelVoiceValue?, v2: StrudelVoiceValue?, v3: StrudelVoiceValue?) -> StrudelPattern,
 ): StrudelPattern {
     return this._innerJoin(
-        arg1 = args.getOrNull(0)?.toPattern(voiceValueModifier) ?: return this,
-        arg2 = args.getOrNull(1)?.toPattern(voiceValueModifier) ?: return this,
-        arg3 = args.getOrNull(2)?.toPattern(voiceValueModifier) ?: return this,
+        arg1 = args.getOrNull(0)?.toPattern() ?: return this,
+        arg2 = args.getOrNull(1)?.toPattern() ?: return this,
+        arg3 = args.getOrNull(2)?.toPattern() ?: return this,
         transform = transform,
     )
 }
@@ -770,7 +769,7 @@ fun StrudelPattern._liftNumericField(
     update: StrudelVoiceData.(Double?) -> StrudelVoiceData,
 ): StrudelPattern {
     if (args.isEmpty()) return this
-    val control = args.toPattern(voiceValueModifier)
+    val control = args.toPattern()
 
     // Use outer join to sample control at each source event's time
     return _outerJoin(control) { sourceEvent, controlEvent ->
