@@ -352,12 +352,11 @@ fun StrudelPattern._bindSqueeze(
 
     // Map query time: t -> (t - b) / d  (map global [b, b+d] to local [0, 1])
     // Map event time: e -> b + e * d    (map local [0, 1] back to global [b, b+d])
-    innerPattern._withQueryTime { t -> (t - b) / d }
-        .mapEvents { e ->
-            val scaledPart = e.part.scale(d).shift(b)
-            val scaledWhole = e.whole?.scale(d)?.shift(b) ?: scaledPart
-            e.copy(part = scaledPart, whole = scaledWhole)
-        }
+    innerPattern._withQueryTime { t -> (t - b) / d }.mapEvents { e ->
+        val scaledPart = e.part.scale(d).shift(b)
+        val scaledWhole = e.whole.scale(d).shift(b)
+        e.copy(part = scaledPart, whole = scaledWhole)
+    }
 }
 
 /**
@@ -379,12 +378,11 @@ fun StrudelPattern._bindPoly(
 
             // Map query time: t -> t * factor
             // Map event time: e -> e / factor
-            innerPattern._withQueryTime { t -> t * factor }
-                .mapEvents { e ->
-                    val scaledPart = e.part.scale(Rational.ONE / factor)
-                    val scaledWhole = e.whole?.scale(Rational.ONE / factor)
-                    e.copy(part = scaledPart, whole = scaledWhole)
-                }
+            innerPattern._withQueryTime { t -> t * factor }.mapEvents { e ->
+                val scaledPart = e.part.scale(Rational.ONE / factor)
+                val scaledWhole = e.whole.scale(Rational.ONE / factor)
+                e.copy(part = scaledPart, whole = scaledWhole)
+            }
         } else {
             innerPattern
         }
@@ -404,15 +402,14 @@ fun StrudelPattern._bindReset(
     // NOTE: Using whole.begin (onset time) for cycle position, not part.begin (visible start).
     // This matches musical semantics where the event's cycle position is determined by its onset.
     // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
-    val eventBegin = outerEvent.whole?.begin ?: outerEvent.part.begin
+    val eventBegin = outerEvent.whole.begin
     val shift = eventBegin % Rational.ONE
 
-    innerPattern._withQueryTime { t -> t - shift }
-        .mapEvents { e ->
-            val shiftedPart = e.part.shift(shift)
-            val shiftedWhole = e.whole?.shift(shift) ?: shiftedPart
-            e.copy(part = shiftedPart, whole = shiftedWhole)
-        }
+    innerPattern._withQueryTime { t -> t - shift }.mapEvents { e ->
+        val shiftedPart = e.part.shift(shift)
+        val shiftedWhole = e.whole.shift(shift)
+        e.copy(part = shiftedPart, whole = shiftedWhole)
+    }
 }
 
 /**
@@ -428,15 +425,13 @@ fun StrudelPattern._bindRestart(
     // NOTE: Using whole.begin (onset time) for alignment, not part.begin (visible start).
     // This matches musical semantics where the event conceptually starts at its onset.
     // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
-    val eventBegin = outerEvent.whole?.begin ?: outerEvent.part.begin
-    val shift = eventBegin
+    val eventBegin = outerEvent.whole.begin
 
-    innerPattern._withQueryTime { t -> t - shift }
-        .mapEvents { e ->
-            val shiftedPart = e.part.shift(shift)
-            val shiftedWhole = e.whole?.shift(shift) ?: shiftedPart
-            e.copy(part = shiftedPart, whole = shiftedWhole)
-        }
+    innerPattern._withQueryTime { t -> t - eventBegin }.mapEvents { e ->
+        val shiftedPart = e.part.shift(eventBegin)
+        val shiftedWhole = e.whole.shift(eventBegin)
+        e.copy(part = shiftedPart, whole = shiftedWhole)
+    }
 }
 
 /**
@@ -527,11 +522,7 @@ fun StrudelPattern._liftData(
         }
     }
 
-    override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         return joined.queryArcContextual(from, to, ctx)
     }
 }
@@ -575,11 +566,7 @@ fun StrudelPattern._liftValue(
         transform(value, this@_liftValue)
     }
 
-    override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         return joined.queryArcContextual(from, to, ctx)
     }
 }
@@ -687,7 +674,7 @@ fun StrudelPattern._applyControl(
         // NOTE: Using whole.begin (onset time) for sampling, not part.begin (visible start).
         // This ensures control patterns are sampled at the musical onset, not at visible clip boundaries.
         // If JS implementation differs, this may need adjustment. See accessor-replacement notes.
-        val sampleTime = event.whole?.begin ?: event.part.begin
+        val sampleTime = event.whole.begin
         val controlEvent = control.sampleAt(sampleTime, ctx)
 
         val combined = combiner(event, controlEvent)
@@ -703,11 +690,7 @@ fun StrudelPattern._withQueryTime(transform: (Rational) -> Rational): StrudelPat
     override val numSteps: Rational? get() = this@_withQueryTime.numSteps
     override fun estimateCycleDuration(): Rational = this@_withQueryTime.estimateCycleDuration()
 
-    override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
-        ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
         return this@_withQueryTime.queryArcContextual(transform(from), transform(to), ctx)
     }
 }
@@ -722,16 +705,16 @@ fun StrudelPattern._withQueryTime(transform: (Rational) -> Rational): StrudelPat
 fun StrudelPattern._withHapTime(transform: (Rational) -> Rational): StrudelPattern = mapEvents { event ->
     val newPartBegin = transform(event.part.begin)
     val newPartEnd = transform(event.part.end)
+
     val newPart = TimeSpan(newPartBegin, newPartEnd)
-    val newWhole = event.whole?.let {
+
+    val newWhole = event.whole.let {
         val newWholeBegin = transform(it.begin)
         val newWholeEnd = transform(it.end)
         TimeSpan(newWholeBegin, newWholeEnd)
     }
-    event.copy(
-        part = newPart,
-        whole = newWhole
-    )
+
+    event.copy(part = newPart, whole = newWhole)
 }
 
 /**

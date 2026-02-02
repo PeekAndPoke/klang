@@ -103,16 +103,11 @@ internal class ReversePattern(
 
                 inner.queryArcContextual(innerFrom, innerTo, ctx).forEach { ev ->
                     val pivot = Rational.ONE + (cycle * Rational(2))
-                    val reversedPart = TimeSpan(
-                        begin = pivot - ev.part.end,
-                        end = pivot - ev.part.begin
-                    )
-                    val reversedWhole = ev.whole?.let {
-                        TimeSpan(
-                            begin = pivot - it.end,
-                            end = pivot - it.begin
-                        )
+                    val reversedPart = TimeSpan(begin = pivot - ev.part.end, end = pivot - ev.part.begin)
+                    val reversedWhole = ev.whole.let {
+                        TimeSpan(begin = pivot - it.end, end = pivot - it.begin)
                     }
+
                     events.add(ev.copy(part = reversedPart, whole = reversedWhole))
                 }
             }

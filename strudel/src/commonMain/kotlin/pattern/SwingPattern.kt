@@ -80,7 +80,7 @@ internal class SwingPattern(
                 val newEnd = newBegin + (eventDuration * scaleFactor)
 
                 val newPart = TimeSpan(newBegin, newEnd)
-                val newWhole = ev.whole?.let { whole ->
+                val newWhole = ev.whole.let { whole ->
                     val wholePos = whole.begin - cycle - subdivisionStart
                     val newWholeBegin = cycle + subdivisionStart + (wholePos * scaleFactor)
                     val newWholeEnd = newWholeBegin + (whole.duration * scaleFactor)
@@ -100,7 +100,7 @@ internal class SwingPattern(
                 val newEnd = newBegin + (eventDuration * scaleFactor)
 
                 val newPart = TimeSpan(newBegin, newEnd)
-                val newWhole = ev.whole?.let { whole ->
+                val newWhole = ev.whole.let { whole ->
                     val wholePos = whole.begin - cycle - subdivisionStart - halfDuration
                     val newWholeBegin = cycle + subdivisionStart + firstPartDuration + (wholePos * scaleFactor)
                     val newWholeEnd = newWholeBegin + (whole.duration * scaleFactor)

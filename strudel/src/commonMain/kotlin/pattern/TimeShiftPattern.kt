@@ -23,10 +23,6 @@ internal class TimeShiftPattern(
     private val factor: Rational = Rational.ONE,
 ) : StrudelPattern {
 
-    companion object {
-        private val MIN_OVERLAP = 1e-7.toRational()
-    }
-
     override val weight: Double get() = source.weight
     override val numSteps: Rational? get() = source.numSteps
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
@@ -37,69 +33,97 @@ internal class TimeShiftPattern(
         ctx: StrudelPattern.QueryContext,
     ): List<StrudelPatternEvent> {
         // 1. Query control events
-        val controlEvents = offsetProvider.queryEvents(from, to, ctx)
+        val controlEvents = offsetProvider
+            .queryEvents(from - Rational.ONE, to + Rational.ONE, ctx)
+
         if (controlEvents.isEmpty()) return emptyList()
 
-        // 2. Get min and max shift values
-        var minShift = Rational.ZERO
-        var maxShift = Rational.ZERO
+        val result2 = createEventList()
 
         for (controlEvent in controlEvents) {
             val offsetDouble = controlEvent.data.value?.asDouble ?: continue
             val offset = offsetDouble.toRational() * factor
-            if (offset < minShift) minShift = offset
-            if (offset > maxShift) maxShift = offset
-        }
+            val shifted = source
+                .queryArcContextual(controlEvent.part.begin, controlEvent.part.end, ctx)
+                .mapNotNull {
+                    val shiftPart = it.part.shift(offset)
+                    val shiftWhole = it.whole.shift(offset)
 
-        // 3. Query source with expanded range
-        val adjustedFrom = from - maxShift
-        val adjustedTo = to - minShift
-        val sourceEvents = source.queryArcContextual(adjustedFrom, adjustedTo, ctx)
+                    if (shiftWhole.end <= from || shiftWhole.begin > to) return@mapNotNull null
 
-        // 4. Map each source event to the control event where it lands after shifting
-        val result = mutableListOf<StrudelPatternEvent>()
+                    val clippedPart = shiftPart
+                        .clipTo(controlEvent.part.shift(offset)) ?: return@mapNotNull null
 
-        for (sourceEvent in sourceEvents) {
-            var matchedEvent: StrudelPatternEvent? = null
-
-            // Try each control event to see where this source event would land
-            for (controlEvent in controlEvents) {
-                val offsetDouble = controlEvent.data.value?.asDouble ?: continue
-                val offset = offsetDouble.toRational() * factor
-
-                // Calculate where this event would land with this offset
-                val shiftedBegin = sourceEvent.part.begin + offset
-
-                // Does the shifted event land in this control event's range?
-                if (shiftedBegin >= controlEvent.part.begin && shiftedBegin < controlEvent.part.end) {
-                    // Yes! Apply this offset
-                    val shiftedPart = sourceEvent.part.shift(offset)
-                    val shiftedWhole = sourceEvent.whole?.shift(offset) ?: shiftedPart
-
-                    // Only include if shifted event overlaps query range (with epsilon tolerance)
-                    val overlaps = hasOverlapWithEpsilon(
-                        eventBegin = shiftedPart.begin,
-                        eventEnd = shiftedPart.end,
-                        queryFrom = from,
-                        queryTo = to,
-                        epsilon = MIN_OVERLAP,
-                    )
-
-                    if (overlaps) {
-                        matchedEvent = sourceEvent.copy(
-                            part = shiftedPart,
-                            whole = shiftedWhole
-                        )
-                    }
-                    break // Found the matching control event
+                    it.copy(part = clippedPart, whole = shiftWhole)
                 }
-            }
 
-            if (matchedEvent != null) {
-                result.add(matchedEvent)
-            }
+            result2.addAll(shifted)
         }
 
-        return result
+        return result2.filter {
+            hasOverlap(it.part.begin, it.part.end, from, to)
+        }
+
+//        // 2. Get min and max shift values
+//        var minShift = Rational.ZERO
+//        var maxShift = Rational.ZERO
+//
+//        for (controlEvent in controlEvents) {
+//            val offsetDouble = controlEvent.data.value?.asDouble ?: continue
+//            val offset = offsetDouble.toRational() * factor
+//            if (offset < minShift) minShift = offset
+//            if (offset > maxShift) maxShift = offset
+//        }
+//
+//        // 3. Query source with expanded range
+//        val adjustedFrom = from - maxShift
+//        val adjustedTo = to - minShift
+//        val sourceEvents = source.queryArcContextual(adjustedFrom, adjustedTo, ctx)
+//
+//        // 4. Map each source event to the control event where it lands after shifting
+//        val result = mutableListOf<StrudelPatternEvent>()
+//
+//        for (sourceEvent in sourceEvents) {
+//            var matchedEvent: StrudelPatternEvent? = null
+//
+//            // Try each control event to see where this source event would land
+//            for (controlEvent in controlEvents) {
+//                val offsetDouble = controlEvent.data.value?.asDouble ?: continue
+//                val offset = offsetDouble.toRational() * factor
+//
+//                // Calculate where this event would land with this offset
+//                val shiftedBegin = sourceEvent.part.begin + offset
+//
+//                // Does the shifted event land in this control event's range?
+//                if (shiftedBegin >= controlEvent.part.begin && shiftedBegin < controlEvent.part.end) {
+//                    // Yes! Apply this offset
+//                    val shiftedPart = sourceEvent.part.shift(offset)
+//                    val shiftedWhole = sourceEvent.whole?.shift(offset) ?: shiftedPart
+//
+//                    // Only include if shifted event overlaps query range (with epsilon tolerance)
+//                    val overlaps = hasOverlapWithEpsilon(
+//                        eventBegin = shiftedPart.begin,
+//                        eventEnd = shiftedPart.end,
+//                        queryFrom = from,
+//                        queryTo = to,
+//                        epsilon = MIN_OVERLAP,
+//                    )
+//
+//                    if (overlaps) {
+//                        matchedEvent = sourceEvent.copy(
+//                            part = shiftedPart,
+//                            whole = shiftedWhole
+//                        )
+//                    }
+//                    break // Found the matching control event
+//                }
+//            }
+//
+//            if (matchedEvent != null) {
+//                result.add(matchedEvent)
+//            }
+//        }
+//
+//        return result
     }
 }

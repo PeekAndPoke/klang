@@ -303,7 +303,7 @@ class GraalStrudelPattern(
         return StrudelPatternEvent(
             // Strudel Timing
             part = part,
-            whole = whole,
+            whole = whole ?: part,
             // Voice data
             data = StrudelVoiceData(
                 // Frequency and note

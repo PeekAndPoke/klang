@@ -62,7 +62,7 @@ class RepeatCyclesPattern(
                 events.forEach { event ->
                     val offset = cycleStart - sourceCycleStart
                     val shiftedPart = event.part.shift(offset)
-                    val shiftedWhole = event.whole?.shift(offset)
+                    val shiftedWhole = event.whole.shift(offset)
 
                     result.add(event.copy(part = shiftedPart, whole = shiftedWhole))
                 }

@@ -73,12 +73,9 @@ class DropPattern(
                 val scaleFactor = Rational.ONE / keepFraction
                 // Shift events from keepWindowStart to origin, scale, then shift to cycleStart
                 val scaledPart = event.part.shift(-keepWindowStart).scale(scaleFactor).shift(cycleStart)
-                val scaledWhole = event.whole?.shift(-keepWindowStart)?.scale(scaleFactor)?.shift(cycleStart)
+                val scaledWhole = event.whole.shift(-keepWindowStart).scale(scaleFactor).shift(cycleStart)
 
-                event.copy(
-                    part = scaledPart,
-                    whole = scaledWhole
-                )
+                event.copy(part = scaledPart, whole = scaledWhole)
             }
 
             // Filter to query range
@@ -105,11 +102,8 @@ class DropPattern(
 
         return events.map { event ->
             val shiftedPart = event.part.shift(-n)
-            val shiftedWhole = event.whole?.shift(-n)
-            event.copy(
-                part = shiftedPart,
-                whole = shiftedWhole
-            )
+            val shiftedWhole = event.whole.shift(-n)
+            event.copy(part = shiftedPart, whole = shiftedWhole)
         }
     }
 

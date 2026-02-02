@@ -35,9 +35,8 @@ class LangEuclidSpec : StringSpec({
                         events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.2) plusOrMinus EPSILON)
 
                         // Whole: should match part for new events
-                        events[0].whole.shouldNotBeNull()
-                        events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                        events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.2) plusOrMinus EPSILON)
+                        events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                        events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.2) plusOrMinus EPSILON)
 
                         // Onset: first event has onset
                         events[0].hasOnset() shouldBe true
@@ -52,9 +51,8 @@ class LangEuclidSpec : StringSpec({
                         events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
 
                         // Whole: should match part
-                        events[1].whole.shouldNotBeNull()
-                        events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.4) plusOrMinus EPSILON)
-                        events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
+                        events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.4) plusOrMinus EPSILON)
+                        events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.6) plusOrMinus EPSILON)
 
                         // Onset: has onset
                         events[1].hasOnset() shouldBe true
@@ -69,9 +67,8 @@ class LangEuclidSpec : StringSpec({
                         events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Whole: should match part
-                        events[2].whole.shouldNotBeNull()
-                        events[2].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.8) plusOrMinus EPSILON)
-                        events[2].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                        events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.8) plusOrMinus EPSILON)
+                        events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Onset: has onset
                         events[2].hasOnset() shouldBe true

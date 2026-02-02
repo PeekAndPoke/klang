@@ -27,7 +27,7 @@ class LangSwingSpec : StringSpec({
                         println(
                             "${index + 1}: note: ${event.data.note} | " +
                                     "part: ${event.part.begin} ${event.part.end} | " +
-                                    "whole: ${event.whole?.begin} ${event.whole?.end}"
+                                    "whole: ${event.whole.begin} ${event.whole.end}"
                         )
                     }
 
@@ -35,20 +35,20 @@ class LangSwingSpec : StringSpec({
                     events.size shouldBe 4
 
                     events[0].data.note shouldBeEqualIgnoringCase "c"
-                    events[0].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
+                    events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
 
                     events[1].data.note shouldBeEqualIgnoringCase "d"
-                    events[1].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
-                    events[1].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
+                    events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                     events[2].data.note shouldBeEqualIgnoringCase "e"
-                    events[2].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[2].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
+                    events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].whole.end.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
 
                     events[3].data.note shouldBeEqualIgnoringCase "f"
-                    events[3].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
-                    events[3].whole?.end?.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[3].whole.begin.toDouble() shouldBe ((cycleDbl + 0.8333333333) plusOrMinus EPSILON)
+                    events[3].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -65,29 +65,33 @@ class LangSwingSpec : StringSpec({
                     val allEvents = subject.queryArc(cycleDbl, cycleDbl + 1)
                     // Filter to only events with onset (should be played)
                     val events = allEvents.filter { it.hasOnset() }
-                    val values = events.map {
-                        listOf(it.part.begin.toDouble(), it.part.end.toDouble(), it.data.note)
-                    }
 
-                    println("Cycle $cycle | ${events.size} events | $values")
+                    events.forEachIndexed { index, event ->
+                        println(
+                            "${index + 1}: note: ${event.data.note} | " +
+                                    "onset: ${event.hasOnset()} | " +
+                                    "part: ${event.part.begin} ${event.part.end} | " +
+                                    "whole: ${event.whole.begin} ${event.whole.end}"
+                        )
+                    }
 
                     events.size shouldBe 4
 
                     events[0].data.note shouldBeEqualIgnoringCase "c"
-                    events[0].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
+                    events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.3333333333) plusOrMinus EPSILON)
 
                     events[1].data.note shouldBeEqualIgnoringCase "d"
-                    events[1].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
-                    events[1].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.583333333333) plusOrMinus EPSILON)
+                    events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                    events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.583333333333) plusOrMinus EPSILON)
 
                     events[2].data.note shouldBeEqualIgnoringCase "e"
-                    events[2].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[2].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.83333333333) plusOrMinus EPSILON)
+                    events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].whole.end.toDouble() shouldBe ((cycleDbl + 0.83333333333) plusOrMinus EPSILON)
 
                     events[3].data.note shouldBeEqualIgnoringCase "f"
-                    events[3].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[3].whole?.end?.toDouble() shouldBe ((cycleDbl + 1.08333333333) plusOrMinus EPSILON)
+                    events[3].whole.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].whole.end.toDouble() shouldBe ((cycleDbl + 1.08333333333) plusOrMinus EPSILON)
                 }
             }
         }
@@ -107,20 +111,20 @@ class LangSwingSpec : StringSpec({
             events.size shouldBe 4
 
             events[0].data.note shouldBeEqualIgnoringCase "c"
-            events[0].whole?.begin?.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            events[0].whole?.end?.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+            events[0].whole.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            events[0].whole.end.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
 
             events[1].data.note shouldBeEqualIgnoringCase "d"
-            events[1].whole?.begin?.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
-            events[1].whole?.end?.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[1].whole.begin.toDouble() shouldBe (0.375 plusOrMinus EPSILON)
+            events[1].whole.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
             events[2].data.note shouldBeEqualIgnoringCase "e"
-            events[2].whole?.begin?.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            events[2].whole?.end?.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
+            events[2].whole.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[2].whole.end.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
 
             events[3].data.note shouldBeEqualIgnoringCase "f"
-            events[3].whole?.begin?.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
-            events[3].whole?.end?.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+            events[3].whole.begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
+            events[3].whole.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 
@@ -140,27 +144,27 @@ class LangSwingSpec : StringSpec({
                         println(
                             "${index + 1}: note: ${event.data.note} | " +
                                     "part: ${event.part.begin} ${event.part.end} | " +
-                                    "whole: ${event.whole?.begin} ${event.whole?.end}"
+                                    "whole: ${event.whole.begin} ${event.whole.end}"
                         )
                     }
 
                     events.size shouldBe 4
 
                     events[0].data.note shouldBeEqualIgnoringCase "c"
-                    events[0].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
+                    events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
 
                     events[1].data.note shouldBeEqualIgnoringCase "d"
-                    events[1].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
-                    events[1].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
+                    events[1].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                     events[2].data.note shouldBeEqualIgnoringCase "e"
-                    events[2].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[2].whole?.end?.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].whole.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
 
                     events[3].data.note shouldBeEqualIgnoringCase "f"
-                    events[3].whole?.begin?.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
-                    events[3].whole?.end?.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[3].whole.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -177,7 +181,7 @@ class LangSwingSpec : StringSpec({
             println(
                 "${index + 1}: note: ${event.data.note} | " +
                         "part: ${event.part.begin} ${event.part.end} | " +
-                        "whole: ${event.whole?.begin} ${event.whole?.end}"
+                        "whole: ${event.whole?.begin} ${event.whole.end}"
             )
         }
 
@@ -185,20 +189,20 @@ class LangSwingSpec : StringSpec({
             events.size shouldBe 4
 
             events[0].data.note shouldBeEqualIgnoringCase "c"
-            events[0].whole?.begin?.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            events[0].whole?.end?.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            events[0].whole.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            events[0].whole.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
 
             events[1].data.note shouldBeEqualIgnoringCase "d"
-            events[1].whole?.begin?.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
-            events[1].whole?.end?.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[1].whole.begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+            events[1].whole.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
             events[2].data.note shouldBeEqualIgnoringCase "e"
-            events[2].whole?.begin?.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-            events[2].whole?.end?.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+            events[2].whole.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            events[2].whole.end.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
 
             events[3].data.note shouldBeEqualIgnoringCase "f"
-            events[3].whole?.begin?.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
-            events[3].whole?.end?.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+            events[3].whole.begin.toDouble() shouldBe (0.625 plusOrMinus EPSILON)
+            events[3].whole.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 
@@ -213,8 +217,8 @@ class LangSwingSpec : StringSpec({
             swingEvents.size shouldBe swingByEvents.size
 
             swingEvents.zip(swingByEvents).forEach { (se, sbe) ->
-                se.whole?.begin shouldBe sbe.whole?.begin
-                se.whole?.end shouldBe sbe.whole?.end
+                se.whole.begin shouldBe sbe.whole.begin
+                se.whole.end shouldBe sbe.whole.end
             }
         }
     }

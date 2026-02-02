@@ -110,10 +110,10 @@ internal inline fun calculateOverlapRange(
 internal inline fun mapEventTimeByScale(
     event: StrudelPatternEvent,
     scale: Rational,
-): Pair<TimeSpan, TimeSpan?> {
+): Pair<TimeSpan, TimeSpan> {
     return Pair(
         event.part.scale(Rational.ONE / scale),
-        event.whole?.scale(Rational.ONE / scale)
+        event.whole.scale(Rational.ONE / scale),
     )
 }
 
@@ -126,10 +126,10 @@ internal inline fun mapEventTimeByScale(
 internal inline fun offsetEventTime(
     event: StrudelPatternEvent,
     offset: Rational,
-): Pair<TimeSpan, TimeSpan?> {
+): Pair<TimeSpan, TimeSpan> {
     return Pair(
         event.part.shift(offset),
-        event.whole?.shift(offset)
+        event.whole.shift(offset)
     )
 }
 
@@ -149,9 +149,9 @@ internal inline fun mapEventTimeBySpan(
     cycleBase: Rational,
     compressedStart: Rational,
     span: Rational,
-): Pair<TimeSpan, TimeSpan?> {
+): Pair<TimeSpan, TimeSpan> {
     val mappedPart = event.part.shift(-cycleBase).scale(span).shift(compressedStart)
-    val mappedWhole = event.whole?.shift(-cycleBase)?.scale(span)?.shift(compressedStart)
+    val mappedWhole = event.whole.shift(-cycleBase).scale(span).shift(compressedStart)
 
     return Pair(mappedPart, mappedWhole)
 }

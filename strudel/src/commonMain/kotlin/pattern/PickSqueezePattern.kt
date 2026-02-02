@@ -64,14 +64,9 @@ internal class PickSqueezePattern(
             // Map inner events back to outer time
             for (innerEvent in innerEvents) {
                 val scaledPart = innerEvent.part.scale(duration).shift(selectorEvent.part.begin)
-                val scaledWhole = innerEvent.whole?.scale(duration)?.shift(selectorEvent.part.begin) ?: scaledPart
+                val scaledWhole = innerEvent.whole.scale(duration).shift(selectorEvent.part.begin)
 
-                result.add(
-                    innerEvent.copy(
-                        part = scaledPart,
-                        whole = scaledWhole
-                    )
-                )
+                result.add(innerEvent.copy(part = scaledPart, whole = scaledWhole))
             }
         }
 

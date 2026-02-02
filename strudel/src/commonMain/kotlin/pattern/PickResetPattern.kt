@@ -42,7 +42,7 @@ internal class PickResetPattern(
             // Global: [intersectStart, intersectEnd]
             // NOTE: Using whole.begin (onset time) for cycle position calculation.
             // This matches musical semantics. See accessor-replacement notes.
-            val eventBegin = selectorEvent.whole?.begin ?: selectorEvent.part.begin
+            val eventBegin = selectorEvent.whole.begin
             val shift = eventBegin.frac()
             val localStart = intersectStart - shift
             val localEnd = intersectEnd - shift
@@ -53,18 +53,14 @@ internal class PickResetPattern(
             for (innerEvent in innerEvents) {
                 // Shift back to global time
                 val shiftedPart = innerEvent.part.shift(shift)
-                val shiftedWhole = innerEvent.whole?.shift(shift) ?: shiftedPart
+                val shiftedWhole = innerEvent.whole.shift(shift)
 
                 // Clip to selector event
                 val clippedPart = shiftedPart.clipTo(selectorEvent.part)
 
                 if (clippedPart != null) {
-                    result.add(
-                        innerEvent.copy(
-                            part = clippedPart,
-                            whole = shiftedWhole  // Preserve whole with shift applied
-                        )
-                    )
+                    // Preserve whole with shift applied
+                    result.add(innerEvent.copy(part = clippedPart, whole = shiftedWhole))
                 }
             }
         }

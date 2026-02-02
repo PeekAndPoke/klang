@@ -54,12 +54,11 @@ class ContinuousPattern private constructor(
         while (to > currentFrom) {
             val nextFrom = minOf(to, currentFrom + granularity)
 
+            val span = TimeSpan(begin = currentFrom, end = nextFrom)
+
             val event = StrudelPatternEvent(
-                part = TimeSpan(
-                    begin = currentFrom,
-                    end = nextFrom
-                ),
-                whole = null,  // Continuous patterns have no onset
+                part = span,
+                whole = span,
                 data = StrudelVoiceData.empty.copy(value = value)
             )
 

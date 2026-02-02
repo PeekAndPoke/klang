@@ -37,9 +37,8 @@ class LangStructSpec : StringSpec({
                         events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                         // Whole: struct pulse boundaries (each pulse is independent)
-                        events[0].whole.shouldNotBeNull()
-                        events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                        events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                        events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                        events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                         // Onset: first pulse starts at its beginning
                         events[0].hasOnset() shouldBe true
@@ -54,9 +53,8 @@ class LangStructSpec : StringSpec({
                         events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Whole: struct pulse boundaries (each pulse is independent)
-                        events[1].whole.shouldNotBeNull()
-                        events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                        events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                        events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                        events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Onset: second pulse starts at its beginning
                         events[1].hasOnset() shouldBe true
@@ -91,9 +89,8 @@ class LangStructSpec : StringSpec({
                         events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                         // Whole: struct mask boundaries (shared with event 1)
-                        events[0].whole.shouldNotBeNull()
-                        events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                        events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                        events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                        events[0].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Onset: part.begin == whole.begin → true
                         events[0].hasOnset() shouldBe true
@@ -108,9 +105,8 @@ class LangStructSpec : StringSpec({
                         events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Whole: same struct mask boundaries as event 0
-                        events[1].whole.shouldNotBeNull()
-                        events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                        events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                        events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                        events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // No onset: part.begin (0.5) != whole.begin (0.0)
                         events[1].hasOnset() shouldBe false

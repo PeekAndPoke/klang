@@ -37,9 +37,8 @@ class LangDropSpec : StringSpec({
                         events[0].part.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
 
                         // Whole: should match part for new events
-                        events[0].whole.shouldNotBeNull()
-                        events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                        events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
+                        events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                        events[0].whole.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
 
                         // Onset: first event in cycle
                         events[0].hasOnset() shouldBe true
@@ -54,9 +53,8 @@ class LangDropSpec : StringSpec({
                         events[1].part.end.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
 
                         // Whole: should match part
-                        events[1].whole.shouldNotBeNull()
-                        events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
-                        events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
+                        events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
+                        events[1].whole.end.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
 
                         // Onset: starts at its part.begin
                         events[1].hasOnset() shouldBe true
@@ -71,9 +69,8 @@ class LangDropSpec : StringSpec({
                         events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Whole: should match part
-                        events[2].whole.shouldNotBeNull()
-                        events[2].whole!!.begin.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
-                        events[2].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                        events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
+                        events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
 
                         // Onset: starts at its part.begin
                         events[2].hasOnset() shouldBe true

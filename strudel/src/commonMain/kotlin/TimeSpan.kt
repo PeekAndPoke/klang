@@ -27,8 +27,13 @@ data class TimeSpan(
 
     /** Clip this timespan to bounds (for clipping operations) */
     fun clipTo(bounds: TimeSpan): TimeSpan? {
-        val clippedBegin = maxOf(begin, bounds.begin)
-        val clippedEnd = minOf(end, bounds.end)
+        return clipTo(bounds.begin, bounds.end)
+    }
+
+    /** Clip this timespan to bounds (for clipping operations) */
+    fun clipTo(begin: Rational, end: Rational): TimeSpan? {
+        val clippedBegin = maxOf(this.begin, begin)
+        val clippedEnd = minOf(this.end, end)
         return if (clippedEnd > clippedBegin) {
             TimeSpan(clippedBegin, clippedEnd)
         } else {

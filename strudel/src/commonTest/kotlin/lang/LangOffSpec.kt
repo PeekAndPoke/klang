@@ -29,29 +29,45 @@ class LangOffSpec : StringSpec({
     }
 
     "off() supports custom delay time" {
-        val p = note("c").off(0.5) { it }
-        val events = p.queryArc(0.0, 1.0)
+        val subject = note("c").off(0.5) { it }
 
         assertSoftly {
-            events shouldHaveSize 3
 
-            // Event 0: Original event from cycle 0
-            events[0].part.begin.toDouble() shouldBe 0.0
-            events[0].part.end.toDouble() shouldBe 1.0
-            events[0].whole?.begin?.toDouble() shouldBe 0.0
-            events[0].whole?.end?.toDouble() shouldBe 1.0
+            repeat(12) { cycle ->
+                val cycleDbl = cycle.toDouble()
+                val events = subject.queryArc(cycleDbl, cycleDbl + 1.0)
 
-            // Event 1: Delayed copy from cycle -1, clipped to query range
-            events[1].part.begin.toDouble() shouldBe 0.0
-            events[1].part.end.toDouble() shouldBe 0.5
-            events[1].whole?.begin?.toDouble() shouldBe -0.5
-            events[1].whole?.end?.toDouble() shouldBe 0.5
+                events.forEachIndexed { index, event ->
+                    println(
+                        "${index + 1}: note: ${event.data.note} | " +
+                                "part: ${event.part.begin} ${event.part.end} | " +
+                                "whole: ${event.whole.begin} ${event.whole.end}"
+                    )
+                }
 
-            // Event 2: Delayed copy from cycle 0
-            events[2].part.begin.toDouble() shouldBe 0.5
-            events[2].part.end.toDouble() shouldBe 1.0
-            events[2].whole?.begin?.toDouble() shouldBe 0.5
-            events[2].whole?.end?.toDouble() shouldBe 1.5
+                events shouldHaveSize 3
+
+                // Event 0: Original event from cycle 0
+                events[0].data.note shouldBe "c"
+                events[0].part.begin.toDouble() shouldBe (cycleDbl - 0.5)
+                events[0].part.end.toDouble() shouldBe (cycleDbl + 0.5)
+                events[0].whole.begin.toDouble() shouldBe (cycleDbl - 0.5)
+                events[0].whole.end.toDouble() shouldBe (cycleDbl + 0.5)
+
+                // Event 1: Delayed copy from cycle -1, clipped to query range
+                events[0].data.note shouldBe "c"
+                events[1].part.begin.toDouble() shouldBe (cycleDbl + 0.0)
+                events[1].part.end.toDouble() shouldBe (cycleDbl + 1.0)
+                events[1].whole.begin.toDouble() shouldBe (cycleDbl + 0.0)
+                events[1].whole.end.toDouble() shouldBe (cycleDbl + 1.0)
+
+                // Event 2: Delayed copy from cycle 0
+                events[0].data.note shouldBe "c"
+                events[2].part.begin.toDouble() shouldBe (cycleDbl + 0.5)
+                events[2].part.end.toDouble() shouldBe (cycleDbl + 1.5)
+                events[2].whole.begin.toDouble() shouldBe (cycleDbl + 0.5)
+                events[2].whole.end.toDouble() shouldBe (cycleDbl + 1.5)
+            }
         }
     }
 })

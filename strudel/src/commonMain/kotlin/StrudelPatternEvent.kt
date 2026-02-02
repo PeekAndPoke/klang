@@ -13,7 +13,7 @@ data class StrudelPatternEvent(
     /** Visible portion after clipping */
     val part: TimeSpan,
     /** Original complete event (null for continuous patterns) */
-    val whole: TimeSpan?,
+    val whole: TimeSpan,
     /** The voice data */
     val data: StrudelVoiceData,
     /**
@@ -26,7 +26,7 @@ data class StrudelPatternEvent(
     val sourceLocations: SourceLocationChain? = null,
 ) {
     /** Check if this event has an onset (should be played) */
-    fun hasOnset(): Boolean = whole != null && whole.begin == part.begin
+    fun hasOnset(): Boolean = whole.begin == part.begin
 
     fun prependLocation(location: SourceLocation?) = when (location) {
         null -> this

@@ -50,7 +50,7 @@ class StaticStrudelPattern(
             }
             .map {
                 val shiftedPart = it.part.shift(offset)
-                val shiftedWhole = it.whole?.shift(offset)
+                val shiftedWhole = it.whole.shift(offset)
                 it.copy(part = shiftedPart, whole = shiftedWhole)
             }
     }

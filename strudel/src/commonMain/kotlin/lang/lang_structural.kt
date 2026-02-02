@@ -433,11 +433,8 @@ internal fun applySlowcatPrime(patterns: List<StrudelPattern>): StrudelPattern {
 
         override fun estimateCycleDuration(): Rational = Rational.ONE * patterns.size
 
-        override fun queryArcContextual(
-            from: Rational,
-            to: Rational,
-            ctx: StrudelPattern.QueryContext,
-        ): List<StrudelPatternEvent> {
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+
             val result = mutableListOf<StrudelPatternEvent>()
             val n = patterns.size
             var cycle = from.floor()
@@ -1012,13 +1009,11 @@ private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
             val d = e - s
             val steps = source.numSteps?.let { it * d }
 
-            source._withQueryTime { t -> t * d + s }
-                .mapEvents { ev ->
-                    val scaledPart = ev.part.shift(-s).scale(io.peekandpoke.klang.strudel.math.Rational.ONE / d)
-                    val scaledWhole = ev.whole?.shift(-s)?.scale(io.peekandpoke.klang.strudel.math.Rational.ONE / d)
-                    ev.copy(part = scaledPart, whole = scaledWhole)
-                }
-                .let { if (steps != null) it.withSteps(steps) else it }
+            source._withQueryTime { t -> t * d + s }.mapEvents { ev ->
+                val scaledPart = ev.part.shift(-s).scale(Rational.ONE / d)
+                val scaledWhole = ev.whole.shift(-s).scale(Rational.ONE / d)
+                ev.copy(part = scaledPart, whole = scaledWhole)
+            }.let { if (steps != null) it.withSteps(steps) else it }
         }
     }
 }

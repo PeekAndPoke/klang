@@ -240,12 +240,11 @@ private fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?
             // Here we use internal logic for efficiency inside the bind loop
 
             // _late(b) -> shift time +b
-            fastGapped._withQueryTime { t -> t - b }
-                .mapEvents { ev ->
-                    val shiftedPart = ev.part.shift(b)
-                    val shiftedWhole = ev.whole?.shift(b)
-                    ev.copy(part = shiftedPart, whole = shiftedWhole)
-                }
+            fastGapped._withQueryTime { t -> t - b }.mapEvents { ev ->
+                val shiftedPart = ev.part.shift(b)
+                val shiftedWhole = ev.whole.shift(b)
+                ev.copy(part = shiftedPart, whole = shiftedWhole)
+            }
         }
     }
 }
@@ -307,12 +306,11 @@ private fun applyFocus(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
             val d = e - s
             val sFloored = s.floor()
 
-            source._withQueryTime { t -> (t - s) / d + sFloored }
-                .mapEvents { ev ->
-                    val scaledPart = ev.part.shift(-sFloored).scale(d).shift(s)
-                    val scaledWhole = ev.whole?.shift(-sFloored)?.scale(d)?.shift(s)
-                    ev.copy(part = scaledPart, whole = scaledWhole)
-                }
+            source._withQueryTime { t -> (t - s) / d + sFloored }.mapEvents { ev ->
+                val scaledPart = ev.part.shift(-sFloored).scale(d).shift(s)
+                val scaledWhole = ev.whole.shift(-sFloored).scale(d).shift(s)
+                ev.copy(part = scaledPart, whole = scaledWhole)
+            }
         }
     }
 }

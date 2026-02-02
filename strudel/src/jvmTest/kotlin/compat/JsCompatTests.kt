@@ -8,6 +8,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.formatAsTable
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import kotlinx.serialization.json.*
@@ -89,14 +90,23 @@ class JsCompatTests : StringSpec() {
 
         val graalArc = (0..<numCycles)
             .flatMap { graalPattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
+            .filter { it.hasOnset() }
 
         val nativeArc = (0..<numCycles)
             .flatMap { nativePattern.queryArc(it.toDouble(), (it + 1).toDouble()) }.sort()
+            .filter { it.hasOnset() }
 
         printEventComparison(graalArc, nativeArc)
 
         assertSoftly {
-            withClue("Number of events must match | JS (Graal): ${graalArc.size} VS Native: ${nativeArc.size}") {
+            withClue(
+                """
+Number of events must match 
+| Name: $name
+| Pattern: $code
+| JS (Graal): ${graalArc.size} VS Native: ${nativeArc.size}
+                """.trimIndent()
+            ) {
                 nativeArc.size shouldBe graalArc.size
             }
 
@@ -255,9 +265,10 @@ ${comparison.report}
 
         fun Double.toFixed(n: Int) = "%.${n}f".format(this)
 
+        fun TimeSpan.str() = "${begin.toDouble().toFixed(5)}-${end.toDouble().toFixed(5)}"
+
         fun StrudelPatternEvent.str(): String {
             val parts = listOf(
-                "${part.begin.toDouble().toFixed(3)}-${part.end.toDouble().toFixed(3)} ",
                 data.value?.asString,
                 data.note,
                 data.sound,
@@ -266,13 +277,31 @@ ${comparison.report}
             return parts.joinToString(" | ")
         }
 
-        val rows = listOf(listOf("#", "JS (Graal)", "Native"))
+        val rows = listOf(
+            listOf(
+                "#",
+                "JS part",
+                "JS whole",
+                "JS Data",
+                "JS hash",
+                "Kotlin part",
+                "Kotlin whole",
+                "Kotlin Data",
+                "Kotlin hash"
+            )
+        )
             .plus(
                 zippedArc.mapIndexed { index, (graal, native) ->
                     listOf(
                         index,
+                        graal?.part?.str(),
+                        graal?.whole?.str(),
                         graal?.str(),
+                        graal?.hashCode().toString(),
+                        native?.part?.str(),
+                        native?.whole?.str(),
                         native?.str(),
+                        native?.hashCode().toString(),
                     )
                 }
             )

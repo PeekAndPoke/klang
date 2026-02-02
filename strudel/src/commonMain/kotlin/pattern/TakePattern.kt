@@ -79,12 +79,9 @@ class TakePattern(
             val scaledEvents = takenEvents.map { event ->
                 val scaleFactor = Rational.ONE / stepFraction
                 val scaledPart = event.part.shift(-cycleStart).scale(scaleFactor).shift(cycleStart)
-                val scaledWhole = event.whole?.shift(-cycleStart)?.scale(scaleFactor)?.shift(cycleStart)
+                val scaledWhole = event.whole.shift(-cycleStart).scale(scaleFactor).shift(cycleStart)
 
-                event.copy(
-                    part = scaledPart,
-                    whole = scaledWhole
-                )
+                event.copy(part = scaledPart, whole = scaledWhole)
             }
 
             // Filter to query range

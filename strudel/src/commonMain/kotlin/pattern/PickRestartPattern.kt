@@ -50,18 +50,14 @@ internal class PickRestartPattern(
             for (innerEvent in innerEvents) {
                 // Shift back to global time
                 val shiftedPart = innerEvent.part.shift(selectorEvent.part.begin)
-                val shiftedWhole = innerEvent.whole?.shift(selectorEvent.part.begin) ?: shiftedPart
+                val shiftedWhole = innerEvent.whole.shift(selectorEvent.part.begin)
 
                 // Clip to selector event
                 val clippedPart = shiftedPart.clipTo(selectorEvent.part)
 
                 if (clippedPart != null) {
-                    result.add(
-                        innerEvent.copy(
-                            part = clippedPart,
-                            whole = shiftedWhole  // Preserve whole with shift applied
-                        )
-                    )
+                    // Preserve whole with shift applied
+                    result.add(innerEvent.copy(part = clippedPart, whole = shiftedWhole))
                 }
             }
         }
