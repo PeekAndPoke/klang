@@ -117,45 +117,46 @@ let wait = 16
 
 stack(
     n("0").scale("C6:major").scaleTranspose("0 -2 2 -5".slow(32))
-        .morse("Schön ist es auf der Welt zu sein!").slow(1)
-        .sound("square").warmth(1.0).gain(0.8).pan(perlin.slow(4))
-        .adsr("0.05:0.5:0.1:1.0")
-        .filterWhen(x => x >= wait * 8)
+        .morse("Schön ist es auf der Welt zu sein!").fast(1)
+        .sound("square").warmth(1.0).gain(0.7).pan(berlin.slow(2))
+        .adsr("0.05:0.5:0.1:0.0")
+        .filterWhen(x => x >= wait * 5)
     , 
     // Melody
     n("<[0 2 4 6 7 6 4 2]>").scale("<[c3:major c3:pentatonic c3:major c3:major]>/16")
         .s("supersaw").unison(10).detune(saw.range(0.001, 0.3).slow(16)).spread(1.0)
-        .gain(0.07).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.03:0.5:0.7:0.2")
+        .gain(0.06).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.03:0.5:0.7:0.2")
         .distort(2.0)
         .lpenv(perlin.slow(8).range(1, 4)).lpf(perlin.slow(8).range(100, 2000))        
-        .filterWhen(x => x >= wait * 4)
+        .filterWhen(x => x >= wait * 3)
     , 
     // Bass
-    note("<a1 [f2 c2 a1 [f2 c2]] [a1 f1 a1 f1] e2>/8").clip(0.75).struct("x*8")
-        .s("supersaw").unison(6).detune(saw.range(0.1, 0.45).slow(16))
+    note("<a1 [f2 c2 a1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [e2@7 e1]>/8").clip(0.75).struct("x*8")
         .gain(0.65).pan(sine.range(0.3, 0.7).slow(16)).adsr("0.03:0.5:0.5:0.5")        
+        .superimpose(x => x.scaleTranspose(12).gain(0.3))
+        .s("supersaw").unison(6).detune(saw.range(0.1, 0.45).slow(16))
         .lpf(2500)
-        .filterWhen(x => x >= wait * 2)
+        .filterWhen(x => x >= wait * 0.5)
     , 
     // Perc 2
     sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-        .gain(1.0).pan("[0.3 0.3 0.8 0.3]").adsr("0.05:0.8:0.5:1.0")
+        .gain(1.0).pan(0.4).adsr("0.05:0.8:0.5:1.0")
         .fast(2).degrade(0.25)
         .filterWhen(x => x >= wait * 1)
     ,
     // Perc 1
-    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32")
-        .gain(0.8).pan(0.6).adsr("0.01:0.5:0.5:1.0")
-        .fast(2).degrade(0.25)        
+    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
+        .gain(0.8).pan(0.55).adsr("0.01:0.5:0.5:1.0")
+        // .degrade(0.25)        
         .filterWhen(x => x >= wait * 0.5)
     ,
     // Wind
     note("a").fast(16).sound("pink")
-     .gain(0.04).pan(perlin.early(1.7).range(0.3, 0.7).slow(13)).adsr("0.05:1.0:1.0:0.5")
-     .bandf(sine.early(1.7).add(perlin.range(-0.3, 0.3).slow(8)).range(440, 1120).slow(24)).bandq(5)     
+     .gain(0.06).pan(perlin.early(1.7).range(0.3, 0.7).slow(13)).adsr("0.05:1.0:1.0:0.5")
+     .bandf(perlin.range(440, 1120).slow(16)).bandq(sine.range(-0.3, 5.0).slow(12))
   ,
 ).delay(0.15).delaytime(0.25).delayfeedback(0.5)  
-.room(0.02).rsize(5.0).compressor("-24:1.2:8:0.03:0.2")
+.room(0.015).rsize(5.0).compressor("-24:1.2:8:0.03:0.2").fast(1)
 
    """.trimIndent()
 
