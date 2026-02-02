@@ -7,6 +7,7 @@ import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.*
 import kotlin.math.floor
@@ -298,12 +299,24 @@ private fun applyPickOuter(
         { data, _, _ -> extractKey(data) }
     }
 
-    // PickOuter currently behaves identically to PickInner (uses bind/innerJoin)
+    // PickOuter sets the whole to the selector event's timespan (outerJoin behavior)
+    // This ensures all picked events have onset at the selector's beginning
     return BindPattern(
         outer = pat,
         transform = { selectorEvent ->
             val key = keyExtractor(selectorEvent.data, modulo, reifiedLookup.size)
-            if (key != null) reifiedLookup[key] else null
+            val pickedPattern = if (key != null) reifiedLookup[key] else null
+
+            // Wrap the picked pattern to set whole to selector's whole
+            pickedPattern?.let { pattern ->
+                MapPattern(pattern) { events ->
+                    events.map { event ->
+                        event.copy(
+                            whole = selectorEvent.whole ?: TimeSpan(selectorEvent.part.begin, selectorEvent.part.end)
+                        )
+                    }
+                }
+            }
         }
     )
 }
