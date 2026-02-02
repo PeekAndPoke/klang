@@ -2319,7 +2319,10 @@ private fun applyTake(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
             if (end >= Rational.ONE) return@_stepJoin source
             // Take(n) keeps first n steps.
             // Zoom window [0, end] to [0, 1]
-            source._withQueryTime { t -> t * end }.withSteps(ratN)
+            source
+                ._withQueryTime { t -> t * end }
+                ._withHapTime { t -> t / end }
+                .withSteps(ratN)
         } else {
             silence
         }
@@ -2374,7 +2377,10 @@ private fun applyDrop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
                 // Map query t in [0, 1] to [start, 1] -> t' = start + t * (1 - start)
                 val duration = Rational.ONE - start
 
-                source._withQueryTime { t -> start + t * duration }.withSteps(ratSteps - ratN)
+                source
+                    ._withQueryTime { t -> start + t * duration }
+                    ._withHapTime { t -> (t - start) / duration }
+                    .withSteps(ratSteps - ratN)
             } else {
                 // drop from end: zoom(0, (steps+n)/steps)
                 // n is negative
@@ -2382,7 +2388,10 @@ private fun applyDrop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
                 if (end <= Rational.ZERO) return@_stepJoin silence
                 // Zoom window [0, end] to [0, 1]
                 // Map query t in [0, 1] to [0, end] -> t' = t * end
-                source._withQueryTime { t -> t * end }.withSteps(ratSteps + ratN)
+                source
+                    ._withQueryTime { t -> t * end }
+                    ._withHapTime { t -> t / end }
+                    .withSteps(ratSteps + ratN)
             }
         } else {
             silence
