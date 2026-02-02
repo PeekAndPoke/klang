@@ -88,17 +88,17 @@ object KlangScriptParser : Grammar<Program>() {
     /** String literals: "hello", 'world' */
     private val string by regexToken("\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'")
 
-    /** Keywords - must be defined before identifier */
-    private val trueKeyword by literalToken("true")
-    private val falseKeyword by literalToken("false")
-    private val nullKeyword by literalToken("null")
-    private val letKeyword by literalToken("let")
-    private val constKeyword by literalToken("const")
-    private val importKeyword by literalToken("import")
-    private val exportKeyword by literalToken("export")
-    private val fromKeyword by literalToken("from")
-    private val asKeyword by literalToken("as")
-    private val returnKeyword by literalToken("return")
+    /** Keywords - must be defined before identifier and use word boundaries */
+    private val trueKeyword by regexToken("\\btrue\\b")
+    private val falseKeyword by regexToken("\\bfalse\\b")
+    private val nullKeyword by regexToken("\\bnull\\b")
+    private val letKeyword by regexToken("\\blet\\b")
+    private val constKeyword by regexToken("\\bconst\\b")
+    private val importKeyword by regexToken("\\bimport\\b")
+    private val exportKeyword by regexToken("\\bexport\\b")
+    private val fromKeyword by regexToken("\\bfrom\\b")
+    private val asKeyword by regexToken("\\bas\\b")
+    private val returnKeyword by regexToken("\\breturn\\b")
 
     /** Identifiers: foo, myVar, _private */
     private val identifier by regexToken("[a-zA-Z_][a-zA-Z0-9_]*")
@@ -249,26 +249,34 @@ object KlangScriptParser : Grammar<Program>() {
     } or primaryExpr
 
     /**
-     * Member access expressions - dot notation for properties and methods
-     * Syntax: object.property.nestedProperty
-     *
-     * Member access has higher precedence than function calls, enabling:
-     * - obj.method() -> access "method" property, then call it
-     * - obj.a.b.c -> chain multiple property accesses
-     *
-     * This is implemented as left-associative to handle chains:
-     * a.b.c parses as (a.b).c
-     *
-     * Implementation: start with unary expression, then parse zero or more
-     * ".property" sequences, building nested MemberAccess nodes.
+     * Member access expressions - now just delegates to unaryExpr
+     * All member access chaining is handled in callExpr to allow proper
+     * interleaving of calls and member accesses
      */
-    private val memberExpr: Parser<Expression> by
-    (unaryExpr and zeroOrMore(-dot and identifier)).map { (base, properties) ->
-        // Fold the property list into nested MemberAccess nodes
-        properties.fold(base) { obj, property ->
-            MemberAccess(obj, property.text, property.toLocation())
-        }
+    private val memberExpr: Parser<Expression> by parser(this::unaryExpr)
+
+    /**
+     * Suffix type for call expressions - either a function call or a member access
+     */
+    private sealed class CallSuffix {
+        data class Call(val lparen: TokenMatch, val args: List<Expression>) : CallSuffix()
+        data class Member(val property: TokenMatch) : CallSuffix()
     }
+
+    /**
+     * Parser for a single call or member suffix
+     * Parses either:
+     * - A member access: .propertyName
+     * - A function call: (arg1, arg2, ...)
+     */
+    private val callSuffix: Parser<CallSuffix> by
+    // Try member access first: .property
+    ((-dot and identifier).map { property -> CallSuffix.Member(property) }) or
+            // Or call: (args)
+            ((leftParen and separatedTerms(expression, comma, acceptZero = true) and optional(comma) and -rightParen)
+                .map { (lparen, args, _) ->
+                    CallSuffix.Call(lparen, args)
+                })
 
     /**
      * Call expressions - function calls and method calls with chaining
@@ -279,31 +287,30 @@ object KlangScriptParser : Grammar<Program>() {
      * - Regular function calls: print("hello")
      * - Method calls: obj.method(arg)
      * - Chained calls: note("c").gain(0.5).pan("0 1")
+     * - No-arg method chaining: sine2.fromBipolar().range(0.1, 0.9)
      *
      * Implementation strategy for chaining:
      * 1. Start with member expression (handles obj.property chains)
-     * 2. Parse zero or more of: function call, then more member accesses
-     * 3. This allows: obj.method().property.anotherMethod()
+     * 2. Parse zero or more suffixes: each suffix is EITHER a call OR a member access
+     * 3. This allows any combination: obj.method().property.anotherMethod().prop2
      *
-     * Example parsing of note("c").gain(0.5):
-     * 1. memberExpr parses: note
-     * 2. First call: note("c")
-     * 3. memberExpr suffix: .gain
-     * 4. Second call: (...).gain(0.5)
+     * Example parsing of sine2.fromBipolar().range(0.1, 0.9):
+     * 1. memberExpr parses: sine2
+     * 2. Suffix 1 (Member): .fromBipolar
+     * 3. Suffix 2 (Call): ()
+     * 4. Suffix 3 (Member): .range
+     * 5. Suffix 4 (Call): (0.1, 0.9)
      */
     private val callExpr: Parser<Expression> by
-    (memberExpr and zeroOrMore(
-        // Parse: (args) followed by optional .property.property...
-        (leftParen and separatedTerms(expression, comma, acceptZero = true) and optional(comma) and -rightParen) and
-                zeroOrMore(-dot and identifier)
-    )).map { (base, callAndMemberPairs) ->
-        // Fold through each call-and-member-access pair
-        callAndMemberPairs.fold(base) { current, (lparen, args, _, properties) ->
-            // First apply the call
-            val afterCall = CallExpression(current, args, lparen.toLocation())
-            // Then apply any member accesses
-            properties.fold(afterCall as Expression) { obj, property ->
-                MemberAccess(obj, property.text, property.toLocation())
+    (memberExpr and zeroOrMore(callSuffix)).map { (base, suffixes) ->
+        // Fold through each suffix, applying calls and member accesses
+        suffixes.fold(base) { current, suffix ->
+            when (suffix) {
+                is CallSuffix.Call ->
+                    CallExpression(current, suffix.args, suffix.lparen.toLocation())
+
+                is CallSuffix.Member ->
+                    MemberAccess(current, suffix.property.text, suffix.property.toLocation())
             }
         }
     }

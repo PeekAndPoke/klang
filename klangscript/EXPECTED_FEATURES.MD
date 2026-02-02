@@ -43,7 +43,7 @@ let f = false;
 
 ```javascript
 let n = null;
-let u = undefined;
+let u = undefined; // undefined is an alias for 'null' in KlangScript
 let v;
 ```
 

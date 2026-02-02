@@ -21,9 +21,9 @@ class ContextRangeMapPatternSpec : StringSpec({
                 val max = ctx.getOrDefault(ContinuousPattern.maxKey, 0.0)
 
                 return listOf(
-                    testEvent(
-                        begin = from,
-                        end = to,
+                    StrudelPatternEvent(
+                        part = TimeSpan(from, to),
+                        whole = TimeSpan(from, to),
                         data = StrudelVoiceData.empty.copy(
                             value = StrudelVoiceValue.Num(min + max)
                         )

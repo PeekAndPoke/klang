@@ -4,26 +4,23 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.strudel.EPSILON
-import io.peekandpoke.klang.strudel.StrudelVoiceData
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.makeStatic
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.testEvent
 
 class StaticStrudelPatternSpec : StringSpec({
 
     "StaticStrudelPattern: Direct Instantiation" {
         // Manually create two events in a 1-cycle window
         val events = listOf(
-            testEvent(
-                begin = 0.0.toRational(),
-                end = 0.5.toRational(),
+            StrudelPatternEvent(
+                part = TimeSpan(0.0.toRational(), 0.5.toRational()),
+                whole = TimeSpan(0.0.toRational(), 0.5.toRational()),
                 data = StrudelVoiceData.empty.copy(note = "a"),
             ),
-            testEvent(
-                begin = 0.5.toRational(),
-                end = 1.0.toRational(),
+            StrudelPatternEvent(
+                part = TimeSpan(0.5.toRational(), 1.0.toRational()),
+                whole = TimeSpan(0.5.toRational(), 1.0.toRational()),
                 data = StrudelVoiceData.empty.copy(note = "b"),
             )
         )
@@ -46,9 +43,9 @@ class StaticStrudelPatternSpec : StringSpec({
 
     "StaticStrudelPattern: query multiple cycles (looping)" {
         val events = listOf(
-            testEvent(
-                begin = 0.0.toRational(),
-                end = 1.0.toRational(),
+            StrudelPatternEvent(
+                part = TimeSpan(0.0.toRational(), 1.0.toRational()),
+                whole = TimeSpan(0.0.toRational(), 1.0.toRational()),
                 data = StrudelVoiceData.empty.copy(note = "kick"),
             )
         )

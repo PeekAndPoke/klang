@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import kotlin.math.abs
@@ -151,18 +152,3 @@ class DuckingSpec : StringSpec({
         fastLevel shouldBeLessThan (slowLevel + 0.2) // Fast returns faster
     }
 })
-
-private infix fun Double.plusOrMinus(tolerance: Double): DoubleWithTolerance {
-    return DoubleWithTolerance(this, tolerance)
-}
-
-private data class DoubleWithTolerance(val expected: Double, val tolerance: Double)
-
-private infix fun Double.shouldBe(expectedWithTolerance: DoubleWithTolerance) {
-    val diff = abs(this - expectedWithTolerance.expected)
-    if (diff > expectedWithTolerance.tolerance) {
-        throw AssertionError(
-            "Expected ${expectedWithTolerance.expected} ± ${expectedWithTolerance.tolerance} but got $this (diff: $diff)"
-        )
-    }
-}
