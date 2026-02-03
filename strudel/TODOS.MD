@@ -195,8 +195,8 @@ implementation notes.
 - [x] **`wrandcat(...[value, weight])`** - Alias for wchooseCycles (standalone, pattern method, string extension)
 - [x] **`pick(lookup, pat)`** - Picks patterns/values from list (by index) or lookup table (by name) ✅ **IMPLEMENTED**
 - [x] **`pickmod(lookup, pat)`** - Like pick but wraps around when index exceeds list size ✅ **IMPLEMENTED**
-- [ ] **`pickF(lookup, funcs, pat)`** - Use pattern of numbers to pick which function to apply
-- [ ] **`pickmodF(lookup, funcs, pat)`** - Like pickF but wraps around
+- [x] **`pickF(lookup, funcs, pat)`** - Use pattern of numbers to pick which function to apply
+- [x] **`pickmodF(lookup, funcs, pat)`** - Like pickF but wraps around
 - [x] **`pickOut(lookup, pat)`** - Like pick but uses outerJoin instead of innerJoin ✅ **IMPLEMENTED**
 - [x] **`pickmodOut(lookup, pat)`** - Like pickOut but wraps around ✅ **IMPLEMENTED**
 - [x] **`pickRestart(lookup, pat)`** - Like pick but restarts chosen pattern when triggered ✅ **IMPLEMENTED**

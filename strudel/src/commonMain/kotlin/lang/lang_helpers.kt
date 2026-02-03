@@ -135,7 +135,8 @@ fun patternMapper(mapper: Any?): StrudelPatternMapper? {
                 try {
                     @Suppress("UNCHECKED_CAST")
                     (mapper as? StrudelPatternMapper)?.invoke(input) ?: input
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    println("Error while invoking pattern mapper: $mapper: \n${e.stackTraceToString()}")
                     input
                 }
             }

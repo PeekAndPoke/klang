@@ -56,7 +56,31 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
             else -> value
         }
 
+        is BooleanValue -> when (cls) {
+            Boolean::class -> value
+            else -> value
+        }
+
         is FunctionValue -> this.convertFunctionToKotlin()
+
+        is ArrayValue -> when (cls) {
+            DoubleArray::class -> elements.map { it.convertToKotlin(Double::class) }.toDoubleArray()
+            FloatArray::class -> elements.map { it.convertToKotlin(Float::class) }.toFloatArray()
+            IntArray::class -> elements.map { it.convertToKotlin(Int::class) }.toIntArray()
+            ShortArray::class -> elements.map { it.convertToKotlin(Short::class) }.toShortArray()
+            LongArray::class -> elements.map { it.convertToKotlin(Double::class).toLong() }.toLongArray()
+            ByteArray::class -> elements.map { it.convertToKotlin(Byte::class) }.toByteArray()
+            BooleanArray::class -> elements.map { it.convertToKotlin(Boolean::class) }.toBooleanArray()
+            List::class, Collection::class, Iterable::class, Any::class -> elements.map {
+                if (it is NullValue) null else it.convertToKotlin(Any::class)
+            }
+
+            Array::class -> elements.map {
+                if (it is NullValue) null else it.convertToKotlin(Any::class)
+            }.toTypedArray()
+
+            else -> value
+        }
 
         else -> {
             val isValid = cls.isInstance(value)

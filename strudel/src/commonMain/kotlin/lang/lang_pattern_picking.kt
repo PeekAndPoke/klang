@@ -7,6 +7,7 @@ import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel._bind
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.*
 import kotlin.math.floor
@@ -883,3 +884,100 @@ val pickmodReset by dslFunction { args, _ ->
 
 @StrudelDsl
 val String.pickmodReset by dslStringExtension { p, args, callInfo -> p.pickmodReset(args, callInfo) }
+
+// -- pickF() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Apply functions from a list based on a pattern of indices.
+ * Indices are clamped to the list size.
+ *
+ * JavaScript: `pat.apply(pick(lookup, funcs))`
+ *
+ * Example: `s("bd [rim hh]").pickF("<0 1 2>", [rev, jux(rev), fast(2)])`
+ */
+fun applyPickF(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val lookupArg = args.getOrNull(0) ?: return pattern
+    val funcsArg = args.getOrNull(1) ?: return pattern
+
+    // Get the list of functions
+    val funcsList = funcsArg.value as? List<*> ?: return pattern
+    val mappers = funcsList.mapNotNull { patternMapper(it) }
+    if (mappers.isEmpty()) return pattern
+
+    return lookupArg.toPattern()._bind { indexEvent ->
+        val index = (indexEvent.data.value?.asInt ?: 0).coerceIn(0, mappers.size - 1)
+        val selectedFunction = mappers.getOrNull(index) ?: { it }
+        selectedFunction(pattern)
+    }
+}
+
+/** Apply functions based on index pattern (clamp indices) */
+@StrudelDsl
+val StrudelPattern.pickF by dslPatternExtension { p, args, _ -> applyPickF(p, args) }
+
+/** Apply functions based on index pattern (clamp indices) */
+@StrudelDsl
+val pickF by dslFunction { args, _ ->
+    if (args.size < 3) return@dslFunction silence
+    val lookupArg = args[0]
+    val funcsArg = args[1]
+    val patArg = args[2]
+    val pattern = listOf(patArg).toPattern(voiceValueModifier)
+    applyPickF(pattern, listOf(lookupArg, funcsArg))
+}
+
+/** Apply functions based on index pattern (clamp indices) */
+@StrudelDsl
+val String.pickF by dslStringExtension { p, args, callInfo ->
+    p.pickF(args, callInfo)
+}
+
+// -- pickmodF() -------------------------------------------------------------------------------------------------------
+
+/**
+ * Apply functions from a list based on a pattern of indices.
+ * Indices wrap around (modulo) if greater than list size.
+ *
+ * JavaScript: `pat.apply(pickmod(lookup, funcs))`
+ */
+fun applyPickmodF(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val lookupArg = args.getOrNull(0) ?: return pattern
+    val funcsArg = args.getOrNull(1) ?: return pattern
+
+    // Get the list of functions
+    val funcsList = funcsArg.value as? List<*> ?: return pattern
+    val mappers = funcsList.mapNotNull { patternMapper(it) }
+    if (mappers.isEmpty()) return pattern
+
+    // JavaScript: pat.apply(pickmod(lookup, funcs))
+    // Similar to pickF but with modulo wrapping
+
+    return lookupArg.toPattern()._bind { indexEvent ->
+        val index = (((indexEvent.data.value?.asInt ?: 0) % mappers.size) + mappers.size) % mappers.size
+        val selectedFunction = mappers.getOrNull(index) ?: { it }
+        selectedFunction(pattern)
+    }
+}
+
+/** Apply functions based on index pattern (wrap indices) */
+@StrudelDsl
+val StrudelPattern.pickmodF by dslPatternExtension { p, args, _ ->
+    applyPickmodF(p, args)
+}
+
+/** Apply functions based on index pattern (wrap indices) */
+@StrudelDsl
+val pickmodF by dslFunction { args, _ ->
+    if (args.size < 3) return@dslFunction silence
+    val lookupArg = args[0]
+    val funcsArg = args[1]
+    val patArg = args[2]
+    val pattern = listOf(patArg).toPattern(voiceValueModifier)
+    applyPickmodF(pattern, listOf(lookupArg, funcsArg))
+}
+
+/** Apply functions based on index pattern (wrap indices) */
+@StrudelDsl
+val String.pickmodF by dslStringExtension { p, args, callInfo ->
+    p.pickmodF(args, callInfo)
+}

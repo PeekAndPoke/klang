@@ -672,6 +672,13 @@ object JsCompatTestData {
         Example("Brak with sound", """s("bd sd").brak()"""),
         Example("Brak with fast", """seq("a", "b").brak().fast(2)"""),
 
+        // pickF - apply functions by index (using data-only transformations, no tempo modifiers)
+        Example("PickF basic 1", """seq("2 4").pickF("<0 1>", [x => x.add(1), x => x.add(2)])"""),
+        Example("PickF basic 2", """s("bd rim").pickF("<0 1>", [x => x.gain(0.5), x => x.gain(1)])"""),
+        Example("PickF with note", """note("c e g").pickF("0 1", [x => x.note("c"), x => x.note("e")])"""),
+        // Seems to be broken in JS
+        Example(SKIP, "PickmodF basic", """s("bd rim").pickmodF("0 1 2 3", [x => x, x => x.sound("hh")])"""),
+
         // Conditional
         Example("FirstOf", """note("[a b c d] [e f g a]").firstOf(4, (x) => x.rev())"""),
         Example("Every", """note("[a b c d] [e f g a]").every(4, (x) => x.rev())"""),
