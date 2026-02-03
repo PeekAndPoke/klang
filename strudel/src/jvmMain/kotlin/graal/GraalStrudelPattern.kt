@@ -438,6 +438,9 @@ class GraalStrudelPattern(
                     value?.isNumber == true ->
                         value.asDouble().asVoiceValue()
 
+                    value?.isBoolean == true ->
+                        value.asBoolean().asVoiceValue()
+
                     value?.hasArrayElements() == true ->
                         value.`as`(List::class.java).mapNotNull {
                             it?.asVoiceValue()

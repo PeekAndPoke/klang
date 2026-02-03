@@ -2492,3 +2492,96 @@ val StrudelPattern.iterBack by dslPatternExtension { p, args, /* callInfo */ _ -
 
 @StrudelDsl
 val String.iterBack by dslStringExtension { p, args, callInfo -> p.iterBack(args, callInfo) }
+
+// -- invert() / inv() ------------------------------------------------------------------------------------------------
+
+/**
+ * Inverts boolean values in a pattern: true <-> false, 1 <-> 0.
+ * Useful for inverting structural patterns and masks.
+ *
+ * JavaScript: `pat.fmap((x) => !x)`
+ */
+fun applyInvert(pattern: StrudelPattern): StrudelPattern {
+    return pattern.mapEvents { event ->
+        val currentBool = event.data.value?.asBoolean ?: false
+        val invertedBool = !currentBool
+        event.copy(data = event.data.copy(value = StrudelVoiceValue.Bool(invertedBool)))
+    }
+}
+
+/** Inverts boolean values: true <-> false, 1 <-> 0 */
+@StrudelDsl
+val invert by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.toPattern(voiceValueModifier)
+    applyInvert(pattern)
+}
+
+/** Inverts boolean values: true <-> false, 1 <-> 0 */
+@StrudelDsl
+val inv by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.toPattern(voiceValueModifier)
+    applyInvert(pattern)
+}
+
+/** Inverts boolean values: true <-> false, 1 <-> 0 */
+@StrudelDsl
+val StrudelPattern.invert by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyInvert(p)
+}
+
+/** Inverts boolean values: true <-> false, 1 <-> 0 */
+@StrudelDsl
+val StrudelPattern.inv by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyInvert(p)
+}
+
+/** Inverts boolean values: true <-> false, 1 <-> 0 */
+@StrudelDsl
+val String.invert by dslStringExtension { p, args, callInfo -> p.invert(args, callInfo) }
+
+/** Inverts boolean values: true <-> false, 1 <-> 0 */
+@StrudelDsl
+val String.inv by dslStringExtension { p, args, callInfo -> p.inv(args, callInfo) }
+
+// -- applyN() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Applies a function to a pattern n times sequentially.
+ * Supports control patterns for n.
+ *
+ * Example: `pattern.applyN(3, x => x.fast(2))` applies fast(2) three times
+ *
+ * JavaScript: `applyN(n, func, pat)`
+ */
+fun applyApplyN(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val transform = args.getOrNull(1).toPatternMapper() ?: return pattern
+
+    // Use _innerJoin to support control patterns for n
+    return pattern._innerJoin(args.take(1)) { src, nValue ->
+        val n = nValue?.asInt ?: 0
+
+        var result = src
+        repeat(n) { result = transform(result) }
+        result
+    }
+}
+
+/** Applies a function to a pattern n times */
+@StrudelDsl
+val applyN by dslFunction { args, /* callInfo */ _ ->
+    val n = args.getOrNull(0) ?: return@dslFunction silence
+    val func = args.getOrNull(1).toPatternMapper() ?: return@dslFunction silence
+    val pattern = args.getOrNull(2)?.toPattern() ?: return@dslFunction silence
+
+    applyApplyN(pattern, listOf(n, StrudelDslArg.of(func)))
+}
+
+/** Applies a function to a pattern n times */
+@StrudelDsl
+val StrudelPattern.applyN by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyApplyN(p, args)
+}
+
+/** Applies a function to a pattern n times */
+@StrudelDsl
+val String.applyN by dslStringExtension { p, args, callInfo -> p.applyN(args, callInfo) }

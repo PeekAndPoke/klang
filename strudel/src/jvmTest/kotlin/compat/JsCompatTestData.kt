@@ -655,6 +655,23 @@ object JsCompatTestData {
         Example(SKIP, "Revv multi-cycle", """cat("a", "b", "c", "d").revv()"""),
         Example(SKIP, "Revv cycle order", """fastcat("a", "b", "c", "d").slow(2).revv().fast(2)"""),
 
+        // Invert boolean patterns
+        Example("Invert basic", """pure("1").invert()"""),
+        Example("Invert sequence", """seq(true, false, true, false).invert()"""),
+        Example("Invert numeric", """seq(1, 0, 1, 0).inv()"""),
+        Example("Invert with struct", """s("bd").struct(seq(true, false, true, false).invert())"""),
+
+        // Apply function n times
+        Example("ApplyN basic", """note("c").applyN(2, x => x.transpose(12))"""),
+        Example("ApplyN with fast", """note("a b").applyN(3, x => x.fast(2))"""),
+        Example("ApplyN with add", """seq("1").applyN(2, x => x.add(1))"""),
+        Example("ApplyN control pattern", """seq("1").applyN("2 1", x => x.add(1))"""),
+
+        // Brak - breakbeat syncopation
+        Example("Brak basic", """seq("a", "b").brak()"""),
+        Example("Brak with sound", """s("bd sd").brak()"""),
+        Example("Brak with fast", """seq("a", "b").brak().fast(2)"""),
+
         // Conditional
         Example("FirstOf", """note("[a b c d] [e f g a]").firstOf(4, (x) => x.rev())"""),
         Example("Every", """note("[a b c d] [e f g a]").every(4, (x) => x.rev())"""),

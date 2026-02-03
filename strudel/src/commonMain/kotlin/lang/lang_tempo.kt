@@ -841,3 +841,48 @@ val StrudelPattern.swing by dslPatternExtension { p, args, /* callInfo */ _ ->
 
 @StrudelDsl
 val String.swing by dslStringExtension { p, args, callInfo -> p.swing(args, callInfo) }
+
+// -- brak() -----------------------------------------------------------------------------------------------------------
+
+/**
+ * Makes every other cycle syncopated (breakbeat-style).
+ *
+ * JavaScript: `pat.when(slowcat(false, true), (x) => fastcat(x, silence)._late(0.25))`
+ *
+ * Effect:
+ * - Cycle 0: plays normally
+ * - Cycle 1: plays first half then silence, delayed by 0.25 cycles (syncopation)
+ * - Cycle 2: plays normally
+ * - Cycle 3: syncopated
+ * - etc.
+ */
+fun applyBrak(pattern: StrudelPattern): StrudelPattern {
+    // when(slowcat(false, true), x => fastcat(x, silence).late(0.25))
+    val condition = applySlowcat(
+        listOf(
+            pure(false),
+            pure(true)
+        )
+    )
+
+    return pattern.`when`(condition) { x ->
+        fastcat(x, silence).late(0.25.toRational())
+    }
+}
+
+/** Makes every other cycle syncopated */
+@StrudelDsl
+val brak by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.toPattern(voiceValueModifier)
+    applyBrak(pattern)
+}
+
+/** Makes every other cycle syncopated */
+@StrudelDsl
+val StrudelPattern.brak by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyBrak(p)
+}
+
+/** Makes every other cycle syncopated */
+@StrudelDsl
+val String.brak by dslStringExtension { p, args, callInfo -> p.brak(args, callInfo) }

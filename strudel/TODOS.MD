@@ -161,7 +161,7 @@ implementation notes.
 ### Pattern Transformation ⭐⭐⭐
 
 - [x] **`rev(n)`** - Reverses pattern in each cycle, supports control patterns for dynamic reversal
-- [ ] **`revv()`** - Reverses pattern vertically (pitch inversion)
+- [x] **`revv()`** - Reverses pattern vertically (pitch inversion)
 - [x] **`struct(pattern)`** - Structures pattern according to mask (uses 'x' markers)
 - [x] **`structAll(pattern)`** - Like struct but keeps all overlapping events
 - [x] **`mask(pattern)`** - Conditionally applies pattern elements (boolean masking)
@@ -172,11 +172,11 @@ implementation notes.
 - [x] **`jux(function)`** - Apply function to right channel only ✅ **IMPLEMENTED**
 - [x] **`juxBy(amount, function)`** - Jux with custom stereo width ✅ **IMPLEMENTED**
 - [x] **`off(time, function)`** - Copies, shifts, and modifies pattern ✅ **IMPLEMENTED**
-- [ ] **`applyN(n, func)`** - Apply function n times
-- [ ] **`when(condition, func)`** - Conditionally apply function
+- [x] **`applyN(n, func)`** - Apply function n times
+- [x] **`when(condition, func)`** - Conditionally apply function
 - [x] **`within(start, end, func)`** - Apply function within time range ✅ **IMPLEMENTED** (2026-01-29)
-- [ ] **`brak()`** - Make every other cycle syncopated
-- [ ] **`inv()` / `invert()`** - Invert pattern structure
+- [x] **`brak()`** - Make every other cycle syncopated
+- [x] **`inv()` / `invert()`** - Invert pattern structure
 
 ### Pattern Picking & Selection ⭐⭐⭐
 
