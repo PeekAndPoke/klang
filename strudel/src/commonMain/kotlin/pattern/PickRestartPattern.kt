@@ -54,10 +54,11 @@ internal class PickRestartPattern(
 
                 // Clip to selector event
                 val clippedPart = shiftedPart.clipTo(selectorEvent.part)
+                val clippedWhole = shiftedWhole.clipTo(selectorEvent.whole)
 
-                if (clippedPart != null) {
-                    // Preserve whole with shift applied
-                    result.add(innerEvent.copy(part = clippedPart, whole = shiftedWhole))
+                if (clippedPart != null && clippedWhole != null) {
+                    // Intersect whole with selector event's whole (matches JS behavior)
+                    result.add(innerEvent.copy(part = clippedPart, whole = clippedWhole))
                 }
             }
         }
