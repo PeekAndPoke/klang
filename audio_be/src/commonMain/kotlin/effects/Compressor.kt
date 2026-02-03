@@ -57,6 +57,11 @@ class Compressor(
             updateCoefficients()
         }
 
+    /**
+     * Make-up gain in decibels to compensate for volume loss after compression.
+     */
+    var makeupGainDb: Double = 0.0
+
     // Envelope follower state
     private var envelopeDb: Double = -Double.MAX_VALUE
 
@@ -72,6 +77,8 @@ class Compressor(
      * Process a stereo buffer in-place.
      */
     fun process(left: DoubleArray, right: DoubleArray, blockSize: Int) {
+        val makeupLinear = if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * ln(10.0) / 20.0) else 1.0
+
         for (i in 0 until blockSize) {
             val inputLevel = max(abs(left[i]), abs(right[i]))
 
@@ -84,7 +91,8 @@ class Compressor(
 
             // Envelope follower with attack/release
             val coeff = if (inputDb > envelopeDb) attackCoeff else releaseCoeff
-            envelopeDb = inputDb + coeff * (envelopeDb - inputDb)
+            // FIX: Correct one-pole filter equation (y += k * (x - y))
+            envelopeDb += coeff * (inputDb - envelopeDb)
 
             // Calculate gain reduction
             val gainReductionDb = calculateGainReduction(envelopeDb)
@@ -96,9 +104,10 @@ class Compressor(
                 1.0
             }
 
-            // Apply gain reduction
-            left[i] *= gainReduction
-            right[i] *= gainReduction
+            // Apply gain reduction and makeup gain
+            val totalGain = gainReduction * makeupLinear
+            left[i] *= totalGain
+            right[i] *= totalGain
         }
     }
 
@@ -106,6 +115,8 @@ class Compressor(
      * Process a mono buffer in-place.
      */
     fun process(buffer: DoubleArray, blockSize: Int) {
+        val makeupLinear = if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * ln(10.0) / 20.0) else 1.0
+
         for (i in 0 until blockSize) {
             val inputLevel = abs(buffer[i])
 
@@ -118,7 +129,8 @@ class Compressor(
 
             // Envelope follower
             val coeff = if (inputDb > envelopeDb) attackCoeff else releaseCoeff
-            envelopeDb = inputDb + coeff * (envelopeDb - inputDb)
+            // FIX: Correct one-pole filter equation (y += k * (x - y))
+            envelopeDb += coeff * (inputDb - envelopeDb)
 
             // Calculate gain reduction
             val gainReductionDb = calculateGainReduction(envelopeDb)
@@ -130,8 +142,8 @@ class Compressor(
                 1.0
             }
 
-            // Apply gain reduction
-            buffer[i] *= gainReduction
+            // Apply gain reduction and makeup gain
+            buffer[i] *= (gainReduction * makeupLinear)
         }
     }
 
@@ -149,10 +161,8 @@ class Compressor(
 
             // In the knee - soft transition
             overshootDb < halfKnee -> {
-                val t = (overshootDb + halfKnee) / kneeDb
-                val gainReduction =
-                    (1.0 / ratio - 1.0) * (overshootDb + halfKnee) * (overshootDb + halfKnee) / (2.0 * kneeDb)
-                gainReduction
+                // Formula for soft knee gain reduction
+                (1.0 / ratio - 1.0) * (overshootDb + halfKnee) * (overshootDb + halfKnee) / (2.0 * kneeDb)
             }
 
             // Above threshold - full compression

@@ -8,6 +8,8 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
@@ -39,6 +41,7 @@ class JvmAudioBackend(
 
     // 2. Create Renderer
     val renderer = KlangAudioRenderer(
+        sampleRate = sampleRate,
         blockFrames = blockSize,
         voices = voices,
         orbits = orbits
@@ -68,8 +71,11 @@ class JvmAudioBackend(
         line.open(format, bufferBytes)
         line.start()
 
-        // Pre-allocate the output buffer for one block
-        val out = ByteArray(blockSize * 4)
+        // Pre-allocate output buffers
+        val outShorts = ShortArray(blockSize * 2)
+        val outBytes = ByteArray(blockSize * 4)
+        val byteBuffer = ByteBuffer.wrap(outBytes).order(ByteOrder.LITTLE_ENDIAN)
+        val shortBuffer = byteBuffer.asShortBuffer()
 
         try {
             while (scope.isActive) {
@@ -91,14 +97,18 @@ class JvmAudioBackend(
 
                 // rendering ///////////////////////////////////////////////////////////////////////////////////////
                 // Render into buffer (State Read)
-                renderer.renderBlock(cursorFrame = currentFrame, out = out)
+                renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)
+
+                // Convert ShortArray to ByteArray efficiently via ByteBuffer
+                shortBuffer.clear()
+                shortBuffer.put(outShorts)
 
                 // Advance Cursor (State Write)
                 currentFrame += blockSize
 
                 // 3. Write to Hardware
                 // This call blocks if the hardware buffer is full, pacing the loop
-                line.write(out, 0, out.size)
+                line.write(outBytes, 0, outBytes.size)
 
                 // 60 FPS
                 delay(10.milliseconds)

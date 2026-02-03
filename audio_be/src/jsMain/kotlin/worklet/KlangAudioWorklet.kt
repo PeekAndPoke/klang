@@ -40,10 +40,15 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                 orbits = orbits,
             )
         )
-        val renderer = KlangAudioRenderer(blockFrames, voices, orbits)
+        val renderer = KlangAudioRenderer(
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            voices = voices,
+            orbits = orbits
+        )
 
         // Buffers
-        val renderBuffer = ByteArray(blockFrames * 4) // 16-bit Stereo PCM (4 bytes per frame)
+        val renderBuffer = ShortArray(blockFrames * 2) // 16-bit Stereo PCM (2 shorts per frame)
         var cursorFrame = 0L
 
         var isPlaying = true
@@ -115,21 +120,17 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         val numChannels = output.size
         if (numChannels == 0) return@init true
 
-        // 1. Render the block into our intermediate ByteArray (PCM 16-bit)
+        // 1. Render the block into our intermediate ShortArray
         renderer.renderBlock(cursorFrame, renderBuffer)
 
         // 2. Convert PCM 16-bit back to Float32 for Web Audio
-        // renderer.renderBlock interleaves L/R: [L_low, L_high, R_low, R_high, ...]
+        // renderer.renderBlock interleaves L/R: [L, R, L, R, ...]
         for (i in 0 until blockFrames) {
-            val idx = i * 4
+            val idx = i * 2
 
-            // Read Little Endian Int16 and normalize to -1.0..1.0
-            val lInt = (renderBuffer[idx].toInt() and 0xFF) or (renderBuffer[idx + 1].toInt() shl 8)
-            val rInt = (renderBuffer[idx + 2].toInt() and 0xFF) or (renderBuffer[idx + 3].toInt() shl 8)
-
-            // Convert to signed short and normalize
-            val lSample = lInt.toShort().toFloat() / Short.MAX_VALUE
-            val rSample = rInt.toShort().toFloat() / Short.MAX_VALUE
+            // Read Short and normalize to -1.0..1.0
+            val lSample = renderBuffer[idx].toFloat() / Short.MAX_VALUE
+            val rSample = renderBuffer[idx + 1].toFloat() / Short.MAX_VALUE
 
             // Write to output channels
             output[0][i] = lSample
