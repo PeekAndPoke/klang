@@ -210,7 +210,7 @@ fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPatt
 /**
  * Safely converts a single argument into a [StrudelPatternMapper].
  */
-fun StrudelDslArg<Any?>?.toPatternMapper() = patternMapper(this?.value)
+fun StrudelDslArg<Any?>?.toPatternMapper(): StrudelPatternMapper? = patternMapper(this?.value)
 
 /**
  * Extracts choice arguments for choose* functions.
@@ -223,6 +223,34 @@ fun List<StrudelDslArg<Any?>>.extractChoiceArgs(): List<StrudelDslArg<Any?>> {
     } else {
         this
     }
+}
+
+/**
+ * Extracts weighted pairs from arguments for weighted choice functions.
+ * Expects arguments in the format: [[item1, weight1], [item2, weight2], ...]
+ * Returns a pair of (items, weights) lists.
+ */
+fun List<StrudelDslArg<Any?>>.extractWeightedPairs(): Pair<List<StrudelDslArg<Any?>>, List<StrudelDslArg<Any?>>> {
+    val items = mutableListOf<StrudelDslArg<Any?>>()
+    val weights = mutableListOf<StrudelDslArg<Any?>>()
+
+    val inputs = if (
+        size == 1 && get(0).value is List<*> && (get(0).value as List<*>).all { it is List<*> }
+    ) {
+        @Suppress("UNCHECKED_CAST")
+        (get(0).value as List<Any?>).asStrudelDslArgs()
+    } else {
+        this
+    }
+
+    inputs.forEach { item ->
+        if (item.value is List<*> && item.value.size >= 2) {
+            val list = item.value
+            items.add(StrudelDslArg(list[0], null))
+            weights.add(StrudelDslArg(list[1], null))
+        }
+    }
+    return items to weights
 }
 
 /**
@@ -251,7 +279,7 @@ fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceModifier = voiceValueModifi
  * Recursively flattens arguments into a list of StrudelPatterns.
  */
 internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
-    modify: VoiceModifier,
+    modify: VoiceModifier = voiceValueModifier,
 ): List<StrudelPattern> {
     val atomFactory = { text: String, sourceLocations: SourceLocationChain? ->
         AtomicPattern(

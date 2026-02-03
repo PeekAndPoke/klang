@@ -7,7 +7,7 @@ data class Example(
     val code: String,
     val skip: Boolean = false,
     val ignoreFields: Set<String> = emptySet(),
-    val recover: (graal: StrudelPatternEvent, native: StrudelPatternEvent) -> Boolean = { _, _ -> false },
+    val recover: Map<String, (graal: StrudelPatternEvent, native: StrudelPatternEvent) -> Boolean> = emptyMap(),
 ) {
     companion object {
         operator fun invoke(name: String, code: String) = Example(name = name, code = code)
@@ -20,10 +20,23 @@ data class Example(
 
     fun ignore(vararg ignore: String) = ignore(ignore.toSet())
 
-    fun recover(recover: (graal: StrudelPatternEvent, native: StrudelPatternEvent) -> Boolean) =
-        copy(
-            recover = { graal, native ->
-                recover(graal, native) || this.recover(graal, native)
-            }
+    fun tryRecover(field: String, graal: StrudelPatternEvent, native: StrudelPatternEvent): Boolean {
+        val fn: (StrudelPatternEvent, StrudelPatternEvent) -> Boolean =
+            recover.getOrDefault(field, { _, _ -> false })
+
+        return fn(graal, native)
+    }
+
+    fun recovers(field: String, fn: (graal: StrudelPatternEvent, native: StrudelPatternEvent) -> Boolean): Example {
+        val current: (StrudelPatternEvent, StrudelPatternEvent) -> Boolean =
+            recover.getOrDefault(field, { _, _ -> false })
+
+        val updated: (StrudelPatternEvent, StrudelPatternEvent) -> Boolean = { graal, native ->
+            fn(graal, native) || current(graal, native)
+        }
+
+        return copy(
+            recover = recover.plus(field to updated)
         )
+    }
 }

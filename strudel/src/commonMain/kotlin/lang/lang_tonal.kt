@@ -69,7 +69,6 @@ fun StrudelVoiceData.resolveNote(newIndex: Int? = null): StrudelVoiceData {
     return copy(
         note = fallbackNote,
         freqHz = Tones.noteToFreq(fallbackNote ?: ""),
-        gain = gain ?: 1.0,
         soundIndex = n ?: soundIndex,
     )
 }
@@ -85,7 +84,7 @@ private val scaleMutation = voiceModifier { scale ->
     copy(scale = newScale).resolveNote()
 }
 
-private fun applyScale(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyScale(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return if (args.isEmpty()) {
         // TODO: test this
         source.reinterpretVoice {
@@ -118,7 +117,7 @@ private val noteMutation = voiceModifier { input ->
     } ?: this
 }
 
-private fun applyNote(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNote(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return if (args.isEmpty()) {
         // TODO: test this
         source.reinterpretVoice {
@@ -154,7 +153,7 @@ private val nMutation = voiceModifier {
     )
 }
 
-private fun applyN(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyN(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return if (args.isEmpty()) {
         // TODO: test this
         source.reinterpretVoice {
@@ -199,7 +198,7 @@ private val soundMutation = voiceModifier {
     )
 }
 
-private fun applySound(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applySound(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return if (args.isEmpty()) {
         // TODO: test this
         source.reinterpretVoice {
@@ -246,7 +245,7 @@ private val bankMutation = voiceModifier {
     copy(bank = it?.toString())
 }
 
-private fun applyBank(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyBank(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return if (args.isEmpty()) {
         // TODO: test this
         source.reinterpretVoice {
@@ -277,7 +276,7 @@ private val legatoMutation = voiceModifier {
     copy(legato = it?.asDoubleOrNull())
 }
 
-private fun applyLegato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLegato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, legatoMutation)
 }
 
@@ -311,7 +310,7 @@ private val vibratoMutation = voiceModifier {
     copy(vibrato = it?.asDoubleOrNull())
 }
 
-private fun applyVibrato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyVibrato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, vibratoMutation)
 }
 
@@ -346,7 +345,7 @@ private val vibratoModMutation = voiceModifier {
     copy(vibratoMod = it?.asDoubleOrNull())
 }
 
-private fun applyVibratoMod(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyVibratoMod(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, vibratoModMutation)
 }
 
@@ -381,7 +380,7 @@ private val pAttackMutation = voiceModifier {
     copy(pAttack = it?.asDoubleOrNull())
 }
 
-private fun applyPAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pAttackMutation)
 }
 
@@ -415,7 +414,7 @@ private val pDecayMutation = voiceModifier {
     copy(pDecay = it?.asDoubleOrNull())
 }
 
-private fun applyPDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pDecayMutation)
 }
 
@@ -449,7 +448,7 @@ private val pReleaseMutation = voiceModifier {
     copy(pRelease = it?.asDoubleOrNull())
 }
 
-private fun applyPRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pReleaseMutation)
 }
 
@@ -483,7 +482,7 @@ private val pEnvMutation = voiceModifier {
     copy(pEnv = it?.asDoubleOrNull())
 }
 
-private fun applyPEnv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPEnv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pEnvMutation)
 }
 
@@ -517,7 +516,7 @@ private val pCurveMutation = voiceModifier {
     copy(pCurve = it?.asDoubleOrNull())
 }
 
-private fun applyPCurve(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPCurve(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pCurveMutation)
 }
 
@@ -551,7 +550,7 @@ private val pAnchorMutation = voiceModifier {
     copy(pAnchor = it?.asDoubleOrNull())
 }
 
-private fun applyPAnchor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPAnchor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pAnchorMutation)
 }
 
@@ -585,7 +584,7 @@ private val accelerateMutation = voiceModifier {
     copy(accelerate = it?.asDoubleOrNull())
 }
 
-private fun applyAccelerate(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyAccelerate(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, accelerateMutation)
 }
 
@@ -683,7 +682,7 @@ fun StrudelVoiceData.transpose(amount: Any?): StrudelVoiceData {
     )
 }
 
-private fun applyTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     // We use defaultModifier for args because we just want the 'value'
     val controlPattern = args.toPattern(voiceValueModifier)
 
@@ -731,7 +730,7 @@ private val freqMutation = voiceModifier {
     copy(freqHz = it?.asDoubleOrNull())
 }
 
-private fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, freqMutation)
 }
 
@@ -816,7 +815,7 @@ fun StrudelVoiceData.scaleTranspose(steps: Int): StrudelVoiceData {
     }
 }
 
-private fun applyScaleTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyScaleTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     // Ensure we parse the argument as mini-notation if it's a string, to get a pattern of values
     // This allows scaleTranspose("0 1 2") to work as a control pattern
     val controlPattern = args.toPattern(voiceValueModifier)
@@ -945,7 +944,7 @@ fun StrudelVoiceData.extractRootNote(octave: Int? = null): StrudelVoiceData {
     }
 }
 
-private fun applyRootNotes(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyRootNotes(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val octave = args.firstOrNull()?.value?.asIntOrNull()
 
     // No need for distinct() anymore since chord() doesn't expand
@@ -1029,7 +1028,7 @@ internal fun getVoicedNotes(
  * Applies voice leading to chord patterns.
  * Uses the Tones library's Voicing module for smooth transitions between chords.
  */
-private fun applyVoicing(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyVoicing(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     // Parse optional range arguments
     val rangeArgs = args.filter { it.value is String }
     val range = when {

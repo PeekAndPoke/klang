@@ -95,11 +95,9 @@ note("c3*4")
  * note("c3").fmh(1.5)
  * // Inharmonic ratio creates bell-like tones
  */
-private val fmhMutation = voiceModifier {
-    copy(fmh = it?.asDoubleOrNull())
-}
+private val fmhMutation = voiceModifier { copy(fmh = it?.asDoubleOrNull()) }
 
-private fun applyFmh(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmh(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, fmhMutation)
 }
 
@@ -130,11 +128,9 @@ val String.fmh by dslStringExtension { p, args, callInfo -> p.fmh(args, callInfo
  * note("c3").fmattack(0.5).fmenv(100)
  * // Slow FM attack creates pitch sweep effect
  */
-private val fmattackMutation = voiceModifier {
-    copy(fmAttack = it?.asDoubleOrNull())
-}
+private val fmattackMutation = voiceModifier { copy(fmAttack = it?.asDoubleOrNull()) }
 
-private fun applyFmattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, fmattackMutation)
 }
 
@@ -173,11 +169,9 @@ val String.fmatt by dslStringExtension { p, args, callInfo -> p.fmattack(args, c
  * note("c3").fmattack(0.01).fmdecay(0.1).fmsustain(0.3).fmenv(100)
  * // Fast decay for plucky FM sound
  */
-private val fmdecayMutation = voiceModifier {
-    copy(fmDecay = it?.asDoubleOrNull())
-}
+private val fmdecayMutation = voiceModifier { copy(fmDecay = it?.asDoubleOrNull()) }
 
-private fun applyFmdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, fmdecayMutation)
 }
 
@@ -220,11 +214,9 @@ val String.fmdec by dslStringExtension { p, args, callInfo -> p.fmdecay(args, ca
  * note("c3").fmsustain(0.7).fmenv(100)
  * // Sustained FM modulation - evolving timbre
  */
-private val fmsustainMutation = voiceModifier {
-    copy(fmSustain = it?.asDoubleOrNull())
-}
+private val fmsustainMutation = voiceModifier { copy(fmSustain = it?.asDoubleOrNull()) }
 
-private fun applyFmsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, fmsustainMutation)
 }
 
@@ -271,11 +263,9 @@ val String.fmsus by dslStringExtension { p, args, callInfo -> p.fmsustain(args, 
  * note("c3 e3 g3").fmh(2).fmenv(sine.range(0, 200))
  * // Dynamic FM modulation via continuous pattern
  */
-private val fmenvMutation = voiceModifier {
-    copy(fmEnv = it?.asDoubleOrNull())
-}
+private val fmenvMutation = voiceModifier { copy(fmEnv = it?.asDoubleOrNull()) }
 
-private fun applyFmenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, fmenvMutation)
 }
 

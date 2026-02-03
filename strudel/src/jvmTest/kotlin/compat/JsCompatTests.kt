@@ -177,7 +177,7 @@ ${comparison.report}
         fun isCompatible(path: String, graalElem: JsonPrimitive?, nativeElem: JsonPrimitive?): ComparisonResult {
             val worst = if (path in ignore) {
                 ComparisonResult.IGNORED
-            } else if (example.recover(graal, native)) {
+            } else if (example.tryRecover(path, graal, native)) {
                 ComparisonResult.RECOVERED
             } else {
                 ComparisonResult.DIFFERENT

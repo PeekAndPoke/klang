@@ -216,5 +216,7 @@ object JsCompatTestSongs {
                     )
             """.trimIndent()
         )
-    )
+    ).map {
+        it.recovers("data.gain") { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
+    }
 }

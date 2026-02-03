@@ -595,7 +595,7 @@ object JsCompatTestData {
             Example("Continuous | Square2 range", """note("a b c d").pan(square2.fromBipolar().range(0.1, 0.9))"""),
         ).map {
             it.ignore("data.gain")
-                .recover { graal, native ->
+                .recovers("data.soundIndex") { graal, native ->
                     graal.data.soundIndex != null && graal.data.soundIndex.toDouble() == native.data.value?.asDouble
                 }
         }.toTypedArray(),
@@ -764,6 +764,6 @@ object JsCompatTestData {
         Example("Iter basic", """note("c d e f").iter(4)"""),
         Example("IterBack basic", """note("c d e f").iterBack(4)"""),
     ).map {
-        it.recover { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
+        it.recovers("data.gain") { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
     }
 }

@@ -22,7 +22,7 @@ private val vowelMutation = voiceModifier { vowel ->
     copy(vowel = newVowel)
 }
 
-private fun applyVowel(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyVowel(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._applyControlFromParams(args, vowelMutation) { src, ctrl ->
         src.copy(vowel = ctrl.vowel)
     }
