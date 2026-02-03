@@ -5,9 +5,7 @@ package io.peekandpoke.klang.strudel
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg
-import io.peekandpoke.klang.strudel.lang.strudelLib
-import io.peekandpoke.klang.strudel.lang.toPattern
+import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
@@ -265,6 +263,80 @@ fun StrudelPattern.mapEvents(
     transform: (StrudelPatternEvent) -> StrudelPatternEvent,
 ): StrudelPattern {
     return ReinterpretPattern(source = this) { evt, _ -> transform(evt) }
+}
+
+/**
+ * Filters events based on their value.
+ * JavaScript: filterValues(test) - keeps only events where test(value) returns true
+ *
+ * @param test Predicate function that tests event values
+ * @return Pattern with only events that pass the test
+ */
+fun StrudelPattern.filterValues(test: (StrudelVoiceValue?) -> Boolean): StrudelPattern {
+    val source = this
+
+    return object : StrudelPattern {
+        override val weight: Double get() = source.weight
+        override val numSteps: Rational? get() = source.numSteps
+
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            return source.queryArcContextual(from, to, ctx).filter { event ->
+                test(event.data.value)
+            }
+        }
+
+        override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    }
+}
+
+/**
+ * Applicative `appLeft` (<*) operator.
+ * Keeps values from the left pattern, but only where the right pattern has events.
+ * Structure is taken from the left pattern.
+ *
+ * JavaScript: pat_func.appLeft(pat_val)
+ * - Queries left pattern for events
+ * - For each left event, queries right pattern at that time
+ * - Keeps left event's value and whole, but intersects the part with right events
+ *
+ * @param patVal The pattern providing structure (right side)
+ * @return Pattern with left values but filtered by right structure
+ */
+fun StrudelPattern.appLeft(patVal: StrudelPattern): StrudelPattern {
+    val patFunc = this
+
+    return object : StrudelPattern {
+        override val weight: Double get() = patFunc.weight
+        override val numSteps: Rational? get() = patFunc.numSteps
+
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            val result = mutableListOf<StrudelPatternEvent>()
+
+            for (hapFunc in patFunc.queryArcContextual(from, to, ctx)) {
+                // Query right pattern at the left event's timespan
+                val querySpan = hapFunc.whole ?: hapFunc.part
+                val hapVals = patVal.queryArcContextual(querySpan.begin, querySpan.end, ctx)
+
+                for (hapVal in hapVals) {
+                    // Intersect the parts
+                    val newPart = hapFunc.part.clipTo(hapVal.part)
+                    if (newPart != null) {
+                        // Keep left's whole and value, but intersect part
+                        result.add(
+                            hapFunc.copy(
+                                part = newPart
+                                // whole is preserved from hapFunc
+                            )
+                        )
+                    }
+                }
+            }
+
+            return result
+        }
+
+        override fun estimateCycleDuration(): Rational = patFunc.estimateCycleDuration()
+    }
 }
 
 /**
@@ -806,6 +878,28 @@ fun StrudelPattern._outerJoin(
         )
     }
 }
+
+/**
+ * Applies a modification to a pattern events VoiceData using the provided arguments.
+ * Arguments are interpreted as a control pattern.
+ */
+fun StrudelPattern._applyControlFromParams(
+    args: List<StrudelDslArg<Any?>>,
+    modify: VoiceModifier,
+    combine: VoiceMerger,
+): StrudelPattern {
+    if (args.isEmpty()) return this
+
+    val control = args.toPattern(modify)
+
+    val mapper: (StrudelVoiceData) -> StrudelVoiceData = { data ->
+        val value = data.value
+        if (value != null) data.modify(value) else data
+    }
+
+    return this.applyControl(control, mapper, combine)
+}
+
 
 /**
  * Applies a control pattern to this pattern (Outer Join).

@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel._applyControlFromParams
 import io.peekandpoke.klang.strudel._liftNumericField
 
 /**
@@ -17,11 +18,9 @@ var strudelLangDynamicsInit = false
 
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
-private val gainMutation = voiceModifier {
-    copy(gain = it?.asDoubleOrNull())
-}
+private val gainMutation = voiceModifier { copy(gain = it?.asDoubleOrNull()) }
 
-private fun applyGain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyGain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, gainMutation)
 }
 
@@ -37,13 +36,12 @@ val gain by dslFunction { args, /* callInfo */ _ -> args.toPattern(gainMutation)
 @StrudelDsl
 val String.gain by dslStringExtension { p, args, callInfo -> p.gain(args, callInfo) }
 
+
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
-private val panMutation = voiceModifier {
-    copy(pan = it?.asDoubleOrNull())
-}
+private val panMutation = voiceModifier { copy(pan = it?.asDoubleOrNull()) }
 
-private fun applyPan(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPan(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, panMutation)
 }
 
@@ -61,11 +59,9 @@ val String.pan by dslStringExtension { p, args, callInfo -> p.pan(args, callInfo
 
 // -- velocity() -------------------------------------------------------------------------------------------------------
 
-private val velocityMutation = voiceModifier {
-    copy(velocity = it?.asDoubleOrNull())
-}
+private val velocityMutation = voiceModifier { copy(velocity = it?.asDoubleOrNull()) }
 
-private fun applyVelocity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyVelocity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, velocityMutation)
 }
 
@@ -95,11 +91,9 @@ val String.vel by dslStringExtension { p, args, callInfo -> p.velocity(args, cal
 
 // -- postgain() -------------------------------------------------------------------------------------------------------
 
-private val postgainMutation = voiceModifier {
-    copy(postGain = it?.asDoubleOrNull())
-}
+private val postgainMutation = voiceModifier { copy(postGain = it?.asDoubleOrNull()) }
 
-private fun applyPostgain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPostgain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, postgainMutation)
 }
 
@@ -117,12 +111,10 @@ val String.postgain by dslStringExtension { p, args, callInfo -> p.postgain(args
 
 // -- compressor() -----------------------------------------------------------------------------------------------------
 
-private val compressorMutation = voiceModifier { shape ->
-    copy(compressor = shape?.toString())
-}
+private val compressorMutation = voiceModifier { shape -> copy(compressor = shape?.toString()) }
 
-private fun applyCompressor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyControlFromParams(args, compressorMutation) { src, ctrl ->
+fun applyCompressor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source._applyControlFromParams(args, compressorMutation) { src, ctrl ->
         src.copy(compressor = ctrl.compressor)
     }
 }
@@ -366,7 +358,7 @@ private val adsrMutation = voiceModifier {
 }
 
 private fun applyAdsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyControlFromParams(args, adsrMutation) { src, ctrl ->
+    return source._applyControlFromParams(args, adsrMutation) { src, ctrl ->
         src.copy(
             attack = ctrl.attack ?: src.attack,
             decay = ctrl.decay ?: src.decay,

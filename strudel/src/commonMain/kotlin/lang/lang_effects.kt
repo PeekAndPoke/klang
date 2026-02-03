@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel._applyControlFromParams
 import io.peekandpoke.klang.strudel._liftNumericField
 
 /**
@@ -11,32 +12,24 @@ import io.peekandpoke.klang.strudel._liftNumericField
  */
 var strudelLangEffectsInit = false
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Effects
-// ///
-
 // -- distort() --------------------------------------------------------------------------------------------------------
 
 private val distortMutation = voiceModifier {
     copy(distort = it?.asDoubleOrNull())
 }
 
-private fun applyDistort(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyDistort(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, distortMutation)
 }
 
 @StrudelDsl
-val StrudelPattern.distort by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDistort(p, args)
-}
+val StrudelPattern.distort by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistort(p, args) }
 
 @StrudelDsl
 val distort by dslFunction { args, /* callInfo */ _ -> args.toPattern(distortMutation) }
 
 @StrudelDsl
-val String.distort by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyDistort(p, args)
-}
+val String.distort by dslStringExtension { p, args, /* callInfo */ _ -> applyDistort(p, args) }
 
 /** Alias for [distort] */
 @StrudelDsl
@@ -54,22 +47,18 @@ val String.dist by dslStringExtension { p, args, callInfo -> p.distort(args, cal
 
 private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
 
-private fun applyCrush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyCrush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, crushMutation)
 }
 
 @StrudelDsl
-val StrudelPattern.crush by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyCrush(p, args)
-}
+val StrudelPattern.crush by dslPatternExtension { p, args, /* callInfo */ _ -> applyCrush(p, args) }
 
 @StrudelDsl
 val crush by dslFunction { args, /* callInfo */ _ -> args.toPattern(crushMutation) }
 
 @StrudelDsl
-val String.crush by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyCrush(p, args)
-}
+val String.crush by dslStringExtension { p, args, /* callInfo */ _ -> applyCrush(p, args) }
 
 // -- coarse() ---------------------------------------------------------------------------------------------------------
 
@@ -77,68 +66,52 @@ private val coarseMutation = voiceModifier {
     copy(coarse = it?.asDoubleOrNull())
 }
 
-private fun applyCoarse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyCoarse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, coarseMutation)
 }
 
 @StrudelDsl
-val StrudelPattern.coarse by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyCoarse(p, args)
-}
+val StrudelPattern.coarse by dslPatternExtension { p, args, /* callInfo */ _ -> applyCoarse(p, args) }
 
 @StrudelDsl
 val coarse by dslFunction { args, /* callInfo */ _ -> args.toPattern(coarseMutation) }
 
 @StrudelDsl
-val String.coarse by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyCoarse(p, args)
-}
+val String.coarse by dslStringExtension { p, args, /* callInfo */ _ -> applyCoarse(p, args) }
 
 // -- room() -----------------------------------------------------------------------------------------------------------
 
-private val roomMutation = voiceModifier {
-    copy(room = it?.asDoubleOrNull())
-}
+private val roomMutation = voiceModifier { copy(room = it?.asDoubleOrNull()) }
 
-private fun applyRoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyRoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, roomMutation)
 }
 
 @StrudelDsl
-val StrudelPattern.room by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyRoom(p, args)
-}
+val StrudelPattern.room by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoom(p, args) }
 
 @StrudelDsl
 val room by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomMutation) }
 
 @StrudelDsl
-val String.room by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyRoom(p, args)
-}
+val String.room by dslStringExtension { p, args, /* callInfo */ _ -> applyRoom(p, args) }
 
 // -- roomsize() / rsize() ---------------------------------------------------------------------------------------------
 
-private val roomSizeMutation = voiceModifier {
-    copy(roomSize = it?.asDoubleOrNull())
-}
+private val roomSizeMutation = voiceModifier { copy(roomSize = it?.asDoubleOrNull()) }
 
-private fun applyRoomSize(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyRoomSize(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, roomSizeMutation)
 }
 
 @StrudelDsl
-val StrudelPattern.roomsize by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyRoomSize(p, args)
-}
+val StrudelPattern.roomsize by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 
 @StrudelDsl
 val roomsize by dslFunction { args, /* callInfo */ _ -> args.toPattern(roomSizeMutation) }
 
 @StrudelDsl
-val String.roomsize by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyRoomSize(p, args)
-}
+val String.roomsize by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 
 /** Alias for [roomsize] */
 @StrudelDsl
@@ -178,11 +151,9 @@ val String.size by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomSi
 
 // -- roomfade() -------------------------------------------------------------------------------------------------------
 
-private val roomFadeMutation = voiceModifier {
-    copy(roomFade = it?.asDoubleOrNull())
-}
+private val roomFadeMutation = voiceModifier { copy(roomFade = it?.asDoubleOrNull()) }
 
-private fun applyRoomFade(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyRoomFade(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, roomFadeMutation)
 }
 
@@ -212,11 +183,9 @@ val String.rfade by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomF
 
 // -- roomlp() ---------------------------------------------------------------------------------------------------------
 
-private val roomLpMutation = voiceModifier {
-    copy(roomLp = it?.asDoubleOrNull())
-}
+private val roomLpMutation = voiceModifier { copy(roomLp = it?.asDoubleOrNull()) }
 
-private fun applyRoomLp(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyRoomLp(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, roomLpMutation)
 }
 
@@ -246,11 +215,9 @@ val String.rlp by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomLp(
 
 // -- roomdim() --------------------------------------------------------------------------------------------------------
 
-private val roomDimMutation = voiceModifier {
-    copy(roomDim = it?.asDoubleOrNull())
-}
+private val roomDimMutation = voiceModifier { copy(roomDim = it?.asDoubleOrNull()) }
 
-private fun applyRoomDim(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyRoomDim(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, roomDimMutation)
 }
 
@@ -280,13 +247,10 @@ val String.rdim by dslStringExtension { p, args, /* callInfo */ _ -> applyRoomDi
 
 // -- iresponse() ------------------------------------------------------------------------------------------------------
 
-private val iResponseMutation = voiceModifier { response ->
-    val newResponse = response?.toString()
-    copy(iResponse = newResponse)
-}
+private val iResponseMutation = voiceModifier { response -> copy(iResponse = response?.toString()) }
 
-private fun applyIResponse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyControlFromParams(args, iResponseMutation) { src, ctrl ->
+fun applyIResponse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source._applyControlFromParams(args, iResponseMutation) { src, ctrl ->
         src.copy(iResponse = ctrl.iResponse)
     }
 }
@@ -317,57 +281,43 @@ val String.ir by dslStringExtension { p, args, /* callInfo */ _ -> applyIRespons
 
 // -- delay() ----------------------------------------------------------------------------------------------------------
 
-private val delayMutation = voiceModifier {
-    copy(delay = it?.asDoubleOrNull())
-}
+private val delayMutation = voiceModifier { copy(delay = it?.asDoubleOrNull()) }
 
-private fun applyDelay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyDelay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, delayMutation)
 }
 
 @StrudelDsl
-val StrudelPattern.delay by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDelay(p, args)
-}
+val StrudelPattern.delay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDelay(p, args) }
 
 @StrudelDsl
 val delay by dslFunction { args, /* callInfo */ _ -> args.toPattern(delayMutation) }
 
 @StrudelDsl
-val String.delay by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyDelay(p, args)
-}
+val String.delay by dslStringExtension { p, args, /* callInfo */ _ -> applyDelay(p, args) }
 
 // -- delaytime() ------------------------------------------------------------------------------------------------------
 
-private val delayTimeMutation = voiceModifier {
-    copy(delayTime = it?.asDoubleOrNull())
-}
+private val delayTimeMutation = voiceModifier { copy(delayTime = it?.asDoubleOrNull()) }
 
-private fun applyDelayTime(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyDelayTime(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, delayTimeMutation)
 }
 
 @StrudelDsl
-val StrudelPattern.delaytime by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDelayTime(p, args)
-}
+val StrudelPattern.delaytime by dslPatternExtension { p, args, /* callInfo */ _ -> applyDelayTime(p, args) }
 
 @StrudelDsl
 val delaytime by dslFunction { args, /* callInfo */ _ -> args.toPattern(delayTimeMutation) }
 
 @StrudelDsl
-val String.delaytime by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyDelayTime(p, args)
-}
+val String.delaytime by dslStringExtension { p, args, /* callInfo */ _ -> applyDelayTime(p, args) }
 
 // -- delayfeedback() --------------------------------------------------------------------------------------------------
 
-private val delayFeedbackMutation = voiceModifier {
-    copy(delayFeedback = it?.asDoubleOrNull())
-}
+private val delayFeedbackMutation = voiceModifier { copy(delayFeedback = it?.asDoubleOrNull()) }
 
-private fun applyDelayFeedback(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyDelayFeedback(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, delayFeedbackMutation)
 }
 
@@ -380,9 +330,7 @@ val StrudelPattern.delayfeedback by dslPatternExtension { p, args, /* callInfo *
 val delayfeedback by dslFunction { args, /* callInfo */ _ -> args.toPattern(delayFeedbackMutation) }
 
 @StrudelDsl
-val String.delayfeedback by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyDelayFeedback(p, args)
-}
+val String.delayfeedback by dslStringExtension { p, args, /* callInfo */ _ -> applyDelayFeedback(p, args) }
 
 /** Alias for [delayfeedback] */
 @StrudelDsl
@@ -410,26 +358,20 @@ val String.dfb by dslStringExtension { p, args, callInfo -> p.delayfeedback(args
 
 // -- phaser() ---------------------------------------------------------------------------------------------------------
 
-private val phaserMutation = voiceModifier {
-    copy(phaserRate = it?.asDoubleOrNull())
-}
+private val phaserMutation = voiceModifier { copy(phaserRate = it?.asDoubleOrNull()) }
 
-private fun applyPhaser(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPhaser(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, phaserMutation)
 }
 
 @StrudelDsl
-val StrudelPattern.phaser by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPhaser(p, args)
-}
+val StrudelPattern.phaser by dslPatternExtension { p, args, /* callInfo */ _ -> applyPhaser(p, args) }
 
 @StrudelDsl
 val phaser by dslFunction { args, /* callInfo */ _ -> args.toPattern(phaserMutation) }
 
 @StrudelDsl
-val String.phaser by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyPhaser(p, args)
-}
+val String.phaser by dslStringExtension { p, args, /* callInfo */ _ -> applyPhaser(p, args) }
 
 /** Alias for [phaser] */
 @StrudelDsl
@@ -445,11 +387,9 @@ val String.ph by dslStringExtension { p, args, callInfo -> p.phaser(args, callIn
 
 // -- phaserdepth() ----------------------------------------------------------------------------------------------------
 
-private val phaserDepthMutation = voiceModifier {
-    copy(phaserDepth = it?.asDoubleOrNull())
-}
+private val phaserDepthMutation = voiceModifier { copy(phaserDepth = it?.asDoubleOrNull()) }
 
-private fun applyPhaserDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPhaserDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, phaserDepthMutation)
 }
 
@@ -462,9 +402,7 @@ val StrudelPattern.phaserdepth by dslPatternExtension { p, args, /* callInfo */ 
 val phaserdepth by dslFunction { args, /* callInfo */ _ -> args.toPattern(phaserDepthMutation) }
 
 @StrudelDsl
-val String.phaserdepth by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyPhaserDepth(p, args)
-}
+val String.phaserdepth by dslStringExtension { p, args, /* callInfo */ _ -> applyPhaserDepth(p, args) }
 
 /** Alias for [phaserdepth] */
 @StrudelDsl
@@ -492,11 +430,9 @@ val String.phasdp by dslStringExtension { p, args, callInfo -> p.phaserdepth(arg
 
 // -- phasercenter() ---------------------------------------------------------------------------------------------------
 
-private val phaserCenterMutation = voiceModifier {
-    copy(phaserCenter = it?.asDoubleOrNull())
-}
+private val phaserCenterMutation = voiceModifier { copy(phaserCenter = it?.asDoubleOrNull()) }
 
-private fun applyPhaserCenter(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPhaserCenter(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, phaserCenterMutation)
 }
 
@@ -509,9 +445,7 @@ val StrudelPattern.phasercenter by dslPatternExtension { p, args, /* callInfo */
 val phasercenter by dslFunction { args, /* callInfo */ _ -> args.toPattern(phaserCenterMutation) }
 
 @StrudelDsl
-val String.phasercenter by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyPhaserCenter(p, args)
-}
+val String.phasercenter by dslStringExtension { p, args, /* callInfo */ _ -> applyPhaserCenter(p, args) }
 
 /** Alias for [phasercenter] */
 @StrudelDsl
@@ -527,11 +461,9 @@ val String.phc by dslStringExtension { p, args, callInfo -> p.phasercenter(args,
 
 // -- phasersweep() ----------------------------------------------------------------------------------------------------
 
-private val phaserSweepMutation = voiceModifier {
-    copy(phaserSweep = it?.asDoubleOrNull())
-}
+private val phaserSweepMutation = voiceModifier { copy(phaserSweep = it?.asDoubleOrNull()) }
 
-private fun applyPhaserSweep(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPhaserSweep(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, phaserSweepMutation)
 }
 
@@ -544,9 +476,7 @@ val StrudelPattern.phasersweep by dslPatternExtension { p, args, /* callInfo */ 
 val phasersweep by dslFunction { args, /* callInfo */ _ -> args.toPattern(phaserSweepMutation) }
 
 @StrudelDsl
-val String.phasersweep by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyPhaserSweep(p, args)
-}
+val String.phasersweep by dslStringExtension { p, args, /* callInfo */ _ -> applyPhaserSweep(p, args) }
 
 /** Alias for [phasersweep] */
 @StrudelDsl
@@ -562,11 +492,9 @@ val String.phs by dslStringExtension { p, args, callInfo -> p.phasersweep(args, 
 
 // -- tremolosync() ----------------------------------------------------------------------------------------------------
 
-private val tremoloSyncMutation = voiceModifier {
-    copy(tremoloSync = it?.asDoubleOrNull())
-}
+private val tremoloSyncMutation = voiceModifier { copy(tremoloSync = it?.asDoubleOrNull()) }
 
-private fun applyTremoloSync(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyTremoloSync(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, tremoloSyncMutation)
 }
 
@@ -579,9 +507,7 @@ val StrudelPattern.tremolosync by dslPatternExtension { p, args, /* callInfo */ 
 val tremolosync by dslFunction { args, /* callInfo */ _ -> args.toPattern(tremoloSyncMutation) }
 
 @StrudelDsl
-val String.tremolosync by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyTremoloSync(p, args)
-}
+val String.tremolosync by dslStringExtension { p, args, /* callInfo */ _ -> applyTremoloSync(p, args) }
 
 /** Alias for [tremolosync] */
 @StrudelDsl
@@ -597,11 +523,9 @@ val String.tremsync by dslStringExtension { p, args, callInfo -> p.tremolosync(a
 
 // -- tremolodepth() ---------------------------------------------------------------------------------------------------
 
-private val tremoloDepthMutation = voiceModifier {
-    copy(tremoloDepth = it?.asDoubleOrNull())
-}
+private val tremoloDepthMutation = voiceModifier { copy(tremoloDepth = it?.asDoubleOrNull()) }
 
-private fun applyTremoloDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyTremoloDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, tremoloDepthMutation)
 }
 
@@ -614,9 +538,7 @@ val StrudelPattern.tremolodepth by dslPatternExtension { p, args, /* callInfo */
 val tremolodepth by dslFunction { args, /* callInfo */ _ -> args.toPattern(tremoloDepthMutation) }
 
 @StrudelDsl
-val String.tremolodepth by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyTremoloDepth(p, args)
-}
+val String.tremolodepth by dslStringExtension { p, args, /* callInfo */ _ -> applyTremoloDepth(p, args) }
 
 /** Alias for [tremolodepth] */
 @StrudelDsl
@@ -632,11 +554,9 @@ val String.tremdepth by dslStringExtension { p, args, callInfo -> p.tremolodepth
 
 // -- tremoloskew() ----------------------------------------------------------------------------------------------------
 
-private val tremoloSkewMutation = voiceModifier {
-    copy(tremoloSkew = it?.asDoubleOrNull())
-}
+private val tremoloSkewMutation = voiceModifier { copy(tremoloSkew = it?.asDoubleOrNull()) }
 
-private fun applyTremoloSkew(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyTremoloSkew(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, tremoloSkewMutation)
 }
 
@@ -649,9 +569,7 @@ val StrudelPattern.tremoloskew by dslPatternExtension { p, args, /* callInfo */ 
 val tremoloskew by dslFunction { args, /* callInfo */ _ -> args.toPattern(tremoloSkewMutation) }
 
 @StrudelDsl
-val String.tremoloskew by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyTremoloSkew(p, args)
-}
+val String.tremoloskew by dslStringExtension { p, args, /* callInfo */ _ -> applyTremoloSkew(p, args) }
 
 /** Alias for [tremoloskew] */
 @StrudelDsl
@@ -667,11 +585,9 @@ val String.tremskew by dslStringExtension { p, args, callInfo -> p.tremoloskew(a
 
 // -- tremolophase() ---------------------------------------------------------------------------------------------------
 
-private val tremoloPhaseMutation = voiceModifier {
-    copy(tremoloPhase = it?.asDoubleOrNull())
-}
+private val tremoloPhaseMutation = voiceModifier { copy(tremoloPhase = it?.asDoubleOrNull()) }
 
-private fun applyTremoloPhase(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyTremoloPhase(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, tremoloPhaseMutation)
 }
 
@@ -684,9 +600,7 @@ val StrudelPattern.tremolophase by dslPatternExtension { p, args, /* callInfo */
 val tremolophase by dslFunction { args, /* callInfo */ _ -> args.toPattern(tremoloPhaseMutation) }
 
 @StrudelDsl
-val String.tremolophase by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyTremoloPhase(p, args)
-}
+val String.tremolophase by dslStringExtension { p, args, /* callInfo */ _ -> applyTremoloPhase(p, args) }
 
 /** Alias for [tremolophase] */
 @StrudelDsl
@@ -702,13 +616,10 @@ val String.tremphase by dslStringExtension { p, args, callInfo -> p.tremolophase
 
 // -- tremoloshape() ---------------------------------------------------------------------------------------------------
 
-private val tremoloShapeMutation = voiceModifier { shape ->
-    val newShape = shape?.toString()?.lowercase()
-    copy(tremoloShape = newShape)
-}
+private val tremoloShapeMutation = voiceModifier { shape -> copy(tremoloShape = shape?.toString()?.lowercase()) }
 
-private fun applyTremoloShape(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyControlFromParams(args, tremoloShapeMutation) { src, ctrl ->
+fun applyTremoloShape(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source._applyControlFromParams(args, tremoloShapeMutation) { src, ctrl ->
         src.copy(tremoloShape = ctrl.tremoloShape)
     }
 }
@@ -722,9 +633,7 @@ val StrudelPattern.tremoloshape by dslPatternExtension { p, args, /* callInfo */
 val tremoloshape by dslFunction { args, /* callInfo */ _ -> args.toPattern(tremoloShapeMutation) }
 
 @StrudelDsl
-val String.tremoloshape by dslStringExtension { p, args, /* callInfo */ _ ->
-    applyTremoloShape(p, args)
-}
+val String.tremoloshape by dslStringExtension { p, args, /* callInfo */ _ -> applyTremoloShape(p, args) }
 
 /** Alias for [tremoloshape] */
 @StrudelDsl

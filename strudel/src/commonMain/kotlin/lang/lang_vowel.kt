@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel._applyControlFromParams
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -22,7 +23,7 @@ private val vowelMutation = voiceModifier { vowel ->
 }
 
 private fun applyVowel(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source.applyControlFromParams(args, vowelMutation) { src, ctrl ->
+    return source._applyControlFromParams(args, vowelMutation) { src, ctrl ->
         src.copy(vowel = ctrl.vowel)
     }
 }

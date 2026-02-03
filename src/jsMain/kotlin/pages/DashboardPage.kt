@@ -140,7 +140,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
         // Highlight in editor
         event.sourceLocations
             ?.locations
-            ?.takeLast(5)
+            ?.takeLast(2)
             ?.forEach { doIt(it) }
     }
 

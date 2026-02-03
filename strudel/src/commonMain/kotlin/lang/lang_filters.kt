@@ -17,11 +17,9 @@ var strudelLangFiltersInit = false
 
 // -- lpf() ------------------------------------------------------------------------------------------------------------
 
-private val lpfMutation = voiceModifier {
-    copy(cutoff = it?.asDoubleOrNull())
-}
+private val lpfMutation = voiceModifier { copy(cutoff = it?.asDoubleOrNull()) }
 
-private fun applyLpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, lpfMutation)
 }
 
@@ -75,11 +73,9 @@ val String.lp by dslStringExtension { p, args, callInfo -> p.lpf(args, callInfo)
 
 // -- hpf() ------------------------------------------------------------------------------------------------------------
 
-private val hpfMutation = voiceModifier {
-    copy(hcutoff = it?.asDoubleOrNull())
-}
+private val hpfMutation = voiceModifier { copy(hcutoff = it?.asDoubleOrNull()) }
 
-private fun applyHpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyHpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, hpfMutation)
 }
 
@@ -121,11 +117,9 @@ val String.hcutoff by dslStringExtension { p, args, callInfo -> p.hpf(args, call
 
 // -- bandf() / bpf() --------------------------------------------------------------------------------------------------
 
-private val bandfMutation = voiceModifier {
-    copy(bandf = it?.asDoubleOrNull())
-}
+private val bandfMutation = voiceModifier { copy(bandf = it?.asDoubleOrNull()) }
 
-private fun applyBandf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyBandf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, bandfMutation)
 }
 
@@ -167,11 +161,9 @@ val String.bp by dslStringExtension { p, args, callInfo -> p.bandf(args, callInf
 
 // -- notchf() ---------------------------------------------------------------------------------------------------------
 
-private val notchfMutation = voiceModifier {
-    copy(notchf = it?.asDoubleOrNull())
-}
+private val notchfMutation = voiceModifier { copy(notchf = it?.asDoubleOrNull()) }
 
-private fun applyNotchf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNotchf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, notchfMutation)
 }
 
@@ -189,11 +181,9 @@ val String.notchf by dslStringExtension { p, args, callInfo -> p.notchf(args, ca
 
 // -- resonance() / res() - Low Pass Filter resonance -----------------------------------------------------------------
 
-private val resonanceMutation = voiceModifier {
-    copy(resonance = it?.asDoubleOrNull())
-}
+private val resonanceMutation = voiceModifier { copy(resonance = it?.asDoubleOrNull()) }
 
-private fun applyResonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyResonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, resonanceMutation)
 }
 
@@ -235,11 +225,9 @@ val String.lpq by dslStringExtension { p, args, callInfo -> p.resonance(args, ca
 
 // -- hresonance() / hres() - High Pass Filter resonance --------------------------------------------------------------
 
-private val hresonanceMutation = voiceModifier {
-    copy(hresonance = it?.asDoubleOrNull())
-}
+private val hresonanceMutation = voiceModifier { copy(hresonance = it?.asDoubleOrNull()) }
 
-private fun applyHresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyHresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, hresonanceMutation)
 }
 
@@ -281,11 +269,9 @@ val String.hpq by dslStringExtension { p, args, callInfo -> p.hresonance(args, c
 
 // -- bandq() - Band Pass Filter resonance ----------------------------------------------------------------------------
 
-private val bandqMutation = voiceModifier {
-    copy(bandq = it?.asDoubleOrNull())
-}
+private val bandqMutation = voiceModifier { copy(bandq = it?.asDoubleOrNull()) }
 
-private fun applyBandq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyBandq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, bandqMutation)
 }
 
@@ -315,11 +301,9 @@ val String.bpq by dslStringExtension { p, args, callInfo -> p.bandq(args, callIn
 
 // -- nresonance() / nres() - Notch Filter resonance ------------------------------------------------------------------
 
-private val nresonanceMutation = voiceModifier {
-    copy(nresonance = it?.asDoubleOrNull())
-}
+private val nresonanceMutation = voiceModifier { copy(nresonance = it?.asDoubleOrNull()) }
 
-private fun applyNresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, nresonanceMutation)
 }
 
@@ -349,11 +333,9 @@ val String.nres by dslStringExtension { p, args, callInfo -> p.nresonance(args, 
 
 // -- lpattack() - Low Pass Filter Envelope Attack -----------------------------------------------------------------------
 
-private val lpattackMutation = voiceModifier {
-    copy(lpattack = it?.asDoubleOrNull())
-}
+private val lpattackMutation = voiceModifier { copy(lpattack = it?.asDoubleOrNull()) }
 
-private fun applyLpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, lpattackMutation)
 }
 
@@ -383,11 +365,9 @@ val String.lpa by dslStringExtension { p, args, callInfo -> p.lpattack(args, cal
 
 // -- lpdecay() - Low Pass Filter Envelope Decay -------------------------------------------------------------------------
 
-private val lpdecayMutation = voiceModifier {
-    copy(lpdecay = it?.asDoubleOrNull())
-}
+private val lpdecayMutation = voiceModifier { copy(lpdecay = it?.asDoubleOrNull()) }
 
-private fun applyLpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, lpdecayMutation)
 }
 
@@ -417,11 +397,9 @@ val String.lpd by dslStringExtension { p, args, callInfo -> p.lpdecay(args, call
 
 // -- lpsustain() - Low Pass Filter Envelope Sustain ---------------------------------------------------------------------
 
-private val lpsustainMutation = voiceModifier {
-    copy(lpsustain = it?.asDoubleOrNull())
-}
+private val lpsustainMutation = voiceModifier { copy(lpsustain = it?.asDoubleOrNull()) }
 
-private fun applyLpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, lpsustainMutation)
 }
 
@@ -451,11 +429,9 @@ val String.lps by dslStringExtension { p, args, callInfo -> p.lpsustain(args, ca
 
 // -- lprelease() - Low Pass Filter Envelope Release ---------------------------------------------------------------------
 
-private val lpreleaseMutation = voiceModifier {
-    copy(lprelease = it?.asDoubleOrNull())
-}
+private val lpreleaseMutation = voiceModifier { copy(lprelease = it?.asDoubleOrNull()) }
 
-private fun applyLprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, lpreleaseMutation)
 }
 
@@ -485,11 +461,9 @@ val String.lpr by dslStringExtension { p, args, callInfo -> p.lprelease(args, ca
 
 // -- lpenv() - Low Pass Filter Envelope Depth ---------------------------------------------------------------------------
 
-private val lpenvMutation = voiceModifier {
-    copy(lpenv = it?.asDoubleOrNull())
-}
+private val lpenvMutation = voiceModifier { copy(lpenv = it?.asDoubleOrNull()) }
 
-private fun applyLpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, lpenvMutation)
 }
 
@@ -519,11 +493,9 @@ val String.lpe by dslStringExtension { p, args, callInfo -> p.lpenv(args, callIn
 
 // -- hpattack() - High Pass Filter Envelope Attack ----------------------------------------------------------------------
 
-private val hpattackMutation = voiceModifier {
-    copy(hpattack = it?.asDoubleOrNull())
-}
+private val hpattackMutation = voiceModifier { copy(hpattack = it?.asDoubleOrNull()) }
 
-private fun applyHpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyHpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, hpattackMutation)
 }
 
@@ -553,11 +525,9 @@ val String.hpa by dslStringExtension { p, args, callInfo -> p.hpattack(args, cal
 
 // -- hpdecay() - High Pass Filter Envelope Decay ------------------------------------------------------------------------
 
-private val hpdecayMutation = voiceModifier {
-    copy(hpdecay = it?.asDoubleOrNull())
-}
+private val hpdecayMutation = voiceModifier { copy(hpdecay = it?.asDoubleOrNull()) }
 
-private fun applyHpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyHpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, hpdecayMutation)
 }
 
@@ -587,11 +557,9 @@ val String.hpd by dslStringExtension { p, args, callInfo -> p.hpdecay(args, call
 
 // -- hpsustain() - High Pass Filter Envelope Sustain --------------------------------------------------------------------
 
-private val hpsustainMutation = voiceModifier {
-    copy(hpsustain = it?.asDoubleOrNull())
-}
+private val hpsustainMutation = voiceModifier { copy(hpsustain = it?.asDoubleOrNull()) }
 
-private fun applyHpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyHpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, hpsustainMutation)
 }
 
@@ -621,11 +589,9 @@ val String.hps by dslStringExtension { p, args, callInfo -> p.hpsustain(args, ca
 
 // -- hprelease() - High Pass Filter Envelope Release --------------------------------------------------------------------
 
-private val hpreleaseMutation = voiceModifier {
-    copy(hprelease = it?.asDoubleOrNull())
-}
+private val hpreleaseMutation = voiceModifier { copy(hprelease = it?.asDoubleOrNull()) }
 
-private fun applyHprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyHprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, hpreleaseMutation)
 }
 
@@ -655,11 +621,9 @@ val String.hpr by dslStringExtension { p, args, callInfo -> p.hprelease(args, ca
 
 // -- hpenv() - High Pass Filter Envelope Depth --------------------------------------------------------------------------
 
-private val hpenvMutation = voiceModifier {
-    copy(hpenv = it?.asDoubleOrNull())
-}
+private val hpenvMutation = voiceModifier { copy(hpenv = it?.asDoubleOrNull()) }
 
-private fun applyHpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyHpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, hpenvMutation)
 }
 
@@ -689,11 +653,9 @@ val String.hpe by dslStringExtension { p, args, callInfo -> p.hpenv(args, callIn
 
 // -- bpattack() - Band Pass Filter Envelope Attack ----------------------------------------------------------------------
 
-private val bpattackMutation = voiceModifier {
-    copy(bpattack = it?.asDoubleOrNull())
-}
+private val bpattackMutation = voiceModifier { copy(bpattack = it?.asDoubleOrNull()) }
 
-private fun applyBpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyBpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, bpattackMutation)
 }
 
@@ -723,11 +685,9 @@ val String.bpa by dslStringExtension { p, args, callInfo -> p.bpattack(args, cal
 
 // -- bpdecay() - Band Pass Filter Envelope Decay ------------------------------------------------------------------------
 
-private val bpdecayMutation = voiceModifier {
-    copy(bpdecay = it?.asDoubleOrNull())
-}
+private val bpdecayMutation = voiceModifier { copy(bpdecay = it?.asDoubleOrNull()) }
 
-private fun applyBpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyBpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, bpdecayMutation)
 }
 
@@ -757,11 +717,9 @@ val String.bpd by dslStringExtension { p, args, callInfo -> p.bpdecay(args, call
 
 // -- bpsustain() - Band Pass Filter Envelope Sustain --------------------------------------------------------------------
 
-private val bpsustainMutation = voiceModifier {
-    copy(bpsustain = it?.asDoubleOrNull())
-}
+private val bpsustainMutation = voiceModifier { copy(bpsustain = it?.asDoubleOrNull()) }
 
-private fun applyBpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyBpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, bpsustainMutation)
 }
 
@@ -791,11 +749,9 @@ val String.bps by dslStringExtension { p, args, callInfo -> p.bpsustain(args, ca
 
 // -- bprelease() - Band Pass Filter Envelope Release --------------------------------------------------------------------
 
-private val bpreleaseMutation = voiceModifier {
-    copy(bprelease = it?.asDoubleOrNull())
-}
+private val bpreleaseMutation = voiceModifier { copy(bprelease = it?.asDoubleOrNull()) }
 
-private fun applyBprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyBprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, bpreleaseMutation)
 }
 
@@ -825,11 +781,9 @@ val String.bpr by dslStringExtension { p, args, callInfo -> p.bprelease(args, ca
 
 // -- bpenv() - Band Pass Filter Envelope Depth --------------------------------------------------------------------------
 
-private val bpenvMutation = voiceModifier {
-    copy(bpenv = it?.asDoubleOrNull())
-}
+private val bpenvMutation = voiceModifier { copy(bpenv = it?.asDoubleOrNull()) }
 
-private fun applyBpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyBpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, bpenvMutation)
 }
 
@@ -859,11 +813,9 @@ val String.bpe by dslStringExtension { p, args, callInfo -> p.bpenv(args, callIn
 
 // -- nfattack() - Notch Filter Envelope Attack (NOT IN ORIGINAL STRUDEL) -------------------------------------------------
 
-private val nfattackMutation = voiceModifier {
-    copy(nfattack = it?.asDoubleOrNull())
-}
+private val nfattackMutation = voiceModifier { copy(nfattack = it?.asDoubleOrNull()) }
 
-private fun applyNfattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, nfattackMutation)
 }
 
@@ -893,11 +845,9 @@ val String.nfa by dslStringExtension { p, args, callInfo -> p.nfattack(args, cal
 
 // -- nfdecay() - Notch Filter Envelope Decay (NOT IN ORIGINAL STRUDEL) ---------------------------------------------------
 
-private val nfdecayMutation = voiceModifier {
-    copy(nfdecay = it?.asDoubleOrNull())
-}
+private val nfdecayMutation = voiceModifier { copy(nfdecay = it?.asDoubleOrNull()) }
 
-private fun applyNfdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, nfdecayMutation)
 }
 
@@ -927,11 +877,9 @@ val String.nfd by dslStringExtension { p, args, callInfo -> p.nfdecay(args, call
 
 // -- nfsustain() - Notch Filter Envelope Sustain (NOT IN ORIGINAL STRUDEL) -----------------------------------------------
 
-private val nfsustainMutation = voiceModifier {
-    copy(nfsustain = it?.asDoubleOrNull())
-}
+private val nfsustainMutation = voiceModifier { copy(nfsustain = it?.asDoubleOrNull()) }
 
-private fun applyNfsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, nfsustainMutation)
 }
 
@@ -961,11 +909,9 @@ val String.nfs by dslStringExtension { p, args, callInfo -> p.nfsustain(args, ca
 
 // -- nfrelease() - Notch Filter Envelope Release (NOT IN ORIGINAL STRUDEL) -----------------------------------------------
 
-private val nfreleaseMutation = voiceModifier {
-    copy(nfrelease = it?.asDoubleOrNull())
-}
+private val nfreleaseMutation = voiceModifier { copy(nfrelease = it?.asDoubleOrNull()) }
 
-private fun applyNfrelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfrelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, nfreleaseMutation)
 }
 
@@ -995,11 +941,9 @@ val String.nfr by dslStringExtension { p, args, callInfo -> p.nfrelease(args, ca
 
 // -- nfenv() - Notch Filter Envelope Depth (NOT IN ORIGINAL STRUDEL) -----------------------------------------------------
 
-private val nfenvMutation = voiceModifier {
-    copy(nfenv = it?.asDoubleOrNull())
-}
+private val nfenvMutation = voiceModifier { copy(nfenv = it?.asDoubleOrNull()) }
 
-private fun applyNfenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, nfenvMutation)
 }
 

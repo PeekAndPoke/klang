@@ -2,10 +2,7 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
-import io.peekandpoke.klang.strudel._liftNumericField
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.BindPattern
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
@@ -95,7 +92,7 @@ private fun applyScale(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
             it.scaleMutation(it.value?.asString).resolveNote()
         }
     } else {
-        source.applyControlFromParams(args, scaleMutation) { src, ctrl ->
+        source._applyControlFromParams(args, scaleMutation) { src, ctrl ->
             src.copy(scale = ctrl.scale).resolveNote()
         }
     }
@@ -128,7 +125,7 @@ private fun applyNote(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
             it.resolveNote().copy(soundIndex = null, value = null)
         }
     } else {
-        source.applyControlFromParams(args, noteMutation) { src, ctrl ->
+        source._applyControlFromParams(args, noteMutation) { src, ctrl ->
             src.noteMutation(
                 ctrl.note ?: ctrl.value?.asString
             )
@@ -168,7 +165,7 @@ private fun applyN(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
             )
         }
     } else {
-        source.applyControlFromParams(args, nMutation) { src, ctrl ->
+        source._applyControlFromParams(args, nMutation) { src, ctrl ->
             src.nMutation(
                 ctrl.soundIndex ?: ctrl.value?.asInt
             )
@@ -209,7 +206,7 @@ private fun applySound(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
             it.soundMutation(it.value?.asString)
         }
     } else {
-        source.applyControlFromParams(args, soundMutation) { src, ctrl ->
+        source._applyControlFromParams(args, soundMutation) { src, ctrl ->
             src.copy(
                 sound = ctrl.sound ?: src.sound,
                 soundIndex = ctrl.soundIndex ?: src.soundIndex,
@@ -256,7 +253,7 @@ private fun applyBank(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
             it.bankMutation(it.value?.asString)
         }
     } else {
-        source.applyControlFromParams(args, bankMutation) { src, ctrl ->
+        source._applyControlFromParams(args, bankMutation) { src, ctrl ->
             src.bankMutation(ctrl.bank ?: src.bank)
         }
     }
@@ -896,7 +893,7 @@ val chord by dslFunction { args, _ ->
 /** Applies chord expansion to a pattern */
 @StrudelDsl
 val StrudelPattern.chord by dslPatternExtension { p, args, _ ->
-    p.applyControlFromParams(args, chordMutation) { src, ctrl ->
+    p._applyControlFromParams(args, chordMutation) { src, ctrl ->
         src.chordMutation(ctrl.chord ?: ctrl.value?.asString)
     }
 }

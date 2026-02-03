@@ -16,9 +16,7 @@ var strudelLangConditionalInit = false
 // -- firstOf() --------------------------------------------------------------------------------------------------------
 
 fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    @Suppress("UNCHECKED_CAST")
-    val transform: (StrudelPattern) -> StrudelPattern =
-        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+    val transform = args.getOrNull(1).toPatternMapper() ?: return source
 
     return source._innerJoin(args.take(1)) { src, nValue ->
         val n = nValue?.asInt ?: 1
@@ -54,15 +52,11 @@ fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
  */
 @StrudelDsl
 val firstOf by dslFunction { args, _ ->
-    val n = args.getOrNull(0) ?: StrudelDslArg.of(1)
-
-    @Suppress("UNCHECKED_CAST")
-    val transform: (StrudelPattern) -> StrudelPattern =
-        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
-
+    val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
+    val transform = args.getOrNull(1).toPatternMapper() ?: { it }
     val pat = args.getOrNull(2)?.toPattern() ?: silence
 
-    applyFirstOf(pat, listOf(n, transform).asStrudelDslArgs())
+    applyFirstOf(pat, listOf(nArg, transform).asStrudelDslArgs())
 }
 
 @StrudelDsl
@@ -89,8 +83,7 @@ val String.every by dslStringExtension { source, args, callInfo -> source.firstO
 
 private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     @Suppress("UNCHECKED_CAST")
-    val transform: (StrudelPattern) -> StrudelPattern =
-        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+    val transform = args.getOrNull(1).toPatternMapper() ?: return source
 
     return source._innerJoin(args.take(1)) { src, nValue ->
         val n = nValue?.asInt ?: 1
@@ -126,15 +119,11 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
  */
 @StrudelDsl
 val lastOf by dslFunction { args, /* callInfo */ _ ->
-    val n = args.getOrNull(0) ?: StrudelDslArg.of(1)
-
-    @Suppress("UNCHECKED_CAST")
-    val transform: (StrudelPattern) -> StrudelPattern =
-        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
-
+    val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
+    val transform = args.getOrNull(1).toPatternMapper() ?: { it }
     val pat = args.getOrNull(2)?.toPattern() ?: silence
 
-    applyLastOf(pat, listOf(n, transform).asStrudelDslArgs())
+    applyLastOf(pat, listOf(nArg, transform).asStrudelDslArgs())
 }
 
 @StrudelDsl
@@ -170,9 +159,7 @@ val String.lastOf by dslStringExtension { source, args, /* callInfo */ _ ->
  */
 @StrudelDsl
 val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
-    @Suppress("UNCHECKED_CAST")
-    val transform: (StrudelPattern) -> StrudelPattern =
-        args.getOrNull(1)?.value as? (StrudelPattern) -> StrudelPattern ?: { it }
+    val transform = args.getOrNull(1).toPatternMapper() ?: { it }
 
     // JavaScript: when(on, func, pat) => on ? func(pat) : pat
     p._innerJoin(args.take(1)) { src, onValue ->
@@ -187,7 +174,7 @@ val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
 @StrudelDsl
 fun StrudelPattern.`when`(
     condition: StrudelPattern,
-    transform: (StrudelPattern) -> StrudelPattern,
+    transform: StrudelPatternMapper,
 ): StrudelPattern {
     return this.`when`(listOf(condition, transform).asStrudelDslArgs())
 }
@@ -199,7 +186,7 @@ val String.`when` by dslStringExtension { p, args, callInfo -> p.`when`(args, ca
 @StrudelDsl
 fun String.`when`(
     condition: StrudelPattern,
-    transform: (StrudelPattern) -> StrudelPattern,
+    transform: StrudelPatternMapper,
 ): StrudelPattern {
     return this.`when`(listOf(condition, transform).asStrudelDslArgs())
 }

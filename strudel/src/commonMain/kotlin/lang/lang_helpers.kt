@@ -25,9 +25,11 @@ var strudelLangHelpersInit = false
 
 // --- Type Aliases ---
 
-typealias VoiceDataModifier = StrudelVoiceData.(Any?) -> StrudelVoiceData
+typealias VoiceModifier = StrudelVoiceData.(Any?) -> StrudelVoiceData
 
-typealias VoiceDataMerger = (source: StrudelVoiceData, control: StrudelVoiceData) -> StrudelVoiceData
+typealias VoiceMerger = (source: StrudelVoiceData, control: StrudelVoiceData) -> StrudelVoiceData
+
+typealias StrudelPatternMapper = (source: StrudelPattern) -> StrudelPattern
 
 typealias StrudelDslFn = (args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
 
@@ -95,9 +97,7 @@ fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): Co
 }
 
 /** Default modifier for patterns that populates VoiceData.value */
-val voiceValueModifier: VoiceDataModifier = {
-    copy(value = it?.asVoiceValue())
-}
+val voiceValueModifier = voiceModifier { copy(value = it?.asVoiceValue()) }
 
 // --- Value Conversion Helpers ---
 
@@ -125,7 +125,25 @@ internal fun Any.asLongOrNull(): Long? = when (this) {
 // --- High Level Helpers ---
 
 /** Creates a voice modifier */
-fun voiceModifier(modify: VoiceDataModifier): VoiceDataModifier = modify
+fun voiceModifier(modify: VoiceModifier): VoiceModifier = modify
+
+/** Creates a pattern mapper */
+fun patternMapper(mapper: Any?): StrudelPatternMapper? {
+    return when (mapper) {
+        is Function1<*, *> -> {
+            { input ->
+                try {
+                    @Suppress("UNCHECKED_CAST")
+                    (mapper as? StrudelPatternMapper)?.invoke(input) ?: input
+                } catch (_: Exception) {
+                    input
+                }
+            }
+        }
+
+        else -> null
+    }
+}
 
 /**
  * Creates a DSL function that returns a StrudelPattern.
@@ -190,30 +208,14 @@ fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPatt
 }
 
 /**
- * Applies a modification to the pattern using the provided arguments.
- * Arguments are interpreted as a control pattern.
+ * Safely converts a single argument into a [StrudelPatternMapper].
  */
-fun StrudelPattern.applyControlFromParams(
-    args: List<StrudelDslArg<Any?>>,
-    modify: VoiceDataModifier,
-    combine: VoiceDataMerger,
-): StrudelPattern {
-    if (args.isEmpty()) return this
-
-    val control = args.toPattern(modify)
-
-    val mapper: (StrudelVoiceData) -> StrudelVoiceData = { data ->
-        val value = data.value
-        if (value != null) data.modify(value) else data
-    }
-
-    return this.applyControl(control, mapper, combine)
-}
+fun StrudelDslArg<Any?>?.toPatternMapper() = patternMapper(this?.value)
 
 /**
  * Converts a single argument into a StrudelPattern.
  */
-fun StrudelDslArg<Any?>.toPattern(modify: VoiceDataModifier = voiceValueModifier): StrudelPattern =
+fun StrudelDslArg<Any?>.toPattern(modify: VoiceModifier = voiceValueModifier): StrudelPattern =
     listOf(this).toPattern(modify)
 
 /**
@@ -222,7 +224,7 @@ fun StrudelDslArg<Any?>.toPattern(modify: VoiceDataModifier = voiceValueModifier
  * - Single String/Number -> parses to AtomicPattern using [modify].
  * - Multiple args -> returns a SequencePattern of the parsed items.
  */
-fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceDataModifier = voiceValueModifier): StrudelPattern {
+fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceModifier = voiceValueModifier): StrudelPattern {
     val patterns = this.toListOfPatterns(modify)
 
     return when {
@@ -236,7 +238,7 @@ fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceDataModifier = voiceValueMo
  * Recursively flattens arguments into a list of StrudelPatterns.
  */
 internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
-    modify: VoiceDataModifier,
+    modify: VoiceModifier,
 ): List<StrudelPattern> {
     val atomFactory = { text: String, sourceLocations: SourceLocationChain? ->
         AtomicPattern(
@@ -285,7 +287,7 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
 fun StrudelPattern.applyControl(
     control: StrudelPattern,
     mapper: (StrudelVoiceData) -> StrudelVoiceData,
-    combiner: VoiceDataMerger,
+    combiner: VoiceMerger,
 ): StrudelPattern = ControlPattern(
     source = this,
     control = control,
@@ -328,15 +330,15 @@ class DslPatternMethod(
     operator fun invoke() = invoke(args = emptyList())
 
     @JvmName("invokeBlock")
-    operator fun invoke(block: (StrudelPattern) -> StrudelPattern) =
+    operator fun invoke(block: StrudelPatternMapper) =
         invoke(args = listOf(block).asStrudelDslArgs())
 
     @JvmName("invokeBlock")
-    operator fun invoke(p1: Any, block: (StrudelPattern) -> StrudelPattern) =
+    operator fun invoke(p1: Any, block: StrudelPatternMapper) =
         invoke(args = listOf(p1, block).asStrudelDslArgs())
 
     @JvmName("invokeBlocksVararg")
-    operator fun invoke(vararg block: (StrudelPattern) -> StrudelPattern) =
+    operator fun invoke(vararg block: StrudelPatternMapper) =
         invoke(args = block.toList().asStrudelDslArgs())
 
     @JvmName("invokeVararg")
