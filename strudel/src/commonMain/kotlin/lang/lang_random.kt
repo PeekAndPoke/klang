@@ -6,8 +6,6 @@ import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.lang.addons.oneMinusValue
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
 import kotlin.math.floor
@@ -55,11 +53,7 @@ val String.withSeed by dslStringExtension { pattern, args, /* callInfo */ _ -> a
 /** Continuous pattern that produces a random value between 0 and 1 */
 @StrudelDsl
 val rand by dslObject {
-    ContinuousPattern { from, _, ctx ->
-        val rand = ctx.getSeededRandom(from, "rand")
-
-        rand.nextDouble()
-    }
+    ContinuousPattern { from, _, ctx -> ctx.getSeededRandom(from, "rand").nextDouble() }
 }
 
 /** Continuous pattern that produces a random value between -1 and 1 */
@@ -80,9 +74,7 @@ val rand2 by dslObject { rand.range(-1.0, 1.0) }
 @StrudelDsl
 val randCycle by dslObject {
     ContinuousPattern { fromTime, _, ctx ->
-        val cycle = floor(fromTime)
-        val rand = ctx.getSeededRandom(cycle, "randCycle")
-        rand.nextDouble()
+        ctx.getSeededRandom(floor(fromTime), "randCycle").nextDouble()
     }
 }
 
@@ -101,13 +93,7 @@ val brandBy by dslFunction { args, /* callInfo */ _ ->
     val probArg = args.getOrNull(0)
     val probVal = probArg?.value
 
-    val probPattern: StrudelPattern = when (probVal) {
-        is StrudelPattern -> probVal
-
-        else -> parseMiniNotation(probArg ?: StrudelDslArg.of("0.5")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
-    }
+    val probPattern: StrudelPattern = (probArg ?: StrudelDslArg.of("0.5")).toPattern()
 
     val staticProb = probVal?.asDoubleOrNull()
 
@@ -157,13 +143,7 @@ val irand by dslFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
-    val nPattern: StrudelPattern = when (nVal) {
-        is StrudelPattern -> nVal
-
-        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
-    }
+    val nPattern: StrudelPattern = (nArg ?: StrudelDslArg.of("0")).toPattern()
 
     val staticN = nVal?.asIntOrNull()
 
@@ -211,27 +191,8 @@ val irand by dslFunction { args, /* callInfo */ _ ->
 // -- degradeBy() ------------------------------------------------------------------------------------------------------
 
 fun applyDegradeBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val probArg = args.getOrNull(0)
-
-    val probPattern: StrudelPattern? = when (val probVal = probArg?.value) {
-        null -> null
-
-        is StrudelPattern -> probVal
-
-        else -> parseMiniNotation(probArg) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
-    }
-
-    if (probPattern != null) {
-        return SometimesPattern.discardOnMatch(source = pattern, probabilityPattern = probPattern)
-    }
-
-    if (probArg?.value is Number) {
-        return SometimesPattern.discardOnMatch(source = pattern, probabilityValue = probArg.value.toDouble())
-    }
-
-    return SometimesPattern.discardOnMatch(source = pattern, probabilityValue = 0.5)
+    // degradeBy(x) is just degradeByWith(rand, x)
+    return applyDegradeByWith(pattern, listOf(StrudelDslArg.of(rand)) + args)
 }
 
 /**
@@ -269,10 +230,16 @@ val String.degrade by dslStringExtension { pattern, args, /* callInfo */ _ -> ap
 // -- degradeByWith() --------------------------------------------------------------------------------------------------
 
 private fun applyDegradeByWith(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // JavaScript: pat.fmap((a) => (_) => a).appLeft(withPat.filterValues((v) => v > x))
+    // Keeps events where withPat > x
+    // Examples:
+    //   degradeByWith(rand, 0.2) -> keep where rand > 0.2 (~80% kept)
+    //   degradeByWith(rand, 0.5) -> keep where rand > 0.5 (~50% kept)
+    //   degradeByWith(rand, 0.8) -> keep where rand > 0.8 (~20% kept)
     val withPat = args.getOrNull(0)?.toPattern() ?: return pattern
+    val xPat = (args.getOrNull(1) ?: StrudelDslArg.of(0.5)).toPattern()
 
-    return pattern._innerJoin(args.drop(1)) { src, xValue ->
-        val x = xValue?.asDouble ?: 0.5
+    return pattern._lift(xPat) { x, src ->
         src.appLeft(withPat.filterValues { v -> (v?.asDouble ?: 0.0) > x })
     }
 }
@@ -287,44 +254,21 @@ private fun applyDegradeByWith(pattern: StrudelPattern, args: List<StrudelDslArg
  * s("bd*8").degradeByWith(rand._segment(1), 0.5)
  */
 @StrudelDsl
-val StrudelPattern.degradeByWith by dslPatternExtension { pattern, args, _ ->
-    applyDegradeByWith(pattern, args)
-}
+val StrudelPattern.degradeByWith by dslPatternExtension { pattern, args, _ -> applyDegradeByWith(pattern, args) }
 
 /**
  * Randomly removes events from the pattern using a custom random pattern.
  */
 @StrudelDsl
-val String.degradeByWith by dslStringExtension { pattern, args, callInfo ->
-    pattern.degradeByWith(args, callInfo)
-}
+val String.degradeByWith by dslStringExtension { pattern, args, callInfo -> pattern.degradeByWith(args, callInfo) }
 
 // -- undegradeBy() ----------------------------------------------------------------------------------------------------
 
 fun applyUndegradeBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val probArg = args.getOrNull(0)
-
-    val probPattern: StrudelPattern? = when (val probVal = probArg?.value) {
-        null -> null
-
-        is StrudelPattern -> probVal
-
-        else -> parseMiniNotation(probArg) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
-    }?.oneMinusValue()
-
-    if (probPattern != null) {
-        return SometimesPattern.discardOnMiss(source = pattern, probabilityPattern = probPattern)
-    }
-
-    if (probArg?.value is Number) {
-        return SometimesPattern.discardOnMiss(source = pattern, probabilityValue = 1.0 - probArg.value.toDouble())
-    }
-
-    return SometimesPattern.discardOnMiss(source = pattern, probabilityValue = 0.5)
+    // undegradeBy(x) is just undegradeByWith(rand, x)
+    // undegradeBy(0) = 100% removal, undegradeBy(1) = 0% removal
+    return applyUndegradeByWith(pattern, listOf(StrudelDslArg.of(rand)) + args)
 }
-
 
 /**
  * Inverse of `degradeBy`: Randomly removes events from the pattern by a given amount.
@@ -358,11 +302,17 @@ val String.undegradeBy by dslStringExtension { pattern, args, /* callInfo */ _ -
 // -- undegradeByWith() --------------------------------------------------------------------------------------------------
 
 private fun applyUndegradeByWith(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // Inverse of degradeByWith: keep where withPat >= (1 - x)
+    // Keeps events where withPat >= (1 - x), which is equivalent to keeping where withPat > (1 - x) for continuous values
+    // Examples:
+    //   undegradeByWith(rand, 0.1) -> keep where rand >= 0.9 (~10% kept)
+    //   undegradeByWith(rand, 0.5) -> keep where rand >= 0.5 (~50% kept)
+    //   undegradeByWith(rand, 1.0) -> keep where rand >= 0.0 (~100% kept)
     val withPat = args.getOrNull(0)?.toPattern() ?: return pattern
+    val xPat = (args.getOrNull(1) ?: StrudelDslArg.of(0.5)).toPattern()
 
-    return pattern._innerJoin(args.drop(1)) { src, xValue ->
-        val x = xValue?.asDouble ?: 0.5
-        src.appLeft(withPat.filterValues { v -> (v?.asDouble ?: 0.0) <= x })
+    return pattern._lift(xPat) { x, src ->
+        src.appLeft(withPat.filterValues { v -> (v?.asDouble ?: 0.0) >= (1 - x) })
     }
 }
 
@@ -373,7 +323,7 @@ private fun applyUndegradeByWith(pattern: StrudelPattern, args: List<StrudelDslA
  * @param {withPat} Pattern providing random values for comparison
  * @param {x}       Threshold value (0..1)
  * @example
- * s("bd*8").undegradeByWith(rand._segment(1), 0.5)
+ * s("bd*8").undegradeByWith(randCycle, 0.5)
  */
 @StrudelDsl
 val StrudelPattern.undegradeByWith by dslPatternExtension { pattern, args, _ ->
@@ -416,24 +366,16 @@ private fun applySometimesBy(
 ): StrudelPattern {
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
 
-    // JavaScript sometimesBy: reify(patx).fmap((x) => stack(pat._degradeBy(x), func(pat._undegradeBy(1 - x)))).innerJoin()
-    // JavaScript someCyclesBy: uses rand._segment(1) for cycle-based seeding
+    // Use 'when' with comparison operators for cleaner implementation
+    // Apply transform when random < probability
     return pattern._innerJoin(args.take(1)) { src, probValue ->
         val x = probValue?.asDouble ?: 0.5
 
-        if (seedByCycle) {
-            // Use randCycle for cycle-based seeding (all events in a cycle get same decision)
-            stack(
-                src.degradeByWith(randCycle, listOf(x).asStrudelDslArgs()),
-                transform(src.undegradeByWith(randCycle, listOf(1 - x).asStrudelDslArgs()))
-            )
-        } else {
-            // Use regular degradeBy/undegradeBy for per-event decisions
-            stack(
-                src.degradeBy(listOf(x).asStrudelDslArgs()),
-                transform(src.undegradeBy(listOf(1 - x).asStrudelDslArgs()))
-            )
-        }
+        // Choose rand or randCycle based on seedByCycle
+        val randomPattern = if (seedByCycle) randCycle else rand
+
+        // Apply transform when random < x, otherwise keep original
+        src.`when`(randomPattern.lt(x), transform)
     }
 }
 
@@ -462,12 +404,8 @@ val String.sometimesBy by dslStringExtension { pattern, args, /* callInfo */ _ -
 
 private fun applySometimes(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
-
     val x = 0.5
-    return stack(
-        pattern.degradeBy(listOf(x).asStrudelDslArgs()),
-        transform(pattern.undegradeBy(listOf(1 - x).asStrudelDslArgs()))
-    )
+    return pattern.`when`(rand.lt(x), transform)
 }
 
 /**
@@ -490,12 +428,8 @@ val String.sometimes by dslStringExtension { pattern, args, /* callInfo */ _ ->
 
 private fun applyOften(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
-
     val x = 0.75
-    return stack(
-        pattern.degradeBy(listOf(x).asStrudelDslArgs()),
-        transform(pattern.undegradeBy(listOf(1 - x).asStrudelDslArgs()))
-    )
+    return pattern.`when`(rand.lt(x), transform)
 }
 
 /** Shorthand for `.sometimesBy(0.75, fn)` */
@@ -514,12 +448,8 @@ val String.often by dslStringExtension { pattern, args, /* callInfo */ _ ->
 
 private fun applyRarely(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
-
     val x = 0.25
-    return stack(
-        pattern.degradeBy(listOf(x).asStrudelDslArgs()),
-        transform(pattern.undegradeBy(listOf(1 - x).asStrudelDslArgs()))
-    )
+    return pattern.`when`(rand.lt(x), transform)
 }
 
 /** Shorthand for `.sometimesBy(0.25, fn)` */
@@ -538,12 +468,8 @@ val String.rarely by dslStringExtension { pattern, args, /* callInfo */ _ ->
 
 private fun applyAlmostNever(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
-
     val x = 0.1
-    return stack(
-        pattern.degradeBy(listOf(x).asStrudelDslArgs()),
-        transform(pattern.undegradeBy(listOf(1 - x).asStrudelDslArgs()))
-    )
+    return pattern.`when`(rand.lt(x), transform)
 }
 
 /** Shorthand for `.sometimesBy(0.1, fn)` */
@@ -562,12 +488,8 @@ val String.almostNever by dslStringExtension { pattern, args, /* callInfo */ _ -
 
 private fun applyAlmostAlways(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
-
     val x = 0.9
-    return stack(
-        pattern.degradeBy(listOf(x).asStrudelDslArgs()),
-        transform(pattern.undegradeBy(listOf(1 - x).asStrudelDslArgs()))
-    )
+    return pattern.`when`(rand.lt(x), transform)
 }
 
 /** Shorthand for `.sometimesBy(0.9, fn)` */
@@ -595,7 +517,7 @@ val String.never by dslStringExtension { pattern, args, callInfo -> pattern.neve
 // -- always() ---------------------------------------------------------------------------------------------------------
 
 private fun applyAlways(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val func = args.map { it.toPatternMapper() }.firstOrNull()
+    val func = args.getOrNull(0).toPatternMapper()
 
     return func?.invoke(pattern) ?: pattern
 }
@@ -663,13 +585,7 @@ val randL by dslFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
-    val nPattern: StrudelPattern = when (nVal) {
-        is StrudelPattern -> nVal
-
-        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
-    }
+    val nPattern: StrudelPattern = (nArg ?: StrudelDslArg.of("0")).toPattern()
 
     val staticN = nVal?.asIntOrNull()
 
@@ -690,13 +606,7 @@ val randrun: DslFunction by dslFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
-    val nPattern: StrudelPattern = when (nVal) {
-        is StrudelPattern -> nVal
-
-        else -> parseMiniNotation(nArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
-        }
-    }
+    val nPattern: StrudelPattern = (nArg ?: StrudelDslArg.of("0")).toPattern()
 
     val staticN = nVal?.asIntOrNull()
 
@@ -803,12 +713,7 @@ val chooseWith: DslFunction by dslFunction { args, /* callInfo */ _ ->
 
 @StrudelDsl
 val StrudelPattern.chooseWith by dslPatternExtension { p, args, /* callInfo */ _ ->
-    val xs = if (args.size == 1 && args[0].value is List<*>) {
-        @Suppress("UNCHECKED_CAST")
-        (args[0].value as List<Any?>).asStrudelDslArgs()
-    } else {
-        args
-    }
+    val xs = args.extractChoiceArgs()
 
     ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.Out)
 }
@@ -837,12 +742,7 @@ val chooseInWith by dslFunction { args, /* callInfo */ _ ->
 
 @StrudelDsl
 val StrudelPattern.chooseInWith by dslPatternExtension { p, args, /* callInfo */ _ ->
-    val xs = if (args.size == 1 && args[0].value is List<*>) {
-        @Suppress("UNCHECKED_CAST")
-        (args[0].value as List<Any?>).asStrudelDslArgs()
-    } else {
-        args
-    }
+    val xs = args.extractChoiceArgs()
 
     ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.In)
 }
@@ -877,12 +777,7 @@ val choose by dslFunction { args, /* callInfo */ _ ->
  */
 @StrudelDsl
 val StrudelPattern.choose by dslPatternExtension { p, args, /* callInfo */ _ ->
-    val xs = if (args.size == 1 && args[0].value is List<*>) {
-        @Suppress("UNCHECKED_CAST")
-        (args[0].value as List<Any?>).asStrudelDslArgs()
-    } else {
-        args
-    }
+    val xs = args.extractChoiceArgs()
 
     ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.Out)
 }
@@ -925,12 +820,7 @@ val chooseIn by dslFunction { args, /* callInfo */ _ ->
 
 @StrudelDsl
 val StrudelPattern.chooseIn by dslPatternExtension { p, args, /* callInfo */ _ ->
-    val xs = if (args.size == 1 && args[0].value is List<*>) {
-        @Suppress("UNCHECKED_CAST")
-        (args[0].value as List<Any?>).asStrudelDslArgs()
-    } else {
-        args
-    }
+    val xs = args.extractChoiceArgs()
 
     ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.In)
 }
@@ -946,12 +836,7 @@ val String.chooseIn by dslStringExtension { p, args, /* callInfo */ _ -> p.choos
  */
 @StrudelDsl
 val StrudelPattern.choose2 by dslPatternExtension { p, args, /* callInfo */ _ ->
-    val xs = if (args.size == 1 && args[0].value is List<*>) {
-        @Suppress("UNCHECKED_CAST")
-        (args[0].value as List<Any?>).asStrudelDslArgs()
-    } else {
-        args
-    }
+    val xs = args.extractChoiceArgs()
 
     ChoicePattern.createFromRaw(p.fromBipolar(), xs, mode = StructurePattern.Mode.Out)
 }

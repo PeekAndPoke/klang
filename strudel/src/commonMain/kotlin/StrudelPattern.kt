@@ -425,7 +425,21 @@ fun <T> StrudelPattern._innerJoin(
     transform: (source: StrudelPattern, v1: StrudelVoiceValue?) -> StrudelPattern,
 ): StrudelPattern {
     return this._innerJoin(
-        arg1 = args.getOrNull(0)?.toPattern() ?: return this,
+        arg1 = args.getOrNull(0),
+        transform = transform,
+    )
+}
+
+/**
+ * Inner join with one argument pattern.
+ */
+@JvmName("_innerJoin_args1")
+fun <T> StrudelPattern._innerJoin(
+    arg1: StrudelDslArg<T>?,
+    transform: (source: StrudelPattern, v1: StrudelVoiceValue?) -> StrudelPattern,
+): StrudelPattern {
+    return this._innerJoin(
+        arg1 = arg1?.toPattern() ?: return this,
         transform = transform,
     )
 }

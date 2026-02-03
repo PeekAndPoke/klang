@@ -213,6 +213,19 @@ fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPatt
 fun StrudelDslArg<Any?>?.toPatternMapper() = patternMapper(this?.value)
 
 /**
+ * Extracts choice arguments for choose* functions.
+ * If args is a single List, unwraps it. Otherwise returns args as-is.
+ */
+fun List<StrudelDslArg<Any?>>.extractChoiceArgs(): List<StrudelDslArg<Any?>> {
+    return if (size == 1 && get(0).value is List<*>) {
+        @Suppress("UNCHECKED_CAST")
+        (get(0).value as List<Any?>).asStrudelDslArgs()
+    } else {
+        this
+    }
+}
+
+/**
  * Converts a single argument into a StrudelPattern.
  */
 fun StrudelDslArg<Any?>.toPattern(modify: VoiceModifier = voiceValueModifier): StrudelPattern =
