@@ -970,6 +970,28 @@ fun StrudelPattern._withQueryTime(transform: (Rational) -> Rational): StrudelPat
 }
 
 /**
+ * Creates a pattern where the query time span is transformed by the given function.
+ *
+ * This transforms the input query range before passing it to the inner pattern.
+ * Unlike [_withQueryTime] which transforms individual time points, this transforms
+ * the entire TimeSpan, allowing for operations like reversing or scaling.
+ *
+ * @param transform Function that transforms a TimeSpan to a new TimeSpan
+ * @return A new pattern with transformed query spans
+ */
+fun StrudelPattern._withQuerySpan(transform: (TimeSpan) -> TimeSpan): StrudelPattern = object : StrudelPattern {
+    override val weight: Double get() = this@_withQuerySpan.weight
+    override val numSteps: Rational? get() = this@_withQuerySpan.numSteps
+    override fun estimateCycleDuration(): Rational = this@_withQuerySpan.estimateCycleDuration()
+
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        val querySpan = TimeSpan(from, to)
+        val transformedSpan = transform(querySpan)
+        return this@_withQuerySpan.queryArcContextual(transformedSpan.begin, transformedSpan.end, ctx)
+    }
+}
+
+/**
  * Creates a pattern where the time of each event is transformed by the given function.
  *
  * This is the counterpart to [_withQueryTime]. While [_withQueryTime] transforms the input query range
@@ -989,6 +1011,23 @@ fun StrudelPattern._withHapTime(transform: (Rational) -> Rational): StrudelPatte
     }
 
     event.copy(part = newPart, whole = newWhole)
+}
+
+/**
+ * Creates a pattern where the time span of each event is transformed by the given function.
+ *
+ * This transforms both the part and whole time spans of output events after querying.
+ * Unlike [_withHapTime] which transforms individual time points, this transforms
+ * complete TimeSpans, allowing for operations like reversing or complex time manipulations.
+ *
+ * @param transform Function that transforms a TimeSpan to a new TimeSpan
+ * @return A new pattern with transformed event spans
+ */
+fun StrudelPattern._withHapSpan(transform: (TimeSpan) -> TimeSpan): StrudelPattern = mapEvents { event ->
+    event.copy(
+        part = transform(event.part),
+        whole = transform(event.whole)
+    )
 }
 
 /**

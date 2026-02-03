@@ -650,6 +650,11 @@ object JsCompatTestData {
         Example("Reverse", """note("c e g").rev()"""),
         Example("Palindrome", """note("c e g").palindrome()"""),
 
+        // Reverse whole pattern (revv) ... not available in JS
+        Example(SKIP, "Revv basic", """note("a b c").revv()"""),
+        Example(SKIP, "Revv multi-cycle", """cat("a", "b", "c", "d").revv()"""),
+        Example(SKIP, "Revv cycle order", """fastcat("a", "b", "c", "d").slow(2).revv().fast(2)"""),
+
         // Conditional
         Example("FirstOf", """note("[a b c d] [e f g a]").firstOf(4, (x) => x.rev())"""),
         Example("Every", """note("[a b c d] [e f g a]").every(4, (x) => x.rev())"""),

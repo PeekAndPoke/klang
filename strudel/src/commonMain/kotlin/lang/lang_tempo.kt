@@ -140,6 +140,41 @@ val StrudelPattern.rev by dslPatternExtension { p, args, /* callInfo */ _ -> app
 @StrudelDsl
 val String.rev by dslStringExtension { p, args, callInfo -> p.rev(args, callInfo) }
 
+// -- revv() -----------------------------------------------------------------------------------------------------------
+
+// TODO: deep checks ... does not seem to work to well for complex patterns
+fun applyRevv(pattern: StrudelPattern): StrudelPattern {
+    // Negates a time span: [begin, end] → [-end, -begin]
+    val negateSpan: (TimeSpan) -> TimeSpan = { span ->
+        TimeSpan(
+            begin = Rational.ZERO - span.end,
+            end = Rational.ZERO - span.begin
+        )
+    }
+
+    // Transform both query spans and event spans
+    return pattern._withQuerySpan(negateSpan)._withHapSpan(negateSpan)
+}
+
+/** Reverses the whole pattern across all cycles (not per-cycle) */
+@StrudelDsl
+val revv by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
+
+    applyRevv(pattern)
+}
+
+/** Reverses the whole pattern across all cycles (not per-cycle) */
+@StrudelDsl
+val StrudelPattern.revv by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyRevv(p)
+}
+
+/** Reverses the whole pattern across all cycles (not per-cycle) */
+@StrudelDsl
+val String.revv by dslStringExtension { p, args, callInfo -> p.revv(args, callInfo) }
+
 // -- palindrome() -----------------------------------------------------------------------------------------------------
 
 fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {

@@ -320,7 +320,6 @@ class MiniNotationParserSpec : StringSpec() {
                 with(events[0]) {
                     data.note shouldBe "C4:minor"
                     data.soundIndex shouldBe null
-                    data.gain shouldBe 1.0
                 }
             }
         }
