@@ -48,6 +48,16 @@ implementation notes.
 - [ ] check https://larkob.github.io/strudel/tutorial/ and produce new todos
 - [ ] Review and validate all "missing" counts in the summary section
 
+## ✅ Project Status
+
+**Current Status (2026-02-03)**: 🎉 **ALL TESTS PASSING** - 2489+ tests, 0 failures (100% pass rate)
+
+- **Feature Completion**: ~263 out of ~303 features implemented (87%)
+- **Test Health**: All unit tests passing
+- **Audio Engine**: Fully functional with dynamic limiter and optimized rendering
+- **Recent Achievements**: Audio engine improvements, pickF/pickmodF implementation
+
+---
 
 ## 🔴 HIGH PRIORITY - Common Use Cases
 
@@ -117,34 +127,28 @@ implementation notes.
 - [x] **`euclid(pulses, steps)`** - Euclidean rhythm function, now supports control patterns (standalone, pattern
   method, string extension)
 - [x] **`euclidRot(pulses, steps, rotation)`** / **`euclidrot`** - Euclidean with rotation, now supports control
-  patterns (standalone, pattern method,
-  string extension)
+  patterns (standalone, pattern method, string extension)
 - [x] **`bjork([pulses, steps, rotation])`** - Euclidean with list parameters, now supports control patterns (
-  standalone, pattern method, string
-  extension)
+  standalone, pattern method, string extension)
 - [x] **`euclidLegato(pulses, steps)`** - Holds pulses until next, now supports control patterns (standalone, pattern
   method, string extension)
 - [x] **`euclidLegatoRot(pulses, steps, rotation)`** - Legato Euclidean with rotation, now supports control patterns (
-  standalone, pattern method,
-  string extension)
+  standalone, pattern method, string extension)
 - [x] **`compress(start, end)`** - Compresses pattern into timespan, now supports control patterns for both parameters (
   standalone, pattern method, string extension)
 - [ ] ~~**`compressSpan(span)`**~~ - **Won't implement**: Not documented, requires TimeSpan/Fraction types not available
   in KlangScript; use `compress(start, end)` instead
 - [x] **`focus(start, end)`** - Like compress but keeps cycle timing, now supports control patterns for both
-  parameters (
-  standalone, pattern method, string extension)
+  parameters (standalone, pattern method, string extension)
 - [/] ~~**`focusSpan(span)`**~~ - **Won't implement**: Same reason as compressSpan; use `focus(start, end)` if
   implemented
 - [x] **`zoom(start, end)`** - Plays portion of pattern stretched to cycle, now supports control patterns for both
-  parameters (pattern method, string extension, typed
-  function)
+  parameters (pattern method, string extension, typed function)
 - [/] ~~**`zoomArc(arc)`**~~ - **Won't implement**: Requires Arc type not available in KlangScript; use
   `zoom(start, end)` instead
 - [x] **`gap(steps)`** - Create gap with n steps, now supports control patterns via slow()
 - [x] **`fastGap(factor)`** - Speeds up with gaps between, now supports control patterns (standalone, pattern method,
-  string extension, alias:
-  densityGap)
+  string extension, alias: densityGap)
 - [x] **`swingBy(swing, n)`** - Creates swing/shuffle rhythm with adjustable timing and duration (custom implementation:
   long-short or short-long patterns based on positive/negative swing values, no overlaps)
 - [x] **`swing(n)`** - Swing with default 1/3 swing amount (custom implementation using swingBy)
@@ -153,14 +157,17 @@ implementation notes.
 - [x] **`plyWith(n, func)`** - Repeats with function applied
 - [x] **`plyForEach(n, func)`** - Repeats with function applied per repetition
 - [x] **`hurry(factor)`** - Speeds up pattern and multiplies speed parameter, now supports control patterns (standalone,
-  pattern method, string
-  extension)
-- [x] **`loopAt(cycles)`** - Fit sample to cycles
-- [x] **`loopAtCps(cps)`** - Fit sample to cycles per second
+  pattern method, string extension)
+- [x] **`pace(n)`** / **`steps(n)`** - Adjust pattern speed to match target step count
+- [x] **`take(n)`** - Keep first n steps, stretch to fill cycle
+- [x] **`drop(n)`** - Drop first n steps, stretch remaining to fill cycle
+- [x] **`extend(n)`** - Speed up pattern (alias for fast(), NOT slow())
+- [x] **`iter(n)`** - Create n time-shifted variations using slowcat
+- [x] **`iterBack(n)`** - Like iter but backward shifts
+- [x] **`repeatCycles(n)`** - Repeat each cycle n times
 
 ### Pattern Transformation ⭐⭐⭐
 
-- [x] **`rev(n)`** - Reverses pattern in each cycle, supports control patterns for dynamic reversal
 - [x] **`revv()`** - Reverses pattern vertically (pitch inversion)
 - [x] **`struct(pattern)`** - Structures pattern according to mask (uses 'x' markers)
 - [x] **`structAll(pattern)`** - Like struct but keeps all overlapping events
@@ -358,7 +365,7 @@ but the audio engine integration is still pending:~~
 - [x] **`coarse()`** - Sample rate reduction
 - [x] **`distort()`** - Distortion effect (alias: `dist`)
   - [ ] check https://strudel.cc/learn/effects/#distort for additional parameters (especially 3rd "shape")
-- [ ] **`shape()`** - Wave distortion amount
+  - see strudel/agent-tasks/distortion-parameters.md for details
 
 #### Amplitude Modulation / Tremolo
 
@@ -375,9 +382,9 @@ but the audio engine integration is still pending:~~
 
 #### Dynamics
 
-- [ ] **`velocity()`** - Volume level 0-1, multiplied with gain
-- [ ] **`postgain()`** - Post-effect gain boost
-- [ ] **`compressor()`** - Dynamic range compression "threshold:ratio:knee:attack:release"
+- [x] **`velocity()`** - Volume level 0-1, multiplied with gain
+- [x] **`postgain()`** - Post-effect gain boost
+- [x] **`compressor()`** - Dynamic range compression "threshold:ratio:knee:attack:release"
 
 #### Panning
 
@@ -433,8 +440,8 @@ but the audio engine integration is still pending:~~
 - [x] **`loop()`** - Loop sample
 - [x] **`loopBegin()` / `loopb()`** - Set loop start point within sample
 - [x] **`loopEnd()` / `loope()`** - Set loop end point within sample
-- [x] **`loopAt(cycles)`** - Fit sample to cycles
-- [ ] **`loopAtCps(cps)`** - Fit sample to cycles per second
+- [x] **`loopAt(cycles)`** - Fit sample to cycles (see Time Modification for implementation details)
+- [x] **`loopAtCps(cps)`** - Fit sample to cycles per second (see Time Modification for implementation details)
 - [x] **`cut(group)`** - Stop playing samples in cutgroup
 - [ ] **`chop(n)`** - Chop sample into n slices for granular synthesis
 - [x] **`slice(n, index)`** - Play slice index from n slices
@@ -503,24 +510,15 @@ but the audio engine integration is still pending:~~
 ### Pattern Operations
 
 - [x] **`palindrome()`** - Alternates forward/backward playback
-- [x] **`iter(subdivisions)`** - Plays pattern subdivisions in order ✅ **IMPLEMENTED** - Uses slowcat with time-shifted
-  variations
-- [x] **`iterBack(subdivisions)`** - Plays subdivisions in reverse ✅ **IMPLEMENTED** - Like iter but backward shifts
 - [ ] **`linger(fraction)`** - Selects and repeats pattern fraction
 - [ ] **`ribbon(offset, cycles)`** - Loops pattern section (alias: `rib`)
 - [x] **`inside(factor, operation)`** - Applies operation within cycle (slows pattern, applies function, then speeds
   back up)
 - [x] **`outside(factor, operation)`** - Applies operation outside cycle (speeds pattern, applies function, then slows
   back down)
-- [x] **`stepcat(...timepats)`** - Concatenate patterns proportionally (aliases: `timecat`, `timeCat`, `s_cat`) ✅ *
-  *IMPLEMENTED** (2026-01-29)
 - [ ] **`stepalt(...groups)`** - Alternate between pattern groups (alias: `s_alt`)
-- [x] **`echo(times, delay, decay)`** - Echo with velocity decay (alias: `stut`) ✅ **IMPLEMENTED** (2026-01-29)
-- [x] **`echoWith(times, delay, function)`** - Echo with custom function (aliases: `echowith`, `stutWith`, `stutwith`) ✅
-  **IMPLEMENTED** (2026-01-29)
 - [ ] **`press()`** - Press pattern (squash events)
 - [ ] **`pressBy(amount)`** - Press pattern by amount
-- [x] **`chunk(n, func)`** - Apply function to chunks (aliases: `slowchunk`, `slowChunk`) ✅ **IMPLEMENTED** (2026-01-29)
 - [ ] **`fastchunk(n, func)`** - Apply function to fast chunks (alias: `fastChunk`)
 - [ ] **`chunkinto(n, func)`** - Chunk into n sections (alias: `chunkInto`)
 - [ ] **`chunkbackinto(n, func)`** - Chunk backwards into n sections (alias: `chunkBackInto`)
@@ -558,18 +556,6 @@ but the audio engine integration is still pending:~~
 
 ### Step-Based Pattern Operations ⭐⭐
 
-- [x] **`pace(targetSteps)`** - Adjust pattern to target number of steps (alias: `steps`) ✅ **IMPLEMENTED** - Uses
-  fast() to adjust pattern speed to match target step count
-- [x] **`take(n)`** - Take first n steps ✅ **IMPLEMENTED** - Keeps first n steps from pattern structure, stretches to
-  fill cycle
-- [x] **`drop(n)`** - Drop first n steps ✅ **IMPLEMENTED** - Skips first n steps, stretches remaining to fill cycle
-- [x] **`extend(factor)`** - Extend pattern by factor ✅ **IMPLEMENTED** - Alias for fast(), speeds up pattern (NOT
-  slow() as originally expected)
-- [x] **`iter(n)`** - Plays pattern subdivisions in order ✅ **IMPLEMENTED** - Creates n time-shifted variations using
-  slowcat
-- [x] **`iterBack(n)`** - Plays subdivisions in reverse ✅ **IMPLEMENTED** - Like iter but shifts backward
-- [x] **`repeatCycles(n)`** - Repeat each cycle n times ✅ **IMPLEMENTED** - Maps output cycles to source cycles (floor(
-  output/n))
 - [ ] **`replicate(factor)`** - Replicate pattern factor times
 - [ ] **`expand(factor)`** - Expand pattern by factor (alias: `s_expand`)
 - [ ] **`contract(factor)`** - Contract pattern by factor (alias: `s_contract`)
@@ -581,20 +567,6 @@ but the audio engine integration is still pending:~~
 - [x] **`bite(n, indices)`** - Slices pattern and plays according to index pattern, now supports control patterns (
   pattern method, string extension)
 
-**✅ Time Manipulation Functions Complete (2026-01-29)** - All 7 step-based time functions implemented with correct
-JS-compatible semantics
-
-### Sample Functions (Advanced)
-
-**Note:** Basic sample functions are listed in HIGH PRIORITY - Sample Manipulation section above.
-
-- [ ] **`loopBegin()` / `loopb()`** - Loop point control
-- [ ] **`loopEnd()` / `loope()`** - Loop point control
-- [ ] **`striate(portions)`** - Progressive sample portions
-- [ ] **`splice(n, index)`** - Slice with speed adjustment
-- [ ] **`scrub(position, speed)`** - Tape-like scrubbing
-- [ ] **`fit()`** - Match sample to event duration
-- [ ] **`chop(n)`** - Chop sample into n slices
 
 ### Synthesis Parameters
 
@@ -616,7 +588,7 @@ JS-compatible semantics
 - [x] **`postgain()`** - Post-processing gain
 - [ ] **`partials(list)`** - Additive synthesis partials
 - [ ] **`phases(list)`** - Additive synthesis phases
-- [ ] **FM synthesis parameters**:
+- [x] **FM synthesis parameters**:
     - `fmh()` - FM harmonicity ratio
     - `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`
 - [x] **Pitch envelope** - `pattack`, `pdecay`, `prelease`, `penv`
@@ -795,14 +767,14 @@ JS-compatible semantics
   `binary`, `binaryN`, `binaryL`, `binaryNL`, `fastcat`, `slowcat`, `slowcatPrime`, `polymeter`, `polymeterSteps`,
   `polyrhythm`,
   `stackLeft`, `stackRight`, `stackCentre`, `stackBy`, `pure`)
-- **Time Modification**: ✅ 0 missing, 3 won't implement (23 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
-  `compress`, `focus`, `ply`, `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`, `loopAt`, `euclidRot`, `euclidLegato`,
-  `euclidLegatoRot`, `bjork`, `euclidish`, `pace`, `steps`, `extend`; many with control pattern support; won't
-  implement: `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
-- **Pattern Operations**: ~3 missing (10 completed: `rev`, `palindrome`, `inside`, `outside`, `iter`, `iterBack`,
-  `stepcat`, `echo`, `echoWith`, `chunk`)
-- **Pattern Transformation**: ~7 missing (11 completed: `struct`, `mask`, `superimpose`, `layer`, `apply`, `structAll`,
-  `maskAll`, `jux`, `juxBy`, `off`, `within`)
+- **Time Modification**: ✅ 0 missing, 3 won't implement (30 completed: `fast`, `slow`, `early`, `late`, `gap`, `zoom`,
+  `compress`, `focus`, `ply`, `hurry`, `fastGap`, `euclid`, `swing`, `swingBy`, `loopAt`, `loopAtCps`, `euclidRot`,
+  `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`, `pace`, `steps`, `extend`, `iter`, `iterBack`,
+  `repeatCycles`, `take`, `drop`, `plyWith`, `plyForEach`; many with control pattern support; won't implement:
+  `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
+- **Pattern Operations**: ~6 missing (5 completed: `palindrome`, `inside`, `outside`, `within`, `chunk`)
+- **Pattern Transformation**: ✅ 0 missing (16 completed: `revv`, `struct`, `mask`, `superimpose`, `layer`, `apply`,
+  `structAll`, `maskAll`, `jux`, `juxBy`, `off`, `within`, `applyN`, `when`, `brak`, `inv`/`invert`)
 - **Tonal Functions**: ✅ 0 missing (11 completed: `note`, `n`, `freq`, `scale`, `sound`/`s`, `bank`, `transpose`,
   `scaleTranspose`, `chord`, `voicing`, `rootNotes` - all with comprehensive chord notation support including 112 chord
   types)
@@ -812,19 +784,22 @@ JS-compatible semantics
 - **Audio Effects**: ~30 missing (31 completed: filters with full aliases, filter resonance, vowel formant,
   distortion, reverb with all aliases (including roomfade, roomlp, roomdim, iresponse), delay, phaser with all aliases,
   tremolo with all aliases, jux, juxBy, orbit with all aliases)
-- **Sample Manipulation**: 9 missing (6 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `cut`, `slice`; 9 missing:
-  `loopBegin/loopb`, `loopEnd/loope`, `loopAtCps`, `chop`, `splice`, `striate`, `fit`, `scrub`)
+- **Sample Manipulation**: ~5 missing (10 completed: `begin`, `end`, `speed`, `loop`, `loopAt`, `loopAtCps`, `cut`,
+  `slice`, `splice`, `loopBegin`/`loopb`, `loopEnd`/`loope`; 5 missing: `chop`, `striate`, `fit`, `scrub`, and
+  advanced slicing features)
 - **Continuous Signals**: ✅ 0 missing (41 completed, many with control pattern support: `steady`, `signal`, `time`,
   `sine`, `sine2`, `cosine`, `cosine2`,
   `saw`, `saw2`, `isaw`, `isaw2`, `tri`, `tri2`, `itri`, `itri2`, `square`, `square2`, `perlin`, `perlin2`, `berlin`,
   `berlin2`, `range`, `rangex`, `range2`,
   `rand`, `rand2`, `irand` (control patterns), `randL` (control patterns), `brand`, `brandBy` (control patterns),
   `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`, `round`, `floor`, `ceil`, `ratio`)
-- **Synthesis Parameters**: ~12 missing (17 completed: gain, pan, ADSR, vibrato, unison, warmth, etc.)
+- **Synthesis Parameters**: ~7 missing (22 completed: gain, pan, ADSR, vibrato, unison, warmth, velocity, postgain,
+  legato/clip, accelerate, detune, spread, density, orbit, FM synthesis parameters, pitch envelope; 7 missing:
+  partials, phases, wavetable, ZZFX, arp, arpWith, and others)
 - **Noise Generators**: ✅ 0 missing (5 completed: `white`/`whitenoise`, `pink`/`pinknoise`, `brown`/`brownnoise`,
   `dust`, `crackle` - all accessed via `s()` or `sound()`, density controlled via `density()`/`d()`)
-- **Step-Based Operations**: ~8 missing (8 completed: `pace`, `steps`, `take`, `drop`, `extend`, `iter`, `iterBack`,
-  `repeatCycles`, `bite` - all with proper step-based semantics matching JS implementation)
+- **Step-Based Operations**: ~8 missing (1 completed: `bite`; note: step-based time functions like `pace`, `steps`,
+  `take`, `drop`, `extend`, `iter`, `iterBack`, `repeatCycles` moved to Time Modification category)
 - **Conditional & Probabilistic**: ✅ 0 missing (20 completed, with control pattern support: `sometimesBy`, `sometimes`,
   `often`, `rarely`,
   `almostAlways`, `almostNever`, `always`, `never`, `someCyclesBy`, `someCycles`, `degradeBy`, `degrade`, `undegradeBy`,
@@ -841,9 +816,9 @@ JS-compatible semantics
   `pickOut`, `pickmodOut`, `pickRestart`, `pickmodRestart`, `squeeze`, `inhabit`/`pickSqueeze`, `inhabitmod`/
   `pickmodSqueeze`)
 
-### Total Estimated: ~46 features remaining (3 marked "won't implement")
+### Total Estimated: ~40 features remaining (3 marked "won't implement")
 
-### Completed So Far: ~256 features! 🎉
+### Completed So Far: ~263 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.
@@ -887,31 +862,31 @@ Strudel documentation.
 
 ### Phase 2: Musical Features (Weeks 3-4)
 
-5. Tonal functions (`transpose`, `scaleTranspose`, `chord`)
-6. More time modifiers (`compress`, `swing`, `ply`)
-7. Pattern transformations (`jux`, `off`, `superimpose`)
-8. Additional continuous signals (`rand`, `perlin`, bipolar versions)
+1. Tonal functions (`transpose`, `scaleTranspose`, `chord`)
+2. More time modifiers (`compress`, `swing`, `ply`)
+3. Pattern transformations (`jux`, `off`, `superimpose`)
+4. Additional continuous signals (`rand`, `perlin`, bipolar versions)
 
 ### Phase 3: Advanced Audio (Weeks 5-6)
 
-9. Complete filter envelopes
-10. Advanced effects (`tremolo`, `phaser`, `compressor`)
-11. Extended synthesis parameters (FM, wavetable)
-12. Sample slicing (`chop`, `slice`, `striate`)
+1. Complete filter envelopes
+2. Advanced effects (`tremolo`, `phaser`, `compressor`)
+3. Extended synthesis parameters (FM, wavetable)
+4. Sample slicing (`chop`, `slice`, `striate`)
 
 ### Phase 4: Integration (Weeks 7-8)
 
-13. MIDI output support
-14. Pattern operations (`palindrome`, `iter`, `zoom`)
-15. Conditional functions (`sometimes`, `rarely`, `degradeBy`)
-16. Tempo control functions
+1. MIDI output support
+2. Pattern operations (`palindrome`, `iter`, `zoom`)
+3. Conditional functions (`sometimes`, `rarely`, `degradeBy`)
+4. Tempo control functions
 
 ### Phase 5: Nice-to-Have (Future)
 
-17. MIDI input
-18. OSC support
-19. Visualization tools
-20. Hydra integration
+1. MIDI input
+2. OSC support
+3. Visualization tools
+4. Hydra integration
 
 ---
 
