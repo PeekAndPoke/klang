@@ -19,32 +19,13 @@ class KlangAudioRenderer(
 
     private val limiter = Compressor(
         sampleRate = sampleRate,
-        thresholdDb = -1.0,    // Very hot threshold (brick-wall limiting)
-        ratio = 20.0,           // 20:1 ratio (hard limiting)
-        kneeDb = 0.0,           // No knee (instant response)
-        attackSeconds = 0.001,  // 1ms attack (fast response)
-        releaseSeconds = 0.1,   // 100ms release
+        thresholdDb = -1.0,    // Ceiling at -1dB
+        ratio = 20.0,          // Brickwall ratio
+        kneeDb = 0.0,
+        attackSeconds = 0.001, // 1ms allows transients to retain punch before clamping
+        releaseSeconds = 0.1,
     )
 
-    /**
-     * Fast soft clipping approximation (replaces expensive tanh).
-     * Since the limiter now handles dynamics, this is only a safety clipper for rare peaks.
-     *
-     * Uses rational function: x * (27 + x²) / (27 + 9x²)
-     * - Fast (no transcendental functions)
-     * - Approaches ±1 asymptotically
-     * - Good enough for final safety clipping
-     */
-    private fun fastSoftClip(x: Double): Double {
-        if (x < -3.0) return -1.0
-        if (x > 3.0) return 1.0
-        val x2 = x * x
-        return x * (27.0 + x2) / (27.0 + 9.0 * x2)
-    }
-
-    /**
-     * Renders one block of audio starting at [cursorFrame] into the [out] short array.
-     */
     fun renderBlock(
         cursorFrame: Long,
         out: ShortArray,
@@ -53,28 +34,51 @@ class KlangAudioRenderer(
         mix.clear()
         orbits.clearAll()
 
-        // 2. Process Voices (Oscillators, Samples, Envelopes)
+        // 2. Process Voices
         voices.process(cursorFrame)
 
         // 3. Mix Voices into Orbits -> Main Mix
         orbits.processAndMix(mix)
 
-        // 4. Apply dynamic limiter BEFORE conversion (prevents distortion)
+        // 4. Apply dynamic limiter
+        // This handles the bulk of the loudness management musically
         limiter.process(mix.left, mix.right, blockFrames)
 
-        // 5. Post-Process (Safety Clipper + Interleave to 16-bit PCM)
+        // 5. Post-Process (Transparent Clip + Interleave)
         val left = mix.left
         val right = mix.right
 
-        for (i in 0 until blockFrames) {
-            // Safety clipper (fast approximation - rarely triggered thanks to limiter)
-            val l = (fastSoftClip(left[i]).coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt().toShort()
-            val r = (fastSoftClip(right[i]).coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt().toShort()
+        // Cache max value to avoid repeated field access/casting
+        val maxShort = Short.MAX_VALUE.toDouble()
 
-            // Interleave L/R into ShortArray
+        for (i in 0 until blockFrames) {
+            val lSample = left[i]
+            val rSample = right[i]
+
+            // OPTIMIZATION: Branching Logic
+            // Most samples are within safe bounds [-1.0, 1.0].
+            // We skip all math for them to preserve CPU and Transparency (Unity Gain).
+
+            val lOut = if (lSample >= -1.0 && lSample <= 1.0) {
+                (lSample * maxShort).toInt()
+            } else if (lSample > 1.0) {
+                Short.MAX_VALUE.toInt()
+            } else {
+                Short.MIN_VALUE.toInt()
+            }
+
+            val rOut = if (rSample >= -1.0 && rSample <= 1.0) {
+                (rSample * maxShort).toInt()
+            } else if (rSample > 1.0) {
+                Short.MAX_VALUE.toInt()
+            } else {
+                Short.MIN_VALUE.toInt()
+            }
+
+            // Interleave
             val idx = i * 2
-            out[idx] = l
-            out[idx + 1] = r
+            out[idx] = lOut.toShort()
+            out[idx + 1] = rOut.toShort()
         }
     }
 }

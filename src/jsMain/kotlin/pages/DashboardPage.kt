@@ -13,6 +13,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
+import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.StreamSource
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
@@ -61,6 +62,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     var loading: Boolean by value(false)
     var player: KlangPlayer? by value(null)
     var song: StrudelPlayback? by value(null)
+    val isPlaying get() = song != null
 
     val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
 
@@ -248,41 +250,59 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                 paddingBottom = 0.px
                             }
 
-                            ui.six.fields.fields {
+                            ui.horizontal.list {
                                 key = "dashboard-form-fields"
 
-                                ui.field {
-                                    ui.fluid.button {
-                                        onClick {
-                                            onPlay()
-                                        }
+                                noui.item {
+                                    if (!isPlaying) {
+                                        ui.large.circular.blue.button {
+                                            onClick { onPlay() }
 
-                                        if (loading) {
-                                            icon.loading.spinner()
-                                        } else {
-                                            icon.play()
-                                            +"Play"
+                                            if (loading) {
+                                                icon.loading.spinner()
+                                                +"Loading"
+                                            } else {
+                                                icon.play()
+                                                +"Play"
+                                            }
+                                        }
+                                    } else {
+                                        ui.large.circular.inverted.blue.button {
+                                            onClick { onPlay() }
+                                            icon.redo_alternate()
+                                            +"Update"
                                         }
                                     }
-                                }
+                                    ui.large.circular.icon.givenNot(isPlaying) { disabled }
+                                        .given(isPlaying) { white }.button {
+//                                            onClick {
+//                                                song?.stop()
+//                                                song = null
+//                                            }
 
-                                ui.field {
-                                    ui.fluid.button {
-                                        onClick {
-                                            song?.stop()
-                                            song = null
+                                            icon.black.pause()
                                         }
+                                    ui.large.circular.icon.givenNot(isPlaying) { disabled }
+                                        .given(isPlaying) { white }.button {
+                                            onClick {
+                                                song?.stop()
+                                                song = null
+                                            }
 
-                                        icon.stop()
-                                        +"Stop"
-                                    }
+                                            icon.black.stop()
+                                        }
                                 }
 
-                                UiInputField(cps, { cpsStream(it) }) {
-                                    step(0.01)
+                                noui.item {
 
-                                    leftLabel {
-                                        ui.basic.label { icon.clock(); +"CPS" }
+                                    UiInputField(cps, { cpsStream(it) }) {
+                                        step(0.01)
+
+                                        appear { large }
+
+                                        leftLabel {
+                                            ui.basic.label { icon.clock(); +"CPS" }
+                                        }
                                     }
                                 }
                             }
