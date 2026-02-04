@@ -579,6 +579,88 @@ fun StrudelPattern._bind(
 )
 
 /**
+ * Maps a function over the values in this pattern, producing a pattern-of-patterns.
+ * Equivalent to `fmap` in JS Strudel.
+ *
+ * The function receives a value and returns a StrudelPattern.
+ * The result is a pattern where each event's value is itself a pattern.
+ */
+fun StrudelPattern._fmap(
+    transform: (StrudelVoiceValue?) -> StrudelPattern,
+): StrudelPattern {
+    return this.mapEvents { event ->
+        event.copy(
+            data = event.data.copy(
+                // Store the transformed pattern as the value
+                // This creates a pattern-of-patterns
+                value = StrudelVoiceValue.Pattern(transform(event.data.value))
+            )
+        )
+    }
+}
+
+/**
+ * Flattens a pattern-of-patterns by squeezing each inner pattern into its outer event's timespan.
+ * Equivalent to `squeezeJoin()` in JS Strudel.
+ *
+ * Expects a pattern where event values are StrudelVoiceValue.Pattern.
+ */
+fun StrudelPattern._squeezeJoin(): StrudelPattern = object : StrudelPattern {
+    override val weight: Double get() = this@_squeezeJoin.weight
+    override val numSteps: Rational? get() = this@_squeezeJoin.numSteps
+    override fun estimateCycleDuration(): Rational = this@_squeezeJoin.estimateCycleDuration()
+
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        val outerEvents = this@_squeezeJoin.queryArcContextual(from, to, ctx)
+        val results = mutableListOf<StrudelPatternEvent>()
+
+        for (outerEvent in outerEvents) {
+            // Get the inner pattern from the event's value
+            val innerPattern = (outerEvent.data.value as? StrudelVoiceValue.Pattern)?.pattern
+                ?: continue
+
+            // Focus the inner pattern [0,1] onto the outer event's whole (or part if no whole)
+            val targetSpan = outerEvent.whole ?: outerEvent.part
+            val focusedPattern = innerPattern._focusSpan(targetSpan)
+
+            // Query the focused pattern within the outer event's part
+            val innerEvents = focusedPattern.queryArcContextual(
+                outerEvent.part.begin,
+                outerEvent.part.end,
+                ctx
+            )
+
+            // Merge outer event's data (sound, note, etc.) with inner event's data (timing)
+            val mergedEvents = innerEvents.map { innerEvent ->
+                innerEvent.copy(
+                    data = outerEvent.data.copy(value = innerEvent.data.value),
+                )
+            }
+
+            results.addAll(mergedEvents)
+        }
+
+        return results
+    }
+}
+
+/**
+ * Helper to focus a pattern's [0,1] cycle onto a specific timespan.
+ */
+private fun StrudelPattern._focusSpan(span: TimeSpan): StrudelPattern {
+    val duration = span.duration
+    if (duration == Rational.ZERO) return silence
+
+    return this._withQueryTime { t -> (t - span.begin) / duration }
+        .mapEvents { event ->
+            event.copy(
+                part = event.part.scale(duration).shift(span.begin),
+                whole = event.whole.scale(duration).shift(span.begin),
+            )
+        }
+}
+
+/**
  * Binds an inner pattern to each event of the outer pattern, "squeezing" the inner pattern
  * (which usually operates in 0..1 time) to fit exactly within the outer event's duration.
  *

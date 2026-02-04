@@ -2585,3 +2585,81 @@ val StrudelPattern.applyN by dslPatternExtension { p, args, /* callInfo */ _ ->
 /** Applies a function to a pattern n times */
 @StrudelDsl
 val String.applyN by dslStringExtension { p, args, callInfo -> p.applyN(args, callInfo) }
+
+// -- pressBy() --------------------------------------------------------------------------------------------------------
+
+/**
+ * Syncopates rhythm by compressing events to start at position [r] within their timespan.
+ *
+ * - r = 0: No compression (normal timing)
+ * - r = 0.5: Events start halfway through (syncopated)
+ * - r = 1: Events compressed to end
+ *
+ * JavaScript: `pat.fmap((x) => pure(x).compress(r, 1)).squeezeJoin()`
+ * Kotlin: Uses `_bindSqueeze()` with `compress()` (which handles control patterns internally)
+ *
+ * Example: s("bd mt sd ht").pressBy("<0 0.5 0.25>")
+ */
+fun applyPressBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val rArg = args.getOrNull(0) ?: return pattern
+
+    return pattern._innerJoin(rArg) { src, rVal ->
+        val r = rVal?.asDouble ?: return@_innerJoin src
+
+        src._fmap { value ->
+            // Create atomic pattern with the value
+            val atomicPattern = AtomicPattern.value(value)
+            // Compress to [r, 1] - applyCompress handles control patterns internally
+            applyCompress(atomicPattern, listOf(StrudelDslArg.of(r), StrudelDslArg.of(1.0)))
+        }._squeezeJoin()
+    }
+}
+
+/** Syncopates rhythm by compressing events to start at given position within their timespan */
+@StrudelDsl
+val pressBy by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslFunction silence
+    }
+    val pattern = args.drop(1).toPattern()
+    applyPressBy(pattern, args.take(1))
+}
+
+/** Syncopates rhythm by compressing events to start at given position within their timespan */
+@StrudelDsl
+val StrudelPattern.pressBy by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPressBy(p, args)
+}
+
+/** Syncopates rhythm by compressing events to start at given position within their timespan */
+@StrudelDsl
+val String.pressBy by dslStringExtension { p, args, callInfo -> p.pressBy(args, callInfo) }
+
+// -- press() ----------------------------------------------------------------------------------------------------------
+
+/**
+ * Syncopates rhythm by shifting each event halfway into its timespan.
+ * Equivalent to `pressBy(0.5)`.
+ *
+ * Example: s("bd mt sd ht").every(4, { it.press() })
+ */
+fun applyPress(pattern: StrudelPattern): StrudelPattern {
+    return applyPressBy(pattern, listOf(StrudelDslArg.of(0.5)))
+}
+
+/** Syncopates rhythm by shifting events halfway into their timespan */
+@StrudelDsl
+val press by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.toPattern()
+    applyPress(pattern)
+}
+
+/** Syncopates rhythm by shifting events halfway into their timespan */
+@StrudelDsl
+val StrudelPattern.press by dslPatternExtension { p, _, /* callInfo */ _ ->
+    applyPress(p)
+}
+
+/** Syncopates rhythm by shifting events halfway into their timespan */
+@StrudelDsl
+val String.press by dslStringExtension { p, args, callInfo -> p.press(args, callInfo) }

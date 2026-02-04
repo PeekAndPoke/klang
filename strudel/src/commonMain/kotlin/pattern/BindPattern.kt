@@ -57,7 +57,9 @@ internal class BindPattern(
                 if (clippedPart != null) {
                     result.add(
                         // CRITICAL: preserve whole - don't modify it!
-                        innerEvent.copy(part = clippedPart)
+                        innerEvent.copy(
+                            part = clippedPart
+                        )
                     )
                 }
             }

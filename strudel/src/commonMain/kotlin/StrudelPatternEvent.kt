@@ -4,6 +4,7 @@ import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.math.abs
 
 /**
  * Voice Data used to create a Voice.
@@ -12,7 +13,7 @@ import kotlinx.serialization.Transient
 data class StrudelPatternEvent(
     /** Visible portion after clipping */
     val part: TimeSpan,
-    /** Original complete event (null for continuous patterns) */
+    /** Original complete even */
     val whole: TimeSpan,
     /** The voice data */
     val data: StrudelVoiceData,
@@ -26,7 +27,12 @@ data class StrudelPatternEvent(
     val sourceLocations: SourceLocationChain? = null,
 ) {
     /** Check if this event is an onset event (should be played) */
-    val isOnset: Boolean = whole.begin == part.begin
+    val isOnset: Boolean = abs(whole.begin.toDouble() - part.begin.toDouble()) < ONSET_EPSILON
+
+    companion object {
+        /** Epsilon for onset detection to handle floating-point precision issues */
+        private const val ONSET_EPSILON = 1e-6
+    }
 
     fun prependLocation(location: SourceLocation?) = when (location) {
         null -> this

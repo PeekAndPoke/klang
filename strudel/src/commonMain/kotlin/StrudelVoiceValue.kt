@@ -212,6 +212,15 @@ sealed interface StrudelVoiceValue {
         override fun toString() = "[${asString}]"
     }
 
+    data class Pattern(val pattern: StrudelPattern) : StrudelVoiceValue {
+        override val asBoolean get() = true
+        override val asString get() = "<pattern>"
+        override val asDouble get() = null
+        override val asInt get() = null
+        override fun isTruthy() = true
+        override fun toString() = asString
+    }
+
     companion object {
         fun Double.asVoiceValue() = Num(this)
 
@@ -250,6 +259,7 @@ object StrudelVoiceValueSerializer : KSerializer<StrudelVoiceValue> {
                 ListSerializer(StrudelVoiceValueSerializer),
                 value.value
             )
+            is StrudelVoiceValue.Pattern -> encoder.encodeString("<pattern>")
         }
     }
 

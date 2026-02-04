@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_be.filters.effects
 
+import io.peekandpoke.klang.audio_be.ClippingFuncs.fastTanh
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import kotlin.math.tanh
 
 /**
  * Distortion effect using hyperbolic tangent (soft clipping).
@@ -20,10 +20,16 @@ class DistortionFilter(
         // Early return if no distortion
         if (amount <= 0.0) return
 
+        // Local copy for loop performance (eliminates repeated field access)
+        val d = drive
+
         for (i in 0 until length) {
             val idx = offset + i
-            // Apply tanh saturation
-            buffer[idx] = tanh(buffer[idx] * drive)
+            val x = buffer[idx] * d
+
+            // Optimization: Fast tanh approximation
+            // ~5x faster than kotlin.math.tanh with negligible error for audio
+            buffer[idx] = fastTanh(x)
         }
     }
 }

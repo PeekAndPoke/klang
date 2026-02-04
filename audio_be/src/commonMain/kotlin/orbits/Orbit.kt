@@ -56,11 +56,7 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
         delayLine.delayTimeSeconds = voice.delay.time
         delayLine.feedback = voice.delay.feedback
 
-        // Reverb
-        // TODO: check the below ...
-        // Use room amount as the send level? Usually room=amount
-        // The mix is handled by how much we write to reverbSendBuffer
-        // But we can also modulate damping if needed.
+        // Reverb (reverb.room is used Voice.mixToOrbit)
         reverb.roomSize = voice.reverb.roomSize.coerceIn(0.0, 1.0)
         reverb.roomFade = voice.reverb.roomFade
         reverb.roomLp = voice.reverb.roomLp

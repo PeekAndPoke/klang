@@ -61,7 +61,7 @@ class Reverb(
     // --- Parameters ---
 
     /** Master mix volume. */
-    var mix: Double = 0.0
+    val mix: Double = 1.0
 
     var roomSize: Double = 0.5
     var damp: Double = 0.5
