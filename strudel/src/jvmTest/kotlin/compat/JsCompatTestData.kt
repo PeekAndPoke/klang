@@ -128,6 +128,10 @@ object JsCompatTestData {
         Example("chunkBack with sound", """s("bd sd ht lt").chunkBack(4, x => x.gain(0.8))"""),
         Example("chunkback lowercase", """seq("0 1 2 3").chunkback(4, x => x.add(10))"""),
         Example("chunkBack 2 slices", """seq("0 1").chunkBack(2, x => x.add(5))"""),
+        Example("fastChunk basic", """seq("0 1 2 3").fastChunk(4, x => x.add(10))"""),
+        Example("fastChunk with sound", """s("bd sd").fastChunk(2, x => x.gain(0.8))"""),
+        Example("fastchunk lowercase", """note("c4 d4 e4 f4").fastchunk(4, x => x.transpose(12))"""),
+        Example("fastChunk with alternation", """seq("<0 5> 1 2").fastChunk(3, x => x.add(10))"""),
 
         // Is OK
         Example(SKIP, "echo basic", """n("0").echo(4, 0.5, 0.5)"""),

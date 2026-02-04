@@ -1274,6 +1274,104 @@ fun String.chunkback(
     return this.chunkBack(n, transform)
 }
 
+// -- fastChunk() / fastchunk() ----------------------------------------------------------------------------------------
+
+/**
+ * Like `chunk`, but the cycles of the source pattern aren't repeated.
+ *
+ * **Key Difference from `chunk`:**
+ * - `chunk(n, func)`: Repeats the source pattern n times, then cycles through which chunk to transform
+ * - `fastChunk(n, func)`: Pattern plays at natural speed, chunks cycle independently
+ *
+ * The pattern progresses naturally while the transformation cycles through chunks.
+ *
+ * @param {n}         Number of chunks to divide the pattern into
+ * @param {transform} Function to apply to each chunk
+ *
+ * @example
+ * seq("0 1 2 3").fastChunk(4) { it.add(10) }
+ * // Cycle 0 (chunk 0): [10, 1, 2, 3]  - first element transformed
+ * // Cycle 1 (chunk 1): [0, 11, 2, 3]  - second element transformed
+ * // Cycle 2 (chunk 2): [0, 1, 12, 3]  - third element transformed
+ * // Cycle 3 (chunk 3): [0, 1, 2, 13]  - fourth element transformed
+ *
+ * @example
+ * s("bd sd ht lt").fastChunk(4) { it.gain(0.8) }
+ * // Each cycle, a different sound gets the gain boost
+ *
+ * @example
+ * note("c4 d4 e4 f4").fastChunk(4) { it.transpose(12) }
+ * // Each cycle, a different note gets transposed up an octave
+ */
+@StrudelDsl
+val StrudelPattern.fastChunk by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
+    val transform = args.getOrNull(1).toPatternMapper() ?: { it }
+    applyChunk(p, listOf(nArg, transform, false, true).asStrudelDslArgs())
+}
+
+/**
+ * Like `chunk`, but the cycles of the source pattern aren't repeated.
+ *
+ * Pattern plays at natural speed while transformation cycles through chunks.
+ *
+ * @example
+ * seq("0 1 2 3").fastChunk(4) { it.add(10) }
+ * // Cycle 0: [10, 1, 2, 3], Cycle 1: [0, 11, 2, 3], Cycle 2: [0, 1, 12, 3], Cycle 3: [0, 1, 2, 13]
+ */
+@StrudelDsl
+fun StrudelPattern.fastChunk(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return applyChunk(this, listOf(n, transform, false, true).asStrudelDslArgs())
+}
+
+@StrudelDsl
+val String.fastChunk by dslStringExtension { p, args, callInfo -> p.fastChunk(args, callInfo) }
+
+/**
+ * Like `chunk`, but the cycles of the source pattern aren't repeated.
+ *
+ * Pattern plays at natural speed while transformation cycles through chunks.
+ *
+ * @example
+ * s("bd sd ht lt").fastChunk(4) { it.gain(0.8) }
+ * // Each cycle, a different sound gets the gain boost
+ */
+@StrudelDsl
+fun String.fastChunk(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return this.fastChunk(listOf(n, transform).asStrudelDslArgs())
+}
+
+/** Alias for [fastChunk] */
+@StrudelDsl
+val StrudelPattern.fastchunk by dslPatternExtension { p, args, callInfo -> p.fastChunk(args, callInfo) }
+
+/** Alias for [fastChunk] */
+@StrudelDsl
+fun StrudelPattern.fastchunk(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return fastChunk(n, transform)
+}
+
+@StrudelDsl
+val String.fastchunk by dslStringExtension { p, args, callInfo -> p.fastChunk(args, callInfo) }
+
+/** Alias for [fastChunk] */
+@StrudelDsl
+fun String.fastchunk(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return this.fastChunk(n, transform)
+}
+
 // -- echo() / stut() --------------------------------------------------------------------------------------------------
 
 /**

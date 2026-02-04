@@ -519,10 +519,10 @@ but the audio engine integration is still pending:~~
 - [ ] **`stepalt(...groups)`** - Alternate between pattern groups (alias: `s_alt`)
 - [x] **`press()`** - Press pattern (squash events)
 - [x] **`pressBy(amount)`** - Press pattern by amount
-- [ ] **`fastchunk(n, func)`** - Apply function to fast chunks (alias: `fastChunk`)
+- [x] **`fastchunk(n, func)`** - Apply function to fast chunks (alias: `fastChunk`)
 - [ ] **`chunkinto(n, func)`** - Chunk into n sections (alias: `chunkInto`)
 - [ ] **`chunkbackinto(n, func)`** - Chunk backwards into n sections (alias: `chunkBackInto`)
-- [ ] **`chunkback(n, func)`** - Chunk backwards (alias: `chunkBack`)
+- [x] **`chunkback(n, func)`** - Chunk backwards (alias: `chunkBack`)
 
 ### Conditional & Probabilistic
 
