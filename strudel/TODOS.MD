@@ -517,8 +517,8 @@ but the audio engine integration is still pending:~~
 - [x] **`outside(factor, operation)`** - Applies operation outside cycle (speeds pattern, applies function, then slows
   back down)
 - [ ] **`stepalt(...groups)`** - Alternate between pattern groups (alias: `s_alt`)
-- [ ] **`press()`** - Press pattern (squash events)
-- [ ] **`pressBy(amount)`** - Press pattern by amount
+- [x] **`press()`** - Press pattern (squash events)
+- [x] **`pressBy(amount)`** - Press pattern by amount
 - [ ] **`fastchunk(n, func)`** - Apply function to fast chunks (alias: `fastChunk`)
 - [ ] **`chunkinto(n, func)`** - Chunk into n sections (alias: `chunkInto`)
 - [ ] **`chunkbackinto(n, func)`** - Chunk backwards into n sections (alias: `chunkBackInto`)

@@ -47,7 +47,6 @@ fun StrudelVoiceData.resolveNote(newIndex: Int? = null): StrudelVoiceData {
         return copy(
             note = noteName,
             freqHz = Tones.noteToFreq(noteName),
-            gain = gain ?: 1.0,
             soundIndex = null, // sound-index was consumed
             value = null,
         )
@@ -149,7 +148,7 @@ val String.note by dslStringExtension { p, args, callInfo -> p.note(args, callIn
 private val nMutation = voiceModifier {
     copy(
         soundIndex = it?.asIntOrNull() ?: soundIndex,
-        gain = gain ?: 1.0,
+        value = null,
     )
 }
 
@@ -159,7 +158,6 @@ fun applyN(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPatt
         source.reinterpretVoice {
             it.copy(
                 soundIndex = it.soundIndex ?: it.value?.asInt,
-                gain = it.gain ?: 1.0,
                 value = null,
             )
         }
@@ -194,7 +192,7 @@ private val soundMutation = voiceModifier {
         // Preserve existing index if the string doesn't specify one.
         soundIndex = split.getOrNull(1)?.toIntOrNull() ?: soundIndex,
         // Preserve existing gain if the string doesn't specify one.
-        gain = split.getOrNull(2)?.toDoubleOrNull() ?: gain ?: 1.0,
+        gain = split.getOrNull(2)?.toDoubleOrNull() ?: gain,
     )
 }
 
@@ -646,7 +644,6 @@ fun StrudelVoiceData.transpose(amount: Any?): StrudelVoiceData {
                 note = newNoteName,
                 freqHz = Tones.noteToFreq(newNoteName),
                 value = null, // clear the value ... it was consumed
-                gain = gain ?: 1.0,
             )
         }
     }
@@ -657,7 +654,6 @@ fun StrudelVoiceData.transpose(amount: Any?): StrudelVoiceData {
     if (currentFreq <= 0.0) {
         return this.copy(
             value = null, // clear the value ... it was consumed
-            gain = gain ?: 1.0,
         )
     }
 
@@ -678,7 +674,6 @@ fun StrudelVoiceData.transpose(amount: Any?): StrudelVoiceData {
         note = newNote,
         freqHz = newFreq,
         value = null, // clear the value ... it was consumed
-        gain = gain ?: 1.0,
     )
 }
 
@@ -807,7 +802,6 @@ fun StrudelVoiceData.scaleTranspose(steps: Int): StrudelVoiceData {
         return copy(
             note = finalNote,
             freqHz = Tones.noteToFreq(finalNote),
-            gain = gain ?: 1.0,
         )
     } catch (_: Exception) {
         // On any error, fallback to chromatic transposition
@@ -937,7 +931,6 @@ fun StrudelVoiceData.extractRootNote(octave: Int? = null): StrudelVoiceData {
         return copy(
             note = rootNote,
             freqHz = Tones.noteToFreq(rootNote),
-            gain = gain ?: 1.0,
         )
     } catch (_: Exception) {
         return this

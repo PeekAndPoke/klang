@@ -1183,6 +1183,97 @@ fun String.slowChunk(
     return this.slowChunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 }
 
+// -- chunkBack() / chunkback() ----------------------------------------------------------------------------------------
+
+/**
+ * Like `chunk`, but cycles through the parts in reverse order.
+ * Known as chunk' in tidalcycles.
+ *
+ * Divides a pattern into `n` chunks and cycles through them backward,
+ * applying the transformation function to one chunk per cycle.
+ *
+ * @param {n}         Number of chunks to divide the pattern into
+ * @param {transform} Function to apply to each chunk
+ *
+ * @example
+ * seq("0 1 2 3").chunkBack(4) { it.add(7) }
+ * // Cycle 0: [7, 1, 2, 3]  - transform chunk 0
+ * // Cycle 1: [0, 1, 2, 10] - transform chunk 3 (backward!)
+ * // Cycle 2: [0, 1, 9, 3]  - transform chunk 2
+ * // Cycle 3: [0, 8, 2, 3]  - transform chunk 1
+ *
+ * @example
+ * s("bd sd ht lt").chunkBack(4) { it.gain(0.8) }
+ * // Cycles backward: chunk 0, then 3, then 2, then 1
+ */
+@StrudelDsl
+val StrudelPattern.chunkBack by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
+    val transform = args.getOrNull(1).toPatternMapper() ?: { it }
+    applyChunk(p, listOf(nArg, transform, true, false).asStrudelDslArgs())
+}
+
+/**
+ * Like `chunk`, but cycles through the parts in reverse order.
+ *
+ * @example
+ * seq("0 1 2 3").chunkBack(4) { it.add(7) }
+ * // Cycle 0: [7, 1, 2, 3]  - chunk 0
+ * // Cycle 1: [0, 1, 2, 10] - chunk 3 (backward)
+ * // Cycle 2: [0, 1, 9, 3]  - chunk 2
+ * // Cycle 3: [0, 8, 2, 3]  - chunk 1
+ */
+@StrudelDsl
+fun StrudelPattern.chunkBack(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return applyChunk(this, listOf(n, transform, true, false).asStrudelDslArgs())
+}
+
+@StrudelDsl
+val String.chunkBack by dslStringExtension { p, args, callInfo -> p.chunkBack(args, callInfo) }
+
+/**
+ * Like `chunk`, but cycles through the parts in reverse order.
+ *
+ * @example
+ * "0 1 2 3".chunkBack(4) { it.add(7) }.scale("A:minor").note()
+ * // Cycles backward through chunks: 0 -> 3 -> 2 -> 1
+ */
+@StrudelDsl
+fun String.chunkBack(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return this.chunkBack(listOf(n, transform).asStrudelDslArgs())
+}
+
+/** Alias for [chunkBack] */
+@StrudelDsl
+val StrudelPattern.chunkback by dslPatternExtension { p, args, callInfo -> p.chunkBack(args, callInfo) }
+
+/** Alias for [chunkBack] */
+@StrudelDsl
+fun StrudelPattern.chunkback(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return chunkBack(n, transform)
+}
+
+@StrudelDsl
+val String.chunkback by dslStringExtension { p, args, callInfo -> p.chunkBack(args, callInfo) }
+
+/** Alias for [chunkBack] */
+@StrudelDsl
+fun String.chunkback(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return this.chunkBack(n, transform)
+}
+
 // -- echo() / stut() --------------------------------------------------------------------------------------------------
 
 /**
