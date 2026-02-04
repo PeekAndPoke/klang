@@ -86,14 +86,16 @@ class LangSlowSpec : StringSpec({
         val p = sound("bd hh").slow(2).slow(2)
 
         // When querying four cycles
-        val events = p.queryArc(0.0, 4.0).sortedBy { it.part.begin }
+        val allEvents = p.queryArc(0.0, 4.0).sortedBy { it.part.begin }
+
+        val events = allEvents.filter { it.isOnset }
 
         // Then the pattern is slowed by 4 total (2 * 2)
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[0].part.duration.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[0].whole.duration.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
         events[1].data.sound shouldBe "hh"
-        events[1].part.duration.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        events[1].whole.duration.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
     "slow() with fractional factor" {

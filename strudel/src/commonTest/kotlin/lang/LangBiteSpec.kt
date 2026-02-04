@@ -22,6 +22,15 @@ class LangBiteSpec : StringSpec({
         events.map { it.data.soundIndex } shouldBe listOf(3, 2, 1, 0)
     }
 
+    "bite works with single pattern index" {
+        // indices: <0 1>
+        val p = n("10 20").bite(2, seq("0"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.soundIndex shouldBe 10
+    }
+
     "bite works with pattern indices" {
         // indices: <0 1>
         val p = n("10 20").bite(2, seq("0 1"))
@@ -35,7 +44,8 @@ class LangBiteSpec : StringSpec({
     "bite handles wrapping indices" {
         // Index 2 on a 2-slice pattern should wrap to 0
         val p = n("10 20").bite(2, "2")
-        val events = p.queryArc(0.0, 1.0)
+        val allEvents = p.queryArc(0.0, 1.0)
+        val events = allEvents.filter { it.isOnset }
 
         events.size shouldBe 1
         events[0].data.soundIndex shouldBe 10

@@ -40,4 +40,15 @@ data class TimeSpan(
             null
         }
     }
+
+    /**
+     * Transforms time relative to the cycle (sam = start of cycle = floor).
+     * Takes cycle-local time, applies transformation, then adds sam back.
+     */
+    fun withCycle(funcTime: (Rational) -> Rational): TimeSpan {
+        val sam = begin.floor()
+        val b = sam + funcTime(begin - sam)
+        val e = sam + funcTime(end - sam)
+        return TimeSpan(b, e)
+    }
 }

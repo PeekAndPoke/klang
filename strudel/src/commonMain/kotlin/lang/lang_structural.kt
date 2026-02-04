@@ -934,8 +934,8 @@ private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     }
 
     // We convert both arguments to patterns to support dynamic zoom (e.g. zoom("<0 0.5>", "<0.5 1>"))
-    val startCtrl = listOf(args[0]).toPattern(voiceValueModifier)
-    val endCtrl = listOf(args[1]).toPattern(voiceValueModifier)
+    val startCtrl = args[0].toPattern(voiceValueModifier)
+    val endCtrl = args[1].toPattern(voiceValueModifier)
 
     // Bind the start pattern...
     return startCtrl._bind { startEv ->
@@ -948,16 +948,26 @@ private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
             val s = sVal.toRational()
             val e = eVal.toRational()
 
-            if (s >= e) return@_bind null
+            if (s >= e) return@_bind silence
 
             val d = e - s
             val steps = source.numSteps?.let { it * d }
 
-            source._withQueryTime { t -> t * d + s }.mapEvents { ev ->
-                val scaledPart = ev.part.shift(-s).scale(Rational.ONE / d)
-                val scaledWhole = ev.whole.shift(-s).scale(Rational.ONE / d)
-                ev.copy(part = scaledPart, whole = scaledWhole)
-            }.let { if (steps != null) it.withSteps(steps) else it }
+            // Using relative start to ensure correct periodicity even if s > 1
+            val sRel = s - s.floor()
+
+            // Match JS implementation: withQuerySpan + withHapSpan + splitQueries
+            source
+                ._withQuerySpan { span ->
+                    // Apply transformation to cycle-local time: t => t * d + sRel
+                    span.withCycle { t: Rational -> t * d + sRel }
+                }
+                ._withHapSpan { span ->
+                    // Apply transformation to cycle-local time: t => (t - sRel) / d
+                    span.withCycle { t: Rational -> (t - sRel) / d }
+                }
+                ._splitQueries()
+                .withSteps(steps)
         }
     }
 }
@@ -980,7 +990,7 @@ val StrudelPattern.zoom by dslPatternExtension { p, args, /* callInfo */ _ -> ap
  * Plays a portion of a pattern, specified by the beginning and end of a time span.
  */
 fun StrudelPattern.zoom(start: Double, end: Double): StrudelPattern =
-    applyZoom(this, listOf(start, end).asStrudelDslArgs())
+    this.zoom(listOf(start, end).asStrudelDslArgs())
 
 @StrudelDsl
 val String.zoom by dslStringExtension { p, args, callInfo -> p.zoom(args, callInfo) }
@@ -1372,6 +1382,79 @@ fun String.fastchunk(
     return this.fastChunk(n, transform)
 }
 
+// -- linger() ---------------------------------------------------------------------------------------------------------
+
+fun applyLinger(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val tArg = args.getOrNull(0) ?: return pattern
+
+    return pattern._innerJoin(tArg) { src, tVal ->
+        val t = tVal?.asDouble ?: return@_innerJoin src
+
+        when {
+            t == 0.0 -> silence
+            t < 0 -> {
+                // Negative: zoom from (t+1) to 1, then slow by t (which is negative)
+                src.zoom(t + 1.0, 1.0).slow(-t)
+            }
+
+            else -> {
+                // Positive: zoom from 0 to t, then slow by t
+                src.zoom(0.0, t).slow(t)
+            }
+        }
+    }
+}
+
+/**
+ * Selects the given fraction of the pattern and repeats that part to fill the remainder of the cycle.
+ *
+ * **Behavior:**
+ * - `linger(0.5)`: Takes first 50% of pattern, repeats it to fill the cycle
+ * - `linger(-0.5)`: Takes last 50% of pattern, repeats it to fill the cycle
+ * - `linger(0)`: Returns silence
+ *
+ * The selected portion is slowed down by the fraction amount to fill the full cycle time.
+ *
+ * @param {t} Fraction to select (positive = from start, negative = from end)
+ *
+ * @example
+ * s("bd sd ht lt").linger(0.5)
+ * // Repeats "bd sd" throughout the cycle
+ *
+ * @example
+ * s("bd sd ht lt").linger(-0.5)
+ * // Repeats "ht lt" throughout the cycle
+ *
+ * @example
+ * s("lt ht mt cp, [hh oh]*2").linger("<1 .5 .25 .125>")
+ * // Different fraction each cycle
+ */
+@StrudelDsl
+val StrudelPattern.linger by dslPatternExtension { p, args, /* callInfo */ _ -> applyLinger(p, args) }
+
+/**
+ * Selects the given fraction of the pattern and repeats that part to fill the remainder of the cycle.
+ *
+ * @example
+ * s("bd sd ht lt").linger(0.5)
+ * // Repeats "bd sd" throughout the cycle
+ */
+@StrudelDsl
+fun StrudelPattern.linger(t: Double): StrudelPattern = linger(listOf(StrudelDslArg.of(t)))
+
+@StrudelDsl
+val String.linger by dslStringExtension { p, args, callInfo -> p.linger(args, callInfo) }
+
+/**
+ * Selects the given fraction of the pattern and repeats that part to fill the remainder of the cycle.
+ *
+ * @example
+ * "bd sd ht lt".linger(0.5)
+ * // Repeats "bd sd" throughout the cycle
+ */
+@StrudelDsl
+fun String.linger(t: Double): StrudelPattern = linger(listOf(StrudelDslArg.of(t)))
+
 // -- echo() / stut() --------------------------------------------------------------------------------------------------
 
 /**
@@ -1584,19 +1667,20 @@ fun String.echowith(times: Int, delay: Double, transform: StrudelPatternMapper):
 fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     if (args.size < 2) return silence
 
-    val nPattern = args.take(1).toPattern(voiceValueModifier)
-    val indicesPattern = args.drop(1).toPattern(voiceValueModifier)
+    val nPattern = args.take(1).toPattern()
+    val indicesPattern = args.drop(1).toPattern()
+    val indicesSteps: Double = indicesPattern.numSteps?.toDouble() ?: return silence
 
     return source._innerJoin(nPattern, indicesPattern) { src, nValue, indexValue ->
-        val n = nValue?.asDouble ?: 4.0
-        val index = indexValue?.asDouble ?: return@_innerJoin silence
+        val steps: Double = src.numSteps?.toDouble() ?: return@_innerJoin silence
+        val n: Double = nValue?.asDouble?.takeIf { it > 0.0 } ?: return@_innerJoin silence
+        val index: Double = indexValue?.asDouble ?: return@_innerJoin silence
+        val indexMod: Double = ((index % steps) + steps) % steps
 
-        if (n <= 0.0) return@_innerJoin silence
+        val start = indexMod / n
+        val end = (indexMod + 1.0) / n
 
-        val start = index / n
-        val end = (index + 1.0) / n
-
-        src.zoom(start, end)
+        src.zoom(start, end).fast(indicesSteps)
     }
 }
 
@@ -2778,7 +2862,7 @@ val String.applyN by dslStringExtension { p, args, callInfo -> p.applyN(args, ca
 // -- pressBy() --------------------------------------------------------------------------------------------------------
 
 /**
- * Syncopates rhythm by compressing events to start at position [r] within their timespan.
+ * Syncopates rhythm by compressing events to start at position {r} within their timespan.
  *
  * - r = 0: No compression (normal timing)
  * - r = 0.5: Events start halfway through (syncopated)

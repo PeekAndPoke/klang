@@ -18,6 +18,7 @@ out/
 
 ### Kotlin ###
 /.kotlin
+/buildSrc/.kotlin
 
 ### Eclipse ###
 .apt_generated

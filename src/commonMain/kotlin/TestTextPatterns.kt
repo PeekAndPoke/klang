@@ -63,47 +63,47 @@ import * from "strudel"
 let wait = 16
 
 stack(
-    sound("cp:4 ~ cp:4 ~ ~ cp:2 cp:2 ~  cp:4 ~ ~ ~ ~ cp:2 ~ ~").slow(4).gain(0.2).legato(2.0)
+    sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ ~ cp ~ ~").slow(4).gain(0.2).legato(2.0)
         .bandf(sine.range(1400, 1600).fast(3.14))
         .filterWhen(x => x >= wait * 10)
     , // Lyrics --------------------------------------------------------------------------------------------
     n("0").morse("Schön ist es auf der Welt zu sein!")
         .scale("C6:major").scaleTranspose("0 -2 2 -5".slow(32))
-        .sound("square").warmth(1.0).gain(0.8).pan(berlin.slow(2)).adsr("0.05:0.2:0.2:0.0")
+        .sound("square").warmth(1.0).gain(0.7).pan(berlin.slow(2)).adsr("0.05:0.2:0.2:0.0")
         .filterWhen(x => x >= wait * 5)
     , // Melody --------------------------------------------------------------------------------------------
-    n("<[0 2 4 6 7 6 4 2]>").scale("<[c3:major c3:pentatonic c3:major c3:major]>/16")
+    n("<[0 2 4 6 7 6 4 2]>").scale("[c3:major c3:pentatonic c3:major c3:major]/16")
         .s("supersaw").unison(10).detune(saw.range(0.001, 0.3).slow(16)).spread(1.0)
         .gain(0.050).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.03:0.5:0.7:0.1")
-        .distort(2.0)
-        .lpenv(perlin.slow(4).range(0, 4)).lpf(perlin.slow(2).range(110, 440 * 5)).lpq(1.2)        
+        .distort(1.5)
+        .lpenv(perlin.slow(4).range(0, 3)).lpf(perlin.slow(2).range(110, 440 * 5)).lpq(1.2)        
         .filterWhen(x => x >= wait * 3)
     , // Bass ----------------------------------------------------------------------------------------------
     note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [c2@2 e2@5 [e1 c1]]>/8").clip(0.75).struct("x!8")
         .gain(0.5).pan(sine.range(0.3, 0.7).slow(16)).adsr("0.03:0.5:0.5:0.5")
-        .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.5).legato(1.2))
+        .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.30).legato(1.1))
         .s("supersaw").unison(6).detune(saw.range(0.1, 0.45).slow(16))
-        .lpf(2500).crush(sine.range(3.0, 20.0).slow(32))
+        .lpf(5 * 440).crush(sine.range(3.5, 12.0).slow(32)).hpf(55)
         .filterWhen(x => x >= wait * 0.5)
     , 
     // Perc 2 ----------------------------------------------------------------------------------------------
-    sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
+    sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh hh*2 cr]>")
         .gain(0.9).pan(0.4).adsr("0.05:0.8:0.5:1.0").fast(2).degrade(0.2)
         .filterWhen(x => x >= wait * 1)
     ,
     // Perc 1 ----------------------------------------------------------------------------------------------
     sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-        .gain(0.7).pan(0.5).adsr("0.01:0.5:0.5:1.0").degrade(0.01)        
+        .gain(0.6).pan(0.5).adsr("0.01:0.5:0.5:1.0").degrade(0.01)        
         .filterWhen(x => x >= wait * 0.5)
     ,
     // Wind ----------------------------------------------------------------------------------------------
     note("a").fast(16).sound("brown")
      .gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.05:1.0:1.0:0.5")
-     .bandf(perlin.range(440, 440 * 4).slow(16)).bandq(sine.range(-0.1, 5.0).slow(12))
+     .bandf(perlin.range(440, 440 * 4).slow(16)).bandq(sine.range(-0.05, 5.0).slow(12))
   ,
-).delay(0.1).delaytime(pure(1/8).div(cps)).delayfeedback(0.33)
+).delay(0.125).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)
   .room(0.05).rsize(10.0)
-
+  
     """.trimIndent()
 
     val strangerThingsNetflix = """

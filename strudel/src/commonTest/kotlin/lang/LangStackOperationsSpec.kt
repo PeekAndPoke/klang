@@ -19,19 +19,20 @@ class LangStackOperationsSpec : StringSpec({
         // p1 should start at (2.0 - 1.0) * 0.5 = 0.5
         val p = stackBy(0.5, p1, p2)
 
-        val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
+        val allEvents = p.queryArc(0.0, 1.0)
+        val events = allEvents.filter { it.isOnset }
 
         events.size shouldBe 2
 
         // e starts at 0.0, ends at 2.0
         val eEvent = events.find { it.data.note?.lowercase() == "e" }!!
-        eEvent.part.begin shouldBe Rational.ZERO
-        eEvent.part.end shouldBe Rational(2)
+        eEvent.whole.begin shouldBe Rational.ZERO
+        eEvent.whole.end shouldBe Rational(2)
 
         // c starts at 0.5, ends at 1.5
         val cEvent = events.find { it.data.note?.lowercase() == "c" }!!
-        cEvent.part.begin shouldBe 0.5.toRational()
-        cEvent.part.end shouldBe 1.5.toRational()
+        cEvent.whole.begin shouldBe 0.5.toRational()
+        cEvent.whole.end shouldBe 1.5.toRational()
     }
 
     "stackLeft() aligns to the start" {

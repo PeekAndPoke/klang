@@ -67,27 +67,19 @@ internal class SequencePattern(
                 // Clamp innerTo to the end of the cycle
                 val innerTo = minOf((intersectEnd - stepStart) / stepSize + cycleOffset, cycleOffset + Rational.ONE)
 
-                // Condition for when to take the event
-                val takeIt = intersectEnd > intersectStart &&
-                        // IMPORTANT: Protection against floating point precision issues
-                        (innerTo - innerFrom > MIN_QUERY_LENGTH)
+                val innerEvents = pattern.queryArcContextual(innerFrom, innerTo, ctx)
 
-                if (takeIt) {
+                events.addAll(innerEvents.mapNotNull { ev ->
+                    // Map back to outer time - scale and shift both part and whole
+                    val scaledPart = ev.part.shift(-cycleOffset).scale(stepSize).shift(stepStart)
+                    val scaledWhole = ev.whole.shift(-cycleOffset).scale(stepSize).shift(stepStart)
 
-                    val innerEvents = pattern.queryArcContextual(innerFrom, innerTo, ctx)
-
-                    events.addAll(innerEvents.mapNotNull { ev ->
-                        // Map back to outer time - scale and shift both part and whole
-                        val scaledPart = ev.part.shift(-cycleOffset).scale(stepSize).shift(stepStart)
-                        val scaledWhole = ev.whole.shift(-cycleOffset).scale(stepSize).shift(stepStart)
-
-                        if (scaledPart.end > from) {
-                            ev.copy(part = scaledPart, whole = scaledWhole)
-                        } else {
-                            null
-                        }
-                    })
-                }
+                    if (scaledPart.end > from) {
+                        ev.copy(part = scaledPart, whole = scaledWhole)
+                    } else {
+                        null
+                    }
+                })
             }
         }
 

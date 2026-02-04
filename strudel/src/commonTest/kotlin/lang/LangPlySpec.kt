@@ -209,8 +209,8 @@ class LangPlySpec : StringSpec({
     "ply() with control pattern" {
         val subject = note("c d e f").ply("2 3")
 
-        assertSoftly {
-            repeat(12) { cycle ->
+        repeat(12) { cycle ->
+            assertSoftly {
 
                 val cycleDbl = cycle.toDouble()
                 val events = subject.queryArc(cycleDbl, cycleDbl + 1)

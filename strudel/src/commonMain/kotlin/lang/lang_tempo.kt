@@ -40,14 +40,20 @@ fun applyTimeShift(
 // -- slow() -----------------------------------------------------------------------------------------------------------
 
 fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val factorProvider = args.firstOrNull()
-        .asControlValueProvider(StrudelVoiceValue.Num(1.0))
+    val factorArg = args.firstOrNull() ?: return pattern
 
-    return TempoModifierPattern(
-        source = pattern,
-        factorProvider = factorProvider,
-        invertPattern = false
-    )
+    // Match JS: slow(factor) = fast(1/factor)
+    return pattern._innerJoin(factorArg) { src, factorVal ->
+        val factor = factorVal?.asDouble ?: return@_innerJoin src
+        if (factor == 0.0) return@_innerJoin silence
+        // slow(factor) = fast(1/factor)
+        val inverseFactor = 1.0 / factor
+        val invRational = inverseFactor.toRational()
+
+        src._withQueryTime { t -> t * invRational }
+            ._withHapTime { t -> t / invRational }
+            .withSteps(src.numSteps)
+    }
 }
 
 /** Slows down all inner patterns by the given factor */
@@ -79,14 +85,20 @@ val String.slow by dslStringExtension { p, args, callInfo -> p.slow(args, callIn
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
 fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val factorProvider = args.firstOrNull()
-        .asControlValueProvider(StrudelVoiceValue.Num(1.0))
+    val factorArg = args.firstOrNull() ?: return pattern
 
-    return TempoModifierPattern(
-        source = pattern,
-        factorProvider = factorProvider,
-        invertPattern = true
-    )
+    // Match JS: fast(factor) uses withQueryTime and withHapTime
+    return pattern._innerJoin(factorArg) { src, factorVal ->
+        val factor = factorVal?.asDouble ?: return@_innerJoin src
+
+        if (factor == 0.0) return@_innerJoin silence
+
+        val factorRational = factor.toRational()
+
+        src._withQueryTime { t -> t * factorRational }
+            ._withHapTime { t -> t / factorRational }
+            .withSteps(src.numSteps)
+    }
 }
 
 /** Speeds up all inner patterns by the given factor */
@@ -372,7 +384,7 @@ fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     val newSteps = if (staticFactor != null) pattern.numSteps?.times(staticFactor) else null
 
     // Convert factor to pattern (supports static values and control patterns)
-    val factorPattern = listOf(factorArg).toPattern(voiceValueModifier)
+    val factorPattern = factorArg.toPattern()
 
     val result = pattern._bindSqueeze { event ->
         // pure(x) -> infinite pattern of the event's data
@@ -383,7 +395,7 @@ fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
         // factorPattern.zoom(begin, end) takes the slice of factor corresponding to the event
         // and stretches it to 0..1, which matches the squeezed context.
         val localFactor = if (staticFactor == null) {
-            factorPattern.zoom(event.part.begin.toDouble(), event.part.end.toDouble())
+            factorPattern.zoom(event.whole.begin.toDouble(), event.whole.end.toDouble())
         } else {
             factorPattern
         }

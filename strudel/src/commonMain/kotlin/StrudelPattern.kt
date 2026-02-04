@@ -362,7 +362,7 @@ fun StrudelPattern.withWeight(weight: Double): StrudelPattern {
  * @param steps The new steps value
  * @return A new pattern with the specified steps
  */
-fun StrudelPattern.withSteps(steps: Rational): StrudelPattern {
+fun StrudelPattern.withSteps(steps: Rational?): StrudelPattern {
     return PropertyOverridePattern(source = this, stepsOverride = steps)
 }
 
@@ -631,6 +631,49 @@ fun StrudelPattern._squeezeJoin(): StrudelPattern = object : StrudelPattern {
             )
 
             // Merge outer event's data (sound, note, etc.) with inner event's data (timing)
+            val mergedEvents = innerEvents.map { innerEvent ->
+                innerEvent.copy(
+                    data = outerEvent.data.copy(value = innerEvent.data.value),
+                )
+            }
+
+            results.addAll(mergedEvents)
+        }
+
+        return results
+    }
+}
+
+/**
+ * Flattens a pattern-of-patterns by querying each inner pattern directly without time transformation.
+ * Equivalent to `innerJoin()` in JS Strudel.
+ *
+ * Unlike _squeezeJoin which squeezes the inner pattern's [0,1] cycle into the outer event's timespan,
+ * _innerJoin queries the inner pattern for the outer event's timespan directly without transformation.
+ * The inner event's whole is used (not the outer's).
+ *
+ * Expects a pattern where event values are StrudelVoiceValue.Pattern.
+ */
+fun StrudelPattern._innerJoin(): StrudelPattern = object : StrudelPattern {
+    override val weight: Double get() = this@_innerJoin.weight
+    override val numSteps: Rational? get() = this@_innerJoin.numSteps
+    override fun estimateCycleDuration(): Rational = this@_innerJoin.estimateCycleDuration()
+
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        val outerEvents = this@_innerJoin.queryArcContextual(from, to, ctx)
+        val results = mutableListOf<StrudelPatternEvent>()
+
+        for (outerEvent in outerEvents) {
+            // Get the inner pattern from the event's value
+            val innerPattern = (outerEvent.data.value as? StrudelVoiceValue.Pattern)?.pattern
+                ?: continue
+
+            // Query the inner pattern for the outer event's part timespan (no time transformation)
+            val innerEvents: List<StrudelPatternEvent> =
+                innerPattern.queryArcContextual(outerEvent.part.begin, outerEvent.part.end, ctx)
+
+            // Merge outer event's data (sound, note, etc.) with inner event's data (timing + value)
+            // Use inner event's whole (not outer's)
             val mergedEvents = innerEvents.map { innerEvent ->
                 innerEvent.copy(
                     data = outerEvent.data.copy(value = innerEvent.data.value),

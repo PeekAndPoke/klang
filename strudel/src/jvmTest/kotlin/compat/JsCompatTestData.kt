@@ -132,6 +132,13 @@ object JsCompatTestData {
         Example("fastChunk with sound", """s("bd sd").fastChunk(2, x => x.gain(0.8))"""),
         Example("fastchunk lowercase", """note("c4 d4 e4 f4").fastchunk(4, x => x.transpose(12))"""),
         Example("fastChunk with alternation", """seq("<0 5> 1 2").fastChunk(3, x => x.add(10))"""),
+        Example("zoom basic first half", """s("bd sd ht lt").zoom(0, 0.5)"""),
+        Example("zoom basic second half", """s("bd sd ht lt").zoom(0.5, 1)"""),
+        Example("zoom middle section", """s("bd sd ht lt").zoom(0.25, 0.75)"""),
+        Example("zoom with numbers", """seq("0 1 2 3").zoom(0, 0.5)"""),
+        Example("zoom then slow", """s("bd sd ht lt").zoom(0, 0.5).slow(2)"""),
+        Example("zoom then slow 0.5", """s("bd sd ht lt").zoom(0, 0.5).slow(0.5)"""),
+        Example("zoom then fast", """s("bd sd ht lt").zoom(0, 0.5).fast(2)"""),
 
         // Is OK
         Example(SKIP, "echo basic", """n("0").echo(4, 0.5, 0.5)"""),
@@ -255,8 +262,10 @@ object JsCompatTestData {
         Example("EuclidLegatoRot Function #4", """note("bd").euclidLegatoRot(3, 8, 9)"""),
 
         // Timing & Tempo
-        Example(SKIP, "Slow", """note("c e g").slow(2)"""), // Our implementation is better
+        Example("Slow", """note("c e g").slow(2)"""), // Our implementation is better
+        Example("Slow twice", """sound("bd hh").slow(2).slow(2)"""), // Our implementation is better
         Example("Fast", """note("c e g").fast(2)"""),
+        Example("Fast twice", """note("c e").fast(2).fast(2)"""),
         Example("Slow & Fast", """note("c e g").slow(2).fast(2)"""),
         Example("Late 0.5", """note("a b c d").late(0.5)"""),
         Example("Late [0.5 0.5]", """note("a b c d").late("0.5 0.5")"""),
@@ -810,6 +819,19 @@ object JsCompatTestData {
         Example("Extend basic", """note("c d e f").extend(2)"""),
         Example("Iter basic", """note("c d e f").iter(4)"""),
         Example("IterBack basic", """note("c d e f").iterBack(4)"""),
+
+        // Bite Operations - js impl might be buggy
+        Example("Bite identity", """n("0 1 2 3").bite(4, "0 1 2 3")"""),
+        Example("Bite reverse", """n("0 1 2 3").bite(4, "3 2 1 0")"""),
+        Example("Bite with pattern indices", """n("10 20").bite(2, "0 1")"""),
+        Example("Bite wrapping", """n("10 20").bite(2, "2")"""),
+        // not supported in JS
+        Example(SKIP, "Bite negative index", """n("10 20").bite(2, "-1")"""),
+        // not supported in JS
+        Example(SKIP, "Bite string extension", """"0 1 2 3".bite(4, "3 2 1 0")"""),
+        Example("Bite pattern control for n", """n("0 1 2 3").bite("2 4", "0 1")"""),
+        Example("Bite steady pattern", """n("0 1 2 3").bite(steady(4), "0 1 2 3")"""),
+        Example(SKIP, "Bite continuous pattern", """n("0 1 2 3").bite(sine.range(2, 4).segment(2), "0 1")"""),
     ).map {
         it.recovers("data.gain") { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
     }

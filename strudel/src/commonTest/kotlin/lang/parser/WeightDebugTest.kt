@@ -236,19 +236,20 @@ class WeightDebugTest : StringSpec({
         for (startCycle in 0 until 100 step 2) {
             val from = startCycle.toDouble()
             val to = from + 2.0
-            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
+            val allEvents = pattern.queryArc(from, to)
+            val events = allEvents.filter { it.isOnset }
 
             events.size shouldBe 2
             val a = events[0]
             val b = events[1]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.part.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
-            a.part.duration.toDouble() shouldBe (1.5 plusOrMinus EPSILON) // 0.75 * 2
+            a.whole.begin.toDouble() shouldBe (from plusOrMinus EPSILON)
+            a.whole.duration.toDouble() shouldBe (1.5 plusOrMinus EPSILON) // 0.75 * 2
 
             b.data.note shouldBeEqualIgnoringCase "b"
-            b.part.begin.toDouble() shouldBe (from + 1.5 plusOrMinus EPSILON)
-            b.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON) // 0.25 * 2
+            b.whole.begin.toDouble() shouldBe (from + 1.5 plusOrMinus EPSILON)
+            b.whole.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON) // 0.25 * 2
         }
     }
 
@@ -297,18 +298,19 @@ class WeightDebugTest : StringSpec({
         for (startCycle in 0 until 100 step 2) {
             val from = startCycle.toDouble()
             val to = from + 2.0
-            val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
+            val allEvents = pattern.queryArc(from, to).sortedBy { it.part.begin }
+            val events = allEvents.filter { it.isOnset }
 
             events.size shouldBe 2
             val a = events[0]
             val b = events[1]
 
             a.data.note shouldBeEqualIgnoringCase "a"
-            a.part.duration.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
+            a.whole.duration.toDouble() shouldBe (1.5 plusOrMinus EPSILON)
             a.data.gain shouldBe (0.5 plusOrMinus EPSILON)
 
             b.data.note shouldBeEqualIgnoringCase "b"
-            b.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+            b.whole.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
             b.data.gain shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
