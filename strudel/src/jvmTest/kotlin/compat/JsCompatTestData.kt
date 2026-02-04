@@ -124,6 +124,10 @@ object JsCompatTestData {
         Example(SKIP, "chunk 3 with 2 slices silence", """s("bd sd hh").chunk(2, x => silence)"""),
         Example(SKIP, "chunk 3 with 2 slices fast", """s("bd sd hh").chunk(2, x => x.fast(2))"""),
         Example("chunk 4 with 2 slices fast", """s("bd hh sd oh").chunk(2, x => x.fast(2))"""),
+        Example("chunkBack basic", """seq("0 1 2 3").chunkBack(4, x => x.add(7))"""),
+        Example("chunkBack with sound", """s("bd sd ht lt").chunkBack(4, x => x.gain(0.8))"""),
+        Example("chunkback lowercase", """seq("0 1 2 3").chunkback(4, x => x.add(10))"""),
+        Example("chunkBack 2 slices", """seq("0 1").chunkBack(2, x => x.add(5))"""),
 
         // Is OK
         Example(SKIP, "echo basic", """n("0").echo(4, 0.5, 0.5)"""),
