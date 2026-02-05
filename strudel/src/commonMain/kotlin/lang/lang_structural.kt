@@ -2488,13 +2488,11 @@ fun applyTake(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 
     return takePattern._stepJoin { event ->
-        val n = event.data.value?.asDouble ?: return@_stepJoin null
-        val steps = source.numSteps?.toDouble()
+        val n = event.data.value?.asRational ?: return@_stepJoin null
+        val steps = source.numSteps
 
-        if (steps != null && steps > 0) {
-            val ratN = n.toRational()
-            val ratSteps = steps.toRational()
-            val end = ratN / ratSteps
+        if (steps != null && steps > Rational.ZERO) {
+            val end = n / steps
 
             if (end <= Rational.ZERO) return@_stepJoin silence
             if (end >= Rational.ONE) return@_stepJoin source
@@ -2503,7 +2501,7 @@ fun applyTake(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
             source
                 ._withQueryTime { t -> t * end }
                 ._withHapTime { t -> t / end }
-                .withSteps(ratN)
+                .withSteps(n)
         } else {
             silence
         }
@@ -2543,16 +2541,13 @@ fun applyDrop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 
     return dropPattern._stepJoin { event ->
-        val n = event.data.value?.asDouble ?: return@_stepJoin null
-        val steps = source.numSteps?.toDouble()
+        val n = event.data.value?.asRational ?: return@_stepJoin null
+        val steps = source.numSteps
 
-        if (steps != null && steps > 0) {
-            val ratN = n.toRational()
-            val ratSteps = steps.toRational()
-
-            if (ratN > Rational.ZERO) {
+        if (steps != null && steps > Rational.ZERO) {
+            if (n > Rational.ZERO) {
                 // drop from start: zoom(n/steps, 1)
-                val start = ratN / ratSteps
+                val start = n / steps
                 if (start >= Rational.ONE) return@_stepJoin silence
                 // Zoom window [start, 1] to [0, 1]
                 // Map query t in [0, 1] to [start, 1] -> t' = start + t * (1 - start)
@@ -2561,18 +2556,18 @@ fun applyDrop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
                 source
                     ._withQueryTime { t -> start + t * duration }
                     ._withHapTime { t -> (t - start) / duration }
-                    .withSteps(ratSteps - ratN)
+                    .withSteps(steps - n)
             } else {
                 // drop from end: zoom(0, (steps+n)/steps)
                 // n is negative
-                val end = (ratSteps + ratN) / ratSteps
+                val end = (steps + n) / steps
                 if (end <= Rational.ZERO) return@_stepJoin silence
                 // Zoom window [0, end] to [0, 1]
                 // Map query t in [0, 1] to [0, end] -> t' = t * end
                 source
                     ._withQueryTime { t -> t * end }
                     ._withHapTime { t -> t / end }
-                    .withSteps(ratSteps + ratN)
+                    .withSteps(steps + n)
             }
         } else {
             silence
@@ -2612,10 +2607,10 @@ fun applyRepeatCycles(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
         }
     }
 
-    val staticReps = repsVal?.asDoubleOrNull()
+    val staticReps = repsVal?.asRationalOrNull()
 
     return if (staticReps != null) {
-        RepeatCyclesPattern(source, staticReps.toRational())
+        RepeatCyclesPattern(source, staticReps)
     } else {
         RepeatCyclesPattern.control(source, repsPattern)
     }
@@ -2876,7 +2871,7 @@ fun applyPressBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     val rArg = args.getOrNull(0) ?: return pattern
 
     return pattern._innerJoin(rArg) { src, rVal ->
-        val r = rVal?.asDouble ?: return@_innerJoin src
+        val r = rVal?.asRational ?: return@_innerJoin src
 
         src._fmap { value ->
             // Create atomic pattern with the value
