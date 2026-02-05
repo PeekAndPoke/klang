@@ -378,8 +378,7 @@ val String.round by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.
 @StrudelDsl
 val StrudelPattern.floor by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     applyUnaryOp(p) { v ->
-        val d = v.asDouble
-        if (d != null) kotlin.math.floor(d).asVoiceValue() else v
+        v.asRational?.floor()?.asVoiceValue() ?: v
     }
 }
 
@@ -395,8 +394,7 @@ val String.floor by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.
 @StrudelDsl
 val StrudelPattern.ceil by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     applyUnaryOp(p) { v ->
-        val d = v.asDouble
-        if (d != null) kotlin.math.ceil(d).asVoiceValue() else v
+        v.asRational?.ceil()?.asVoiceValue() ?: v
     }
 }
 

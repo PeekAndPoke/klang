@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.RationalStringSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -263,7 +264,10 @@ object StrudelVoiceValueSerializer : KSerializer<StrudelVoiceValue> {
 
     override fun serialize(encoder: Encoder, value: StrudelVoiceValue) {
         when (value) {
-            is StrudelVoiceValue.Num -> encoder.encodeDouble(value.value.toDouble())
+            is StrudelVoiceValue.Num -> {
+                // Use string serialization for Rational (e.g., "2/3" or "-5/8")
+                encoder.encodeSerializableValue(RationalStringSerializer, value.value)
+            }
             is StrudelVoiceValue.Text -> encoder.encodeString(value.value)
             is StrudelVoiceValue.Bool -> encoder.encodeBoolean(value.value)
             is StrudelVoiceValue.Seq -> encoder.encodeSerializableValue(
@@ -280,7 +284,28 @@ object StrudelVoiceValueSerializer : KSerializer<StrudelVoiceValue> {
             val element = decoder.decodeJsonElement()
             return if (element is JsonPrimitive) {
                 when {
-                    element.isString -> StrudelVoiceValue.Text(element.content)
+                    element.isString -> {
+                        val content = element.content
+                        // Try to parse as a Rational first (handles "2/3" format)
+                        // Check if it looks like a fraction
+                        if ("/" in content) {
+                            val parts = content.split("/")
+                            if (parts.size == 2) {
+                                val num = parts[0].trim().toDoubleOrNull()
+                                val den = parts[1].trim().toDoubleOrNull()
+                                if (num != null && den != null) {
+                                    // Division by zero or malformed results in NaN
+                                    if (den == 0.0) {
+                                        return StrudelVoiceValue.Num(Rational.NaN)
+                                    }
+                                    return StrudelVoiceValue.Num(Rational(num / den))
+                                }
+                            }
+                            // Malformed fraction - treat as text
+                        }
+                        // Otherwise it's just text
+                        StrudelVoiceValue.Text(content)
+                    }
                     element.content == "true" || element.content == "false" ->
                         StrudelVoiceValue.Bool(element.content.toBoolean())
 
@@ -302,10 +327,26 @@ object StrudelVoiceValueSerializer : KSerializer<StrudelVoiceValue> {
         }
 
         // Fallback for generic decoders (like Properties or CBOR):
-        // We attempt to decode as string, then parse.
-        // This assumes the underlying format can provide the value as a string.
+        // Try to decode as string first (supports fraction format like "2/3")
         try {
             val str = decoder.decodeString()
+            // Check if it's a fraction format
+            if ("/" in str) {
+                val parts = str.split("/")
+                if (parts.size == 2) {
+                    val num = parts[0].trim().toDoubleOrNull()
+                    val den = parts[1].trim().toDoubleOrNull()
+                    if (num != null && den != null) {
+                        // Division by zero results in NaN
+                        if (den == 0.0) {
+                            return StrudelVoiceValue.Num(Rational.NaN)
+                        }
+                        return StrudelVoiceValue.Num(Rational(num / den))
+                    }
+                }
+                // Malformed fraction - treat as text
+            }
+            // Try parsing as a number
             val d = str.toDoubleOrNull()
             return if (d != null) StrudelVoiceValue.Num(Rational(d)) else StrudelVoiceValue.Text(str)
         } catch (e: Exception) {

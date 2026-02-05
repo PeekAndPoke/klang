@@ -171,3 +171,144 @@ object RationalSerializer : KSerializer<Rational> {
         return Rational(decoder.decodeDouble())
     }
 }
+
+/**
+ * Serializer that converts Rational to/from string format like "2/3" or "-5/8"
+ */
+object RationalStringSerializer : KSerializer<Rational> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("RationalString", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: Rational) {
+        if (value.isNaN) {
+            encoder.encodeString("NaN")
+            return
+        }
+
+        val str = toFractionString(value.toDouble())
+        encoder.encodeString(str)
+    }
+
+    override fun deserialize(decoder: Decoder): Rational {
+        val str = decoder.decodeString().trim()
+
+        if (str == "NaN") {
+            return Rational.NaN
+        }
+
+        // Handle fraction format "numerator/denominator"
+        if ("/" in str) {
+            val parts = str.split("/")
+            if (parts.size == 2) {
+                val num = parts[0].trim().toDoubleOrNull()
+                val den = parts[1].trim().toDoubleOrNull()
+
+                // Check for valid numerator and denominator
+                if (num != null && den != null) {
+                    // Division by zero results in NaN
+                    if (den == 0.0) {
+                        return Rational.NaN
+                    }
+                    return Rational(num / den)
+                }
+            }
+            // Malformed fraction (wrong number of parts, or non-numeric values)
+            return Rational.NaN
+        }
+
+        // Fallback: try parsing as plain number
+        val d = str.toDoubleOrNull()
+        return if (d != null) {
+            Rational(d)
+        } else {
+            Rational.NaN
+        }
+    }
+
+    /**
+     * Converts a double to a fraction string using the continued fraction algorithm.
+     * Handles positive and negative values, producing strings like "2/3" or "-5/8".
+     */
+    private fun toFractionString(d: Double): String {
+        if (d.isNaN()) return "NaN"
+        if (d.isInfinite()) return if (d > 0) "Infinity" else "-Infinity"
+        if (d == 0.0) return "0/1"
+
+        // Handle sign
+        val negative = d < 0
+        val sign = if (negative) "-" else ""
+        val absD = kotlin.math.abs(d)
+
+        // Use continued fraction algorithm for accurate conversion
+        val (num, den) = doubleToFraction(absD)
+
+        return "$sign$num/$den"
+    }
+
+    /**
+     * Converts a positive double to numerator/denominator pair using continued fractions.
+     * This provides the most accurate rational approximation within the denominator limit.
+     */
+    private fun doubleToFraction(d: Double, maxDenominator: Long = 1_000_000L): Pair<Long, Long> {
+        if (d == 0.0) return Pair(0L, 1L)
+
+        // Check if it's already an integer
+        val asLong = d.toLong()
+        if (kotlin.math.abs(d - asLong.toDouble()) < 1e-10) {
+            return Pair(asLong, 1L)
+        }
+
+        val tolerance = 1e-10
+        var h1 = 1L  // numerator
+        var h2 = 0L
+        var k1 = 0L  // denominator
+        var k2 = 1L
+        var b = d
+
+        // Continued fraction algorithm
+        var iterations = 0
+        while (iterations < 100) {
+            val a = b.toLong()
+            val aux1 = h1
+            h1 = a * h1 + h2
+            h2 = aux1
+
+            val aux2 = k1
+            k1 = a * k1 + k2
+            k2 = aux2
+
+            // Check if we've reached our precision goal or denominator limit
+            if (k1 >= maxDenominator) {
+                // Use previous convergent
+                return Pair(h2, k2)
+            }
+
+            val approximation = h1.toDouble() / k1.toDouble()
+            if (kotlin.math.abs(d - approximation) < tolerance) {
+                break
+            }
+
+            b = 1.0 / (b - a)
+            if (b.isInfinite() || b.isNaN()) {
+                break
+            }
+
+            iterations++
+        }
+
+        // Simplify by GCD
+        val gcd = gcd(h1, k1)
+        return Pair(h1 / gcd, k1 / gcd)
+    }
+
+    private fun gcd(a: Long, b: Long): Long {
+        var x = kotlin.math.abs(a)
+        var y = kotlin.math.abs(b)
+        while (y != 0L) {
+            val temp = y
+            y = x % y
+            x = temp
+        }
+        return x
+    }
+}

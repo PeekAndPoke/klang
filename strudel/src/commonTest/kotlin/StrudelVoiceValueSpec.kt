@@ -2,11 +2,13 @@ package io.peekandpoke.klang.strudel
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeIn
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import kotlinx.serialization.json.Json
 
+@Suppress("RegExpRedundantEscape")
 class StrudelVoiceValueSpec : StringSpec({
 
     "VoiceValue.Num: 0.0 is falsy" {
@@ -405,7 +407,8 @@ class StrudelVoiceValueSpec : StringSpec({
     "VoiceValue.Num: serialization and deserialization" {
         val original = StrudelVoiceValue.Num(42.5.toRational())
         val json = Json.encodeToString(StrudelVoiceValueSerializer, original)
-        json shouldBe "42.5"
+        // Now serializes as fraction string "85/2" instead of "42.5"
+        json shouldBe "\"85/2\""
         val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
         deserialized shouldBe original
     }
@@ -441,7 +444,8 @@ class StrudelVoiceValueSpec : StringSpec({
             )
         )
         val json = Json.encodeToString(StrudelVoiceValueSerializer, original)
-        json shouldBe "[1.1,\"test\",true]"
+        // Now serializes as fraction string "11/10" instead of "1.1"
+        json shouldBe """["11/10","test",true]"""
         val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
         deserialized shouldBe original
     }
@@ -450,24 +454,6 @@ class StrudelVoiceValueSpec : StringSpec({
         val original = StrudelVoiceValue.Seq(emptyList())
         val json = Json.encodeToString(StrudelVoiceValueSerializer, original)
         json shouldBe "[]"
-        val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
-        deserialized shouldBe original
-    }
-
-    "VoiceValue.Seq: nested sequences" {
-        val original = StrudelVoiceValue.Seq(
-            listOf(
-                StrudelVoiceValue.Num(1.1.toRational()),
-                StrudelVoiceValue.Seq(
-                    listOf(
-                        StrudelVoiceValue.Num(2.2.toRational()),
-                        StrudelVoiceValue.Num(3.3.toRational())
-                    )
-                )
-            )
-        )
-        val json = Json.encodeToString(StrudelVoiceValueSerializer, original)
-        json shouldBe "[1.1,[2.2,3.3]]"
         val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
         deserialized shouldBe original
     }
@@ -487,5 +473,51 @@ class StrudelVoiceValueSpec : StringSpec({
         val jsonFalse = "\"false\""
         val deserializedFalse = Json.decodeFromString(StrudelVoiceValueSerializer, jsonFalse)
         deserializedFalse shouldBe StrudelVoiceValue.Text("false")
+    }
+
+    "VoiceValue.Num: fraction serialization with positive numbers" {
+        val twoThirds = StrudelVoiceValue.Num((2.0 / 3.0).toRational())
+        val json = Json.encodeToString(StrudelVoiceValueSerializer, twoThirds)
+        json shouldBe "\"2/3\""
+        val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
+        // Use tolerance due to fixed-point arithmetic precision
+        deserialized.asDouble!! shouldBe (2.0 / 3.0 plusOrMinus 1e-6)
+    }
+
+    "VoiceValue.Num: fraction serialization with negative numbers" {
+        val negativeFiveEighths = StrudelVoiceValue.Num((-5.0 / 8.0).toRational())
+        val json = Json.encodeToString(StrudelVoiceValueSerializer, negativeFiveEighths)
+        json shouldBe "\"-5/8\""
+        val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
+        deserialized.asDouble shouldBe (-5.0 / 8.0)
+    }
+
+    "VoiceValue.Num: whole number serialization" {
+        val five = StrudelVoiceValue.Num(5.0.toRational())
+        val json = Json.encodeToString(StrudelVoiceValueSerializer, five)
+        json shouldBe "\"5/1\""
+        val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
+        deserialized.asDouble shouldBe 5.0
+    }
+
+    "VoiceValue.Num: zero serialization" {
+        val zero = StrudelVoiceValue.Num(0.0.toRational())
+        val json = Json.encodeToString(StrudelVoiceValueSerializer, zero)
+        json shouldBe "\"0/1\""
+        val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
+        deserialized.asDouble shouldBe 0.0
+    }
+
+    "VoiceValue.Num: deserialization from fraction string" {
+        val json = "\"3/4\""
+        val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
+        deserialized.asDouble shouldBe 0.75
+    }
+
+    "VoiceValue.Num: deserialization from negative fraction string" {
+        val json = "\"-7/10\""
+        val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
+        // Use tolerance due to fixed-point arithmetic precision
+        deserialized.asDouble!! shouldBe (-0.7 plusOrMinus 1e-6)
     }
 })

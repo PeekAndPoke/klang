@@ -12,6 +12,7 @@ import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeNumberOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeStringOrNull
 import io.peekandpoke.klang.strudel.graal.GraalJsHelpers.safeToStringOrNull
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.tones.Tones
 import org.graalvm.polyglot.Value
 
@@ -432,19 +433,15 @@ class GraalStrudelPattern(
                 compressor = compressor,
                 // Value
                 value = when {
-                    value?.isString == true ->
-                        value.asString().asVoiceValue()
+                    value?.isString == true -> value.asString().asVoiceValue()
 
-                    value?.isNumber == true ->
-                        value.asDouble().asVoiceValue()
+                    value?.isNumber == true -> value.asDouble().toRational().asVoiceValue()
 
-                    value?.isBoolean == true ->
-                        value.asBoolean().asVoiceValue()
+                    value?.isBoolean == true -> value.asBoolean().asVoiceValue()
 
-                    value?.hasArrayElements() == true ->
-                        value.`as`(List::class.java).mapNotNull {
-                            it?.asVoiceValue()
-                        }.asVoiceValue()
+                    value?.hasArrayElements() == true -> value.`as`(List::class.java).mapNotNull {
+                        it?.asVoiceValue()
+                    }.asVoiceValue()
 
                     else -> null
                 }
