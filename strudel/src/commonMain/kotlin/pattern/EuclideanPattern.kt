@@ -6,7 +6,6 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.TimeSpan
-import io.peekandpoke.klang.strudel.lang.slow
 import io.peekandpoke.klang.strudel.lang.struct
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -123,9 +122,6 @@ internal class EuclideanPattern(
         /**
          * Internal implementation for static legato euclidean pattern.
          */
-        /**
-         * Internal implementation for static legato euclidean pattern.
-         */
         private fun createLegatoStatic(
             inner: StrudelPattern,
             pulses: Int,
@@ -137,39 +133,19 @@ internal class EuclideanPattern(
             // 1. Rotate the bitmap directly
             // We use bjorklundStrudel to handle negative pulses consistency
             val bitmap = bjorklundStrudel(pulses, steps)
-            val rotatedBitmap = rotateJs(bitmap, -rotation)
+            // Normalize rotation to handle large numbers and correct direction
+            // Strudel JS rotates by shifting right for positive numbers.
+            // rotateJs(n) performs left rotate for positive n, right for negative n.
+            // So we negate the modulo result.
+            val effectiveRotation = rotation % steps
+            val rotatedBitmap = rotateJs(bitmap, -effectiveRotation)
 
             val onsets = rotatedBitmap.mapIndexedNotNull { i, v -> if (v == 1) i else null }
 
             if (onsets.isEmpty()) return EmptyPattern
 
-            // A pattern that always returns a single event filling the queried duration.
-            // This ensures perfectly legato gates without granularity issues or cycle repetitions.
-            val fillAtom = object : StrudelPattern {
-                override val weight = 1.0
-
-                override val numSteps: Rational = Rational.ONE
-
-                override fun estimateCycleDuration(): Rational = Rational.ONE
-
-                override fun queryArcContextual(
-                    from: Rational,
-                    to: Rational,
-                    ctx: QueryContext,
-                ): List<StrudelPatternEvent> {
-                    val timeSpan = TimeSpan(begin = from, end = to)
-
-                    return listOf(
-                        StrudelPatternEvent(
-                            part = timeSpan,
-                            whole = timeSpan,
-                            data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
-                        )
-                    )
-                }
-            }
-
-            val patterns = ArrayList<StrudelPattern>()
+            val ratSteps = steps.toRational()
+            val segments = ArrayList<Pair<Rational, Rational>>()
 
             var i = 0
             while (i < steps) {
@@ -184,26 +160,66 @@ internal class EuclideanPattern(
                         safety++
                     }
 
-                    patterns.add(PropertyOverridePattern(fillAtom, weightOverride = dist.toDouble()))
+                    // Create segment relative to cycle start
+                    val start = i.toRational() / ratSteps
+                    val duration = dist.toRational() / ratSteps
+                    segments.add(start to (start + duration))
 
                     // Advance by dist (skipping gaps covered by this event)
                     i += dist
                 } else {
                     // It's a gap
-                    patterns.add(PropertyOverridePattern(EmptyPattern, weightOverride = 1.0))
                     i++
                 }
             }
 
-            val totalWeight = patterns.sumOf { it.weight }
-            val structure = SequencePattern(patterns)
+            // Create a custom pattern that repeats the segments every cycle.
+            // This ensures alignment with the metric grid (1 cycle = 1 unit)
+            // even if events overhang into the next cycle.
+            val geometry = object : StrudelPattern {
+                override val weight = 1.0
+                override val numSteps: Rational = ratSteps
 
-            // Scale so that 'steps' amount of weight fits in 1 cycle.
-            // If totalWeight > steps (due to wrap-around overlap from legato), we slow it down.
-            // Example: steps=8, totalWeight=9. We want 8 units to take 1 cycle.
-            // structure fits 9 units in 1 cycle.
-            // slow(9/8) makes 9 units take 1.125 cycles -> 8 units take 1 cycle.
-            return inner.struct(structure.slow(totalWeight / steps.toDouble()))
+                override fun estimateCycleDuration(): Rational = Rational.ONE
+
+                override fun queryArcContextual(
+                    from: Rational,
+                    to: Rational,
+                    ctx: QueryContext,
+                ): List<StrudelPatternEvent> {
+                    val results = createEventList()
+
+                    val startCycle = from.floor().toInt()
+                    val endCycle = to.ceil().toInt()
+
+                    // Check from startCycle - 1 to handle events overlapping from previous cycle
+                    for (cycle in (startCycle - 1) until endCycle) {
+                        val cycleRat = Rational(cycle)
+
+                        for ((segStart, segEnd) in segments) {
+                            val absStart = cycleRat + segStart
+                            val absEnd = cycleRat + segEnd
+
+                            // Check intersection with query arc
+                            val s = maxOf(from, absStart)
+                            val e = minOf(to, absEnd)
+
+                            if (s < e) {
+                                results.add(
+                                    StrudelPatternEvent(
+                                        part = TimeSpan(s, e),
+                                        whole = TimeSpan(absStart, absEnd),
+                                        data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    return results
+                }
+            }
+
+            return inner.struct(geometry)
         }
 
         // Replicates JS Array.prototype.slice behavior exactly
