@@ -7,6 +7,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.not
+import io.peekandpoke.klang.strudel.lang.addons.timeLoop
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -934,8 +935,8 @@ private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     }
 
     // We convert both arguments to patterns to support dynamic zoom (e.g. zoom("<0 0.5>", "<0.5 1>"))
-    val startCtrl = args[0].toPattern(voiceValueModifier)
-    val endCtrl = args[1].toPattern(voiceValueModifier)
+    val startCtrl = args[0].toPattern()
+    val endCtrl = args[1].toPattern()
 
     // Bind the start pattern...
     return startCtrl._bind { startEv ->
@@ -1384,22 +1385,23 @@ fun String.fastchunk(
 
 // -- linger() ---------------------------------------------------------------------------------------------------------
 
+
 fun applyLinger(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val tArg = args.getOrNull(0) ?: return pattern
 
     return pattern._innerJoin(tArg) { src, tVal ->
-        val t = tVal?.asDouble ?: return@_innerJoin src
+        val t = tVal?.asRational ?: return@_innerJoin src
 
         when {
-            t == 0.0 -> silence
-            t < 0 -> {
+            t == Rational.ZERO -> silence
+            t < Rational.ZERO -> {
                 // Negative: zoom from (t+1) to 1, then slow by t (which is negative)
-                src.zoom(t + 1.0, 1.0).slow(-t)
+                src.zoom(t + Rational.ONE, Rational.ONE).slow(-t).timeLoop(Rational.ONE)
             }
 
             else -> {
                 // Positive: zoom from 0 to t, then slow by t
-                src.zoom(0.0, t).slow(t)
+                src.zoom(Rational.ZERO, t).slow(t).timeLoop(Rational.ONE)
             }
         }
     }

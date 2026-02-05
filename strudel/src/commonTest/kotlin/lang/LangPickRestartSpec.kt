@@ -30,7 +30,7 @@ class LangPickRestartSpec : StringSpec({
         // inner 0.0-0.25 is "0".
         events[0].part.begin.toDouble() shouldBeExactly 0.0
         events[0].part.end.toDouble() shouldBeExactly 0.25
-        events[0].data.value?.asString shouldBe "0"
+        events[0].data.value?.asDouble shouldBe 0.0
 
         // Event 2 at 0.5:
         // inner restarted at 0.0 (relative to 0.5).
@@ -38,7 +38,7 @@ class LangPickRestartSpec : StringSpec({
         // If it was standard 'pick', at 0.5 we would get inner's 0.5-0.75 which is "2".
         events[1].part.begin.toDouble() shouldBeExactly 0.5
         events[1].part.end.toDouble() shouldBeExactly 0.75
-        events[1].data.value?.asString shouldBe "0"
+        events[1].data.value?.asDouble shouldBe 0.0
     }
 
     "pickRestart() supports spread arguments (varargs)" {
@@ -56,8 +56,8 @@ class LangPickRestartSpec : StringSpec({
 
         // At 0.0 (selector 0): pat1 restarted. duration 0.5 (clipped to selector).
         // pat1 (0 1 2 3): 0 at 0.0, 1 at 0.25. (2 at 0.5 - clipped out).
-        events[0].data.value?.asString shouldBe "0"
-        events[1].data.value?.asString shouldBe "1"
+        events[0].data.value?.asDouble shouldBe 0.0
+        events[1].data.value?.asDouble shouldBe 1.0
 
         // At 0.5 (selector 1): pat2 restarted. duration 0.5.
         // pat2 (a b c d): a at 0.0, b at 0.25. (relative to 0.5).
@@ -78,11 +78,11 @@ class LangPickRestartSpec : StringSpec({
 
         // "a" (0 1) restarted at 0.0. Duration 0.5.
         // "0" at 0.0-0.5.
-        events[0].data.value?.asString shouldBe "0"
+        events[0].data.value?.asDouble shouldBe 0.0
 
         // "b" (2 3) restarted at 0.5. Duration 0.5.
         // "2" at 0.0-0.5 (relative).
-        events[1].data.value?.asString shouldBe "2"
+        events[1].data.value?.asDouble shouldBe 2.0
     }
 
     "pickRestart() works as pattern extension" {
@@ -92,8 +92,8 @@ class LangPickRestartSpec : StringSpec({
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 2
-        events[0].data.value?.asString shouldBe "0"
-        events[1].data.value?.asString shouldBe "0" // Restarted
+        events[0].data.value?.asDouble shouldBe 0.0
+        events[1].data.value?.asDouble shouldBe 0.0 // Restarted
     }
 
     // -- pickmodRestart tests --
@@ -114,7 +114,7 @@ class LangPickRestartSpec : StringSpec({
         events shouldHaveSize 4
 
         events.forEach {
-            it.data.value?.asString shouldBe "0"
+            it.data.value?.asDouble shouldBe 0.0
         }
     }
 
@@ -146,11 +146,11 @@ class LangPickRestartSpec : StringSpec({
 
         // Event 1 at 0.0: "0"
         events[0].part.begin.toDouble() shouldBeExactly 0.0
-        events[0].data.value?.asString shouldBe "0"
+        events[0].data.value?.asDouble shouldBe 0.0
 
         // Event 2 at 0.5:
         // Standard pick queries inner at 0.5. Inner at 0.5-0.75 is "2".
         events[1].part.begin.toDouble() shouldBeExactly 0.5
-        events[1].data.value?.asString shouldBe "2"
+        events[1].data.value?.asDouble shouldBe 2.0
     }
 })

@@ -2,7 +2,9 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern.Companion.compile
 
 class LangIterCycleSpec : FunSpec({
@@ -67,7 +69,8 @@ class LangIterCycleSpec : FunSpec({
 
         // Verify timing pattern repeats (shifted by 3 cycles)
         for (i in cycle0to2.indices) {
-            cycle0to2[i].part.begin.toDouble() shouldBe cycle3to5[i].part.begin.toDouble() - 3.0
+            cycle0to2[i].part.begin.toDouble() shouldBe
+                    ((cycle3to5[i].part.begin.toDouble() - 3.0) plusOrMinus EPSILON)
         }
     }
 

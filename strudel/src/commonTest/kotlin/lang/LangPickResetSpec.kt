@@ -31,7 +31,7 @@ class LangPickResetSpec : StringSpec({
         // inner at 0.0-0.25 is "0".
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
-        events[0].data.value?.asString shouldBe "0"
+        events[0].data.value?.asDouble shouldBe 0.0
 
         // Event 2 at 0.5:
         // inner reset (aligned) at 0.5.
@@ -54,7 +54,7 @@ class LangPickResetSpec : StringSpec({
 
         events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].part.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
-        events[1].data.value?.asString shouldBe "0"
+        events[1].data.value?.asDouble shouldBe 0.0
     }
 
     "pickReset() supports spread arguments (varargs)" {
@@ -72,8 +72,8 @@ class LangPickResetSpec : StringSpec({
 
         // At 0.0 (selector 0): pat1 reset. Shift 0.0.
         // Query 0.0-0.5. pat1(0.0-0.5) -> "0" "1".
-        events[0].data.value?.asString shouldBe "0"
-        events[1].data.value?.asString shouldBe "1"
+        events[0].data.value?.asDouble shouldBe 0.0
+        events[1].data.value?.asDouble shouldBe 1.0
 
         // At 0.5 (selector 1): pat2 reset. Shift 0.5.
         // Query global 0.5-1.0.
@@ -96,12 +96,12 @@ class LangPickResetSpec : StringSpec({
 
         // "a" (0 1) reset at 0.0. Shift 0.0.
         // Query 0.0-0.5. Inner "0".
-        events[0].data.value?.asString shouldBe "0"
+        events[0].data.value?.asDouble shouldBe 0.0
 
         // "b" (2 3) reset at 0.5. Shift 0.5.
         // Query global 0.5-1.0. Local 0.0-0.5.
         // Inner "2".
-        events[1].data.value?.asString shouldBe "2"
+        events[1].data.value?.asDouble shouldBe 2.0
     }
 
     "pickReset() works as pattern extension" {
@@ -111,8 +111,8 @@ class LangPickResetSpec : StringSpec({
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 2
-        events[0].data.value?.asString shouldBe "0"
-        events[1].data.value?.asString shouldBe "0" // Reset
+        events[0].data.value?.asDouble shouldBe 0.0
+        events[1].data.value?.asDouble shouldBe 0.0 // Reset
     }
 
     // -- pickmodReset tests --
@@ -133,7 +133,7 @@ class LangPickResetSpec : StringSpec({
         events shouldHaveSize 4
 
         events.forEach {
-            it.data.value?.asString shouldBe "0"
+            it.data.value?.asDouble shouldBe 0.0
         }
     }
 

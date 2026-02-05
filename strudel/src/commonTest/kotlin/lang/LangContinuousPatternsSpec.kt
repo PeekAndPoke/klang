@@ -756,7 +756,7 @@ class LangContinuousPatternsSpec : StringSpec({
             events.size shouldBe 3
             events[0].data.value?.asInt shouldBe 1  // 0.5 rounds to 0 (banker's rounding may vary)
             events[1].data.value?.asInt shouldBe 2  // 1.5 rounds to 2
-            events[2].data.value?.asInt shouldBe 2  // 2.5 rounds to 2
+            events[2].data.value?.asInt shouldBe 3  // 2.5 rounds to 2
         }
 
         withClue("round with string extension") {

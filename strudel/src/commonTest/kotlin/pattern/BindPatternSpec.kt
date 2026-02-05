@@ -167,7 +167,7 @@ class BindPatternSpec : StringSpec({
         events shouldHaveSize 3
 
         events[0].data.value?.asString shouldBe "x"
-        events[1].data.value?.asString shouldBe "2"
+        events[1].data.value?.asDouble shouldBe 2.0
         events[2].data.note shouldBe "z"
     }
 })

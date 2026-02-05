@@ -140,7 +140,7 @@ class LangUndegradeByWithSpec : StringSpec({
 
     "undegradeByWith() with dynamic x parameter (pattern)" {
         // x varies, statistical check over multiple cycles
-        val p = note("a").undegradeByWith(steady(0.5), sine.segment(1)).seed(42)
+        val p = note("a").undegradeByWith(steady(0.5), sine.slow(4))
         var count = 0
         val total = 100
         for (i in 0 until total) {

@@ -43,18 +43,25 @@ fun applyTimeShift(
 fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val factorArg = args.firstOrNull() ?: return pattern
 
-    // Match JS: slow(factor) = fast(1/factor)
-    return pattern._innerJoin(factorArg) { src, factorVal ->
-        val factor = factorVal?.asDouble ?: return@_innerJoin src
-        if (factor == 0.0) return@_innerJoin silence
-        // slow(factor) = fast(1/factor)
-        val inverseFactor = 1.0 / factor
-        val invRational = inverseFactor.toRational()
+    val result = pattern._innerJoin(factorArg) { src, factorVal ->
+        val factor = factorVal?.asRational ?: return@_innerJoin src
+        if (factor == Rational.ZERO) return@_innerJoin silence
+        val inverseFactor = Rational.ONE / factor
 
-        src._withQueryTime { t -> t * invRational }
-            ._withHapTime { t -> t / invRational }
+        src._withQueryTime { t -> t * inverseFactor }
+            ._withHapTime { t -> t / inverseFactor }
             .withSteps(src.numSteps)
     }
+
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toRational()
+    if (staticFactor != null && staticFactor > Rational.ZERO) {
+        return object : StrudelPattern by result {
+            override fun estimateCycleDuration(): Rational =
+                pattern.estimateCycleDuration() * staticFactor
+        }
+    }
+
+    return result
 }
 
 /** Slows down all inner patterns by the given factor */
@@ -88,18 +95,24 @@ val String.slow by dslStringExtension { p, args, callInfo -> p.slow(args, callIn
 fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val factorArg = args.firstOrNull() ?: return pattern
 
-    // Match JS: fast(factor) uses withQueryTime and withHapTime
-    return pattern._innerJoin(factorArg) { src, factorVal ->
-        val factor = factorVal?.asDouble ?: return@_innerJoin src
+    val result = pattern._innerJoin(factorArg) { src, factorVal ->
+        val factor = factorVal?.asRational ?: return@_innerJoin src
+        if (factor == Rational.ZERO) return@_innerJoin silence
 
-        if (factor == 0.0) return@_innerJoin silence
-
-        val factorRational = factor.toRational()
-
-        src._withQueryTime { t -> t * factorRational }
-            ._withHapTime { t -> t / factorRational }
+        src._withQueryTime { t -> t * factor }
+            ._withHapTime { t -> t / factor }
             .withSteps(src.numSteps)
     }
+
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toRational()
+    if (staticFactor != null && staticFactor > Rational.ZERO) {
+        return object : StrudelPattern by result {
+            override fun estimateCycleDuration(): Rational =
+                pattern.estimateCycleDuration() / staticFactor
+        }
+    }
+
+    return result
 }
 
 /** Speeds up all inner patterns by the given factor */

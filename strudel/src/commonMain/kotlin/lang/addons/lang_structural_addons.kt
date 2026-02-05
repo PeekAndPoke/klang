@@ -2,6 +2,8 @@ package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.lang.*
@@ -181,3 +183,64 @@ val StrudelPattern.morse by dslPatternExtension { p, args, /* callInfo */ _ ->
  */
 @StrudelDsl
 val String.morse by dslStringExtension { p, args, callInfo -> p.morse(args, callInfo) }
+
+// -- timeLoop() -------------------------------------------------------------------------------------------------------
+
+// TODO: make timeLoop() available as dsl function
+
+/**
+ * Loops the pattern within the given duration.
+ *
+ * Equivalent to `timeLoop(duration)` in JS Strudel.
+ * Effectively repeats the pattern segment [0, duration] every duration.
+ */
+fun StrudelPattern.timeLoop(duration: Rational): StrudelPattern {
+    if (duration <= Rational.ZERO) return silence
+
+    val source = this
+    return object : StrudelPattern {
+        override val weight: Double get() = source.weight
+        override val numSteps: Rational? get() = source.numSteps
+        override fun estimateCycleDuration(): Rational = duration
+
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            val result = mutableListOf<StrudelPatternEvent>()
+
+            // Calculate loop range covering [from, to]
+            val startLoop = (from / duration).floor()
+
+            // Loop through cycles
+            var k = startLoop
+            while (k * duration < to) {
+                val loopStart = k * duration
+
+                // Intersection of query with this loop
+                val qStart = maxOf(from, loopStart)
+                val qEnd = minOf(to, loopStart + duration)
+
+                if (qStart < qEnd) {
+                    // Map to local time [0, duration]
+                    val localStart = qStart - loopStart
+                    val localEnd = qEnd - loopStart
+
+                    // Query source at [localStart, localEnd]
+                    val events = source.queryArcContextual(localStart, localEnd, ctx)
+
+                    // Shift events back to global time
+                    for (ev in events) {
+                        result.add(
+                            ev.copy(
+                                part = ev.part.shift(loopStart),
+                                whole = ev.whole.shift(loopStart)
+                            )
+                        )
+                    }
+                }
+
+                k += Rational.ONE
+            }
+
+            return result
+        }
+    }
+}
