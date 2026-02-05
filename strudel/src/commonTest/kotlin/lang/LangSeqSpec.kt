@@ -8,8 +8,24 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class LangSeqSpec : StringSpec({
+
+    "seq() creates num voice values" {
+        // seq("a b") -> sequence of a then b
+        val p = seq("0 1.1")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 2
+        events[0].data.value?.asRational shouldBe 0.toRational()
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+
+        events[1].data.value?.asRational shouldBe 1.1.toRational()
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
 
     "seq() with single argument creates a sequence from mini-notation" {
         // seq("a b") -> sequence of a then b

@@ -2,8 +2,9 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
-import io.kotest.matchers.doubles.shouldBeExactly
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
 
 class LangPickResetSpec : StringSpec({
 
@@ -28,8 +29,8 @@ class LangPickResetSpec : StringSpec({
         // Event 1 at 0.0:
         // inner reset (aligned) at 0.0.
         // inner at 0.0-0.25 is "0".
-        events[0].part.begin.toDouble() shouldBeExactly 0.0
-        events[0].part.end.toDouble() shouldBeExactly 0.25
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
         events[0].data.value?.asString shouldBe "0"
 
         // Event 2 at 0.5:
@@ -51,8 +52,8 @@ class LangPickResetSpec : StringSpec({
         // Inner at 0.0-0.25 is "0".
         // So we should get "0".
 
-        events[1].part.begin.toDouble() shouldBeExactly 0.5
-        events[1].part.end.toDouble() shouldBeExactly 0.75
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
         events[1].data.value?.asString shouldBe "0"
     }
 

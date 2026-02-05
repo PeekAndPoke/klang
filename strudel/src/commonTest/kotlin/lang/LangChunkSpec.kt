@@ -4,7 +4,9 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.strudel.StrudelPattern.Companion.compile
+import io.peekandpoke.klang.strudel.StrudelVoiceValue
 
 class LangChunkSpec : FunSpec({
 
@@ -16,6 +18,12 @@ class LangChunkSpec : FunSpec({
                 withClue("Cycle $cycle") {
                     val events = pat.queryArc(cycle.toDouble(), cycle.toDouble() + 1.0)
                     events.size shouldBe 4
+
+                    events.forEachIndexed { index, value ->
+                        withClue("Event $index should have a num voice value") {
+                            value.data.value?.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+                        }
+                    }
 
                     val values = events.map { it.data.value?.asInt }
 

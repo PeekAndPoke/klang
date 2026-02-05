@@ -86,7 +86,11 @@ fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): Co
 }
 
 /** Default modifier for patterns that populates VoiceData.value */
-val voiceValueModifier = voiceModifier { copy(value = it?.asVoiceValue()) }
+val voiceValueModifier = voiceModifier {
+    val result = (it?.asRationalOrNull() ?: it)?.asVoiceValue()
+
+    copy(value = result)
+}
 
 // --- Value Conversion Helpers ---
 
@@ -281,7 +285,7 @@ fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceModifier = voiceValueModifi
 internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
     modify: VoiceModifier = voiceValueModifier,
 ): List<StrudelPattern> {
-    val atomFactory = { text: String, sourceLocations: SourceLocationChain? ->
+    val atomFactory = { text: Any?, sourceLocations: SourceLocationChain? ->
         AtomicPattern(
             data = StrudelVoiceData.empty.modify(text),
             sourceLocations = sourceLocations,
@@ -298,11 +302,11 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
                 parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
             )
 
-            is Rational -> listOf(atomFactory(arg.toDouble().toString(), locChain))
+            is Rational -> listOf(atomFactory(arg, locChain))
 
-            is Number -> listOf(atomFactory(arg.toString(), locChain))
+            is Number -> listOf(atomFactory(arg, locChain))
 
-            is Boolean -> listOf(atomFactory(arg.toString(), locChain))
+            is Boolean -> listOf(atomFactory(arg, locChain))
 
             is StrudelPattern -> listOf(arg)
 
