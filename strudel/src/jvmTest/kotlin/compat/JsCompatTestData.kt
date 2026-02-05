@@ -290,6 +290,13 @@ object JsCompatTestData {
         Example("PressBy control pattern", """sound("bd sd ht").pressBy("<0 0.5 0.75>")"""),
         Example("PressBy with notes", """note("c e g").pressBy(0.5)"""),
         Example("PressBy with seq", """seq("0 1 2").pressBy(0.5)"""),
+        Example("Linger first half", """s("bd sd ht lt").linger(0.5)"""),
+        // fails in js: t.add is not a function
+        Example(SKIP, "Linger last half (negative)", """s("bd sd ht lt").linger(-0.5)"""),
+        Example("Linger first quarter", """seq("0 1 2 3").linger(0.25)"""),
+        Example("Linger first 75%", """note("c d e f").linger(0.75)"""),
+        Example("Linger 0 (silence)", """s("bd sd").linger(0)"""),
+        Example("Linger control pattern", """s("bd sd ht lt").linger("<1 0.5 0.25>")"""),
         Example("Focus first half", """note("c d e f").focus(0, 0.5)"""),
         Example("Focus second half", """note("c d e f").focus(0.5, 1)"""),
         Example("Focus middle", """note("c d e f").focus(0.25, 0.75)"""),

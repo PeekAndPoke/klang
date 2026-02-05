@@ -65,21 +65,10 @@ data class StrudelDslArg<out T>(
 fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): ControlValueProvider {
     val arg = this
     val argVal = arg?.value ?: return ControlValueProvider.Static(default)
+    val argRat = argVal.asRationalOrNull()?.asVoiceValue()
 
-    val argDbl = argVal.asDoubleOrNull()
-
-    if (argDbl != null) {
-        return ControlValueProvider.Static(
-            value = StrudelVoiceValue.Num(argDbl),
-            location = arg.location
-        )
-    }
-
-    if (argVal is Rational) {
-        return ControlValueProvider.Static(
-            value = StrudelVoiceValue.Num(argVal.toDouble()),
-            location = arg.location
-        )
+    if (argRat != null) {
+        return ControlValueProvider.Static(value = argRat, location = arg.location)
     }
 
     val pattern = when (argVal) {
@@ -101,8 +90,16 @@ val voiceValueModifier = voiceModifier { copy(value = it?.asVoiceValue()) }
 
 // --- Value Conversion Helpers ---
 
+internal fun Any.asRationalOrNull(): Rational? = when (this) {
+    is Rational -> this
+    is Number -> Rational(this.toDouble())
+    is String -> this.toDoubleOrNull()?.let { Rational(it) }
+    else -> null
+}
+
 /** Safely convert any value to a double or null */
 internal fun Any.asDoubleOrNull(): Double? = when (this) {
+    is Rational -> this.toDouble()
     is Number -> this.toDouble()
     is String -> this.toDoubleOrNull()
     else -> null
@@ -110,6 +107,7 @@ internal fun Any.asDoubleOrNull(): Double? = when (this) {
 
 /** Safely convert any value to an int or null */
 internal fun Any.asIntOrNull(): Int? = when (this) {
+    is Rational -> this.toInt()
     is Number -> this.toInt()
     is String -> this.toDoubleOrNull()?.toInt()
     else -> null
@@ -117,6 +115,7 @@ internal fun Any.asIntOrNull(): Int? = when (this) {
 
 /** Safely convert any value to a long or null */
 internal fun Any.asLongOrNull(): Long? = when (this) {
+    is Rational -> this.toLong()
     is Number -> this.toLong()
     is String -> this.toDoubleOrNull()?.toLong()
     else -> null

@@ -17,8 +17,7 @@ class LangLingerSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val cycleDbl = cycle.toDouble()
-                    val allEvents = subject.queryArc(cycleDbl, cycleDbl + 1).filter { it.isOnset }
-
+                    val allEvents = subject.queryArc(cycleDbl, cycleDbl + 1)
                     val events = allEvents.filter { it.isOnset }
 
                     events.forEachIndexed { index, event ->
@@ -31,16 +30,24 @@ class LangLingerSpec : StringSpec({
 
                     // linger(0.5) takes first 50% (bd sd) and repeats it to fill cycle
                     // The first 50% has 2 events, so we get those 2 events repeated
-                    events.size shouldBe 2
+                    events.size shouldBe 4
 
                     // Each event should be twice as long (slowed by 0.5)
                     events[0].data.sound shouldBeEqualIgnoringCase "bd"
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
 
                     events[1].data.sound shouldBeEqualIgnoringCase "sd"
-                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+
+                    events[2].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+
+                    events[3].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -53,20 +60,28 @@ class LangLingerSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val cycleDbl = cycle.toDouble()
-                    val events = subject.queryArc(cycleDbl, cycleDbl + 1).filter { it.isOnset }
+                    val allEvents = subject.queryArc(cycleDbl, cycleDbl + 1)
+                    val events = allEvents.filter { it.isOnset }
 
                     // linger(-0.5) takes last 50% (ht lt) and repeats it to fill cycle
-                    events.size shouldBe 2
-
-                    events[0].data.sound shouldBeEqualIgnoringCase "ht"
-                    events[1].data.sound shouldBeEqualIgnoringCase "lt"
+                    events.size shouldBe 4
 
                     // Each event should be twice as long (slowed by 0.5)
+                    events[0].data.sound shouldBeEqualIgnoringCase "ht"
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
 
-                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[1].data.sound shouldBeEqualIgnoringCase "lt"
+                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+
+                    events[2].data.sound shouldBeEqualIgnoringCase "ht"
+                    events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+
+                    events[3].data.sound shouldBeEqualIgnoringCase "lt"
+                    events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -82,13 +97,24 @@ class LangLingerSpec : StringSpec({
                     val events = subject.queryArc(cycleDbl, cycleDbl + 1).filter { it.isOnset }
 
                     // linger(0.25) takes first 25% (just "0") and repeats it to fill cycle
-                    events.size shouldBe 1
-
-                    events[0].data.value?.asInt shouldBe 0
+                    events.size shouldBe 4
 
                     // Event should fill the whole cycle (slowed by 0.25)
+                    events[0].data.value?.asInt shouldBe 0
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+
+                    events[1].data.value?.asInt shouldBe 0
+                    events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
+                    events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+
+                    events[2].data.value?.asInt shouldBe 0
+                    events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+
+                    events[3].data.value?.asInt shouldBe 0
+                    events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }
@@ -101,24 +127,36 @@ class LangLingerSpec : StringSpec({
             repeat(12) { cycle ->
                 withClue("Cycle $cycle") {
                     val cycleDbl = cycle.toDouble()
-                    val events = subject.queryArc(cycleDbl, cycleDbl + 1).filter { it.isOnset }
+                    val allEvents = subject.queryArc(cycleDbl, cycleDbl + 1)
+                    val events = allEvents.filter { it.isOnset }
+
+                    events.forEachIndexed { index, event ->
+                        println(
+                            "Cycle $cycle, Event ${index + 1}: note: ${event.data.note} | " +
+                                    "part: [${event.part.begin}, ${event.part.end}] | " +
+                                    "whole: [${event.whole.begin}, ${event.whole.end}]"
+                        )
+                    }
 
                     // linger(0.75) takes first 75% (c d e) and repeats it to fill cycle
-                    events.size shouldBe 3
-
-                    events[0].data.note shouldBeEqualIgnoringCase "c"
-                    events[1].data.note shouldBeEqualIgnoringCase "d"
-                    events[2].data.note shouldBeEqualIgnoringCase "e"
+                    events.size shouldBe 4
 
                     // Each event should be slowed by 0.75
+                    events[0].data.note shouldBeEqualIgnoringCase "c"
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
 
+                    events[1].data.note shouldBeEqualIgnoringCase "d"
                     events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
+                    events[2].data.note shouldBeEqualIgnoringCase "e"
                     events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+
+                    events[3].data.note shouldBeEqualIgnoringCase "c"
+                    events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                    events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
             }
         }

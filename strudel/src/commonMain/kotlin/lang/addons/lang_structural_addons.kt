@@ -5,6 +5,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.strudel.pattern.SequencePattern
@@ -89,7 +90,7 @@ private fun applyMorse(textArg: StrudelDslArg<Any?>?): StrudelPattern {
 
         // "x" is the standard note for rhythm/struct
         return AtomicPattern(
-            data = StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(1.0)),
+            data = StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(Rational.ONE)),
             sourceLocations = chain
         )
     }

@@ -3,7 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 
@@ -31,7 +31,7 @@ internal class SegmentPattern(
         fun static(source: StrudelPattern, n: Int): SegmentPattern {
             return SegmentPattern(
                 source = source,
-                nProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(n.toDouble()))
+                nProvider = ControlValueProvider.Static(Rational(n).asVoiceValue())
             )
         }
 

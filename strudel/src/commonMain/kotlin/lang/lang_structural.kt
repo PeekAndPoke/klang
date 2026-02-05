@@ -2481,7 +2481,7 @@ val String.steps by dslStringExtension { p, args, callInfo -> p.pace(args, callI
 fun applyTake(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val takeArg = args.firstOrNull() ?: return source
 
-    val control: ControlValueProvider = takeArg.asControlValueProvider(StrudelVoiceValue.Num(1.0))
+    val control: ControlValueProvider = takeArg.asControlValueProvider(Rational.ONE.asVoiceValue())
 
     val takePattern = when (control) {
         is ControlValueProvider.Static -> AtomicPattern(StrudelVoiceData.empty.copy(value = control.value))
@@ -2536,7 +2536,7 @@ val String.take by dslStringExtension { p, args, callInfo -> p.take(args, callIn
 fun applyDrop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val dropArg = args.firstOrNull() ?: return source
 
-    val control: ControlValueProvider = dropArg.asControlValueProvider(StrudelVoiceValue.Num(0.0))
+    val control: ControlValueProvider = dropArg.asControlValueProvider(Rational.ZERO.asVoiceValue())
 
     val dropPattern = when (control) {
         is ControlValueProvider.Static -> AtomicPattern(StrudelVoiceData.empty.copy(value = control.value))

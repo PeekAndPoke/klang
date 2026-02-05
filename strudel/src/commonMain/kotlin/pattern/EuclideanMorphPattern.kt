@@ -1,8 +1,11 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.math.bjorklund
@@ -42,8 +45,8 @@ internal class EuclideanMorphPattern(
             groovePattern: StrudelPattern,
         ): EuclideanMorphPattern {
             return EuclideanMorphPattern(
-                pulsesProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(pulses.toDouble())),
-                stepsProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(steps.toDouble())),
+                pulsesProvider = ControlValueProvider.Static(Rational(pulses).asVoiceValue()),
+                stepsProvider = ControlValueProvider.Static(Rational(steps).asVoiceValue()),
                 groovePattern = groovePattern
             )
         }

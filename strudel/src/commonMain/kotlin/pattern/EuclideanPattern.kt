@@ -1,8 +1,11 @@
 package io.peekandpoke.klang.strudel.pattern
 
-import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.lang.late
 import io.peekandpoke.klang.strudel.lang.struct
 import io.peekandpoke.klang.strudel.math.Rational
@@ -62,9 +65,9 @@ internal class EuclideanPattern(
         ): EuclideanPattern {
             return EuclideanPattern(
                 inner = inner,
-                pulsesProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(pulses.toDouble())),
-                stepsProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(steps.toDouble())),
-                rotationProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(rotation.toDouble())),
+                pulsesProvider = ControlValueProvider.Static(Rational(pulses).asVoiceValue()),
+                stepsProvider = ControlValueProvider.Static(Rational(steps).asVoiceValue()),
+                rotationProvider = ControlValueProvider.Static(Rational(rotation).asVoiceValue()),
                 legato = legato
             )
         }
@@ -252,9 +255,7 @@ internal class EuclideanPattern(
                     StrudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = StrudelVoiceData.empty.copy(
-                            value = StrudelVoiceValue.Num(0.0),
-                        )
+                        data = StrudelVoiceData.empty.copy(value = Rational.ONE.asVoiceValue())
                     )
                 )
             }

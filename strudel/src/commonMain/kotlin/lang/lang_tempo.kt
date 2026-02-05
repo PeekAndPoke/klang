@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.stretchBy
 import io.peekandpoke.klang.strudel.math.Rational
@@ -24,7 +25,7 @@ fun applyTimeShift(
 ): StrudelPattern {
     if (args.isEmpty()) return pattern
 
-    val control = args[0].asControlValueProvider(StrudelVoiceValue.Num(0.0))
+    val control = args[0].asControlValueProvider(Rational.ZERO.asVoiceValue())
 
     return TimeShiftPattern(
         source = pattern,
@@ -130,7 +131,7 @@ val String.fast by dslStringExtension { p, args, callInfo -> p.fast(args, callIn
 
 fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val nProvider: ControlValueProvider =
-        args.firstOrNull().asControlValueProvider(StrudelVoiceValue.Num(1.0))
+        args.firstOrNull().asControlValueProvider(Rational.ONE.asVoiceValue())
 
     return ReversePattern(inner = pattern, nProvider = nProvider)
 }
@@ -687,7 +688,7 @@ fun applyFastGap(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     }
 
     val factorProvider: ControlValueProvider =
-        args.firstOrNull().asControlValueProvider(StrudelVoiceValue.Num(1.0))
+        args.firstOrNull().asControlValueProvider(Rational.ONE.asVoiceValue())
 
     return FastGapPattern(source = pattern, factorProvider = factorProvider)
 }

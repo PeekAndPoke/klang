@@ -3,7 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -19,7 +19,7 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
  */
 internal class ReversePattern(
     val inner: StrudelPattern,
-    val nProvider: ControlValueProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(1.0)),
+    val nProvider: ControlValueProvider = ControlValueProvider.Static.ONE,
 ) : StrudelPattern {
     companion object {
         /**
@@ -28,7 +28,7 @@ internal class ReversePattern(
         fun static(inner: StrudelPattern, n: Rational = Rational.ONE): ReversePattern {
             return ReversePattern(
                 inner = inner,
-                nProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(n.toDouble()))
+                nProvider = ControlValueProvider.Static(n.asVoiceValue())
             )
         }
 
@@ -124,9 +124,14 @@ internal class ReversePattern(
     ): List<StrudelPatternEvent> {
         // Multi-cycle reversal using fast/slow approach
         // fast(n).rev().slow(n)
-        val fast = TempoModifierPattern.static(source = inner, factor = nRat, invertPattern = true)
-        val reversed = ReversePattern(inner = fast, nProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(1.0)))
-        val slowed = TempoModifierPattern.static(source = reversed, factor = nRat, invertPattern = false)
+        val fast: TempoModifierPattern =
+            TempoModifierPattern.static(source = inner, factor = nRat, invertPattern = true)
+
+        val reversed =
+            ReversePattern(inner = fast, nProvider = ControlValueProvider.Static.ONE)
+
+        val slowed: TempoModifierPattern =
+            TempoModifierPattern.static(source = reversed, factor = nRat, invertPattern = false)
 
         return slowed.queryArcContextual(from, to, ctx)
     }

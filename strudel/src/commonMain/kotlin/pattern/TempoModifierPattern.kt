@@ -3,7 +3,7 @@ package io.peekandpoke.klang.strudel.pattern
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -39,7 +39,7 @@ internal class TempoModifierPattern(
         ): TempoModifierPattern {
             return TempoModifierPattern(
                 source = source,
-                factorProvider = ControlValueProvider.Static(StrudelVoiceValue.Num(factor.toDouble())),
+                factorProvider = ControlValueProvider.Static(factor.asVoiceValue()),
                 invertPattern = invertPattern
             )
         }

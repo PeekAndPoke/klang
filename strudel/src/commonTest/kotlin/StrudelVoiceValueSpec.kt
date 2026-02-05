@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import kotlinx.serialization.json.Json
 
 class StrudelVoiceValueSpec : StringSpec({
@@ -304,8 +305,8 @@ class StrudelVoiceValueSpec : StringSpec({
     }
 
     "VoiceValue.Bool: from() converts Boolean to Bool" {
-        StrudelVoiceValue.from(true) shouldBe StrudelVoiceValue.Bool(true)
-        StrudelVoiceValue.from(false) shouldBe StrudelVoiceValue.Bool(false)
+        StrudelVoiceValue.of(true) shouldBe StrudelVoiceValue.Bool(true)
+        StrudelVoiceValue.of(false) shouldBe StrudelVoiceValue.Bool(false)
     }
 
     // Tests for VoiceValue.Seq
@@ -402,7 +403,7 @@ class StrudelVoiceValueSpec : StringSpec({
 
     // Serialization tests
     "VoiceValue.Num: serialization and deserialization" {
-        val original = StrudelVoiceValue.Num(42.5)
+        val original = StrudelVoiceValue.Num(42.5.toRational())
         val json = Json.encodeToString(StrudelVoiceValueSerializer, original)
         json shouldBe "42.5"
         val deserialized = Json.decodeFromString(StrudelVoiceValueSerializer, json)
@@ -434,7 +435,7 @@ class StrudelVoiceValueSpec : StringSpec({
     "VoiceValue.Seq: serialization and deserialization" {
         val original = StrudelVoiceValue.Seq(
             listOf(
-                StrudelVoiceValue.Num(1.1),
+                StrudelVoiceValue.Num(1.1.toRational()),
                 StrudelVoiceValue.Text("test"),
                 StrudelVoiceValue.Bool(true)
             )
@@ -456,11 +457,11 @@ class StrudelVoiceValueSpec : StringSpec({
     "VoiceValue.Seq: nested sequences" {
         val original = StrudelVoiceValue.Seq(
             listOf(
-                StrudelVoiceValue.Num(1.1),
+                StrudelVoiceValue.Num(1.1.toRational()),
                 StrudelVoiceValue.Seq(
                     listOf(
-                        StrudelVoiceValue.Num(2.2),
-                        StrudelVoiceValue.Num(3.3)
+                        StrudelVoiceValue.Num(2.2.toRational()),
+                        StrudelVoiceValue.Num(3.3.toRational())
                     )
                 )
             )

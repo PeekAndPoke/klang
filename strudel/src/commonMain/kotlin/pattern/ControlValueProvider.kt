@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.pattern
 
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.math.Rational
 
 /**
@@ -23,6 +24,10 @@ sealed interface ControlValueProvider {
         val value: StrudelVoiceValue,
         val location: SourceLocation? = null,
     ) : ControlValueProvider {
+        companion object {
+            val ONE = Static(Rational.ONE.asVoiceValue())
+        }
+
         override fun query(
             from: Rational,
             to: Rational,
