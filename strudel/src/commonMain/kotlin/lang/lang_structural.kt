@@ -1374,8 +1374,77 @@ fun String.fastchunk(
     return this.fastChunk(n, transform)
 }
 
-// -- linger() ---------------------------------------------------------------------------------------------------------
+// -- chunkInto() ------------------------------------------------------------------------------------------------------
 
+/**
+ * Like `chunk`, but the function is applied to a looped subcycle of the source pattern.
+ * Effectively an alias for `fastChunk`.
+ *
+ * @name chunkInto
+ * @synonyms chunkinto
+ * @memberof Pattern
+ * @example
+ * sound("bd sd ht lt bd - cp lt").chunkInto(4, hurry(2))
+ *   .bank("tr909")
+ */
+@StrudelDsl
+val StrudelPattern.chunkInto by dslPatternExtension { p, args, /* callInfo */ _ ->
+    val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
+    val transform = args.getOrNull(1).toPatternMapper() ?: { it }
+    applyChunk(p, listOf(nArg, transform, false, true).asStrudelDslArgs())
+}
+
+/**
+ * Like `chunk`, but the function is applied to a looped subcycle of the source pattern.
+ */
+@StrudelDsl
+fun StrudelPattern.chunkInto(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return applyChunk(this, listOf(n, transform, false, true).asStrudelDslArgs())
+}
+
+@StrudelDsl
+val String.chunkInto by dslStringExtension { p, args, callInfo -> p.chunkInto(args, callInfo) }
+
+/**
+ * Like `chunk`, but the function is applied to a looped subcycle of the source pattern.
+ */
+@StrudelDsl
+fun String.chunkInto(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return this.chunkInto(listOf(n, transform).asStrudelDslArgs())
+}
+
+/** Alias for [chunkInto] */
+@StrudelDsl
+val StrudelPattern.chunkinto by dslPatternExtension { p, args, callInfo -> p.chunkInto(args, callInfo) }
+
+/** Alias for [chunkInto] */
+@StrudelDsl
+fun StrudelPattern.chunkinto(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return chunkInto(n, transform)
+}
+
+@StrudelDsl
+val String.chunkinto by dslStringExtension { p, args, callInfo -> p.chunkInto(args, callInfo) }
+
+/** Alias for [chunkInto] */
+@StrudelDsl
+fun String.chunkinto(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return this.chunkInto(n, transform)
+}
+
+// -- linger() ---------------------------------------------------------------------------------------------------------
 
 fun applyLinger(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val tArg = args.getOrNull(0) ?: return pattern
@@ -2976,79 +3045,3 @@ val StrudelPattern.rib by dslPatternExtension { p, args, callInfo -> p.ribbon(ar
 @StrudelDsl
 val String.rib by dslStringExtension { p, args, callInfo -> p.ribbon(args, callInfo) }
 
-// -- stepalt() --------------------------------------------------------------------------------------------------------
-
-fun applyStepAlt(groups: List<Any?>): StrudelPattern {
-    // 1. Normalize groups: each arg becomes a list of patterns
-    // JS: groups = groups.map((a) => (Array.isArray(a) ? a.map(reify) : [reify(a)]));
-    val normalizedGroups: List<List<StrudelPattern>> = groups.map { group ->
-        when (group) {
-            is List<*> -> group.map {
-                (it as? StrudelDslArg<*>)?.toPattern() ?: StrudelDslArg.of(it).toPattern()
-            }
-
-            is StrudelDslArg<*> -> listOf(group.toPattern())
-            else -> listOf(StrudelDslArg.of(group).toPattern())
-        }
-    }
-
-    // 2. Calculate LCM of lengths
-    // JS: const cycles = lcm(...groups.map((x) => Fraction(x.length)));
-    val lengths = normalizedGroups.map { it.size }
-    if (lengths.isEmpty()) return silence
-    val cycles = lcm(lengths)
-
-    // 3. Build the sequence of patterns
-    val resultPatterns = mutableListOf<StrudelPattern>()
-    for (cycle in 0 until cycles) {
-        // result.push(...groups.map((x) => (x.length == 0 ? silence : x[cycle % x.length])));
-        for (group in normalizedGroups) {
-            if (group.isEmpty()) {
-                resultPatterns.add(silence)
-            } else {
-                resultPatterns.add(group[cycle % group.size])
-            }
-        }
-    }
-
-    // 4. Calculate total steps
-    // JS: result = result.filter((x) => x.hasSteps && x._steps > 0);
-    // JS: const steps = result.reduce((a, b) => a.add(b._steps), Fraction(0));
-    // Note: applyStepcat internally handles weights based on steps/duration if arguments provide them.
-    // But here we are building a raw list of patterns.
-    // To mimic stepcat behavior, we need to pass these to applyStepcat.
-    // applyStepcat expects StrudelDslArg.
-
-    // Filter patterns that have steps > 0 for step calculation
-    val validPatterns = resultPatterns.filter { (it.numSteps ?: Rational.ZERO) > Rational.ZERO }
-    val totalSteps = validPatterns.fold(Rational.ZERO) { acc, pat ->
-        acc + (pat.numSteps ?: Rational.ZERO)
-    }
-
-    // 5. Concatenate using stepcat
-    // JS: result = stepcat(...result);
-    val stepcatResult = applyStepcat(resultPatterns.map { StrudelDslArg.of(it) })
-
-    // 6. Override steps
-    // JS: result._steps = steps;
-    return stepcatResult.withSteps(totalSteps)
-}
-
-/**
- * Concatenates patterns stepwise, according to an inferred 'steps per cycle'.
- * Similar to `stepcat`, but if an argument is a list, the whole pattern will alternate between the elements in the list.
- *
- * @example
- * stepalt(listOf("bd cp", "mt"), "bd").sound()
- * // The same as "bd cp bd mt bd".sound()
- */
-@StrudelDsl
-val stepalt by dslFunction { args, /* callInfo */ _ ->
-    // args is List<StrudelDslArg<Any?>>.
-    // If the argument is a list in DSL (e.g. stepalt(["a", "b"])), it comes as a StrudelDslArg containing a List.
-    // We need to preserve that structure.
-    val rawArgs = args.map { arg ->
-        if (arg.value is List<*>) arg.value else arg
-    }
-    applyStepAlt(rawArgs)
-}

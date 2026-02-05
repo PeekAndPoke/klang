@@ -516,7 +516,7 @@ but the audio engine integration is still pending:~~
   back up)
 - [x] **`outside(factor, operation)`** - Applies operation outside cycle (speeds pattern, applies function, then slows
   back down)
-- [ ] **`stepalt(...groups)`** - Alternate between pattern groups (alias: `s_alt`)
+- [/] ~~**`stepalt(...groups)`**~~ - Alternate between pattern groups (alias: `s_alt`) - Still experimental in Strudel
 - [x] **`press()`** - Press pattern (squash events)
 - [x] **`pressBy(amount)`** - Press pattern by amount
 - [x] **`fastchunk(n, func)`** - Apply function to fast chunks (alias: `fastChunk`)
