@@ -361,8 +361,7 @@ val or by dslFunction { _, _ -> silence }
 @StrudelDsl
 val StrudelPattern.round by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     applyUnaryOp(p) { v ->
-        val d = v.asDouble
-        if (d != null) kotlin.math.round(d).asVoiceValue() else v
+        v.asRational?.round()?.asVoiceValue() ?: v
     }
 }
 

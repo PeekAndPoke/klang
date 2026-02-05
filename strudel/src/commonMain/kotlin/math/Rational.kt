@@ -156,6 +156,28 @@ value class Rational private constructor(private val bits: Long) : Comparable<Ra
         return Rational(bits and FRACTION_MASK)
     }
 
+    /**
+     * Rounds to the nearest integer (as Rational).
+     * Uses "round half away from zero" rule:
+     * - 2.5 rounds to 3
+     * - -2.5 rounds to -3
+     * - 2.4 rounds to 2
+     * - -2.6 rounds to -3
+     */
+    fun round(): Rational {
+        if (isNaN) return NaN
+
+        val half = Rational(MULTIPLIER_L shr 1) // 0.5 in fixed-point
+
+        // For positive numbers: floor(x + 0.5)
+        // For negative numbers: ceil(x - 0.5)
+        return if (bits >= 0) {
+            (this + half).floor()
+        } else {
+            (this - half).ceil()
+        }
+    }
+
     override fun toString(): String = if (isNaN) "NaN" else toDouble().toString()
 }
 

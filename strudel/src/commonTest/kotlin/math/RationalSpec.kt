@@ -273,4 +273,154 @@ class RationalSpec : StringSpec({
     "Number Interop | rem(Number) operator" {
         (r(7, 2) % 2) shouldBe r(3, 2)
     }
+
+    // Round function tests
+    "round() | Positive numbers - round down" {
+        Rational(2.0).round() shouldBe Rational(2)
+        Rational(2.1).round() shouldBe Rational(2)
+        Rational(2.4).round() shouldBe Rational(2)
+        Rational(2.49).round() shouldBe Rational(2)
+    }
+
+    "round() | Positive numbers - round up" {
+        Rational(2.5).round() shouldBe Rational(3)
+        Rational(2.6).round() shouldBe Rational(3)
+        Rational(2.9).round() shouldBe Rational(3)
+        Rational(2.99).round() shouldBe Rational(3)
+    }
+
+    "round() | Negative numbers - round towards zero" {
+        Rational(-2.0).round() shouldBe Rational(-2)
+        Rational(-2.1).round() shouldBe Rational(-2)
+        Rational(-2.4).round() shouldBe Rational(-2)
+        Rational(-2.49).round() shouldBe Rational(-2)
+    }
+
+    "round() | Negative numbers - round away from zero" {
+        Rational(-2.5).round() shouldBe Rational(-3)
+        Rational(-2.6).round() shouldBe Rational(-3)
+        Rational(-2.9).round() shouldBe Rational(-3)
+        Rational(-2.99).round() shouldBe Rational(-3)
+    }
+
+    "round() | Exact half values (0.5)" {
+        Rational(0.5).round() shouldBe Rational(1)
+        Rational(1.5).round() shouldBe Rational(2)
+        Rational(2.5).round() shouldBe Rational(3)
+        Rational(3.5).round() shouldBe Rational(4)
+        Rational(10.5).round() shouldBe Rational(11)
+        Rational(100.5).round() shouldBe Rational(101)
+    }
+
+    "round() | Negative exact half values (-0.5)" {
+        Rational(-0.5).round() shouldBe Rational(-1)
+        Rational(-1.5).round() shouldBe Rational(-2)
+        Rational(-2.5).round() shouldBe Rational(-3)
+        Rational(-3.5).round() shouldBe Rational(-4)
+        Rational(-10.5).round() shouldBe Rational(-11)
+        Rational(-100.5).round() shouldBe Rational(-101)
+    }
+
+    "round() | Zero and near-zero values" {
+        Rational(0.0).round() shouldBe Rational.ZERO
+        Rational(0.1).round() shouldBe Rational.ZERO
+        Rational(0.4).round() shouldBe Rational.ZERO
+        Rational(0.49).round() shouldBe Rational.ZERO
+        Rational(-0.1).round() shouldBe Rational.ZERO
+        Rational(-0.4).round() shouldBe Rational.ZERO
+        Rational(-0.49).round() shouldBe Rational.ZERO
+    }
+
+    "round() | Already integer values" {
+        Rational(1).round() shouldBe Rational(1)
+        Rational(5).round() shouldBe Rational(5)
+        Rational(42).round() shouldBe Rational(42)
+        Rational(-1).round() shouldBe Rational(-1)
+        Rational(-5).round() shouldBe Rational(-5)
+        Rational(-42).round() shouldBe Rational(-42)
+        Rational(100).round() shouldBe Rational(100)
+        Rational(-100).round() shouldBe Rational(-100)
+    }
+
+    "round() | Fractions" {
+        r(1, 3).round() shouldBe Rational.ZERO  // 0.333...
+        r(2, 3).round() shouldBe Rational(1)     // 0.666...
+        r(5, 8).round() shouldBe Rational(1)     // 0.625
+        r(3, 8).round() shouldBe Rational.ZERO   // 0.375
+        r(7, 8).round() shouldBe Rational(1)     // 0.875
+        r(1, 8).round() shouldBe Rational.ZERO   // 0.125
+    }
+
+    "round() | Negative fractions" {
+        r(-1, 3).round() shouldBe Rational.ZERO  // -0.333...
+        r(-2, 3).round() shouldBe Rational(-1)   // -0.666...
+        r(-5, 8).round() shouldBe Rational(-1)   // -0.625
+        r(-3, 8).round() shouldBe Rational.ZERO  // -0.375
+        r(-7, 8).round() shouldBe Rational(-1)   // -0.875
+        r(-1, 8).round() shouldBe Rational.ZERO  // -0.125
+    }
+
+    "round() | Large numbers" {
+        Rational(999.4).round() shouldBe Rational(999)
+        Rational(999.5).round() shouldBe Rational(1000)
+        Rational(999.6).round() shouldBe Rational(1000)
+        Rational(-999.4).round() shouldBe Rational(-999)
+        Rational(-999.5).round() shouldBe Rational(-1000)
+        Rational(-999.6).round() shouldBe Rational(-1000)
+    }
+
+    "round() | Very small fractions" {
+        Rational(0.001).round() shouldBe Rational.ZERO
+        Rational(0.01).round() shouldBe Rational.ZERO
+        Rational(0.499).round() shouldBe Rational.ZERO
+        Rational(0.501).round() shouldBe Rational(1)
+        Rational(-0.001).round() shouldBe Rational.ZERO
+        Rational(-0.01).round() shouldBe Rational.ZERO
+        Rational(-0.499).round() shouldBe Rational.ZERO
+        Rational(-0.501).round() shouldBe Rational(-1)
+    }
+
+    "round() | NaN handling" {
+        Rational.NaN.round().isNaN shouldBe true
+    }
+
+    "round() | Result is always integer" {
+        val testValues = listOf(0.1, 0.5, 0.9, 1.1, 1.5, 1.9, 2.3, 2.7, -0.1, -0.5, -1.5, -2.7)
+        assertSoftly {
+            testValues.forEach { value ->
+                withClue("round($value) should return an integer") {
+                    val rounded = Rational(value).round()
+                    rounded.frac() shouldBe Rational.ZERO
+                }
+            }
+        }
+    }
+
+    "round() | Comprehensive behavior verification" {
+        // Verify the "round half away from zero" behavior
+        val testCases = listOf(
+            0.0 to 0.0,
+            0.4 to 0.0,
+            0.5 to 1.0,
+            0.6 to 1.0,
+            1.4 to 1.0,
+            1.5 to 2.0,
+            1.6 to 2.0,
+            2.5 to 3.0,
+            -0.4 to 0.0,
+            -0.5 to -1.0,
+            -0.6 to -1.0,
+            -1.4 to -1.0,
+            -1.5 to -2.0,
+            -1.6 to -2.0,
+            -2.5 to -3.0
+        )
+        assertSoftly {
+            testCases.forEach { (input, expected) ->
+                withClue("round($input) should be $expected") {
+                    Rational(input).round().toDouble() shouldBe expected
+                }
+            }
+        }
+    }
 })
