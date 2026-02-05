@@ -26,6 +26,9 @@ data class Rational private constructor(val numerator: Long, val denominator: Lo
         /** Zero as a rational number */
         val ZERO = Rational(0L, 1L)
 
+        /** Quarter as a rational number */
+        val QUARTER = Rational(1L, 4L)
+
         /** Half as a rational number */
         val HALF = Rational(1L, 2L)
 
@@ -186,10 +189,16 @@ data class Rational private constructor(val numerator: Long, val denominator: Lo
     /** Adds two rational numbers */
     operator fun plus(other: Rational): Rational {
         if (isNaN || other.isNaN) return NaN
-        if (isInfinite || other.isInfinite) return if (isInfinite && other.isInfinite && sign(numerator.toDouble()) != sign(
-                other.numerator.toDouble()
-            )
-        ) NaN else if (isInfinite) this else other
+
+        if (isInfinite || other.isInfinite) {
+            return if (
+                isInfinite && other.isInfinite && sign(numerator.toDouble()) != sign(other.numerator.toDouble())
+            ) {
+                NaN
+            } else {
+                if (isInfinite) this else other
+            }
+        }
 
         // (a/b) + (c/d) = (ad + bc) / bd
         val g = gcd(denominator, other.denominator)
@@ -359,11 +368,82 @@ data class Rational private constructor(val numerator: Long, val denominator: Lo
 
     /**
      * Raises this rational to the power of another rational.
+     *
+     * Follows the semantics of [Double.pow]:
+     * - `b.pow(0.0)` is `1.0`
+     * - `b.pow(1.0) == b`
+     * - `b.pow(NaN)` is `NaN`
+     * - `NaN.pow(x)` is `NaN` for `x != 0.0`
+     * - `b.pow(Inf)` is `NaN` for `abs(b) == 1.0`
+     * - `b.pow(x)` is `NaN` for `b < 0` and `x` is finite and not an integer
      */
-    infix fun pow(exponent: Rational): Rational {
-        if (isNaN || exponent.isNaN) return NaN
-        val res = toDouble().pow(exponent.toDouble())
-        return Rational(res)
+    fun pow(exponent: Rational): Rational {
+        val result = toDouble().pow(exponent.toDouble())
+        if (result.isNaN() || result.isInfinite()) return NaN
+        return Rational(result)
+    }
+
+    /**
+     * Raises this rational to the power of a number.
+     */
+    fun pow(exponent: Number): Rational = pow(exponent.toRational())
+
+    /**
+     * Computes the logarithm of this value to the given [base].
+     *
+     * Follows the semantics of [kotlin.math.log]:
+     * - `log(x, b)` is `NaN` if either `x` or `b` are `NaN`
+     * - `log(x, b)` is `NaN` when `x < 0` or `b <= 0` or `b == 1.0`
+     * - `log(+Inf, +Inf)` is `NaN`
+     * - `log(+Inf, b)` is `+Inf` for `b > 1` and `-Inf` for `b < 1`
+     * - `log(0.0, b)` is `-Inf` for `b > 1` and `+Inf` for `b < 1`
+     */
+    fun log(base: Rational): Rational {
+        val result = kotlin.math.log(toDouble(), base.toDouble())
+        if (result.isNaN() || result.isInfinite()) return NaN
+        return Rational(result)
+    }
+
+    /**
+     * Computes the logarithm of this value to the given [base].
+     */
+    fun log(base: Number): Rational = log(base.toRational())
+
+    /**
+     * Computes the natural logarithm (base E) of this value.
+     *
+     * Special cases:
+     * - `ln(NaN)` is `NaN`
+     * - `ln(x)` is `NaN` when `x < 0.0`
+     * - `ln(+Inf)` is `+Inf`
+     * - `ln(0.0)` is `-Inf`
+     */
+    fun ln(): Rational {
+        val result = kotlin.math.ln(toDouble())
+        if (result.isNaN() || result.isInfinite()) return NaN
+        return Rational(result)
+    }
+
+    /**
+     * Computes the common logarithm (base 10) of this value.
+     *
+     * See [ln] for special cases.
+     */
+    fun log10(): Rational {
+        val result = kotlin.math.log10(toDouble())
+        if (result.isNaN() || result.isInfinite()) return NaN
+        return Rational(result)
+    }
+
+    /**
+     * Computes the binary logarithm (base 2) of this value.
+     *
+     * See [ln] for special cases.
+     */
+    fun log2(): Rational {
+        val result = kotlin.math.log2(toDouble())
+        if (result.isNaN() || result.isInfinite()) return NaN
+        return Rational(result)
     }
 
     override fun toString(): String {

@@ -11,9 +11,11 @@ data class TimeSpan(
     val begin: Rational,
     val end: Rational,
 ) {
-    init {
-        require(end >= begin) { "TimeSpan end ($end) must be >= begin ($begin)" }
-    }
+//    init {
+//        require(end >= begin) { "TimeSpan end ($end) must be >= begin ($begin)" }
+//    }
+
+    val isValid = end >= begin
 
     val duration: Rational get() = end - begin
 

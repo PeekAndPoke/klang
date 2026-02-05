@@ -45,10 +45,9 @@ val String.hush by dslStringExtension { _, _, _ -> silence }
 
 /** Creates silence with a specific duration in steps (metrical steps). */
 fun applyGap(args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val stepsVal = args.firstOrNull()?.value?.asDoubleOrNull() ?: 1.0
-    val stepsRat = stepsVal.toRational()
+    val steps = args.firstOrNull()?.value?.asRationalOrNull() ?: Rational.ONE
 
-    return GapPattern(stepsRat)
+    return GapPattern(steps)
 }
 
 /** Creates silence with a specific duration in steps (metrical steps). */
@@ -754,7 +753,7 @@ val String.juxBy by dslStringExtension { p, args, callInfo -> p.juxBy(args, call
 @StrudelDsl
 val StrudelPattern.off by dslPatternExtension { p, args, /* callInfo */ _ ->
     // TODO: we must support control patterns for the first parameter
-    val time = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.25
+    val time = args.getOrNull(0)?.value?.asRationalOrNull() ?: Rational.QUARTER
 
     @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }

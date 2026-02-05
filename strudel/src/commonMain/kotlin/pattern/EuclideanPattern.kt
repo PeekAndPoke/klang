@@ -6,11 +6,10 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.TimeSpan
-import io.peekandpoke.klang.strudel.lang.late
+import io.peekandpoke.klang.strudel.lang.slow
 import io.peekandpoke.klang.strudel.lang.struct
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.math.bjorklund
 import io.peekandpoke.klang.strudel.math.recursiveBjorklund
 import kotlin.math.abs
 import kotlin.math.max
@@ -124,6 +123,9 @@ internal class EuclideanPattern(
         /**
          * Internal implementation for static legato euclidean pattern.
          */
+        /**
+         * Internal implementation for static legato euclidean pattern.
+         */
         private fun createLegatoStatic(
             inner: StrudelPattern,
             pulses: Int,
@@ -132,8 +134,12 @@ internal class EuclideanPattern(
         ): StrudelPattern {
             if (pulses <= 0 || steps <= 0) return EmptyPattern
 
-            val bitmap = bjorklund(pulses, steps)
-            val onsets = bitmap.mapIndexedNotNull { i, v -> if (v == 1) i else null }
+            // 1. Rotate the bitmap directly
+            // We use bjorklundStrudel to handle negative pulses consistency
+            val bitmap = bjorklundStrudel(pulses, steps)
+            val rotatedBitmap = rotateJs(bitmap, -rotation)
+
+            val onsets = rotatedBitmap.mapIndexedNotNull { i, v -> if (v == 1) i else null }
 
             if (onsets.isEmpty()) return EmptyPattern
 
@@ -164,28 +170,40 @@ internal class EuclideanPattern(
             }
 
             val patterns = ArrayList<StrudelPattern>()
-            val wrappedOnsets = onsets + (onsets[0] + steps)
 
-            for (i in 0 until onsets.size) {
-                val current = wrappedOnsets[i]
-                val next = wrappedOnsets[i + 1]
-                val duration = (next - current).toDouble()
+            var i = 0
+            while (i < steps) {
+                if (rotatedBitmap[i] == 1) {
+                    // It's an onset. Find distance to next onset.
+                    var dist = 1
+                    var safety = 0
+                    while (safety < steps) {
+                        val nextIdx = (i + dist) % steps
+                        if (rotatedBitmap[nextIdx] == 1) break
+                        dist++
+                        safety++
+                    }
 
-                // Instead of (duration to pattern), we use weighted patterns.
-                // PropertyOverridePattern is used directly to avoid import issues with .withWeight extension
-                patterns.add(PropertyOverridePattern(fillAtom, weightOverride = duration))
+                    patterns.add(PropertyOverridePattern(fillAtom, weightOverride = dist.toDouble()))
+
+                    // Advance by dist (skipping gaps covered by this event)
+                    i += dist
+                } else {
+                    // It's a gap
+                    patterns.add(PropertyOverridePattern(EmptyPattern, weightOverride = 1.0))
+                    i++
+                }
             }
 
-            // SequencePattern automatically squeezes the sequence into 1 cycle allocating time proportional to weights
+            val totalWeight = patterns.sumOf { it.weight }
             val structure = SequencePattern(patterns)
 
-            val rotatedStructure = if (rotation != 0) {
-                structure.late(rotation.toDouble() / steps)
-            } else {
-                structure
-            }
-
-            return inner.struct(rotatedStructure)
+            // Scale so that 'steps' amount of weight fits in 1 cycle.
+            // If totalWeight > steps (due to wrap-around overlap from legato), we slow it down.
+            // Example: steps=8, totalWeight=9. We want 8 units to take 1 cycle.
+            // structure fits 9 units in 1 cycle.
+            // slow(9/8) makes 9 units take 1.125 cycles -> 8 units take 1 cycle.
+            return inner.struct(structure.slow(totalWeight / steps.toDouble()))
         }
 
         // Replicates JS Array.prototype.slice behavior exactly

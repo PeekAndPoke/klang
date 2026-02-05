@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import kotlin.math.*
 
 class RationalSpec : StringSpec({
 
@@ -227,21 +228,6 @@ class RationalSpec : StringSpec({
         (Rational.NaN * r(5)) shouldBe Rational.NaN
         (Rational.NaN / Rational.NaN) shouldBe Rational.NaN
     }
-
-//    "Safety | Long.MIN_VALUE safety" {
-//        // abs(Long.MIN_VALUE) fails in standard math, Rational should handle it
-//        val min = Rational(Long.MIN_VALUE)
-//        val one = Rational(1)
-//
-//        // Should not crash
-//        val res = min / one
-//        res.numerator shouldBe Long.MIN_VALUE
-//
-//        // GCD involving MIN_VALUE
-//        // MIN_VALUE / MIN_VALUE should simplify to 1
-//        val selfDiv = Rational(Long.MIN_VALUE) / Rational(Long.MIN_VALUE)
-//        selfDiv shouldBe Rational.ONE
-//    }
 
     "Safety | Accumulated precision (Euclidean pattern)" {
         // 1/8 step duration
@@ -489,5 +475,456 @@ class RationalSpec : StringSpec({
         val exp1 = Rational.ONE.exp()
         val expMinus1 = Rational.MINUS_ONE.exp()
         (exp1 * expMinus1).toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    // pow() function tests
+    "pow() | Basic integer exponents" {
+        Rational(2).pow(Rational(3)) shouldBe Rational(8)
+        Rational(3).pow(Rational(2)) shouldBe Rational(9)
+        Rational(5).pow(Rational(2)) shouldBe Rational(25)
+        Rational(10).pow(Rational(3)).toDouble() shouldBe (1000.0 plusOrMinus EPSILON)
+    }
+
+    "pow() | Zero exponent returns 1" {
+        Rational(2).pow(Rational.ZERO) shouldBe Rational.ONE
+        Rational(100).pow(Rational.ZERO) shouldBe Rational.ONE
+        Rational(-5).pow(Rational.ZERO) shouldBe Rational.ONE
+    }
+
+    "pow() | One exponent returns same value" {
+        Rational(5).pow(Rational.ONE) shouldBe Rational(5)
+        Rational(42).pow(Rational.ONE) shouldBe Rational(42)
+        Rational(-7).pow(Rational.ONE) shouldBe Rational(-7)
+    }
+
+    "pow() | Negative exponents" {
+        Rational(2).pow(Rational(-1)) shouldBe Rational(0.5)
+        Rational(4).pow(Rational(-1)) shouldBe Rational(0.25)
+        Rational(10).pow(Rational(-2)).toDouble() shouldBe (0.01 plusOrMinus EPSILON)
+    }
+
+    "pow() | Fractional exponents (square root)" {
+        Rational(4).pow(Rational(0.5)).toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        Rational(9).pow(Rational(0.5)).toDouble() shouldBe (3.0 plusOrMinus EPSILON)
+        Rational(16).pow(Rational(0.5)).toDouble() shouldBe (4.0 plusOrMinus EPSILON)
+    }
+
+    "pow() | Fractional exponents (cube root)" {
+        Rational(8).pow(Rational(1.0 / 3.0)).toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        Rational(27).pow(Rational(1.0 / 3.0)).toDouble() shouldBe (3.0 plusOrMinus EPSILON)
+    }
+
+    "pow() | Zero base with positive exponent" {
+        Rational.ZERO.pow(Rational(1)) shouldBe Rational.ZERO
+        Rational.ZERO.pow(Rational(2)) shouldBe Rational.ZERO
+        Rational.ZERO.pow(Rational(10)) shouldBe Rational.ZERO
+    }
+
+    "pow() | Zero base with zero exponent is 1" {
+        Rational.ZERO.pow(Rational.ZERO).toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "pow() | Negative base with integer exponent" {
+        Rational(-2).pow(Rational(3)).toDouble() shouldBe (-8.0 plusOrMinus EPSILON)
+        Rational(-2).pow(Rational(2)).toDouble() shouldBe (4.0 plusOrMinus EPSILON)
+        Rational(-3).pow(Rational(3)).toDouble() shouldBe (-27.0 plusOrMinus EPSILON)
+    }
+
+    "pow() | NaN handling - base is NaN" {
+        Rational.NaN.pow(Rational(2)).isNaN shouldBe true
+    }
+
+    "pow() | NaN handling - exponent is NaN" {
+        Rational(2).pow(Rational.NaN).isNaN shouldBe true
+    }
+
+    "pow() | NaN handling - both NaN" {
+        Rational.NaN.pow(Rational.NaN).isNaN shouldBe true
+    }
+
+    "pow() | Overflow results in NaN" {
+        val result = Rational(10).pow(Rational(1000))
+        result.isNaN shouldBe true
+    }
+
+    "pow() | Number overload with Int" {
+        Rational(2).pow(3) shouldBe Rational(8)
+        Rational(5).pow(2) shouldBe Rational(25)
+    }
+
+    "pow() | Number overload with Long" {
+        Rational(2).pow(3L) shouldBe Rational(8)
+        Rational(3).pow(4L).toDouble() shouldBe (81.0 plusOrMinus EPSILON)
+    }
+
+    "pow() | Number overload with Double" {
+        Rational(4).pow(0.5).toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        Rational(8).pow(1.0 / 3.0).toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
+    "pow() | Matches Kotlin's pow() for standard values" {
+        val testCases = listOf(
+            2.0 to 3.0,
+            3.0 to 2.0,
+            5.0 to 0.0,
+            2.0 to -1.0,
+            4.0 to 0.5,
+            10.0 to 2.0,
+            0.5 to 2.0
+        )
+        assertSoftly {
+            testCases.forEach { (base, exponent) ->
+                withClue("pow($base, $exponent)") {
+                    val rationalResult = Rational(base).pow(Rational(exponent)).toDouble()
+                    val kotlinResult = base.pow(exponent)
+                    rationalResult shouldBe (kotlinResult plusOrMinus EPSILON)
+                }
+            }
+        }
+    }
+
+    "pow() | Property: (a^b)^c = a^(b*c)" {
+        val a = Rational(2)
+        val b = Rational(3)
+        val c = Rational(2)
+
+        val left = a.pow(b).pow(c)
+        val right = a.pow(b * c)
+
+        left.toDouble() shouldBe (right.toDouble() plusOrMinus EPSILON)
+    }
+
+    "pow() | Property: a^b * a^c = a^(b+c)" {
+        val a = Rational(2)
+        val b = Rational(3)
+        val c = Rational(2)
+
+        val left = a.pow(b) * a.pow(c)
+        val right = a.pow(b + c)
+
+        left.toDouble() shouldBe (right.toDouble() plusOrMinus EPSILON)
+    }
+
+    "pow() | Property: (a*b)^c = a^c * b^c" {
+        val a = Rational(2)
+        val b = Rational(3)
+        val c = Rational(2)
+
+        val left = (a * b).pow(c)
+        val right = a.pow(c) * b.pow(c)
+
+        left.toDouble() shouldBe (right.toDouble() plusOrMinus EPSILON)
+    }
+
+    // Special cases from Double.pow() semantics
+    "pow() | Special case: b.pow(0.0) is 1.0" {
+        Rational(5).pow(Rational.ZERO) shouldBe Rational.ONE
+        Rational(-3).pow(Rational.ZERO) shouldBe Rational.ONE
+        Rational(100).pow(Rational.ZERO) shouldBe Rational.ONE
+    }
+
+    "pow() | Special case: b.pow(1.0) == b" {
+        Rational(5).pow(Rational.ONE) shouldBe Rational(5)
+        Rational(-3).pow(Rational.ONE) shouldBe Rational(-3)
+        Rational(42).pow(Rational.ONE) shouldBe Rational(42)
+    }
+
+    "pow() | Special case: b.pow(NaN) is NaN" {
+        Rational(5).pow(Rational.NaN).isNaN shouldBe true
+        Rational(-3).pow(Rational.NaN).isNaN shouldBe true
+        Rational.ZERO.pow(Rational.NaN).isNaN shouldBe true
+    }
+
+    "pow() | Special case: NaN.pow(x) is NaN for x != 0.0" {
+        Rational.NaN.pow(Rational(1)).isNaN shouldBe true
+        Rational.NaN.pow(Rational(2)).isNaN shouldBe true
+        Rational.NaN.pow(Rational(-1)).isNaN shouldBe true
+        Rational.NaN.pow(Rational(0.5)).isNaN shouldBe true
+    }
+
+    "pow() | Special case: NaN.pow(0.0) follows Double.pow semantics" {
+        // NaN.pow(0.0) should be 1.0 per IEEE 754
+        val result = Rational.NaN.pow(Rational.ZERO)
+        result.toDouble() shouldBe (Double.NaN.pow(0.0) plusOrMinus EPSILON)
+    }
+
+    "pow() | Special case: b.pow(Inf) is NaN for abs(b) == 1.0" {
+        Rational.ONE.pow(Rational.POSITIVE_INFINITY).isNaN shouldBe true
+        Rational.MINUS_ONE.pow(Rational.POSITIVE_INFINITY).isNaN shouldBe true
+    }
+
+    "pow() | Special case: b.pow(x) is NaN for b < 0 and x not integer" {
+        // Negative base with fractional exponent
+        Rational(-4).pow(Rational(0.5)).isNaN shouldBe true
+        Rational(-2).pow(Rational(1.5)).isNaN shouldBe true
+        Rational(-8).pow(Rational(1.0 / 3.0)).isNaN shouldBe true
+    }
+
+    "pow() | Special case: negative base with integer exponent works" {
+        Rational(-2).pow(Rational(2)).toDouble() shouldBe (4.0 plusOrMinus EPSILON)
+        Rational(-2).pow(Rational(3)).toDouble() shouldBe (-8.0 plusOrMinus EPSILON)
+        Rational(-3).pow(Rational(4)).toDouble() shouldBe (81.0 plusOrMinus EPSILON)
+    }
+
+    "pow() | Edge case: very large exponents result in NaN (overflow)" {
+        // 2^2000 and 10^309 result in Infinity, which is converted to NaN
+        val result1 = Rational(2).pow(Rational(2000))
+        val result2 = Rational(10).pow(Rational(309))
+
+        // Both should be NaN after overflow handling
+        result1.isNaN shouldBe true
+        result2.isNaN shouldBe true
+    }
+
+    "pow() | Edge case: very small results" {
+        Rational(2).pow(Rational(-10)).toDouble() shouldBe (0.0009765625 plusOrMinus EPSILON)
+        Rational(10).pow(Rational(-5)).toDouble() shouldBe (0.00001 plusOrMinus EPSILON)
+    }
+
+    "pow() | Matches Double.pow() exactly for all special cases" {
+        val testCases = listOf(
+            // (base, exponent, description)
+            Triple(5.0, 0.0, "any^0 = 1"),
+            Triple(-5.0, 0.0, "negative^0 = 1"),
+            Triple(5.0, 1.0, "any^1 = any"),
+            Triple(Double.NaN, 2.0, "NaN^x = NaN (x!=0)"),
+            Triple(2.0, Double.NaN, "x^NaN = NaN"),
+            Triple(-4.0, 0.5, "negative^fractional = NaN"),
+            Triple(-2.0, 2.0, "negative^even = positive"),
+            Triple(-2.0, 3.0, "negative^odd = negative")
+        )
+
+        assertSoftly {
+            testCases.forEach { (base, exponent, description) ->
+                withClue(description) {
+                    val rationalResult = Rational(base).pow(Rational(exponent)).toDouble()
+                    val doubleResult = base.pow(exponent)
+
+                    if (doubleResult.isNaN()) {
+                        rationalResult.isNaN() shouldBe true
+                    } else {
+                        rationalResult shouldBe (doubleResult plusOrMinus EPSILON)
+                    }
+                }
+            }
+        }
+    }
+
+    // log() function tests - logarithm with custom base
+    "log() | Basic logarithms" {
+        Rational(8).log(Rational(2)).toDouble() shouldBe (3.0 plusOrMinus EPSILON)
+        Rational(100).log(Rational(10)).toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        Rational(27).log(Rational(3)).toDouble() shouldBe (3.0 plusOrMinus EPSILON)
+    }
+
+    "log() | log(x, x) = 1" {
+        Rational(5).log(Rational(5)).toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        Rational(10).log(Rational(10)).toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "log() | log(1, b) = 0" {
+        Rational.ONE.log(Rational(2)).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        Rational.ONE.log(Rational(10)).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "log() | Special case: NaN if x or base is NaN" {
+        Rational.NaN.log(Rational(2)).isNaN shouldBe true
+        Rational(2).log(Rational.NaN).isNaN shouldBe true
+    }
+
+    "log() | Special case: NaN when x < 0" {
+        Rational(-5).log(Rational(2)).isNaN shouldBe true
+        Rational(-10).log(Rational(10)).isNaN shouldBe true
+    }
+
+    "log() | Special case: NaN when base <= 0" {
+        Rational(10).log(Rational.ZERO).isNaN shouldBe true
+        Rational(10).log(Rational(-2)).isNaN shouldBe true
+    }
+
+    "log() | Special case: NaN when base == 1" {
+        Rational(10).log(Rational.ONE).isNaN shouldBe true
+    }
+
+    "log() | Number overload" {
+        Rational(8).log(2).toDouble() shouldBe (3.0 plusOrMinus EPSILON)
+        Rational(100).log(10.0).toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
+    "log() | Matches kotlin.math.log" {
+        val testCases = listOf(
+            2.0 to 2.0,
+            8.0 to 2.0,
+            100.0 to 10.0,
+            27.0 to 3.0,
+            16.0 to 4.0
+        )
+
+        assertSoftly {
+            testCases.forEach { (value, base) ->
+                withClue("log($value, $base)") {
+                    val rationalResult = Rational(value).log(Rational(base)).toDouble()
+                    val kotlinResult = log(value, base)
+                    rationalResult shouldBe (kotlinResult plusOrMinus EPSILON)
+                }
+            }
+        }
+    }
+
+    // ln() function tests - natural logarithm
+    "ln() | Basic natural logarithms" {
+        Rational(kotlin.math.E).ln().toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        Rational(1.0).ln().toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "ln() | Various values" {
+        Rational(2).ln().toDouble() shouldBe (ln(2.0) plusOrMinus EPSILON)
+        Rational(10).ln().toDouble() shouldBe (ln(10.0) plusOrMinus EPSILON)
+        Rational(0.5).ln().toDouble() shouldBe (ln(0.5) plusOrMinus EPSILON)
+    }
+
+    "ln() | Special case: ln(NaN) is NaN" {
+        Rational.NaN.ln().isNaN shouldBe true
+    }
+
+    "ln() | Special case: ln(x) is NaN when x < 0" {
+        Rational(-1).ln().isNaN shouldBe true
+        Rational(-10).ln().isNaN shouldBe true
+    }
+
+    "ln() | Special case: ln(0) is -Inf (converted to NaN)" {
+        Rational.ZERO.ln().isNaN shouldBe true
+    }
+
+    "ln() | Matches kotlin.math.ln" {
+        val testValues = listOf(1.0, 2.0, kotlin.math.E, 10.0, 0.5, 100.0)
+
+        assertSoftly {
+            testValues.forEach { value ->
+                withClue("ln($value)") {
+                    val rationalResult = Rational(value).ln().toDouble()
+                    val kotlinResult = ln(value)
+                    rationalResult shouldBe (kotlinResult plusOrMinus EPSILON)
+                }
+            }
+        }
+    }
+
+    // log10() function tests - common logarithm
+    "log10() | Basic common logarithms" {
+        Rational(10).log10().toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        Rational(100).log10().toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        Rational(1000).log10().toDouble() shouldBe (3.0 plusOrMinus EPSILON)
+        Rational(1).log10().toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "log10() | Fractional values" {
+        Rational(0.1).log10().toDouble() shouldBe (-1.0 plusOrMinus EPSILON)
+        Rational(0.01).log10().toDouble() shouldBe (-2.0 plusOrMinus EPSILON)
+    }
+
+    "log10() | Special case: log10(NaN) is NaN" {
+        Rational.NaN.log10().isNaN shouldBe true
+    }
+
+    "log10() | Special case: log10(x) is NaN when x < 0" {
+        Rational(-1).log10().isNaN shouldBe true
+        Rational(-10).log10().isNaN shouldBe true
+    }
+
+    "log10() | Special case: log10(0) is -Inf (converted to NaN)" {
+        Rational.ZERO.log10().isNaN shouldBe true
+    }
+
+    "log10() | Matches kotlin.math.log10" {
+        val testValues = listOf(1.0, 10.0, 100.0, 1000.0, 0.1, 0.01, 2.0, 5.0)
+
+        assertSoftly {
+            testValues.forEach { value ->
+                withClue("log10($value)") {
+                    val rationalResult = Rational(value).log10().toDouble()
+                    val kotlinResult = log10(value)
+                    rationalResult shouldBe (kotlinResult plusOrMinus EPSILON)
+                }
+            }
+        }
+    }
+
+    // log2() function tests - binary logarithm
+    "log2() | Basic binary logarithms" {
+        Rational(2).log2().toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        Rational(4).log2().toDouble() shouldBe (2.0 plusOrMinus EPSILON)
+        Rational(8).log2().toDouble() shouldBe (3.0 plusOrMinus EPSILON)
+        Rational(16).log2().toDouble() shouldBe (4.0 plusOrMinus EPSILON)
+        Rational(1).log2().toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+    }
+
+    "log2() | Power of 2 values" {
+        Rational(32).log2().toDouble() shouldBe (5.0 plusOrMinus EPSILON)
+        Rational(64).log2().toDouble() shouldBe (6.0 plusOrMinus EPSILON)
+        Rational(128).log2().toDouble() shouldBe (7.0 plusOrMinus EPSILON)
+        Rational(256).log2().toDouble() shouldBe (8.0 plusOrMinus EPSILON)
+    }
+
+    "log2() | Fractional values" {
+        Rational(0.5).log2().toDouble() shouldBe (-1.0 plusOrMinus EPSILON)
+        Rational(0.25).log2().toDouble() shouldBe (-2.0 plusOrMinus EPSILON)
+    }
+
+    "log2() | Special case: log2(NaN) is NaN" {
+        Rational.NaN.log2().isNaN shouldBe true
+    }
+
+    "log2() | Special case: log2(x) is NaN when x < 0" {
+        Rational(-1).log2().isNaN shouldBe true
+        Rational(-8).log2().isNaN shouldBe true
+    }
+
+    "log2() | Special case: log2(0) is -Inf (converted to NaN)" {
+        Rational.ZERO.log2().isNaN shouldBe true
+    }
+
+    "log2() | Matches kotlin.math.log2" {
+        val testValues = listOf(1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 0.5, 0.25, 3.0, 10.0)
+
+        assertSoftly {
+            testValues.forEach { value ->
+                withClue("log2($value)") {
+                    val rationalResult = Rational(value).log2().toDouble()
+                    val kotlinResult = log2(value)
+                    rationalResult shouldBe (kotlinResult plusOrMinus EPSILON)
+                }
+            }
+        }
+    }
+
+    // Properties and relationships
+    "log() | Property: log(a*b, base) = log(a, base) + log(b, base)" {
+        val a = Rational(4)
+        val b = Rational(8)
+        val base = Rational(2)
+
+        val left = (a * b).log(base)
+        val right = a.log(base) + b.log(base)
+
+        left.toDouble() shouldBe (right.toDouble() plusOrMinus EPSILON)
+    }
+
+    "ln() | Property: ln(e^x) = x" {
+        val x = Rational(2)
+        val result = Rational(kotlin.math.E).pow(x).ln()
+        result.toDouble() shouldBe (x.toDouble() plusOrMinus EPSILON)
+    }
+
+    "log10() | Property: 10^log10(x) = x" {
+        val x = Rational(42)
+        val result = Rational(10).pow(x.log10())
+        result.toDouble() shouldBe (x.toDouble() plusOrMinus EPSILON)
+    }
+
+    "log2() | Property: 2^log2(x) = x" {
+        val x = Rational(100)
+        val result = Rational(2).pow(x.log2())
+        result.toDouble() shouldBe (x.toDouble() plusOrMinus EPSILON)
     }
 })

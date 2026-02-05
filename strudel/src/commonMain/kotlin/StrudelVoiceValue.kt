@@ -11,7 +11,6 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
-import kotlin.math.pow
 
 /**
  * A value that can be either a number or a string.
@@ -68,9 +67,9 @@ sealed interface StrudelVoiceValue {
     }
 
     infix fun pow(other: StrudelVoiceValue?): StrudelVoiceValue? {
-        val d1 = asDouble ?: return null
-        val d2 = other?.asDouble ?: return null
-        return Num(Rational(d1.pow(d2)))
+        val d1 = asRational ?: return null
+        val d2 = other?.asRational ?: return null
+        return Num(d1.pow(d2))
     }
 
     infix fun band(other: StrudelVoiceValue?): StrudelVoiceValue? {
@@ -104,8 +103,8 @@ sealed interface StrudelVoiceValue {
     }
 
     fun log2(): StrudelVoiceValue? {
-        val d = asDouble ?: return null
-        return Num(Rational(kotlin.math.log2(d)))
+        val d = asRational ?: return null
+        return Num(d.log2())
     }
 
     infix fun lt(other: StrudelVoiceValue?): StrudelVoiceValue? {

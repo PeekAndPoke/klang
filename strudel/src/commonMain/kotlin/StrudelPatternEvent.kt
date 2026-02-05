@@ -27,7 +27,7 @@ data class StrudelPatternEvent(
     val sourceLocations: SourceLocationChain? = null,
 ) {
     /** Check if this event is an onset event (should be played) */
-    val isOnset: Boolean = abs(whole.begin.toDouble() - part.begin.toDouble()) < ONSET_EPSILON
+    val isOnset: Boolean = whole.isValid && abs(whole.begin.toDouble() - part.begin.toDouble()) < ONSET_EPSILON
 
     companion object {
         /** Epsilon for onset detection to handle floating-point precision issues */
