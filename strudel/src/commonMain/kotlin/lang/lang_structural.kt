@@ -1049,6 +1049,7 @@ private fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     // TODO: support control patterns
     val back = args.getOrNull(2)?.value as? Boolean ?: false
     val fast = args.getOrNull(3)?.value as? Boolean ?: false
+    val earlyOffset = args.getOrNull(4)?.value?.asIntOrNull() ?: 0
 
     if (n <= 0) {
         return silence
@@ -1063,10 +1064,14 @@ private fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     }
     val binarySequence = applySeq(binaryPatterns)
 
-    val binaryIter = if (back) {
+    var binaryIter = if (back) {
         applyIter(binarySequence, listOf(nArg))  // forward (default)
     } else {
         applyIterBack(binarySequence, listOf(nArg))  // backward
+    }
+
+    if (earlyOffset != 0) {
+        binaryIter = binaryIter.early(earlyOffset.toRational())
     }
 
     val pattern = if (!fast) {
@@ -1389,6 +1394,7 @@ fun String.fastchunk(
  */
 @StrudelDsl
 val StrudelPattern.chunkInto by dslPatternExtension { p, args, /* callInfo */ _ ->
+    // TODO: support control patterns
     val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
     applyChunk(p, listOf(nArg, transform, false, true).asStrudelDslArgs())
@@ -1442,6 +1448,77 @@ fun String.chunkinto(
     transform: StrudelPatternMapper,
 ): StrudelPattern {
     return this.chunkInto(n, transform)
+}
+
+// -- chunkBackInto() --------------------------------------------------------------------------------------------------
+
+/**
+ * Like `chunkInto`, but moves backwards through the chunks.
+ *
+ * @name chunkBackInto
+ * @synonyms chunkbackinto
+ * @memberof Pattern
+ * @example
+ * sound("bd sd ht lt bd - cp lt").chunkBackInto(4, hurry(2))
+ *   .bank("tr909")
+ */
+@StrudelDsl
+val StrudelPattern.chunkBackInto by dslPatternExtension { p, args, /* callInfo */ _ ->
+    // TODO: support control patterns
+    val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
+    val transform = args.getOrNull(1).toPatternMapper() ?: { it }
+
+    applyChunk(p, listOf(nArg, transform, true, true, 1).asStrudelDslArgs())
+}
+
+/**
+ * Like `chunkInto`, but moves backwards through the chunks.
+ */
+@StrudelDsl
+fun StrudelPattern.chunkBackInto(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return applyChunk(this, listOf(n, transform, true, true, 1).asStrudelDslArgs())
+}
+
+@StrudelDsl
+val String.chunkBackInto by dslStringExtension { p, args, callInfo -> p.chunkBackInto(args, callInfo) }
+
+/**
+ * Like `chunkInto`, but moves backwards through the chunks.
+ */
+@StrudelDsl
+fun String.chunkBackInto(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return this.chunkBackInto(listOf(n, transform).asStrudelDslArgs())
+}
+
+/** Alias for [chunkBackInto] */
+@StrudelDsl
+val StrudelPattern.chunkbackinto by dslPatternExtension { p, args, callInfo -> p.chunkBackInto(args, callInfo) }
+
+/** Alias for [chunkBackInto] */
+@StrudelDsl
+fun StrudelPattern.chunkbackinto(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return chunkBackInto(n, transform)
+}
+
+@StrudelDsl
+val String.chunkbackinto by dslStringExtension { p, args, callInfo -> p.chunkBackInto(args, callInfo) }
+
+/** Alias for [chunkBackInto] */
+@StrudelDsl
+fun String.chunkbackinto(
+    n: Int,
+    transform: StrudelPatternMapper,
+): StrudelPattern {
+    return this.chunkBackInto(n, transform)
 }
 
 // -- linger() ---------------------------------------------------------------------------------------------------------

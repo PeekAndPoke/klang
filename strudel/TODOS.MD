@@ -520,8 +520,8 @@ but the audio engine integration is still pending:~~
 - [x] **`press()`** - Press pattern (squash events)
 - [x] **`pressBy(amount)`** - Press pattern by amount
 - [x] **`fastchunk(n, func)`** - Apply function to fast chunks (alias: `fastChunk`)
-- [ ] **`chunkinto(n, func)`** - Chunk into n sections (alias: `chunkInto`)
-- [ ] **`chunkbackinto(n, func)`** - Chunk backwards into n sections (alias: `chunkBackInto`)
+- [x] **`chunkinto(n, func)`** - Chunk into n sections (alias: `chunkInto`)
+- [x] **`chunkbackinto(n, func)`** - Chunk backwards into n sections (alias: `chunkBackInto`)
 - [x] **`chunkback(n, func)`** - Chunk backwards (alias: `chunkBack`)
 
 ### Conditional & Probabilistic
@@ -645,7 +645,7 @@ but the audio engine integration is still pending:~~
 - [/] **`isPattern(thing)`** - Check if value is a pattern (can check with `is StrudelPattern` but no dedicated
   function)
 - [/] **`reify(thing)`** - Convert value to pattern (partially via `toPattern()` helper)
-- [ ] **`nothing`** - Empty pattern with 0 steps (different from `silence` which has implied duration)
+- [x] **`nothing`** - Empty pattern with 0 steps (different from `silence` which has implied duration)
 - [x] **`pure(value)`** - Create atomic pattern with single value (via `AtomicPattern.pure`)
 
 ### Pattern Binding Functions

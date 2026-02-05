@@ -147,6 +147,10 @@ val silence by dslObject { EmptyPattern }
 @StrudelDsl
 val rest by dslObject { silence }
 
+/** Empty pattern that does not produce any events */
+@StrudelDsl
+val nothing by dslObject { silence }
+
 /**
  * Continuous pattern that produces a constant from a callback
  *
