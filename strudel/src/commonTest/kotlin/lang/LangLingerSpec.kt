@@ -199,15 +199,20 @@ class LangLingerSpec : StringSpec({
 
                         1 -> {
                             // linger(0.5): first half repeated
-                            events.size shouldBe 2
+                            events.size shouldBe 4
                             events[0].data.sound shouldBeEqualIgnoringCase "bd"
                             events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                            events[2].data.sound shouldBeEqualIgnoringCase "bd"
+                            events[3].data.sound shouldBeEqualIgnoringCase "sd"
                         }
 
                         2 -> {
                             // linger(0.25): first quarter repeated
-                            events.size shouldBe 1
+                            events.size shouldBe 4
                             events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                            events[1].data.sound shouldBeEqualIgnoringCase "bd"
+                            events[2].data.sound shouldBeEqualIgnoringCase "bd"
+                            events[3].data.sound shouldBeEqualIgnoringCase "bd"
                         }
                     }
                 }

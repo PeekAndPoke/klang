@@ -106,8 +106,7 @@ private fun applyRangex(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>
 
     // Apply exponential function to the result
     return applyUnaryOp(ranged) { v ->
-        val d = v.asDouble
-        if (d != null) kotlin.math.exp(d).asVoiceValue() else v
+        v.asRational?.exp()?.asVoiceValue() ?: v
     }
 }
 

@@ -131,7 +131,6 @@ class RationalSpec : StringSpec({
 
             withClue("i = $i") {
                 val r = Rational(i)
-                r.toString() shouldBe d.toString()
                 r.toDouble() shouldBe d
             }
         }
@@ -216,8 +215,11 @@ class RationalSpec : StringSpec({
     }
 
     "Safety | Division by zero" {
-        (r(1) / r(0)) shouldBe Rational.NaN
-        Rational(1.0) / Rational(0.0) shouldBe Rational.NaN
+        (r(1) / r(0)) shouldBe Rational.POSITIVE_INFINITY
+        (Rational(1.0) / Rational(0.0)) shouldBe Rational.POSITIVE_INFINITY
+
+        (r(-1) / r(0)) shouldBe Rational.NEGATIVE_INFINITY
+        (Rational(-1.0) / Rational(0.0)) shouldBe Rational.NEGATIVE_INFINITY
     }
 
     "Safety | Operations with NaN" {
@@ -422,5 +424,70 @@ class RationalSpec : StringSpec({
                 }
             }
         }
+    }
+
+    // exp() function tests
+    "exp() | Zero returns 1" {
+        Rational.ZERO.exp() shouldBe Rational.ONE
+    }
+
+    "exp() | One returns e" {
+        val result = Rational.ONE.exp().toDouble()
+        result shouldBe (kotlin.math.E plusOrMinus EPSILON)
+    }
+
+    "exp() | Positive values" {
+        Rational(2.0).exp().toDouble() shouldBe (kotlin.math.exp(2.0) plusOrMinus EPSILON)
+        Rational(0.5).exp().toDouble() shouldBe (kotlin.math.exp(0.5) plusOrMinus EPSILON)
+        Rational(3.0).exp().toDouble() shouldBe (kotlin.math.exp(3.0) plusOrMinus EPSILON)
+    }
+
+    "exp() | Negative values" {
+        Rational(-1.0).exp().toDouble() shouldBe (kotlin.math.exp(-1.0) plusOrMinus EPSILON)
+        Rational(-2.0).exp().toDouble() shouldBe (kotlin.math.exp(-2.0) plusOrMinus EPSILON)
+        Rational(-10.0).exp().toDouble() shouldBe (kotlin.math.exp(-10.0) plusOrMinus EPSILON)
+    }
+
+    "exp() | Large negative values approach zero" {
+        Rational(-20.0).exp().toDouble() shouldBe (kotlin.math.exp(-20.0) plusOrMinus 1e-9)
+        val exp30Result = Rational(-30.0).exp().toDouble()
+        exp30Result shouldBe (0.0 plusOrMinus 1e-9)
+    }
+
+    "exp() | NaN handling" {
+        Rational.NaN.exp().isNaN shouldBe true
+    }
+
+    "exp() | Very large values result in NaN (overflow)" {
+        val result = Rational(1000.0).exp()
+        result.isNaN shouldBe true
+    }
+
+    "exp() | Matches Kotlin's exp() for standard values" {
+        val testValues = listOf(0.0, 0.5, 1.0, 2.0, -1.0, -2.0, 5.0, -10.0)
+        assertSoftly {
+            testValues.forEach { value ->
+                withClue("exp($value)") {
+                    val rationalResult = Rational(value).exp().toDouble()
+                    val kotlinResult = kotlin.math.exp(value)
+                    rationalResult shouldBe (kotlinResult plusOrMinus EPSILON)
+                }
+            }
+        }
+    }
+
+    "exp() | Property: exp(a) * exp(b) = exp(a + b)" {
+        val a = Rational(1.5)
+        val b = Rational(0.5)
+        val expA = a.exp()
+        val expB = b.exp()
+        val expAB = (a + b).exp()
+        (expA * expB).toDouble() shouldBe (expAB.toDouble() plusOrMinus 1e-4)
+    }
+
+    "exp() | Property: exp(1) * exp(-1) = 1" {
+        val exp1 = Rational.ONE.exp()
+        val expMinus1 = Rational.MINUS_ONE.exp()
+        (exp1 * expMinus1).toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 })

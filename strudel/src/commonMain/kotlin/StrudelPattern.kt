@@ -314,7 +314,7 @@ fun StrudelPattern.appLeft(patVal: StrudelPattern): StrudelPattern {
 
             for (hapFunc in patFunc.queryArcContextual(from, to, ctx)) {
                 // Query right pattern at the left event's timespan
-                val querySpan = hapFunc.whole ?: hapFunc.part
+                val querySpan = hapFunc.whole
                 val hapVals = patVal.queryArcContextual(querySpan.begin, querySpan.end, ctx)
 
                 for (hapVal in hapVals) {
@@ -620,7 +620,7 @@ fun StrudelPattern._squeezeJoin(): StrudelPattern = object : StrudelPattern {
                 ?: continue
 
             // Focus the inner pattern [0,1] onto the outer event's whole (or part if no whole)
-            val targetSpan = outerEvent.whole ?: outerEvent.part
+            val targetSpan = outerEvent.whole
             val focusedPattern = innerPattern._focusSpan(targetSpan)
 
             // Query the focused pattern within the outer event's part
