@@ -939,14 +939,11 @@ private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
 
     // Bind the start pattern...
     return startCtrl._bind { startEv ->
-        val sVal = startEv.data.value?.asDouble ?: return@_bind null
+        val s = startEv.data.value?.asRational ?: return@_bind null
 
         // ... then bind the end pattern
         endCtrl._bind { endEv ->
-            val eVal = endEv.data.value?.asDouble ?: return@_bind null
-
-            val s = sVal.toRational()
-            val e = eVal.toRational()
+            val e = endEv.data.value?.asRational ?: return@_bind null
 
             if (s >= e) return@_bind silence
 
@@ -958,14 +955,10 @@ private fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
 
             // Match JS implementation: withQuerySpan + withHapSpan + splitQueries
             source
-                ._withQuerySpan { span ->
-                    // Apply transformation to cycle-local time: t => t * d + sRel
-                    span.withCycle { t: Rational -> t * d + sRel }
-                }
-                ._withHapSpan { span ->
-                    // Apply transformation to cycle-local time: t => (t - sRel) / d
-                    span.withCycle { t: Rational -> (t - sRel) / d }
-                }
+                // Apply transformation to cycle-local time: t => t * d + sRel
+                ._withQuerySpan { span -> span.withCycle { t -> t * d + sRel } }
+                // Apply transformation to cycle-local time: t => (t - sRel) / d
+                ._withHapSpan { span -> span.withCycle { t: Rational -> (t - sRel) / d } }
                 ._splitQueries()
                 .withSteps(steps)
         }
@@ -998,29 +991,28 @@ val String.zoom by dslStringExtension { p, args, callInfo -> p.zoom(args, callIn
 @StrudelDsl
 fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, end)
 
+// -- within() ---------------------------------------------------------------------------------------------------------
+
 val StrudelPattern.within by dslPatternExtension { p, args, /* callInfo */ _ ->
     // TODO: support control patterns for start and end
-    val start = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
-    val end = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 1.0
+    val start = args.getOrNull(0)?.value?.asRationalOrNull() ?: Rational.ZERO
+    val end = args.getOrNull(1)?.value?.asRationalOrNull() ?: Rational.ONE
     val transform = args.getOrNull(2).toPatternMapper() ?: { it }
 
-    if (start >= end || start < 0.0 || end > 1.0) {
+    if (start >= end || start < Rational.ZERO || end > Rational.ONE) {
         p // Return unchanged if invalid window
     } else {
-        val startRat = start.toRational()
-        val endRat = end.toRational()
-
         val isBeginInWindow: (StrudelPatternEvent) -> Boolean = { ev ->
             val cycle = ev.part.begin.floor()
             if (start < end) {
-                val s = cycle + startRat
-                val e = cycle + endRat
+                val s = cycle + start
+                val e = cycle + end
                 ev.part.begin >= s && ev.part.begin < e
             } else {
-                val s1 = cycle + startRat
+                val s1 = cycle + start
                 val e1 = cycle + Rational.ONE
                 val s2 = cycle
-                val e2 = cycle + endRat
+                val e2 = cycle + end
                 (ev.part.begin >= s1 && ev.part.begin < e1) || (ev.part.begin >= s2 && ev.part.begin < e2)
             }
         }
