@@ -2938,3 +2938,125 @@ val StrudelPattern.press by dslPatternExtension { p, _, /* callInfo */ _ ->
 /** Syncopates rhythm by shifting events halfway into their timespan */
 @StrudelDsl
 val String.press by dslStringExtension { p, args, callInfo -> p.press(args, callInfo) }
+
+// -- ribbon() ---------------------------------------------------------------------------------------------------------
+
+fun applyRibbon(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val offsetArg = args.getOrNull(0) ?: StrudelDslArg.of(0.0)
+    val cyclesArg = args.getOrNull(1) ?: StrudelDslArg.of(1.0)
+
+    // pat.early(offset) -> use applyTimeShift with factor -1
+    val shifted = applyTimeShift(pattern, listOf(offsetArg), Rational.MINUS_ONE)
+
+    // pure(1).slow(cycles)
+    // We use SequencePattern to ensure we get discrete events per cycle (or per 'cycles' duration),
+    // which forces _bindRestart to re-trigger the pattern repeatedly (looping it).
+    // If we just used AtomicPattern, it might produce a single long event, preventing the loop.
+    val one = AtomicPattern(StrudelVoiceData.empty.copy(value = 1.asVoiceValue()))
+    val pureOne = SequencePattern(listOf(one))
+
+    val loopStructure = applySlow(pureOne, listOf(cyclesArg))
+
+    // struct.restart(shifted)
+    return loopStructure._bindRestart { shifted }
+}
+
+/**
+ * Loops the pattern inside an `offset` for `cycles`.
+ * If you think of the entire span of time in cycles as a ribbon, you can cut a single piece and loop it.
+ *
+ * @param {number} offset start point of loop in cycles
+ * @param {number} cycles loop length in cycles
+ * @example
+ * note("<c d e f>").ribbon(1, 2)
+ */
+@StrudelDsl
+val StrudelPattern.ribbon by dslPatternExtension { p, args, /* callInfo */ _ -> applyRibbon(p, args) }
+
+@StrudelDsl
+val String.ribbon by dslStringExtension { p, args, callInfo -> p.ribbon(args, callInfo) }
+
+/** Alias for [ribbon] */
+@StrudelDsl
+val StrudelPattern.rib by dslPatternExtension { p, args, callInfo -> p.ribbon(args, callInfo) }
+
+/** Alias for [ribbon] */
+@StrudelDsl
+val String.rib by dslStringExtension { p, args, callInfo -> p.ribbon(args, callInfo) }
+
+// -- stepalt() --------------------------------------------------------------------------------------------------------
+
+fun applyStepAlt(groups: List<Any?>): StrudelPattern {
+    // 1. Normalize groups: each arg becomes a list of patterns
+    // JS: groups = groups.map((a) => (Array.isArray(a) ? a.map(reify) : [reify(a)]));
+    val normalizedGroups: List<List<StrudelPattern>> = groups.map { group ->
+        when (group) {
+            is List<*> -> group.map {
+                (it as? StrudelDslArg<*>)?.toPattern() ?: StrudelDslArg.of(it).toPattern()
+            }
+
+            is StrudelDslArg<*> -> listOf(group.toPattern())
+            else -> listOf(StrudelDslArg.of(group).toPattern())
+        }
+    }
+
+    // 2. Calculate LCM of lengths
+    // JS: const cycles = lcm(...groups.map((x) => Fraction(x.length)));
+    val lengths = normalizedGroups.map { it.size }
+    if (lengths.isEmpty()) return silence
+    val cycles = lcm(lengths)
+
+    // 3. Build the sequence of patterns
+    val resultPatterns = mutableListOf<StrudelPattern>()
+    for (cycle in 0 until cycles) {
+        // result.push(...groups.map((x) => (x.length == 0 ? silence : x[cycle % x.length])));
+        for (group in normalizedGroups) {
+            if (group.isEmpty()) {
+                resultPatterns.add(silence)
+            } else {
+                resultPatterns.add(group[cycle % group.size])
+            }
+        }
+    }
+
+    // 4. Calculate total steps
+    // JS: result = result.filter((x) => x.hasSteps && x._steps > 0);
+    // JS: const steps = result.reduce((a, b) => a.add(b._steps), Fraction(0));
+    // Note: applyStepcat internally handles weights based on steps/duration if arguments provide them.
+    // But here we are building a raw list of patterns.
+    // To mimic stepcat behavior, we need to pass these to applyStepcat.
+    // applyStepcat expects StrudelDslArg.
+
+    // Filter patterns that have steps > 0 for step calculation
+    val validPatterns = resultPatterns.filter { (it.numSteps ?: Rational.ZERO) > Rational.ZERO }
+    val totalSteps = validPatterns.fold(Rational.ZERO) { acc, pat ->
+        acc + (pat.numSteps ?: Rational.ZERO)
+    }
+
+    // 5. Concatenate using stepcat
+    // JS: result = stepcat(...result);
+    val stepcatResult = applyStepcat(resultPatterns.map { StrudelDslArg.of(it) })
+
+    // 6. Override steps
+    // JS: result._steps = steps;
+    return stepcatResult.withSteps(totalSteps)
+}
+
+/**
+ * Concatenates patterns stepwise, according to an inferred 'steps per cycle'.
+ * Similar to `stepcat`, but if an argument is a list, the whole pattern will alternate between the elements in the list.
+ *
+ * @example
+ * stepalt(listOf("bd cp", "mt"), "bd").sound()
+ * // The same as "bd cp bd mt bd".sound()
+ */
+@StrudelDsl
+val stepalt by dslFunction { args, /* callInfo */ _ ->
+    // args is List<StrudelDslArg<Any?>>.
+    // If the argument is a list in DSL (e.g. stepalt(["a", "b"])), it comes as a StrudelDslArg containing a List.
+    // We need to preserve that structure.
+    val rawArgs = args.map { arg ->
+        if (arg.value is List<*>) arg.value else arg
+    }
+    applyStepAlt(rawArgs)
+}

@@ -510,8 +510,8 @@ but the audio engine integration is still pending:~~
 ### Pattern Operations
 
 - [x] **`palindrome()`** - Alternates forward/backward playback
-- [ ] **`linger(fraction)`** - Selects and repeats pattern fraction
-- [ ] **`ribbon(offset, cycles)`** - Loops pattern section (alias: `rib`)
+- [x] **`linger(fraction)`** - Selects and repeats pattern fraction
+- [x] **`ribbon(offset, cycles)`** - Loops pattern section (alias: `rib`)
 - [x] **`inside(factor, operation)`** - Applies operation within cycle (slows pattern, applies function, then speeds
   back up)
 - [x] **`outside(factor, operation)`** - Applies operation outside cycle (speeds pattern, applies function, then slows

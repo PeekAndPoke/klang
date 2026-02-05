@@ -60,49 +60,48 @@ stack(
 import * from "stdlib"
 import * from "strudel"
 
-let wait = 16
-
+// CPS: 0.63
 stack(
-    sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ ~ cp ~ ~").slow(4).gain(0.2).legato(2.0)
-        .bandf(sine.range(1400, 1600).fast(3.14))
-        .filterWhen(x => x >= wait * 10)
-    , // Lyrics --------------------------------------------------------------------------------------------
-    n("0").morse("Schön ist es auf der Welt zu sein!")
-        .scale("C6:major").scaleTranspose("0 -2 2 -5".slow(32))
-        .sound("square").warmth(1.0).gain(0.7).pan(berlin.slow(2)).adsr("0.05:0.2:0.2:0.0")
-        .filterWhen(x => x >= wait * 5)
-    , // Melody --------------------------------------------------------------------------------------------
-    n("<[0 2 4 6 7 6 4 2]>").scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-        .s("supersaw").unison(10).detune(saw.range(0.001, 0.3).slow(16)).spread(1.0)
-        .gain(0.050).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.03:0.5:0.7:0.1")
-        .distort(1.5)
-        .lpenv(perlin.slow(4).range(0, 3)).lpf(perlin.slow(2).range(110, 440 * 5)).lpq(1.2)        
-        .filterWhen(x => x >= wait * 3)
-    , // Bass ----------------------------------------------------------------------------------------------
-    note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [c2@2 e2@5 [e1 c1]]>/8").clip(0.75).struct("x!8")
-        .gain(0.5).pan(sine.range(0.3, 0.7).slow(16)).adsr("0.03:0.5:0.5:0.5")
-        .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.30).legato(1.1))
-        .s("supersaw").unison(6).detune(saw.range(0.1, 0.45).slow(16))
-        .lpf(5 * 440).crush(sine.range(3.5, 12.0).slow(32)).hpf(55)
-        .filterWhen(x => x >= wait * 0.5)
-    , 
-    // Perc 2 ----------------------------------------------------------------------------------------------
-    sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh hh*2 cr]>")
-        .gain(0.9).pan(0.4).adsr("0.05:0.8:0.5:1.0").fast(2).degrade(0.2)
-        .filterWhen(x => x >= wait * 1)
+    note(`<
+        [e5 [b4 c5] d5 [c5 b4]]    [a4 [a4 c5] e5 [d5 c5]]
+        [b4 [~ c5] d5 e5]          [c5 a4 a4 ~]
+        
+        [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]
+        [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
+    >`)
+      .sound("tri").clip(0.33).hpf(600)
+      .superimpose(x => x.transpose("<0 12 0 -12>/8"))
+      .orbit(0).gain(0.225).pan(cosine2.range(0.2, 0.8).oneMinusValue().slow(48))
+      .delay(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)      
+      .filterWhen(x => x >= 16)
     ,
-    // Perc 1 ----------------------------------------------------------------------------------------------
-    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-        .gain(0.6).pan(0.5).adsr("0.01:0.5:0.5:1.0").degrade(0.01)        
-        .filterWhen(x => x >= wait * 0.5)
+    note(`<
+        [[e2 e3]*4]                   [[a2 a3]*4] 
+        [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
+            
+        [[d2 d3]*4]                   [[c2 c3]*4]
+        [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5 a4] [a2 a3]]
+    >`)
+      .superimpose(x => x.transpose("<0 12 0 -12>/8"))
+      .sound("supersaw").spread(0.5).unison(sine.range(6, 16).slow(32)).detune(sine.range(0.05, 0.3).early(1.5).slow(12))
+      .orbit(2).gain(0.65).pan(cosine2.slow(48).range(0.2, 0.8)).adsr("0.01:0.25:0.5:0.25")
+      .superimpose(x => x.bandf(sine.range(2000, 4000).slow(48)).bandq(1.1))
+      .filterWhen(x => x >= 31.4)
     ,
-    // Wind ----------------------------------------------------------------------------------------------
-    note("a").fast(16).sound("brown")
-     .gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.05:1.0:1.0:0.5")
-     .bandf(perlin.range(440, 440 * 4).slow(16)).bandq(sine.range(-0.05, 5.0).slow(12))
-  ,
-).delay(0.125).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)
-  .room(0.05).rsize(10.0)
+    sound(`<
+        [[bd:2, cr, cr] hh sd hh]   [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
+        [[bd, hh] hh sd hh]         [bd hh sd oh]   [bd hh sd hh]             [bd hh [mt mt, sd] [ht ht, oh]]            
+        [[bd:2, cr] hh sd hh]       [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
+        [[bd, hh] hh [sd, hh] oh]   [bd hh sd oh]   [bd hh sd hh]             [bd hh [sd sd] [sd sd]]
+            
+        [[bd:2, cr, cr] hh sd sd]   [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
+        [[bd, hh] hh sd [hh sd]]    [bd hh sd oh]   [bd hh sd hh]             [bd hh [lt lt, sd sd] ~]            
+        [[bd:2, cr] hh sd [sd, hh]] [bd hh sd:8 oh] [bd hh sd hh]             [bd hh sd [bd, oh]]
+        [[bd, cr] oh sd oh]         [cr hh cr hh]   [[sd, oh] bd sd [bd, hh]] [sd [bd, hh] [bd bd] [bd bd, hh]]
+    >`)
+      .orbit(3).gain(0.8).adsr("0.01:0.2:0.8:0.5")
+      .fast(2)
+).room(0.1).rsize(2.0) //.compressor("-24:1.2:8:0.03:0.2")
   
     """.trimIndent()
 
@@ -113,46 +112,43 @@ import * from "strudel"
 let wait = 16
 
 stack(
-    sound("cp:4 ~ cp:4 ~ ~ cp:2 cp:2 ~  cp:4 ~ ~ ~ ~ cp:2 ~ ~").slow(4).gain(0.2).legato(2.0)
+    sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).gain(0.175).legato(2.0)
         .bandf(sine.range(1400, 1600).fast(3.14))
         .filterWhen(x => x >= wait * 10)
     , // Lyrics --------------------------------------------------------------------------------------------
     n("0").morse("Schön ist es auf der Welt zu sein!")
-        .scale("C6:major").scaleTranspose("0 -2 2 -5".slow(32))
-        .sound("square").warmth(1.0).gain(0.8).pan(berlin.slow(2)).adsr("0.05:0.2:0.2:0.0")
-        .filterWhen(x => x >= wait * 5)
+        .scale("C6:major").scaleTranspose("0 -2 2 7".slow(32))
+        .sound("square").warmth(1.0).gain(0.65).pan(berlin.slow(2)).adsr("0.05:0.2:0.2:0.0")
+        .filterWhen(x => x >= wait * 6)
     , // Melody --------------------------------------------------------------------------------------------
-    n("<[0 2 4 6 7 6 4 2]>").scale("<[c3:major c3:pentatonic c3:major c3:major]>/16")
-        .s("supersaw").unison(10).detune(saw.range(0.001, 0.3).slow(16)).spread(1.0)
-        .gain(0.050).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.03:0.5:0.7:0.1")
-        .distort(2.0)
-        .lpenv(perlin.slow(4).range(0, 4)).lpf(perlin.slow(2).range(110, 440 * 5)).lpq(1.5)        
+    n("<[0 2 4 6 7 6 4 2]>").scale("[c3:major c3:pentatonic c3:major c3:major]/16")
+        .s("supersaw").unison(8).detune(saw.range(0.0, 0.25).slow(16)).spread(1.0)
+        .gain(0.045).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.05:0.5:0.7:0.1")
+        .distort(1.5)
+        .lpenv(perlin.slow(4).range(0, 3))
         .filterWhen(x => x >= wait * 3)
     , // Bass ----------------------------------------------------------------------------------------------
-    note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [c2@2 e2@5 [e1 c1]]>/8").clip(0.75).struct("x!8")
-        .gain(0.5).pan(sine.range(0.3, 0.7).slow(16)).adsr("0.03:0.5:0.5:0.5")
-        .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.3).legato(1.2))
-        .s("supersaw").unison(6).detune(saw.range(0.1, 0.45).slow(16))
-        .lpf(2500).crush(sine.range(3.0, 8.0).slow(32))
+    note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [c2@2 e2@5 [e1 e1]]>/8").clip(0.75).struct("x!8")
+        .gain(0.5).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.5")
+        .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.35).legato(1.1))
+        .s("supersaw").unison(8).detune(saw.range(0.05, 0.4).slow(16))
+        .lpf(6 * 440).crush(sine.range(3.5, 12.0).slow(32)).hpf(55)
         .filterWhen(x => x >= wait * 0.5)
-    , 
-    // Perc 2 ----------------------------------------------------------------------------------------------
+    , // Perc 2 --------------------------------------------------------------------------------------------
     sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-        .gain(0.9).pan(0.4).adsr("0.05:0.8:0.5:1.0").fast(2).degrade(0.2)
+        .gain(0.9).pan(0.4).adsr("0.01:0.8:0.5:1.0").fast(2).degrade(0.1)
         .filterWhen(x => x >= wait * 1)
-    ,
-    // Perc 1 ----------------------------------------------------------------------------------------------
-    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd ~  bd ~ bd|sd ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-        .gain(0.7).pan(0.5).adsr("0.01:0.5:0.5:1.0").degrade(0.01)        
+    , // Perc 1 --------------------------------------------------------------------------------------------
+    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
+        .gain(0.6).pan(0.5).adsr("0.01:0.5:0.5:1.0").degrade(0.01)        
         .filterWhen(x => x >= wait * 0.5)
-    ,
-    // Wind ----------------------------------------------------------------------------------------------
+    , // Wind ----------------------------------------------------------------------------------------------
     note("a").fast(16).sound("brown")
      .gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.05:1.0:1.0:0.5")
-     .bandf(perlin.range(440, 440 * 4).slow(16)).bandq(sine.range(-0.1, 5.0).slow(12))
+     .bandf(perlin.range(440, 440 * 4).slow(16)).bandq(sine.range(-0.05, 5.0).slow(12))
   ,
-).delay(0.1).delaytime(pure(1/8).div(cps)).delayfeedback(0.33)
-  .room(0.015).rsize(5.0)
+).delay(0.1).delaytime(pure(1/8).div(cps)).delayfeedback(0.35)
+  .room(0.05).rsize(2.0)
 
    """.trimIndent()
 

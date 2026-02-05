@@ -3,7 +3,9 @@ package io.peekandpoke.klang.strudel.lang.addons
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel._outerJoin
+import io.peekandpoke.klang.strudel._splitQueries
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
@@ -15,6 +17,74 @@ import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
  * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
  */
 var strudelLangTempoAddonsInit = false
+
+// -- helpers ----------------------------------------------------------------------------------------------------------
+
+fun applyTimeMoveInCycle(
+    pattern: StrudelPattern,
+    args: List<StrudelDslArg<Any?>>,
+    factor: Rational,
+): StrudelPattern {
+    if (args.isEmpty()) return pattern
+    val control = args.toPattern()
+
+    // 1. Split queries to ensure we process one cycle at a time
+    // 2. Use _outerJoin to iterate source events and sample control at event time
+    return pattern._splitQueries()._outerJoin(control) { srcEv, ctrlEv ->
+        val shiftVal = (ctrlEv?.data?.value?.asDouble ?: 0.0)
+        val shift = shiftVal.toRational() * factor
+
+        if (shift == Rational.ZERO) return@_outerJoin srcEv
+
+        val shiftedPart = srcEv.part.shift(shift)
+        val shiftedWhole = srcEv.whole.shift(shift)
+
+        // Clip to the cycle of the *original* event
+        val cycleStart = srcEv.whole.begin.floor()
+        val cycleEnd = cycleStart + Rational.ONE
+
+        // If the event moves out of its cycle, it is dropped/clipped
+        val clippedPart = shiftedPart.clipTo(cycleStart, cycleEnd) ?: return@_outerJoin null
+
+        srcEv.copy(part = clippedPart, whole = shiftedWhole)
+    }
+}
+
+// -- lateInCycle() ----------------------------------------------------------------------------------------------------
+
+/**
+ * Nudges the pattern to start later in time, but only shifts events that are already within the time window.
+ * Does not pull events from future/past cycles. Used for swing and inner-cycle timing adjustments.
+ */
+@StrudelDsl
+val StrudelPattern.lateInCycle by dslPatternExtension { p, args, _ ->
+    applyTimeMoveInCycle(pattern = p, args = args, factor = Rational.ONE)
+}
+
+@StrudelDsl
+val String.lateInCycle by dslStringExtension { p, args, callInfo -> p.lateInCycle(args, callInfo) }
+
+/** Nudges the pattern to start later in time (intra-cycle) */
+@StrudelDsl
+val lateInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+
+// -- earlyInCycle() ---------------------------------------------------------------------------------------------------
+
+/**
+ * Nudges the pattern to start earlier in time, but only shifts events that are already within the time window.
+ * Does not pull events from future/past cycles.
+ */
+@StrudelDsl
+val StrudelPattern.earlyInCycle by dslPatternExtension { p, args, _ ->
+    applyTimeMoveInCycle(pattern = p, args = args, factor = Rational.MINUS_ONE)
+}
+
+@StrudelDsl
+val String.earlyInCycle by dslStringExtension { p, args, callInfo -> p.earlyInCycle(args, callInfo) }
+
+/** Nudges the pattern to start earlier in time (intra-cycle) */
+@StrudelDsl
+val earlyInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
 
 // -- stretchBy() ------------------------------------------------------------------------------------------------------
 

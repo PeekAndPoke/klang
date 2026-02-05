@@ -5,6 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.strudel.lang.addons.lateInCycle
 import io.peekandpoke.klang.strudel.lang.addons.stretchBy
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
@@ -806,9 +807,9 @@ fun applySwingBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
 
         val transform: StrudelPatternMapper = { innerPat ->
             if (swingValue >= 0) {
-                innerPat.late(timing).stretchBy(stretch)
+                innerPat.lateInCycle(timing).stretchBy(stretch)
             } else {
-                innerPat.stretchBy(stretch).late(timing)
+                innerPat.stretchBy(stretch).lateInCycle(timing)
             }
         }
 

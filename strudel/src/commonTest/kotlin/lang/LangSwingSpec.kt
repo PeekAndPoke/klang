@@ -181,7 +181,7 @@ class LangSwingSpec : StringSpec({
             println(
                 "${index + 1}: note: ${event.data.note} | " +
                         "part: ${event.part.begin} ${event.part.end} | " +
-                        "whole: ${event.whole?.begin} ${event.whole.end}"
+                        "whole: ${event.whole.begin} ${event.whole.end}"
             )
         }
 
