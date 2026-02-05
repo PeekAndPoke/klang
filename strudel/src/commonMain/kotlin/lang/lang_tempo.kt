@@ -54,7 +54,8 @@ fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
             .withSteps(src.numSteps)
     }
 
-    val staticFactor = factorArg.value?.asDoubleOrNull()?.toRational()
+    val staticFactor = factorArg.value?.asRationalOrNull()
+
     if (staticFactor != null && staticFactor > Rational.ZERO) {
         return object : StrudelPattern by result {
             override fun estimateCycleDuration(): Rational =
@@ -105,7 +106,8 @@ fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
             .withSteps(src.numSteps)
     }
 
-    val staticFactor = factorArg.value?.asDoubleOrNull()?.toRational()
+    val staticFactor = factorArg.value?.asRationalOrNull()
+
     if (staticFactor != null && staticFactor > Rational.ZERO) {
         return object : StrudelPattern by result {
             override fun estimateCycleDuration(): Rational =
@@ -275,14 +277,11 @@ fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
 
     // Bind start...
     return startCtrl._bind { startEv ->
-        val sVal = startEv.data.value?.asDouble ?: return@_bind null
+        val b = startEv.data.value?.asRational ?: return@_bind null
 
         // ...bind end
         endCtrl._bind { endEv ->
-            val eVal = endEv.data.value?.asDouble ?: return@_bind null
-
-            val b = sVal.toRational()
-            val e = eVal.toRational()
+            val e = endEv.data.value?.asRational ?: return@_bind null
 
             // JS check: if (b.gt(e) || b.gt(1) || e.gt(1) || b.lt(0) || e.lt(0)) return silence
             if (b > e || b > Rational.ONE || e > Rational.ONE || b < Rational.ZERO || e < Rational.ZERO) {
@@ -293,16 +292,8 @@ fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
             if (duration == Rational.ZERO) return@_bind null
 
             val factor = Rational.ONE / duration
-
-            // pat._fastGap(1 / (e - b))._late(b)
-            // Note: using applyTimeShift for 'late' with factor=1.0 (Rational.ONE)
             val fastGapped = pattern._fastGap(factor)
 
-            // _late(b) is implemented via applyTimeShift with factor=1
-            // But we can just use the internal logic directly or call the helper
-            // Here we use internal logic for efficiency inside the bind loop
-
-            // _late(b) -> shift time +b
             fastGapped._withQueryTime { t -> t - b }.mapEvents { ev ->
                 val shiftedPart = ev.part.shift(b)
                 val shiftedWhole = ev.whole.shift(b)
@@ -342,13 +333,10 @@ fun applyFocus(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     val endCtrl = listOf(args[1]).toPattern(voiceValueModifier)
 
     return startCtrl._bind { startEv ->
-        val sVal = startEv.data.value?.asDouble ?: return@_bind null
+        val s = startEv.data.value?.asRational ?: return@_bind null
 
         endCtrl._bind { endEv ->
-            val eVal = endEv.data.value?.asDouble ?: return@_bind null
-
-            val s = sVal.toRational()
-            val e = eVal.toRational()
+            val e = endEv.data.value?.asRational ?: return@_bind null
 
             if (s >= e) return@_bind null
 
@@ -395,7 +383,7 @@ fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     val factorArg = args[0]
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asDoubleOrNull()?.toRational()
+    val staticFactor = factorArg.value?.asRationalOrNull()
     val newSteps = if (staticFactor != null) pattern.numSteps?.times(staticFactor) else null
 
     // Convert factor to pattern (supports static values and control patterns)
@@ -467,7 +455,8 @@ fun applyPlyWith(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     val func = funcArg.toPatternMapper() ?: return pattern
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asDoubleOrNull()?.toInt()
+    val staticFactor = factorArg.value?.asRationalOrNull()?.toInt()
+
     val newSteps = if (staticFactor != null) {
         pattern.numSteps?.times(staticFactor.toRational())
     } else {
@@ -475,7 +464,7 @@ fun applyPlyWith(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     }
 
     val result = pattern._bindSqueeze { event ->
-        val factor = staticFactor ?: event.data.value?.asDoubleOrNull()?.toInt() ?: 1
+        val factor = staticFactor ?: event.data.value?.asRational?.toInt() ?: 1
 
         if (factor <= 0) {
             return@_bindSqueeze null

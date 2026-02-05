@@ -79,15 +79,7 @@ private fun extractIndex(data: StrudelVoiceData, modulo: Boolean, len: Int): Int
     val value = data.value ?: data.note ?: data.soundIndex ?: return null
 
     // Handle various numeric types
-    val numericValue: Double = when (value) {
-        is StrudelVoiceValue -> value.asDouble ?: return null
-        is Int -> value.toDouble()
-        is Long -> value.toDouble()
-        is Double -> value
-        is Float -> value.toDouble()
-        is String -> value.toDoubleOrNull() ?: return null
-        else -> return null
-    }
+    val numericValue: Double = value.asDoubleOrNull() ?: return null
 
     val idx = floor(numericValue).toInt()
 

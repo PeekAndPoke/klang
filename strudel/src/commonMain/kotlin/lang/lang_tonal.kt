@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.BindPattern
 import io.peekandpoke.klang.strudel.pattern.ControlPattern
@@ -606,6 +607,11 @@ fun StrudelVoiceData.transpose(amount: Any?): StrudelVoiceData {
     val intervalName: String
 
     when (amount) {
+        is Rational -> {
+            semitones = amount.toInt()
+            intervalName = ""
+        }
+
         is Number -> {
             semitones = amount.toInt()
             intervalName = ""

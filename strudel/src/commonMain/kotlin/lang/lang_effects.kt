@@ -14,9 +14,7 @@ var strudelLangEffectsInit = false
 
 // -- distort() --------------------------------------------------------------------------------------------------------
 
-private val distortMutation = voiceModifier {
-    copy(distort = it?.asDoubleOrNull())
-}
+private val distortMutation = voiceModifier { copy(distort = it?.asDoubleOrNull()) }
 
 fun applyDistort(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, distortMutation)
@@ -62,9 +60,7 @@ val String.crush by dslStringExtension { p, args, /* callInfo */ _ -> applyCrush
 
 // -- coarse() ---------------------------------------------------------------------------------------------------------
 
-private val coarseMutation = voiceModifier {
-    copy(coarse = it?.asDoubleOrNull())
-}
+private val coarseMutation = voiceModifier { copy(coarse = it?.asDoubleOrNull()) }
 
 fun applyCoarse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, coarseMutation)

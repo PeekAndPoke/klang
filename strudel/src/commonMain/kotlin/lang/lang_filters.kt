@@ -11,10 +11,6 @@ import io.peekandpoke.klang.strudel._liftNumericField
  */
 var strudelLangFiltersInit = false
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Filters
-// ///
-
 // -- lpf() ------------------------------------------------------------------------------------------------------------
 
 private val lpfMutation = voiceModifier { copy(cutoff = it?.asDoubleOrNull()) }

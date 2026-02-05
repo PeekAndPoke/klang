@@ -12,10 +12,6 @@ import io.peekandpoke.klang.strudel._liftNumericField
  */
 var strudelLangDynamicsInit = false
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Dynamics, Gain, Pan, Envelope ...
-// ///
-
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
 private val gainMutation = voiceModifier { copy(gain = it?.asDoubleOrNull()) }
@@ -145,9 +141,7 @@ val String.comp by dslStringExtension { p, args, callInfo -> p.compressor(args, 
 
 // -- unison() ---------------------------------------------------------------------------------------------------------
 
-private val unisonMutation = voiceModifier {
-    copy(voices = it?.asDoubleOrNull())
-}
+private val unisonMutation = voiceModifier { copy(voices = it?.asDoubleOrNull()) }
 
 private fun applyUnison(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, unisonMutation)
@@ -179,9 +173,7 @@ val String.uni by dslStringExtension { p, args, callInfo -> p.unison(args, callI
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
-private val detuneMutation = voiceModifier {
-    copy(freqSpread = it?.asDoubleOrNull())
-}
+private val detuneMutation = voiceModifier { copy(freqSpread = it?.asDoubleOrNull()) }
 
 private fun applyDetune(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, detuneMutation)
@@ -201,9 +193,7 @@ val String.detune by dslStringExtension { p, args, callInfo -> p.detune(args, ca
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
-private val spreadMutation = voiceModifier {
-    copy(panSpread = it?.asDoubleOrNull())
-}
+private val spreadMutation = voiceModifier { copy(panSpread = it?.asDoubleOrNull()) }
 
 private fun applySpread(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, spreadMutation)
@@ -223,9 +213,7 @@ val String.spread by dslStringExtension { p, args, callInfo -> p.spread(args, ca
 
 // -- density() --------------------------------------------------------------------------------------------------------
 
-private val densityMutation = voiceModifier {
-    copy(density = it?.asDoubleOrNull())
-}
+private val densityMutation = voiceModifier { copy(density = it?.asDoubleOrNull()) }
 
 private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, densityMutation)
@@ -257,9 +245,7 @@ val String.d by dslStringExtension { p, args, callInfo -> p.density(args, callIn
 
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
 
-private val attackMutation = voiceModifier {
-    copy(attack = it?.asDoubleOrNull())
-}
+private val attackMutation = voiceModifier { copy(attack = it?.asDoubleOrNull()) }
 
 private fun applyAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, attackMutation)
@@ -279,9 +265,7 @@ val String.attack by dslStringExtension { p, args, callInfo -> p.attack(args, ca
 
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
-private val decayMutation = voiceModifier {
-    copy(decay = it?.asDoubleOrNull())
-}
+private val decayMutation = voiceModifier { copy(decay = it?.asDoubleOrNull()) }
 
 private fun applyDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, decayMutation)
@@ -301,9 +285,7 @@ val String.decay by dslStringExtension { p, args, callInfo -> p.decay(args, call
 
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
-private val sustainMutation = voiceModifier {
-    copy(sustain = it?.asDoubleOrNull())
-}
+private val sustainMutation = voiceModifier { copy(sustain = it?.asDoubleOrNull()) }
 
 private fun applySustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, sustainMutation)
@@ -323,9 +305,7 @@ val String.sustain by dslStringExtension { p, args, callInfo -> p.sustain(args, 
 
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 
-private val releaseMutation = voiceModifier {
-    copy(release = it?.asDoubleOrNull())
-}
+private val releaseMutation = voiceModifier { copy(release = it?.asDoubleOrNull()) }
 
 private fun applyRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, releaseMutation)
@@ -455,9 +435,7 @@ val String.duck by dslStringExtension { p, args, callInfo -> p.duckorbit(args, c
 
 // -- duckattack() / duckatt() -------------------------------------------------------------------------------------
 
-private val duckAttackMutation = voiceModifier {
-    copy(duckAttack = it?.asDoubleOrNull())
-}
+private val duckAttackMutation = voiceModifier { copy(duckAttack = it?.asDoubleOrNull()) }
 
 private fun applyDuckAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, duckAttackMutation)
@@ -489,9 +467,7 @@ val String.duckatt by dslStringExtension { p, args, callInfo -> p.duckattack(arg
 
 // -- duckdepth() --------------------------------------------------------------------------------------------------
 
-private val duckDepthMutation = voiceModifier {
-    copy(duckDepth = it?.asDoubleOrNull())
-}
+private val duckDepthMutation = voiceModifier { copy(duckDepth = it?.asDoubleOrNull()) }
 
 private fun applyDuckDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, duckDepthMutation)

@@ -98,6 +98,7 @@ internal fun Any.asRationalOrNull(): Rational? = when (this) {
     is Rational -> this
     is Number -> Rational(this.toDouble())
     is String -> this.toDoubleOrNull()?.let { Rational(it) }
+    is StrudelVoiceValue -> this.asRational
     else -> null
 }
 
@@ -106,6 +107,7 @@ internal fun Any.asDoubleOrNull(): Double? = when (this) {
     is Rational -> this.toDouble()
     is Number -> this.toDouble()
     is String -> this.toDoubleOrNull()
+    is StrudelVoiceValue -> this.asDouble
     else -> null
 }
 
@@ -114,6 +116,7 @@ internal fun Any.asIntOrNull(): Int? = when (this) {
     is Rational -> this.toInt()
     is Number -> this.toInt()
     is String -> this.toDoubleOrNull()?.toInt()
+    is StrudelVoiceValue -> this.asInt
     else -> null
 }
 
@@ -122,6 +125,7 @@ internal fun Any.asLongOrNull(): Long? = when (this) {
     is Rational -> this.toLong()
     is Number -> this.toLong()
     is String -> this.toDoubleOrNull()?.toLong()
+    is StrudelVoiceValue -> this.asInt?.toLong()
     else -> null
 }
 
