@@ -271,9 +271,7 @@ val String.bank by dslStringExtension { p, args, callInfo -> p.bank(args, callIn
 
 // -- legato() / clip() ------------------------------------------------------------------------------------------------
 
-private val legatoMutation = voiceModifier {
-    copy(legato = it?.asDoubleOrNull())
-}
+private val legatoMutation = voiceModifier { copy(legato = it?.asDoubleOrNull()) }
 
 fun applyLegato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, legatoMutation)
@@ -305,9 +303,7 @@ val String.clip by dslStringExtension { p, args, callInfo -> p.legato(args, call
 
 // -- vibrato() --------------------------------------------------------------------------------------------------------
 
-private val vibratoMutation = voiceModifier {
-    copy(vibrato = it?.asDoubleOrNull())
-}
+private val vibratoMutation = voiceModifier { copy(vibrato = it?.asDoubleOrNull()) }
 
 fun applyVibrato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, vibratoMutation)
@@ -340,9 +336,7 @@ val String.vib by dslStringExtension { p, args, callInfo -> p.vibrato(args, call
 
 // -- vibratoMod() -----------------------------------------------------------------------------------------------------
 
-private val vibratoModMutation = voiceModifier {
-    copy(vibratoMod = it?.asDoubleOrNull())
-}
+private val vibratoModMutation = voiceModifier { copy(vibratoMod = it?.asDoubleOrNull()) }
 
 fun applyVibratoMod(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, vibratoModMutation)
@@ -375,9 +369,7 @@ val String.vibmod by dslStringExtension { p, args, callInfo -> p.vibratoMod(args
 
 // -- pattack() / patt() -----------------------------------------------------------------------------------------------
 
-private val pAttackMutation = voiceModifier {
-    copy(pAttack = it?.asDoubleOrNull())
-}
+private val pAttackMutation = voiceModifier { copy(pAttack = it?.asDoubleOrNull()) }
 
 fun applyPAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pAttackMutation)
@@ -409,9 +401,7 @@ val String.patt by dslStringExtension { p, args, callInfo -> p.pattack(args, cal
 
 // -- pdecay() / pdec() ------------------------------------------------------------------------------------------------
 
-private val pDecayMutation = voiceModifier {
-    copy(pDecay = it?.asDoubleOrNull())
-}
+private val pDecayMutation = voiceModifier { copy(pDecay = it?.asDoubleOrNull()) }
 
 fun applyPDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pDecayMutation)
@@ -443,9 +433,7 @@ val String.pdec by dslStringExtension { p, args, callInfo -> p.pdecay(args, call
 
 // -- prelease() / prel() ----------------------------------------------------------------------------------------------
 
-private val pReleaseMutation = voiceModifier {
-    copy(pRelease = it?.asDoubleOrNull())
-}
+private val pReleaseMutation = voiceModifier { copy(pRelease = it?.asDoubleOrNull()) }
 
 fun applyPRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pReleaseMutation)
@@ -477,9 +465,7 @@ val String.prel by dslStringExtension { p, args, callInfo -> p.prelease(args, ca
 
 // -- penv() / pamt() --------------------------------------------------------------------------------------------------
 
-private val pEnvMutation = voiceModifier {
-    copy(pEnv = it?.asDoubleOrNull())
-}
+private val pEnvMutation = voiceModifier { copy(pEnv = it?.asDoubleOrNull()) }
 
 fun applyPEnv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pEnvMutation)
@@ -511,9 +497,7 @@ val String.pamt by dslStringExtension { p, args, callInfo -> p.penv(args, callIn
 
 // -- pcurve() / pcrv() ------------------------------------------------------------------------------------------------
 
-private val pCurveMutation = voiceModifier {
-    copy(pCurve = it?.asDoubleOrNull())
-}
+private val pCurveMutation = voiceModifier { copy(pCurve = it?.asDoubleOrNull()) }
 
 fun applyPCurve(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pCurveMutation)
@@ -545,9 +529,7 @@ val String.pcrv by dslStringExtension { p, args, callInfo -> p.pcurve(args, call
 
 // -- panchor() / panc() -----------------------------------------------------------------------------------------------
 
-private val pAnchorMutation = voiceModifier {
-    copy(pAnchor = it?.asDoubleOrNull())
-}
+private val pAnchorMutation = voiceModifier { copy(pAnchor = it?.asDoubleOrNull()) }
 
 fun applyPAnchor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, pAnchorMutation)
@@ -579,9 +561,7 @@ val String.panc by dslStringExtension { p, args, callInfo -> p.panchor(args, cal
 
 // -- accelerate() -----------------------------------------------------------------------------------------------------
 
-private val accelerateMutation = voiceModifier {
-    copy(accelerate = it?.asDoubleOrNull())
-}
+private val accelerateMutation = voiceModifier { copy(accelerate = it?.asDoubleOrNull()) }
 
 fun applyAccelerate(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, accelerateMutation)
@@ -727,9 +707,7 @@ val String.transpose by dslStringExtension { p, args, callInfo -> p.transpose(ar
 
 // -- freq() -----------------------------------------------------------------------------------------------------------
 
-private val freqMutation = voiceModifier {
-    copy(freqHz = it?.asDoubleOrNull())
-}
+private val freqMutation = voiceModifier { copy(freqHz = it?.asDoubleOrNull()) }
 
 fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftNumericField(args, freqMutation)

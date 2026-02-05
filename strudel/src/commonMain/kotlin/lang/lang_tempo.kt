@@ -556,15 +556,16 @@ fun applyPlyForEach(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
     val func = funcArg.value as? ((StrudelPattern, Int) -> StrudelPattern) ?: return pattern
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asDoubleOrNull()?.toInt()
+    val staticFactor = factorArg.value?.asRationalOrNull()?.toInt()
+
     val newSteps = if (staticFactor != null) {
-        pattern.numSteps?.times(staticFactor.toRational())
+        pattern.numSteps?.times(staticFactor)
     } else {
         null
     }
 
     val result = pattern._bindSqueeze { event ->
-        val factor = staticFactor ?: event.data.value?.asDoubleOrNull()?.toInt() ?: 1
+        val factor = staticFactor ?: event.data.value?.asRationalOrNull()?.toInt() ?: 1
 
         if (factor <= 0) {
             return@_bindSqueeze null
@@ -703,13 +704,14 @@ val fastGap by dslFunction { args, /* callInfo */ _ ->
         return@dslFunction silence
     }
 
-    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+    val factor = args[0].value?.asRationalOrNull() ?: Rational.ONE
+
     val pattern = args.drop(1).toPattern(voiceValueModifier)
 
-    if (factor <= 0.0 || factor == 1.0) {
+    if (factor <= Rational.ZERO || factor == Rational.ONE) {
         pattern
     } else {
-        FastGapPattern.static(source = pattern, factor = factor.toRational())
+        FastGapPattern.static(source = pattern, factor = factor)
     }
 }
 
@@ -765,7 +767,8 @@ fun applyOutside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     }
 
     // TODO: support control pattern for "factor"
-    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
+    val factor = args[0].value?.asRationalOrNull() ?: Rational.ONE
+
     val func = args[1].toPatternMapper() ?: return pattern
 
     val sped = pattern.fast(factor)
@@ -788,14 +791,14 @@ val StrudelPattern.outside by dslPatternExtension { p, args, /* callInfo */ _ ->
 
 fun applySwingBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return pattern._innerJoin(args) { source, swing, n ->
-        val swingValue = swing?.asDouble ?: return@_innerJoin silence
-        val nVal = n?.asDouble ?: 1.0
+        val swingValue = swing?.asRational ?: return@_innerJoin silence
+        val nVal = n?.asRational ?: Rational.ONE
 
-        val timing = seq(0, swingValue / 2)
-        val stretch = seq(1 + swingValue, 1 - swingValue)
+        val timing = seq(Rational.ZERO, swingValue / 2)
+        val stretch = seq(Rational.ONE + swingValue, Rational.ONE - swingValue)
 
         val transform: StrudelPatternMapper = { innerPat ->
-            if (swingValue >= 0) {
+            if (swingValue >= Rational.ZERO) {
                 innerPat.lateInCycle(timing).stretchBy(stretch)
             } else {
                 innerPat.stretchBy(stretch).lateInCycle(timing)

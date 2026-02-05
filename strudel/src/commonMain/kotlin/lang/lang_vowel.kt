@@ -11,10 +11,6 @@ import io.peekandpoke.klang.strudel._applyControlFromParams
  */
 var strudelLangVowelInit = false
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Vowel Formant Synthesis
-// ///
-
 // -- vowel() ----------------------------------------------------------------------------------------------------------
 
 private val vowelMutation = voiceModifier { vowel ->

@@ -5,6 +5,7 @@ import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel._innerJoin
 import io.peekandpoke.klang.strudel._liftData
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.strudel.math.Rational
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -203,7 +204,7 @@ fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     if (args.isEmpty()) return source
 
     // Get the loopAt factor
-    val factor = args[0].value?.asDoubleOrNull() ?: return source
+    val factor = args[0].value?.asRationalOrNull() ?: return source
 
     // Apply slow() to stretch the events to the desired duration
     // loopAt(2) stretches events to 2 cycles, loopAt(0.5) compresses to 0.5 cycles
@@ -233,11 +234,11 @@ val String.loopAt by dslStringExtension { p, args, callInfo -> p.loopAt(args, ca
 
 fun applyLoopAtCps(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._innerJoin(args) { pat, factorValue, cpsValue ->
-        val factor = factorValue?.asDouble ?: return@_innerJoin silence
-        val cps = cpsValue?.asDouble ?: 0.5
+        val factor = factorValue?.asRational ?: return@_innerJoin silence
+        val cps = cpsValue?.asRational ?: Rational.HALF
 
         // Calculate speed: (1 / factor) * cps
-        val speed = (1.0 / factor) * cps
+        val speed = (Rational.ONE / factor) * cps
 
         // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
         pat.speed(speed).unit("c").slow(factor)
