@@ -29,23 +29,19 @@ class LangEuclidLegatoRotSpec : StringSpec({
         val allEvents = p.queryArc(0.0, 1.0)
         val events = allEvents.filter { it.isOnset }
 
-        events.size shouldBe 4
+        events.size shouldBe 3
 
         // Wrapped part
-        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-        events[0].part.end.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
+        events[0].whole.begin.toDouble() shouldBe (1.0 / 8.0 plusOrMinus EPSILON)
+        events[0].whole.end.toDouble() shouldBe (1.0 / 2.0 plusOrMinus EPSILON)
 
         // Event 1
-        events[1].part.begin.toDouble() shouldBe (0.125 plusOrMinus EPSILON)
-        events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].whole.begin.toDouble() shouldBe (1.0 / 2.0 plusOrMinus EPSILON)
+        events[1].whole.end.toDouble() shouldBe (7.0 / 8.0 plusOrMinus EPSILON)
 
         // Event 2
-        events[2].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
-        events[2].part.end.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
-
-        // Event 3 (head)
-        events[3].part.begin.toDouble() shouldBe (0.875 plusOrMinus EPSILON)
-        events[3].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        events[2].whole.begin.toDouble() shouldBe (7.0 / 8.0 plusOrMinus EPSILON)
+        events[2].whole.end.toDouble() shouldBe (9.0 / 8.0 plusOrMinus EPSILON)
     }
 
     "euclidLegatoRot works as top-level function" {
@@ -53,7 +49,7 @@ class LangEuclidLegatoRotSpec : StringSpec({
         val allEvents = p.queryArc(0.0, 1.0)
         val events = allEvents.filter { it.isOnset }
 
-        events.size shouldBe 4
+        events.size shouldBe 3
     }
 
     "euclidLegatoRot works as string extension" {
@@ -61,6 +57,6 @@ class LangEuclidLegatoRotSpec : StringSpec({
         val allEvents = p.queryArc(0.0, 1.0)
         val events = allEvents.filter { it.isOnset }
 
-        events.size shouldBe 4
+        events.size shouldBe 3
     }
 })
