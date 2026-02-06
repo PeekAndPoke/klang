@@ -28,6 +28,7 @@ import io.peekandpoke.klang.strudel.ScheduledVoiceEvent
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
+import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.css.properties.scaleX
@@ -225,8 +226,11 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
                                 noui.item {
                                     if (!isPlaying) {
-                                        ui.large.circular.blue.button {
-                                            onClick { onPlay() }
+                                        ui.large.circular.black.button {
+                                            onClick {
+                                                onPlay()
+                                                document.documentElement?.requestFullscreen()
+                                            }
 
                                             if (loading) {
                                                 icon.loading.spinner()
@@ -237,7 +241,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                             }
                                         }
                                     } else {
-                                        ui.large.circular.inverted.blue.button {
+                                        ui.large.circular.basic.black.button {
                                             onClick { onPlay() }
                                             icon.redo_alternate()
                                             +"Update"
@@ -275,9 +279,26 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                         }
                                     }
                                 }
+
+                                noui.item {
+                                    ui.large.circular.icon.basic.black.button {
+                                        if (document.fullscreenElement != null) {
+                                            onClick {
+                                                document.exitFullscreen()
+                                                triggerRedraw()
+                                            }
+                                            icon.compress()
+                                        } else {
+                                            onClick {
+                                                document.documentElement?.requestFullscreen()
+                                                triggerRedraw()
+                                            }
+                                            icon.expand()
+                                        }
+                                    }
+                                }
                             }
                         }
-
 
                         div {
                             key = "dashboard-form-code"
