@@ -221,7 +221,6 @@ fun pick(lookup: List<Any>, pat: StrudelPattern): StrudelPattern =
 fun pick(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
     applyPickInner(lookup, pat, modulo = false)
 
-
 // -- pickmod() --------------------------------------------------------------------------------------------------------
 
 /** pickmod() - Pattern extension */

@@ -32,7 +32,6 @@ val gain by dslFunction { args, /* callInfo */ _ -> args.toPattern(gainMutation)
 @StrudelDsl
 val String.gain by dslStringExtension { p, args, callInfo -> p.gain(args, callInfo) }
 
-
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
 private val panMutation = voiceModifier { copy(pan = it?.asDoubleOrNull()) }

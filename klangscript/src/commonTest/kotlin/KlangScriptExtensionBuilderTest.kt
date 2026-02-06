@@ -223,7 +223,6 @@ class KlangScriptExtensionBuilderTest : StringSpec() {
         // registerObject Tests
         // ==============================================
 
-
         "registerObject with 0-parameter method" {
             val engine = klangScript {
                 registerObject("Math", MathHelper) {

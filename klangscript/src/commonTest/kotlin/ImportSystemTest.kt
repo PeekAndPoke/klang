@@ -282,7 +282,6 @@ class ImportSystemTest : StringSpec({
             )
         }
 
-
         // Import after some statements
         val result = engine.execute(
             """
@@ -304,7 +303,6 @@ class ImportSystemTest : StringSpec({
                 """.trimIndent()
             )
         }
-
 
         val result = engine.execute(
             """

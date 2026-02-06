@@ -10,7 +10,6 @@ import io.peekandpoke.klang.script.builder.registerType
 import io.peekandpoke.klang.script.runtime.ArgumentError
 import io.peekandpoke.klang.script.runtime.TypeError
 
-
 /**
  * Native Kotlin interop tests
  *

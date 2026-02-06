@@ -16,4 +16,3 @@ interface UrlCache {
 
     suspend fun getOrPut(uri: String, loader: suspend () -> ByteArray?): ByteArray?
 }
-

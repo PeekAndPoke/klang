@@ -144,7 +144,6 @@ class Samples(
         suspend fun getPcm(loader: AssetLoader, decoder: AudioDecoder): MonoSamplePcm?
     }
 
-
     private val resolveCache = mutableMapOf<SampleRequest, ResolvedSample?>()
     private val loadCache = mutableMapOf<SampleRequest, LoadedSample?>()
 

@@ -1,6 +1,5 @@
 package io.peekandpoke.klang
 
-
 val strangerThingsJson = """
 {
   "events": [

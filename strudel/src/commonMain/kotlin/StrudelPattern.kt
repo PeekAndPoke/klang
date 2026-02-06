@@ -517,7 +517,6 @@ fun <T> StrudelPattern._innerJoin(
     )
 }
 
-
 /**
  * Inner join that passes argument patterns' values and the source pattern to a transform function.
  * This matches JavaScript Strudel's register() behavior with innerJoin.
@@ -1041,7 +1040,6 @@ fun StrudelPattern._applyControlFromParams(
 
     return this.applyControl(control, mapper, combine)
 }
-
 
 /**
  * Applies a control pattern to this pattern (Outer Join).
