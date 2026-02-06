@@ -461,7 +461,7 @@ naming:
       - "**/*.Spec.kt"
       - "**/*.Spek.kt"
       - "**/*.gradle.kts"
-    packagePattern: '^[a-z]+(\.[a-z][A-Za-z0-9]*)*$'
+    packagePattern: '^[a-z]+(\.[a-z][A-Za-z0-9_]*)*$'
   TopLevelPropertyNaming:
     active: true
     excludes:
