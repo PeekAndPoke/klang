@@ -167,6 +167,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                         ui.bottom.aligned.center.aligned.column {
                             css {
                                 minHeight = 100.pct
+                                paddingRight = 0.px
                             }
 
                             div {
