@@ -51,6 +51,9 @@ interface StrudelPattern {
             val cpsKey = Key<Double>("cps")
 
             val empty = QueryContext()
+
+            /** Builder */
+            operator fun invoke(block: Updater.() -> Unit): QueryContext = QueryContext().update(block)
         }
 
         /**

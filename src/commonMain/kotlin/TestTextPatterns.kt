@@ -71,7 +71,7 @@ stack(
     >`)
       .sound("tri").clip(0.33).hpf(600)
       .superimpose(x => x.transpose("<0 12 0 -12>/8"))
-      .orbit(0).gain(0.225).pan(cosine2.range(0.2, 0.8).oneMinusValue().slow(48))
+      .orbit(0).gain(0.225).pan(cosine2.range(0.2, 0.8).oneMinusValue().slow(64))
       .delay(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)      
       .filterWhen(x => x >= 16)
     ,
@@ -83,8 +83,8 @@ stack(
         [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5 a4] [a2 a3]]
     >`)
       .superimpose(x => x.transpose("<0 12 0 -12>/8"))
-      .sound("supersaw").spread(0.5).unison(sine.range(6, 16).slow(32)).detune(sine.range(0.05, 0.3).early(1.5).slow(12))
-      .orbit(2).gain(0.65).pan(cosine2.slow(48).range(0.2, 0.8)).adsr("0.01:0.25:0.5:0.25")
+      .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).detune(sine.range(0.05, 0.3).early(1.5).slow(12))
+      .orbit(2).gain(0.65).pan(cosine2.slow(64).range(0.2, 0.8)).adsr("0.01:0.25:0.5:0.25")
       .superimpose(x => x.bandf(sine.range(2000, 4000).slow(48)).bandq(1.1))
       .filterWhen(x => x >= 31.4)
     ,

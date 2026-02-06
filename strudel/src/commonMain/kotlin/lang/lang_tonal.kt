@@ -113,6 +113,7 @@ private val noteMutation = voiceModifier { input ->
         copy(
             note = newNote,
             freqHz = Tones.noteToFreq(newNote),
+            value = null,
         )
     } ?: this
 }

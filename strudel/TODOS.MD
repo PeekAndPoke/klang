@@ -50,12 +50,12 @@ implementation notes.
 
 ## ✅ Project Status
 
-**Current Status (2026-02-03)**: 🎉 **ALL TESTS PASSING** - 2489+ tests, 0 failures (100% pass rate)
+**Current Status (2026-02-05)**: 🎉 **ALL TESTS PASSING** - 2489+ tests, 0 failures (100% pass rate)
 
-- **Feature Completion**: ~263 out of ~303 features implemented (87%)
+- **Feature Completion**: ~269 out of ~303 features implemented (89%)
 - **Test Health**: All unit tests passing
 - **Audio Engine**: Fully functional with dynamic limiter and optimized rendering
-- **Recent Achievements**: Audio engine improvements, pickF/pickmodF implementation
+- **Recent Achievements**: Pattern Operations complete (chunkInto, chunkBackInto), all chunk variants implemented
 
 ---
 
@@ -593,7 +593,8 @@ but the audio engine integration is still pending:~~
     - `fmattack()`, `fmdecay()`, `fmsustain()`, `fmenv()`
 - [x] **Pitch envelope** - `pattack`, `pdecay`, `prelease`, `penv`
 - [ ] **Wavetable synthesis** - `wt_` prefix support with loop points
-- [/] ~~**ZZFX synthesis**~~ - Full parameter set (zrand, curve, slide, etc.)
+- [/] ~~**ZZFX synthesis**~~ - **Won't implement**: Novelty feature from JavaScript sound effects library, not essential
+  for music live coding
 - [ ] **`arp()`** - Arpeggiator patterns
 - [ ] **`arpWith(func)`** - Arpeggiator with custom function
 
@@ -772,7 +773,8 @@ but the audio engine integration is still pending:~~
   `euclidLegato`, `euclidLegatoRot`, `bjork`, `euclidish`, `pace`, `steps`, `extend`, `iter`, `iterBack`,
   `repeatCycles`, `take`, `drop`, `plyWith`, `plyForEach`; many with control pattern support; won't implement:
   `compressSpan`, `focusSpan`, `zoomArc` - require types not in KlangScript)
-- **Pattern Operations**: ~6 missing (5 completed: `palindrome`, `inside`, `outside`, `within`, `chunk`)
+- **Pattern Operations**: ✅ 0 missing (11 completed: `palindrome`, `linger`, `ribbon`, `inside`, `outside`, `press`,
+  `pressBy`, `fastchunk`, `chunkInto`, `chunkBackInto`, `chunkBack`)
 - **Pattern Transformation**: ✅ 0 missing (16 completed: `revv`, `struct`, `mask`, `superimpose`, `layer`, `apply`,
   `structAll`, `maskAll`, `jux`, `juxBy`, `off`, `within`, `applyN`, `when`, `brak`, `inv`/`invert`)
 - **Tonal Functions**: ✅ 0 missing (11 completed: `note`, `n`, `freq`, `scale`, `sound`/`s`, `bank`, `transpose`,
@@ -793,9 +795,10 @@ but the audio engine integration is still pending:~~
   `berlin2`, `range`, `rangex`, `range2`,
   `rand`, `rand2`, `irand` (control patterns), `randL` (control patterns), `brand`, `brandBy` (control patterns),
   `segment` (control patterns), `seg`, `toBipolar`, `fromBipolar`, `round`, `floor`, `ceil`, `ratio`)
-- **Synthesis Parameters**: ~7 missing (22 completed: gain, pan, ADSR, vibrato, unison, warmth, velocity, postgain,
-  legato/clip, accelerate, detune, spread, density, orbit, FM synthesis parameters, pitch envelope; 7 missing:
-  partials, phases, wavetable, ZZFX, arp, arpWith, and others)
+- **Synthesis Parameters**: ~6 missing, 1 won't implement (22 completed: gain, pan, ADSR, vibrato, unison, warmth,
+  velocity, postgain,
+  legato/clip, accelerate, detune, spread, density, orbit, FM synthesis parameters, pitch envelope; 6 missing:
+  partials, phases, wavetable, arp, arpWith; won't implement: ZZFX)
 - **Noise Generators**: ✅ 0 missing (5 completed: `white`/`whitenoise`, `pink`/`pinknoise`, `brown`/`brownnoise`,
   `dust`, `crackle` - all accessed via `s()` or `sound()`, density controlled via `density()`/`d()`)
 - **Step-Based Operations**: ~8 missing (1 completed: `bite`; note: step-based time functions like `pace`, `steps`,
@@ -816,9 +819,9 @@ but the audio engine integration is still pending:~~
   `pickOut`, `pickmodOut`, `pickRestart`, `pickmodRestart`, `squeeze`, `inhabit`/`pickSqueeze`, `inhabitmod`/
   `pickmodSqueeze`)
 
-### Total Estimated: ~40 features remaining (3 marked "won't implement")
+### Total Estimated: ~33 features remaining (4 marked "won't implement")
 
-### Completed So Far: ~263 features! 🎉
+### Completed So Far: ~269 features! 🎉
 
 **Note:** Audio Effects section has been reorganized with detailed categorization. Many new functions identified from
 Strudel documentation.

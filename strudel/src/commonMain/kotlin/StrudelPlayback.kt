@@ -187,7 +187,7 @@ class StrudelPlayback internal constructor(
         val fromRational = Rational(from)
         val toRational = Rational(to)
 
-        val ctx: QueryContext = QueryContext.empty.update {
+        val ctx = QueryContext {
             set(QueryContext.cpsKey, cyclesPerSecond)
         }
 

@@ -1,11 +1,73 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.tones.Tones
 
 class LangNoteSpec : StringSpec({
+
+    "note() handles numerical frequencies correctly" {
+        val p = note("60 72.5")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.note shouldBe "60"
+        events[0].data.freqHz shouldBe Tones.midiToFreq(60.0)
+
+        events[1].data.note shouldBe "72.5"
+        events[1].data.freqHz shouldBe Tones.midiToFreq(72.5)
+    }
+
+    "note() handles continuous values combined with sequence over multiple cycles" {
+        // seq("50 60") -> 0..0.5 = 50, 0.5..1 = 60
+        // saw.range(0, 1).slow(4) -> linear ramp from 0 to 1 over 4 cycles
+        val p = seq("50 60")
+            .add(saw.range(0.0, 1.0).slow(4).segment(2)).note()
+
+        assertSoftly {
+            // Check over 12 cycles
+            // The pattern has a period of 4 cycles (due to slow(4))
+            // So at cycle 0, 4, 8 it should be the same
+            for (cycle in 0 until 12) {
+
+                withClue("Cycle $cycle") {
+                    val cycleDbl = cycle.toDouble()
+                    val events = p.queryArc(cycleDbl, cycleDbl + 1.0)
+                    val offset = (cycle % 4) / 4.0
+
+                    // Event 1 at start of cycle
+                    // base = 50
+                    // saw value = offset
+                    // expected = 50 + offset
+                    val e1 = events.find { it.part.begin == cycle.toRational() }!!
+                    val expectedNote1 = 50.0 + offset
+
+                    // We compare approximate frequency because float parsing in note() might have slight differences vs direct calculation
+                    // But here we constructed the string via logic in Strudel, so it might be exact string "50.0" etc.
+                    // Actually, .add() results in a Double value, which .note() converts to string.
+
+                    e1.data.note?.toDouble() shouldBe expectedNote1
+                    e1.data.freqHz shouldBe Tones.midiToFreq(expectedNote1)
+
+                    // Event 2 at middle of cycle
+                    // base = 60
+                    // saw value at offset + 0.125 (since half cycle = 1/8 of 4-cycle period)
+                    // expected = 60 + offset + 0.125
+                    val e2 = events.find { it.part.begin == cycle.toRational() + Rational.HALF }!!
+                    val expectedNote2 = 60.0 + offset + 0.125
+
+                    e2.data.note?.toDouble() shouldBe expectedNote2
+                    e2.data.freqHz shouldBe Tones.midiToFreq(expectedNote2)
+                }
+            }
+        }
+    }
 
     "top-level note() sets VoiceData.note correctly" {
         val p = note("c3 g3")
