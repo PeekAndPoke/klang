@@ -53,7 +53,6 @@ class SampleIndexLoader(
 
                 // Collect aliases
                 aliases.putAll(result.aliases)
-
             } catch (e: Exception) {
                 println("Could not load sample source: ${source.name}")
                 e.printStackTrace()

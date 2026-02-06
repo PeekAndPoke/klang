@@ -318,6 +318,5 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
         }
-
     }
 }

@@ -38,7 +38,6 @@ fun saveDebugWav(floatData: FloatArray, sampleRate: Int, dir: String = "./tmp") 
 
         AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, file)
         println("Saved debug WAV to: ${file.absolutePath}")
-
     } catch (e: Exception) {
         println("Failed to save debug WAV: ${e.message}")
     }

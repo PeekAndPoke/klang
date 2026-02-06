@@ -71,5 +71,4 @@ object JvmGenericAudioDecoder {
             }
         }
     }
-
 }

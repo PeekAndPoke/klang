@@ -238,7 +238,6 @@ object Deps {
             const val serialization_kotlinx_xml = "io.ktor:ktor-serialization-kotlinx-xml:$ktor_version"
             const val serialization_kotlinx_cbor = "io.ktor:ktor-serialization-kotlinx-cbor:$ktor_version"
             const val serialization_kotlinx_protobuf = "io.ktor:ktor-serialization-kotlinx-protobuf:$ktor_version"
-
         }
     }
 

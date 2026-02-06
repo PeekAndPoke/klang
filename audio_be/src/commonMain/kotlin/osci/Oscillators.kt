@@ -301,7 +301,6 @@ class Oscillators private constructor(
                         }
                         phases[n] = p
                     }
-
                 } else {
                     // MODULATED PATH (Slower, per-sample inner loop)
                     for (i in offset until end) {

@@ -234,7 +234,6 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                 }
             )
             view.dispatch(transaction)
-
         } catch (e: Throwable) {
             console.error("Error adding highlight:", e)
             return ""

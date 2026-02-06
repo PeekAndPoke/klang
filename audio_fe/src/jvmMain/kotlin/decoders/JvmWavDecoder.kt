@@ -62,7 +62,6 @@ object JvmWavDecoder {
                 val endPos = startPos + chunkSize
                 if (endPos > buffer.limit()) break
                 buffer.position(endPos.toInt())
-
             } else if (chunkName == "data") {
                 // We need fmt to be read before data
                 if (!foundFmt) throw RuntimeException("WAV 'data' chunk found before 'fmt ' chunk")

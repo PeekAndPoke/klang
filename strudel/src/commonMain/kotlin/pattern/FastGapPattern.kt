@@ -35,7 +35,6 @@ internal class FastGapPattern(
                 factorProvider = ControlValueProvider.Static(factor.asVoiceValue())
             )
         }
-
     }
 
     override val weight: Double get() = source.weight
