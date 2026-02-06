@@ -226,12 +226,14 @@ data class Scale(
                 }
                 val height = currNote.height
 
-                if (height == -1) null
-                else {
+                if (height == -1) {
+                    null
+                } else {
                     val chroma = (height % 12 + 12) % 12
                     val position = chromas.indexOf(chroma)
-                    if (position == -1) null
-                    else {
+                    if (position == -1) {
+                        null
+                    } else {
                         val nameWithOctave = Note.enharmonic(currNote.name, notes[position])
                         if (currNote.oct == null) Note.get(nameWithOctave).pc else nameWithOctave
                     }
@@ -255,12 +257,14 @@ data class Scale(
                 }
                 val height = currNote.height
 
-                if (height == -1 || notes.isEmpty()) null
-                else {
+                if (height == -1 || notes.isEmpty()) {
+                    null
+                } else {
                     val chroma = (height % 12 + 12) % 12
                     val position = chromas.indexOf(chroma)
-                    if (position == -1) null
-                    else {
+                    if (position == -1) {
+                        null
+                    } else {
                         val nameWithOctave = Note.enharmonic(currNote.name, notes[position])
                         if (currNote.oct == null) Note.get(nameWithOctave).pc else nameWithOctave
                     }

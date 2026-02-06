@@ -65,10 +65,14 @@ data class DurationValue(
                 dots = "",
                 name = "",
                 value = 1.0 / denominator,
-                fraction = if (denominator < 1.0) Pair((1.0 / denominator).toInt(), 1) else Pair(
+                fraction = if (denominator < 1.0) {
+                    Pair((1.0 / denominator).toInt(), 1)
+                } else {
+                    Pair(
                     1,
                     denominator.toInt()
-                ),
+                )
+                },
                 shorthand = shorthand,
                 names = names
             )

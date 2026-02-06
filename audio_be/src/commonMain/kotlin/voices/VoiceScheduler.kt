@@ -369,7 +369,9 @@ class VoiceScheduler(
                 curve = data.pCurve ?: 1.0,
                 anchor = data.pAnchor ?: 0.0
             )
-        } else null
+        } else {
+            null
+        }
 
         // ... (Delay, Reverb, Effects setup is same) ...
         // Delay
@@ -420,7 +422,9 @@ class VoiceScheduler(
                 attackSeconds = duckAttackParam ?: 0.1,
                 depth = duckDepthParam
             )
-        } else null
+        } else {
+            null
+        }
 
         // Dynamics
         val baseGain = data.gain ?: 1.0
@@ -441,7 +445,9 @@ class VoiceScheduler(
                     releaseSeconds = it.releaseSeconds
                 )
             }
-        } else null
+        } else {
+            null
+        }
 
         // Effects
         val distort = Voice.Distort(amount = data.distort ?: 0.0)
@@ -462,7 +468,9 @@ class VoiceScheduler(
             )
 
             Voice.Fm(ratio, depth, fmEnv)
-        } else null
+        } else {
+            null
+        }
 
         // Decision
         val freqHz = data.freqHz

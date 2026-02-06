@@ -468,7 +468,9 @@ data class StrudelVoiceData(
                             release = lprelease,
                             depth = lpenv,
                         )
-                    } else null
+                    } else {
+                        null
+                    }
 
                 add(
                     FilterDef.LowPass(
@@ -489,7 +491,9 @@ data class StrudelVoiceData(
                             release = hprelease,
                             depth = hpenv,
                         )
-                    } else null
+                    } else {
+                        null
+                    }
 
                 add(
                     FilterDef.HighPass(
@@ -510,7 +514,9 @@ data class StrudelVoiceData(
                             release = bprelease,
                             depth = bpenv,
                         )
-                    } else null
+                    } else {
+                        null
+                    }
 
                 add(
                     FilterDef.BandPass(
@@ -531,7 +537,9 @@ data class StrudelVoiceData(
                             release = nfrelease,
                             depth = nfenv,
                         )
-                    } else null
+                    } else {
+                        null
+                    }
 
                 add(
                     FilterDef.Notch(

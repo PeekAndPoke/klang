@@ -22,7 +22,6 @@ import io.peekandpoke.klang.strudel.pattern.SequencePattern
  */
 var strudelLangStructuralAddonsInit = false
 
-
 // -- morse() ----------------------------------------------------------------------------------------------------------
 
 private val morseMap = mapOf(

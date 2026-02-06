@@ -77,7 +77,6 @@ object LowPassHighPassFilters {
         }
     }
 
-
     // State Variable Filter (Shared logic)
     abstract class BaseSvf(cutoffHz: Double, q: Double, private val sampleRate: Double) : AudioFilter,
         AudioFilter.Tunable {

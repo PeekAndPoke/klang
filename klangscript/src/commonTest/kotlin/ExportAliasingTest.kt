@@ -168,7 +168,6 @@ class ExportAliasingTest : StringSpec({
             )
         }
 
-
         val result = engine.execute(
             """
                 import * from "math"
