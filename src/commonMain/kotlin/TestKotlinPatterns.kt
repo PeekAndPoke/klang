@@ -136,5 +136,4 @@ object TestKotlinPatterns {
             .struct("x*8")
             .s("supersaw"),
     )
-
 }

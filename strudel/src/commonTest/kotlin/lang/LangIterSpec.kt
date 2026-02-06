@@ -50,7 +50,6 @@ class LangIterSpec : StringSpec({
                 events.map { it.data.note } shouldBe listOf("c", "d", "e", "f")
             }
         }
-
     }
 
     "iterBack() shifts pattern backward each cycle" {
