@@ -20,8 +20,8 @@ internal class StructurePattern(
 ) : StrudelPattern {
 
     enum class Mode {
-        In,  // Source provides structure (Mask behavior)
-        Out  // Other provides structure (Struct behavior)
+        In, // Source provides structure (Mask behavior)
+        Out // Other provides structure (Struct behavior)
     }
 
     override val weight: Double = if (mode == Mode.In) source.weight else other.weight
@@ -109,7 +109,7 @@ internal class StructurePattern(
                     // so whole is set to mask boundaries, not preserved from source
                     val finalEvent = sourceEvent.copy(
                         part = clippedPart,
-                        whole = maskEvent.whole  // Set to mask's whole (JS behavior)
+                        whole = maskEvent.whole // Set to mask's whole (JS behavior)
                     ).prependLocations(maskEvent.sourceLocations)
 
                     result.add(finalEvent)

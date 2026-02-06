@@ -194,7 +194,7 @@ class StrudelPlayback internal constructor(
         val events: List<StrudelPatternEvent> =
             pattern.queryArcContextual(from = fromRational, to = toRational, ctx = ctx)
                 .filter { it.part.begin >= fromRational && it.part.begin < toRational }
-                .filter { it.isOnset }  // Allow continuous OR onset events
+                .filter { it.isOnset } // Allow continuous OR onset events
                 .sortedBy { it.part.begin }
 
         // Transform to ScheduledVoice using absolute time from KlangTime epoch

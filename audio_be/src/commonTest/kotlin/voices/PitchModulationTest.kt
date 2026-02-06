@@ -28,7 +28,7 @@ class PitchModulationTest : StringSpec({
     "vibrato with rate and depth modulates pitch" {
         val voice = createSynthVoice(
             vibrato = Voice.Vibrato(
-                rate = 5.0,  // 5 Hz LFO
+                rate = 5.0, // 5 Hz LFO
                 depth = 0.02 // 2% pitch variation
             )
         )
@@ -129,7 +129,7 @@ class PitchModulationTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 releaseFrames = 0.0,
-                amount = 2.0,    // 2 semitones shift
+                amount = 2.0, // 2 semitones shift
                 curve = 0.0,
                 anchor = 0.0
             )
@@ -156,7 +156,7 @@ class PitchModulationTest : StringSpec({
                 attackFrames = 0.0,
                 decayFrames = 100.0,
                 releaseFrames = 0.0,
-                amount = -1.0,   // -1 semitone shift
+                amount = -1.0, // -1 semitone shift
                 curve = 0.0,
                 anchor = 0.0
             )
@@ -183,7 +183,7 @@ class PitchModulationTest : StringSpec({
                 attackFrames = 50.0,
                 decayFrames = 50.0,
                 releaseFrames = 0.0,
-                amount = 1.0,   // 1 semitone shift
+                amount = 1.0, // 1 semitone shift
                 curve = 0.0,
                 anchor = 0.0
             )
@@ -328,7 +328,7 @@ class PitchModulationTest : StringSpec({
         val voice = createSynthVoice(
             pitchEnvelope = Voice.PitchEnvelope(
                 attackFrames = 0.0, // Instant
-                decayFrames = 0.0,  // Instant
+                decayFrames = 0.0, // Instant
                 releaseFrames = 0.0,
                 amount = 1.0,
                 curve = 0.0,

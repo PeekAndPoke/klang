@@ -25,7 +25,7 @@ class LangSlowcatSpec : FunSpec({
         events shouldHaveSize 4
         events[0].data.value?.asInt shouldBe 1
         events[1].data.value?.asInt shouldBe 2
-        events[2].data.value?.asInt shouldBe 1  // Key test: cycles back!
+        events[2].data.value?.asInt shouldBe 1 // Key test: cycles back!
         events[3].data.value?.asInt shouldBe 2
     }
 

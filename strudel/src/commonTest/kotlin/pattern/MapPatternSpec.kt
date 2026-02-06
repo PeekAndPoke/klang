@@ -96,7 +96,7 @@ class MapPatternSpec : StringSpec({
     "MapPattern should work with empty source" {
         val source = silence
         val pattern = source.map { events ->
-            events + listOf()  // Try to add events (but source is empty)
+            events + listOf() // Try to add events (but source is empty)
         }
 
         val events = pattern.queryArc(0.0, 1.0)

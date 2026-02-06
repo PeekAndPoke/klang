@@ -18,10 +18,10 @@ class LangRepeatCyclesSpec : StringSpec({
         cycle1 shouldHaveSize 1
 
         val cycle2 = staticPattern.queryArc(2.0, 3.0)
-        cycle2 shouldHaveSize 1  // Continues indefinitely for static patterns
+        cycle2 shouldHaveSize 1 // Continues indefinitely for static patterns
 
         val cycle10 = staticPattern.queryArc(10.0, 11.0)
-        cycle10 shouldHaveSize 1  // Still producing events
+        cycle10 shouldHaveSize 1 // Still producing events
     }
 
     "repeatCycles(2) with cycle-varying pattern over 10 cycles" {

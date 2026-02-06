@@ -113,7 +113,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
         """.trimIndent()
         ).let {
             it.shouldBeInstanceOf<NumberValue>()
-            it.value shouldBe 17.0  // 5*3 + 5 - 3 = 15 + 5 - 3 = 17
+            it.value shouldBe 17.0 // 5*3 + 5 - 3 = 15 + 5 - 3 = 17
         }
     }
 
@@ -132,7 +132,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
         """.trimIndent()
         ).let {
             it.shouldBeInstanceOf<NumberValue>()
-            it.value shouldBe 70.0  // Must be 70, not 999 - proves return exits immediately
+            it.value shouldBe 70.0 // Must be 70, not 999 - proves return exits immediately
         }
     }
 
@@ -150,7 +150,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
         """.trimIndent()
         ).let {
             it.shouldBeInstanceOf<NumberValue>()
-            it.value shouldBe 35.0  // (3 + 4) * 5 = 35
+            it.value shouldBe 35.0 // (3 + 4) * 5 = 35
         }
     }
 
@@ -209,7 +209,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
         """.trimIndent()
         ).let {
             it.shouldBeInstanceOf<NumberValue>()
-            it.value shouldBe 20.0  // 5*2 + 10 = 20
+            it.value shouldBe 20.0 // 5*2 + 10 = 20
         }
     }
 
@@ -289,7 +289,7 @@ class ArrowFunctionBlockBodyTest : StringSpec({
         """.trimIndent()
         ).let {
             it.shouldBeInstanceOf<NumberValue>()
-            it.value shouldBe 12.0  // 6 + 6
+            it.value shouldBe 12.0 // 6 + 6
         }
     }
 })

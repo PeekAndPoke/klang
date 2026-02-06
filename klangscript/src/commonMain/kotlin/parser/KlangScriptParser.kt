@@ -51,7 +51,7 @@ object KlangScriptParser : Grammar<Program>() {
         val endColumn = if (lines.size == 1) {
             column + text.length
         } else {
-            lines.last().length + 1  // +1 for 1-based indexing
+            lines.last().length + 1 // +1 for 1-based indexing
         }
 
         return SourceLocation(
@@ -218,12 +218,12 @@ object KlangScriptParser : Grammar<Program>() {
                     text.substring(1, text.length - 1),
                     toLocation()
                 )
-            }) or  // Strip backticks
-            (string use { StringLiteral(text.substring(1, text.length - 1), toLocation()) }) or  // Strip quotes
+            }) or // Strip backticks
+            (string use { StringLiteral(text.substring(1, text.length - 1), toLocation()) }) or // Strip quotes
             objectLiteral or
             arrayLiteral or
             (identifier use { Identifier(text, toLocation()) }) or
-            (-leftParen * parser(this::expression) * -rightParen)  // Parenthesized expressions
+            (-leftParen * parser(this::expression) * -rightParen) // Parenthesized expressions
 
     /**
      * Unary expressions - prefix operators
@@ -437,7 +437,7 @@ object KlangScriptParser : Grammar<Program>() {
                     ) and arrow and arrowFunctionBody
             ).map { (params, arrowToken, body) ->
             ArrowFunction(params, body, arrowToken.toLocation())
-        } or comparisonExpr  // Fall back to comparison expression if not an arrow function
+        } or comparisonExpr // Fall back to comparison expression if not an arrow function
 
     /**
      * Let declaration statement
@@ -611,7 +611,7 @@ object KlangScriptParser : Grammar<Program>() {
         try {
             return parseToEnd(source)
         } finally {
-            currentSource = null  // Clean up after parsing
+            currentSource = null // Clean up after parsing
         }
     }
 }

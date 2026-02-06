@@ -82,7 +82,7 @@ class VariableTest : StringSpec({
 
         val result = script.execute("result")
         result.shouldBeInstanceOf<NumberValue>()
-        result.value shouldBe 14.0  // 2 + (3 * 4)
+        result.value shouldBe 14.0 // 2 + (3 * 4)
     }
 
     "should declare variable with function call as initializer" {

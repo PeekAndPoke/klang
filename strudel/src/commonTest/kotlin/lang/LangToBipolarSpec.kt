@@ -11,8 +11,8 @@ class LangToBipolarSpec : StringSpec({
 
         events.size shouldBe 3
         events[0].data.value?.asDouble shouldBe -1.0 // 0 -> -1
-        events[1].data.value?.asDouble shouldBe 0.0  // 0.5 -> 0
-        events[2].data.value?.asDouble shouldBe 1.0  // 1 -> 1
+        events[1].data.value?.asDouble shouldBe 0.0 // 0.5 -> 0
+        events[2].data.value?.asDouble shouldBe 1.0 // 1 -> 1
     }
 
     "toBipolar works with pattern receiver" {

@@ -199,7 +199,7 @@ data class ConstDeclaration(
  *                The exportedName is the name visible to importers
  */
 data class ExportStatement(
-    val exports: List<Pair<String, String>>,  // Pair: (localName, exportedName)
+    val exports: List<Pair<String, String>>, // Pair: (localName, exportedName)
     override val location: SourceLocation? = null,
 ) : Statement(location)
 
@@ -262,9 +262,9 @@ data class ExportStatement(
  */
 data class ImportStatement(
     val libraryName: String,
-    val imports: List<Pair<String, String>>? = null,  // null = import *, non-null = import { ... }
+    val imports: List<Pair<String, String>>? = null, // null = import *, non-null = import { ... }
     // Pair: (exportName, localAlias)
-    val namespaceAlias: String? = null,  // If set, import * as namespaceAlias
+    val namespaceAlias: String? = null, // If set, import * as namespaceAlias
     override val location: SourceLocation? = null,
 ) : Statement(location)
 

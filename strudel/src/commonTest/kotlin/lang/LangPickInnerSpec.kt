@@ -60,11 +60,11 @@ class LangPickInnerSpec : StringSpec({
 
         events shouldHaveSize 5
 
-        events[0].data.value?.asString shouldBe "bd"  // index 0
-        events[1].data.value?.asString shouldBe "hh"  // index 1
-        events[2].data.value?.asString shouldBe "hh"  // index 2 clamped to 1
-        events[3].data.value?.asString shouldBe "hh"  // index 3 clamped to 1
-        events[4].data.value?.asString shouldBe "hh"  // index 99 clamped to 1
+        events[0].data.value?.asString shouldBe "bd" // index 0
+        events[1].data.value?.asString shouldBe "hh" // index 1
+        events[2].data.value?.asString shouldBe "hh" // index 2 clamped to 1
+        events[3].data.value?.asString shouldBe "hh" // index 3 clamped to 1
+        events[4].data.value?.asString shouldBe "hh" // index 99 clamped to 1
     }
 
     "pickmod() wraps out-of-bounds indices with modulo" {
@@ -76,11 +76,11 @@ class LangPickInnerSpec : StringSpec({
 
         events shouldHaveSize 5
 
-        events[0].data.value?.asString shouldBe "bd"  // index 0 % 2 = 0
-        events[1].data.value?.asString shouldBe "hh"  // index 1 % 2 = 1
-        events[2].data.value?.asString shouldBe "bd"  // index 2 % 2 = 0
-        events[3].data.value?.asString shouldBe "hh"  // index 3 % 2 = 1
-        events[4].data.value?.asString shouldBe "bd"  // index 4 % 2 = 0
+        events[0].data.value?.asString shouldBe "bd" // index 0 % 2 = 0
+        events[1].data.value?.asString shouldBe "hh" // index 1 % 2 = 1
+        events[2].data.value?.asString shouldBe "bd" // index 2 % 2 = 0
+        events[3].data.value?.asString shouldBe "hh" // index 3 % 2 = 1
+        events[4].data.value?.asString shouldBe "bd" // index 4 % 2 = 0
     }
 
     // New test for spread arguments with pickmod
@@ -159,15 +159,15 @@ class LangPickInnerSpec : StringSpec({
 
         events shouldHaveSize 3
 
-        events[0].data.value?.asString shouldBe "bd"  // 0.2 rounds to 0
-        events[1].data.value?.asString shouldBe "hh"  // 1.5 rounds to 2
-        events[2].data.value?.asString shouldBe "sd"  // 2.8 rounds to 3, clamped to 2
+        events[0].data.value?.asString shouldBe "bd" // 0.2 rounds to 0
+        events[1].data.value?.asString shouldBe "hh" // 1.5 rounds to 2
+        events[2].data.value?.asString shouldBe "sd" // 2.8 rounds to 3, clamped to 2
     }
 
     "pick() preserves timing from picked patterns (innerJoin)" {
         val lookup: List<Any> = listOf(
-            sound("bd hh"),  // Two events
-            sound("sd")      // One event
+            sound("bd hh"), // Two events
+            sound("sd") // One event
         )
         val selector = seq("0 1")
 

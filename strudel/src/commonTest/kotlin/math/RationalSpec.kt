@@ -195,18 +195,18 @@ class RationalSpec : StringSpec({
     }
 
     "Math Utilities | floor" {
-        r(7, 2).floor() shouldBe r(3)   // 3.5 -> 3
+        r(7, 2).floor() shouldBe r(3) // 3.5 -> 3
         r(19, 10).floor() shouldBe r(1) // 1.9 -> 1
         r(-7, 2).floor() shouldBe r(-4) // -3.5 -> -4
-        r(1, 2).floor() shouldBe r(0)   // 0.5 -> 0
+        r(1, 2).floor() shouldBe r(0) // 0.5 -> 0
     }
 
     "Math Utilities | ceil" {
-        r(7, 2).ceil() shouldBe r(4)    // 3.5 -> 4
-        r(11, 10).ceil() shouldBe r(2)  // 1.1 -> 2
-        r(2).ceil() shouldBe r(2)       // 2.0 -> 2
-        r(-7, 2).ceil() shouldBe r(-3)  // -3.5 -> -3
-        r(1, 2).ceil() shouldBe r(1)    // 0.5 -> 1
+        r(7, 2).ceil() shouldBe r(4) // 3.5 -> 4
+        r(11, 10).ceil() shouldBe r(2) // 1.1 -> 2
+        r(2).ceil() shouldBe r(2) // 2.0 -> 2
+        r(-7, 2).ceil() shouldBe r(-3) // -3.5 -> -3
+        r(1, 2).ceil() shouldBe r(1) // 0.5 -> 1
     }
 
     "Math Utilities | frac" {
@@ -331,21 +331,21 @@ class RationalSpec : StringSpec({
     }
 
     "round() | Fractions" {
-        r(1, 3).round() shouldBe Rational.ZERO  // 0.333...
-        r(2, 3).round() shouldBe Rational(1)     // 0.666...
-        r(5, 8).round() shouldBe Rational(1)     // 0.625
-        r(3, 8).round() shouldBe Rational.ZERO   // 0.375
-        r(7, 8).round() shouldBe Rational(1)     // 0.875
-        r(1, 8).round() shouldBe Rational.ZERO   // 0.125
+        r(1, 3).round() shouldBe Rational.ZERO // 0.333...
+        r(2, 3).round() shouldBe Rational(1) // 0.666...
+        r(5, 8).round() shouldBe Rational(1) // 0.625
+        r(3, 8).round() shouldBe Rational.ZERO // 0.375
+        r(7, 8).round() shouldBe Rational(1) // 0.875
+        r(1, 8).round() shouldBe Rational.ZERO // 0.125
     }
 
     "round() | Negative fractions" {
-        r(-1, 3).round() shouldBe Rational.ZERO  // -0.333...
-        r(-2, 3).round() shouldBe Rational(-1)   // -0.666...
-        r(-5, 8).round() shouldBe Rational(-1)   // -0.625
-        r(-3, 8).round() shouldBe Rational.ZERO  // -0.375
-        r(-7, 8).round() shouldBe Rational(-1)   // -0.875
-        r(-1, 8).round() shouldBe Rational.ZERO  // -0.125
+        r(-1, 3).round() shouldBe Rational.ZERO // -0.333...
+        r(-2, 3).round() shouldBe Rational(-1) // -0.666...
+        r(-5, 8).round() shouldBe Rational(-1) // -0.625
+        r(-3, 8).round() shouldBe Rational.ZERO // -0.375
+        r(-7, 8).round() shouldBe Rational(-1) // -0.875
+        r(-1, 8).round() shouldBe Rational.ZERO // -0.125
     }
 
     "round() | Large numbers" {

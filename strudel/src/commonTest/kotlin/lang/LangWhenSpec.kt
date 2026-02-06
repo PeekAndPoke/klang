@@ -43,10 +43,10 @@ class LangWhenSpec : FunSpec({
         assertSoftly {
             events.size shouldBe 4
             // First and third notes should be transformed
-            events[0].data.note shouldBeEqualIgnoringCase "c4"  // c + 12
-            events[1].data.note shouldBeEqualIgnoringCase "d3"  // d
-            events[2].data.note shouldBeEqualIgnoringCase "e4"  // e + 12
-            events[3].data.note shouldBeEqualIgnoringCase "f3"  // f
+            events[0].data.note shouldBeEqualIgnoringCase "c4" // c + 12
+            events[1].data.note shouldBeEqualIgnoringCase "d3" // d
+            events[2].data.note shouldBeEqualIgnoringCase "e4" // e + 12
+            events[3].data.note shouldBeEqualIgnoringCase "f3" // f
         }
     }
 
@@ -57,7 +57,7 @@ class LangWhenSpec : FunSpec({
         events0.size shouldBe 4
 
         // First note should be transformed (first quarter in cycle 0)
-        events0[0].data.value?.asInt shouldBe 12  // 0 + 12
+        events0[0].data.value?.asInt shouldBe 12 // 0 + 12
         events0[1].data.value?.asInt shouldBe 1
         events0[2].data.value?.asInt shouldBe 2
         events0[3].data.value?.asInt shouldBe 3

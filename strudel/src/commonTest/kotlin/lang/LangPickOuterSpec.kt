@@ -55,11 +55,11 @@ class LangPickOuterSpec : StringSpec({
 
         events shouldHaveSize 5
 
-        events[0].data.value?.asString shouldBe "bd"  // index 0
-        events[1].data.value?.asString shouldBe "hh"  // index 1
-        events[2].data.value?.asString shouldBe "hh"  // index 2 clamped to 1
-        events[3].data.value?.asString shouldBe "hh"  // index 3 clamped to 1
-        events[4].data.value?.asString shouldBe "hh"  // index 99 clamped to 1
+        events[0].data.value?.asString shouldBe "bd" // index 0
+        events[1].data.value?.asString shouldBe "hh" // index 1
+        events[2].data.value?.asString shouldBe "hh" // index 2 clamped to 1
+        events[3].data.value?.asString shouldBe "hh" // index 3 clamped to 1
+        events[4].data.value?.asString shouldBe "hh" // index 99 clamped to 1
     }
 
     "pickmodOut() wraps out-of-bounds indices with modulo" {

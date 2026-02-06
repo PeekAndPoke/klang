@@ -46,12 +46,12 @@ class BindPatternSpec : StringSpec({
 
     "BindPattern should clip inner events to outer event boundaries" {
         val outer = seq("a", "b")
-        val inner = seq("x", "y", "z", "w")  // 4 events in 1 cycle
+        val inner = seq("x", "y", "z", "w") // 4 events in 1 cycle
 
         val pattern = BindPattern(outer) { inner }
 
         val events = pattern.queryArc(0.0, 1.0)
-        events shouldHaveSize 4  // Each outer event contains 2 inner events
+        events shouldHaveSize 4 // Each outer event contains 2 inner events
 
         // First outer event (0.0 - 0.5) should have 2 inner events clipped to it
         events[0].part.begin shouldBe 0.toRational()
@@ -78,11 +78,11 @@ class BindPatternSpec : StringSpec({
 
         val pattern = BindPattern(outer) { event ->
             val key = event.data.value?.asString ?: ""
-            lookup[key]  // Returns null for "b"
+            lookup[key] // Returns null for "b"
         }
 
         val events = pattern.queryArc(0.0, 1.0)
-        events shouldHaveSize 2  // Only "a" and "c" produce events
+        events shouldHaveSize 2 // Only "a" and "c" produce events
         events[0].data.note shouldBe "x"
         events[1].data.note shouldBe "z"
     }
@@ -95,7 +95,7 @@ class BindPatternSpec : StringSpec({
 
         // Query only middle portion
         val events = pattern.queryArc(0.25, 0.75)
-        events shouldHaveSize 2  // Should get events "b" and "c"
+        events shouldHaveSize 2 // Should get events "b" and "c"
 
         events[0].part.begin shouldBe 0.25.toRational()
         events[1].part.begin shouldBe 0.5.toRational()

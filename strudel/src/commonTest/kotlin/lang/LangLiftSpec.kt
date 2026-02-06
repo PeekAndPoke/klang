@@ -85,7 +85,7 @@ class LangLiftSpec : StringSpec({
         val control = pure(2.0)
 
         val result = source._lift(control) { value, src ->
-            src  // Identity transformation
+            src // Identity transformation
         }
 
         val events = result.queryArc(0.0, 1.0)

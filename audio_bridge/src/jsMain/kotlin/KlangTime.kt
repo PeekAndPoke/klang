@@ -39,7 +39,7 @@ actual class KlangTime private constructor(
         var currentFrame: Long = 0
             set(value) {
                 if (field == 0L && value > 0L) {
-                    startFrame = value  // Capture first non-zero frame as start
+                    startFrame = value // Capture first non-zero frame as start
                 }
                 field = value
             }

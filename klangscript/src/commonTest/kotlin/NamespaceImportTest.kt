@@ -31,7 +31,7 @@ class NamespaceImportTest : StringSpec({
         val stmt = result.statements[0]
         stmt.shouldBeInstanceOf<ImportStatement>()
         stmt.libraryName shouldBe "math"
-        stmt.imports shouldBe null  // Wildcard
+        stmt.imports shouldBe null // Wildcard
         stmt.namespaceAlias shouldBe "math"
     }
 
@@ -173,7 +173,7 @@ class NamespaceImportTest : StringSpec({
             """.trimIndent()
         )
 
-        result shouldBe NumberValue(18.0)  // square(3) = 9, double(9) = 18
+        result shouldBe NumberValue(18.0) // square(3) = 9, double(9) = 18
     }
 
     "should namespace work with object properties" {
@@ -280,7 +280,7 @@ class NamespaceImportTest : StringSpec({
             """.trimIndent()
         )
 
-        result shouldBe NumberValue(11.0)  // func2(5) = 10, func1(10) = 11
+        result shouldBe NumberValue(11.0) // func2(5) = 10, func1(10) = 11
     }
 
     "should parse namespace import and wildcard import differently" {
@@ -318,6 +318,6 @@ class NamespaceImportTest : StringSpec({
             """.trimIndent()
         )
 
-        result shouldBe NumberValue(32.0)  // square(4) = 16, * 2 = 32
+        result shouldBe NumberValue(32.0) // square(4) = 16, * 2 = 32
     }
 })

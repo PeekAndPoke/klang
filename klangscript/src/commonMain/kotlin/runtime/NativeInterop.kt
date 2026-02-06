@@ -236,7 +236,7 @@ fun wrapAsRuntimeValue(value: Any?): RuntimeValue {
         else -> {
             // Wrap as native object
             val kClass = value::class
-            val qualifiedName = kClass.simpleName ?: "Unknown"  // Use simpleName for multiplatform compatibility
+            val qualifiedName = kClass.simpleName ?: "Unknown" // Use simpleName for multiplatform compatibility
             @Suppress("UNCHECKED_CAST")
             NativeObjectValue(
                 kClass = kClass as KClass<Any>,

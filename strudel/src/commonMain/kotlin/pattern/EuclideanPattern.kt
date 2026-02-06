@@ -383,7 +383,7 @@ internal class EuclideanPattern(
 
                             ev.copy(
                                 part = timeSpan,
-                                whole = timeSpan  // Each Euclidean hit is independent
+                                whole = timeSpan // Each Euclidean hit is independent
                             )
                         })
                     }

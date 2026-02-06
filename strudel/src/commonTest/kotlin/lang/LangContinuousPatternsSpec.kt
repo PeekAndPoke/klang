@@ -754,9 +754,9 @@ class LangContinuousPatternsSpec : StringSpec({
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 3
-            events[0].data.value?.asInt shouldBe 1  // 0.5 rounds to 0 (banker's rounding may vary)
-            events[1].data.value?.asInt shouldBe 2  // 1.5 rounds to 2
-            events[2].data.value?.asInt shouldBe 3  // 2.5 rounds to 2
+            events[0].data.value?.asInt shouldBe 1 // 0.5 rounds to 0 (banker's rounding may vary)
+            events[1].data.value?.asInt shouldBe 2 // 1.5 rounds to 2
+            events[2].data.value?.asInt shouldBe 3 // 2.5 rounds to 2
         }
 
         withClue("round with string extension") {
@@ -795,8 +795,8 @@ class LangContinuousPatternsSpec : StringSpec({
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 4
-            events[0].data.value?.asInt shouldBe -2  // floor(-1.5) = -2
-            events[1].data.value?.asInt shouldBe -1  // floor(-0.5) = -1
+            events[0].data.value?.asInt shouldBe -2 // floor(-1.5) = -2
+            events[1].data.value?.asInt shouldBe -1 // floor(-0.5) = -1
             events[2].data.value?.asInt shouldBe 0
             events[3].data.value?.asInt shouldBe 1
         }
@@ -837,8 +837,8 @@ class LangContinuousPatternsSpec : StringSpec({
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 4
-            events[0].data.value?.asInt shouldBe -1  // ceil(-1.5) = -1
-            events[1].data.value?.asInt shouldBe 0   // ceil(-0.5) = 0
+            events[0].data.value?.asInt shouldBe -1 // ceil(-1.5) = -1
+            events[1].data.value?.asInt shouldBe 0 // ceil(-0.5) = 0
             events[2].data.value?.asInt shouldBe 1
             events[3].data.value?.asInt shouldBe 2
         }
@@ -912,7 +912,7 @@ class LangContinuousPatternsSpec : StringSpec({
         withClue("sine.slow(8) should generate events") {
             events.size shouldBe 1
             events[0].data.value.shouldNotBeNull()
-            events[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)  // At t=0, sine = 0.5
+            events[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON) // At t=0, sine = 0.5
         }
     }
 
@@ -967,7 +967,7 @@ class LangContinuousPatternsSpec : StringSpec({
             // sine.slow(8) at 0.5: phase = 0.5/8 = 0.0625
             // sine(0.0625) = (sin(0.0625 * 2π) + 1) / 2 = (sin(0.3927) + 1) / 2 ≈ (0.383 + 1) / 2 ≈ 0.691
             events[1].data.pan.shouldNotBeNull()
-            events[1].data.pan shouldBe (0.691 plusOrMinus 0.01)  // Allow some tolerance
+            events[1].data.pan shouldBe (0.691 plusOrMinus 0.01) // Allow some tolerance
         }
     }
 

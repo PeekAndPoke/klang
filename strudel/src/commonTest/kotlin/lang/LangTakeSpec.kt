@@ -38,7 +38,7 @@ class LangTakeSpec : StringSpec({
 
         // Should keep only first step (c)
         val events = p.queryArc(0.0, 2.0)
-        events shouldHaveSize 2  // One per cycle
+        events shouldHaveSize 2 // One per cycle
         events.all { it.data.note == "c" } shouldBe true
     }
 

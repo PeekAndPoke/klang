@@ -108,14 +108,14 @@ class Interpreter(
                     NullValue
                 }
                 env.define(statement.name, value, mutable = true)
-                NullValue  // Declarations don't produce values
+                NullValue // Declarations don't produce values
             }
 
             // Const declaration: create immutable variable
             is ConstDeclaration -> {
                 val value = evaluate(statement.initializer)
                 env.define(statement.name, value, mutable = false)
-                NullValue  // Declarations don't produce values
+                NullValue // Declarations don't produce values
             }
 
             // Import statement: load and evaluate library, import symbols
@@ -194,7 +194,7 @@ class Interpreter(
         // Import symbols from library environment into current environment
         importSymbolsFromEnvironment(libraryEnv, importStmt.imports, importStmt.namespaceAlias, importStmt.libraryName)
 
-        return NullValue  // Imports don't produce values
+        return NullValue // Imports don't produce values
     }
 
     /**
@@ -249,7 +249,7 @@ class Interpreter(
 
             // Import each symbol with its alias
             for ((exportName, localAlias) in imports) {
-                val value = exports[exportName]!!  // Safe because we validated above
+                val value = exports[exportName]!! // Safe because we validated above
                 env.define(localAlias, value, mutable = true)
             }
         }
@@ -279,7 +279,7 @@ class Interpreter(
     private fun executeExport(exportStmt: ExportStatement): RuntimeValue {
         // Mark the symbols as exported in the environment with their aliases
         env.markExports(exportStmt.exports)
-        return NullValue  // Exports don't produce values
+        return NullValue // Exports don't produce values
     }
 
     /**

@@ -15,7 +15,7 @@ class LangFocusSpec : StringSpec({
 
         // focus(0, 0.5) compresses the entire pattern into [0, 0.5)
         // Using early(0).fast(2).late(0) transformation
-        events.size shouldBe 8  // 2 full cycles of 4 notes each
+        events.size shouldBe 8 // 2 full cycles of 4 notes each
 
         events[0].data.note shouldBeEqualIgnoringCase "c"
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
@@ -65,15 +65,15 @@ class LangFocusSpec : StringSpec({
 
         // Query before focused region - has wrap-around events
         val beforeEvents = p.queryArc(0.0, 0.25)
-        beforeEvents.size shouldBe 2  // Wrapped events from the end of pattern
+        beforeEvents.size shouldBe 2 // Wrapped events from the end of pattern
 
         // Query focused region - should have compressed pattern
         val duringEvents = p.queryArc(0.25, 0.75)
-        duringEvents.size shouldBe 4  // One full cycle in the focused range
+        duringEvents.size shouldBe 4 // One full cycle in the focused range
 
         // Query after focused region - has wrap-around events
         val afterEvents = p.queryArc(0.75, 1.0)
-        afterEvents.size shouldBe 2  // Wrapped events from the beginning of next pattern
+        afterEvents.size shouldBe 2 // Wrapped events from the beginning of next pattern
     }
 
     "focus() works across multiple cycles" {
@@ -100,7 +100,7 @@ class LangFocusSpec : StringSpec({
 
         // Compressed into 0.2 of the cycle (factor = 1/0.2 = 5)
         // Pattern is 5x faster, producing 20 events in [0, 1)
-        events.size shouldBe 20  // 5 cycles * 4 notes
+        events.size shouldBe 20 // 5 cycles * 4 notes
 
         // First event starts near 0 (wrap-around)
         events[0].data.note shouldBeEqualIgnoringCase "c"
@@ -112,7 +112,7 @@ class LangFocusSpec : StringSpec({
         val p = note("c d e f").focus("0", "0.5")
         val events = p.queryArc(0.0, 1.0)
 
-        events.size shouldBe 8  // 2 full cycles compressed
+        events.size shouldBe 8 // 2 full cycles compressed
         events[0].data.note shouldBeEqualIgnoringCase "c"
     }
 
@@ -120,7 +120,7 @@ class LangFocusSpec : StringSpec({
         val p = note("c d e f").focus("0", "0.5")
         val events = p.queryArc(0.0, 1.0)
 
-        events.size shouldBe 8  // 2 full cycles compressed
+        events.size shouldBe 8 // 2 full cycles compressed
         events[0].data.note shouldBeEqualIgnoringCase "c"
     }
 
@@ -128,7 +128,7 @@ class LangFocusSpec : StringSpec({
         val p = StrudelPattern.compile("""note("c d e f").focus("0", "0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
-        events.size shouldBe 8  // 2 full cycles compressed
+        events.size shouldBe 8 // 2 full cycles compressed
         events[0].data.note shouldBeEqualIgnoringCase "c"
     }
 

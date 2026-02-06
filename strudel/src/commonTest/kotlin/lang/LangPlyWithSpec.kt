@@ -87,11 +87,11 @@ class LangPlyWithSpec : StringSpec({
 
         // First event (c): c, c+12
         events[0].data.note shouldBeEqualIgnoringCase "C3"
-        events[1].data.note shouldBeEqualIgnoringCase "C4"  // c transposed by 12 semitones = c1
+        events[1].data.note shouldBeEqualIgnoringCase "C4" // c transposed by 12 semitones = c1
 
         // Second event (d): d, d+12
         events[2].data.note shouldBeEqualIgnoringCase "D3"
-        events[3].data.note shouldBeEqualIgnoringCase "D4"  // d transposed by 12 semitones = d1
+        events[3].data.note shouldBeEqualIgnoringCase "D4" // d transposed by 12 semitones = d1
     }
 
     "plyWith() event timing" {

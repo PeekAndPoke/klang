@@ -17,6 +17,6 @@ class LangExtendSpec : StringSpec({
         // With fast(2), pattern plays twice as fast
         // "c d e f" has 4 events per cycle normally
         // fast(2) gives 8 events per cycle
-        events1.size shouldBe 16  // 8 events/cycle × 2 cycles
+        events1.size shouldBe 16 // 8 events/cycle × 2 cycles
     }
 })

@@ -51,8 +51,8 @@ class ImportAliasingTest : StringSpec({
         stmt.shouldBeInstanceOf<ImportStatement>()
         stmt.libraryName shouldBe "math"
         stmt.imports shouldBe listOf(
-            Pair("add", "add"),  // No alias, same name
-            Pair("multiply", "mul")  // Aliased
+            Pair("add", "add"), // No alias, same name
+            Pair("multiply", "mul") // Aliased
         )
     }
 
@@ -195,7 +195,7 @@ class ImportAliasingTest : StringSpec({
             """.trimIndent()
         )
 
-        result shouldBe NumberValue(60.0)  // 3 * 2 * 10
+        result shouldBe NumberValue(60.0) // 3 * 2 * 10
     }
 
     "should error when trying to import non-exported symbol even with alias" {

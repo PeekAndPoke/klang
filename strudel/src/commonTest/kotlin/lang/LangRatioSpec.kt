@@ -16,9 +16,9 @@ class LangRatioSpec : StringSpec({
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 3
-            events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)      // 1
-            events[1].data.value?.asDouble shouldBe (1.25 plusOrMinus EPSILON)     // 5/4
-            events[2].data.value?.asDouble shouldBe (1.5 plusOrMinus EPSILON)      // 3/2
+            events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON) // 1
+            events[1].data.value?.asDouble shouldBe (1.25 plusOrMinus EPSILON) // 5/4
+            events[2].data.value?.asDouble shouldBe (1.5 plusOrMinus EPSILON) // 3/2
         }
 
         withClue("ratio with musical intervals") {
@@ -27,10 +27,10 @@ class LangRatioSpec : StringSpec({
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 4
-            events[0].data.value?.asDouble shouldBe (220.0 plusOrMinus EPSILON)    // octave (2/1)
-            events[1].data.value?.asDouble shouldBe (165.0 plusOrMinus EPSILON)    // fifth (3/2)
-            events[2].data.value?.asDouble shouldBe (146.67 plusOrMinus 0.01)      // fourth (4/3)
-            events[3].data.value?.asDouble shouldBe (137.5 plusOrMinus EPSILON)    // major third (5/4)
+            events[0].data.value?.asDouble shouldBe (220.0 plusOrMinus EPSILON) // octave (2/1)
+            events[1].data.value?.asDouble shouldBe (165.0 plusOrMinus EPSILON) // fifth (3/2)
+            events[2].data.value?.asDouble shouldBe (146.67 plusOrMinus 0.01) // fourth (4/3)
+            events[3].data.value?.asDouble shouldBe (137.5 plusOrMinus EPSILON) // major third (5/4)
         }
 
         withClue("ratio with plain numbers returns unchanged") {

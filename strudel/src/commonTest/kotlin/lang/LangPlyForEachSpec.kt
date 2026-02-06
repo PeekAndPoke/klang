@@ -36,15 +36,15 @@ class LangPlyForEachSpec : StringSpec({
             events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
             events[0].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
 
-            events[1].data.value?.asDouble shouldBe 3.0  // 1 + 1 * 2
+            events[1].data.value?.asDouble shouldBe 3.0 // 1 + 1 * 2
             events[1].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
             events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-            events[2].data.value?.asDouble shouldBe 5.0  // 1 + 2 * 2
+            events[2].data.value?.asDouble shouldBe 5.0 // 1 + 2 * 2
             events[2].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
             events[2].part.end.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
 
-            events[3].data.value?.asDouble shouldBe 7.0  // 1 + 3 * 2
+            events[3].data.value?.asDouble shouldBe 7.0 // 1 + 3 * 2
             events[3].part.begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
             events[3].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         }
@@ -66,8 +66,8 @@ class LangPlyForEachSpec : StringSpec({
 
         // Second event (10) with 3 repetitions: 10, 20, 30
         events[3].data.value?.asDouble shouldBe 10.0
-        events[4].data.value?.asDouble shouldBe 20.0  // 10 + 1*10
-        events[5].data.value?.asDouble shouldBe 30.0   // 10 + 2*10
+        events[4].data.value?.asDouble shouldBe 20.0 // 10 + 1*10
+        events[5].data.value?.asDouble shouldBe 30.0 // 10 + 2*10
     }
 
     "plyForEach() with factor 1 returns original" {
@@ -88,7 +88,7 @@ class LangPlyForEachSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.value?.asDouble shouldBe 0.0
-        events[1].data.value?.asDouble shouldBe 5.0  // 0 + 1*5
+        events[1].data.value?.asDouble shouldBe 5.0 // 0 + 1*5
     }
 
     "plyForEach() passes correct indices" {
@@ -103,15 +103,15 @@ class LangPlyForEachSpec : StringSpec({
 
         // 10 (original), 110 (10+100), 210 (10+200), 310 (10+300)
         events[0].data.value?.asDouble shouldBe 10.0
-        events[1].data.value?.asDouble shouldBe 110.0   // 10 + 1*100
-        events[2].data.value?.asDouble shouldBe 210.0   // 10 + 2*100
-        events[3].data.value?.asDouble shouldBe 310.0   // 10 + 3*100
+        events[1].data.value?.asDouble shouldBe 110.0 // 10 + 1*100
+        events[2].data.value?.asDouble shouldBe 210.0 // 10 + 2*100
+        events[3].data.value?.asDouble shouldBe 310.0 // 10 + 3*100
     }
 
     "plyForEach() with note patterns" {
         // Test with note() and transpose
         val p = note("c3").plyForEach(3) { pattern, index ->
-            pattern.transpose(index * 12)  // Transpose by octaves
+            pattern.transpose(index * 12) // Transpose by octaves
         }
         val events = p.queryArc(0.0, 1.0)
 
@@ -119,8 +119,8 @@ class LangPlyForEachSpec : StringSpec({
 
         // c, c1, c2 (transposed by 0, 12, 24 semitones)
         events[0].data.note shouldBeEqualIgnoringCase "C3"
-        events[1].data.note shouldBeEqualIgnoringCase "C4"  // +12 semitones = +1 octave
-        events[2].data.note shouldBeEqualIgnoringCase "C5"  // +24 semitones = +2 octaves
+        events[1].data.note shouldBeEqualIgnoringCase "C4" // +12 semitones = +1 octave
+        events[2].data.note shouldBeEqualIgnoringCase "C5" // +24 semitones = +2 octaves
     }
 
     "plyForEach() timing is correct" {
@@ -147,9 +147,9 @@ class LangPlyForEachSpec : StringSpec({
 
         events.size shouldBe 4
         events[0].data.value?.asDouble shouldBe 1.0
-        events[1].data.value?.asDouble shouldBe 3.0  // 1 + 1*2
-        events[2].data.value?.asDouble shouldBe 5.0  // 1 + 2*2
-        events[3].data.value?.asDouble shouldBe 7.0  // 1 + 3*2
+        events[1].data.value?.asDouble shouldBe 3.0 // 1 + 1*2
+        events[2].data.value?.asDouble shouldBe 5.0 // 1 + 2*2
+        events[3].data.value?.asDouble shouldBe 7.0 // 1 + 3*2
     }
 
     "plyForEach() with compile - multiple events" {

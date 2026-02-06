@@ -1056,7 +1056,7 @@ private fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     }
 
     val binary = MutableList(n - 1) { false }
-    binary.add(0, true)  // [true, false, false, false] for n=4
+    binary.add(0, true) // [true, false, false, false] for n=4
 
     // Construct binary patterns manually to avoid dependency on 'pure' DSL property order
     val binaryPatterns = binary.map {
@@ -1065,9 +1065,9 @@ private fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     val binarySequence = applySeq(binaryPatterns)
 
     var binaryIter = if (back) {
-        applyIter(binarySequence, listOf(nArg))  // forward (default)
+        applyIter(binarySequence, listOf(nArg)) // forward (default)
     } else {
-        applyIterBack(binarySequence, listOf(nArg))  // backward
+        applyIterBack(binarySequence, listOf(nArg)) // backward
     }
 
     if (earlyOffset != 0) {

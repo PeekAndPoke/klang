@@ -43,8 +43,8 @@ class ContextRangeMapPatternSpec : StringSpec({
         )
 
         val ctx = QueryContext.empty.update {
-            set(ContinuousPattern.minKey, 2.0)   // -> 3.0
-            set(ContinuousPattern.maxKey, 5.0)   // -> 10.0
+            set(ContinuousPattern.minKey, 2.0) // -> 3.0
+            set(ContinuousPattern.maxKey, 5.0) // -> 10.0
         }
 
         val events = wrapped.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)

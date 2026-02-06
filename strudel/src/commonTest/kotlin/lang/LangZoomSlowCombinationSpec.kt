@@ -45,7 +45,7 @@ class LangZoomSlowCombinationSpec : StringSpec({
 
         // Should have "bd sd" compressed to 0.5 cycles, repeating twice
         assertSoftly {
-            events.size shouldBe 4  // bd, sd, bd, sd
+            events.size shouldBe 4 // bd, sd, bd, sd
             events[0].data.sound shouldBe "bd"
             events[1].data.sound shouldBe "sd"
             events[2].data.sound shouldBe "bd"
@@ -81,7 +81,7 @@ class LangZoomSlowCombinationSpec : StringSpec({
         // 2. slow compresses that to half cycle, making it repeat
         // Result: "bd sd bd sd" each 0.25 cycles long
         assertSoftly {
-            events.size shouldBe 4  // bd, sd, bd, sd
+            events.size shouldBe 4 // bd, sd, bd, sd
             events[0].data.sound shouldBe "bd"
             events[1].data.sound shouldBe "sd"
             events[2].data.sound shouldBe "bd"

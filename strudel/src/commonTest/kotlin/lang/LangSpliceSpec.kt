@@ -11,8 +11,8 @@ class LangSpliceSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.begin shouldBe 0.25  // 1/4
-        events[0].data.end shouldBe 0.5     // 2/4
+        events[0].data.begin shouldBe 0.25 // 1/4
+        events[0].data.end shouldBe 0.5 // 2/4
         events[0].data.speed shouldBe 4.0
     }
 
@@ -21,8 +21,8 @@ class LangSpliceSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.begin shouldBe 0.0   // 0/4
-        events[0].data.end shouldBe 0.25    // 1/4
+        events[0].data.begin shouldBe 0.0 // 0/4
+        events[0].data.end shouldBe 0.25 // 1/4
         events[0].data.speed shouldBe 4.0
     }
 
@@ -31,8 +31,8 @@ class LangSpliceSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.begin shouldBe 0.75  // 3/4
-        events[0].data.end shouldBe 1.0     // 4/4
+        events[0].data.begin shouldBe 0.75 // 3/4
+        events[0].data.end shouldBe 1.0 // 4/4
         events[0].data.speed shouldBe 4.0
     }
 
@@ -41,8 +41,8 @@ class LangSpliceSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.begin shouldBe 0.0   // 0/2
-        events[0].data.end shouldBe 0.5     // 1/2
+        events[0].data.begin shouldBe 0.0 // 0/2
+        events[0].data.end shouldBe 0.5 // 1/2
         events[0].data.speed shouldBe 2.0
     }
 

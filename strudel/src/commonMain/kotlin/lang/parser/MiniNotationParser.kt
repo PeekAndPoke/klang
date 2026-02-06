@@ -247,7 +247,7 @@ class MiniNotationParser(
             // base.startLine points to the line with the opening quote
             // token.line and token.column are both 1-based within the string content
 
-            val absoluteStartLine = base.startLine + line - 1  // -1 because line 1 in content is on base.startLine
+            val absoluteStartLine = base.startLine + line - 1 // -1 because line 1 in content is on base.startLine
             val absoluteStartColumn = if (line == 1) {
                 // Same line as the opening quote - add to base column (both 1-based)
                 base.startColumn + column
@@ -273,8 +273,8 @@ class MiniNotationParser(
     private fun tokenize(input: String): List<Token> {
         val tokens = mutableListOf<Token>()
         var i = 0
-        var line = 1  // 1-based
-        var column = 1  // 1-based
+        var line = 1 // 1-based
+        var column = 1 // 1-based
 
         fun addToken(type: TokenType, text: String, start: Int, end: Int, tokenLine: Int, tokenColumn: Int) {
             tokens.add(
@@ -288,7 +288,7 @@ class MiniNotationParser(
                 '\n' -> {
                     i++
                     line++
-                    column = 1  // Reset to 1 at start of new line
+                    column = 1 // Reset to 1 at start of new line
                 }
 
                 ' ', '\t', '\r' -> {

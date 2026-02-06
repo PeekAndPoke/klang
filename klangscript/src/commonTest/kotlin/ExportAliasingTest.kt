@@ -49,8 +49,8 @@ class ExportAliasingTest : StringSpec({
         val stmt = result.statements[0]
         stmt.shouldBeInstanceOf<ExportStatement>()
         stmt.exports shouldBe listOf(
-            Pair("add", "add"),  // No alias
-            Pair("multiply", "mul")  // Aliased
+            Pair("add", "add"), // No alias
+            Pair("multiply", "mul") // Aliased
         )
     }
 
@@ -155,7 +155,7 @@ class ExportAliasingTest : StringSpec({
             """.trimIndent()
         )
 
-        result shouldBe NumberValue(13.0)  // 10 + (5 - 2) = 13
+        result shouldBe NumberValue(13.0) // 10 + (5 - 2) = 13
     }
 
     "should export alias work with wildcard import" {
@@ -261,7 +261,7 @@ class ExportAliasingTest : StringSpec({
             """.trimIndent()
         )
 
-        result shouldBe NumberValue(36.0)  // double(3) = 6, sq(6) = 36
+        result shouldBe NumberValue(36.0) // double(3) = 6, sq(6) = 36
     }
 
     "should export aliasing work with objects" {
@@ -310,7 +310,7 @@ class ExportAliasingTest : StringSpec({
             """.trimIndent()
         )
 
-        result shouldBe NumberValue(60.0)  // transform(3) = 6, process(6) = 60
+        result shouldBe NumberValue(60.0) // transform(3) = 6, process(6) = 60
     }
 
     "should error when trying to import non-exported symbol even if it exists" {

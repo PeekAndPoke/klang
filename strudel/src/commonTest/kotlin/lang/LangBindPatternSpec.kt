@@ -52,7 +52,7 @@ class LangBindPatternSpec : StringSpec({
         val control = pure(1.0)
 
         val result = control._bind { _ ->
-            null  // Return null to produce silence
+            null // Return null to produce silence
         }
 
         val events = result.queryArc(0.0, 1.0)

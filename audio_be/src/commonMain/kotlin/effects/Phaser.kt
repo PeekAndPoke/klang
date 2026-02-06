@@ -9,11 +9,11 @@ class Phaser(sampleRate: Int) {
     private val twoPi = 2.0 * PI
 
     // Parameters
-    var rate: Double = 0.0       // Hz
-    var depth: Double = 0.0      // 0.0 to 1.0
+    var rate: Double = 0.0 // Hz
+    var depth: Double = 0.0 // 0.0 to 1.0
     var centerFreq: Double = 1000.0 // Hz
     var sweepRange: Double = 1000.0 // Hz (depth of frequency sweep)
-    var feedback: Double = 0.0   // 0.0 to <1.0
+    var feedback: Double = 0.0 // 0.0 to <1.0
 
     // State
     private var lfoPhase = 0.0

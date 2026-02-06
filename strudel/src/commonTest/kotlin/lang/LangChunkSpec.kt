@@ -70,11 +70,11 @@ class LangChunkSpec : FunSpec({
         assertSoftly {
             // Cycle 0: First half doubled
             val events0 = pat.queryArc(0.0, 1.0)
-            events0.size shouldBe 6  // bd bd hh hh sd oh
+            events0.size shouldBe 6 // bd bd hh hh sd oh
 
             // Cycle 1: Second half doubled
             val events1 = pat.queryArc(1.0, 2.0)
-            events1.size shouldBe 6  // bd hh sd sd oh hh
+            events1.size shouldBe 6 // bd hh sd sd oh hh
         }
     }
 
@@ -96,7 +96,7 @@ class LangChunkSpec : FunSpec({
 
         val events0 = pat.queryArc(0.0, 1.0)
         events0.size shouldBe 4
-        events0[0].data.value?.asInt shouldBe 12  // 0 + 12
+        events0[0].data.value?.asInt shouldBe 12 // 0 + 12
     }
 
     test("chunk(n) should cycle after n cycles") {

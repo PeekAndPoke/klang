@@ -17,7 +17,7 @@ class RepeatCyclesPatternSpec : StringSpec({
         // Query 4 cycles - should get all 4 (not stop after 2)
         val events = pattern.queryArc(0.0.toRational(), 4.0.toRational())
 
-        events shouldHaveSize 4  // All 4 cycles
+        events shouldHaveSize 4 // All 4 cycles
         events.all { it.data.note == "c" } shouldBe true
     }
 })

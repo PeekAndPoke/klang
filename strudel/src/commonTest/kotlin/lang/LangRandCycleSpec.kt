@@ -17,10 +17,10 @@ class LangRandCycleSpec : StringSpec({
 
         assertSoftly {
             withClue("value at cycle 0") {
-                value1 shouldBe (value1 plusOrMinus 1.0)  // Between 0 and 1
+                value1 shouldBe (value1 plusOrMinus 1.0) // Between 0 and 1
             }
             withClue("value at cycle 1") {
-                value2 shouldBe (value2 plusOrMinus 1.0)  // Between 0 and 1
+                value2 shouldBe (value2 plusOrMinus 1.0) // Between 0 and 1
             }
         }
     }

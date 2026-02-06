@@ -232,7 +232,7 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Envelope should modulate sample amplitude
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.02)  // Start of attack
+        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.02) // Start of attack
         ctx.voiceBuffer[50] shouldBe (0.5 plusOrMinus 0.03) // Mid-attack
         ctx.voiceBuffer[99] shouldBe (0.99 plusOrMinus 0.03) // End of attack
     }

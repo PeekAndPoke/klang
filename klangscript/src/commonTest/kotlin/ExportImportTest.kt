@@ -48,7 +48,7 @@ class ExportImportTest : StringSpec({
         val stmt = result.statements[0]
         stmt.shouldBeInstanceOf<ImportStatement>()
         stmt.libraryName shouldBe "math"
-        stmt.imports shouldBe null  // Wildcard
+        stmt.imports shouldBe null // Wildcard
     }
 
     "should prevent scope pollution with explicit exports" {

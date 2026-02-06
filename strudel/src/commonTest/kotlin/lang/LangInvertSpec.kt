@@ -88,9 +88,9 @@ class LangInvertSpec : StringSpec({
 
         events.size shouldBe 4
         events[0].data.value?.asBoolean shouldBe false // 1 -> false
-        events[1].data.value?.asBoolean shouldBe true  // 0 -> true
+        events[1].data.value?.asBoolean shouldBe true // 0 -> true
         events[2].data.value?.asBoolean shouldBe false // 1 -> false
-        events[3].data.value?.asBoolean shouldBe true  // 0 -> true
+        events[3].data.value?.asBoolean shouldBe true // 0 -> true
     }
 
     "invert() double inversion returns to original" {

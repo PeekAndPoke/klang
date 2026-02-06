@@ -43,7 +43,7 @@ class AbstractVoicePipelineTest : StringSpec({
         // Note: We can't easily replace the internal filters, so we'll test with the main filter
         // and verify that pre/post filters exist in the preFilters/postFilters lists
 
-        voice.preFilters.size shouldBe 1  // BitCrushFilter
+        voice.preFilters.size shouldBe 1 // BitCrushFilter
         voice.postFilters.size shouldBe 1 // DistortionFilter
 
         val ctx = createContext()
@@ -57,7 +57,7 @@ class AbstractVoicePipelineTest : StringSpec({
         val spyMainFilter = SpyFilter("mainFilter")
 
         val voice = createSynthVoice(
-            crush = Voice.Crush(4.0),  // Creates pre-filter
+            crush = Voice.Crush(4.0), // Creates pre-filter
             filter = spyMainFilter
         )
 
@@ -76,7 +76,7 @@ class AbstractVoicePipelineTest : StringSpec({
 
         val voice = createSynthVoice(
             filter = spyMainFilter,
-            distort = Voice.Distort(0.5)  // Creates post-filter
+            distort = Voice.Distort(0.5) // Creates post-filter
         )
 
         // Post-filter should exist
@@ -91,8 +91,8 @@ class AbstractVoicePipelineTest : StringSpec({
 
     "multiple pre-filters are all applied" {
         val voice = createSynthVoice(
-            crush = Voice.Crush(4.0),   // Pre-filter 1
-            coarse = Voice.Coarse(2.0)  // Pre-filter 2
+            crush = Voice.Crush(4.0), // Pre-filter 1
+            coarse = Voice.Coarse(2.0) // Pre-filter 2
         )
 
         voice.preFilters.size shouldBe 2
@@ -129,8 +129,8 @@ class AbstractVoicePipelineTest : StringSpec({
             phaser = Voice.Phaser(
                 rate = 1.0,
                 depth = 0.5,
-                center = 0.0,  // Should default to 1000.0
-                sweep = 0.0    // Should default to 1000.0
+                center = 0.0, // Should default to 1000.0
+                sweep = 0.0 // Should default to 1000.0
             )
         )
 
@@ -145,8 +145,8 @@ class AbstractVoicePipelineTest : StringSpec({
 
     "voice with no effects has empty filter lists" {
         val voice = createSynthVoice(
-            crush = Voice.Crush(0.0),    // amount = 0, no filter created
-            coarse = Voice.Coarse(0.0),  // amount = 0, no filter created
+            crush = Voice.Crush(0.0), // amount = 0, no filter created
+            coarse = Voice.Coarse(0.0), // amount = 0, no filter created
             distort = Voice.Distort(0.0) // amount = 0, no filter created
         )
 

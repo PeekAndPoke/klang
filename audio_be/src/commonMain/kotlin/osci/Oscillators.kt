@@ -662,11 +662,11 @@ class Oscillators private constructor(
                 Names.supersaw, Names.z_supersaw -> if (freqHz != null) {
                     this.supersaw(
                         /* sampleRate */ sampleRate,
-                        /* baseFreqHz */  freqHz,
-                        /* voices */  (unison * mul).toInt(),
-                        /* detuneSemitones */  freqSpread,
-                        /* panspread */  panSpread,
-                        /* rng */  rng,
+                        /* baseFreqHz */ freqHz,
+                        /* voices */ (unison * mul).toInt(),
+                        /* detuneSemitones */ freqSpread,
+                        /* panspread */ panSpread,
+                        /* rng */ rng,
                     )
                 } else {
                     silence

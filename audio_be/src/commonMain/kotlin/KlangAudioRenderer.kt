@@ -19,8 +19,8 @@ class KlangAudioRenderer(
 
     private val limiter = Compressor(
         sampleRate = sampleRate,
-        thresholdDb = -1.0,    // Ceiling at -1dB
-        ratio = 20.0,          // Brickwall ratio
+        thresholdDb = -1.0, // Ceiling at -1dB
+        ratio = 20.0, // Brickwall ratio
         kneeDb = 0.0,
         attackSeconds = 0.001, // 1ms allows transients to retain punch before clamping
         releaseSeconds = 0.1,

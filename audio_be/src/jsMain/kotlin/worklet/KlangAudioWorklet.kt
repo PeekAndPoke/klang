@@ -23,7 +23,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         }
 
         val commLink = KlangCommLink()
-        val klangTime = KlangTime.create()  // Creates AudioWorklet-specific time source
+        val klangTime = KlangTime.create() // Creates AudioWorklet-specific time source
 
         // Core DSP components
         val orbits = Orbits(

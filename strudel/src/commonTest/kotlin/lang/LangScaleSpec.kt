@@ -25,7 +25,7 @@ class LangScaleSpec : StringSpec({
             4 to 60, // C4
             5 to 72, // C5
             6 to 84, // C6
-            7 to 96  // C7
+            7 to 96 // C7
         )
 
         cases.forEach { (oct, midi) ->

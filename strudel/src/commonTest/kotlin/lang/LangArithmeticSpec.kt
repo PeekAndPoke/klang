@@ -283,7 +283,7 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.value?.asInt shouldBe 8  // 2^3
+        events[0].data.value?.asInt shouldBe 8 // 2^3
         events[1].data.value?.asInt shouldBe 27 // 3^3
     }
 
@@ -303,7 +303,7 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.value?.asInt shouldBe 8  // 12 & 10 = 8
+        events[0].data.value?.asInt shouldBe 8 // 12 & 10 = 8
         events[1].data.value?.asInt shouldBe 10 // 15 & 10 = 10
     }
 
@@ -313,7 +313,7 @@ class LangArithmeticSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 10 // 8 | 2 = 10
-        events[1].data.value?.asInt shouldBe 6  // 4 | 2 = 6
+        events[1].data.value?.asInt shouldBe 6 // 4 | 2 = 6
     }
 
     "bxor() performs bitwise XOR" {
@@ -439,7 +439,7 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.value?.asInt shouldBe 0  // 0 && 10 = 0 (falsy)
+        events[0].data.value?.asInt shouldBe 0 // 0 && 10 = 0 (falsy)
         events[1].data.value?.asInt shouldBe 10 // 5 && 10 = 10 (truthy)
     }
 
@@ -449,7 +449,7 @@ class LangArithmeticSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 10 // 0 || 10 = 10
-        events[1].data.value?.asInt shouldBe 5  // 5 || 10 = 5
+        events[1].data.value?.asInt shouldBe 5 // 5 || 10 = 5
     }
 
     // ========== Rounding operations tests ==========
@@ -469,8 +469,8 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events[0].data.value?.asInt shouldBe 2  // floor(2.1) = 2
-        events[1].data.value?.asInt shouldBe 2  // floor(2.9) = 2
+        events[0].data.value?.asInt shouldBe 2 // floor(2.1) = 2
+        events[1].data.value?.asInt shouldBe 2 // floor(2.9) = 2
         events[2].data.value?.asInt shouldBe -3 // floor(-2.1) = -3
     }
 
@@ -479,8 +479,8 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events[0].data.value?.asInt shouldBe 3  // ceil(2.1) = 3
-        events[1].data.value?.asInt shouldBe 3  // ceil(2.9) = 3
+        events[0].data.value?.asInt shouldBe 3 // ceil(2.1) = 3
+        events[1].data.value?.asInt shouldBe 3 // ceil(2.9) = 3
         events[2].data.value?.asInt shouldBe -2 // ceil(-2.9) = -2
     }
 

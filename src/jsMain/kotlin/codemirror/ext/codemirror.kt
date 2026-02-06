@@ -37,6 +37,6 @@ external interface JavaScriptModule {
  * Basic setup module interface
  */
 external interface BasicSetupModule {
-    val basicSetup: Array<Extension>  // basicSetup is an array of extensions
+    val basicSetup: Array<Extension> // basicSetup is an array of extensions
 }
 

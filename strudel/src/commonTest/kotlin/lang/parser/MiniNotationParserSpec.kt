@@ -404,7 +404,7 @@ class MiniNotationParserSpec : StringSpec() {
                 atomPattern?.sourceLocations shouldNotBe null
                 atomPattern?.sourceLocations?.outermost?.source shouldBe "test.klang"
                 atomPattern?.sourceLocations?.outermost?.startLine shouldBe 1
-                atomPattern?.sourceLocations?.outermost?.startColumn shouldBe 11  // baseColumn + 0 (start of "bd")
+                atomPattern?.sourceLocations?.outermost?.startColumn shouldBe 11 // baseColumn + 0 (start of "bd")
             }
         }
 
