@@ -215,7 +215,7 @@ sealed interface StrudelVoiceValue {
         override val asInt get() = value.firstOrNull()?.asInt
         override val asRational get() = value.firstOrNull()?.asRational
         override fun isTruthy() = value.isNotEmpty()
-        override fun toString() = "[${asString}]"
+        override fun toString() = "[$asString]"
     }
 
     data class Pattern(val pattern: StrudelPattern) : StrudelVoiceValue {

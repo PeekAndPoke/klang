@@ -282,7 +282,7 @@ class NativeInteropTest : StringSpec() {
                 registerType<NativeObject> {
                     registerMethod("sound") { soundName: String -> sound(soundName) }
                     registerMethod("speed") { factor: Double ->
-                        NativeObject("${pattern}|speed:$factor")
+                        NativeObject("$pattern|speed:$factor")
                     }
                 }
             }
