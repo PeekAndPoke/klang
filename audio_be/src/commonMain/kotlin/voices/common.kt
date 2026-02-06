@@ -104,13 +104,17 @@ fun Voice.fillPitchModulation(ctx: Voice.RenderContext, offset: Int, length: Int
             val mod = 1.0 + (sin(phase) * vib.depth)
             phase += phaseInc
             mod
-        } else 1.0
+        } else {
+            1.0
+        }
 
         // 2. Accelerate component (Exponential pitch change)
         val accelMod = if (hasAccelerate) {
             val progress = relPos / totalFrames
             2.0.pow(accel * progress)
-        } else 1.0
+        } else {
+            1.0
+        }
 
         // 3. Pitch Envelope component
         val pEnvMod = if (hasPitchEnv) {
@@ -129,7 +133,9 @@ fun Voice.fillPitchModulation(ctx: Voice.RenderContext, offset: Int, length: Int
 
             // Convert semitone offset to frequency ratio
             2.0.pow((pEnv.amount * envLevel) / 12.0)
-        } else 1.0
+        } else {
+            1.0
+        }
 
         out[idx] = vibMod * accelMod * pEnvMod
     }

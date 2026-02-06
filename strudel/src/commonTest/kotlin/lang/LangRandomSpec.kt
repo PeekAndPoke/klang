@@ -172,8 +172,9 @@ class LangRandomSpec : StringSpec({
             var zeros = 0
             events.forEach { event ->
                 val value = event.data.value?.asDouble!!
-                if (value == 1.0) ones++
-                else if (value == 0.0) zeros++
+                if (value == 1.0) {
+                    ones++
+                } else if (value == 0.0) zeros++
             }
 
             println("Ones: $ones, zeros: $zeros")

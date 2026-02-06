@@ -179,8 +179,9 @@ interface Key {
         // Calculates secondary and substitute dominant supertonics (ii-V relations)
         private fun supertonics(dominants: List<String>, targetTriads: List<String>): List<String> =
             dominants.mapIndexed { index, chord ->
-                if (chord.isEmpty()) ""
-                else {
+                if (chord.isEmpty()) {
+                    ""
+                } else {
                     val domRoot = chord.dropLast(1)
                     val minorRoot = Distance.transpose(domRoot, "5P")
                     val target = targetTriads[index]
@@ -212,8 +213,9 @@ interface Key {
 
                 val secondaryDominantSupertonics = supertonics(secondaryDominants, triads)
                 val substituteDominants = secondaryDominants.map { chord ->
-                    if (chord.isEmpty()) ""
-                    else {
+                    if (chord.isEmpty()) {
+                        ""
+                    } else {
                         val domRoot = chord.dropLast(1)
                         val subRoot = Distance.transpose(domRoot, "5d")
                         subRoot + "7"
