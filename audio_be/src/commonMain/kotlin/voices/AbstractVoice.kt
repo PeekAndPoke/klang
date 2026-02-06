@@ -204,7 +204,7 @@ abstract class AbstractVoice(
         val env = envelope
         val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
         val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
-        val relRate = if (env.releaseFrames > 0) env.sustainLevel / env.releaseFrames else 1.0
+        val relRateDen = if (env.releaseFrames > 0) env.releaseFrames else 1.0
 
         var absPos = (ctx.blockStart + offset) - startFrame
         val gateEndPos = gateEndFrame - startFrame
@@ -213,29 +213,31 @@ abstract class AbstractVoice(
         for (i in 0 until length) {
             val idx = offset + i
 
-            // Calculate envelope value
-            currentEnv = if (absPos >= gateEndPos) {
+            if (absPos >= gateEndPos) {
                 // Release phase
+                if (!env.releaseStarted) {
+                    env.releaseStartLevel = currentEnv
+                    env.releaseStarted = true
+                }
                 val relPos = absPos - gateEndPos
-                env.sustainLevel - (relPos * relRate)
+                val relRate = env.releaseStartLevel / relRateDen
+                currentEnv = env.releaseStartLevel - (relPos * relRate)
             } else {
                 // Attack/Decay/Sustain phases
-                when {
+                env.releaseStarted = false
+                currentEnv = when {
                     absPos < env.attackFrames -> absPos * attRate
                     absPos < env.attackFrames + env.decayFrames -> {
                         val decPos = absPos - env.attackFrames
                         1.0 - (decPos * decRate)
                     }
-
                     else -> env.sustainLevel
                 }
             }
 
             if (currentEnv < 0.0) currentEnv = 0.0
 
-            // Apply envelope
             ctx.voiceBuffer[idx] *= currentEnv
-
             absPos++
         }
 

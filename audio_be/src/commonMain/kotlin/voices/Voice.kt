@@ -109,6 +109,10 @@ sealed interface Voice {
         val releaseFrames: Double,
         /** Current envelope level (state variable) */
         var level: Double = 0.0,
+        /** Level captured the moment we enter release */
+        var releaseStartLevel: Double = 0.0,
+        /** Has the release phase been entered already? */
+        var releaseStarted: Boolean = false,
     ) {
         companion object {
             /** Create envelope from resolved ADSR settings */

@@ -2,7 +2,6 @@ package io.peekandpoke.klang.audio_be.osci
 
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.safeEnumOrNull
-import kotlin.jvm.JvmStatic
 import kotlin.math.*
 import kotlin.random.Random
 
@@ -457,22 +456,24 @@ class Oscillators private constructor(
         }
 
         @Suppress("NOTHING_TO_INLINE")
-        @JvmStatic
-        fun polyBlep(t: Double, dt: Double): Double {
+        inline fun polyBlep(t: Double, dt: Double): Double {
             // t = phase (0..1), dt = increment per sample
-            return when {
-                t < dt -> {
-                    val r = t / dt
-                    r + r - r * r - 1.0
-                }
+            // Additive PolyBLEP to handle overlapping cases (high freq / large dt)
+            var correction = 0.0
 
-                t > 1.0 - dt -> {
-                    val r = (t - 1.0) / dt
-                    r * r + r + r + 1.0
-                }
-
-                else -> 0.0
+            // 1. Beginning of cycle discontinuity
+            if (t < dt) {
+                val r = t / dt
+                correction += r + r - r * r - 1.0
             }
+
+            // 2. End of cycle discontinuity
+            if (t > 1.0 - dt) {
+                val r = (t - 1.0) / dt
+                correction += r * r + r + r + 1.0
+            }
+
+            return correction
         }
 
         private fun applySemitoneDetuneToFrequency(frequency: Double, detuneSemitones: Double): Double =
