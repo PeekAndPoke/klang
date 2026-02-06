@@ -109,7 +109,7 @@ class Samples(
                     try {
                         decoder.decodeMonoFloatPcm(it)
                     } catch (e: Exception) {
-                        println("Failed to decode sample ${url}: ${e.stackTraceToString()}")
+                        println("Failed to decode sample $url: ${e.stackTraceToString()}")
                         null
                     }
                 }
