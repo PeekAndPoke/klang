@@ -27,6 +27,7 @@ import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.ScheduledVoiceEvent
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
+import io.peekandpoke.klang.strudel.lang.delay
 import io.peekandpoke.klang.strudel.playStrudel
 import kotlinx.browser.document
 import kotlinx.css.*
@@ -285,13 +286,19 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                         if (document.fullscreenElement != null) {
                                             onClick {
                                                 document.exitFullscreen()
-                                                triggerRedraw()
+                                                launch {
+                                                    delay(1000)
+                                                    triggerRedraw()
+                                                }
                                             }
                                             icon.compress()
                                         } else {
                                             onClick {
                                                 document.documentElement?.requestFullscreen()
-                                                triggerRedraw()
+                                                launch {
+                                                    delay(1000)
+                                                    triggerRedraw()
+                                                }
                                             }
                                             icon.expand()
                                         }
