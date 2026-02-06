@@ -170,7 +170,6 @@ class LangSwingSpec : StringSpec({
         }
     }
 
-
     "swingBy(-0.5, 2) produces events" {
         val p = note("c d e f").swingBy(-0.5, 2)
         val allEvents = p.queryArc(0.0, 1.0)

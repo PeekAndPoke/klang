@@ -441,7 +441,6 @@ stack(
         .vmod(0.5)        
     """.trimIndent()
 
-
     val bandF = """
         n("0 1 2 3 4 5 6 7").scale("C4:minor")
          .bandf("500 1000 200").resonance(5)

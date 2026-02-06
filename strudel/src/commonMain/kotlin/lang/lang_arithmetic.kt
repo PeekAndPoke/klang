@@ -399,4 +399,3 @@ val StrudelPattern.ceil by dslPatternExtension { p, /* args */ _, /* callInfo */
 
 @StrudelDsl
 val String.ceil by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p.ceil() }
-

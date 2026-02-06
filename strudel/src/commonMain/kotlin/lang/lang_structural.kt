@@ -2386,7 +2386,6 @@ val StrudelPattern.eish by dslPatternExtension { p, args, callInfo -> p.euclidis
 @StrudelDsl
 val String.eish by dslStringExtension { p, args, callInfo -> p.euclidish(args, callInfo) }
 
-
 // -- run() ------------------------------------------------------------------------------------------------------------
 
 fun applyRun(n: Int): StrudelPattern {
@@ -3121,4 +3120,3 @@ val StrudelPattern.rib by dslPatternExtension { p, args, callInfo -> p.ribbon(ar
 /** Alias for [ribbon] */
 @StrudelDsl
 val String.rib by dslStringExtension { p, args, callInfo -> p.ribbon(args, callInfo) }
-

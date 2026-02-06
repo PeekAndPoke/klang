@@ -278,7 +278,6 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                             }
                         }
 
-
                         div {
                             key = "dashboard-form-code"
 

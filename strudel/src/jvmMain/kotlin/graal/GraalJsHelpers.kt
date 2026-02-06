@@ -73,7 +73,6 @@ object GraalJsHelpers {
         }
     }
 
-
     fun Value?.safeNumber(default: Double): Double {
         return safeNumberOrNull() ?: default
     }

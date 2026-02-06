@@ -310,7 +310,6 @@ class NamespaceImportTest : StringSpec({
             )
         }
 
-
         val result = engine.execute(
             """
                 import * as h from "helpers"

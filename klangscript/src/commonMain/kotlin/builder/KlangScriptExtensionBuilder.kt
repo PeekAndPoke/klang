@@ -443,5 +443,3 @@ inline fun <reified P : Any, reified R> KlangScriptExtensionBuilder.registerVara
         wrapAsRuntimeValue(result)
     }
 }
-
-

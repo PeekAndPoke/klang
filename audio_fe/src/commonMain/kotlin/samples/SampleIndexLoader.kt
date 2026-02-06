@@ -261,7 +261,6 @@ class SampleIndexLoader(
             return out
         }
 
-
         /**
          * Parse bank file.
          *

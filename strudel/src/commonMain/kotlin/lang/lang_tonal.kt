@@ -314,7 +314,6 @@ fun applyVibrato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
 @StrudelDsl
 val vibrato by dslFunction { args, /* callInfo */ _ -> args.toPattern(vibratoMutation) }
 
-
 /** Sets the vibrato frequency (speed) in Hz. */
 @StrudelDsl
 val StrudelPattern.vibrato by dslPatternExtension { p, args, /* callInfo */ _ -> applyVibrato(p, args) }
@@ -362,7 +361,6 @@ val vibmod by dslFunction { args, callInfo -> vibratoMod(args, callInfo) }
 /** Alias for [vibratoMod] */
 @StrudelDsl
 val StrudelPattern.vibmod by dslPatternExtension { p, args, callInfo -> p.vibratoMod(args, callInfo) }
-
 
 /** Alias for [vibratoMod] on a string */
 @StrudelDsl

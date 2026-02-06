@@ -19,7 +19,6 @@ internal class StackPattern(val patterns: List<StrudelPattern>) : StrudelPattern
             return lcm(allSteps).takeIf { it > 0 }?.let { Rational(it) }
         }
 
-
     override fun estimateCycleDuration(): Rational {
         return patterns.maxOfOrNull { it.estimateCycleDuration() } ?: Rational.ONE
     }

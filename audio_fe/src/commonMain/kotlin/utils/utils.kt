@@ -37,4 +37,3 @@ inline fun <reified T : Enum<T>> safeEnumOrNull(input: String?): T? {
         }
     }
 }
-

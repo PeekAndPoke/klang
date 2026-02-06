@@ -247,7 +247,6 @@ class ExportImportTest : StringSpec({
         result shouldBe NumberValue(6.0)
     }
 
-
     "should export functions that use native functions" {
         val engine = klangScript {
             registerFunctionRaw("nativeDouble") { values, _ ->

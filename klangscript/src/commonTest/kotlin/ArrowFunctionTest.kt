@@ -105,7 +105,6 @@ class ArrowFunctionTest : StringSpec({
             }
         }
 
-
         // applyFunc(x => x * 2, 21) should return 42
         val result = script.execute("applyFunc(x => x * 2, 21)")
         result.shouldBeInstanceOf<NumberValue>()
@@ -124,7 +123,6 @@ class ArrowFunctionTest : StringSpec({
                 )
             }
         }
-
 
         // x => createObj(x).double()
         val result = script.execute("(x => createObj(x).value)(5)")

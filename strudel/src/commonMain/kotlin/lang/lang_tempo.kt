@@ -259,7 +259,6 @@ val StrudelPattern.late by dslPatternExtension { p, args, _ ->
 @StrudelDsl
 val String.late by dslStringExtension { p, args, callInfo -> p.late(args, callInfo) }
 
-
 /** Nudges the pattern to start later in time by the given number of cycles */
 @StrudelDsl
 val late by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
