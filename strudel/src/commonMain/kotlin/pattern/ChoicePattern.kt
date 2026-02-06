@@ -124,8 +124,11 @@ internal class ChoicePattern(
                 if (found == -1) currentWeights.lastIndex else found
             } else {
                 // Uniform choice: Map 0..1 to 0..n-1
-                if (t >= 1.0) choices.lastIndex
-                else (t * choices.size).toInt().coerceIn(0, choices.lastIndex)
+                if (t >= 1.0) {
+                    choices.lastIndex
+                } else {
+                    (t * choices.size).toInt().coerceIn(0, choices.lastIndex)
+                }
             }
 
             val chosenPat = choices.getOrNull(selectedIndex) ?: return@flatMap emptyList()

@@ -482,8 +482,11 @@ fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = null): Stru
 
     val adjustedPatterns = validPatterns.map { pat ->
         val steps = pat.numSteps!!.toInt()
-        if (steps == targetSteps) pat
-        else pat.fast(targetSteps.toDouble() / steps)
+        if (steps == targetSteps) {
+            pat
+        } else {
+            pat.fast(targetSteps.toDouble() / steps)
+        }
     }
 
     return PropertyOverridePattern(

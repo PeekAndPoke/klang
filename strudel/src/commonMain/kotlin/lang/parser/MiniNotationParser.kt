@@ -91,9 +91,13 @@ class MiniNotationParser(
             }
         }
 
-        return if (steps.isEmpty()) silence
-        else if (steps.size == 1) steps[0]
-        else seq(*steps.toTypedArray())
+        return if (steps.isEmpty()) {
+            silence
+        } else if (steps.size == 1) {
+            steps[0]
+        } else {
+            seq(*steps.toTypedArray())
+        }
     }
 
     // Step: Atom, Group [], Alternation <>, Silence ~, with modifiers
@@ -121,7 +125,9 @@ class MiniNotationParser(
                 val atomLocation = token.toLocation(baseLocation)
                 val locationChain = if (atomLocation != null) {
                     SourceLocationChain.single(atomLocation)
-                } else null
+                } else {
+                    null
+                }
 
                 // Always treat as a single atom, no special parsing here
                 atomFactory(text, locationChain)
@@ -129,8 +135,11 @@ class MiniNotationParser(
 
             else -> {
                 // Determine what went wrong for better error
-                if (isAtEnd()) error("Unexpected end of input")
-                else error("Unexpected token: ${peek().text} at index $pos")
+                if (isAtEnd()) {
+                    error("Unexpected end of input")
+                } else {
+                    error("Unexpected token: ${peek().text} at index $pos")
+                }
             }
         }
 
@@ -156,7 +165,9 @@ class MiniNotationParser(
             } else if (match(TokenType.QUESTION)) {
                 val probStr = if (check(TokenType.LITERAL) && peek().text.firstOrNull()?.isDigit() == true) {
                     consume(TokenType.LITERAL, "").text
-                } else null
+                } else {
+                    null
+                }
                 val probability = probStr?.toDoubleOrNull() ?: 0.5
                 pattern = pattern.degradeBy(probability)
             } else if (match(TokenType.PIPE)) {

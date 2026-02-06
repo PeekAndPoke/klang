@@ -33,8 +33,11 @@ object Progression {
         if (tonic.empty) return chords.map { "" }
         return chords.map {
             val rn = RomanNumeral.get(it)
-            if (rn.empty) ""
-            else Distance.transpose(tonic, rn.interval) + rn.chordType
+            if (rn.empty) {
+                ""
+            } else {
+                Distance.transpose(tonic, rn.interval) + rn.chordType
+            }
         }
     }
 

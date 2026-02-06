@@ -175,8 +175,9 @@ object Distance {
     ): (Int) -> String {
         val len = intervals.size
         return { normalized ->
-            if (tonic == null) ""
-            else {
+            if (tonic == null) {
+                ""
+            } else {
                 // Handle negative degrees and octave wrapping
                 val index = if (normalized < 0) (len - (-normalized % len)) % len else normalized % len
                 val octaves = floor(normalized.toDouble() / len).toInt()
