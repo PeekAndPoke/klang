@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.AudioBackend
+import io.peekandpoke.klang.audio_be.AudioVisualizer
 import io.peekandpoke.klang.audio_bridge.infra.KlangAtomicInt
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangLock
@@ -39,6 +40,9 @@ class KlangPlayer(
     val commLink = KlangCommLink(capacity = 8192)
     private var backendJob: Job? = null
 
+    // Hold reference to active backend for visualizer access
+    private var _activeBackend: AudioBackend? = null
+
     // Thread-safe state management
     private val lock = KlangLock()
     private val _activePlaybacks = mutableListOf<KlangPlayback>()
@@ -65,11 +69,19 @@ class KlangPlayer(
                 ),
             )
 
+            // Store backend reference for visualizer access
+            _activeBackend = backend
+
             launch(backendDispatcher.limitedParallelism(1)) {
                 backend.run(this)
             }
         }
     }
+
+    /**
+     * Get the visualizer
+     */
+    fun getVisualizer(): AudioVisualizer? = _activeBackend?.visualizer
 
     /**
      * Register a playback.
@@ -105,9 +117,10 @@ class KlangPlayer(
             _activePlaybacks.toList().forEach { it.stop() }
             _activePlaybacks.clear()
 
-            // Shutdown the backend
+            // Shutdown the backend and clear reference
             backendJob?.cancel()
             backendJob = null
+            _activeBackend = null
         }
     }
 }

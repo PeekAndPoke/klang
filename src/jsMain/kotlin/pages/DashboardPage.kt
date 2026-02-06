@@ -16,14 +16,13 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.StreamSource
+import de.peekandpoke.ultra.streams.ops.map
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import io.peekandpoke.klang.Nav
+import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.audio_engine.klangPlayer
-import io.peekandpoke.klang.audio_fe.create
-import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
-import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
+import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.ScheduledVoiceEvent
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -59,8 +58,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    var loading: Boolean by value(false)
-    var player: KlangPlayer? by value(null)
+    val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
     var song: StrudelPlayback? by value(null)
     val isPlaying get() = song != null
 
@@ -74,30 +72,8 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
         song?.updateCyclesPerSecond(it)
     }
 
-    init {
-        lifecycle {
-            onUnmount {
-                player?.shutdown()
-            }
-        }
-    }
-
-    private suspend fun createPlayer(): KlangPlayer {
-        if (loading) error("Already loading")
-
-        loading = true
-
-        val samples = Samples.create(catalogue = SampleCatalogue.default)
-
-        val playerOptions = KlangPlayer.Options(
-            samples = samples,
-            sampleRate = 48000,
-        )
-
-        return klangPlayer(playerOptions).also {
-            player = it
-            loading = false
-        }
+    private suspend fun getPlayer(): KlangPlayer {
+        return Player.ensure().await()
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -150,7 +126,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
         when (val s = song) {
             null -> launch {
                 if (!loading) {
-                    createPlayer().let { p ->
+                    getPlayer().let { p ->
                         val pattern = StrudelPattern.compileRaw(code)!!
 
                         song = p.playStrudel(pattern)
@@ -193,43 +169,36 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                 minHeight = 100.pct
                             }
 
-                            ui.basic.inverted.black.segment {
+                            div {
+                                css { height = 100.px }
+                                Oscilloscope { Player.get() }
+                            }
+
+                            ui.basic.inverted.black.fitted.segment {
                                 css {
                                     backgroundColor = Color.black
+                                    marginTop = 0.px
                                     paddingBottom = 0.px
                                 }
 
                                 div {
-                                    css {
-                                        whiteSpace = WhiteSpace.nowrap
-                                    }
+                                    css { whiteSpace = WhiteSpace.nowrap }
+                                    onClick { router.navToUri(Nav.tour()) }
 
-                                    onClick {
-                                        router.navToUri(Nav.tour())
-                                    }
+                                    icon.music { css { marginRight = 8.px } }
 
-                                    icon.music {
-                                        css {
-                                            marginRight = 8.px
-                                        }
-                                    }
-
-                                    ui.small.header H1 {
+                                    ui.big.text {
                                         css {
                                             fontFamily = "monospace"
                                             lineHeight = LineHeight("2.0em")
                                             color = Color.white
                                             display = Display.inlineBlock
+                                            fontWeight = FontWeight.bold
                                         }
                                         +"KLANG AUDIO MOTÖR"
                                     }
 
-                                    icon.music {
-                                        css {
-                                            transform { scaleX(-1.0) }
-                                            marginLeft = 8.px
-                                        }
-                                    }
+                                    icon.music { css { transform { scaleX(-1.0) }; marginLeft = 8.px } }
                                 }
                             }
                         }

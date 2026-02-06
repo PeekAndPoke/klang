@@ -2,10 +2,7 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract
 import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendCmd
-import io.peekandpoke.klang.audio_bridge.AudioContext
-import io.peekandpoke.klang.audio_bridge.AudioContextOptions
-import io.peekandpoke.klang.audio_bridge.AudioWorkletNode
-import io.peekandpoke.klang.audio_bridge.AudioWorkletNodeOptions
+import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangRingBuffer
 import kotlinx.browser.window
@@ -21,6 +18,24 @@ class JsAudioBackend(
     private val commLink: KlangCommLink.BackendEndpoint = config.commLink
 
     private val sampleUploadBuffer = KlangRingBuffer<KlangCommLink.Cmd.Sample.Chunk>(8192 * 4)
+
+    // AnalyserNode for visualization
+    private var analyser: AnalyserNode? = null
+
+    // Implement AudioVisualizer interface with zero-copy methods
+    override val visualizer = object : AudioVisualizer {
+        override val fftSize: Int = 2048
+
+        override fun getWaveform(out: VisualizerBuffer) {
+            // Zero-copy fill on JS (VisualizerBuffer is Float32Array)
+            analyser?.getFloatTimeDomainData(out)
+        }
+
+        override fun getFft(out: VisualizerBuffer) {
+            // Zero-copy fill on JS
+            analyser?.getFloatFrequencyData(out)
+        }
+    }
 
     override suspend fun run(scope: CoroutineScope) {
         // Init the audio context with the given sample rate
@@ -51,7 +66,30 @@ class JsAudioBackend(
             }
 
             node = AudioWorkletNode(ctx, "klang-audio-processor", nodeOpts)
-            node.connect(ctx.destination)
+
+            // Create AnalyserNode for visualization (with fallback if it fails)
+            try {
+                analyser = ctx.createAnalyser().apply {
+                    fftSize = 2048
+                    smoothingTimeConstant = 0.8
+                }
+                console.log("AnalyserNode created successfully for visualization")
+            } catch (e: Throwable) {
+                console.warn("Failed to create AnalyserNode, visualization disabled:", e)
+                analyser = null
+            }
+
+            // Connect audio graph: Worklet → Analyser → Destination (or direct if no analyser)
+            when (val ana = analyser) {
+                null -> {
+                    node.connect(ctx.destination)
+                }
+
+                else -> {
+                    node.connect(ana)
+                    ana.connect(ctx.destination)
+                }
+            }
 
             // 3. Send Command
             if (ctx.state == "suspended") {

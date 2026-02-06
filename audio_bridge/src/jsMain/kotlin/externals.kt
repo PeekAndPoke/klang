@@ -15,6 +15,7 @@ external class AudioContext(options: AudioContextOptions = definedExternally) {
     fun resume(): Promise<Unit>
     fun close(): Promise<Unit>
     fun decodeAudioData(audioData: ArrayBuffer): Promise<AudioBuffer>
+    fun createAnalyser(): AnalyserNode
 }
 
 external interface AudioContextOptions {
@@ -37,6 +38,15 @@ external class AudioWorklet {
 open external class AudioNode {
     fun connect(destination: AudioNode)
     fun disconnect()
+}
+
+external class AnalyserNode : AudioNode {
+    var fftSize: Int
+    var frequencyBinCount: Int
+    var smoothingTimeConstant: Double
+
+    fun getFloatTimeDomainData(array: Float32Array)
+    fun getFloatFrequencyData(array: Float32Array)
 }
 
 external class AudioWorkletNode(context: AudioContext, name: String, options: dynamic = definedExternally) : AudioNode {
