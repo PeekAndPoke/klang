@@ -169,7 +169,7 @@ class Interpreter(
         } catch (e: Exception) {
             throw ImportError(
                 libraryName = libName,
-                message = "Failed to load library '${libName}': ${e.message}",
+                message = "Failed to load library '$libName': ${e.message}",
                 location = importStmt.location,
                 stackTrace = getStackTrace()
             )
