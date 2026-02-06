@@ -366,7 +366,7 @@ naming:
       - "**/*.Spec.kt"
       - "**/*.Spek.kt"
       - "**/*.gradle.kts"
-    enumEntryPattern: '^[A-Z][_a-zA-Z0-9]*'
+    enumEntryPattern: '[_a-zA-Z0-9]+'
   ForbiddenClassName:
     active: false
     excludes:
