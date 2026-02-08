@@ -24,6 +24,8 @@ class VoiceScheduler(
         val oscillators: Oscillators,
 //        val samples: Samples,
         val orbits: Orbits,
+        /** Supplier for current backend time in milliseconds (from KlangTime) */
+        val timeMs: () -> Double = { 0.0 },
     ) {
         val sampleRateDouble = sampleRate.toDouble()
     }
@@ -196,6 +198,16 @@ class VoiceScheduler(
             // All voice times for this playback are relative to this moment.
             val nowSec = backendStartTimeSec + (lastProcessedFrame.toDouble() / options.sampleRate.toDouble())
             playbackEpochs[pid] = nowSec
+
+            // Send the backend's current wall-clock time to the frontend.
+            // Both clocks are seeded from Date.now(), so the frontend can compute:
+            //   latencyMs = backendTimestampMs - frontendStartTimeMs
+            options.commLink.feedback.send(
+                KlangCommLink.Feedback.PlaybackLatency(
+                    playbackId = pid,
+                    backendTimestampMs = options.timeMs(),
+                )
+            )
         }
 
         // Schedule directly — no offset adjustment needed.

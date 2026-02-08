@@ -114,6 +114,18 @@ class KlangCommLink(capacity: Int = 8192) {
             override val playbackId: String,
             val req: SampleRequest,
         ) : Feedback
+
+        @Serializable
+        @SerialName("playback-latency")
+        data class PlaybackLatency(
+            override val playbackId: String,
+            /**
+             * The backend's KlangTime.internalMsNow() at the moment the playback epoch was recorded.
+             * Both frontend and backend KlangTime are seeded from Date.now(), so the frontend
+             * can compute transport latency as: backendTimestampMs - frontendStartTimeMs
+             */
+            val backendTimestampMs: Double,
+        ) : Feedback
     }
 
     /** Frontend to backend buffer */

@@ -38,6 +38,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                 blockFrames = blockFrames,
                 oscillators = oscillators(sampleRate = sampleRate),
                 orbits = orbits,
+                timeMs = { klangTime.internalMsNow() },
             )
         )
         val renderer = KlangAudioRenderer(

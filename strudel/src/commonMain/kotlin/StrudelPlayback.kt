@@ -75,6 +75,11 @@ class StrudelPlayback internal constructor(
     private val samplesAlreadySent = mutableSetOf<SampleRequest>()
     private val klangTime = KlangTime.create()
 
+    // ===== Latency Compensation =====
+
+    /** Measured transport latency in milliseconds. Applied to VoicesScheduled signal times. */
+    private var backendLatencyMs: Double = 0.0
+
     // ===== Signal Bus =====
 
     /**
@@ -307,6 +312,9 @@ class StrudelPlayback internal constructor(
         val secPerCycle = 1.0 / cyclesPerSecond
         val playbackStartTimeSec = startTimeMs / 1000.0
 
+        // Latency compensation for UI signals (shift highlights to match actual audio playback)
+        val latencyOffsetSec = backendLatencyMs / 1000.0
+
         // Build voice signal events for callbacks (collected first to avoid blocking audio scheduling)
         val signalEvents = mutableListOf<KlangPlaybackSignal.VoicesScheduled.VoiceEvent>()
 
@@ -324,10 +332,11 @@ class StrudelPlayback internal constructor(
             val voiceData = event.data.toVoiceData()
 
             // Collect signal event (don't invoke yet - audio scheduling is critical path)
+            // Apply latency offset to sync highlights with actual audio output
             signalEvents.add(
                 KlangPlaybackSignal.VoicesScheduled.VoiceEvent(
-                    startTime = absoluteStartTime,
-                    endTime = absoluteEndTime,
+                    startTime = absoluteStartTime + latencyOffsetSec,
+                    endTime = absoluteEndTime + latencyOffsetSec,
                     data = voiceData,
                     sourceLocations = event.sourceLocations,
                 )
@@ -345,9 +354,7 @@ class StrudelPlayback internal constructor(
         if (sendEvents && signalEvents.isNotEmpty()) {
             scope.launch(callbackDispatcher) {
                 signals.emit(
-                    KlangPlaybackSignal.VoicesScheduled(
-                        voices = signalEvents.distinctBy { it.startTime to it.sourceLocations }
-                    )
+                    KlangPlaybackSignal.VoicesScheduled(voices = signalEvents)
                 )
             }
         }
@@ -436,6 +443,17 @@ class StrudelPlayback internal constructor(
 
                 is KlangCommLink.Feedback.UpdateCursorFrame -> {
                     // Ignore - event-fetcher is now autonomous
+                }
+
+                is KlangCommLink.Feedback.PlaybackLatency -> {
+                    // Compute transport latency:
+                    // Both KlangTime clocks are seeded from Date.now(), so they share the same epoch.
+                    // backendTimestampMs is when the backend first saw our voices.
+                    // startTimeMs is when we started this playback.
+                    // The difference is how long it took for our voices to reach the backend.
+                    backendLatencyMs = evt.backendTimestampMs - startTimeMs
+                    // Clamp to reasonable range (0 to 500ms). Negative means clock skew, treat as 0.
+                    backendLatencyMs = backendLatencyMs.coerceIn(0.0, 500.0)
                 }
             }
         }

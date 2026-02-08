@@ -22,6 +22,9 @@ class JvmAudioBackend(
     private val sampleRate: Int = config.sampleRate
     private val blockSize: Int = config.blockSize
 
+    // KlangTime for timing measurements
+    private val klangTime = KlangTime.create()
+
     // 1. Setup DSP Graph
     val orbits = Orbits(
         maxOrbits = 16,
@@ -36,6 +39,7 @@ class JvmAudioBackend(
             blockFrames = blockSize,
             oscillators = oscillators(sampleRate),
             orbits = orbits,
+            timeMs = { klangTime.internalMsNow() },
         )
     )
 
@@ -49,7 +53,6 @@ class JvmAudioBackend(
 
     override suspend fun run(scope: CoroutineScope) {
         // Set backend start time from KlangTime relative clock
-        val klangTime = KlangTime.create()
         voices.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
 
         var currentFrame = 0L
