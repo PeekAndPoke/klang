@@ -12,7 +12,7 @@ class LangSlowcatSpec : FunSpec({
         val pat2 = compile("""pure(2).struct("x ~")""")!! // 2 at 0.0-0.5
 
         // Use applySlowcat
-        val result = applySlowcat(listOf(pat1, pat2))
+        val result = slowcat(pat1, pat2)
 
         // Query 4 cycles
         val events = result.queryArc(0.0, 4.0)
@@ -34,7 +34,7 @@ class LangSlowcatSpec : FunSpec({
         val pat2 = compile("""pure(2).struct("x ~ ~")""")!!
         val pat3 = compile("""pure(3).struct("x ~ ~")""")!!
 
-        val result = applySlowcat(listOf(pat1, pat2, pat3))
+        val result = slowcat(pat1, pat2, pat3)
         val events = result.queryArc(0.0, 6.0)
 
         // Should cycle: 1, 2, 3, 1, 2, 3
@@ -43,7 +43,7 @@ class LangSlowcatSpec : FunSpec({
 
     test("slowcat handles single pattern") {
         val pat = compile("""pure(42).struct("x ~")""")!!
-        val result = applySlowcat(listOf(pat))
+        val result = slowcat(pat)
 
         val events = result.queryArc(0.0, 2.0)
 
@@ -52,7 +52,7 @@ class LangSlowcatSpec : FunSpec({
     }
 
     test("slowcat handles empty list") {
-        val result = applySlowcat(emptyList())
+        val result = slowcat()
 
         val events = result.queryArc(0.0, 2.0)
 
