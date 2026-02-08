@@ -335,8 +335,65 @@ val sequenceP by dslFunction { args, /* callInfo */ _ ->
 // -- cat() ------------------------------------------------------------------------------------------------------------
 
 fun applyCat(patterns: List<StrudelPattern>): StrudelPattern {
-    // cat is an alias for slowcat (infinite cycling, relative time)
-    return applySlowcat(patterns)
+    if (patterns.isEmpty()) return silence
+    if (patterns.size == 1) return patterns[0]
+
+    return object : StrudelPattern {
+        override val weight: Double = patterns.sumOf { it.weight }
+        override val numSteps: Rational? = null
+
+        override fun estimateCycleDuration(): Rational {
+            return patterns.fold(Rational.ZERO) { acc, p -> acc + p.estimateCycleDuration() }
+        }
+
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            val totalDuration = estimateCycleDuration()
+            if (totalDuration <= Rational.ZERO) return emptyList()
+
+            val result = mutableListOf<StrudelPatternEvent>()
+
+            // Find which "loops" of the total sequence we touch
+            val startLoop = (from / totalDuration).floor()
+            val endLoop = (to / totalDuration).ceil()
+
+            var currentLoop = startLoop
+            while (currentLoop < endLoop) {
+                val loopStart = currentLoop * totalDuration
+                var currentOffset = loopStart
+
+                for (p in patterns) {
+                    val dur = p.estimateCycleDuration()
+                    val pStart = currentOffset
+                    val pEnd = pStart + dur
+
+                    // Check intersection
+                    val start = if (from > pStart) from else pStart
+                    val end = if (to < pEnd) to else pEnd
+
+                    if (end > start) {
+                        // Map to pattern local time
+                        val localStart = start - pStart
+                        val localEnd = end - pStart
+
+                        val pEvents = p.queryArcContextual(localStart, localEnd, ctx)
+
+                        // Shift back
+                        pEvents.forEach { ev ->
+                            result.add(
+                                ev.copy(
+                                    part = ev.part.shift(pStart),
+                                    whole = ev.whole.shift(pStart)
+                                )
+                            )
+                        }
+                    }
+                    currentOffset += dur
+                }
+                currentLoop += Rational.ONE
+            }
+            return result
+        }
+    }
 }
 
 @StrudelDsl
@@ -2800,22 +2857,6 @@ val StrudelPattern.extend by dslPatternExtension { p, args, callInfo -> p.fast(a
 
 @StrudelDsl
 val String.extend by dslStringExtension { p, args, callInfo -> p.fast(args, callInfo) }
-
-// -- slowcat() --------------------------------------------------------------------------------------------------------
-
-/**
- * Cycles through a list of patterns infinitely, playing one pattern per cycle.
- * This mimics the JavaScript `slowcat()` behavior.
- *
- * Relative Time: Each pattern starts at 0.0 when it is its turn.
- */
-internal fun applySlowcat(patterns: List<StrudelPattern>): StrudelPattern {
-    if (patterns.isEmpty()) return silence
-    // We use SequencePattern (which squeezes) and slow() to achieve this.
-    // [A, B] -> Sequence(A, B) fits in 1 cycle -> slow(2) stretches to 2 cycles.
-    // Effectively A plays 0..1 (local time 0..1), B plays 1..2 (local time 0..1).
-    return SequencePattern(patterns.map { it.withWeight(1.0) }).slow(patterns.size.toDouble())
-}
 
 // -- iter() -----------------------------------------------------------------------------------------------------------
 

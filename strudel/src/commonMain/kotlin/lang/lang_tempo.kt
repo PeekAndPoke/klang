@@ -876,7 +876,7 @@ val String.swing by dslStringExtension { p, args, callInfo -> p.swing(args, call
  */
 fun applyBrak(pattern: StrudelPattern): StrudelPattern {
     // when(slowcat(false, true), x => fastcat(x, silence).late(0.25))
-    val condition = applySlowcat(
+    val condition = applyCat(
         listOf(
             pure(false),
             pure(true)
