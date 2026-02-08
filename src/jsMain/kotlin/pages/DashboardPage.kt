@@ -7,7 +7,6 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.utils.launch
-import de.peekandpoke.kraft.utils.setTimeout
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
@@ -22,9 +21,9 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.comp.Oscilloscope
-import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -37,7 +36,6 @@ import kotlinx.css.properties.transform
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.serialization.builtins.serializer
-import kotlin.js.Date
 
 @Suppress("FunctionName")
 fun Tag.DashboardPage() = comp {
@@ -65,6 +63,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     val isPlaying get() = song != null
 
     val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
+    val highlightBuffer = CodeHighlightBuffer(editorRef)
 
     var code: String by value(codeStream()) {
         codeStream(it)
@@ -80,49 +79,6 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
-        // console.log("Voice scheduled:", event.startTime, event.endTime, Date.now())
-
-        fun doIt(location: SourceLocation) {
-            val now = Date.now()
-            // few ms early for better visuals
-            val startFromNowMs = maxOf(1.0, (event.startTimeMs - now) - 25.0)
-
-            // console.log("startFromNowMs", startFromNowMs)
-
-            setTimeout(startFromNowMs.toInt()) {
-                editorRef { editor ->
-                    // console.log("here", editor)
-
-                    val highlightId = editor.addHighlight(
-                        line = location.startLine,
-                        column = location.startColumn,
-                        length = if (location.startLine == location.endLine) {
-                            location.endColumn - location.startColumn
-                        } else {
-                            // For multiline locations, just highlight the first line for now
-                            // TODO: support multiline highlighting
-                            2
-                        }
-                    )
-
-                    // Remove highlight after duration
-                    val now = Date.now()
-                    val endFromNowMs = maxOf(250.0, event.endTimeMs - now)
-
-                    setTimeout(endFromNowMs.toInt()) {
-                        editorRef { it.removeHighlight(highlightId) }
-                    }
-                }
-            }
-        }
-
-        // Highlight in editor
-        (event.sourceLocations as? io.peekandpoke.klang.script.ast.SourceLocationChain)
-            ?.locations
-            ?.forEach { doIt(it) }
-    }
-
     private fun onPlay() {
         when (val s = song) {
             null -> launch {
@@ -135,7 +91,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                         // Set up live code highlighting via signals
                         song?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
                             signal.voices.forEach { voiceEvent ->
-                                scheduleHighlight(voiceEvent)
+                                highlightBuffer.scheduleHighlight(voiceEvent)
                             }
                         }
 
@@ -272,6 +228,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                         .given(isPlaying) { white }.button {
                                             onClick {
                                                 song?.stop()
+                                                highlightBuffer.cancelAll()
                                                 song = null
                                             }
 

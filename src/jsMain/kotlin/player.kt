@@ -1,5 +1,6 @@
 package io.peekandpoke.klang
 
+import de.peekandpoke.kraft.utils.async
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
@@ -26,6 +27,11 @@ object Player {
 
     private var deferred: CompletableDeferred<KlangPlayer>? = null
 
+    // We force downloading the sample immediately (better user experience later)
+    private val samplesDeferred: Deferred<Samples> = async {
+        Samples.create(catalogue = SampleCatalogue.default)
+    }.also { it.start() }
+
     fun get(): KlangPlayer? = _player
 
     fun ensure(): Deferred<KlangPlayer> {
@@ -36,7 +42,7 @@ object Player {
         launch {
             _status(Status.LOADING)
 
-            val samples = Samples.create(catalogue = SampleCatalogue.default)
+            val samples = samplesDeferred.await()
             val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = 48000)
             val player = klangPlayer(playerOptions)
 

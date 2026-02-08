@@ -39,6 +39,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         val from: Int,
         val to: Int,
         val id: String,
+        val durationMs: Double = 300.0,
     )
 
     // Define StateEffect types for managing highlights
@@ -89,6 +90,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                                                         this.`class` = "cm-highlight-playing"
                                                         this.attributes = jsObject {
                                                             this.`data-highlight-id` = range.id
+                                                            this.style = "animation-duration: ${range.durationMs}ms"
                                                         }
                                                     }
                                                 )
@@ -195,9 +197,10 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
      * @param line 1-based line number
      * @param column 1-based column number
      * @param length Length of the highlight in characters
+     * @param durationMs Duration of the highlight animation in milliseconds
      * @return Highlight ID that can be used to remove it later
      */
-    fun addHighlight(line: Int, column: Int, length: Int): String {
+    fun addHighlight(line: Int, column: Int, length: Int, durationMs: Double = 300.0): String {
         val view = editor ?: return ""
 
         // Check if window has focus - if not, clear all highlights and return immediately
@@ -224,7 +227,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
             }
 
             // Create the highlight range and effect
-            val range = HighlightRange(from, to, highlightId)
+            val range = HighlightRange(from, to, highlightId, durationMs)
             val effect = addHighlightEffect.of(range.unsafeCast<HighlightRange>())
 
             // Dispatch transaction
