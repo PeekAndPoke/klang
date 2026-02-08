@@ -6,6 +6,11 @@ package io.peekandpoke.klang.audio_engine
  */
 interface KlangPlayback {
     /**
+     * Signal bus for subscribing to playback lifecycle signals.
+     */
+    val signals: KlangPlaybackSignals
+
+    /**
      * Start playback
      */
     fun start()

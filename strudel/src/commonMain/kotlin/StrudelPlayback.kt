@@ -8,6 +8,8 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangLock
 import io.peekandpoke.klang.audio_bridge.infra.withLock
 import io.peekandpoke.klang.audio_engine.KlangPlayback
+import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
@@ -73,15 +75,12 @@ class StrudelPlayback internal constructor(
     private val samplesAlreadySent = mutableSetOf<SampleRequest>()
     private val klangTime = KlangTime.create()
 
-    // ===== Live Coding Callbacks =====
+    // ===== Signal Bus =====
 
     /**
-     * Callback fired when a voice is scheduled for playback
-     *
-     * Used for live code highlighting - provides timing and source location information
-     * so the frontend can highlight the corresponding source code.
+     * Signal bus for playback lifecycle signals.
      */
-    var onVoiceScheduled: ((event: ScheduledVoiceEvent) -> Unit)? = null
+    override val signals = KlangPlaybackSignals()
 
     // ===== Public API =====
 
@@ -139,6 +138,10 @@ class StrudelPlayback internal constructor(
         // Send clean up command to backend
         cleanUpBackend()
 
+        // Emit stopped signal and clear listeners
+        signals.emit(KlangPlaybackSignal.PlaybackStopped)
+        signals.clear()
+
         // Notify the player that this playback has stopped
         onStopped(this)
     }
@@ -156,13 +159,102 @@ class StrudelPlayback internal constructor(
         }
     }
 
-    private suspend fun run(scope: CoroutineScope) {
-        // Record start time for autonomous progression
-        startTimeMs = klangTime.internalMsNow()
+    /**
+     * Pre-fetches samples needed for the first cycles of the pattern.
+     *
+     * Queries the pattern for the first cycles, identifies sample sounds,
+     * loads their PCM data, and sends them to the backend BEFORE any voices are scheduled.
+     *
+     * This ensures the backend has sample data available when the first ScheduleVoice
+     * commands arrive, preventing silent first notes.
+     */
+    private suspend fun preloadSamples() {
+        val preloadStartMs = klangTime.internalMsNow()
 
+        // Query first 2 cycles for sample discovery
+        val prefetchCycles = 2.0
+        val preloadVoices = try {
+            queryEvents(from = 0.0, to = prefetchCycles, sendEvents = false)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
+
+        // Identify unique sample requests (non-oscillator sounds)
+        val sampleRequests = preloadVoices
+            .map { it.data.asSampleRequest() }
+            .toSet()
+
+        if (sampleRequests.isEmpty()) return
+
+        // Emit preloading signal
+        signals.emit(
+            KlangPlaybackSignal.PreloadingSamples(
+                count = sampleRequests.size,
+                samples = sampleRequests.map { "${it.bank ?: ""}/${it.sound ?: ""}:${it.index ?: 0}" },
+            )
+        )
+
+        // Load all samples concurrently and send to backend
+        val jobs = sampleRequests.map { req ->
+            scope.async(fetcherDispatcher) {
+                // Remember this sample so lookAheadForSampleSounds doesn't re-request it
+                samplesAlreadySent.add(req)
+
+                // Resolve and load
+                val loaded = samples.get(req)
+                val loadedSample = loaded?.sample
+                val loadedPcm = loaded?.pcm
+
+                val cmd = if (loadedSample == null || loadedPcm == null) {
+                    KlangCommLink.Cmd.Sample.NotFound(
+                        playbackId = playbackId,
+                        req = req,
+                    )
+                } else {
+                    KlangCommLink.Cmd.Sample.Complete(
+                        playbackId = playbackId,
+                        req = req,
+                        note = loadedSample.note,
+                        pitchHz = loadedSample.pitchHz,
+                        sample = loadedPcm,
+                    )
+                }
+
+                // Send to backend (this goes into the ring buffer, processed in order)
+                control.send(cmd)
+            }
+        }
+
+        // Wait for ALL samples to be loaded and sent
+        jobs.forEach { it.await() }
+
+        val durationMs = (klangTime.internalMsNow() - preloadStartMs).toLong()
+
+        // Emit completion signal
+        signals.emit(
+            KlangPlaybackSignal.SamplesPreloaded(
+                count = sampleRequests.size,
+                durationMs = durationMs,
+            )
+        )
+    }
+
+    private suspend fun run(scope: CoroutineScope) {
         // Reset state
         queryCursorCycles = 0.0
         sampleSoundLookAheadPointer = 0.0
+
+        // ===== PRELOAD PHASE =====
+        // Query first cycles to discover and preload samples before any voices are scheduled.
+        // This ensures the backend has sample data before it tries to play them.
+        preloadSamples()
+
+        // NOW record start time — after preloading, so playback time starts fresh
+        startTimeMs = klangTime.internalMsNow()
+
+        // Emit started signal
+        signals.emit(KlangPlaybackSignal.PlaybackStarted)
 
         lookAheadForSampleSounds(0.0, sampleSoundLookAheadCycles)
 
@@ -215,8 +307,8 @@ class StrudelPlayback internal constructor(
         val secPerCycle = 1.0 / cyclesPerSecond
         val playbackStartTimeSec = startTimeMs / 1000.0
 
-        // Build voice events for callbacks (collected first to avoid blocking audio scheduling)
-        val voiceEvents = mutableListOf<ScheduledVoiceEvent>()
+        // Build voice signal events for callbacks (collected first to avoid blocking audio scheduling)
+        val signalEvents = mutableListOf<KlangPlaybackSignal.VoicesScheduled.VoiceEvent>()
 
         val voices = events.map { event ->
             // Use whole for scheduling (complete event), not part (clipped portion)
@@ -228,32 +320,35 @@ class StrudelPlayback internal constructor(
             val absoluteStartTime = playbackStartTimeSec + relativeStartTime
             val absoluteEndTime = absoluteStartTime + duration
 
-            // Collect callback event (don't invoke yet - audio scheduling is critical path)
-            voiceEvents.add(
-                ScheduledVoiceEvent(
+            // Convert to VoiceData once (used by both ScheduledVoice and signal)
+            val voiceData = event.data.toVoiceData()
+
+            // Collect signal event (don't invoke yet - audio scheduling is critical path)
+            signalEvents.add(
+                KlangPlaybackSignal.VoicesScheduled.VoiceEvent(
                     startTime = absoluteStartTime,
                     endTime = absoluteEndTime,
-                    data = event.data,
+                    data = voiceData,
                     sourceLocations = event.sourceLocations,
                 )
             )
 
             ScheduledVoice(
                 playbackId = playbackId,
-                data = event.data.toVoiceData(),
-                startTime = relativeStartTime,       // ← CHANGED: relative, not absolute
+                data = voiceData,
+                startTime = relativeStartTime,               // ← CHANGED: relative, not absolute
                 gateEndTime = relativeStartTime + duration,  // ← CHANGED: relative, not absolute
             )
         }
 
-        // Fire callbacks on separate dispatcher to avoid blocking audio scheduling
-        if (sendEvents && voiceEvents.isNotEmpty() && onVoiceScheduled != null) {
+        // Fire signals on separate dispatcher to avoid blocking audio scheduling
+        if (sendEvents && signalEvents.isNotEmpty()) {
             scope.launch(callbackDispatcher) {
-                voiceEvents
-                    .distinctBy { it.startTime to it.sourceLocations }
-                    .forEach { event ->
-                        onVoiceScheduled?.invoke(event)
-                    }
+                signals.emit(
+                    KlangPlaybackSignal.VoicesScheduled(
+                        voices = signalEvents.distinctBy { it.startTime to it.sourceLocations }
+                    )
+                )
             }
         }
 

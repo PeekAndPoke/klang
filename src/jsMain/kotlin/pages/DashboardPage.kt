@@ -20,11 +20,11 @@ import de.peekandpoke.ultra.streams.ops.map
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.strudel.ScheduledVoiceEvent
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -80,7 +80,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun scheduleHighlight(event: ScheduledVoiceEvent) {
+    private fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
         // console.log("Voice scheduled:", event.startTime, event.endTime, Date.now())
 
         fun doIt(location: SourceLocation) {
@@ -118,9 +118,8 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
         }
 
         // Highlight in editor
-        event.sourceLocations
+        (event.sourceLocations as? io.peekandpoke.klang.script.ast.SourceLocationChain)
             ?.locations
-            ?.takeLast(2)
             ?.forEach { doIt(it) }
     }
 
@@ -133,8 +132,20 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
                         song = p.playStrudel(pattern)
 
-                        // Set up live code highlighting callback
-                        song?.onVoiceScheduled = { event -> scheduleHighlight(event) }
+                        // Set up live code highlighting via signals
+                        song?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
+                            signal.voices.forEach { voiceEvent ->
+                                scheduleHighlight(voiceEvent)
+                            }
+                        }
+
+                        // Optional: Listen to other lifecycle signals
+                        song?.signals?.on<KlangPlaybackSignal.PreloadingSamples> { signal ->
+                            console.log("Preloading ${signal.count} samples...")
+                        }
+                        song?.signals?.on<KlangPlaybackSignal.SamplesPreloaded> { signal ->
+                            console.log("Samples loaded in ${signal.durationMs}ms")
+                        }
 
                         song?.start(
                             StrudelPlayback.Options(cyclesPerSecond = cps)
