@@ -453,7 +453,7 @@ class StrudelPlayback internal constructor(
                     // The difference is how long it took for our voices to reach the backend.
                     backendLatencyMs = evt.backendTimestampMs - startTimeMs
                     // Clamp to reasonable range (0 to 500ms). Negative means clock skew, treat as 0.
-                    backendLatencyMs = backendLatencyMs.coerceIn(0.0, 500.0)
+                    backendLatencyMs = backendLatencyMs.coerceIn(0.0, 1000.0)
                 }
             }
         }

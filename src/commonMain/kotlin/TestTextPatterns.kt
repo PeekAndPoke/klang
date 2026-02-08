@@ -22,75 +22,73 @@ object TestTextPatterns {
 import * from "stdlib"
 import * from "strudel"
 
-// CPS: 0.58
-
 stack(
     // melody
     arrange(
       [8, silence],
       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
     ).sound("triangle").scale("C4:minor")
-    .orbit(1).gain(0.3).adsr("0.05:0.7:0.0:0.3")
+    .orbit(1).gain(0.3).adsr("0.05:0.7:0.0:0.2")
     .hpf(800)
     .superimpose(x => x.transpose("12").gain(0.5))
     , // bass  ---------------------------------------------------------
     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-    .orbit(3).sound("supersaw").unison(4).detune(0.1)
-    .adsr("0.0:0.3:0.0:0.1").lpf(1000).gain(1.0).postgain(2.0)
+    .orbit(3).sound("supersaw").unison(8).detune(0.1)
+    .adsr("0.02:0.3:0.0:0.1").lpf(1200).hpf(80).gain(1.0).postgain(1.5)
     , // Drums ---------------------------------------------------------
     sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
      .orbit(4).pan(0.5).gain(0.9)
      .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.3),
 ).room(0.1).rsize(5.0)
-                
+                                
     """.trimIndent()
 
     val tetris = """
 import * from "stdlib"
 import * from "strudel"
 
-// CPS: 0.63
 stack(
-    note(`<
-        [e5 [b4 c5] d5 [c5 b4]]    [a4 [a4 c5] e5 [d5 c5]]
-        [b4 [~ c5] d5 e5]          [c5 a4 a4 ~]
+  note(`<
+    [e5 [b4 c5] d5 [c5 b4]]    [a4 [a4 c5] e5 [d5 c5]]
+    [b4 [~ c5] d5 e5]          [c5 a4 a4 ~]
+    
+    [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]
+    [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
+  >`)
+    .sound("tri").clip(0.33).hpf(600)
+    .superimpose(x => x.transpose("<0 12 0 -12>/8"))
+    .orbit(0).gain(0.22).pan(cosine2.range(0.3, 0.7).oneMinusValue().slow(64))
+    .delay(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)      
+    .filterWhen(x => x >= 16)
+  ,
+  note(`<
+    [[e2 e3]*4]                   [[a2 a3]*4] 
+    [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
         
-        [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]
-        [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
-    >`)
-      .sound("tri").clip(0.33).hpf(600)
-      .superimpose(x => x.transpose("<0 12 0 -12>/8"))
-      .orbit(0).gain(0.225).pan(cosine2.range(0.2, 0.8).oneMinusValue().slow(64))
-      .delay(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)      
-      .filterWhen(x => x >= 16)
-    ,
-    note(`<
-        [[e2 e3]*4]                   [[a2 a3]*4] 
-        [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5]]
-            
-        [[d2 d3]*4]                   [[c2 c3]*4]
-        [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5 a4] [a2 a3]]
-    >`)
-      .superimpose(x => x.transpose("<0 12 0 -12>/8"))
-      .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).detune(sine.range(0.05, 0.3).early(1.5).slow(12))
-      .orbit(2).gain(0.65).pan(cosine2.slow(64).range(0.2, 0.8)).adsr("0.01:0.25:0.5:0.25")
-      .superimpose(x => x.bandf(sine.range(2000, 4000).slow(48)).bandq(1.1))
-      .filterWhen(x => x >= 31.4)
-    ,
-    sound(`<
-        [[bd:2, cr, cr] hh sd hh]   [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
-        [[bd, hh] hh sd hh]         [bd hh sd oh]   [bd hh sd hh]             [bd hh [mt mt, sd] [ht ht, oh]]            
-        [[bd:2, cr] hh sd hh]       [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
-        [[bd, hh] hh [sd, hh] oh]   [bd hh sd oh]   [bd hh sd hh]             [bd hh [sd sd] [sd sd]]
-            
-        [[bd:2, cr, cr] hh sd sd]   [bd hh sd oh]   [bd hh sd hh]             [bd hh sd hh]
-        [[bd, hh] hh sd [hh sd]]    [bd hh sd oh]   [bd hh sd hh]             [bd hh [lt lt, sd sd] ~]            
-        [[bd:2, cr] hh sd [sd, hh]] [bd hh sd:8 oh] [bd hh sd hh]             [bd hh sd [bd, oh]]
-        [[bd, cr] oh sd oh]         [cr hh cr hh]   [[sd, oh] bd sd [bd, hh]] [sd [bd, hh] [bd bd] [bd bd, hh]]
-    >`)
-      .orbit(3).gain(0.8).adsr("0.01:0.2:0.8:0.5")
-      .fast(2)
-).room(0.1).rsize(2.0) //.compressor("-24:1.2:8:0.03:0.2")
+    [[d2 d3]*4]                   [[c2 c3]*4]
+    [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5 a4] [a2 a3]]
+  >`)
+    .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32))
+    .orbit(1).gain(1.0).pan(cosine2.slow(64).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")
+    .superimpose(x => x.transpose("<0 12 0 -12>/8").bandf(sine.range(2000, 6000).slow(24)).bandq(1.2).gain(0.75))
+    .detune(sine.range(0.05, 0.3).early(1.5).slow(12))
+    .filterWhen(x => x >= 31.4)
+  ,
+  sound(`<
+    [[bd:2,cr,cr] hh sd hh]       [bd hh sd   oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh sd hh]       [bd hh sd   oh]  [bd      hh sd hh]       [bd hh      [mt mt,sd]    [ht ht,oh]]
+    [[bd:2,cr]    hh sd hh]       [bd hh sd   oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh [sd,hh] oh]  [bd hh sd   oh]  [bd      hh sd hh]       [bd hh      [sd sd]       [sd sd]   ]
+                                                                           
+    [[bd:2,cr,cr] hh sd sd]       [bd hh sd   oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh sd [hh sd]]  [bd hh sd   oh]  [bd      hh sd hh]       [bd hh      [lt lt,sd sd] ~         ]
+    [[bd:2,cr]    hh sd [sd,hh]]  [bd hh sd:8 oh]  [bd      hh sd hh]       [bd hh      sd            [bd,oh]   ]
+    [[bd,cr]      hh sd hh]       [cr hh cr   hh]  [[sd,oh] bd sd [bd,hh]]  [sd [bd,hh] [bd bd]       [bd bd,hh]]
+  >`)
+    .orbit(1).gain(0.8).adsr("0.01:0.2:0.8:0.5")
+    .fast(2)
+  ,
+).room(0.1).rsize(2.0).compressor("-24:1.2:8:0.03:0.2")
   
     """.trimIndent()
 
@@ -101,40 +99,40 @@ import * from "strudel"
 let wait = 16
 
 stack(
-    sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).gain(0.3).legato(2.0)
-        .bandf(sine.range(1400, 1600).fast(3.14))
-        .filterWhen(x => x >= wait * 10)
-    , // Lyrics --------------------------------------------------------------------------------------------
-    n("0").morse("Schön ist es auf der Welt zu sein!")
-        .scale("C6:major").scaleTranspose("0 -2 2 7".slow(32))
-        .sound("square").warmth(1.0).gain(0.9).pan(berlin.slow(2)).adsr("0.05:0.2:0.2:0.0")
-        .filterWhen(x => x >= wait * 6)
-    , // Melody --------------------------------------------------------------------------------------------
-    n("<[0 2 4 6 7 6 4 2]>").scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-        .s("supersaw").unison(8).detune(saw.range(0.0, 0.25).slow(16)).spread(1.0)
-        .gain(0.06).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.05:0.5:0.7:0.1")
-        .distort(2.0)
-        .lpenv(perlin.slow(4).range(0, 3))
-        .filterWhen(x => x >= wait * 3)
-    , // Bass ----------------------------------------------------------------------------------------------
-    note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [c2@2 e2@5 [e1 e1]]>/8").clip(0.75).struct("x!8")
-        .gain(0.75).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.5")
-        .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.6).legato(1.2))
-        .s("supersaw").unison(8).detune(saw.range(0.05, 0.4).slow(16))
-        .lpf(6 * 440).hpf(60).crush(sine.range(3.5, 12.0).slow(32))
-        .filterWhen(x => x >= wait * 0.5)
-    , // Perc 2 --------------------------------------------------------------------------------------------
-    sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-        .gain(0.8).pan(0.4).adsr("0.01:1.0:1.0:1.0").fast(2).degrade(0.1)
-        .filterWhen(x => x >= wait * 1)
-    , // Perc 1 --------------------------------------------------------------------------------------------
-    sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-        .gain(0.8).pan(0.5).adsr("0.01:0.2:0.5:1.0").degrade(0.01).hpf(60)        
-        .filterWhen(x => x >= wait * 0.5)
-    , // Wind ----------------------------------------------------------------------------------------------
-    note("a").fast(16).sound("brown")
-     .gain(0.1).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.05:1.0:1.0:0.5")
-     .bandf(perlin.range(440, 440 * 4).slow(16)).bandq(sine.range(-0.05, 5.0).slow(12))
+  sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).gain(0.3).legato(2.0)
+    .bandf(sine.range(1400, 1600).fast(3.14))
+    .filterWhen(x => x >= wait * 10)
+  , // Lyrics --------------------------------------------------------------------------------------------
+  n("0").morse("Schön ist es auf der Welt zu sein!")
+    .scale("C6:major").scaleTranspose("0 -2 2 7".slow(32))
+    .sound("square").warmth(1.0).gain(1.1).pan(berlin.slow(2)).adsr("0.05:0.2:0.2:0.0")
+    .filterWhen(x => x >= wait * 6)
+  , // Melody --------------------------------------------------------------------------------------------
+  n("<[0 2 4 6 7 6 4 2]>").scale("[c3:major c3:pentatonic c3:major c3:major]/16")
+    .s("supersaw").unison(8).detune(saw.range(0.0, 0.25).slow(16)).spread(1.0)
+    .gain(0.09).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.05:0.5:0.7:0.1")
+    .distort(1.2)
+    .lpenv(perlin.slow(4).range(0, 3))
+    .filterWhen(x => x >= wait * 3)
+  , // Bass ----------------------------------------------------------------------------------------------
+  note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [c2@2 e2@5 [e1 e1]]>/8").clip(0.75).struct("x!8")
+    .gain(0.75).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.2")
+    .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.65).legato(1.2))
+    .s("supersaw").unison(8).detune(saw.range(0.05, 0.4).slow(16))
+    .lpf(6 * 440).hpf(80).crush(sine.range(3.5, 12.0).slow(32))
+    .filterWhen(x => x >= wait * 0.5)
+  , // Perc 2 --------------------------------------------------------------------------------------------
+  sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
+    .gain(0.8).pan(0.4).adsr("0.01:1.0:1.0:1.0").fast(2).degrade(0.1)
+    .filterWhen(x => x >= wait * 1)
+  , // Perc 1 --------------------------------------------------------------------------------------------
+  sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
+    .gain(0.8).pan(0.5).adsr("0.01:0.2:0.5:1.0").degrade(0.01).hpf(60)        
+    .filterWhen(x => x >= wait * 0.5)
+  , // Wind ----------------------------------------------------------------------------------------------
+  note("a").fast(16).sound("brown")
+    .gain(0.1).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.05:1.0:1.0:0.5")
+    .bandf(perlin.range(440, 440 * 4).slow(16)).bandq(sine.range(-0.05, 5.0).slow(12))
   ,
 ).delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)
   .room(0.05).rsize(5.0)
@@ -145,37 +143,54 @@ stack(
 import * from "stdlib"
 import * from "strudel"
 
-// https://google.de
-let wait = 16
+// https://open.spotify.com/intl-de/track/58Hx7vKWjxuQyZ9XgUh3Wl?si=9c254ec279fe47f3
 
 stack(
   // Guitar 1 ----------------------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .fast(4).scale("C3:chromatic").clip(0.75).hpf(800).lpf(4000).pan(0.4)
-    .s("supersaw").unison(12).detune(0.05).distort(1.5).gain(0.25)
+    .s("supersaw").unison(12).detune(0.05).distort(1.5).gain(0.225)
     .adsr("0.02:0.2:0.3:0.2")
   // .hush()
   , // Guitar 2 ----------------------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .fast(4).scale("C4:chromatic").clip(0.75).hpf(800).lpf(4000).gain(1.0).pan(0.6)
-    .s("supersaw").unison(12).detune(0.05).distort(1.5).gain(0.25)
+    .s("supersaw").unison(12).detune(0.05).distort(1.5).gain(0.225)
     .adsr("0.02:0.2:0.3:0.2")
   , // Guitar 3 ----------------------------------------------------------------------------------------------
   cat(
-    n(`<[0,7,12]                               [[0,7,12]!3 ~  ~!12]
-        [0,7,12]                               [[8,15,20]     [10,17,22]]>`),
-    // n(`<[0!16] [0!16] [0!16] [0!16]>`),
-  )
-    .fast(1).scale("C2:chromatic").clip(1.0).pan(0.5).hpf(200).lpf(3000)
+    n(`<[0,7,12]                                [[0,7,12]!3 ~  ~!12]
+        [0,7,12]                                [[8,15,20]     [10,17,22]]>`).repeat(2),
+    n(`<[0!11 8!4 7]                            [0!11 5!4 3] 
+        [0!11 8!4 7]                            [[8,15]!7 [10,17]!9]>`).repeat(2),
+  ).fast(1).scale("C2:chromatic").clip(1.0).pan(0.5).hpf(120).lpf(2500)
     .s("supersaw").unison(6).detune(0.10).distort(1.5).gain(0.8).postgain(0.3)
     .adsr("0.02:0.2:0.5:0.2")
   , // Drums --------------------------------------------------------------------------------------------
-  s("[bd bd] [sd bd] [~ bd] [sd bd] [~ bd] [sd bd] [~ bd] sd").adsr("0.01:0.3:0.5:1.0"),
-  s("hh hh hh hh hh hh hh hh").fast(2).adsr("0.01:0.3:0.5:1.0"),
-).room(0.5).rsize(2.0)
-                
+  cat(
+    s(`<[lt,sd]                                 [[lt,sd]!3 ~   ~!12]
+        [lt,sd]                                 [[lt,sd]       [lt,sd]]>`).repeat(2),
+    s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd] [~ bd] sd
+        [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd] [~ bd] sd>`).fast(8).repeat(4)
+  ).adsr("0.01:0.3:1.0:1.0"),
+  s("cr hh hh hh hh hh hh hh").fast(2).adsr("0.01:0.3:1.0:1.0"),
+).room(0.2).rsize(2.0)
+
+
+
+/*
+░▒▓████████▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░    ░▒▓█▓▒░░▒▓█▓▒░░▒▓██████▓▒░░▒▓█▓▒░      ░▒▓██████▓▒░     ░▒▓████████▓▒░▒▓████████▓▒░▒▓████████▓▒░▒▓████████▓▒░▒▓██████▓▒░▒▓████████▓▒░ 
+   ░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░           ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░    ░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░     
+   ░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░           ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░    ░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░     ░▒▓█▓▒░        ░▒▓█▓▒░     
+   ░▒▓█▓▒░   ░▒▓████████▓▒░▒▓██████▓▒░      ░▒▓████████▓▒░▒▓████████▓▒░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░    ░▒▓██████▓▒░ ░▒▓██████▓▒░ ░▒▓██████▓▒░ ░▒▓██████▓▒░░▒▓█▓▒░        ░▒▓█▓▒░     
+   ░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░           ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░    ░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░     ░▒▓█▓▒░        ░▒▓█▓▒░     
+   ░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░           ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░    ░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░     ░▒▓█▓▒░░▒▓█▓▒░ ░▒▓█▓▒░     
+   ░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░    ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░▒▓██████▓▒░     ░▒▓████████▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓████████▓▒░▒▓██████▓▒░  ░▒▓█▓▒░     
+*/ 
+
+
     """.trimIndent()
 
     val tetrisOriginal = """

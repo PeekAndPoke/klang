@@ -13,7 +13,7 @@ object BuiltInSongs {
         Song(
             id = "builtin-song-0000001",
             title = "Tetris",
-            cps = 0.65,
+            cps = 0.63,
             code = TestTextPatterns.tetris,
         )
     )
@@ -22,7 +22,7 @@ object BuiltInSongs {
         Song(
             id = "builtin-song-0000002",
             title = "Smalltown Boy",
-            cps = 0.65,
+            cps = 0.58,
             code = TestTextPatterns.smallTownBoy,
         )
     )

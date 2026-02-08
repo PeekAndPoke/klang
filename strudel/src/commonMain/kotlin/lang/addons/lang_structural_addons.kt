@@ -243,3 +243,47 @@ fun StrudelPattern.timeLoop(duration: Rational): StrudelPattern {
         }
     }
 }
+
+// -- repeat() ---------------------------------------------------------------------------------------------------------
+
+fun applyRepeat(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val times = args.firstOrNull()?.value?.asIntOrNull() ?: 1
+    if (times <= 0) return silence
+    if (times == 1) return pattern
+
+    // Create a list with the pattern repeated n times
+    val patterns = List(times) { pattern }
+
+    // Concatenate them sequentially
+    return applyCat(patterns)
+}
+
+/**
+ * Repeats the pattern n times sequentially.
+ * The total duration will be n * original_duration.
+ *
+ * @param {n} number of repetitions
+ * @example note("a b").repeat(2) // plays "a b a b" over 2 cycles
+ */
+@StrudelDsl
+val repeat by dslFunction { args, /* callInfo */ _ ->
+    if (args.isEmpty()) return@dslFunction silence
+
+    // If called as function: repeat(3, note("a"))
+    val timesArg = args[0]
+    val patterns = args.drop(1).toListOfPatterns()
+
+    if (patterns.isEmpty()) return@dslFunction silence
+
+    // Apply repeat to the first pattern (or stack of patterns if multiple provided?)
+    // Standard convention: repeat(n, pattern)
+    applyRepeat(patterns.first(), listOf(timesArg))
+}
+
+@StrudelDsl
+val StrudelPattern.repeat by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyRepeat(p, args)
+}
+
+@StrudelDsl
+val String.repeat by dslStringExtension { p, args, callInfo -> p.repeat(args, callInfo) }
