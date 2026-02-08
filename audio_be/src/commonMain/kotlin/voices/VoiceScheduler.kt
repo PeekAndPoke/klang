@@ -54,13 +54,23 @@ class VoiceScheduler(
         val req: SampleRequest
     }
 
+    // The samples uploaded to the backend
     private val samples = mutableMapOf<SampleRequest, SampleEntry>()
 
+    // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
+
+    // State with active voices
     private val active = ArrayList<Voice>(64)
 
     // Global start time for absolute time to frame conversion
     private var backendStartTimeSec: Double = 0.0
+
+    // Map playbackId -> backend-local epoch (seconds since backend start) when this playback was first seen
+    private val playbackEpochs = mutableMapOf<String, Double>()
+
+    // Track the last processed frame (for epoch recording)
+    private var lastProcessedFrame: Long = 0
 
     // Scratch buffers
     private val voiceBuffer = DoubleArray(options.blockFrames)
@@ -104,6 +114,7 @@ class VoiceScheduler(
     fun clear() {
         scheduled.clear()
         active.clear()
+        playbackEpochs.clear()
     }
 
     fun addSample(msg: KlangCommLink.Cmd.Sample) {
@@ -169,23 +180,36 @@ class VoiceScheduler(
         backendStartTimeSec = startTimeSec
     }
 
-    fun scheduleVoice(playbackId: String, voice: ScheduledVoice) {
-        // Voice already has absolute time from KlangTime
-        // Just schedule it directly
+    /**
+     * Cleans up state for the given playbackId.
+     */
+    fun cleanup(playbackId: String) {
+        playbackEpochs.remove(playbackId)
+    }
+
+    fun scheduleVoice(voice: ScheduledVoice) {
+        val pid = voice.playbackId
+
+        // Auto-register playback epoch on first voice
+        if (pid !in playbackEpochs) {
+            // Record "now" in backend time as this playback's epoch
+            // All voice times for this playback are relative to this moment.
+            val nowSec = backendStartTimeSec + (lastProcessedFrame.toDouble() / options.sampleRate.toDouble())
+            playbackEpochs[pid] = nowSec
+        }
+
+        // Schedule directly — no offset adjustment needed.
+        // Times are relative to playback start; conversion happens in promoteScheduled.
         scheduled.push(voice)
 
-        // Prefetch sound samples
+        // Prefetch sound samples (unchanged)
         if (voice.data.isSampleSound()) {
             val req = voice.data.asSampleRequest()
-
             if (!samples.containsKey(req)) {
-                // make sure we do not request this one again
                 samples[req] = SampleEntry.Requested(req)
-
-                // println("VoiceScheduler: requesting sample ${voice.data.asSampleRequest()}")
                 options.commLink.feedback.send(
                     KlangCommLink.Feedback.RequestSample(
-                        playbackId = playbackId,
+                        playbackId = pid,
                         req = voice.data.asSampleRequest(),
                     )
                 )
@@ -194,6 +218,7 @@ class VoiceScheduler(
     }
 
     fun process(cursorFrame: Long) {
+        lastProcessedFrame = cursorFrame
         val blockEnd = cursorFrame + options.blockFrames
 
         // println("active voices: ${active.size}")
@@ -225,26 +250,44 @@ class VoiceScheduler(
     }
 
     private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
-        // Convert backend-relative frames to absolute time (from KlangTime epoch)
-        val blockEndAbsSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
+        val blockEndSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
+        val nowSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
+
+        // Allow events up to 1 block in the past (normal scheduling jitter)
+        val oldestAllowedSec = nowSec - (options.blockFrames.toDouble() / options.sampleRate.toDouble())
 
         while (true) {
-            // Do we have a voice scheduled?
             val head = scheduled.peek() ?: break
-            // Optimization: Early exit if we're past the block end
-            if (head.startTime >= blockEndAbsSec) break
 
-            // println("Starting voice with note '${head.data.note}' at time ${head.startTime}")
+            // Look up this playback's epoch
+            val epoch = playbackEpochs[head.playbackId]
+            if (epoch == null) {
+                // No epoch recorded — shouldn't happen, but skip gracefully
+                scheduled.pop()
+                continue
+            }
 
-            // Remove the head
+            // Convert relative time to absolute backend time
+            val absoluteStartSec = epoch + head.startTime
+
+            // Early exit: if this event is beyond current block, stop
+            if (absoluteStartSec >= blockEndSec) break
+
+            // Remove from heap
             scheduled.pop()
-            // 1. Drop if too old (e.g. more than 1 block in the past)
-            // If the system lagged, we don't want to blast 50 old notes at once.
-            val oldestAllowedAbsSec =
-                backendStartTimeSec + ((nowFrame - options.blockFrames).toDouble() / options.sampleRate.toDouble())
-            if (head.startTime <= oldestAllowedAbsSec) continue
-            // Finally, make a voice
-            makeVoice(head, nowFrame)?.let {
+
+            // Drop if too old
+            if (absoluteStartSec < oldestAllowedSec) {
+                continue
+            }
+
+            // Convert the voice to use absolute times for makeVoice
+            val absoluteVoice = head.copy(
+                startTime = absoluteStartSec,
+                gateEndTime = epoch + head.gateEndTime,
+            )
+
+            makeVoice(absoluteVoice, nowFrame)?.let {
                 active.add(it)
             }
         }

@@ -56,10 +56,13 @@ data class StrudelPatternEvent(
 }
 
 /**
- * Event fired when a voice is scheduled for playback
+ * Event fired when a voice is scheduled for playback.
  *
- * Used for live code highlighting - provides timing and source location information.
- * Not serialized - only used for frontend callbacks.
+ * Uses ABSOLUTE wall-clock times (from KlangTime epoch) because
+ * this is consumed by the frontend UI for highlighting (compared with Date.now()).
+ *
+ * Note: This is different from ScheduledVoice which uses RELATIVE times
+ * (seconds since playback start) for the audio backend.
  */
 data class ScheduledVoiceEvent(
     /** Absolute start time (seconds from KlangTime epoch) */

@@ -90,10 +90,11 @@ class KlangAudioWorklet : AudioWorkletProcessor {
 
                     when (cmd) {
                         is KlangCommLink.Cmd.ScheduleVoice -> {
-                            ctx.voices.scheduleVoice(
-                                playbackId = cmd.playbackId,
-                                voice = cmd.voice,
-                            )
+                            ctx.voices.scheduleVoice(voice = cmd.voice)
+                        }
+
+                        is KlangCommLink.Cmd.Cleanup -> {
+                            ctx.voices.cleanup(cmd.playbackId)
                         }
 
                         is KlangCommLink.Cmd.Sample -> ctx.voices.addSample(msg = cmd)

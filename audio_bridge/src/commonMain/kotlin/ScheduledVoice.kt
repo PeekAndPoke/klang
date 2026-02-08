@@ -7,10 +7,12 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class ScheduledVoice(
+    /** The ID of the playback (song) this voice belongs to */
+    val playbackId: String,
     /** The event that triggered this voice */
     val data: VoiceData,
-    /** Time in seconds to start the voice */
+    /** Time in seconds relative to playback start */
     val startTime: Double,
-    /** Time in seconds when the note key is lifted (Start + Duration) */
+    /** Time in seconds relative to playback start when the note key is lifted */
     val gateEndTime: Double,
 )

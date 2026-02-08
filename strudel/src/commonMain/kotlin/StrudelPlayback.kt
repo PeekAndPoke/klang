@@ -136,11 +136,25 @@ class StrudelPlayback internal constructor(
             fetcherJob = null
         }
 
+        // Send clean up command to backend
+        cleanUpBackend()
+
         // Notify the player that this playback has stopped
         onStopped(this)
     }
 
     // ===== Private Implementation =====
+
+
+    /**
+     * Cleans up backend state for this playback.
+     */
+    private fun cleanUpBackend() {
+        // Notify backend to clean up this playback session
+        scope.launch(fetcherDispatcher) {
+            control.send(KlangCommLink.Cmd.Cleanup(playbackId))
+        }
+    }
 
     private suspend fun run(scope: CoroutineScope) {
         // Record start time for autonomous progression
@@ -210,7 +224,7 @@ class StrudelPlayback internal constructor(
             val relativeStartTime = (timeSpan.begin * secPerCycle).toDouble()
             val duration = (timeSpan.duration * secPerCycle).toDouble()
 
-            // Convert to absolute time
+            // Absolute times for UI callbacks (need wall-clock for setTimeout highlighting)
             val absoluteStartTime = playbackStartTimeSec + relativeStartTime
             val absoluteEndTime = absoluteStartTime + duration
 
@@ -225,9 +239,10 @@ class StrudelPlayback internal constructor(
             )
 
             ScheduledVoice(
+                playbackId = playbackId,
                 data = event.data.toVoiceData(),
-                startTime = absoluteStartTime,
-                gateEndTime = absoluteEndTime,
+                startTime = relativeStartTime,       // ← CHANGED: relative, not absolute
+                gateEndTime = relativeStartTime + duration,  // ← CHANGED: relative, not absolute
             )
         }
 

@@ -46,6 +46,11 @@ object WorkletContract {
 
     private fun Cmd.encode(): dynamic {
         return when (this) {
+            is Cmd.Cleanup -> jsObject {
+                it.type = Cmd.Cleanup.SERIAL_NAME
+                it[Cmd::playbackId.name] = playbackId
+            }
+
             is Cmd.ScheduleVoice -> jsObject {
                 it.type = Cmd.ScheduleVoice.SERIAL_NAME
                 it[Cmd::playbackId.name] = playbackId
@@ -85,6 +90,10 @@ object WorkletContract {
 
     private fun decodeCmd(msg: dynamic): Cmd {
         return when (val type = msg.type) {
+            Cmd.Cleanup.SERIAL_NAME -> Cmd.Cleanup(
+                playbackId = msg[Cmd::playbackId.name],
+            )
+
             Cmd.ScheduleVoice.SERIAL_NAME -> Cmd.ScheduleVoice(
                 playbackId = msg[Cmd::playbackId.name],
                 voice = decodeScheduledVoice(msg[Cmd.ScheduleVoice::voice.name])

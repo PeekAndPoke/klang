@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
+import kotlin.math.PI
 import kotlin.math.sin
 
 /**
@@ -274,7 +275,7 @@ object TestSamples {
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = FloatArray(size) {
-                sin(2.0 * Math.PI * it / size).toFloat()
+                sin(2.0 * PI * it / size).toFloat()
             },
             meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
         )

@@ -85,10 +85,11 @@ class JvmAudioBackend(
 
                     when (cmd) {
                         is KlangCommLink.Cmd.ScheduleVoice -> {
-                            voices.scheduleVoice(
-                                playbackId = cmd.playbackId,
-                                voice = cmd.voice,
-                            )
+                            voices.scheduleVoice(voice = cmd.voice)
+                        }
+
+                        is KlangCommLink.Cmd.Cleanup -> {
+                            voices.cleanup(cmd.playbackId)
                         }
 
                         is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)

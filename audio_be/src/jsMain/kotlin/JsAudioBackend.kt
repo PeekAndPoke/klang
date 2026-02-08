@@ -118,9 +118,7 @@ class JsAudioBackend(
                     val cmd = commLink.control.receive() ?: break
 
                     when (cmd) {
-                        // Direct forwarding
-                        is KlangCommLink.Cmd.ScheduleVoice -> node.port.sendCmd(cmd)
-
+                        // Special handling for Samples ... we split the data for big samples
                         is KlangCommLink.Cmd.Sample -> when (cmd) {
                             // Direct forwarding
                             is KlangCommLink.Cmd.Sample.NotFound,
@@ -134,6 +132,9 @@ class JsAudioBackend(
                                 chunks.forEach { chunk -> sampleUploadBuffer.send(chunk) }
                             }
                         }
+
+                        // All others are forwarded as they are
+                        else -> node.port.sendCmd(cmd)
                     }
                 }
 
