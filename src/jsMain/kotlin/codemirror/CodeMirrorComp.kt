@@ -192,6 +192,27 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
     }
 
     /**
+     * Manually update the code in the editor
+     */
+    fun setCode(newCode: String) {
+        val view = editor ?: return
+
+        if (view.state.doc.toString() == newCode) return
+
+        view.dispatch(
+            view.state.update(
+                jsObject {
+                    this.changes = jsObject<dynamic> {
+                        this.from = 0
+                        this.to = view.state.doc.length
+                        this.insert = newCode
+                    }
+                }
+            )
+        )
+    }
+
+    /**
      * Add a highlight at the specified location
      *
      * @param line 1-based line number

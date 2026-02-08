@@ -29,30 +29,19 @@ stack(
     arrange(
       [8, silence],
       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
-    ).orbit(1)
-    .scale("C4:minor")
-    .adsr("0.05:0.7:0.0:0.5")
+    ).sound("triangle").scale("C4:minor")
+    .orbit(1).gain(0.3).adsr("0.05:0.7:0.0:0.3")
     .hpf(800)
-    .sound("triangle")
-    .gain(0.3)
     .superimpose(x => x.transpose("12").gain(0.5))
-  ,
-
-    // bass
+    , // bass  ---------------------------------------------------------
     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
-    .orbit(3)
-    .sound("supersaw").unison(4).detune(0.1)
-    .adsr("0.0:0.3:0.0:0.8")
-    .lpf(800)
-    .gain(0.8).pan(-0.5),
-    
-    // Drums
+    .orbit(3).sound("supersaw").unison(4).detune(0.1)
+    .adsr("0.0:0.3:0.0:0.1").lpf(1000).gain(1.0).postgain(2.0)
+    , // Drums ---------------------------------------------------------
     sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
-     .orbit(4)
-     .pan(0.5)
-     .gain(0.4)
-     .delay("0.2").delaytime(0.25).delayfeedback(0.3),
-).room(0.025).rsize(5.0)
+     .orbit(4).pan(0.5).gain(0.9)
+     .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.3),
+).room(0.1).rsize(5.0)
                 
     """.trimIndent()
 
@@ -163,24 +152,24 @@ stack(
   n(`<
     [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
     [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]
-  >`).fast(4).scale("C3:chromatic").clip(0.75).hpf(800).lpf(4000).pan(0.35)
-  .s("supersaw").unison(12).detune(0.05).distort(1.5).gain(0.2)
+  >`).fast(4).scale("C3:chromatic").clip(0.75).hpf(800).lpf(4000).pan(0.4)
+  .s("supersaw").unison(12).detune(0.05).distort(1.5).gain(0.25)
   .adsr("0.02:0.2:0.3:0.2")
   // .hush()
   , // Guitar 2 ----------------------------------------------------------------------------------------------
   n(`<
     [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
     [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]
-  >`).fast(4).scale("C4:chromatic").clip(0.75).hpf(800).lpf(4000).gain(1.0).pan(0.65)
-  .s("supersaw").unison(12).detune(0.05).distort(1.5).gain(0.2)
+  >`).fast(4).scale("C4:chromatic").clip(0.75).hpf(800).lpf(4000).gain(1.0).pan(0.6)
+  .s("supersaw").unison(12).detune(0.05).distort(1.5).gain(0.25)
   .adsr("0.02:0.2:0.3:0.2")
   , // Guitar 3 ----------------------------------------------------------------------------------------------
   n(`<
-    [0,7,12]  [[0,7,12] [0,7,12] [0,7,12] ~ ~!12]
-    [0,7,12]  [[8, 15, 20] [10, 17, 22]]
-  >`).fast(1).scale("C2:chromatic").clip(1.0).pan(0.5).hpf(200)//.lpf(3000)
-  .s("supersaw").unison(6).detune(0.15).distort(1.5).gain(0.8).postgain(0.2)
-  .adsr("0.02:0.2:0.7:0.2")
+    [0,7,12]                                 [[0,7,12]!3 ~  ~!12]
+    [0,7,12]                                 [[8,15,20]     [10,17,22]]
+  >`).fast(1).scale("C2:chromatic").clip(1.0).pan(0.5).hpf(200).lpf(3000)
+  .s("supersaw").unison(6).detune(0.10).distort(1.5).gain(0.8).postgain(0.3)
+  .adsr("0.02:0.2:0.5:0.2")
   , // Drums --------------------------------------------------------------------------------------------
   s("[bd bd] [sd bd] [~ bd] [sd bd] [~ bd] [sd bd] [~ bd] sd").adsr("0.01:0.3:0.5:1.0"),
   s("hh hh hh hh hh hh hh hh").fast(2).adsr("0.01:0.3:0.5:1.0"),

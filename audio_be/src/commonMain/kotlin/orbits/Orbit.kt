@@ -44,12 +44,9 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
     private var isActive = false
 
     /**
-     * Initialize orbit from a voice only if it was NOT yet initialized
+     * Update orbit settings from a voice.
      */
-    fun initFromVoice(voice: Voice) {
-        // Already active?
-        if (isActive) return
-
+    fun updateFromVoice(voice: Voice) {
         isActive = true
 
         // Delay

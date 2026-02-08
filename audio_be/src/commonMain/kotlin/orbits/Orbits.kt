@@ -96,7 +96,7 @@ class Orbits(
 
         return orbits.getOrPut(safeId) {
             Orbit(id = id, blockFrames = blockFrames, sampleRate = sampleRate).also {
-                it.initFromVoice(voice)
+                it.updateFromVoice(voice)
             }
         }
     }

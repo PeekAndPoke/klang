@@ -17,6 +17,7 @@ import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.StreamSource
 import de.peekandpoke.ultra.streams.ops.map
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
+import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
@@ -51,27 +52,34 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
         sound("bd hh sd oh")
     """.trimIndent()
 
+    val cpsStream = StreamSource(0.5)
+        .persistInLocalStorage("current-cps", Double.serializer())
+
+    val titleStream = StreamSource("New Song")
+        .persistInLocalStorage("current-title", String.serializer())
+
     val codeStream = StreamSource(defaultCode)
         .persistInLocalStorage("current-song", String.serializer())
 
-    val cpsStream = StreamSource(0.5).persistInLocalStorage("current-cps", Double.serializer())
-
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
-    var song: StrudelPlayback? by value(null)
-    val isPlaying get() = song != null
+    private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
+    private var playback: StrudelPlayback? by value(null)
+    private val isPlaying get() = playback != null
 
-    val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
-    val highlightBuffer = CodeHighlightBuffer(editorRef)
+    private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
+    private val highlightBuffer = CodeHighlightBuffer(editorRef)
 
-    var code: String by value(codeStream()) {
-        codeStream(it)
+    private var title: String by value(titleStream()) {
+        titleStream(it)
     }
 
-    val cps: Double by subscribingTo(cpsStream) {
-        song?.updateCyclesPerSecond(it)
+    private var cps: Double by value(cpsStream()) {
+        cpsStream(it)
+        playback?.updateCyclesPerSecond(it)
     }
+
+    private var code: String by value(codeStream()) { codeStream(it) }
 
     private suspend fun getPlayer(): KlangPlayer {
         return Player.ensure().await()
@@ -80,30 +88,30 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun onPlay() {
-        when (val s = song) {
+        when (val s = playback) {
             null -> launch {
                 if (!loading) {
                     getPlayer().let { p ->
                         val pattern = StrudelPattern.compileRaw(code)!!
 
-                        song = p.playStrudel(pattern)
+                        playback = p.playStrudel(pattern)
 
                         // Set up live code highlighting via signals
-                        song?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
+                        playback?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
                             signal.voices.forEach { voiceEvent ->
                                 highlightBuffer.scheduleHighlight(voiceEvent)
                             }
                         }
 
                         // Optional: Listen to other lifecycle signals
-                        song?.signals?.on<KlangPlaybackSignal.PreloadingSamples> { signal ->
+                        playback?.signals?.on<KlangPlaybackSignal.PreloadingSamples> { signal ->
                             console.log("Preloading ${signal.count} samples...")
                         }
-                        song?.signals?.on<KlangPlaybackSignal.SamplesPreloaded> { signal ->
+                        playback?.signals?.on<KlangPlaybackSignal.SamplesPreloaded> { signal ->
                             console.log("Samples loaded in ${signal.durationMs}ms")
                         }
 
-                        song?.start(
+                        playback?.start(
                             StrudelPlayback.Options(cyclesPerSecond = cps)
                         )
                     }
@@ -115,6 +123,12 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                 s.updatePattern(pattern)
             }
         }
+    }
+
+    private fun onStop() {
+        playback?.stop()
+        highlightBuffer.cancelAll()
+        playback = null
     }
 
     override fun VDom.render() {
@@ -133,6 +147,27 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                             minHeight = 100.vh
                             backgroundColor = Color.black
                         }
+
+                        ui.top.aligned.column {
+                            ui.inverted.vertical.menu {
+                                console.log("BuiltInSongs", BuiltInSongs.songs.toTypedArray())
+
+                                BuiltInSongs.songs.forEach { song ->
+
+                                    noui.item {
+                                        onClick {
+                                            onStop()
+                                            title = song.title
+                                            cps = song.cps
+                                            code = song.code
+                                            editorRef { it.setCode(song.code) }
+                                        }
+                                        +song.title
+                                    }
+                                }
+                            }
+                        }
+
                         ui.bottom.aligned.center.aligned.column {
                             css {
                                 minHeight = 100.pct
@@ -227,9 +262,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                     ui.large.circular.icon.givenNot(isPlaying) { disabled }
                                         .given(isPlaying) { white }.button {
                                             onClick {
-                                                song?.stop()
-                                                highlightBuffer.cancelAll()
-                                                song = null
+                                                onStop()
                                             }
 
                                             icon.black.stop()
@@ -237,14 +270,23 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                 }
 
                                 noui.item {
-
-                                    UiInputField(cps, { cpsStream(it) }) {
+                                    UiInputField(cps, { cps = it }) {
                                         step(0.01)
 
                                         appear { large }
 
                                         leftLabel {
                                             ui.basic.label { icon.clock(); +"CPS" }
+                                        }
+                                    }
+                                }
+
+                                noui.item {
+                                    UiInputField(title, { title = it }) {
+                                        appear { large }
+
+                                        leftLabel {
+                                            ui.basic.label { icon.music(); +"Title" }
                                         }
                                     }
                                 }

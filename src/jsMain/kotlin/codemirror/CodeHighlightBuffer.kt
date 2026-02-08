@@ -20,7 +20,7 @@ import kotlin.js.Date
 class CodeHighlightBuffer(
     private val editorRef: ComponentRef.Tracker<CodeMirrorComp>,
     private val maxRefreshRatePerLocation: Int = 16,
-    private val maxSimultaneousHighlights: Int = 128,
+    private val maxSimultaneousHighlights: Int = 100,
 ) {
     /**
      * Active highlight information for tracking and cancellation.
