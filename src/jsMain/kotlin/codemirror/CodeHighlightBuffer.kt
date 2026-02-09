@@ -71,7 +71,7 @@ class CodeHighlightBuffer(
         // Compute timing (convert times from seconds to milliseconds)
         val startTimeMs = event.startTime * 1000.0
         val endTimeMs = event.endTime * 1000.0
-        val startFromNowMs = maxOf(1.0, (startTimeMs - now) - 0.0)
+        val startFromNowMs = maxOf(1.0, (startTimeMs - now) + 300.0)
         val durationMs = maxOf(200.0, minOf(10000.0, endTimeMs - startTimeMs))
 
         // Rate-limit check: Use projected time (when highlight will actually fire)

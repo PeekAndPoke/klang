@@ -175,7 +175,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                             }
 
                             div {
-                                css { height = 75.px }
+                                css { height = 70.px }
                                 Oscilloscope { Player.get() }
                             }
 

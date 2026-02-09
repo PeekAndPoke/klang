@@ -63,10 +63,10 @@ stack(
   ,
   note(`<
     [[e2 e3]*4]                   [[a2 a3]*4] 
-    [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5|a5|e5|c5]]
+    [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5|a5|a5|e5]]
         
     [[d2 d3]*4]                   [[c2 c3]*4]
-    [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5|a5|e5|c5 a4] [a2 a3]]
+    [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5|a5|a5|e5 a4] [a2 a3]]
   >`)
     .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.5)
     .orbit(1).gain(1.0).pan(cosine2.slow(64).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")
@@ -147,42 +147,42 @@ import * from "stdlib"
 import * from "strudel"
 stack(
   morse("Gitarre!").n("0").scale("c4:chromatic").fast(2).gain(1.0).distort(0.5)
-    .postgain("0!4 0.5!2 1.1 2.5".slow(32)).hpf(4400).lpf(4400)
+    .postgain("0!4 1.0!2 2.1 2.6".slow(32)).hpf(4400).lpf(4400)
   ,// Guitar 1 ----------------------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .fast(4).scale("C3:chromatic").clip(0.75).hpf(800).lpf(3500).pan(0.2)
-    .s("supersaw").unison(8).detune(0.05).distort(1.5).gain(0.225)
-    .adsr("0.02:0.2:0.3:0.1").sustain(isaw.range(0.1, 0.0))
+    .fast(4).scale("C3:chromatic").clip(0.75).hpf(850).lpf(3500).pan(0.2)
+    .s("supersaw").unison(8).detune(0.05).distort(1.5).gain(0.215)
+    .adsr("0.02:0.2:0.3:0.1").sustain(isaw.range(0.25, 1.0).slow(32))
   // .hush()
   , // Guitar 2 ----------------------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .fast(4).scale("C4:chromatic").clip(0.75).hpf(800).lpf(4500).pan(0.8)
-    .s("supersaw").unison(8).detune(0.05).distort(1.5).gain(0.225)
-    .adsr("0.02:0.2:0.3:0.1").sustain(isaw.range(0.1, 0.0).slow(32))
+    .fast(4).scale("C4:chromatic").clip(0.75).hpf(800).lpf(3600).pan(0.8)
+    .s("supersaw").unison(8).detune(0.05).distort(1.5).gain(0.215)
+    .adsr("0.02:0.2:0.3:0.1").sustain(isaw.range(0.25, 1.0).slow(32))
   , // Guitar 3 ----------------------------------------------------------------------------------------------
   cat(
     n(`<[0,7,12]                                [[0,7,12]!3 ~  ~!12]
-        [0,7,12]                                [[8,15,20]     [10,17,17|17|22|22|29]*8]>`).repeat(2),
+        [0,7,12]                                [[8,15,20]       [10,17,17|17|22|22|10]*8]>`).repeat(2),
     n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3] 
-        [0!11 8 8 8 8 7]                        [[8,15]!4 [8,15,8]!3 [10,17,10|10|17|17|22]!9]>`).repeat(2),
-  ).fast(1).scale("C2:chromatic").pan(0.5).hpf(120).lpf(3800)
-    .s("supersaw").unison(4).detune(0.10).gain(0.6).distort(1.5).postgain(0.275)
-    .superimpose(x => x.bandf("600@2 1000".slow(32)).bandq(saw.range(1.5, 4.0).slow(32)).gan(0.4))    
-    .adsr("0.02:0.2:0.5:0.0").clip(1.05)
+        [0!11 8 8 8 8 [7,14]]                   [[8,15]!4    [8,15,8]!3 [10,17,10|10|17|17|22]!9]>`).repeat(2),
+  ).fast(1).scale("C2:chromatic").pan(0.5).hpf(80).lpf(4000)
+    .s("supersaw").unison(4).detune(0.10).gain(0.5).distort(1.5).postgain(0.285)
+    .superimpose(x => x.bandf("1000@3 1600".slow(32)).bandq(saw.range(2.0, 4.0).slow(32)).gain(0.45))    
+    .adsr("0.01:0.2:0.5:0.05").clip(1.05)
   , // Noise -------------------------------------------------------------------------------------------------
-  s("cp cp cp cp").bandq("5000 1000 2400 5000").gain(saw.range(0.0, 0.3).slow(32))
+  s("cp cp cp cp").bandf("500 600 500 600").gain(saw.range(0.0, 0.5).slow(32))
+  ,note("a").sound("brown").gain(0.05).crush(8)
   , // Drums -------------------------------------------------------------------------------------------------
   cat(
-    s(`<[lt,sd]                                 [[lt,sd]!3 ~   ~!12]
-        [lt,sd]                                 [[lt,sd]       [lt,sd]]>`).repeat(2),
-    s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd] [~ bd] sd
-        [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd] [~ bd] sd>`).fast(8).repeat(4)
-  ).adsr("0.01:0.3:1.0:1.0").gain(0.95),
+    s(`<[lt,sd]                                 [[lt,sd]!3 ~    ~!12]
+        [lt,sd]                                 [[[mt,sd]@3 mt] [mt,sd]]>`).repeat(2),
+    s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]  [~ bd] sd
+        [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]  [~ bd] sd>`).fast(8).repeat(4)
+  ).adsr("0.01:0.3:1.0:1.0").gain(0.90),
   s("cr hh hh hh hh hh hh hh").fast(2).adsr("0.01:0.3:1.0:1.0"),
-  note("a").sound("white").gain(0.01)
-).room(0.15).rsize(3.0) 
+).room(0.15).rsize(5.0) 
 /*
 
 
