@@ -40,7 +40,7 @@ object BuiltInSongs {
         Song(
             id = "builtin-song-0000004",
             title = "A Truth Worth Synthing For",
-            cps = 0.42,
+            cps = 0.41,
             code = TestTextPatterns.aTruthWorthFightingFor,
         )
     )
