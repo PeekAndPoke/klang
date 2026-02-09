@@ -13,6 +13,7 @@ class Orbits(
 ) {
     private val maxOrbits = maxOrbits.coerceIn(1, 32)
     private val orbits = mutableMapOf<Int, Orbit>()
+    private var cleanupIndex = 0
 
     /**
      * Clear all orbits
@@ -64,6 +65,8 @@ class Orbits(
 
         // Step 3: Mix all orbits to output
         for (orbit in orbits.values) {
+            if (!orbit.isActive) continue
+
             run {
                 val masterLeft = masterMix.left
                 val orbitLeft = orbit.mixBuffer.left
@@ -81,6 +84,17 @@ class Orbits(
                     masterRight[i] += orbitRight[i]
                 }
             }
+        }
+
+        // Step 4: Cleanup stale orbits (round-robin approach)
+        // We pick one orbit per block to check for silence
+        val orbitKeys = orbits.keys.toList()
+        if (orbitKeys.isNotEmpty()) {
+            val keyIndex = cleanupIndex % orbitKeys.size
+            val orbitId = orbitKeys[keyIndex]
+            orbits[orbitId]?.tryDeactivate()
+
+            cleanupIndex = (cleanupIndex + 1) % maxOrbits
         }
     }
 

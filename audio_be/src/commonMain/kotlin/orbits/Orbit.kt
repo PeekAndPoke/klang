@@ -41,7 +41,8 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
         private set
 
     // To track if we need to update parameters this block
-    private var isActive = false
+    var isActive = false
+        private set
 
     /**
      * Update orbit settings from a voice.
@@ -124,5 +125,39 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
 
         // Compressor active? (Insert effect on the mix bus)
         compressor?.process(mixBuffer.left, mixBuffer.right, blockFrames)
+    }
+
+    /**
+     * Checks if the orbit is silent and deactivates it if so.
+     * This helps clean up unused orbits to reduce processing overhead.
+     */
+    fun tryDeactivate() {
+        if (!isActive) return
+
+        // Check if silent
+        var silent = true
+        val threshold = 0.0001 // -80dB approx
+
+        // Check left channel
+        for (sample in mixBuffer.left) {
+            if (sample > threshold || sample < -threshold) {
+                silent = false
+                break
+            }
+        }
+
+        // Check right channel
+        if (silent) {
+            for (sample in mixBuffer.right) {
+                if (sample > threshold || sample < -threshold) {
+                    silent = false
+                    break
+                }
+            }
+        }
+
+        if (silent) {
+            isActive = false
+        }
     }
 }
