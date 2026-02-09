@@ -166,10 +166,10 @@ stack(
     n(`<[0,7,12]                                [[0,7,12]!3 ~  ~!12]
         [0,7,12]                                [[8,15,20]     [10,17,17|17|22|22|29]*8]>`).repeat(2),
     n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3] 
-        [0!11 8 8 8 8 7]                        [[8,15,20]!4 [8,15,8]!3 [10,17,10|10|17|17|22]!9]>`).repeat(2),
+        [0!11 8 8 8 8 7]                        [[8,15]!4 [8,15,8]!3 [10,17,10|10|17|17|22]!9]>`).repeat(2),
   ).fast(1).scale("C2:chromatic").pan(0.5).hpf(120).lpf(3500)
-    .s("supersaw").unison(4).detune(0.10).gain(0.7).distort(1.5).postgain(0.275)
-    .superimpose(x => x.bandf("800@2 1200".slow(32)).bandq(saw.range(1.5, 4.0).slow(32)))    
+    .s("supersaw").unison(4).detune(0.10).gain(0.6).distort(1.5).postgain(0.275)
+    .superimpose(x => x.bandf("800@2 1200".slow(32)).bandq(saw.range(1.5, 4.0).slow(32)).gan(0.4))    
     .adsr("0.02:0.2:0.5:0.0").clip(1.05)
   , // Noise -------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandq("5000 1000 2400 5000").gain(saw.range(0.0, 0.3).slow(32))
@@ -179,10 +179,10 @@ stack(
         [lt,sd]                                 [[lt,sd]       [lt,sd]]>`).repeat(2),
     s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd] [~ bd] sd
         [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd] [~ bd] sd>`).fast(8).repeat(4)
-  ).adsr("0.01:0.3:1.0:1.0"),
+  ).adsr("0.01:0.3:1.0:1.0").gain(0.95),
   s("cr hh hh hh hh hh hh hh").fast(2).adsr("0.01:0.3:1.0:1.0"),
   note("a").sound("white").gain(0.005)
-).room(0.25).rsize(3.0) 
+).room(0.15).rsize(3.0) 
 /*
 
 
