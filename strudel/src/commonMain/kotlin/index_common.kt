@@ -16,7 +16,7 @@ fun KlangPlayer.playStrudel(
         playbackId = generatePlaybackId(),
         pattern = pattern,
         playerOptions = options,
-        commLink = commLink,
+        sendControl = ::sendControl,
         scope = playbackScope,
         fetcherDispatcher = playbackFetcherDispatcher,
         callbackDispatcher = playbackCallbackDispatcher,

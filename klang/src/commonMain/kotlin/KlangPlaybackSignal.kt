@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
  * Signals emitted during playback lifecycle.
@@ -67,6 +68,14 @@ sealed class KlangPlaybackSignal {
             val endTimeMs get() = (endTime * 1000).toLong()
         }
     }
+
+    /**
+     * Emitted with system-wide diagnostics information.
+     * Contains performance metrics and orbit states.
+     */
+    data class Diagnostics(
+        val diagnostics: KlangCommLink.Feedback.Diagnostics,
+    ) : KlangPlaybackSignal()
 
     /**
      * Generic custom signal for module-specific data.

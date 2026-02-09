@@ -9,6 +9,11 @@ import kotlinx.serialization.Serializable
 
 class KlangCommLink(capacity: Int = 8192) {
 
+    companion object {
+        /** Playback ID for system-wide messages (not tied to a specific playback) */
+        const val SYSTEM_PLAYBACK_ID = "--SYSTEM--"
+    }
+
     /** Sent from the frontend to the backend */
     sealed interface Cmd {
         val playbackId: String
@@ -100,13 +105,6 @@ class KlangCommLink(capacity: Int = 8192) {
     @Serializable
     sealed interface Feedback {
         val playbackId: String
-
-        @Serializable
-        @SerialName("update-cursor-frame")
-        data class UpdateCursorFrame(
-            override val playbackId: String,
-            val frame: Long,
-        ) : Feedback
 
         @Serializable
         @SerialName("request-sample")

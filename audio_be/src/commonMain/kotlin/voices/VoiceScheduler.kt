@@ -296,7 +296,7 @@ class VoiceScheduler(
 
             options.commLink.feedback.send(
                 KlangCommLink.Feedback.Diagnostics(
-                    playbackId = "global", // System-wide diagnostics
+                    playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID, // System-wide diagnostics
                     renderHeadroom = minHeadroom,
                     activeVoiceCount = active.size,
                     orbits = orbitStates

@@ -25,6 +25,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.comp.Oscilloscope
+import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -129,6 +130,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun onStop() {
         playback?.stop()
+        playback?.signals?.clear()
         highlightBuffer.cancelAll()
         playback = null
     }
@@ -166,8 +168,6 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                 BuiltInSongs.songs.forEach { song ->
                                     ui.item {
                                         val isSelected = songId == song.id
-
-                                        console.log(song.title, isSelected)
 
                                         css {
                                             border = Border.none
@@ -208,6 +208,13 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                             css {
                                 minHeight = 100.pct
                                 paddingRight = 0.px
+                            }
+
+                            div {
+                                css {
+                                    marginBottom = 10.px
+                                }
+                                PlayerMiniStats()
                             }
 
                             div {

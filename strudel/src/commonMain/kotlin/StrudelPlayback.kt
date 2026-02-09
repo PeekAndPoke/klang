@@ -22,13 +22,13 @@ import kotlinx.coroutines.*
  */
 class StrudelPlayback internal constructor(
     /** Unique identifier for this playback */
-    private val playbackId: String,
+    override val playbackId: String,
     /** Strudel pattern to play */
     private var pattern: StrudelPattern,
     /** The player options */
     private val playerOptions: KlangPlayer.Options,
-    /** Shared communication link to the backend */
-    commLink: KlangCommLink,
+    /** Function to send control messages to the backend */
+    private val sendControl: (KlangCommLink.Cmd) -> Unit,
     /** The coroutines scope on which the player runs */
     private val scope: CoroutineScope,
     /** The dispatcher used for the event fetcher */
@@ -70,8 +70,6 @@ class StrudelPlayback internal constructor(
 
     // ===== Resources =====
     private val samples: Samples = playerOptions.samples
-    private val control = commLink.frontend.control
-    private val feedback = commLink.frontend.feedback
     private val samplesAlreadySent = mutableSetOf<SampleRequest>()
     private val klangTime = KlangTime.create()
 
@@ -160,7 +158,7 @@ class StrudelPlayback internal constructor(
     private fun cleanUpBackend() {
         // Notify backend to clean up this playback session
         scope.launch(fetcherDispatcher) {
-            control.send(KlangCommLink.Cmd.Cleanup(playbackId))
+            sendControl(KlangCommLink.Cmd.Cleanup(playbackId))
         }
     }
 
@@ -227,7 +225,7 @@ class StrudelPlayback internal constructor(
                 }
 
                 // Send to backend (this goes into the ring buffer, processed in order)
-                control.send(cmd)
+                sendControl(cmd)
             }
         }
 
@@ -273,8 +271,7 @@ class StrudelPlayback internal constructor(
             // Request the next cycles from the source
             requestNextCyclesAndAdvanceCursor()
 
-            // Query feedback-events from backend (only for sample requests now)
-            processFeedbackEvents()
+            // Note: Feedback events are now dispatched by KlangPlayer via handleFeedback()
 
             // roughly 60 FPS
             delay(16)
@@ -420,7 +417,7 @@ class StrudelPlayback internal constructor(
 
                 for (voice in events) {
                     // Schedule the voice
-                    control.send(
+                    sendControl(
                         KlangCommLink.Cmd.ScheduleVoice(
                             playbackId = playbackId,
                             voice = voice,
@@ -437,36 +434,36 @@ class StrudelPlayback internal constructor(
         }
     }
 
-    private fun processFeedbackEvents() {
-        while (true) {
-            val evt = feedback.receive() ?: break
-
-            // Only process feedback for this playback
-            if (evt.playbackId != playbackId) {
-                continue
+    /**
+     * Called by the player to deliver feedback messages.
+     * Note: playbackId is already filtered by the player.
+     */
+    override fun handleFeedback(feedback: KlangCommLink.Feedback) {
+        when (feedback) {
+            is KlangCommLink.Feedback.RequestSample -> {
+                requestAndSendSample(feedback.req)
             }
 
-            when (evt) {
-                is KlangCommLink.Feedback.RequestSample -> {
-                    requestAndSendSample(evt.req)
-                }
+            is KlangCommLink.Feedback.Diagnostics -> {
+                // Ignore - diagnostics are handled at player level
+            }
 
-                is KlangCommLink.Feedback.UpdateCursorFrame -> {
-                    // Ignore - event-fetcher is now autonomous
-                }
-
-                is KlangCommLink.Feedback.PlaybackLatency -> {
-                    // Compute transport latency:
-                    // Both KlangTime clocks are seeded from Date.now(), so they share the same epoch.
-                    // backendTimestampMs is when the backend first saw our voices.
-                    // startTimeMs is when we started this playback.
-                    // The difference is how long it took for our voices to reach the backend.
-                    backendLatencyMs = evt.backendTimestampMs - startTimeMs
-                    // Clamp to reasonable range (0 to 500ms). Negative means clock skew, treat as 0.
-                    backendLatencyMs = backendLatencyMs.coerceIn(0.0, 1000.0)
-                }
+            is KlangCommLink.Feedback.PlaybackLatency -> {
+                // Compute transport latency:
+                // Both KlangTime clocks are seeded from Date.now(), so they share the same epoch.
+                // backendTimestampMs is when the backend first saw our voices.
+                // startTimeMs is when we started this playback.
+                // The difference is how long it took for our voices to reach the backend.
+                backendLatencyMs = feedback.backendTimestampMs - startTimeMs
+                // Clamp to reasonable range (0 to 500ms). Negative means clock skew, treat as 0.
+                backendLatencyMs = backendLatencyMs.coerceIn(0.0, 5000.0)
             }
         }
+    }
+
+    @Deprecated("Use handleFeedback instead - now called by player dispatcher")
+    private fun processFeedbackEvents() {
+        // This method is no longer used - feedback is now dispatched by KlangPlayer
     }
 
     private fun requestAndSendSample(req: SampleRequest) {
@@ -489,7 +486,7 @@ class StrudelPlayback internal constructor(
                 )
             }
 
-            control.send(cmd)
+            sendControl(cmd)
         }
     }
 }

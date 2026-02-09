@@ -33,6 +33,8 @@ object WorkletContract {
     }
 
     fun MessagePort.sendFeed(feedback: KlangCommLink.Feedback) {
+        // println("Sending feedback: $feedback")
+
         val obj = codec.encodeToDynamic(KlangCommLink.Feedback.serializer(), feedback)
 
         postMessage(obj)

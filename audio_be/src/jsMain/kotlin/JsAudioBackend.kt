@@ -101,6 +101,7 @@ class JsAudioBackend(
             node.port.onmessage = { message: MessageEvent ->
                 // We pass all feedback through to the frontend
                 val decoded = WorkletContract.decodeFeed(message)
+
                 // Forward
                 commLink.feedback.send(decoded)
 

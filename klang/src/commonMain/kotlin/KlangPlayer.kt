@@ -27,6 +27,7 @@ class KlangPlayer(
         private val nextPlaybackId = KlangAtomicInt(0)
         private fun generatePlaybackId(): String = "playback-${nextPlaybackId.getAndIncrement()}"
     }
+
     data class Options(
         /** The samples */
         val samples: Samples,
@@ -46,6 +47,10 @@ class KlangPlayer(
     // Thread-safe state management
     private val lock = KlangLock()
     private val _activePlaybacks = mutableListOf<KlangPlayback>()
+
+    // Signal bus for system-wide signals (diagnostics, etc.)
+    val signals = KlangPlaybackSignals()
+    private var feedbackDispatcherJob: Job? = null
 
     // Expose scope and dispatchers for playback implementations
     val playbackScope: CoroutineScope get() = scope
@@ -76,6 +81,46 @@ class KlangPlayer(
                 backend.run(this)
             }
         }
+
+        // Start feedback dispatcher - the sole consumer of feedback messages
+        // Use scope's default dispatcher (Dispatchers.Default) to avoid blocking fetcherDispatcher
+        feedbackDispatcherJob = scope.launch {
+            while (isActive) {
+                val feedback = commLink.frontend.feedback.receive()
+
+                if (feedback == null) {
+                    delay(16) // Avoid busy-wait when no messages available
+                    continue
+                }
+
+                when {
+                    // System messages go to player signals
+                    feedback.playbackId == KlangCommLink.SYSTEM_PLAYBACK_ID -> {
+                        when (feedback) {
+                            is KlangCommLink.Feedback.Diagnostics -> {
+                                withContext(callbackDispatcher) {
+                                    signals.emit(KlangPlaybackSignal.Diagnostics(feedback))
+                                }
+                            }
+
+                            else -> {
+                                // Ignore other system messages for now
+                            }
+                        }
+                    }
+                    // Playback-specific messages go to the matching playback
+                    else -> {
+                        val playback = lock.withLock {
+                            _activePlaybacks.find { it.playbackId == feedback.playbackId }
+                        }
+
+                        playback?.handleFeedback(feedback)
+                    }
+                }
+            }
+        }
+
+        println("[KlangPlayer] Init complete, backendJob=$backendJob, feedbackDispatcherJob=$feedbackDispatcherJob")
     }
 
     /**
@@ -109,6 +154,14 @@ class KlangPlayer(
     fun generatePlaybackId(): String = Companion.generatePlaybackId()
 
     /**
+     * Send a control message to the backend.
+     * This is the only way playbacks should communicate with the backend.
+     */
+    fun sendControl(cmd: KlangCommLink.Cmd) {
+        commLink.frontend.control.send(cmd)
+    }
+
+    /**
      * Stop all playbacks and shut down the backend.
      */
     fun shutdown() {
@@ -121,6 +174,13 @@ class KlangPlayer(
             backendJob?.cancel()
             backendJob = null
             _activeBackend = null
+
+            // Shutdown the feedback dispatcher
+            feedbackDispatcherJob?.cancel()
+            feedbackDispatcherJob = null
+
+            // Clear signal listeners
+            signals.clear()
         }
     }
 }
