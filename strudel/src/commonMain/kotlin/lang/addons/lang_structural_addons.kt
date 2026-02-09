@@ -1,11 +1,8 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.script.ast.SourceLocationChain
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
@@ -287,3 +284,56 @@ val StrudelPattern.repeat by dslPatternExtension { p, args, /* callInfo */ _ ->
 
 @StrudelDsl
 val String.repeat by dslStringExtension { p, args, callInfo -> p.repeat(args, callInfo) }
+
+// -- solo() -----------------------------------------------------------------------------------------------------------
+
+/**
+ * Applies solo to a pattern using control pattern support.
+ * When any pattern is soloed, all non-soloed patterns are muted.
+ */
+fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // Default to true if called without arguments: .solo()
+    val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(1.0)) }
+
+    // Get the control pattern
+    val soloArg = effectiveArgs.getOrNull(0) ?: return source
+
+    // Use _innerJoin to support control patterns
+    return source._innerJoin(soloArg) { src, soloVal ->
+        // Convert to boolean based on truthiness
+        val isSolo = soloVal?.asBoolean
+
+        // Apply solo flag to the pattern by mapping over events
+        src.mapEvents { event ->
+            event.copy(
+                data = event.data.copy(solo = isSolo)
+            )
+        }
+    }
+}
+
+/**
+ * Solos the pattern. If any pattern is soloed, all non-soloed patterns are muted.
+ * Can be disabled by passing 0 or false: .solo(0)
+ * Supports control patterns: .solo("<1 0 1 0>")
+ */
+@StrudelDsl
+val solo by dslFunction { args, /* callInfo */ _ ->
+    applySolo(AtomicPattern.value(null), args)
+}
+
+/**
+ * Solos the pattern. If any pattern is soloed, all non-soloed patterns are muted.
+ * Can be disabled by passing 0 or false: .solo(0)
+ * Supports control patterns: .solo("<1 0 1 0>")
+ */
+@StrudelDsl
+val StrudelPattern.solo by dslPatternExtension { p, args, /* callInfo */ _ -> applySolo(p, args) }
+
+/**
+ * Solos the pattern. If any pattern is soloed, all non-soloed patterns are muted.
+ * Can be disabled by passing 0 or false: .solo(0)
+ * Supports control patterns: .solo("<1 0 1 0>")
+ */
+@StrudelDsl
+val String.solo by dslStringExtension { p, args, callInfo -> p.solo(args, callInfo) }

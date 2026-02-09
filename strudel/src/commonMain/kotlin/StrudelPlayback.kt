@@ -307,6 +307,16 @@ class StrudelPlayback internal constructor(
                 .filter { it.part.begin >= fromRational && it.part.begin < toRational }
                 .filter { it.isOnset }  // Allow continuous OR onset events
                 .sortedBy { it.part.begin }
+                // Implement SOLO logic:
+                // If any event in this batch is "soloed", drop all events that are NOT soloed.
+                .let { rawEvents ->
+                    val isSoloActive = rawEvents.any { it.data.solo == true }
+                    if (isSoloActive) {
+                        rawEvents.filter { it.data.solo == true }
+                    } else {
+                        rawEvents
+                    }
+                }
 
         // Transform to ScheduledVoice using absolute time from KlangTime epoch
         val secPerCycle = 1.0 / cyclesPerSecond

@@ -28,17 +28,71 @@ var strudelLangStructuralInit = false
 // Structural patterns
 // ///
 
-// -- hush() -----------------------------------------------------------------------------------------------------------
+// -- hush() / bypass() / mute() --------------------------------------------------------------------------------------
 
-/** Stops all playing patterns by returning silence, ignoring all arguments. */
+/**
+ * Applies hush/mute with control pattern support.
+ * Returns silence when the condition is true.
+ * When called without arguments, unconditionally returns silence.
+ */
+private fun applyHush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    // No arguments: unconditionally mute
+    if (args.isEmpty()) return silence
+
+    // With control pattern: mute when condition is true
+    val condition = args.toPattern()
+    val conditionNot = condition.not()
+
+    return StructurePattern(
+        source = source,
+        other = conditionNot,
+        mode = StructurePattern.Mode.In,
+        filterByTruthiness = true
+    )
+}
+
+/**
+ * Stops/mutes the pattern. Without arguments, unconditionally returns silence.
+ * With arguments (including control patterns), mutes when the condition is truthy.
+ * Example: s("bd sd").hush("<1 0>") mutes on alternating cycles.
+ */
 @StrudelDsl
 val hush by dslFunction { _, _ -> silence }
 
 @StrudelDsl
-val StrudelPattern.hush by dslPatternExtension { _, _, _ -> silence }
+val StrudelPattern.hush by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
 
 @StrudelDsl
-val String.hush by dslStringExtension { _, _, _ -> silence }
+val String.hush by dslStringExtension { p, args, callInfo -> p.hush(args, callInfo) }
+
+/**
+ * Returns silence when the condition is true (bypasses the pattern).
+ * Supports both static values and control patterns.
+ * Example: s("bd sd").bypass("<1 0>") plays on alternating cycles.
+ */
+@StrudelDsl
+val bypass by dslFunction { _, _ -> silence }
+
+@StrudelDsl
+val StrudelPattern.bypass by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
+
+@StrudelDsl
+val String.bypass by dslStringExtension { p, args, callInfo -> p.bypass(args, callInfo) }
+
+/**
+ * Alias for hush()/bypass(). Mutes the pattern based on a condition.
+ * Without arguments, unconditionally returns silence.
+ * With arguments (including control patterns), mutes when the condition is truthy.
+ * Example: s("bd sd").mute("<1 0>") mutes on alternating cycles.
+ */
+@StrudelDsl
+val mute by dslFunction { _, _ -> silence }
+
+@StrudelDsl
+val StrudelPattern.mute by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
+
+@StrudelDsl
+val String.mute by dslStringExtension { p, args, callInfo -> p.mute(args, callInfo) }
 
 // -- gap() ------------------------------------------------------------------------------------------------------------
 
@@ -898,34 +952,6 @@ val String.filterWhen by dslStringExtension { source, args, callInfo -> source.f
 @StrudelDsl
 fun String.filterWhen(predicate: (Double) -> Boolean): StrudelPattern = filterWhen(predicate as Any)
 
-// -- bypass() ---------------------------------------------------------------------------------------------------------
-
-private fun applyBypass(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    if (args.isEmpty()) return source
-
-    val condition = args.toPattern()
-    val conditionNot = condition.not()
-
-    return StructurePattern(
-        source = source,
-        other = conditionNot,
-        mode = StructurePattern.Mode.In,
-        filterByTruthiness = true
-    )
-}
-
-/**
- * Returns silence when the condition is true (bypasses the pattern).
- * Supports both static values and patterns.
- */
-@StrudelDsl
-val bypass by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
-
-@StrudelDsl
-val StrudelPattern.bypass by dslPatternExtension { p, args, /* callInfo */ _ -> applyBypass(p, args) }
-
-@StrudelDsl
-val String.bypass by dslStringExtension { p, args, callInfo -> p.bypass(args, callInfo) }
 
 // -- superimpose() ----------------------------------------------------------------------------------------------------
 

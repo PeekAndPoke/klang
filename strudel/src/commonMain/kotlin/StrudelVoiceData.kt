@@ -226,6 +226,10 @@ data class StrudelVoiceData(
     /** Dynamic range compression settings (threshold:ratio:knee:attack:release) */
     val compressor: String?,
 
+    // Playback control
+    /** Solo flag - when true, mutes all non-soloed patterns */
+    val solo: Boolean?,
+
     // Custom value
     val value: StrudelVoiceValue? = null,
 ) {
@@ -329,6 +333,7 @@ data class StrudelVoiceData(
             loopEnd = null,
             vowel = null,
             compressor = null,
+            solo = null,
             value = null,
         )
     }
@@ -433,6 +438,7 @@ data class StrudelVoiceData(
             loopEnd = other.loopEnd ?: loopEnd,
             vowel = other.vowel ?: vowel,
             compressor = other.compressor ?: compressor,
+            solo = other.solo ?: solo,
             value = other.value ?: value
         )
     }

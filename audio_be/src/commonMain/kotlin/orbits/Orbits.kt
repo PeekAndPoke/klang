@@ -95,9 +95,9 @@ class Orbits(
         val safeId = id % maxOrbits
 
         return orbits.getOrPut(safeId) {
-            Orbit(id = id, blockFrames = blockFrames, sampleRate = sampleRate).also {
-                it.updateFromVoice(voice)
-            }
+            Orbit(id = id, blockFrames = blockFrames, sampleRate = sampleRate)
+        }.also {
+            it.updateFromVoice(voice)
         }
     }
 }

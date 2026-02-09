@@ -988,6 +988,7 @@ fun StrudelPattern._liftNumericField(
     return _outerJoin(control) { sourceEvent, controlEvent ->
         val value = controlEvent?.data?.value?.asDouble
         sourceEvent.copy(data = sourceEvent.data.update(value))
+            .appendLocations(controlEvent?.sourceLocations)
     }
 }
 

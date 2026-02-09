@@ -21,6 +21,7 @@ import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLDivElement
 import kotlin.math.floor
+import kotlin.math.pow
 
 @Suppress("FunctionName")
 fun Tag.Oscilloscope(
@@ -29,7 +30,7 @@ fun Tag.Oscilloscope(
     centerLineColor: Color? = Color.white.withAlpha(0.2),
     centerLineWidth: Double = 1.0,
     expandedStrokeColor: Color = Color.black,
-    expandedStrokeWidth: Double = strokeWidth * 1.5,
+    expandedStrokeWidth: Double = strokeWidth * 1.0,
     player: () -> KlangPlayer?,
 ) = comp(
     Oscilloscope.Props(
@@ -154,7 +155,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
             val splitFraction = leftWidth / totalWidth
 
-            // Draw left canvas (original) - first portion
+            // Draw left canvas (original) - first portion with vibrating string effect
             drawWaveformSlice(
                 ctx = ctx,
                 canvasWidth = leftWidth,
@@ -165,10 +166,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 centerLineWidth = props.centerLineWidth,
                 bufferStartFraction = 0.0,
                 bufferEndFraction = splitFraction,
-                clearColor = null
+                clearColor = null,
+                totalWidth = totalWidth,
+                xOffset = 0.0
             )
 
-            // Draw right canvas (overlay) - remaining portion
+            // Draw right canvas (overlay) - remaining portion with vibrating string effect
             drawWaveformSlice(
                 ctx = overlayCtx,
                 canvasWidth = rightWidth,
@@ -179,9 +182,23 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 centerLineWidth = 0.0,
                 bufferStartFraction = splitFraction,
                 bufferEndFraction = 1.0,
-                clearColor = null
+                clearColor = null,
+                totalWidth = totalWidth,
+                xOffset = leftWidth
             )
         }
+    }
+
+    /**
+     * Calculate vibrating string deflection for expanded mode.
+     * Returns a value between 0.25 (at edges) and 1.0 (at center).
+     * Uses power of 4 for quick ease-in from edges.
+     */
+    private fun calculateStringDeflection(normalized: Double): Double {
+        // Power of 4 for quick ease-in from edges
+        val curveValue = 1.0 - 16.0 * (normalized - 0.5).pow(4)
+        // Scale from 0.25 (minimum at edges) to 1.0 (maximum at center)
+        return 0.1 + 0.9 * curveValue
     }
 
     private fun drawWaveformSlice(
@@ -195,6 +212,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         bufferStartFraction: Double,
         bufferEndFraction: Double,
         clearColor: String?,
+        totalWidth: Double? = null,
+        xOffset: Double = 0.0,
     ) {
         val centerY = canvasHeight / 2.0
 
@@ -236,9 +255,18 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             val sliceWidth = canvasWidth / sliceLength.toDouble()
             for (i in 0 until sliceLength) {
                 val bufferIdx = startIdx + i
-                val value = visualizerBuffer[bufferIdx]
-                val y = centerY - (value * centerY)
+                var value = visualizerBuffer[bufferIdx]
                 val x = i * sliceWidth
+
+                // Apply vibrating string deflection if in expanded mode
+                totalWidth?.let { total ->
+                    val globalX = xOffset + x
+                    val normalized = globalX / total  // 0.0 to 1.0
+                    val deflectionMultiplier = calculateStringDeflection(normalized)
+                    value *= deflectionMultiplier.toFloat()
+                }
+
+                val y = centerY - (value * centerY)
 
                 if (i == 0) {
                     ctx.moveTo(x, y)
@@ -268,6 +296,16 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 }
 
                 val x = pixelX.toDouble()
+
+                // Apply vibrating string deflection if in expanded mode
+                totalWidth?.let { total ->
+                    val globalX = xOffset + x
+                    val normalized = globalX / total  // 0.0 to 1.0
+                    val deflectionMultiplier = calculateStringDeflection(normalized)
+                    minVal *= deflectionMultiplier.toFloat()
+                    maxVal *= deflectionMultiplier.toFloat()
+                }
+
                 val yMin = centerY - (minVal * centerY)
                 val yMax = centerY - (maxVal * centerY)
 

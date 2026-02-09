@@ -57,4 +57,44 @@ class LangBypassSpec : StringSpec({
         val p2 = note("a").bypass(false)
         p2.queryArc(0.0, 1.0).size shouldBe 1
     }
+
+    "bypass() behaves identically to hush()" {
+        val pattern = s("bd sd")
+
+        // Test with control pattern
+        val bypassed = pattern.bypass("<1 0>")
+        val hushed = pattern.hush("<1 0>")
+
+        repeat(4) { cycle ->
+            val cycleDbl = cycle.toDouble()
+            val bypassedEvents = bypassed.queryArc(cycleDbl, cycleDbl + 1)
+                .filter { it.isOnset }
+            val hushedEvents = hushed.queryArc(cycleDbl, cycleDbl + 1)
+                .filter { it.isOnset }
+
+            bypassedEvents.size shouldBe hushedEvents.size
+
+            // Verify event details match
+            bypassedEvents.zip(hushedEvents).forEach { (b, h) ->
+                b.data.sound shouldBe h.data.sound
+            }
+        }
+    }
+
+    "bypass() and mute() are equivalent" {
+        val pattern = s("bd sd")
+
+        val bypassed = pattern.bypass("<1 0>")
+        val muted = pattern.mute("<1 0>")
+
+        repeat(4) { cycle ->
+            val cycleDbl = cycle.toDouble()
+            val bypassedEvents = bypassed.queryArc(cycleDbl, cycleDbl + 1)
+                .filter { it.isOnset }
+            val mutedEvents = muted.queryArc(cycleDbl, cycleDbl + 1)
+                .filter { it.isOnset }
+
+            bypassedEvents.size shouldBe mutedEvents.size
+        }
+    }
 })

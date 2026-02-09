@@ -431,6 +431,8 @@ class GraalStrudelPattern(
                 vowel = vowel,
                 // Dynamics / Compression
                 compressor = compressor,
+                // Playback control
+                solo = null,
                 // Value
                 value = when {
                     value?.isString == true -> value.asString().asVoiceValue()
