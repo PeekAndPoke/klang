@@ -39,7 +39,7 @@ class JvmAudioBackend(
             blockFrames = blockSize,
             oscillators = oscillators(sampleRate),
             orbits = orbits,
-            timeMs = { klangTime.internalMsNow() },
+            performanceTimeMs = { klangTime.internalMsNow() },
         )
     )
 

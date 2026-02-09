@@ -25,7 +25,7 @@ class VoiceScheduler(
 //        val samples: Samples,
         val orbits: Orbits,
         /** Supplier for current backend time in milliseconds (from KlangTime) */
-        val timeMs: () -> Double = { 0.0 },
+        val performanceTimeMs: () -> Double = { 0.0 },
     ) {
         val sampleRateDouble = sampleRate.toDouble()
     }
@@ -90,6 +90,7 @@ class VoiceScheduler(
     // Diagnostics state
     private var lastDiagnosticsTimeMs = 0.0
     private var minHeadroom = 1.0
+    private var avgHeadroom = 1.0
 
     fun VoiceData.isOscillator() = options.oscillators.isOsc(sound)
 
@@ -209,7 +210,7 @@ class VoiceScheduler(
             options.commLink.feedback.send(
                 KlangCommLink.Feedback.PlaybackLatency(
                     playbackId = pid,
-                    backendTimestampMs = options.timeMs(),
+                    backendTimestampMs = options.performanceTimeMs(),
                 )
             )
         }
@@ -234,7 +235,7 @@ class VoiceScheduler(
     }
 
     fun process(cursorFrame: Long) {
-        val startMs = options.timeMs()
+        val startMs = options.performanceTimeMs()
 
         lastProcessedFrame = cursorFrame
         val blockEnd = cursorFrame + options.blockFrames
@@ -267,7 +268,7 @@ class VoiceScheduler(
         }
 
         // 4. Diagnostics & Headroom
-        val endMs = options.timeMs()
+        val endMs = options.performanceTimeMs()
         val durationMs = endMs - startMs
         // Calculate max available time for this block in ms
         val blockDurationMs = (options.blockFrames.toDouble() / options.sampleRateDouble) * 1000.0
@@ -279,6 +280,9 @@ class VoiceScheduler(
         if (headroom < minHeadroom) {
             minHeadroom = headroom
         }
+
+        // Exponential moving average for smooth reporting (90% old + 10% new)
+        avgHeadroom = (avgHeadroom * 9.0 + headroom) / 10.0
 
         // Send diagnostics approx 20 times per second (every 50ms)
         if (endMs - lastDiagnosticsTimeMs > 50.0) {
@@ -297,7 +301,7 @@ class VoiceScheduler(
             options.commLink.feedback.send(
                 KlangCommLink.Feedback.Diagnostics(
                     playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID, // System-wide diagnostics
-                    renderHeadroom = minHeadroom,
+                    renderHeadroom = avgHeadroom,
                     activeVoiceCount = active.size,
                     orbits = orbitStates
                 )
@@ -305,6 +309,7 @@ class VoiceScheduler(
 
             // Reset min headroom for next interval
             minHeadroom = 1.0
+            // Note: avgHeadroom is NOT reset - it continues smoothing across reports
         }
     }
 

@@ -29,7 +29,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
             blockFrames = blockFrames,
             oscillators = oscillators(sampleRate) { rng(Random(42)) },
             orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate),
-            timeMs = timeMs
+            performanceTimeMs = timeMs
         )
 
         val scheduler = VoiceScheduler(options)

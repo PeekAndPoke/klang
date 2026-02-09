@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import org.khronos.webgl.Float32Array
 import org.khronos.webgl.set
+import kotlin.js.Date
 
 @JsName("KlangAudioWorklet")
 class KlangAudioWorklet : AudioWorkletProcessor {
@@ -38,9 +39,11 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                 blockFrames = blockFrames,
                 oscillators = oscillators(sampleRate = sampleRate),
                 orbits = orbits,
-                timeMs = { klangTime.internalMsNow() },
+                // Used for performance measurement only
+                performanceTimeMs = { Date.now() },
             )
         )
+
         val renderer = KlangAudioRenderer(
             sampleRate = sampleRate,
             blockFrames = blockFrames,

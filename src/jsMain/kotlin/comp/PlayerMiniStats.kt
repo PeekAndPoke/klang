@@ -7,12 +7,14 @@ import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
 import de.peekandpoke.ultra.semanticui.*
+import de.peekandpoke.ultra.streams.ops.ticker
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.title
+import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("FunctionName")
 fun Tag.PlayerMiniStats() = comp {
@@ -24,10 +26,16 @@ class PlayerMiniStats(ctx: NoProps) : PureComponent(ctx) {
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var playerDiagnosticsSubscription: (() -> Unit)? = null
-    private var playerDiagnostics: KlangPlaybackSignal.Diagnostics? by value(null)
+    private var playerDiagnostics: KlangPlaybackSignal.Diagnostics? = null
 
-    private suspend fun getPlayer(): KlangPlayer {
-        return Player.ensure().await().also { player ->
+    @Suppress("unused")
+    private val ticker by subscribingTo(ticker(16.milliseconds)) { update() }
+    private var _player: KlangPlayer? = null
+
+    private fun update() {
+        _player?.let { return }
+
+        _player ?: Player.get()?.also { player ->
             // Unsubscribe
             playerDiagnosticsSubscription?.invoke()
             // Resubscribe
@@ -41,7 +49,7 @@ class PlayerMiniStats(ctx: NoProps) : PureComponent(ctx) {
         lifecycle {
             onMount {
                 launch {
-                    getPlayer()
+                    update()
                 }
             }
 
@@ -60,14 +68,17 @@ class PlayerMiniStats(ctx: NoProps) : PureComponent(ctx) {
             div {
                 ui.horizontal.list {
                     signal.diagnostics.orbits
-                        .filter { it.active }
+//                        .filter { it.active }
                         .forEach { orbit ->
                             noui.item {
-                                ui.labelSize().basic.inverted.white.label {
-                                    title = "Active orbit #${orbit.id}"
-                                    icon.satellite()
-                                    +"${orbit.id}"
-                                }
+                                ui.labelSize()
+                                    .given(orbit.active) { basic.inverted.white }
+                                    .givenNot(orbit.active) { basic.inverted.black }
+                                    .label {
+                                        title = "Active orbit #${orbit.id}"
+                                        icon.satellite()
+                                        +"${orbit.id}"
+                                    }
                             }
                         }
 
@@ -78,10 +89,10 @@ class PlayerMiniStats(ctx: NoProps) : PureComponent(ctx) {
 
                             val color = semanticIcon {
                                 when {
-                                    room > 0.75 -> white
-                                    room > 0.5 -> yellow
-                                    room > 0.25 -> orange
-                                    else -> green
+                                    room > 0.500 -> white
+                                    room > 0.333 -> yellow
+                                    room > 0.166 -> orange
+                                    else -> red
                                 }
                             }
 
