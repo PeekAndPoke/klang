@@ -142,7 +142,6 @@ stack(
   
    """.trimIndent()
 
-
     val aTruthWorthFightingFor = """
 import * from "stdlib"
 import * from "strudel"
