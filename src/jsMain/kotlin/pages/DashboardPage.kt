@@ -52,6 +52,8 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
         sound("bd hh sd oh")
     """.trimIndent()
 
+    var songId by value("")
+
     val cpsStream = StreamSource(0.5)
         .persistInLocalStorage("current-cps", Double.serializer())
 
@@ -148,15 +150,49 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                             backgroundColor = Color.black
                         }
 
-                        ui.top.aligned.column {
-                            ui.inverted.vertical.menu {
-                                console.log("BuiltInSongs", BuiltInSongs.songs.toTypedArray())
+                        ui.top.aligned.right.floated.column {
+                            css {
+                                paddingRight = 0.px
+                                paddingLeft = 32.px
+                            }
+
+                            ui.vertical.relaxed.list {
+                                css {
+                                    border = Border.none
+                                    borderRadius = 0.px
+                                    width = 100.pct
+                                }
 
                                 BuiltInSongs.songs.forEach { song ->
+                                    ui.item {
+                                        val isSelected = songId == song.id
 
-                                    noui.item {
+                                        console.log(song.title, isSelected)
+
+                                        css {
+                                            border = Border.none
+
+                                            borderTopLeftRadius = 4.px
+                                            borderBottomLeftRadius = 4.px
+                                            borderTopRightRadius = 0.px
+                                            borderBottomRightRadius = 0.px
+
+                                            padding = Padding(10.px, 20.px)
+
+                                            if (isSelected) {
+                                                backgroundColor = Color.white
+                                                color = Color.black
+                                            } else {
+                                                backgroundColor = Color.black
+                                                color = Color.white
+
+                                                borderRadius = 0.px
+                                            }
+                                        }
+
                                         onClick {
                                             onStop()
+                                            songId = song.id
                                             title = song.title
                                             cps = song.cps
                                             code = song.code
