@@ -16,6 +16,11 @@ class Orbits(
     private var cleanupIndex = 0
 
     /**
+     * Get all currently allocated orbit IDs.
+     */
+    val allocatedIds: Set<Int> get() = orbits.keys
+
+    /**
      * Clear all orbits
      */
     fun clearAll() {

@@ -87,6 +87,10 @@ class VoiceScheduler(
         freqModBuffer = freqModBuffer
     )
 
+    // Diagnostics state
+    private var lastDiagnosticsTimeMs = 0.0
+    private var minHeadroom = 1.0
+
     fun VoiceData.isOscillator() = options.oscillators.isOsc(sound)
 
     fun VoiceData.isSampleSound() = !isOscillator()
@@ -230,6 +234,8 @@ class VoiceScheduler(
     }
 
     fun process(cursorFrame: Long) {
+        val startMs = options.timeMs()
+
         lastProcessedFrame = cursorFrame
         val blockEnd = cursorFrame + options.blockFrames
 
@@ -258,6 +264,47 @@ class VoiceScheduler(
                 }
                 active.removeLast()
             }
+        }
+
+        // 4. Diagnostics & Headroom
+        val endMs = options.timeMs()
+        val durationMs = endMs - startMs
+        // Calculate max available time for this block in ms
+        val blockDurationMs = (options.blockFrames.toDouble() / options.sampleRateDouble) * 1000.0
+
+        // 1.0 = all time left, 0.0 = no time left, < 0.0 = glitching
+        val headroom = 1.0 - (durationMs / blockDurationMs)
+
+        // Track minimum headroom (worst case) since last report to catch glitches
+        if (headroom < minHeadroom) {
+            minHeadroom = headroom
+        }
+
+        // Send diagnostics approx 20 times per second (every 50ms)
+        if (endMs - lastDiagnosticsTimeMs > 50.0) {
+            lastDiagnosticsTimeMs = endMs
+
+            // Determine which orbits are currently active (have voices feeding them)
+            val activeOrbitIds = active.map { it.orbitId }.toSet()
+
+            val orbitStates = options.orbits.allocatedIds.map { id ->
+                KlangCommLink.Feedback.Diagnostics.OrbitState(
+                    id = id,
+                    active = id in activeOrbitIds
+                )
+            }
+
+            options.commLink.feedback.send(
+                KlangCommLink.Feedback.Diagnostics(
+                    playbackId = "global", // System-wide diagnostics
+                    renderHeadroom = minHeadroom,
+                    activeVoiceCount = active.size,
+                    orbits = orbitStates
+                )
+            )
+
+            // Reset min headroom for next interval
+            minHeadroom = 1.0
         }
     }
 

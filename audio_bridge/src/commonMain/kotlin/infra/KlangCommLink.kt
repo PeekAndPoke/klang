@@ -126,6 +126,36 @@ class KlangCommLink(capacity: Int = 8192) {
              */
             val backendTimestampMs: Double,
         ) : Feedback
+
+        @Serializable
+        @SerialName("diagnostics")
+        data class Diagnostics(
+            override val playbackId: String,
+            /**
+             * Rendering headroom as a ratio (not time-based).
+             * - 1.0 = idle (all time available)
+             * - 0.0 = full load (using all available time)
+             * - <0.0 = overload (glitching, taking longer than block duration)
+             * Calculated as: 1.0 - (renderDuration / blockDuration)
+             */
+            val renderHeadroom: Double,
+            /**
+             * Number of voices currently active (rendering audio)
+             */
+            val activeVoiceCount: Int,
+            /**
+             * State of all allocated orbits (mixing channels)
+             */
+            val orbits: List<OrbitState>,
+        ) : Feedback {
+            @Serializable
+            data class OrbitState(
+                /** Orbit ID (0-15 typically) */
+                val id: Int,
+                /** Whether this orbit is currently active (has voices rendering to it) */
+                val active: Boolean,
+            )
+        }
     }
 
     /** Frontend to backend buffer */
