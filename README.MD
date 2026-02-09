@@ -5,7 +5,7 @@
 
 Ein Klang-Generator | A Sound-Generator
 
-This of the home of the Klang Audio Motör, a Kotlin multiplatform realtime audio generator.
+This is the home of the Klang Audio Motör, a Kotlin multiplatform realtime audio generatör.
 
 Currently supported platforms:
 
