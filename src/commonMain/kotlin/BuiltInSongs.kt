@@ -12,8 +12,8 @@ object BuiltInSongs {
     val tetris = add(
         Song(
             id = "builtin-song-0000001",
-            title = "Tetris",
-            cps = 0.63,
+            title = "Synthris",
+            cps = 0.64,
             code = TestTextPatterns.tetris,
         )
     )
@@ -21,7 +21,7 @@ object BuiltInSongs {
     val smallTownBoy = add(
         Song(
             id = "builtin-song-0000002",
-            title = "Smalltown Boy",
+            title = "Synthtown Boy",
             cps = 0.58,
             code = TestTextPatterns.smallTownBoy,
         )
@@ -30,8 +30,8 @@ object BuiltInSongs {
     val strangerThings = add(
         Song(
             id = "builtin-song-0000003",
-            title = "Stranger Things",
-            cps = 0.60,
+            title = "Stranger Synths",
+            cps = 0.55,
             code = TestTextPatterns.strangerThingsNetflix,
         )
     )
@@ -39,8 +39,8 @@ object BuiltInSongs {
     val aTruthWorthLyingFor = add(
         Song(
             id = "builtin-song-0000004",
-            title = "A Truth Worth Lying For",
-            cps = 0.4,
+            title = "A Truth Worth Synthing For",
+            cps = 0.41,
             code = TestTextPatterns.aTruthWorthFightingFor,
         )
     )
