@@ -147,7 +147,7 @@ import * from "stdlib"
 import * from "strudel"
 stack(
   morse("Gitarre!").n("0").scale("c4:chromatic").fast(2)
-    .gain(1.0).distort(0.5).postgain("0.5!4 1.5!2 2.0 2.3".slow(32)).hpf(4350).lpf(4450)
+    .gain(1.0).distort(0.5).postgain("0.5!4 1.4!2 1.9 2.2".slow(32)).hpf(4350).lpf(4450)
   ,// Guitar 1 ----------------------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12@2 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
@@ -169,7 +169,7 @@ stack(
         [0!11 8 8 8 [8,15] [7,14]]              [[8,15]!4                [8,15,8]!3 [10,17,10|10|17|17|22]!9]>`).repeat(2),
   ).fast(1).scale("C2:chromatic").pan(0.65).hpf(60).lpf(4000).warmth(0.3)
     .s("supersaw").unison(4).detune(0.10).gain(0.5).distort(2.5).postgain(0.25)
-    .superimpose(x => x.pan(0.35).bandf("750 1200 900 1400".slow(64)).bandq(saw.range(2.0, 5.0).slow(64)).postgain(0.225))    
+    .superimpose(x => x.pan(0.35).bandf("750 1200 900 1400".slow(64)).bandq(saw.range(2.0, 5.0).slow(64)).postgain(0.2))    
     .adsr("0.02:0.2:0.5:0.0").clip(1.01)
   , // Noise -------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("800 600 800 600").gain(saw.range(0.0, 0.5).slow(32))
@@ -182,7 +182,7 @@ stack(
         [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]          [~ bd] sd>`).fast(8).repeat(4)
   ).adsr("0.01:0.3:1.0:1.0").gain(0.90),
   s("cr hh hh hh hh hh hh hh").fast(2).adsr("0.01:0.3:1.0:1.0"),
-).room(0.025).rsize(10.0)
+).room(0.01).rsize(10.0)
 /*
 
 
