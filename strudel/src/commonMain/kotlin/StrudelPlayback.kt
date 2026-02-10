@@ -309,7 +309,13 @@ class StrudelPlayback internal constructor(
                 .let { rawEvents ->
                     val isSoloActive = rawEvents.any { it.data.solo == true }
                     if (isSoloActive) {
-                        rawEvents.filter { it.data.solo == true }
+                        rawEvents.map { evt ->
+                            if (evt.data.solo != true) {
+                                evt.copy(data = evt.data.copy(gain = evt.data.gain?.let { g -> g * 0.05 }))
+                            } else {
+                                evt
+                            }
+                        }
                     } else {
                         rawEvents
                     }
