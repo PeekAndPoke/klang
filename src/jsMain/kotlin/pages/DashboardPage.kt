@@ -273,7 +273,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                 }
 
-                ui.thirteen.wide.column {
+                ui.thirteen.wide.column.with("noise-bg") {
                     css {
                         padding = Padding(0.px)
                         backgroundColor = Color.white

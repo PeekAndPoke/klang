@@ -22,16 +22,16 @@ import kotlin.math.PI
 import kotlin.math.min
 
 @Suppress("FunctionName")
-fun Tag.Gauge(
+fun Tag.RoundGauge(
     value: Double,
-    display: String?,
+    display: ((Double) -> String)?,
     title: String?,
     range: ClosedRange<Double>,
     icon: SemanticIconFn?,
     iconColors: List<Pair<ClosedRange<Double>, Color>>,
     size: LinearDimension = 50.px,
 ) = comp(
-    Gauge.Props(
+    RoundGauge.Props(
         value = value,
         display = display,
         title = title,
@@ -41,16 +41,20 @@ fun Tag.Gauge(
         size = size,
     )
 ) {
-    Gauge(it)
+    RoundGauge(it)
 }
 
-class Gauge(ctx: Ctx<Props>) : Component<Gauge.Props>(ctx) {
+class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    companion object {
+        // for extensions
+    }
+
     data class Props(
         val value: Double,
-        val display: String?,
+        val display: ((Double) -> String)?,
         val title: String?,
         val range: ClosedRange<Double>,
         val icon: SemanticIconFn?,
@@ -97,7 +101,7 @@ class Gauge(ctx: Ctx<Props>) : Component<Gauge.Props>(ctx) {
             onNextProps { _, newProps ->
                 // Smooth the value changes (90% old + 10% new)
                 val current = smoothedValue ?: newProps.value
-                smoothedValue = (current * 9.0 + newProps.value) / 10.0
+                smoothedValue = (current * 4.0 + newProps.value) / 5.0
                 draw()
             }
 
@@ -141,7 +145,7 @@ class Gauge(ctx: Ctx<Props>) : Component<Gauge.Props>(ctx) {
                             textAlign = TextAlign.center
                             color = textColor
                         }
-                        +display
+                        +display(smoothedValue ?: props.value)
                     }
                 }
             }
@@ -183,6 +187,29 @@ class Gauge(ctx: Ctx<Props>) : Component<Gauge.Props>(ctx) {
         val percentage = if (rangeSize > 0) (value - props.range.start) / rangeSize else 0.0
 
         val indicatorAngle = startAngle + (percentage * fullSweep)
+
+        // Draw subtle tick marks inside the circle
+        val tickColor = "rgba(255, 255, 255, 0.33)"
+        val tickCount = 11  // Number of tick marks
+        val tickOuterRadius = (size / 2) * 0.88  // Start just inside circle edge
+        val tickInnerRadius = (size / 2) * 0.78  // End further inside
+
+        ctx.strokeStyle = tickColor
+        ctx.lineWidth = 1.0
+
+        for (i in 0 until tickCount) {
+            val tickAngle = startAngle + (i.toDouble() / (tickCount - 1)) * fullSweep
+
+            val x1 = cx + (tickOuterRadius * kotlin.math.cos(tickAngle))
+            val y1 = cy + (tickOuterRadius * kotlin.math.sin(tickAngle))
+            val x2 = cx + (tickInnerRadius * kotlin.math.cos(tickAngle))
+            val y2 = cy + (tickInnerRadius * kotlin.math.sin(tickAngle))
+
+            ctx.beginPath()
+            ctx.moveTo(x1, y1)
+            ctx.lineTo(x2, y2)
+            ctx.stroke()
+        }
 
         // Draw needle as a triangle (sharp tip)
         val color = Color.white

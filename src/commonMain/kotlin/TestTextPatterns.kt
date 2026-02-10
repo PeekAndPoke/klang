@@ -170,7 +170,7 @@ stack(
         [0!11 8 8 8 [8,15] [7,14]]              [[8,15]!4 [8,15]!3       [10,10|10|17|17|22]!9]>`).repeat(2),
   ).fast(1).scale("C2:chromatic").pan(0.75).hpf(60).lpf(3800).warmth(0.3)
     .s("supersaw").unison(4).detune(0.12).gain(0.5).distort(2.5).postgain(0.25)
-    .superimpose(x => x.pan(0.25).bandf("800 1046 900 1350|1350|1046".slow(64)).bandq(saw.range(2.0, 5.0).slow(64)).postgain(0.2))    
+    .superimpose(x => x.pan(0.25).bandf("800 1046 900 900|1046|1046|1046|1046".slow(64)).bandq(saw.range(2.0, 5.0).slow(64)).postgain(0.225))    
     .adsr("0.01:0.25:0.5:0.0").clip(1.01) //.solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("2400 600 1200 600").gain(saw.range(0.1, 0.2).slow(32)) //.solo()
@@ -183,7 +183,7 @@ stack(
         [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]            [~ bd] sd>`).fast(8).repeat(4)
   ).adsr("0.01:0.3:1.0:1.0").gain(0.80).hpf(80) //.solo()
   , // Drums 1 -----------------------------------------------------------------------------------------------
-  s("cr hh hh hh hh hh hh hh").fast(2).adsr("0.01:0.3:1.0:1.0").gain(0.9) //.solo()
+  s("cr hh hh hh hh hh hh hh").fast(2).adsr("0.01:0.3:1.0:1.0").gain("0.9".add(berlin2.range(-0.1, 0.1))) // .solo()
 ).room(0.01).rsize(5.0) /*
 
   
