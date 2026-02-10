@@ -4,7 +4,7 @@ import de.peekandpoke.ultra.common.toFixed
 import kotlinx.css.Color
 import kotlinx.css.LinearDimension
 import kotlinx.html.Tag
-import kotlin.math.ceil
+import kotlin.math.round
 
 fun Tag.roundOrbitsGauge(
     value: Double?,
@@ -12,7 +12,7 @@ fun Tag.roundOrbitsGauge(
 ) = RoundGauge(
     size = size,
     value = { value ?: 0.0 },
-    display = { if (value == null) "-" else ceil(it).toInt().toString() },
+    display = { if (value == null) "-" else round(it).toInt().toString() },
     title = "Active Orbits",
     range = 0.0..10.0,
     icon = { small.satellite },
@@ -59,7 +59,7 @@ fun Tag.activeVoicesGauge(
     size = size,
     value = { value?.toDouble() ?: 0.0 },
     display = {
-        if (value == null) "--" else ceil(it).toInt().toString().padStart(2, '0')
+        if (value == null) "--" else round(it).toInt().toString().padStart(2, '0')
     },
     title = "Active Voices",
     range = 0.0..100.0,

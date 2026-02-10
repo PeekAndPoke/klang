@@ -195,12 +195,16 @@ class VoiceScheduler(
 
     /**
      * Cleans up state for the given playbackId.
+     *
+     * - Removes playback epoch (prevents new voices from this playback)
+     * - Cancels scheduled voices that haven't started yet
+     * - Leaves active voices alone to ring out naturally through their release phase
      */
     fun cleanup(playbackId: String) {
-        // Remove playback epoch
+        // Remove playback epoch - prevents new voices from scheduling
         playbackEpochs.remove(playbackId)
 
-        // Remove all scheduled voices for this playback
+        // Remove all scheduled voices for this playback (they never started, so no need to ring out)
         // Note: MinHeap doesn't support efficient removal, so we rebuild without matching voices
         val remainingScheduled = mutableListOf<ScheduledVoice>()
         while (scheduled.size() > 0) {
@@ -212,8 +216,9 @@ class VoiceScheduler(
         // Re-add the remaining voices
         remainingScheduled.forEach { scheduled.push(it) }
 
-        // Remove all active voices for this playback
-        active.removeAll { it.playbackId == playbackId }
+        // DON'T remove active voices - let them ring out naturally!
+        // They will finish their release phase and be removed by the render loop when done.
+        // This prevents abrupt cuts and allows natural envelope decay.
     }
 
     fun scheduleVoice(voice: ScheduledVoice) {
