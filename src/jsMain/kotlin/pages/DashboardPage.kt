@@ -261,7 +261,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                 bottom = 50.px
                                 right = 0.px
                                 // Dimensions
-                                height = 180.px
+                                height = 150.px
                                 width = 100.pct
 
                                 opacity = 0.25
