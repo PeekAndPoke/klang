@@ -62,24 +62,21 @@ class PlayerMiniStats(ctx: NoProps) : PureComponent(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        playerDiagnostics?.let { signal ->
-            div {
-                ui.horizontal.list {
-//                    console.log("Orbits:", signal.diagnostics.orbits)
+        div {
+            ui.horizontal.list {
+                noui.bottom.aligned.item {
+                    val active = playerDiagnostics?.diagnostics?.orbits?.count { it.active }
+                    roundOrbitsGauge(value = active?.toDouble(), size = 50.px)
+                }
 
-                    noui.bottom.aligned.item {
-                        val active = signal.diagnostics.orbits.count { it.active }
+                noui.bottom.aligned.item {
+                    val headroom = playerDiagnostics?.diagnostics?.renderHeadroom
+                    renderHeadroomGauge(value = headroom, size = 62.px)
+                }
 
-                        roundOrbitsGauge(value = active.toDouble(), size = 50.px)
-                    }
-
-                    noui.bottom.aligned.item {
-                        renderHeadroomGauge(value = signal.diagnostics.renderHeadroom, size = 62.px)
-                    }
-
-                    noui.bottom.aligned.item {
-                        activeVoicesGauge(value = signal.diagnostics.activeVoiceCount, size = 50.px)
-                    }
+                noui.bottom.aligned.item {
+                    val voiceCount = playerDiagnostics?.diagnostics?.activeVoiceCount
+                    activeVoicesGauge(value = voiceCount, size = 50.px)
                 }
             }
         }
