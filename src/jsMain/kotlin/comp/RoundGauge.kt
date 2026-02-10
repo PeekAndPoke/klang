@@ -71,7 +71,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
     // Smoothed value for smooth needle movement
     private var smoothedValue: Double by value(props.range.start)
 
-    private val textColor = Color.white.withAlpha(0.7)
+    private val textColor = Color.white.withAlpha(0.5)
 
     init {
         lifecycle {
@@ -97,8 +97,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
             onNextProps { _, newProps ->
                 // Smooth the value changes (90% old + 10% new)
-                val current = smoothedValue ?: props.range.start
-                smoothedValue = (current * 4.0 + newProps.value()) / 5.0
+                smoothedValue = (smoothedValue * 9.0 + newProps.value()) / 10.0
 
                 draw()
             }

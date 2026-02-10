@@ -32,6 +32,7 @@ fun Tag.Oscilloscope(
     centerLineWidth: Double = 1.0,
     expandedStrokeColor: Color = Color.black,
     expandedStrokeWidth: Double = strokeWidth * 1.0,
+    pointSkip: Int = 4,  // Draw every Nth point in compact mode (1=all, 2=every 2nd, 3=every 3rd)
     player: () -> KlangPlayer?,
 ) = comp(
     Oscilloscope.Props(
@@ -42,6 +43,7 @@ fun Tag.Oscilloscope(
         centerLineWidth = centerLineWidth,
         expandedStrokeColor = expandedStrokeColor,
         expandedStrokeWidth = expandedStrokeWidth,
+        pointSkip = pointSkip,
     )
 ) {
     Oscilloscope(it)
@@ -59,6 +61,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val centerLineWidth: Double,
         val expandedStrokeColor: Color,
         val expandedStrokeWidth: Double,
+        val pointSkip: Int,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -272,13 +275,17 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val widthInt = canvasWidth.toInt()
 
         if (widthInt >= sliceLength) {
-            // More pixels than samples - draw all points
+            // More pixels than samples - draw points with optional skipping
             val sliceWidth = canvasWidth / sliceLength.toDouble()
 
             // Get cached deflection multipliers if in expanded mode
             val deflectionCache = totalWidth?.let { getOrBuildDeflectionCache(it) }
 
-            for (i in 0 until sliceLength) {
+            // Use pointSkip to control line thickness (skip points in compact mode)
+            val step = if (expanded) 1 else props.pointSkip.coerceAtLeast(1)
+            var isFirstPoint = true
+
+            for (i in 0 until sliceLength step step) {
                 val bufferIdx = startIdx + i
                 var value = visualizerBuffer[bufferIdx]
                 val x = i * sliceWidth
@@ -293,8 +300,9 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
                 val y = centerY - (value * centerY)
 
-                if (i == 0) {
+                if (isFirstPoint) {
                     ctx.moveTo(x, y)
+                    isFirstPoint = false
                 } else {
                     ctx.lineTo(x, y)
                 }
@@ -306,7 +314,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             // Get cached deflection multipliers if in expanded mode
             val deflectionCache = totalWidth?.let { getOrBuildDeflectionCache(it) }
 
-            for (pixelX in 0 until widthInt) {
+            // Use pointSkip to reduce line thickness in compact mode
+            val step = if (expanded) 1 else props.pointSkip.coerceAtLeast(1)
+            var isFirstPoint = true
+            var lastDrawnPixelX = -1
+
+            for (pixelX in 0 until widthInt step step) {
                 val localStartIdx = pixelX * samplesPerPixel
                 val localEndIdx = minOf(localStartIdx + samplesPerPixel, sliceLength)
 
@@ -337,11 +350,49 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 val yMin = centerY - (minVal * centerY)
                 val yMax = centerY - (maxVal * centerY)
 
-                if (pixelX == 0) {
+                if (isFirstPoint) {
                     ctx.moveTo(x, yMax)
+                    isFirstPoint = false
                 }
 
                 // Draw vertical line from min to max for this pixel
+                ctx.lineTo(x, yMax)
+                ctx.lineTo(x, yMin)
+
+                lastDrawnPixelX = pixelX
+            }
+
+            // Always draw the last point to complete the waveform
+            if (lastDrawnPixelX < widthInt - 1) {
+                val pixelX = widthInt - 1
+                val localStartIdx = pixelX * samplesPerPixel
+                val localEndIdx = minOf(localStartIdx + samplesPerPixel, sliceLength)
+
+                val bufferStartIdx = startIdx + localStartIdx
+                val bufferEndIdx = startIdx + localEndIdx
+
+                var minVal = visualizerBuffer[bufferStartIdx]
+                var maxVal = visualizerBuffer[bufferStartIdx]
+
+                for (i in bufferStartIdx + 1 until bufferEndIdx) {
+                    val value = visualizerBuffer[i]
+                    if (value < minVal) minVal = value
+                    if (value > maxVal) maxVal = value
+                }
+
+                val x = pixelX.toDouble()
+
+                deflectionCache?.let { cache ->
+                    val globalX = (xOffset + x).toInt()
+                    val cacheIdx = globalX.coerceIn(0, cache.size - 1)
+                    val deflectionMultiplier = cache[cacheIdx]
+                    minVal *= deflectionMultiplier.toFloat()
+                    maxVal *= deflectionMultiplier.toFloat()
+                }
+
+                val yMin = centerY - (minVal * centerY)
+                val yMax = centerY - (maxVal * centerY)
+
                 ctx.lineTo(x, yMax)
                 ctx.lineTo(x, yMin)
             }

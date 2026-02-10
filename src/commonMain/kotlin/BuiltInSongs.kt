@@ -31,7 +31,7 @@ object BuiltInSongs {
         Song(
             id = "builtin-song-0000003",
             title = "Stranger Synths",
-            cps = 0.55,
+            cps = 0.57,
             code = TestTextPatterns.strangerThingsNetflix,
         )
     )

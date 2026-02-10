@@ -32,6 +32,7 @@ import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
 import io.peekandpoke.klang.strudel.playStrudel
 import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.css.properties.scaleX
@@ -251,25 +252,25 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                 }
                             }
                         }
+                    }
 
-                        div {
-                            css {
-                                zIndex = 1000
-                                position = Position.absolute // Use Position.fixed if you want it to stay during scroll
-                                pointerEvents = PointerEvents.none
-                                // Anchor to bottom-right
-                                bottom = 50.px
-                                right = 0.px
-                                // Dimensions
-                                height = 150.px
-                                width = 100.pct
+                    div {
+                        css {
+                            zIndex = 1000
+                            position = Position.absolute // Use Position.fixed if you want it to stay during scroll
+                            pointerEvents = PointerEvents.none
+                            // Anchor to bottom-right
+                            top = (window.innerHeight - 130).px
+                            right = 0.px
+                            // Dimensions
+                            height = 130.px
+                            width = 100.pct
 
-                                opacity = 0.25
-                                attributes["mix-blend-mode"] = "screen"
-                            }
-
-                            Spectrumeter { Player.get() }
+                            opacity = 0.3
+                            attributes["mix-blend-mode"] = "screen"
                         }
+
+                        Spectrumeter { Player.get() }
                     }
                 }
 

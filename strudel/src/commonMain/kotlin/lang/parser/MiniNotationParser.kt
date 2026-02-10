@@ -411,16 +411,27 @@ class MiniNotationParser(
                 }
 
                 '/' -> {
-                    addToken(
-                        type = TokenType.SLASH,
-                        text = "/",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    // Check for // comment
+                    if (i + 1 < input.length && input[i + 1] == '/') {
+                        // Skip comment until end of line
+                        i += 2 // Skip //
+                        while (i < input.length && input[i] != '\n') {
+                            i++
+                        }
+                        // Don't increment column - newline will reset it
+                    } else {
+                        // Single / is a division/slow operator
+                        addToken(
+                            type = TokenType.SLASH,
+                            text = "/",
+                            start = i,
+                            end = i + 1,
+                            tokenLine = line,
+                            tokenColumn = column
+                        )
+                        i++
+                        column++
+                    }
                 }
 
                 '~' -> {

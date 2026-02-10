@@ -307,7 +307,7 @@ class VoiceScheduler(
         avgHeadroom = (avgHeadroom * 9.0 + headroom) / 10.0
 
         // Send diagnostics approx 20 times per second (every 50ms)
-        if (endMs - lastDiagnosticsTimeMs > 50.0) {
+        if (endMs - lastDiagnosticsTimeMs > 20.0) {
             lastDiagnosticsTimeMs = endMs
 
             // Determine which orbits are currently active (have voices feeding them)
