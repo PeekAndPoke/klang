@@ -19,25 +19,29 @@
 
         /* CodeMirror live code highlighting */
         .cm-highlight-playing {
-            background-color: rgba(255, 100, 0, 0.0);
-            border: 2px solid rgba(255, 100, 0, 0.0);
+            background-color: rgba(0, 100, 200, 0.0);
+            border: 1px solid rgba(0, 100, 200, 0.0);
             border-radius: 3px;
             animation-name: pulse;
             animation-timing-function: ease-out;
             animation-fill-mode: forwards;
             /* duration comes from inline style via CodeMirrorComp */
             padding: 1px;
-            margin: -3px;
+            margin: -2px;
         }
 
         @keyframes pulse {
             0% {
-                background-color: rgba(255, 100, 0, 0.1);
-                border-color: rgba(255, 100, 0, 1.0);
+                background-color: rgba(0, 100, 255, 0.2);
+                border-color: rgba(0, 100, 255, 1.0);
+            }
+            50% {
+                background-color: rgba(0, 100, 255, 0.05);
+                border-color: rgba(0, 100, 255, 0.3);
             }
             100% {
-                background-color: rgba(255, 100, 0, 0.02);
-                border-color: rgba(255, 100, 0, 0.2);
+                background-color: rgba(0, 100, 255, 0.05);
+                border-color: rgba(0, 100, 255, 0.3);
             }
         }
 

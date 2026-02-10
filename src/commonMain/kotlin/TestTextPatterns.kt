@@ -149,31 +149,31 @@ import * from "strudel"
 stack(
   // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").fast(2)
-    .gain(1.0).distort(0.5).postgain("0.5!4 1.0!2 1.5 1.8".slow(64)).hpf(4350).lpf(4450) //.solo()
+    .gain(1.0).distort(0.5).postgain("0.3!4 0.8!2 1.2 1.5".slow(32)).hpf(4350).lpf(4450).pan(0.6) //.solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .fast(4).scale("C3:chromatic").clip(0.75).hpf(800).lpf(4500).pan(0.2)
-    .s("supersaw").unison(6).detune(0.03).gain(0.2).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.9).warmth(0.3) //.solo()
+    .s("supersaw").unison(6).detune(0.05).gain(0.2).distort(saw.range(0.5, 2.0).slow(32)).postgain(0.8).warmth(0.4) //.solo()
     .adsr("0.01:0.25:0.3:0.07").filterWhen(t => t > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .fast(4).scale("C4:chromatic").clip(0.75).hpf(800).lpf(4500).pan(0.8)
-    .s("supersaw").unison(6).detune(0.03).gain(0.2).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.9).warmth(0.3) //.solo()
+    .s("supersaw").unison(6).detune(0.05).gain(0.2).distort(saw.range(0.5, 2.0).slow(32)).postgain(0.70).warmth(0.4) //.solo()
     .adsr("0.01:0.25:0.3:0.07").filterWhen(t => t > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(
     n(`<[0,7,12]                                [[0,7,12]!3 ~            ~!12]
-        [0,7,12]                                [[[8,15,20]@12 [8,15]@4] [10,10,17|17|22|22]*8]>`).repeat(2),
+        [0,7,12]                                [[[8,15]@12 [8,15]@4] [10,10,17|17|22|22]*8]>`).repeat(2),
     n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3] 
         [0!11 8 8 8 [8,15] [7,14]]              [[8,15]!4 [8,15]!3       [10,10|10|17|17|22]!9]>`).repeat(2),
-  ).fast(1).scale("C2:chromatic").pan(0.65).hpf(60).lpf(3800).warmth(0.3)
-    .s("supersaw").unison(4).detune(0.10).gain(0.5).distort(2.5).postgain(0.25)
-    .superimpose(x => x.pan(0.35).bandf("750 1100 900 1350".slow(64)).bandq(saw.range(2.0, 5.0).slow(64)).postgain(0.2))    
+  ).fast(1).scale("C2:chromatic").pan(0.75).hpf(60).lpf(3800).warmth(0.3)
+    .s("supersaw").unison(4).detune(0.12).gain(0.5).distort(2.5).postgain(0.25)
+    .superimpose(x => x.pan(0.25).bandf("800 1046 900 1350|1350|1046".slow(64)).bandq(saw.range(2.0, 5.0).slow(64)).postgain(0.2))    
     .adsr("0.01:0.25:0.5:0.0").clip(1.01) //.solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
-  s("cp cp cp cp").bandf("3200 600 2400 600").gain(saw.range(0.1, 0.3).slow(32)) //.solo()
+  s("cp cp cp cp").bandf("2400 600 1200 600").gain(saw.range(0.1, 0.2).slow(32)) //.solo()
   ,note("a").sound("brown").gain(0.05).crush(8) //.solo()
   , // Drums 1 -----------------------------------------------------------------------------------------------
   cat(

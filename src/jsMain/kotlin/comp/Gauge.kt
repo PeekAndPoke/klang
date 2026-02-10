@@ -1,0 +1,217 @@
+package io.peekandpoke.klang.comp
+
+import de.peekandpoke.kraft.components.Component
+import de.peekandpoke.kraft.components.Ctx
+import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
+import de.peekandpoke.ultra.semanticui.icon
+import de.peekandpoke.ultra.semanticui.semanticIcon
+import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.externals.ResizeObserver
+import io.peekandpoke.klang.utils.mixColor
+import kotlinx.css.*
+import kotlinx.html.Tag
+import kotlinx.html.canvas
+import kotlinx.html.div
+import kotlinx.html.title
+import org.w3c.dom.CanvasRenderingContext2D
+import org.w3c.dom.HTMLCanvasElement
+import kotlin.math.PI
+import kotlin.math.min
+
+@Suppress("FunctionName")
+fun Tag.Gauge(
+    value: Double,
+    display: String?,
+    title: String?,
+    range: ClosedRange<Double>,
+    icon: SemanticIconFn?,
+    iconColors: List<Pair<ClosedRange<Double>, Color>>,
+    size: LinearDimension = 50.px,
+) = comp(
+    Gauge.Props(
+        value = value,
+        display = display,
+        title = title,
+        range = range,
+        icon = icon,
+        iconColors = iconColors,
+        size = size,
+    )
+) {
+    Gauge(it)
+}
+
+class Gauge(ctx: Ctx<Props>) : Component<Gauge.Props>(ctx) {
+
+    //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    data class Props(
+        val value: Double,
+        val display: String?,
+        val title: String?,
+        val range: ClosedRange<Double>,
+        val icon: SemanticIconFn?,
+        val iconColors: List<Pair<ClosedRange<Double>, Color>>,
+        val size: LinearDimension,
+    )
+
+    //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private var canvas: HTMLCanvasElement? = null
+    private var ctx2d: CanvasRenderingContext2D? = null
+    private var resizeObserver: ResizeObserver? = null
+
+    // Smoothed value for smooth needle movement
+    private var smoothedValue: Double? by value(null)
+
+    private val textColor = Color.white.withAlpha(0.7)
+
+    init {
+        lifecycle {
+            onMount {
+                // Initialize smoothed value with current value
+                smoothedValue = props.value
+
+                dom?.let { container ->
+                    canvas = container.querySelector("canvas") as? HTMLCanvasElement
+                    ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
+
+                    resizeObserver = ResizeObserver { entries, _ ->
+                        for (entry in entries) {
+                            val width = entry.contentRect.width
+                            val height = entry.contentRect.height
+
+                            canvas?.width = width.toInt()
+                            canvas?.height = height.toInt()
+
+                            draw()
+                        }
+                    }
+                    resizeObserver?.observe(container)
+                }
+            }
+
+            onNextProps { _, newProps ->
+                // Smooth the value changes (90% old + 10% new)
+                val current = smoothedValue ?: newProps.value
+                smoothedValue = (current * 9.0 + newProps.value) / 10.0
+                draw()
+            }
+
+            onUnmount {
+                resizeObserver?.disconnect()
+            }
+        }
+    }
+
+    //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    override fun VDom.render() {
+        val iconFn: SemanticIconFn = props.icon ?: semanticIcon { this }
+        val iconColor = mixColor(props.value, props.iconColors)
+
+        div {
+            css {
+                position = Position.relative
+                display = Display.inlineBlock
+            }
+
+            ui.basic.inverted.white.circular.icon.label {
+                css {
+                    borderWidth = 1.8.px
+                    width = props.size
+                    height = props.size
+                    position = Position.relative
+                }
+
+                props.title?.let { title = it }
+
+                icon.iconFn().then { css { color = iconColor } }
+
+                props.display?.let { display ->
+                    div {
+                        css {
+                            position = Position.absolute
+                            left = 0.px
+                            bottom = 20.pct
+                            width = 100.pct
+                            textAlign = TextAlign.center
+                            color = textColor
+                        }
+                        +display
+                    }
+                }
+            }
+
+            canvas {
+                css {
+                    position = Position.absolute
+                    top = 0.px
+                    left = 0.px
+                    width = 100.pct
+                    height = 100.pct
+                    pointerEvents = PointerEvents.none
+                }
+            }
+        }
+    }
+
+    private fun draw() {
+        val canvas = canvas ?: return
+        val ctx = ctx2d ?: return
+
+        val w = canvas.width.toDouble()
+        val h = canvas.height.toDouble()
+        val cx = w / 2
+        val cy = h / 2
+
+        val size = min(w, h)
+
+        ctx.clearRect(0.0, 0.0, w, h)
+
+        // Calculate indicator angle
+        // Gauge range: 135deg (bottom-left) to 405deg (bottom-right) = 270deg sweep
+        val startAngle = 0.75 * PI  // 135deg
+        val fullSweep = 1.5 * PI     // 270deg sweep
+
+        // Use smoothed value for gradual movement
+        val value = (smoothedValue ?: props.value).coerceIn(props.range.start, props.range.endInclusive)
+        val rangeSize = props.range.endInclusive - props.range.start
+        val percentage = if (rangeSize > 0) (value - props.range.start) / rangeSize else 0.0
+
+        val indicatorAngle = startAngle + (percentage * fullSweep)
+
+        // Draw needle as a triangle (sharp tip)
+        val color = Color.white
+
+        // Needle dimensions
+        val innerRadius = size * 0.08  // Start point (just beyond center)
+        val outerRadius = (size / 2) * 0.85  // Tip point
+        val needleWidth = size * 0.03  // Width at base
+
+        // Calculate tip point (sharp end)
+        val tipX = cx + (outerRadius * kotlin.math.cos(indicatorAngle))
+        val tipY = cy + (outerRadius * kotlin.math.sin(indicatorAngle))
+
+        // Calculate base point (at inner radius)
+        val baseX = cx + (innerRadius * kotlin.math.cos(indicatorAngle))
+        val baseY = cy + (innerRadius * kotlin.math.sin(indicatorAngle))
+
+        // Calculate perpendicular offset for needle width
+        val perpAngle = indicatorAngle + (PI / 2)
+        val offsetX = needleWidth * kotlin.math.cos(perpAngle)
+        val offsetY = needleWidth * kotlin.math.sin(perpAngle)
+
+        // Draw triangle: tip + two base corners
+        ctx.fillStyle = color.toString()
+        ctx.beginPath()
+        ctx.moveTo(tipX, tipY)  // Sharp tip
+        ctx.lineTo(baseX + offsetX, baseY + offsetY)  // Base left
+        ctx.lineTo(baseX - offsetX, baseY - offsetY)  // Base right
+        ctx.closePath()
+        ctx.fill()
+    }
+}

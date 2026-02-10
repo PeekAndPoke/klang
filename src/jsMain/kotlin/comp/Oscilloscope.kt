@@ -20,6 +20,7 @@ import org.khronos.webgl.get
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.events.Event
 import kotlin.math.floor
 import kotlin.math.pow
 
@@ -72,8 +73,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     private var expanded: Boolean by value(false)
     private var overlayCanvas: HTMLCanvasElement? by value(null)
     private var overlayCtx2d: CanvasRenderingContext2D? by value(null)
-    private var overlayContainer: org.w3c.dom.HTMLDivElement? by value(null)
-    private var windowResizeListener: ((org.w3c.dom.events.Event) -> Unit)? by value(null)
+    private var overlayContainer: HTMLDivElement? by value(null)
+    private var windowResizeListener: ((Event) -> Unit)? by value(null)
+
+    // Cache for deflection multipliers to avoid recalculating every frame
+    private var deflectionCache: DoubleArray? = null
+    private var cachedTotalWidth: Double = 0.0
 
     init {
         lifecycle {
@@ -201,6 +206,22 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         return 0.1 + 0.9 * curveValue
     }
 
+    /**
+     * Get or build the deflection cache for the given total width.
+     * Cache is invalidated when totalWidth changes (e.g., window resize).
+     */
+    private fun getOrBuildDeflectionCache(totalWidth: Double): DoubleArray {
+        if (deflectionCache == null || cachedTotalWidth != totalWidth) {
+            val resolution = totalWidth.toInt().coerceAtLeast(1)
+            deflectionCache = DoubleArray(resolution) { pixelX ->
+                val normalized = pixelX.toDouble() / totalWidth
+                calculateStringDeflection(normalized)
+            }
+            cachedTotalWidth = totalWidth
+        }
+        return deflectionCache!!
+    }
+
     private fun drawWaveformSlice(
         ctx: CanvasRenderingContext2D,
         canvasWidth: Double,
@@ -253,16 +274,20 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         if (widthInt >= sliceLength) {
             // More pixels than samples - draw all points
             val sliceWidth = canvasWidth / sliceLength.toDouble()
+
+            // Get cached deflection multipliers if in expanded mode
+            val deflectionCache = totalWidth?.let { getOrBuildDeflectionCache(it) }
+
             for (i in 0 until sliceLength) {
                 val bufferIdx = startIdx + i
                 var value = visualizerBuffer[bufferIdx]
                 val x = i * sliceWidth
 
-                // Apply vibrating string deflection if in expanded mode
-                totalWidth?.let { total ->
-                    val globalX = xOffset + x
-                    val normalized = globalX / total  // 0.0 to 1.0
-                    val deflectionMultiplier = calculateStringDeflection(normalized)
+                // Apply vibrating string deflection if in expanded mode (using cache)
+                deflectionCache?.let { cache ->
+                    val globalX = (xOffset + x).toInt()
+                    val cacheIdx = globalX.coerceIn(0, cache.size - 1)
+                    val deflectionMultiplier = cache[cacheIdx]
                     value *= deflectionMultiplier.toFloat()
                 }
 
@@ -277,6 +302,9 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         } else {
             // More samples than pixels - downsample by showing min/max per pixel bin
             val samplesPerPixel = sliceLength / widthInt
+
+            // Get cached deflection multipliers if in expanded mode
+            val deflectionCache = totalWidth?.let { getOrBuildDeflectionCache(it) }
 
             for (pixelX in 0 until widthInt) {
                 val localStartIdx = pixelX * samplesPerPixel
@@ -297,11 +325,11 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
                 val x = pixelX.toDouble()
 
-                // Apply vibrating string deflection if in expanded mode
-                totalWidth?.let { total ->
-                    val globalX = xOffset + x
-                    val normalized = globalX / total  // 0.0 to 1.0
-                    val deflectionMultiplier = calculateStringDeflection(normalized)
+                // Apply vibrating string deflection if in expanded mode (using cache)
+                deflectionCache?.let { cache ->
+                    val globalX = (xOffset + x).toInt()
+                    val cacheIdx = globalX.coerceIn(0, cache.size - 1)
+                    val deflectionMultiplier = cache[cacheIdx]
                     minVal *= deflectionMultiplier.toFloat()
                     maxVal *= deflectionMultiplier.toFloat()
                 }
@@ -362,7 +390,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         overlayCtx2d = canvas.getContext("2d") as? CanvasRenderingContext2D
 
         // Add window resize listener to reposition overlay
-        val resizeListener: (org.w3c.dom.events.Event) -> Unit = {
+        val resizeListener: (Event) -> Unit = {
             val newRect = dom?.getBoundingClientRect()
             if (newRect != null) {
                 container.style.top = "${newRect.top}px"
@@ -415,6 +443,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         overlayCanvas = null
         overlayCtx2d = null
         windowResizeListener = null
+
+        // Invalidate deflection cache when exiting expanded mode
+        deflectionCache = null
+        cachedTotalWidth = 0.0
 
         // Restore original resize observer
         dom?.let { containerElement ->

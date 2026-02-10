@@ -26,6 +26,7 @@ import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlayerMiniStats
+import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -249,6 +250,25 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                                     icon.music { css { transform { scaleX(-1.0) }; marginLeft = 8.px } }
                                 }
                             }
+                        }
+
+                        div {
+                            css {
+                                zIndex = 1000
+                                position = Position.absolute // Use Position.fixed if you want it to stay during scroll
+                                pointerEvents = PointerEvents.none
+                                // Anchor to bottom-right
+                                bottom = 50.px
+                                right = 0.px
+                                // Dimensions
+                                height = 180.px
+                                width = 100.pct
+
+                                opacity = 0.25
+                                attributes["mix-blend-mode"] = "screen"
+                            }
+
+                            Spectrumeter { Player.get() }
                         }
                     }
                 }
