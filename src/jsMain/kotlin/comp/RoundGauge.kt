@@ -23,7 +23,7 @@ import kotlin.math.min
 
 @Suppress("FunctionName")
 fun Tag.RoundGauge(
-    value: Double,
+    value: () -> Double,
     display: ((Double) -> String)?,
     title: String?,
     range: ClosedRange<Double>,
@@ -53,7 +53,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
     }
 
     data class Props(
-        val value: Double,
+        val value: () -> Double,
         val display: ((Double) -> String)?,
         val title: String?,
         val range: ClosedRange<Double>,
@@ -69,16 +69,13 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
     private var resizeObserver: ResizeObserver? = null
 
     // Smoothed value for smooth needle movement
-    private var smoothedValue: Double? by value(null)
+    private var smoothedValue: Double by value(props.range.start)
 
     private val textColor = Color.white.withAlpha(0.7)
 
     init {
         lifecycle {
             onMount {
-                // Initialize smoothed value with current value
-                smoothedValue = props.value
-
                 dom?.let { container ->
                     canvas = container.querySelector("canvas") as? HTMLCanvasElement
                     ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
@@ -100,8 +97,9 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
             onNextProps { _, newProps ->
                 // Smooth the value changes (90% old + 10% new)
-                val current = smoothedValue ?: newProps.value
-                smoothedValue = (current * 4.0 + newProps.value) / 5.0
+                val current = smoothedValue ?: props.range.start
+                smoothedValue = (current * 4.0 + newProps.value()) / 5.0
+
                 draw()
             }
 
@@ -115,7 +113,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
     override fun VDom.render() {
         val iconFn: SemanticIconFn = props.icon ?: semanticIcon { this }
-        val iconColor = mixColor(props.value, props.iconColors)
+        val iconColor = mixColor(props.value(), props.iconColors)
 
         div {
             css {
@@ -145,7 +143,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                             textAlign = TextAlign.center
                             color = textColor
                         }
-                        +display(smoothedValue ?: props.value)
+                        +display(smoothedValue)
                     }
                 }
             }
@@ -182,7 +180,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val fullSweep = 1.5 * PI     // 270deg sweep
 
         // Use smoothed value for gradual movement
-        val value = (smoothedValue ?: props.value).coerceIn(props.range.start, props.range.endInclusive)
+        val value = (smoothedValue).coerceIn(props.range.start, props.range.endInclusive)
         val rangeSize = props.range.endInclusive - props.range.start
         val percentage = if (rangeSize > 0) (value - props.range.start) / rangeSize else 0.0
 

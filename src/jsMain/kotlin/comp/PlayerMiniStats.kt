@@ -65,8 +65,11 @@ class PlayerMiniStats(ctx: NoProps) : PureComponent(ctx) {
         playerDiagnostics?.let { signal ->
             div {
                 ui.horizontal.list {
+//                    console.log("Orbits:", signal.diagnostics.orbits)
+
                     noui.bottom.aligned.item {
                         val active = signal.diagnostics.orbits.count { it.active }
+
                         roundOrbitsGauge(value = active.toDouble(), size = 50.px)
                     }
 

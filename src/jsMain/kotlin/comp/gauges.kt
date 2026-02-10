@@ -4,14 +4,15 @@ import de.peekandpoke.ultra.common.toFixed
 import kotlinx.css.Color
 import kotlinx.css.LinearDimension
 import kotlinx.html.Tag
+import kotlin.math.ceil
 
 fun Tag.roundOrbitsGauge(
     value: Double,
     size: LinearDimension,
 ) = RoundGauge(
     size = size,
-    value = value,
-    display = { it.toInt().toString() },
+    value = { value },
+    display = { ceil(it).toInt().toString() },
     title = "Active Orbits",
     range = 0.0..10.0,
     icon = { small.satellite },
@@ -28,7 +29,7 @@ fun Tag.renderHeadroomGauge(
     size: LinearDimension,
 ) = RoundGauge(
     size = size,
-    value = 1.0 - value,
+    value = { 1.0 - value },
     display = { (1.0 - it).toFixed(2) },
     title = "Render Headroom",
     range = 0.0..1.0,
@@ -46,8 +47,8 @@ fun Tag.activeVoicesGauge(
     size: LinearDimension,
 ) = RoundGauge(
     size = size,
-    value = value.toDouble(),
-    display = { it.toInt().toString().padStart(2, '0') },
+    value = { value.toDouble() },
+    display = { ceil(it).toInt().toString().padStart(2, '0') },
     title = "Active Voices",
     range = 0.0..80.0,
     icon = { small.volume_up },

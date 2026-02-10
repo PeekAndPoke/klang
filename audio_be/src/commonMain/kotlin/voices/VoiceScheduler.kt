@@ -62,8 +62,14 @@ class VoiceScheduler(
     // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
 
+    // Wrapper to track playbackId alongside Voice
+    private data class ActiveVoice(
+        val voice: Voice,
+        val playbackId: String,
+    )
+
     // State with active voices
-    private val active = ArrayList<Voice>(64)
+    private val active = ArrayList<ActiveVoice>(64)
 
     // Global start time for absolute time to frame conversion
     private var backendStartTimeSec: Double = 0.0
@@ -191,7 +197,23 @@ class VoiceScheduler(
      * Cleans up state for the given playbackId.
      */
     fun cleanup(playbackId: String) {
+        // Remove playback epoch
         playbackEpochs.remove(playbackId)
+
+        // Remove all scheduled voices for this playback
+        // Note: MinHeap doesn't support efficient removal, so we rebuild without matching voices
+        val remainingScheduled = mutableListOf<ScheduledVoice>()
+        while (scheduled.size() > 0) {
+            val voice = scheduled.pop()
+            if (voice != null && voice.playbackId != playbackId) {
+                remainingScheduled.add(voice)
+            }
+        }
+        // Re-add the remaining voices
+        remainingScheduled.forEach { scheduled.push(it) }
+
+        // Remove all active voices for this playback
+        active.removeAll { it.playbackId == playbackId }
     }
 
     fun scheduleVoice(voice: ScheduledVoice) {
@@ -251,10 +273,10 @@ class VoiceScheduler(
         // 3. Render Loop
         var i = 0
         while (i < active.size) {
-            val voice = active[i]
+            val activeVoice = active[i]
 
             // Delegate logic to the voice itself
-            val isAlive = voice.render(ctx)
+            val isAlive = activeVoice.voice.render(ctx)
 
             if (isAlive) {
                 i++
@@ -289,7 +311,7 @@ class VoiceScheduler(
             lastDiagnosticsTimeMs = endMs
 
             // Determine which orbits are currently active (have voices feeding them)
-            val activeOrbitIds = active.map { it.orbitId }.toSet()
+            val activeOrbitIds = active.map { it.voice.orbitId }.toSet()
 
             val orbitStates = options.orbits.allocatedIds.map { id ->
                 KlangCommLink.Feedback.Diagnostics.OrbitState(
@@ -351,8 +373,8 @@ class VoiceScheduler(
                 gateEndTime = epoch + head.gateEndTime,
             )
 
-            makeVoice(absoluteVoice, nowFrame)?.let {
-                active.add(it)
+            makeVoice(absoluteVoice, nowFrame)?.let { voice ->
+                active.add(ActiveVoice(voice, head.playbackId))
             }
         }
     }
@@ -689,8 +711,9 @@ class VoiceScheduler(
                 if (samplePlayback.cut != null) {
                     val iterator = active.iterator()
                     while (iterator.hasNext()) {
-                        val activeVoice = iterator.next()
-                        if (activeVoice is SampleVoice && activeVoice.samplePlayback.cut == samplePlayback.cut) {
+                        val activeVoiceWrapper = iterator.next()
+                        val voice = activeVoiceWrapper.voice
+                        if (voice is SampleVoice && voice.samplePlayback.cut == samplePlayback.cut) {
                             // Kill the active voice in the same cut group
                             // TODO: Use a fade out / release phase instead of hard cut?
                             iterator.remove()
