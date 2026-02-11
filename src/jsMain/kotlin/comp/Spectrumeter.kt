@@ -219,6 +219,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
             val x = bucketIdx * barWidth
             val effectiveWidth = if (barWidth > props.gap) barWidth - props.gap else barWidth
+            val boxAlpha = 0.5 + (normalized * 0.5)
+
+            val colorsWithAlpha = colors.map { it.withAlpha(boxAlpha) }
 
             // Draw stacked boxes from bottom to top
             for (boxIdx in 0 until numBoxesToDraw) {
@@ -228,7 +231,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
                 // Color gradient: bottom boxes (0%) use first color, top boxes (100%) use last color
                 val colorProgress = boxIdx.toDouble() / maxBoxes.coerceAtLeast(1)
                 val colorIdx = (colorProgress * (numColors - 1)).toInt().coerceIn(0, numColors - 1)
-                val boxColor = colors[colorIdx].withAlpha((1.0 + normalized) / 2.0)
+                val boxColor = colorsWithAlpha[colorIdx]
 
                 ctx.fillStyle = boxColor.toString()
                 ctx.fillRect(x, boxY, effectiveWidth, boxHeight)

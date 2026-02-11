@@ -134,8 +134,11 @@ class JsAudioBackend(
                             }
                         }
 
-                        // All others are forwarded as they are
-                        else -> node.port.sendCmd(cmd)
+                        // Direct forwarding for control commands
+                        is KlangCommLink.Cmd.Cleanup,
+                        is KlangCommLink.Cmd.ClearScheduled,
+                        is KlangCommLink.Cmd.ScheduleVoice,
+                            -> node.port.sendCmd(cmd)
                     }
                 }
 

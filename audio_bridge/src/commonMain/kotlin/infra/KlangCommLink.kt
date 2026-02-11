@@ -26,6 +26,14 @@ class KlangCommLink(capacity: Int = 8192) {
             }
         }
 
+        data class ClearScheduled(
+            override val playbackId: String,
+        ) : Cmd {
+            companion object {
+                const val SERIAL_NAME = "clear-scheduled"
+            }
+        }
+
         data class ScheduleVoice(
             override val playbackId: String,
             val voice: ScheduledVoice,

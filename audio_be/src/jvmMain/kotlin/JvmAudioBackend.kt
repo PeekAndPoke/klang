@@ -95,6 +95,10 @@ class JvmAudioBackend(
                             voices.cleanup(cmd.playbackId)
                         }
 
+                        is KlangCommLink.Cmd.ClearScheduled -> {
+                            voices.clearScheduled(cmd.playbackId)
+                        }
+
                         is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
                     }
                 }

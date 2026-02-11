@@ -101,6 +101,10 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                             ctx.voices.cleanup(cmd.playbackId)
                         }
 
+                        is KlangCommLink.Cmd.ClearScheduled -> {
+                            ctx.voices.clearScheduled(cmd.playbackId)
+                        }
+
                         is KlangCommLink.Cmd.Sample -> ctx.voices.addSample(msg = cmd)
                     }
                 }

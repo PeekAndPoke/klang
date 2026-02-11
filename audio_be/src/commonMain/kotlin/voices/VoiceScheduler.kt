@@ -284,6 +284,29 @@ class VoiceScheduler(
         // This prevents abrupt cuts and allows natural envelope decay.
     }
 
+    /**
+     * Clears scheduled voices for a playback but preserves active voices and clears epoch.
+     * Used for tempo/pattern changes to drop future events while maintaining timing anchor.
+     *
+     * Key difference from cleanup(): Clears epoch to force re-anchoring on next voice.
+     */
+    fun clearScheduled(playbackId: String) {
+        // Remove scheduled voices for this playback
+        val remainingScheduled = mutableListOf<ScheduledVoice>()
+        while (scheduled.size() > 0) {
+            val voice = scheduled.pop()
+            if (voice != null && voice.playbackId != playbackId) {
+                remainingScheduled.add(voice)
+            }
+        }
+        remainingScheduled.forEach { scheduled.push(it) }
+
+        // Clear epoch so next voice establishes new time anchor
+        playbackEpochs.remove(playbackId)
+
+        // Keep active voices playing - don't interrupt them
+    }
+
     fun scheduleVoice(voice: ScheduledVoice) {
         val pid = voice.playbackId
 
