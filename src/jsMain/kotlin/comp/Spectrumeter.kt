@@ -169,21 +169,6 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val endBinRange = props.binRange.last.coerceIn(startBinRange, bufferLength - 1)
         val effectiveBinCount = endBinRange - startBinRange + 1
 
-        // Check if there's any actual audio data (not just silence/noise)
-        // Use a stricter threshold to avoid showing bars for background noise
-        var hasData = false
-        for (i in startBinRange..endBinRange) {
-            val dbValue = visualizerBuffer[i].toDouble()
-            // If any bin is above -60dB, consider it as having actual audio
-            if (dbValue > -60.0) {
-                hasData = true
-                break
-            }
-        }
-
-        // Don't draw anything if there's no audio data
-        if (!hasData) return
-
         val numBuckets = props.numBuckets.coerceIn(1, effectiveBinCount)
         val colors = props.colors
         val numColors = colors.size.coerceAtLeast(1)
@@ -219,7 +204,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
             val x = bucketIdx * barWidth
             val effectiveWidth = if (barWidth > props.gap) barWidth - props.gap else barWidth
-            val boxAlpha = 0.5 + (normalized * 0.5)
+            val boxAlpha = 0.25 + (normalized * 0.75)
 
             val colorsWithAlpha = colors.map { it.withAlpha(boxAlpha) }
 

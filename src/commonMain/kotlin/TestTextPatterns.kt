@@ -150,7 +150,7 @@ import * from "strudel"
 stack(
   // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").fast(2).transpose("0 -2 0 2".slow(512))
-    .gain(1.0).distort(0.5).postgain("1.0 0.0!7".slow(512)).hpf(4350).lpf(4450).pan(0.6) //.solo()
+    .gain(1.0).distort(0.5).postgain("1.0 0.0!7".slow(256)).hpf(4350).lpf(4450).pan(0.6) //.solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
@@ -170,7 +170,7 @@ stack(
     n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3] 
         [0!11 5 8 8 [8,15] [7,14]]              [[8,15]!4 [8,15]!3       [10,10|10|17|17|22]!9]>`).repeat(2),
   ).fast(1).scale("C2:chromatic").pan(0.75).hpf(120).lpf(4500).warmth(0.2)
-    .s("supersaw").unison(6).detune(0.12).gain(0.5).distort(saw.range(3.5, /*  --->  */ 11.0 /*  <----  */ ).slow(32)).postgain(0.18)
+    .s("supersaw").unison(6).detune(0.08).gain(0.5).distort(saw.range(3.5, /*  --->  */ 11.0 /*  <----  */ ).slow(32)).postgain(0.18)
     .superimpose(x => x.pan(0.25).bandf("800 1150 950 1200|1200|1225|1259".slow(64)).bandq(saw.range(2.0, 5.0).slow(64)).postgain(0.17))    
     .adsr("0.01:0.25:0.5:0.0").clip(1.01).filterWhen(t => t % 128 >= 4).transpose("0 -2 0 2".slow(512)) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
@@ -200,12 +200,13 @@ stack(
 
 
 
-                                             https://open.spotify.com/intl-de/track/58Hx7vKWjxuQyZ9XgUh3Wl?si=9c254ec279fe47f3                                                                                                                                                                                                                */ 
+                                             https://open.spotify.com/intl-de/track/58Hx7vKWjxuQyZ9XgUh3Wl?si=9c254ec279fe47f3
 
 
 
 
 
+*/ 
    """.trimIndent()
 
     val tetrisOriginal = """
