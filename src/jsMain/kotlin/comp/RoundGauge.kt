@@ -142,7 +142,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                     css {
                         color = iconColor
                         if (!isDisabled) {
-                            put("text-shadow", "0 0 16px")
+                            put("text-shadow", "0 0 10px")
                         }
                     }
                 }

@@ -228,7 +228,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
                 // Color gradient: bottom boxes (0%) use first color, top boxes (100%) use last color
                 val colorProgress = boxIdx.toDouble() / maxBoxes.coerceAtLeast(1)
                 val colorIdx = (colorProgress * (numColors - 1)).toInt().coerceIn(0, numColors - 1)
-                val boxColor = colors[colorIdx].withAlpha(normalized)
+                val boxColor = colors[colorIdx].withAlpha((1.0 + normalized) / 2.0)
 
                 ctx.fillStyle = boxColor.toString()
                 ctx.fillRect(x, boxY, effectiveWidth, boxHeight)

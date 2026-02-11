@@ -259,15 +259,16 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                     }
 
                     div {
+                        val spectHeight = 150
                         css {
                             zIndex = 1000
                             position = Position.absolute // Use Position.fixed if you want it to stay during scroll
                             pointerEvents = PointerEvents.none
                             // Anchor to bottom-right
-                            top = (window.innerHeight - 130).px
+                            top = (window.innerHeight - spectHeight).px
                             right = 0.px
                             // Dimensions
-                            height = 130.px
+                            height = spectHeight.px
                             width = 100.pct
 
                             opacity = 0.5
