@@ -642,6 +642,7 @@ data class StrudelVoiceData(
             loopBegin = loopBegin,
             loopEnd = loopEnd,
             compressor = compressor,
+            solo = if (solo == true) 0.95 else 0.0,
         )
     }
 

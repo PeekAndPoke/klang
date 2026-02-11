@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import de.peekandpoke.ultra.common.maths.Ease
 import io.peekandpoke.klang.audio_be.ONE_OVER_TWELVE
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
@@ -13,6 +14,7 @@ import io.peekandpoke.klang.audio_be.osci.withWarmth
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
+import io.peekandpoke.klang.common.math.ValueRamp
 
 class VoiceScheduler(
     val options: Options,
@@ -62,14 +64,18 @@ class VoiceScheduler(
     // Heap with scheduled voices
     private val scheduled = KlangMinHeap<ScheduledVoice> { a, b -> a.startTime < b.startTime }
 
-    // Wrapper to track playbackId alongside Voice
+    // Wrapper to track playbackId and solo state alongside Voice
     private data class ActiveVoice(
         val voice: Voice,
         val playbackId: String,
+        val soloAmount: Double, // Solo strength: 1.0 = full solo (others silent), 0.0 = no solo
     )
 
     // State with active voices
     private val active = ArrayList<ActiveVoice>(64)
+
+    // Smooth gain transition for solo/mute (background voices fade based on max soloAmount)
+    private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = 2.0, ease = Ease.InOut.cubic)
 
     // Global start time for absolute time to frame conversion
     private var backendStartTimeSec: Double = 0.0
@@ -275,10 +281,32 @@ class VoiceScheduler(
         // 2. Prepare Context
         ctx.blockStart = cursorFrame
 
+        // 2.5. Calculate solo/mute gain multipliers
+        // Find the maximum solo amount across all active voices
+        val maxSoloAmount = active.maxOfOrNull { it.soloAmount } ?: 0.0
+
+        // Calculate target gain for non-solo voices
+        // When maxSoloAmount = 0.0 -> targetGain = 1.0 (normal)
+        // When maxSoloAmount = 1.0 -> targetGain = 0.05 (heavily muted)
+        val targetGain = 1.0 - (maxSoloAmount * 0.95)
+
+        // Step the ramp towards the target (smooth transition)
+        val blockDurationSec = options.blockFrames.toDouble() / options.sampleRateDouble
+        val currentBackgroundGain = soloMuteRamp.step(targetGain, blockDurationSec)
+
         // 3. Render Loop
         var i = 0
         while (i < active.size) {
             val activeVoice = active[i]
+
+            // Apply gain multiplier based on solo state
+            if (activeVoice.soloAmount > 0.0) {
+                // This voice is solo - always full volume
+                activeVoice.voice.setGainMultiplier(1.0)
+            } else {
+                // This voice is not solo - apply background attenuation
+                activeVoice.voice.setGainMultiplier(currentBackgroundGain)
+            }
 
             // Delegate logic to the voice itself
             val isAlive = activeVoice.voice.render(ctx)
@@ -379,7 +407,8 @@ class VoiceScheduler(
             )
 
             makeVoice(absoluteVoice, nowFrame)?.let { voice ->
-                active.add(ActiveVoice(voice, head.playbackId))
+                val soloAmount = head.data.solo ?: 0.0
+                active.add(ActiveVoice(voice, head.playbackId, soloAmount))
             }
         }
     }

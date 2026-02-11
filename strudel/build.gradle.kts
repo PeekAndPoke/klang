@@ -38,6 +38,7 @@ kotlin {
 
                 api(Deps.KotlinLibs.Ultra.common)
 
+                api(project(":common"))
                 api(project(":klang"))
                 api(project(":klangscript"))
             }

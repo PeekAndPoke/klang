@@ -387,6 +387,26 @@ sealed interface Voice {
     val coarse: Coarse
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Dynamic Gain Control
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Dynamic gain multiplier applied during rendering.
+     * This is multiplied with the voice's base gain during rendering.
+     * Can be used for solo/mute, fades, dynamic ducking, or any other real-time gain control.
+     * Default value is 1.0 (no change).
+     */
+    val gainMultiplier: Double get() = 1.0
+
+    /**
+     * Sets a dynamic gain multiplier that is applied during rendering.
+     * Default implementation is empty (no-op) for voices that don't support dynamic gain control.
+     *
+     * @param multiplier The gain multiplier (1.0 = normal, 0.0 = silent, etc.)
+     */
+    fun setGainMultiplier(multiplier: Double) {}
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Rendering
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
 

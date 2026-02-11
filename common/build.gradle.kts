@@ -38,7 +38,7 @@ kotlin {
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
 
-                implementation(project(":tones"))
+                api(Deps.KotlinLibs.Ultra.common)
             }
         }
 

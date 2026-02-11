@@ -52,8 +52,8 @@ kotlin {
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
 
-                implementation(project(":common"))
-                implementation(project(":audio_bridge"))
+                api(project(":common"))
+                api(project(":audio_bridge"))
             }
         }
 

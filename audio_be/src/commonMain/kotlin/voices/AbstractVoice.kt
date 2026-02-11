@@ -60,6 +60,15 @@ abstract class AbstractVoice(
     override val coarse: Coarse,
 ) : Voice {
 
+    // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
+    private var _gainMultiplier: Double = 1.0
+
+    override val gainMultiplier: Double get() = _gainMultiplier
+
+    override fun setGainMultiplier(multiplier: Double) {
+        _gainMultiplier = multiplier
+    }
+
     // Initialize effect filters
     private val fxCrush = if (crush.amount > 0.0) BitCrushFilter(crush.amount) else null
     private val fxCoarse = if (coarse.amount > 1.0) SampleRateReducerFilter(coarse.amount) else null

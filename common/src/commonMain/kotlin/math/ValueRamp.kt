@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.math
+package io.peekandpoke.klang.common.math
 
 import de.peekandpoke.ultra.common.maths.Ease
 import kotlin.math.abs

@@ -132,6 +132,10 @@ data class VoiceData(
 
     // Dynamics / Compression
     val compressor: String?,
+
+    // Solo
+    /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. Frontend defaults to 0.95. */
+    val solo: Double?,
 ) {
     companion object {
         val empty = VoiceData(
@@ -204,6 +208,7 @@ data class VoiceData(
             loopBegin = null,
             loopEnd = null,
             compressor = null,
+            solo = null,
         )
     }
 

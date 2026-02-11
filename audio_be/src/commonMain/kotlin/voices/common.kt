@@ -22,8 +22,11 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
     val panNorm = pan.coerceIn(0.0, 1.0)
     val panAngle = panNorm * (PI / 2.0)
 
-    val gainL = cos(panAngle) * gain
-    val gainR = sin(panAngle) * gain
+    // Apply dynamic gain multiplier (e.g., for solo/mute, fades, etc.)
+    val effectiveGain = gain * gainMultiplier
+
+    val gainL = cos(panAngle) * effectiveGain
+    val gainR = sin(panAngle) * effectiveGain
 
     // Pre-fetch orbit buffers
     val voiceBuffer = ctx.voiceBuffer

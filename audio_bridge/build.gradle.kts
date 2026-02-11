@@ -38,7 +38,8 @@ kotlin {
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
 
-                implementation(project(":tones"))
+                api(project(":common"))
+                api(project(":tones"))
             }
         }
 
