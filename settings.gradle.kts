@@ -7,6 +7,9 @@ include(
     // Public entry point
     ":klang",
 
+    // Common
+    ":common",
+
     // Audio engine parts
     ":audio_fe",
     ":audio_be",

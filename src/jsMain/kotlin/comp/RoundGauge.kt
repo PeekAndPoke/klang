@@ -72,7 +72,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
     private var resizeObserver: ResizeObserver? = null
 
     // Smoothed value for smooth needle movement
-    private var smoothedValue: Double by value(props.range.start)
+    private var smoothedValue: Double by value(props.value())
 
     private val textColor = Color.white.withAlpha(0.5)
 

@@ -22,23 +22,10 @@ kotlin {
             binaries.executable()
 
             webpackTask {
-                mainOutputFileName = "klang-worklet.js"
                 cssSupport { enabled.set(false) }
             }
         }
-
-        compilerOptions {
-            // This forces Kotlin to generate "class X extends Y" instead of functions.
-            // This is required for AudioWorklets, WebComponents, etc.
-            target.set("es2015")
-        }
     }
-
-//    wasmJs {
-//        browser {
-//            binaries.executable()
-//        }
-//    }
 
     jvmToolchain(Deps.jvmTargetVersion)
 
@@ -48,12 +35,10 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
 
-                implementation(project(":common"))
-                implementation(project(":audio_bridge"))
+                implementation(project(":tones"))
             }
         }
 
@@ -62,11 +47,6 @@ kotlin {
                 Deps.Test {
                     commonTestDeps()
                 }
-            }
-        }
-
-        jsMain {
-            dependencies {
             }
         }
 
@@ -87,12 +67,4 @@ kotlin {
 
 tasks {
     configureJvmTests()
-
-    named("jsBrowserDevelopmentWebpack") {
-        mustRunAfter("jsProductionExecutableCompileSync")
-    }
-
-    named("jsBrowserProductionWebpack") {
-        mustRunAfter("jsDevelopmentExecutableCompileSync")
-    }
 }

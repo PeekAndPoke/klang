@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel
 
+import de.peekandpoke.ultra.common.maths.Ease
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -14,6 +15,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.math.ValueRamp
 import kotlinx.coroutines.*
 
 /**
@@ -73,8 +75,15 @@ class StrudelPlayback internal constructor(
     private val samplesAlreadySent = mutableSetOf<SampleRequest>()
     private val klangTime = KlangTime.create()
 
-    // ===== Latency Compensation =====
+    // ===== Solo / Mute Smooth Transitions =====
+    /** Smooth solo transitions for other voices gains */
+    private val soloGainRamp = ValueRamp(
+        initialValue = 1.0,
+        duration = 0.1,
+        ease = Ease.InOut.cubic
+    )
 
+    // ===== Latency Compensation =====
     /** Measured transport latency in milliseconds. Applied to VoicesScheduled signal times. */
     private var backendLatencyMs: Double = 0.0
 
@@ -248,6 +257,9 @@ class StrudelPlayback internal constructor(
         queryCursorCycles = 0.0
         sampleSoundLookAheadPointer = 0.0
 
+        // Reset solo transition state
+        soloGainRamp.reset(1.0)
+
         // ===== PRELOAD PHASE =====
         // Query first cycles to discover and preload samples before any voices are scheduled.
         // This ensures the backend has sample data before it tries to play them.
@@ -264,15 +276,10 @@ class StrudelPlayback internal constructor(
         while (scope.isActive) {
             // Update local frame counter based on elapsed time
             updateLocalFrameCounter()
-
             // Look ahead for sample sound
             lookAheadForSampleSounds(queryCursorCycles + sampleSoundLookAheadCycles, 1.0)
-
             // Request the next cycles from the source
             requestNextCyclesAndAdvanceCursor()
-
-            // Note: Feedback events are now dispatched by KlangPlayer via handleFeedback()
-
             // roughly 60 FPS
             delay(16)
         }
@@ -307,18 +314,11 @@ class StrudelPlayback internal constructor(
                 // Implement SOLO logic:
                 // If any event in this batch is "soloed", drop all events that are NOT soloed.
                 .let { rawEvents ->
-                    val isSoloActive = rawEvents.any { it.data.solo == true }
-                    if (isSoloActive) {
-                        rawEvents.map { evt ->
-                            if (evt.data.solo != true) {
-                                evt.copy(data = evt.data.copy(gain = evt.data.gain?.let { g -> g * 0.05 }))
-                            } else {
-                                evt
-                            }
-                        }
-                    } else {
-                        rawEvents
-                    }
+                    applySoloLogicSmoothed(
+                        rawEvents = rawEvents,
+                        fromCycles = fromRational.toDouble(),
+                        toCycles = toRational.toDouble()
+                    )
                 }
 
         // Transform to ScheduledVoice using absolute time from KlangTime epoch
@@ -373,6 +373,49 @@ class StrudelPlayback internal constructor(
         }
 
         return voices
+    }
+
+    private fun applySoloLogicSmoothed(
+        rawEvents: List<StrudelPatternEvent>,
+        fromCycles: Double,
+        toCycles: Double,
+    ): List<StrudelPatternEvent> {
+        // 1. Identify Solo State for this batch
+        // Simplified logic: If ANY event in this batch is marked as solo,
+        // we consider this entire batch window to be in "solo mode".
+        // The ramp will smooth out the transition between batches.
+        val isSoloActiveInBatch = rawEvents.any { it.data.solo == true }
+
+        // Determine target gain based on solo presence
+        val targetGain = if (isSoloActiveInBatch) 0.05 else 1.0
+
+        var batchCurrentTime = fromCycles
+
+        // 2. Process events
+        val smoothedEvents = rawEvents.map { evt ->
+            val eventTime = evt.part.begin.toDouble()
+            val dtCycles = eventTime - batchCurrentTime
+            val dtSec = dtCycles * secPerCycle
+
+            // Advance gain ramp towards the target for this batch
+            soloGainRamp.step(targetGain, dtSec)
+            batchCurrentTime = eventTime
+
+            // Apply the current smoothed gain
+            if (evt.data.solo != true) {
+                evt.copy(data = evt.data.copy(gain = (evt.data.gain ?: 1.0) * soloGainRamp.current))
+            } else {
+                evt
+            }
+        }
+
+        // 3. Advance state to the end of the batch
+        // This ensures the envelope continues to evolve even if there are no more events in this chunk
+        val tailDtCycles = toCycles - batchCurrentTime
+        val tailDtSec = tailDtCycles * secPerCycle
+        soloGainRamp.step(targetGain, tailDtSec)
+
+        return smoothedEvents
     }
 
     private fun lookAheadForSampleSounds(from: Double, dur: Double) {

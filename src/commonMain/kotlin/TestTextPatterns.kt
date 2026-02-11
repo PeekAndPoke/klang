@@ -85,12 +85,12 @@ stack(                                                              ////////    
     [[bd:2,cr]     hh  sd       [sd,hh]]  [bd  hh  sd:8  oh]  [bd       hh  sd  hh]       [bd  hh       sd             [bd,oh]   ]
     [[bd,cr]       hh  [sd,hh]  cr]       [cr  hh  cr    hh]  [[sd,oh]  bd  sd  [bd,hh]]  [sd  [bd,hh]  [bd bd]        [bd bd,hh]]
   >`)
-    .orbit(1).gain(0.8).adsr("0.01:0.2:0.8:0.5")
+    .orbit(2).gain("0.8".add(perlin.range(-0.05, 0.05))).adsr("0.01:0.2:0.8:0.5")
     .fast(2)
   ,
 
 ).room(0.1).rsize(2.0).compressor("-24:1.2:8:0.03:0.2")
-  
+    
     """.trimIndent()
 
     val strangerThingsNetflix = """
@@ -155,13 +155,13 @@ stack(
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .fast(4).scale("C3:chromatic").clip(0.75).hpf(700).lpf(4500).pan(0.2).notchf(1250).transpose("0 -2 0 2".slow(512))
-    .s("supersaw").unison(6).detune(0.03).gain(0.5).distort(saw.range(0.5, 1.5).slow(32)).postgain(0.25).warmth(0.1).late(0.003) // .solo()
+    .s("supersaw").unison(6).detune(0.03).gain(0.5).distort(saw.range(0.5, 1.5).slow(32)).postgain(0.275).warmth(0.1).late(0.001) // .solo()
     .adsr("0.03:0.25:0.5:0.07").filterWhen(t => t % 128 > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .fast(4).scale("C4:chromatic").clip(0.75).hpf(700).lpf(4500).pan(0.8).notchf(1250).transpose("0 -2 0 2".slow(512))
-    .s("supersaw").unison(6).detune(0.03).gain(0.5).distort(saw.range(0.5, 1.5).slow(32)).postgain(0.25).warmth(0.1).early(0.003) // .solo()
+    .s("supersaw").unison(6).detune(0.03).gain(0.5).distort(saw.range(0.5, 1.5).slow(32)).postgain(0.25).warmth(0.1).early(0.001) // .solo()
     .adsr("0.03:0.25:0.5:0.07").filterWhen(t => t % 128 > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(
@@ -174,7 +174,7 @@ stack(
     .superimpose(x => x.pan(0.25).bandf("800 1150 950 1200|1200|1225|1259".slow(64)).bandq(saw.range(2.0, 5.0).slow(64)).postgain(0.17))    
     .adsr("0.01:0.25:0.5:0.0").clip(1.01).filterWhen(t => t % 128 >= 4).transpose("0 -2 0 2".slow(512)) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
-  s("cp cp cp cp").bandf("2400 600 1200 600").gain(saw.range(0.1, 0.3).slow(32)) //.solo()
+  s("cp cp cp cp").bandf("2400 600 1200 600").gain(isaw.range(0.2, 0).slow(32)) // .solo()
   ,note("a").sound("brown").gain(0.03).crush(8) //.solo()
   , // Drums 1 -----------------------------------------------------------------------------------------------
   cat(
