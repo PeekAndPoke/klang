@@ -85,7 +85,7 @@ stack(                                                              ////////    
     [[bd:2,cr]     hh  sd       [sd,hh]]  [bd  hh  sd:8  oh]  [bd       hh  sd  hh]       [bd  hh       sd             [bd,oh]   ]
     [[bd,cr]       hh  [sd,hh]  cr]       [cr  hh  cr    hh]  [[sd,oh]  bd  sd  [bd,hh]]  [sd  [bd,hh]  [bd bd]        [bd bd,hh]]
   >`)
-    .orbit(2).gain("0.8".add(perlin.range(-0.05, 0.05))).adsr("0.01:0.2:0.8:0.5")
+    .orbit(2).gain("0.8".add(berlin.range(-0.1, 0.0).fast(16))).adsr("0.01:0.2:0.8:0.5")
     .fast(2)
   ,
 

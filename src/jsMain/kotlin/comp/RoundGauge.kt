@@ -224,7 +224,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         }
 
         // Draw needle as a triangle (sharp tip)
-        val color = Color.white
+        val color = Color.white.withAlpha(0.9)
 
         // Needle dimensions
         val innerRadius = size * 0.08  // Start point (just beyond center)
