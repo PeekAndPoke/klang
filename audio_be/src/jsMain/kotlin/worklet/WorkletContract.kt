@@ -62,6 +62,7 @@ object WorkletContract {
                 it.type = Cmd.ScheduleVoice.SERIAL_NAME
                 it[Cmd::playbackId.name] = playbackId
                 it[Cmd.ScheduleVoice::voice.name] = voice.encode()
+                it[Cmd.ScheduleVoice::clearScheduled.name] = clearScheduled
             }
 
             is Cmd.Sample.NotFound -> jsObject {
@@ -107,7 +108,8 @@ object WorkletContract {
 
             Cmd.ScheduleVoice.SERIAL_NAME -> Cmd.ScheduleVoice(
                 playbackId = msg[Cmd::playbackId.name],
-                voice = decodeScheduledVoice(msg[Cmd.ScheduleVoice::voice.name])
+                voice = decodeScheduledVoice(msg[Cmd.ScheduleVoice::voice.name]),
+                clearScheduled = msg[Cmd.ScheduleVoice::clearScheduled.name] as? Boolean ?: false
             )
 
             Cmd.Sample.NotFound.SERIAL_NAME -> Cmd.Sample.NotFound(

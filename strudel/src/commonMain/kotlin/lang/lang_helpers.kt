@@ -49,8 +49,6 @@ internal fun generateSourceId(sourceLocation: SourceLocation? = null): String {
     } else {
         // Fallback to counter for patterns without source locations
         "id_${++sourceIdCounter}"
-    }.also {
-        println("generated source id: $it")
     }
 }
 

@@ -37,6 +37,8 @@ class KlangCommLink(capacity: Int = 8192) {
         data class ScheduleVoice(
             override val playbackId: String,
             val voice: ScheduledVoice,
+            /** If true, clears all scheduled voices for this playback before scheduling this one */
+            val clearScheduled: Boolean = false,
         ) : Cmd {
             companion object {
                 const val SERIAL_NAME = "schedule-voice"

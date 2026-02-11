@@ -266,18 +266,9 @@ class VoiceScheduler(
     fun cleanup(playbackId: String) {
         // Remove playback epoch - prevents new voices from scheduling
         playbackEpochs.remove(playbackId)
-
         // Remove all scheduled voices for this playback (they never started, so no need to ring out)
         // Note: MinHeap doesn't support efficient removal, so we rebuild without matching voices
-        val remainingScheduled = mutableListOf<ScheduledVoice>()
-        while (scheduled.size() > 0) {
-            val voice = scheduled.pop()
-            if (voice != null && voice.playbackId != playbackId) {
-                remainingScheduled.add(voice)
-            }
-        }
-        // Re-add the remaining voices
-        remainingScheduled.forEach { scheduled.push(it) }
+        clearScheduled(playbackId)
 
         // DON'T remove active voices - let them ring out naturally!
         // They will finish their release phase and be removed by the render loop when done.
@@ -291,24 +282,16 @@ class VoiceScheduler(
      * Key difference from cleanup(): Clears epoch to force re-anchoring on next voice.
      */
     fun clearScheduled(playbackId: String) {
-        // Remove scheduled voices for this playback
-        val remainingScheduled = mutableListOf<ScheduledVoice>()
-        while (scheduled.size() > 0) {
-            val voice = scheduled.pop()
-            if (voice != null && voice.playbackId != playbackId) {
-                remainingScheduled.add(voice)
-            }
-        }
-        remainingScheduled.forEach { scheduled.push(it) }
-
-        // Clear epoch so next voice establishes new time anchor
-        playbackEpochs.remove(playbackId)
-
-        // Keep active voices playing - don't interrupt them
+        scheduled.removeWhen { it.playbackId == playbackId }
     }
 
-    fun scheduleVoice(voice: ScheduledVoice) {
+    fun scheduleVoice(voice: ScheduledVoice, clearScheduled: Boolean = false) {
         val pid = voice.playbackId
+
+        // Clear scheduled voices if requested (for tempo/pattern changes)
+        if (clearScheduled) {
+            this.clearScheduled(pid)
+        }
 
         // Auto-register playback epoch on first voice
         if (pid !in playbackEpochs) {

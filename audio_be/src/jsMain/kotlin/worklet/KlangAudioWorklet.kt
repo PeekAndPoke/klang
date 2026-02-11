@@ -94,7 +94,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
 
                     when (cmd) {
                         is KlangCommLink.Cmd.ScheduleVoice -> {
-                            ctx.voices.scheduleVoice(voice = cmd.voice)
+                            ctx.voices.scheduleVoice(voice = cmd.voice, clearScheduled = cmd.clearScheduled)
                         }
 
                         is KlangCommLink.Cmd.Cleanup -> {

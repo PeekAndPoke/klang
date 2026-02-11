@@ -25,6 +25,16 @@ class KlangMinHeap<T>(private val less: (T, T) -> Boolean) {
         return root
     }
 
+    /**
+     * Removes all elements matching the predicate and rebuilds the heap.
+     * More efficient than popping all, filtering, and re-pushing.
+     */
+    fun removeWhen(predicate: (T) -> Boolean) {
+        val remaining = data.filter { !predicate(it) }
+        data.clear()
+        remaining.forEach { push(it) }
+    }
+
     private fun siftUp(i0: Int) {
         var i = i0
         while (i > 0) {

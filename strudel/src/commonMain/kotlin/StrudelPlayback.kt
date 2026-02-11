@@ -15,6 +15,8 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.coroutines.*
+import kotlin.math.ceil
+import kotlin.math.floor
 
 /**
  * Strudel-specific playback implementation.
@@ -90,7 +92,11 @@ class StrudelPlayback internal constructor(
      * Update the pattern being played
      */
     fun updatePattern(pattern: StrudelPattern) {
+        // Update pattern
         this.pattern = pattern
+        // Re-request current cycle to repopulate backend
+        resyncCurrentCycle()
+        // Pre-fetch samples for new pattern
         lookAheadForSampleSounds(queryCursorCycles, sampleSoundLookAheadCycles)
     }
 
@@ -98,7 +104,10 @@ class StrudelPlayback internal constructor(
      * Update the cycles per second (tempo)
      */
     fun updateCyclesPerSecond(cps: Double) {
+        // Update tempo
         this.cyclesPerSecond = cps
+        // Re-request current cycle with new tempo
+        resyncCurrentCycle()
     }
 
     override fun start() {
@@ -176,7 +185,7 @@ class StrudelPlayback internal constructor(
         // Query first 2 cycles for sample discovery
         val prefetchCycles = 2.0
         val preloadVoices = try {
-            queryEvents(from = 0.0, to = prefetchCycles, sendEvents = false)
+            queryEvents(from = 0.0, to = prefetchCycles, sendSignals = false)
         } catch (e: Exception) {
             e.printStackTrace()
             return
@@ -283,8 +292,12 @@ class StrudelPlayback internal constructor(
     /**
      * Query events from the Strudel pattern and convert to ScheduledVoice.
      * Returns absolute times from KlangTime epoch.
+     *
+     * @param from Start time in seconds
+     * @param to End time in seconds
+     * @param sendSignals Whether to send signals to the UI
      */
-    private fun queryEvents(from: Double, to: Double, sendEvents: Boolean): List<ScheduledVoice> {
+    private fun queryEvents(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
         // Convert Double time to Rational for exact pattern arithmetic
         val fromRational = Rational(from)
         val toRational = Rational(to)
@@ -342,7 +355,7 @@ class StrudelPlayback internal constructor(
         }
 
         // Fire signals on separate dispatcher to avoid blocking audio scheduling
-        if (sendEvents && signalEvents.isNotEmpty()) {
+        if (sendSignals && signalEvents.isNotEmpty()) {
             scope.launch(callbackDispatcher) {
                 signals.emit(
                     KlangPlaybackSignal.VoicesScheduled(voices = signalEvents)
@@ -363,7 +376,7 @@ class StrudelPlayback internal constructor(
         // println("[Song: $playbackId] Sample Look ahead $from - $to")
 
         // Lookup events
-        val events = queryEvents(from = from, to = to, sendEvents = false)
+        val events = queryEvents(from = from, to = to, sendSignals = false)
 
         // Figure out which samples we need to send to the backend
         val newSamples = events
@@ -383,7 +396,6 @@ class StrudelPlayback internal constructor(
         val nowFrame = localFrameCounter
         val nowSec = nowFrame.toDouble() / playerOptions.sampleRate.toDouble()
         val nowCycles = nowSec / secPerCycle
-
         val targetCycles = nowCycles + (lookaheadSec / secPerCycle)
 
         // Fetch as many new cycles as needed
@@ -391,21 +403,15 @@ class StrudelPlayback internal constructor(
             val from = queryCursorCycles
             val to = from + fetchChunk
 
+            // println("Advance: $from -> $to")
+
             try {
-                val events = try {
-                    queryEvents(from = from, to = to, sendEvents = true)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    emptyList()
-                }
+                val events = queryEvents(from = from, to = to, sendSignals = true)
 
                 for (voice in events) {
                     // Schedule the voice
                     sendControl(
-                        KlangCommLink.Cmd.ScheduleVoice(
-                            playbackId = playbackId,
-                            voice = voice,
-                        )
+                        KlangCommLink.Cmd.ScheduleVoice(playbackId = playbackId, voice = voice)
                     )
                 }
 
@@ -413,8 +419,43 @@ class StrudelPlayback internal constructor(
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 t.printStackTrace()
-                break
             }
+        }
+    }
+
+    /**
+     * Re-requests the current cycle and sends events to backend.
+     * Used after tempo/pattern changes to repopulate the backend's schedule.
+     * Backend will filter out events that are already in the past.
+     */
+    private fun resyncCurrentCycle() {
+        // Calculate ACTUAL current playback position (not query cursor!)
+        val nowMs = klangTime.internalMsNow()
+        val elapsedSec = (nowMs - startTimeMs) / 1000.0
+        // Query from current cycle incl the lookahead window
+        val from = floor(queryCursorCycles - 1)
+        val to = from + ceil(lookaheadSec / secPerCycle)
+
+        try {
+            val events = queryEvents(from = from, to = to, sendSignals = false)
+
+            println("Sync: $from -> $to --> ${events.size} events (nowSec=$elapsedSec)")
+
+            var isFirstVoice = true
+
+            for (voice in events) {
+                sendControl(
+                    KlangCommLink.Cmd.ScheduleVoice(
+                        playbackId = playbackId,
+                        voice = voice,
+                        clearScheduled = isFirstVoice  // Clear on first voice only
+                    )
+                )
+
+                isFirstVoice = false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
