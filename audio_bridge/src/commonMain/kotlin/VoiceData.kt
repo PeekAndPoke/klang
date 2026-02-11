@@ -136,6 +136,9 @@ data class VoiceData(
     // Solo
     /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. Frontend defaults to 0.95. */
     val solo: Double?,
+
+    /** Unique source ID for tracking which audio source this voice came from (e.g., pattern, track, instrument) */
+    val sourceId: String?,
 ) {
     companion object {
         val empty = VoiceData(
@@ -209,6 +212,7 @@ data class VoiceData(
             loopEnd = null,
             compressor = null,
             solo = null,
+            sourceId = null,
         )
     }
 

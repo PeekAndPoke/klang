@@ -29,6 +29,31 @@ typealias VoiceModifier = StrudelVoiceData.(Any?) -> StrudelVoiceData
 
 typealias VoiceMerger = (source: StrudelVoiceData, control: StrudelVoiceData) -> StrudelVoiceData
 
+// --- Source ID Generation ---
+
+private var sourceIdCounter = 0
+
+/**
+ * Generates a unique source ID for tracking which audio source events came from.
+ * Uses source location hash for stable IDs across code re-evaluation (live coding).
+ * Falls back to counter-based IDs when no source location is available.
+ *
+ * Used to track solo/mute state per pattern expression (e.g., sound("bd hh")).
+ */
+internal fun generateSourceId(sourceLocation: SourceLocation? = null): String {
+
+    return if (sourceLocation != null) {
+        val hash = "${sourceLocation.startLine}:${sourceLocation.startColumn}".hashCode()
+        // Use hash of source location for stable ID across re-evaluation
+        "loc_$hash"
+    } else {
+        // Fallback to counter for patterns without source locations
+        "id_${++sourceIdCounter}"
+    }.also {
+        println("generated source id: $it")
+    }
+}
+
 typealias StrudelPatternMapper = (source: StrudelPattern) -> StrudelPattern
 
 typealias StrudelDslFn = (args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
@@ -289,9 +314,15 @@ fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceModifier = voiceValueModifi
 internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
     modify: VoiceModifier = voiceValueModifier,
 ): List<StrudelPattern> {
+    // Generate a unique source ID for all patterns created from this call
+    // This ensures all events from expressions like sound("bd hh") share the same source ID
+    // Use first available source location for stable IDs across code re-evaluation
+    val firstLocation = this.firstOrNull()?.location
+    val sourceId = generateSourceId(firstLocation)
+
     val atomFactory = { text: Any?, sourceLocations: SourceLocationChain? ->
         AtomicPattern(
-            data = StrudelVoiceData.empty.modify(text),
+            data = StrudelVoiceData.empty.modify(text).copy(patternId = sourceId),
             sourceLocations = sourceLocations,
         )
     }

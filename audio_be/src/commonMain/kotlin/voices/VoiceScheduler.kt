@@ -69,6 +69,7 @@ class VoiceScheduler(
         val voice: Voice,
         val playbackId: String,
         val soloAmount: Double, // Solo strength: 1.0 = full solo (others silent), 0.0 = no solo
+        val sourceId: String?, // Source ID for tracking which pattern/source this voice came from
     )
 
     // State with active voices
@@ -76,6 +77,62 @@ class VoiceScheduler(
 
     // Smooth gain transition for solo/mute (background voices fade based on max soloAmount)
     private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = 2.0, ease = Ease.InOut.cubic)
+
+    /**
+     * Tracks solo state for source IDs with delayed cleanup.
+     * Source IDs remain in the set for the ramp duration after solo is removed,
+     * allowing smooth transitions.
+     */
+    private class SoloSourceTracker(val rampDurationSec: Double, val sampleRate: Int) {
+        private data class SourceState(
+            val sourceId: String,
+            val cleanupFrame: Long?,  // null = active, non-null = cleanup scheduled at this frame
+        )
+
+        private val sources = mutableMapOf<String, SourceState>()
+
+        /**
+         * Updates the tracker with currently active solo source IDs.
+         * Returns the set of source IDs that should be considered solo'd (including those in cleanup).
+         */
+        fun update(activeSoloSourceIds: Set<String>, currentFrame: Long): Set<String> {
+            // Mark existing sources for cleanup if no longer active
+            for ((sourceId, state) in sources.toList()) {
+                if (sourceId !in activeSoloSourceIds && state.cleanupFrame == null) {
+                    // Schedule cleanup after ramp duration
+                    val cleanupFrame = currentFrame + (rampDurationSec * sampleRate).toLong()
+                    sources[sourceId] = state.copy(cleanupFrame = cleanupFrame)
+                }
+            }
+
+            // Add new active sources
+            for (sourceId in activeSoloSourceIds) {
+                if (sourceId !in sources) {
+                    sources[sourceId] = SourceState(sourceId, cleanupFrame = null)
+                } else {
+                    // Re-activate if it was scheduled for cleanup
+                    sources[sourceId] = SourceState(sourceId, cleanupFrame = null)
+                }
+            }
+
+            // Remove sources that have passed their cleanup time
+            val iterator = sources.entries.iterator()
+            while (iterator.hasNext()) {
+                val (_, state) = iterator.next()
+                if (state.cleanupFrame != null && currentFrame >= state.cleanupFrame) {
+                    iterator.remove()
+                }
+            }
+
+            // Return all source IDs (both active and in cleanup phase)
+            return sources.keys
+        }
+    }
+
+    private val soloSourceTracker = SoloSourceTracker(
+        rampDurationSec = 2.0,
+        sampleRate = options.sampleRate
+    )
 
     // Global start time for absolute time to frame conversion
     private var backendStartTimeSec: Double = 0.0
@@ -281,14 +338,25 @@ class VoiceScheduler(
         // 2. Prepare Context
         ctx.blockStart = cursorFrame
 
-        // 2.5. Calculate solo/mute gain multipliers
-        // Find the maximum solo amount across all active voices
-        val maxSoloAmount = active.maxOfOrNull { it.soloAmount } ?: 0.0
+        // 2.5. Calculate solo/mute gain multipliers based on source IDs
+        // Collect currently active solo source IDs
+        val activeSoloSourceIds = mutableSetOf<String>()
+        var maxSoloAmount = 0.0
+        for (voice in active) {
+            if (voice.soloAmount > 0.0 && voice.sourceId != null) {
+                activeSoloSourceIds.add(voice.sourceId)
+                maxSoloAmount = maxOf(maxSoloAmount, voice.soloAmount)
+            }
+        }
+
+        // Update tracker (handles delayed cleanup) and get effective solo sources
+        val soloSourceIds = soloSourceTracker.update(activeSoloSourceIds, cursorFrame)
+        val hasSoloSources = soloSourceIds.isNotEmpty()
 
         // Calculate target gain for non-solo voices
-        // When maxSoloAmount = 0.0 -> targetGain = 1.0 (normal)
-        // When maxSoloAmount = 1.0 -> targetGain = 0.05 (heavily muted)
-        val targetGain = 1.0 - (maxSoloAmount * 0.95)
+        // When no solo -> targetGain = 1.0 (normal)
+        // When solo active -> targetGain = 0.05 (heavily muted)
+        val targetGain = if (hasSoloSources) 1.0 - (maxSoloAmount * 0.95) else 1.0
 
         // Step the ramp towards the target (smooth transition)
         val blockDurationSec = options.blockFrames.toDouble() / options.sampleRateDouble
@@ -299,12 +367,15 @@ class VoiceScheduler(
         while (i < active.size) {
             val activeVoice = active[i]
 
-            // Apply gain multiplier based on solo state
-            if (activeVoice.soloAmount > 0.0) {
-                // This voice is solo - always full volume
+            // Apply gain multiplier based on source ID membership in solo set
+            val isFromSoloSource = activeVoice.sourceId != null && activeVoice.sourceId in soloSourceIds
+            if (isFromSoloSource) {
+                // This voice's source is solo'd - always full volume
                 activeVoice.voice.setGainMultiplier(1.0)
             } else {
-                // This voice is not solo - apply background attenuation
+                // Non-solo voices use ramped gain (smoothly transitions between states)
+                // When no solo: ramps to 1.0
+                // When solo active: ramps to ~0.05
                 activeVoice.voice.setGainMultiplier(currentBackgroundGain)
             }
 
@@ -408,7 +479,8 @@ class VoiceScheduler(
 
             makeVoice(absoluteVoice, nowFrame)?.let { voice ->
                 val soloAmount = head.data.solo ?: 0.0
-                active.add(ActiveVoice(voice, head.playbackId, soloAmount))
+                val sourceId = head.data.sourceId
+                active.add(ActiveVoice(voice, head.playbackId, soloAmount, sourceId))
             }
         }
     }

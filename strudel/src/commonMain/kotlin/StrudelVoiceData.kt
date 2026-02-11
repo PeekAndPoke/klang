@@ -230,6 +230,9 @@ data class StrudelVoiceData(
     /** Solo flag - when true, mutes all non-soloed patterns */
     val solo: Boolean?,
 
+    /** Unique pattern ID for tracking solo state across pattern changes */
+    val patternId: String? = null,
+
     // Custom value
     val value: StrudelVoiceValue? = null,
 ) {
@@ -334,6 +337,7 @@ data class StrudelVoiceData(
             vowel = null,
             compressor = null,
             solo = null,
+            patternId = null,
             value = null,
         )
     }
@@ -439,6 +443,7 @@ data class StrudelVoiceData(
             vowel = other.vowel ?: vowel,
             compressor = other.compressor ?: compressor,
             solo = other.solo ?: solo,
+            patternId = patternId,  // Never merge - preserve original source ID
             value = other.value ?: value
         )
     }
@@ -643,6 +648,7 @@ data class StrudelVoiceData(
             loopEnd = loopEnd,
             compressor = compressor,
             solo = if (solo == true) 0.95 else 0.0,
+            sourceId = patternId,
         )
     }
 
