@@ -74,6 +74,9 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
     private val highlightBuffer = CodeHighlightBuffer(editorRef)
+    private var highlightPerEvent by value(highlightBuffer.maxHighlightsPerEvent) {
+        highlightBuffer.maxHighlightsPerEvent = it
+    }
 
     private var title: String by value(titleStream()) {
         titleStream(it)
@@ -83,6 +86,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
         cpsStream(it)
         playback?.updateCyclesPerSecond(it)
     }
+
 
     private var code: String by value(codeStream()) { codeStream(it) }
 
@@ -266,8 +270,7 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
                             height = 130.px
                             width = 100.pct
 
-                            opacity = 0.3
-                            attributes["mix-blend-mode"] = "screen"
+                            opacity = 0.5
                         }
 
                         Spectrumeter { Player.get() }
@@ -351,6 +354,18 @@ class DashboardPage(ctx: NoProps) : PureComponent(ctx) {
 
                                         leftLabel {
                                             ui.basic.label { icon.music(); +"Title" }
+                                        }
+                                    }
+                                }
+
+                                noui.item {
+                                    UiInputField(highlightPerEvent, { highlightPerEvent = it }) {
+                                        step(1)
+
+                                        appear { large }
+
+                                        leftLabel {
+                                            ui.basic.label { icon.clock(); +"EVT" }
                                         }
                                     }
                                 }

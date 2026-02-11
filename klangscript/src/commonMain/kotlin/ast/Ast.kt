@@ -416,6 +416,9 @@ enum class BinaryOperator {
     /** Division: a / b */
     DIVIDE,
 
+    /** Modulo: a % b */
+    MODULO,
+
     /** Equality: a == b */
     EQUAL,
 

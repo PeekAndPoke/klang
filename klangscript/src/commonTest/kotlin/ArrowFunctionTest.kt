@@ -165,4 +165,64 @@ class ArrowFunctionTest : StringSpec({
         result.shouldBeInstanceOf<NumberValue>()
         result.value shouldBe 123.0
     }
+
+    // ========================================
+    // Modulo operator in arrow functions
+    // ========================================
+
+    "should handle modulo in arrow function body" {
+        val script = klangScript()
+
+        // (t => t % 16)(18) should be 2
+        val result = script.execute("(t => t % 16)(18)")
+        result.shouldBeInstanceOf<NumberValue>()
+        result.value shouldBe 2.0
+    }
+
+    "should handle modulo comparison in arrow function" {
+        val script = klangScript()
+
+        // (t => t % 16 > 4)(20) -> 20 % 16 is 4. 4 > 4 is false.
+        val resultFalse = script.execute("(t => t % 16 > 4)(20)")
+        resultFalse.shouldBeInstanceOf<BooleanValue>()
+        resultFalse.value shouldBe false
+
+        // (t => t % 16 > 4)(21) -> 21 % 16 is 5. 5 > 4 is true.
+        val resultTrue = script.execute("(t => t % 16 > 4)(21)")
+        resultTrue.shouldBeInstanceOf<BooleanValue>()
+        resultTrue.value shouldBe true
+    }
+
+    "should handle modulo in arrow function stored in variable" {
+        val script = klangScript()
+
+        // Store arrow function with modulo in variable and call it
+        val result = script.execute(
+            """
+            let modFunc = t => t % 16
+            modFunc(18)
+        """.trimIndent()
+        )
+
+        result.shouldBeInstanceOf<NumberValue>()
+        result.value shouldBe 2.0
+    }
+
+    "should handle complex modulo expression in arrow function" {
+        val script = klangScript()
+
+        // (t => (t % 16) * 2 + 1)(20) -> (20 % 16) * 2 + 1 = 4 * 2 + 1 = 9
+        val result = script.execute("(t => (t % 16) * 2 + 1)(20)")
+        result.shouldBeInstanceOf<NumberValue>()
+        result.value shouldBe 9.0
+    }
+
+    "should handle modulo with multiple parameters in arrow function" {
+        val script = klangScript()
+
+        // (a, b) => a % b
+        val result = script.execute("((a, b) => a % b)(17, 5)")
+        result.shouldBeInstanceOf<NumberValue>()
+        result.value shouldBe 2.0
+    }
 })

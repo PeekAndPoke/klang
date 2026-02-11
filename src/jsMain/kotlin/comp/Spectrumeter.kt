@@ -24,11 +24,11 @@ import org.w3c.dom.HTMLCanvasElement
 @Suppress("FunctionName")
 fun Tag.Spectrumeter(
     colors: List<Color> = listOf(
-        Color.lightBlue,
+        Color.lightSkyBlue,
+        Color.yellowGreen,
         Color.yellow,
         Color.orange,
         Color.red,
-        Color.darkRed,
     ),
 //    colors: List<Color> = listOf(Color.white),
     gap: Double = 1.0,

@@ -8,7 +8,7 @@ import io.peekandpoke.klang.script.runtime.NumberValue
  * Tests for arithmetic operations in KlangScript
  *
  * Covers:
- * - Basic operations: +, -, *, /
+ * - Basic operations: +, -, *, /, %
  * - Operator precedence
  * - Parenthesized expressions
  * - Nested operations
@@ -151,5 +151,118 @@ class ArithmeticTest : StringSpec({
         )
 
         results shouldBe listOf(2.0, 6.0, 5.0)
+    }
+
+    // ========================================
+    // Modulo operator tests
+    // ========================================
+
+    "should evaluate simple modulo" {
+        val engine = klangScript()
+        val result = engine.execute("10 % 3")
+
+        (result as NumberValue).value shouldBe 1.0
+    }
+
+    "should handle modulo with exact division" {
+        val engine = klangScript()
+        val result = engine.execute("10 % 5")
+
+        (result as NumberValue).value shouldBe 0.0
+    }
+
+    "should handle modulo with negative dividend" {
+        val engine = klangScript()
+        val result = engine.execute("-10 % 3")
+
+        // -10 % 3 = -1 (result takes sign of dividend in Kotlin/JS)
+        (result as NumberValue).value shouldBe -1.0
+    }
+
+    "should handle modulo with negative divisor" {
+        val engine = klangScript()
+        val result = engine.execute("10 % -3")
+
+        // 10 % -3 = 1 (result takes sign of dividend in Kotlin/JS)
+        (result as NumberValue).value shouldBe 1.0
+    }
+
+    "should handle modulo with both negative" {
+        val engine = klangScript()
+        val result = engine.execute("-10 % -3")
+
+        // -10 % -3 = -1
+        (result as NumberValue).value shouldBe -1.0
+    }
+
+    "should respect operator precedence - modulo before addition" {
+        val engine = klangScript()
+        val result = engine.execute("1 + 10 % 3")
+
+        // Should be 1 + (10 % 3) = 1 + 1 = 2
+        (result as NumberValue).value shouldBe 2.0
+    }
+
+    "should respect operator precedence - modulo before subtraction" {
+        val engine = klangScript()
+        val result = engine.execute("10 - 7 % 4")
+
+        // Should be 10 - (7 % 4) = 10 - 3 = 7
+        (result as NumberValue).value shouldBe 7.0
+    }
+
+    "should respect left associativity with multiplication" {
+        val engine = klangScript()
+        val result = engine.execute("10 % 3 * 4")
+
+        // Should be (10 % 3) * 4 = 1 * 4 = 4
+        (result as NumberValue).value shouldBe 4.0
+    }
+
+    "should respect left associativity with division" {
+        val engine = klangScript()
+        val result = engine.execute("10 % 3 / 2")
+
+        // Should be (10 % 3) / 2 = 1 / 2 = 0.5
+        (result as NumberValue).value shouldBe 0.5
+    }
+
+    "should handle left associativity for multiple modulo operations" {
+        val engine = klangScript()
+        val result = engine.execute("17 % 5 % 3")
+
+        // Should be (17 % 5) % 3 = 2 % 3 = 2
+        (result as NumberValue).value shouldBe 2.0
+    }
+
+    "should handle modulo with parentheses" {
+        val engine = klangScript()
+        val result = engine.execute("20 % (10 % 7)")
+
+        // Should be 20 % (10 % 7) = 20 % 3 = 2
+        (result as NumberValue).value shouldBe 2.0
+    }
+
+    "should handle complex expression with modulo" {
+        val engine = klangScript()
+        val result = engine.execute("(10 + 5) % 7 * 2")
+
+        // Should be (10 + 5) % 7 * 2 = 15 % 7 * 2 = 1 * 2 = 2
+        (result as NumberValue).value shouldBe 2.0
+    }
+
+    "should handle modulo in function arguments" {
+        var receivedValue: Double? = null
+
+        val engine = klangScript {
+            registerFunctionRaw("check") { value, _ ->
+                receivedValue = (value.first() as NumberValue).value
+                value.first()
+            }
+        }
+
+        engine.execute("check(17 % 5)")
+
+        receivedValue shouldBe 2.0
     }
 })

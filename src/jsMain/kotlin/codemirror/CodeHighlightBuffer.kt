@@ -16,11 +16,13 @@ import kotlin.js.Date
  * - Concurrency cap: Max [maxSimultaneousHighlights] active highlights
  * - Dynamic duration: Highlight animation matches voice duration
  * - Clean cancellation: All pending timeouts can be cleared
+ * - Stack depth limit: Max [maxHighlightsPerEvent] locations from each event's source location chain
  */
 class CodeHighlightBuffer(
     private val editorRef: ComponentRef.Tracker<CodeMirrorComp>,
     private val maxRefreshRatePerLocation: Int = 16,
     private val maxSimultaneousHighlights: Int = 100,
+    var maxHighlightsPerEvent: Int = 15,
 ) {
     /**
      * Active highlight information for tracking and cancellation.
@@ -46,14 +48,15 @@ class CodeHighlightBuffer(
 
     /**
      * Schedule highlights for a voice event.
-     * Automatically handles all source locations in the event's location chain.
+     * Automatically handles source locations in the event's location chain,
+     * limited to the first [maxHighlightsPerEvent] locations.
      */
     fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
         // Cast to SourceLocationChain - if not, nothing to highlight
         val chain = event.sourceLocations as? SourceLocationChain ?: return
 
-        // Schedule each location in the chain
-        chain.locations.forEach { location ->
+        // Schedule each location in the chain (limited by maxHighlightsPerEvent)
+        chain.locations.asReversed().take(maxHighlightsPerEvent).forEach { location ->
             scheduleForLocation(location, event)
         }
     }

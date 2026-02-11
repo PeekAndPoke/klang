@@ -504,6 +504,40 @@ class ErrorHandlingTest : StringSpec({
         error.operation shouldBe "ADD"
     }
 
+    "TypeError - modulo by zero" {
+        val engine = klangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("10 % 0")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "modulo"
+        error.message shouldBe "Modulo by zero"
+    }
+
+    "TypeError - modulo with string" {
+        val engine = klangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("10 % \"hello\"")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "MODULO"
+    }
+
+    "TypeError - modulo with null" {
+        val engine = klangScript()
+
+        val error = shouldThrow<TypeError> {
+            engine.execute("5 % null")
+        }
+
+        error.errorType shouldBe "TypeError"
+        error.operation shouldBe "MODULO"
+    }
+
     // ============================================================
     // Edge Cases - Member Access
     // ============================================================

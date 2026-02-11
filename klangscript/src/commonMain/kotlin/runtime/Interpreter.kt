@@ -567,10 +567,12 @@ class Interpreter(
      * - 10 - 4 → NumberValue(6.0)
      * - 3 * 7 → NumberValue(21.0)
      * - 20 / 4 → NumberValue(5.0)
+     * - 10 % 3 → NumberValue(1.0)
      * - 5 > 3 → BooleanValue(true)
      * - 10 == 10 → BooleanValue(true)
      * - "a" == "a" → BooleanValue(true)
      * - 1 / 0 → TypeError: "Division by zero"
+     * - 1 % 0 → TypeError: "Modulo by zero"
      */
     private fun evaluateBinaryOp(binOp: BinaryOperation): RuntimeValue {
         // Evaluate both operands
@@ -640,6 +642,18 @@ class Interpreter(
                             )
                         }
                         leftValue.value / rightValue.value
+                    }
+                    BinaryOperator.MODULO -> {
+                        // Check for modulo by zero (consistent with division)
+                        if (rightValue.value == 0.0) {
+                            throw TypeError(
+                                "Modulo by zero",
+                                operation = "modulo",
+                                location = binOp.location,
+                                stackTrace = getStackTrace()
+                            )
+                        }
+                        leftValue.value % rightValue.value
                     }
 
                     else -> error("Unexpected arithmetic operator: ${binOp.operator}")

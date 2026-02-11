@@ -134,6 +134,7 @@ object KlangScriptParser : Grammar<Program>() {
     private val minus by literalToken("-")
     private val times by literalToken("*")
     private val divide by literalToken("/")
+    private val modulo by literalToken("%")
     private val exclamation by literalToken("!")
     private val lessThan by literalToken("<")
     private val greaterThan by literalToken(">")
@@ -316,14 +317,15 @@ object KlangScriptParser : Grammar<Program>() {
     }
 
     /**
-     * Multiplication and division (higher precedence)
+     * Multiplication, division, and modulo (higher precedence)
      * Left-associative: 6 / 2 / 3 = (6 / 2) / 3
      */
     private val multiplicationExpr: Parser<Expression> by
-    leftAssociative(callExpr, times or divide) { left, op, right ->
+    leftAssociative(callExpr, times or divide or modulo) { left, op, right ->
         val operator = when (op.text) {
             "*" -> BinaryOperator.MULTIPLY
             "/" -> BinaryOperator.DIVIDE
+            "%" -> BinaryOperator.MODULO
             else -> error("Unexpected operator: $op")
         }
         BinaryOperation(left, operator, right, op.toLocation())

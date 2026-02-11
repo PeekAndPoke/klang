@@ -1,34 +1,5 @@
 # Project history
 
-## AI cost
-
-- 300 EUR / year for JetBrains AI Ultimate
-- 23-12-2025: bought 10 AI credits at JetBrains -> 11.90 EUR
-- 26-12-2025: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 05-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 06-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 07-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 11-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 14-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 16-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 17-01-2026: bought AI credits at Anthropic -> 59.50 USD
-- 19-01-2026: bought AI credits at Anthropic -> 59.50 USD
-- 21-01-2026: bought AI credits at Anthropic -> 59.50 USD
-- 21-01-2026: bought AI credits at Anthropic -> 59.50 USD
-- 26-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 27-01-2026: bought AI credits at Anthropic -> 59.50 USD
-- 28-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 29-01-2026: bought AI credits at Anthropic -> 59.50 USD
-- 29-01-2026: bought AI credits at Anthropic -> 59.50 USD
-- 30-01-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 31-01-2026: bought AI credits at Anthropic -> 59.50 USD
-- 02-02-2026: bought AI credits at Anthropic -> 59.50 USD
-- 02-03-2026: bought AI credits at Anthropic -> 59.50 USD
-- 02-04-2026: bought AI credits at Anthropic -> 59.50 USD
-- 02-05-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-- 02-08-2026: bought AI credits at Anthropic -> 59.50 USD
-- 02-08-2026: bought 50 AI credits at JetBrains -> 59.90 EUR
-
 ## Diary
 
 ### (2026-01-31) Strudel - Part/Whole Refactoring & Verification

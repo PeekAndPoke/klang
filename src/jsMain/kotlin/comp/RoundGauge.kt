@@ -29,6 +29,7 @@ fun Tag.RoundGauge(
     range: ClosedRange<Double>,
     icon: SemanticIconFn?,
     iconColors: List<Pair<ClosedRange<Double>, Color>>,
+    disabled: Boolean,
     size: LinearDimension = 50.px,
 ) = comp(
     RoundGauge.Props(
@@ -38,6 +39,7 @@ fun Tag.RoundGauge(
         range = range,
         icon = icon,
         iconColors = iconColors,
+        disabled = disabled,
         size = size,
     )
 ) {
@@ -59,6 +61,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val range: ClosedRange<Double>,
         val icon: SemanticIconFn?,
         val iconColors: List<Pair<ClosedRange<Double>, Color>>,
+        val disabled: Boolean,
         val size: LinearDimension,
     )
 
@@ -111,8 +114,13 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
+        val isDisabled = props.disabled
         val iconFn: SemanticIconFn = props.icon ?: semanticIcon { this }
-        val iconColor = mixColor(props.value(), props.iconColors)
+        val iconColor = if (isDisabled) {
+            Color.grey
+        } else {
+            mixColor(props.value(), props.iconColors)
+        }
 
         div {
             css {
@@ -130,7 +138,14 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
                 props.title?.let { title = it }
 
-                icon.iconFn().then { css { color = iconColor } }
+                icon.iconFn().then {
+                    css {
+                        color = iconColor
+                        if (!isDisabled) {
+                            put("text-shadow", "0 0 16px")
+                        }
+                    }
+                }
 
                 props.display?.let { display ->
                     div {
