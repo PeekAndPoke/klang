@@ -4,34 +4,29 @@ import de.peekandpoke.kraft.components.NoProps
 import de.peekandpoke.kraft.components.PureComponent
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.routing.JoinedPageTitle
-import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
-import de.peekandpoke.ultra.html.onClick
-import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.Nav
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
 
 @Suppress("FunctionName")
-fun Tag.NotFoundPage() = comp {
-    NotFoundPage(it)
+fun Tag.StartPage() = comp {
+    StartPage(it)
 }
 
-class NotFoundPage(ctx: NoProps) : PureComponent(ctx) {
+class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        JoinedPageTitle { listOf("Dragons", "404") }
+        JoinedPageTitle { listOf("KLANG", "AUDIO", "MOTÖR") }
 
         div {
-            key = "not-found-page"
+            key = "start-page"
             css {
                 height = 100.vh
                 width = 100.pct
@@ -45,29 +40,7 @@ class NotFoundPage(ctx: NoProps) : PureComponent(ctx) {
                 cursor = Cursor.pointer
             }
 
-            onClick {
-                router.navToUri(Nav.dashboard())
-            }
-
-            div {
-                icon.huge.dragon()
-            }
-
-            ui.hidden.divider()
-
-            div {
-
-                div { +"You got lost!" }
-                div { +"And you are surrounded by" }
-                div {
-                    css {
-                        padding = Padding(24.px)
-                        fontSize = 3.em
-                    }
-                    +"404"
-                }
-                div { +"dragons!" }
-            }
+            +"TODO"
         }
     }
 }

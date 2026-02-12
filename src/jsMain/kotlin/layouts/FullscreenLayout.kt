@@ -43,6 +43,8 @@ class FullscreenLayout(ctx: Ctx<Props>) : Component<FullscreenLayout.Props>(ctx)
                 display = Display.flex
                 overflow = Overflow.hidden
             }
+
+            props.inner(this)
         }
     }
 }

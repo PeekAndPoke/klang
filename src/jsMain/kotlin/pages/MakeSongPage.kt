@@ -146,6 +146,7 @@ class MakeSongPage(ctx: Ctx<Props>) : Component<MakeSongPage.Props>(ctx) {
     override fun VDom.render() {
 
         ui.fluid.container.with("noise-bg") {
+            key = "make-song-page"
             css {
                 padding = Padding(0.px)
                 backgroundColor = Color.white
