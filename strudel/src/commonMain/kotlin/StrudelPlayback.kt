@@ -392,6 +392,17 @@ class StrudelPlayback internal constructor(
         }
     }
 
+    /**
+     * Get the current cycle position accounting for backend latency.
+     * This is used to query the correct time range when resyncing.
+     */
+    private fun getNowCycle(): Double {
+        val nowMs = klangTime.internalMsNow()
+        // Add backend latency to account for transport delay
+        val elapsedSec = ((nowMs - startTimeMs) - backendLatencyMs) / 1000.0
+        return elapsedSec / secPerCycle
+    }
+
     private fun requestNextCyclesAndAdvanceCursor() {
         // Use local frame counter for autonomous progression
         val nowFrame = localFrameCounter
@@ -430,17 +441,18 @@ class StrudelPlayback internal constructor(
      * Backend will filter out events that are already in the past.
      */
     private fun resyncCurrentCycle() {
-        // Calculate ACTUAL current playback position (not query cursor!)
-        val nowMs = klangTime.internalMsNow()
-        val elapsedSec = (nowMs - startTimeMs) / 1000.0
-        // Query from current cycle incl the lookahead window
-        val from = floor(queryCursorCycles - 1)
-        val to = from + ceil(lookaheadSec / secPerCycle)
+        // Get current cycle with latency compensation
+        val nowCycle = getNowCycle()
+
+        // Query from current cycle to target (now + lookahead)
+        val from = floor(nowCycle)
+        val targetCycle = nowCycle + (lookaheadSec / secPerCycle)
+        val to = ceil(targetCycle)
 
         try {
             val voices = queryEvents(from = from, to = to, sendSignals = false)
 
-            println("Sync: $from -> $to --> ${voices.size} events (nowSec=$elapsedSec)")
+            println("Sync: $from -> $to (nowCycle=$nowCycle) --> ${voices.size} events")
 
             // Send all voices atomically in one command
             sendControl(
