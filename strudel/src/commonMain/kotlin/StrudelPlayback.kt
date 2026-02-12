@@ -446,19 +446,18 @@ class StrudelPlayback internal constructor(
 
         // Query from current cycle to target (now + lookahead)
         val from = floor(nowCycle)
-        val targetCycle = nowCycle + (lookaheadSec / secPerCycle)
-        val to = ceil(targetCycle)
+        val to = ceil(queryCursorCycles)
 
         try {
             val voices = queryEvents(from = from, to = to, sendSignals = false)
 
-            println("Sync: $from -> $to (nowCycle=$nowCycle) --> ${voices.size} events")
+            println("Sync: $from -> $to (nowCycle=$nowCycle) --> ${voices.size} voices")
 
-            // Send all voices atomically in one command
+            // Send only future voices atomically in one command
             sendControl(
                 KlangCommLink.Cmd.ReplaceVoices(
                     playbackId = playbackId,
-                    voices = voices
+                    voices = voices,
                 )
             )
         } catch (e: Exception) {
