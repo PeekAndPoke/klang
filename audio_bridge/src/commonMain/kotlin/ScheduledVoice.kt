@@ -15,4 +15,6 @@ data class ScheduledVoice(
     val startTime: Double,
     /** Time in seconds relative to playback start when the note key is lifted */
     val gateEndTime: Double,
+    /** Frontend's playback start time in seconds (for epoch anchoring) */
+    val playbackStartTime: Double,
 )

@@ -34,6 +34,15 @@ class KlangCommLink(capacity: Int = 8192) {
             }
         }
 
+        data class ReplaceVoices(
+            override val playbackId: String,
+            val voices: List<ScheduledVoice>,
+        ) : Cmd {
+            companion object {
+                const val SERIAL_NAME = "replace-voices"
+            }
+        }
+
         data class ScheduleVoice(
             override val playbackId: String,
             val voice: ScheduledVoice,

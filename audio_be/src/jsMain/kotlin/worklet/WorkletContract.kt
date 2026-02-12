@@ -58,6 +58,12 @@ object WorkletContract {
                 it[Cmd::playbackId.name] = playbackId
             }
 
+            is Cmd.ReplaceVoices -> jsObject {
+                it.type = Cmd.ReplaceVoices.SERIAL_NAME
+                it[Cmd::playbackId.name] = playbackId
+                it[Cmd.ReplaceVoices::voices.name] = voices.map { v -> v.encode() }.toTypedArray()
+            }
+
             is Cmd.ScheduleVoice -> jsObject {
                 it.type = Cmd.ScheduleVoice.SERIAL_NAME
                 it[Cmd::playbackId.name] = playbackId
@@ -104,6 +110,13 @@ object WorkletContract {
 
             Cmd.ClearScheduled.SERIAL_NAME -> Cmd.ClearScheduled(
                 playbackId = msg[Cmd::playbackId.name],
+            )
+
+            Cmd.ReplaceVoices.SERIAL_NAME -> Cmd.ReplaceVoices(
+                playbackId = msg[Cmd::playbackId.name],
+                voices = (msg[Cmd.ReplaceVoices::voices.name] as Array<*>).map {
+                    decodeScheduledVoice(it!!)
+                }
             )
 
             Cmd.ScheduleVoice.SERIAL_NAME -> Cmd.ScheduleVoice(

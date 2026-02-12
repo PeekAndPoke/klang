@@ -137,6 +137,7 @@ class JsAudioBackend(
                         // Direct forwarding for control commands
                         is KlangCommLink.Cmd.Cleanup,
                         is KlangCommLink.Cmd.ClearScheduled,
+                        is KlangCommLink.Cmd.ReplaceVoices,
                         is KlangCommLink.Cmd.ScheduleVoice,
                             -> node.port.sendCmd(cmd)
                     }

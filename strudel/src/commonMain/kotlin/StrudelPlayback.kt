@@ -349,8 +349,9 @@ class StrudelPlayback internal constructor(
             ScheduledVoice(
                 playbackId = playbackId,
                 data = voiceData,
-                startTime = relativeStartTime,               // ← CHANGED: relative, not absolute
-                gateEndTime = relativeStartTime + duration,  // ← CHANGED: relative, not absolute
+                startTime = relativeStartTime,
+                gateEndTime = relativeStartTime + duration,
+                playbackStartTime = playbackStartTimeSec,
             )
         }
 
@@ -403,7 +404,7 @@ class StrudelPlayback internal constructor(
             val from = queryCursorCycles
             val to = from + fetchChunk
 
-            // println("Advance: $from -> $to")
+            println("Advance: $from -> $to")
 
             try {
                 val events = queryEvents(from = from, to = to, sendSignals = true)
@@ -437,23 +438,17 @@ class StrudelPlayback internal constructor(
         val to = from + ceil(lookaheadSec / secPerCycle)
 
         try {
-            val events = queryEvents(from = from, to = to, sendSignals = false)
+            val voices = queryEvents(from = from, to = to, sendSignals = false)
 
-            println("Sync: $from -> $to --> ${events.size} events (nowSec=$elapsedSec)")
+            println("Sync: $from -> $to --> ${voices.size} events (nowSec=$elapsedSec)")
 
-            var isFirstVoice = true
-
-            for (voice in events) {
-                sendControl(
-                    KlangCommLink.Cmd.ScheduleVoice(
-                        playbackId = playbackId,
-                        voice = voice,
-                        clearScheduled = isFirstVoice  // Clear on first voice only
-                    )
+            // Send all voices atomically in one command
+            sendControl(
+                KlangCommLink.Cmd.ReplaceVoices(
+                    playbackId = playbackId,
+                    voices = voices
                 )
-
-                isFirstVoice = false
-            }
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }

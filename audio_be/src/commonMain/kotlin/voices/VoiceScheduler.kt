@@ -285,6 +285,20 @@ class VoiceScheduler(
         scheduled.removeWhen { it.playbackId == playbackId }
     }
 
+    /**
+     * Atomically replaces all scheduled voices for a playback with new ones.
+     * Used for tempo/pattern changes to ensure gap-free transitions.
+     */
+    fun replaceVoices(playbackId: String, voices: List<ScheduledVoice>) {
+        // Clear scheduled voices and epoch
+        clearScheduled(playbackId)
+
+        // Schedule all new voices (first one will establish new epoch)
+        voices.forEach { voice ->
+            scheduleVoice(voice)
+        }
+    }
+
     fun scheduleVoice(voice: ScheduledVoice, clearScheduled: Boolean = false) {
         val pid = voice.playbackId
 
@@ -293,41 +307,14 @@ class VoiceScheduler(
             this.clearScheduled(pid)
         }
 
-        // Auto-register playback epoch on first voice
-        if (pid !in playbackEpochs) {
-            // Record "now" in backend time as this playback's epoch
-            // All voice times for this playback are relative to this moment.
-            val nowSec = backendStartTimeSec + (lastProcessedFrame.toDouble() / options.sampleRate.toDouble())
-            playbackEpochs[pid] = nowSec
+        // Make sure we are synced
+        ensureEpoch(voice)
 
-            // Send the backend's current wall-clock time to the frontend.
-            // Both clocks are seeded from Date.now(), so the frontend can compute:
-            //   latencyMs = backendTimestampMs - frontendStartTimeMs
-            options.commLink.feedback.send(
-                KlangCommLink.Feedback.PlaybackLatency(
-                    playbackId = pid,
-                    backendTimestampMs = options.performanceTimeMs(),
-                )
-            )
-        }
-
-        // Schedule directly — no offset adjustment needed.
-        // Times are relative to playback start; conversion happens in promoteScheduled.
+        // Move to queue
         scheduled.push(voice)
 
-        // Prefetch sound samples (unchanged)
-        if (voice.data.isSampleSound()) {
-            val req = voice.data.asSampleRequest()
-            if (!samples.containsKey(req)) {
-                samples[req] = SampleEntry.Requested(req)
-                options.commLink.feedback.send(
-                    KlangCommLink.Feedback.RequestSample(
-                        playbackId = pid,
-                        req = voice.data.asSampleRequest(),
-                    )
-                )
-            }
-        }
+        // Prefetch sound samples
+        prefetchSampleSound(voice)
     }
 
     fun process(cursorFrame: Long) {
@@ -442,6 +429,57 @@ class VoiceScheduler(
             // Reset min headroom for next interval
             minHeadroom = 1.0
             // Note: avgHeadroom is NOT reset - it continues smoothing across reports
+        }
+    }
+
+    /**
+     * Updates the relative time epoch for a playback.
+     * This is used to ensure voices play at the correct relative time.
+     */
+    private fun ensureEpoch(voice: ScheduledVoice) {
+        val pid = voice.playbackId
+
+        // Auto-register playback epoch on first voice
+        if (pid !in playbackEpochs) {
+            val nowSec = backendStartTimeSec + (lastProcessedFrame.toDouble() / options.sampleRate.toDouble())
+
+            val performanceNowMs = options.performanceTimeMs()
+            val performanceNowSec = performanceNowMs / 1000.0
+            val latency = maxOf(0.0, performanceNowSec - voice.playbackStartTime)
+
+            // Calculate epoch from frontend's playbackStartTime
+            // Both clocks are seeded from Date.now(), so times are comparable
+            // Epoch = backend time when frontend playback started
+            val frontendElapsed = nowSec - voice.playbackStartTime
+            playbackEpochs[pid] = (nowSec - frontendElapsed) + latency
+
+            // Send the backend's current wall-clock time to the frontend.
+            // Both clocks are seeded from Date.now(), so the frontend can compute:
+            //   latencyMs = backendTimestampMs - frontendStartTimeMs
+            options.commLink.feedback.send(
+                KlangCommLink.Feedback.PlaybackLatency(playbackId = pid, backendTimestampMs = performanceNowMs)
+            )
+        }
+    }
+
+    /**
+     * Prefetches sample sounds for a voice.
+     * This is used to ensure that sample sounds are available when needed.
+     */
+    private fun prefetchSampleSound(voice: ScheduledVoice) {
+        val pid = voice.playbackId
+
+        if (voice.data.isSampleSound()) {
+            val req = voice.data.asSampleRequest()
+            if (!samples.containsKey(req)) {
+                samples[req] = SampleEntry.Requested(req)
+                options.commLink.feedback.send(
+                    KlangCommLink.Feedback.RequestSample(
+                        playbackId = pid,
+                        req = voice.data.asSampleRequest(),
+                    )
+                )
+            }
         }
     }
 
