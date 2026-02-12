@@ -2,6 +2,8 @@ package io.peekandpoke.klang
 
 object BuiltInSongs {
 
+    const val PREFIX = "builtin-song"
+
     private val _song = mutableListOf<Song>()
     val songs get() = _song.toList()
 
@@ -11,37 +13,41 @@ object BuiltInSongs {
 
     val tetris = add(
         Song(
-            id = "builtin-song-0000001",
+            id = "$PREFIX-0001",
             title = "Synthris",
             cps = 0.65,
             code = TestTextPatterns.tetris,
+            icon = "gamepad",
         )
     )
 
     val smallTownBoy = add(
         Song(
-            id = "builtin-song-0000002",
+            id = "$PREFIX-0002",
             title = "Synthtown Boy",
             cps = 0.58,
             code = TestTextPatterns.smallTownBoy,
-        )
-    )
-
-    val strangerThings = add(
-        Song(
-            id = "builtin-song-0000003",
-            title = "Stranger Synths",
-            cps = 0.57,
-            code = TestTextPatterns.strangerThingsNetflix,
+            icon = "record vinyl",
         )
     )
 
     val aTruthWorthLyingFor = add(
         Song(
-            id = "builtin-song-0000004",
+            id = "$PREFIX-0003",
             title = "A Truth Worth Synthing For",
-            cps = 0.42,
+            cps = 0.41,
             code = TestTextPatterns.aTruthWorthFightingFor,
+            icon = "guitar",
+        )
+    )
+
+    val strangerThings = add(
+        Song(
+            id = "$PREFIX-0004",
+            title = "Stranger Synths",
+            cps = 0.57,
+            code = TestTextPatterns.strangerThingsNetflix,
+            icon = "music",
         )
     )
 }

@@ -5,4 +5,5 @@ data class Song(
     val title: String,
     val cps: Double,
     val code: String,
+    val icon: String? = null,
 )

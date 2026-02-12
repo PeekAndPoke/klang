@@ -98,38 +98,39 @@ import * from "stdlib"
 import * from "strudel"
 
 let wait = 16
+let keep = 32
 
 stack(
   sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).gain(0.3).legato(2.0)
     .bandf(sine.range(1400, 1800).fast(3.14))
-    .filterWhen(x => x >= wait * 10)
+    .filterWhen(x => x >= wait * 10 && x < (wait * 10 + keep))
   , // Lyrics --------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!")
     .scale("C6:major").scaleTranspose("0 -2 2 0".slow(32))
     .sound("square").warmth(1.0).gain(1.0).pan(berlin.slow(2)).adsr("0.05:0.2:0.2:0.0")
-    .filterWhen(x => x >= wait * 6)
+    .filterWhen(x => x >= wait * 6 && x < (wait * 6 + keep))
   , // Melody --------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]>").scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .s("supersaw").unison(8).detune(saw.range(0.0, 0.25).slow(16)).spread(1.0)
     .gain(0.09).pan(sine.range(0.3, 0.7).oneMinusValue().slow(8)).adsr("0.05:0.5:0.7:0.1")
     .distort(1.2).warmth(0.5)
     .lpenv(perlin.slow(4).range(0, 3))
-    .filterWhen(x => x >= wait * 3)
+    .filterWhen(x => x >= wait * 3 && x < (wait * 3 + keep))
   , // Bass ----------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [c2@2 e2@5 [e1 e1]]>/8").clip(0.75).struct("x!8")
     .gain(0.75).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.2")
     .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.65).legato(1.2))
     .s("supersaw").unison(8).detune(saw.range(0.05, 0.4).slow(16))
     .lpf(6 * 440).hpf(80).crush(sine.range(3.5, 12.0).slow(32))
-    .filterWhen(x => x >= wait * 0.5)
+    .filterWhen(x => x >= wait * 0.5 && x < (wait * 0.5 + keep))
   , // Perc 2 --------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
     .gain(0.8).pan(0.4).adsr("0.01:1.0:1.0:1.0").fast(2).degrade(0.1)
-    .filterWhen(x => x >= wait * 1)
+    .filterWhen(x => x >= wait * 1 && x < (wait * 1 + keep))
   , // Perc 1 --------------------------------------------------------------------------------------------
   sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
     .gain(0.8).pan(0.5).adsr("0.01:0.2:0.5:1.0").degrade(0.01).hpf(60)        
-    .filterWhen(x => x >= wait * 0.5)
+    .filterWhen(x => x >= wait * 0.5 && x < (wait * 0.5 + keep))
   , // Wind ----------------------------------------------------------------------------------------------
   note("a").fast(16).sound("brown")
     .gain(0.1).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.05:1.0:1.0:0.5")
@@ -138,8 +139,7 @@ stack(
 ).delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)
   .room(0.05).rsize(5.0)
   
-  
-  
+    
   
    """.trimIndent()
 
@@ -150,7 +150,7 @@ import * from "strudel"
 stack(
   // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").fast(2).transpose("0 -2 0 2".slow(512))
-    .gain(1.0).distort(0.5).postgain("1.0 0.0!7".slow(128)).hpf(4350).lpf(4450).pan(0.6) //.solo()
+    .gain(1.0).distort(0.5).postgain("1.0 0.0!3".slow(128)).hpf(4350).lpf(4450).pan(0.6) //.solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<[0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
       [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)

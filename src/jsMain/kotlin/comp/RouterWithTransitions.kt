@@ -113,9 +113,9 @@ class RouterWithTransitions internal constructor(ctx: Ctx<Props>) : Component<Ro
                 currentRoute.render(this)
             }
 
-            console.log("Render states:", inTransitions.map {
-                it.uri to it.timing.isDone
-            }.toTypedArray())
+//            console.log("Render states:", inTransitions.map {
+//                it.uri to it.timing.isDone
+//            }.toTypedArray())
 
             div(classes = "previous") {
                 key = "previous-states"

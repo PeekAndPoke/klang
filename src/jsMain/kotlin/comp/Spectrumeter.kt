@@ -10,9 +10,7 @@ import io.peekandpoke.klang.audio_bridge.createVisualizerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.externals.ResizeObserver
 import kotlinx.browser.window
-import kotlinx.css.Color
-import kotlinx.css.height
-import kotlinx.css.pct
+import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.canvas
 import kotlinx.html.div
@@ -230,7 +228,11 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
             css {
                 height = 100.pct
             }
-            canvas("spectrum-canvas") {}
+            canvas("spectrum-canvas") {
+                css {
+                    display = Display.block
+                }
+            }
         }
     }
 }
