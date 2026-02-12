@@ -139,6 +139,10 @@ object KlangScriptParser : Grammar<Program>() {
     private val lessThan by literalToken("<")
     private val greaterThan by literalToken(">")
 
+    /** Logical operators */
+    private val doubleAmpersand by literalToken("&&")
+    private val doublePipe by literalToken("||")
+
     /** Member access operator */
     private val dot by literalToken(".")
 
@@ -380,6 +384,36 @@ object KlangScriptParser : Grammar<Program>() {
     }
 
     /**
+     * Logical AND expression
+     * Syntax: expr && expr
+     * Precedence: Lower than comparison, higher than OR
+     * Left-associative: a && b && c = (a && b) && c
+     *
+     * Logical AND has lower precedence than comparison operators, allowing:
+     * - x > 5 && y < 10 parses as (x > 5) && (y < 10)
+     * - a + 1 == 2 && b * 2 == 4 parses as ((a + 1) == 2) && ((b * 2) == 4)
+     */
+    private val logicalAndExpr: Parser<Expression> by
+    leftAssociative(comparisonExpr, doubleAmpersand) { left, op, right ->
+        BinaryOperation(left, BinaryOperator.AND, right, op.toLocation())
+    }
+
+    /**
+     * Logical OR expression
+     * Syntax: expr || expr
+     * Precedence: Lower than AND, higher than arrow functions
+     * Left-associative: a || b || c = (a || b) || c
+     *
+     * Logical OR has lower precedence than AND, allowing:
+     * - a && b || c && d parses as (a && b) || (c && d)
+     * - true || false && false parses as true || (false && false) = true
+     */
+    private val logicalOrExpr: Parser<Expression> by
+    leftAssociative(logicalAndExpr, doublePipe) { left, op, right ->
+        BinaryOperation(left, BinaryOperator.OR, right, op.toLocation())
+    }
+
+    /**
      * Arrow function body - either expression or block
      * Syntax:
      * - Expression: `expr` (implicit return)
@@ -411,7 +445,7 @@ object KlangScriptParser : Grammar<Program>() {
      * 1. Try to parse parameter list (single identifier OR parenthesized list)
      * 2. If we see `=>`, we have an arrow function
      * 3. Parse body (expression or block)
-     * 4. Otherwise, fall back to regular expression (comparisonExpr)
+     * 4. Otherwise, fall back to regular expression (logicalOrExpr)
      *
      * Examples:
      * - `x => x + 1` - Single param, expression body
@@ -439,7 +473,7 @@ object KlangScriptParser : Grammar<Program>() {
                     ) and arrow and arrowFunctionBody
             ).map { (params, arrowToken, body) ->
             ArrowFunction(params, body, arrowToken.toLocation())
-        } or comparisonExpr  // Fall back to comparison expression if not an arrow function
+        } or logicalOrExpr  // Fall back to logical OR expression if not an arrow function
 
     /**
      * Let declaration statement

@@ -476,6 +476,25 @@ class Interpreter(
     }
 
     /**
+     * Convert a RuntimeValue to boolean using JavaScript-like truthiness rules
+     *
+     * Falsy values: null, false, 0, NaN, ""
+     * Truthy values: everything else (non-zero numbers, non-empty strings, objects, arrays, functions)
+     *
+     * @param value The runtime value to convert
+     * @return true if the value is truthy, false if falsy
+     */
+    private fun toBoolean(value: RuntimeValue): Boolean {
+        return when (value) {
+            is BooleanValue -> value.value
+            is NullValue -> false
+            is NumberValue -> value.value != 0.0 && !value.value.isNaN()
+            is StringValue -> value.value.isNotEmpty()
+            else -> true  // Objects, arrays, and functions are truthy
+        }
+    }
+
+    /**
      * Evaluate a unary operation expression
      *
      * Handles prefix operators: -, +, !
@@ -529,14 +548,7 @@ class Interpreter(
             }
 
             UnaryOperator.NOT -> {
-                // Convert value to boolean using JavaScript-like truthiness rules
-                val boolValue = when (operandValue) {
-                    is BooleanValue -> operandValue.value
-                    is NullValue -> false
-                    is NumberValue -> operandValue.value != 0.0 && !operandValue.value.isNaN()
-                    is StringValue -> operandValue.value.isNotEmpty()
-                    else -> true // Objects and functions are truthy
-                }
+                val boolValue = toBoolean(operandValue)
                 BooleanValue(!boolValue)
             }
         }
@@ -545,21 +557,21 @@ class Interpreter(
     /**
      * Evaluate a binary operation expression
      *
-     * Binary operations perform arithmetic and comparison operations.
+     * Binary operations perform arithmetic, comparison, and logical operations.
      *
      * Process:
-     * 1. Evaluate the left operand
-     * 2. Evaluate the right operand
-     * 3. Apply the operator based on type
-     * 4. Return the result
+     * 1. For logical operators (&&, ||): use short-circuit evaluation
+     * 2. For other operators: evaluate both operands, then apply operation
+     * 3. Return the result
      *
      * Supported operators:
-     * - Arithmetic (+, -, *, /): Require number operands, return NumberValue
+     * - Arithmetic (+, -, *, /, %): Require number operands, return NumberValue
      * - Comparison (<, <=, >, >=): Require number operands, return BooleanValue
      * - Equality (==, !=): Work on all types, return BooleanValue
+     * - Logical (&&, ||): Short-circuit evaluation, return BooleanValue
      *
      * @param binOp The binary operation AST node
-     * @return NumberValue for arithmetic, BooleanValue for comparisons
+     * @return NumberValue for arithmetic, BooleanValue for comparisons and logical ops
      * @throws TypeError if operands are invalid for the operation
      *
      * Examples:
@@ -571,11 +583,42 @@ class Interpreter(
      * - 5 > 3 → BooleanValue(true)
      * - 10 == 10 → BooleanValue(true)
      * - "a" == "a" → BooleanValue(true)
+     * - true && false → BooleanValue(false)
+     * - true || false → BooleanValue(true)
      * - 1 / 0 → TypeError: "Division by zero"
      * - 1 % 0 → TypeError: "Modulo by zero"
      */
     private fun evaluateBinaryOp(binOp: BinaryOperation): RuntimeValue {
-        // Evaluate both operands
+        // Handle logical operators with short-circuit evaluation
+        when (binOp.operator) {
+            BinaryOperator.AND -> {
+                val leftValue = evaluate(binOp.left)
+                // Short-circuit: if left is falsy, return false without evaluating right
+                return if (!toBoolean(leftValue)) {
+                    BooleanValue(false)
+                } else {
+                    val rightValue = evaluate(binOp.right)
+                    BooleanValue(toBoolean(rightValue))
+                }
+            }
+
+            BinaryOperator.OR -> {
+                val leftValue = evaluate(binOp.left)
+                // Short-circuit: if left is truthy, return true without evaluating right
+                return if (toBoolean(leftValue)) {
+                    BooleanValue(true)
+                } else {
+                    val rightValue = evaluate(binOp.right)
+                    BooleanValue(toBoolean(rightValue))
+                }
+            }
+
+            else -> {
+                // For all other operators, evaluate both operands
+            }
+        }
+
+        // Evaluate both operands for non-logical operators
         val leftValue = evaluate(binOp.left)
         val rightValue = evaluate(binOp.right)
 

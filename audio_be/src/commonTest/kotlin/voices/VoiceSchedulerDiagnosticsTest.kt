@@ -92,10 +92,8 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
             playbackId = "test",
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(
-                sound = "sine",
-                freqHz = 440.0
-            )
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0),
+            playbackStartTime = 0.0,
         )
         scheduler.scheduleVoice(voice)
 
@@ -121,17 +119,15 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
                 sound = "sine",
                 freqHz = 440.0,
                 orbit = 0
-            )
+            ),
+            playbackStartTime = 0.0,
         )
         val voice2 = ScheduledVoice(
             playbackId = "test",
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(
-                sound = "sine",
-                freqHz = 880.0,
-                orbit = 2
-            )
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 880.0, orbit = 2),
+            playbackStartTime = 0.0,
         )
         scheduler.scheduleVoice(voice1)
         scheduler.scheduleVoice(voice2)
@@ -205,13 +201,15 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
             playbackId = "test",
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, orbit = 0)
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, orbit = 0),
+            playbackStartTime = 0.0,
         )
         val voice2 = ScheduledVoice(
             playbackId = "test",
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = 880.0, orbit = 3)
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 880.0, orbit = 3),
+            playbackStartTime = 0.0,
         )
         scheduler.scheduleVoice(voice1)
         scheduler.scheduleVoice(voice2)

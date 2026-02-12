@@ -436,6 +436,12 @@ enum class BinaryOperator {
 
     /** Greater than or equal: a >= b */
     GREATER_THAN_OR_EQUAL,
+
+    /** Logical AND: a && b */
+    AND,
+
+    /** Logical OR: a || b */
+    OR,
 }
 
 /**
