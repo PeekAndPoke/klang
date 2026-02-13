@@ -34,8 +34,8 @@ object BuiltInSongs {
     val aTruthWorthLyingFor = add(
         Song(
             id = "$PREFIX-0003",
-            title = "A Truth Worth Synthing For",
-            cps = 0.41,
+            title = "A Synth Worth Lying For",
+            cps = 0.43,
             code = TestTextPatterns.aTruthWorthFightingFor,
             icon = "guitar",
         )
