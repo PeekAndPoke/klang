@@ -11,13 +11,13 @@ import de.peekandpoke.ultra.common.maths.Ease
 import de.peekandpoke.ultra.common.maths.Ease.timed
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
-import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.ops.ticker
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlayerMiniStats
+import io.peekandpoke.klang.comp.RoundButton
 import io.peekandpoke.klang.comp.Spectrumeter
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
@@ -144,11 +144,13 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             div {
-                ui.circular.red.button {
-                    onClick {
+                RoundButton(
+                    icon = { power_off },
+                    color = Color.red,
+                    onClick = {
                         state.gotoBooting()
                     }
-                }
+                )
             }
 
             div {
