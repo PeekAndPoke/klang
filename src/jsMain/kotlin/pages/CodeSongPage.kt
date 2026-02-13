@@ -33,15 +33,15 @@ import kotlinx.html.div
 import kotlinx.serialization.builtins.serializer
 
 @Suppress("FunctionName")
-fun Tag.MakeSongPage(
+fun Tag.CodeSongPage(
     id: String?,
 ) = comp(
-    MakeSongPage.Props(id = id)
+    CodeSongPage.Props(id = id)
 ) {
-    MakeSongPage(it)
+    CodeSongPage(it)
 }
 
-class MakeSongPage(ctx: Ctx<Props>) : Component<MakeSongPage.Props>(ctx) {
+class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -90,7 +90,9 @@ class MakeSongPage(ctx: Ctx<Props>) : Component<MakeSongPage.Props>(ctx) {
         playback?.updateCyclesPerSecond(it)
     }
 
-    private var code: String by value(codeStream()) { codeStream(it) }
+    private var code: String by value(codeStream()) { isCodeModified = it != codeStream() }
+
+    private var isCodeModified by value(false)
 
     private suspend fun getPlayer(): KlangPlayer {
         return Player.ensure().await()
@@ -99,6 +101,11 @@ class MakeSongPage(ctx: Ctx<Props>) : Component<MakeSongPage.Props>(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun onPlay() {
+        // Update the code
+        codeStream(code)
+        // set as up to date
+        isCodeModified = false
+
         when (val s = playback) {
             null -> launch {
                 if (!loading) {
@@ -118,6 +125,7 @@ class MakeSongPage(ctx: Ctx<Props>) : Component<MakeSongPage.Props>(ctx) {
                         playback?.signals?.on<KlangPlaybackSignal.PreloadingSamples> { signal ->
                             console.log("Preloading ${signal.count} samples...")
                         }
+
                         playback?.signals?.on<KlangPlaybackSignal.SamplesPreloaded> { signal ->
                             console.log("Samples loaded in ${signal.durationMs}ms")
                         }
@@ -180,12 +188,13 @@ class MakeSongPage(ctx: Ctx<Props>) : Component<MakeSongPage.Props>(ctx) {
                                     }
                                 }
                             } else {
-                                ui.large.circular.basic.black.button {
+                                ui.large.circular.white.givenNot(isCodeModified) { disabled }.button {
                                     onClick { onPlay() }
-                                    icon.redo_alternate()
+                                    icon.black.redo_alternate()
                                     +"Update"
                                 }
                             }
+
                             ui.large.circular.icon.givenNot(isPlaying) { disabled }
                                 .given(isPlaying) { white }.button {
 //                                            onClick {
@@ -195,12 +204,10 @@ class MakeSongPage(ctx: Ctx<Props>) : Component<MakeSongPage.Props>(ctx) {
 
                                     icon.black.pause()
                                 }
+
                             ui.large.circular.icon.givenNot(isPlaying) { disabled }
                                 .given(isPlaying) { white }.button {
-                                    onClick {
-                                        onStop()
-                                    }
-
+                                    onClick { onStop() }
                                     icon.black.stop()
                                 }
                         }

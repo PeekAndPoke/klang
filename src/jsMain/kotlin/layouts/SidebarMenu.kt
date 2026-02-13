@@ -59,8 +59,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                         minHeight = 0.px
                     }
 
-                    val iNewSong = currentRoute.route == Nav.newSong
-                    val isEditSong = currentRoute.route == Nav.editSong
+                    val iNewSong = currentRoute.route == Nav.newSongCode
+                    val isEditSong = currentRoute.route == Nav.editSongCode
                     val songId = currentRoute.matchedRoute["id"]
 
                     fun DIV.itemCss(isSelected: Boolean) {
@@ -98,7 +98,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
                     ui.item {
                         itemCss(iNewSong)
-                        onClick { router.navToUri(Nav.newSong()) }
+                        onClick { router.navToUri(Nav.newSongCode()) }
                         icon.plus()
                         noui.content {
                             itemContentCss(iNewSong)
@@ -110,7 +110,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                         ui.item {
                             val isSelected = isEditSong && song.id == songId
                             itemCss(isSelected)
-                            onClick { router.navToUri(Nav.editSong(song.id)) }
+                            onClick { router.navToUri(Nav.editSongCode(song.id)) }
                             if (song.icon != null) {
                                 icon.with(song.icon).render()
                             } else {

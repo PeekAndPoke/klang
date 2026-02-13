@@ -92,7 +92,6 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
 
                 val spectHeight = 150
                 css {
-                    zIndex = 1000
                     position = Position.absolute
                     pointerEvents = PointerEvents.none
                     // Anchor to bottom

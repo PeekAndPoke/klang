@@ -2,6 +2,7 @@
 
 package io.peekandpoke.klang.strudel
 
+import de.peekandpoke.ultra.common.datetime.MpInstant
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
@@ -32,11 +33,19 @@ interface StrudelPattern {
         }
 
         fun compileRaw(code: String): StrudelPattern? {
+            val beforeEngine = MpInstant.now()
+
             val klangScriptEngine = klangScript {
                 registerLibrary(strudelLib)
             }
 
-            return klangScriptEngine.execute(code).toObjectOrNull<StrudelPattern>()
+            println("Creating klangscript engine took: ${MpInstant.now() - beforeEngine}")
+
+            val beforeCompile = MpInstant.now()
+
+            return klangScriptEngine.execute(code).toObjectOrNull<StrudelPattern>().also {
+                println("Compiling pattern took: ${MpInstant.now() - beforeCompile}")
+            }
         }
     }
 
