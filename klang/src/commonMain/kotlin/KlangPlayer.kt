@@ -111,27 +111,27 @@ class KlangPlayer(
                     continue
                 }
 
-                when {
-                    // System messages go to player signals
-                    feedback.playbackId == KlangCommLink.SYSTEM_PLAYBACK_ID -> {
-                        when (feedback) {
-                            is KlangCommLink.Feedback.Diagnostics -> {
-                                withContext(callbackDispatcher) {
-                                    signals.emit(KlangPlaybackSignal.Diagnostics(feedback))
-                                }
-                            }
+                // Handle feedback by type
+                when (feedback) {
+                    // Sample received acknowledgements go to preloader (shared across all playbacks)
+                    is KlangCommLink.Feedback.SampleReceived -> {
+                        samplePreloader.handleSampleReceived(feedback.req)
+                    }
 
-                            else -> {
-                                // Ignore other system messages for now
+                    // System messages go to player signals
+                    is KlangCommLink.Feedback.Diagnostics -> {
+                        if (feedback.playbackId == KlangCommLink.SYSTEM_PLAYBACK_ID) {
+                            withContext(callbackDispatcher) {
+                                signals.emit(KlangPlaybackSignal.Diagnostics(feedback))
                             }
                         }
                     }
+
                     // Playback-specific messages go to the matching playback
                     else -> {
                         val playback = lock.withLock {
                             _activePlaybacks.find { it.playbackId == feedback.playbackId }
                         }
-
                         playback?.handleFeedback(feedback)
                     }
                 }

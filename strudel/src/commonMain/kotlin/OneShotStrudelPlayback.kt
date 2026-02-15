@@ -58,8 +58,17 @@ internal class OneShotStrudelPlayback internal constructor(
             }
         }
 
-        // Start the controller
-        controller.start(options)
+        // Override lookahead and prefetch for one-shot playback
+        // This prevents scheduling events beyond the target cycles
+        val oneShotOptions = options.copy(
+            // Reduce lookahead to 90% of target cycles to prevent scheduling beyond target
+            lookaheadCycles = minOf(options.lookaheadCycles, cyclesToPlay * 0.9),
+            // Set prefetch to match cyclesToPlay
+            prefetchCycles = cyclesToPlay,
+        )
+
+        // Start the controller with adjusted options
+        controller.start(oneShotOptions)
     }
 
     override fun stop() {

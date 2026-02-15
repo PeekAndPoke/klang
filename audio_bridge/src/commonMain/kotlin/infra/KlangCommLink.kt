@@ -133,6 +133,13 @@ class KlangCommLink(capacity: Int = 8192) {
         ) : Feedback
 
         @Serializable
+        @SerialName("sample-received")
+        data class SampleReceived(
+            override val playbackId: String,
+            val req: SampleRequest,
+        ) : Feedback
+
+        @Serializable
         @SerialName("playback-latency")
         data class PlaybackLatency(
             override val playbackId: String,

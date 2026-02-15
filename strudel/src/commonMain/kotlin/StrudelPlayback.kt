@@ -12,8 +12,8 @@ interface StrudelPlayback : KlangPlayback {
      * Configuration options for Strudel playback.
      */
     data class Options(
-        /** Amount of time to look ahead when scheduling events */
-        val lookaheadSec: Double = 1.0,
+        /** Number of cycles to look ahead when scheduling events */
+        val lookaheadCycles: Double = 2.0,
         /** Cycles per second (tempo) */
         val cyclesPerSecond: Double = 0.5,
         /** Initial cycles prefetch, so that the audio starts flawlessly. Auto-calculated if null. */

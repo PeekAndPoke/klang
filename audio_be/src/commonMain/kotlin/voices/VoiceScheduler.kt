@@ -199,6 +199,7 @@ class VoiceScheduler(
         when (msg) {
             is KlangCommLink.Cmd.Sample.NotFound -> {
                 samples[req] = SampleEntry.NotFound(req)
+                // No acknowledgement needed - frontend completes immediately
             }
 
             is KlangCommLink.Cmd.Sample.Complete -> {
@@ -207,6 +208,13 @@ class VoiceScheduler(
                     note = msg.note,
                     pitchHz = msg.pitchHz,
                     sample = msg.sample,
+                )
+                // Send acknowledgement to frontend
+                options.commLink.feedback.send(
+                    KlangCommLink.Feedback.SampleReceived(
+                        playbackId = msg.playbackId,
+                        req = req,
+                    )
                 )
             }
 
@@ -231,12 +239,20 @@ class VoiceScheduler(
                     entry
                 } else {
                     // Promote to Complete
-                    SampleEntry.Complete(
+                    val completed = SampleEntry.Complete(
                         req = req,
                         note = entry.note,
                         pitchHz = entry.pitchHz,
                         sample = entry.sample,
                     )
+                    // Send acknowledgement when complete
+                    options.commLink.feedback.send(
+                        KlangCommLink.Feedback.SampleReceived(
+                            playbackId = msg.playbackId,
+                            req = req,
+                        )
+                    )
+                    completed
                 }
             }
         }
@@ -411,10 +427,7 @@ class VoiceScheduler(
             val activeOrbitIds = active.map { it.voice.orbitId }.toSet()
 
             val orbitStates = options.orbits.allocatedIds.map { id ->
-                KlangCommLink.Feedback.Diagnostics.OrbitState(
-                    id = id,
-                    active = id in activeOrbitIds
-                )
+                KlangCommLink.Feedback.Diagnostics.OrbitState(id = id, active = id in activeOrbitIds)
             }
 
             options.commLink.feedback.send(
@@ -485,10 +498,6 @@ class VoiceScheduler(
 
     private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
         val blockEndSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
-        val nowSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
-
-        // Allow events up to 1 block in the past (normal scheduling jitter)
-        val oldestAllowedSec = nowSec - (options.blockFrames.toDouble() / options.sampleRate.toDouble())
 
         while (true) {
             val head = scheduled.peek() ?: break
@@ -509,11 +518,6 @@ class VoiceScheduler(
 
             // Remove from heap
             scheduled.pop()
-
-            // Drop if too old
-            if (absoluteStartSec < oldestAllowedSec) {
-                continue
-            }
 
             // Convert the voice to use absolute times for makeVoice
             val absoluteVoice = head.copy(

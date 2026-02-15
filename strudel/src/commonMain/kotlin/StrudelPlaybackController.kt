@@ -45,7 +45,7 @@ internal class StrudelPlaybackController(
 
     // ===== Playback Parameters =====
     private var cyclesPerSecond: Double = 0.5
-    private var lookaheadSec: Double = 1.0
+    private var lookaheadCycles: Double = 2.0
     private val secPerCycle get() = 1.0 / cyclesPerSecond
 
     // ===== Fetcher State =====
@@ -104,12 +104,13 @@ internal class StrudelPlaybackController(
 
         // Update playback parameters
         this.cyclesPerSecond = options.cyclesPerSecond
-        this.lookaheadSec = options.lookaheadSec
+        this.lookaheadCycles = options.lookaheadCycles
 
         // Start the fetcher job
+        val prefetchCycles = options.prefetchCycles?.toDouble() ?: 2.0
         jobLock.withLock {
             fetcherJob = scope.launch(fetcherDispatcher.limitedParallelism(1)) {
-                run(this)
+                runPlayback(this, prefetchCycles)
             }
         }
     }
@@ -154,6 +155,10 @@ internal class StrudelPlaybackController(
                 backendLatencyMs = feedback.backendTimestampMs - startTimeMs
                 backendLatencyMs = backendLatencyMs.coerceIn(0.0, 5000.0)
             }
+
+            is KlangCommLink.Feedback.SampleReceived -> {
+                // Ignore - sample acknowledgements are handled at player level
+            }
         }
     }
 
@@ -170,10 +175,9 @@ internal class StrudelPlaybackController(
 
     /**
      * Pre-fetches samples needed for the first cycles of the pattern using the centralized preloader.
+     * Waits for backend acknowledgement to ensure samples are ready before playback starts.
      */
-    private suspend fun preloadSamples() {
-        // Query first 2 cycles for sample discovery
-        val prefetchCycles = 2.0
+    private suspend fun preloadSamples(prefetchCycles: Double) {
         val preloadVoices = try {
             queryEvents(from = 0.0, to = prefetchCycles, sendSignals = false)
         } catch (e: Exception) {
@@ -188,25 +192,49 @@ internal class StrudelPlaybackController(
 
         if (sampleRequests.isEmpty()) return
 
-        // Use centralized preloader (emits signals, caches across playbacks)
-        samplePreloader.ensureLoaded(
+        // Use centralized preloader with deferred (waits for backend ack)
+        // Emits signals and caches across playbacks
+        val deferred = samplePreloader.ensureLoadedDeferred(
             playbackId = playbackId,
             requests = sampleRequests,
             signals = signals,
         )
+
+        // Wait for backend acknowledgement (with timeout to prevent hanging)
+        try {
+            kotlinx.coroutines.withTimeout(5000) {
+                deferred.await()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Continue anyway - samples may have been sent even if ack wasn't received
+        }
     }
 
-    private suspend fun run(scope: CoroutineScope) {
+    private suspend fun runPlayback(scope: CoroutineScope, prefetchCycles: Double) {
         // Reset state
         queryCursorCycles = 0.0
         sampleSoundLookAheadPointer = 0.0
         lastEmittedCycle = -1L
 
         // ===== PRELOAD PHASE =====
-        preloadSamples()
+        preloadSamples(prefetchCycles)
 
-        // NOW record start time — after preloading
+        // ===== RECORD START TIME =====
+        // Must be set BEFORE scheduling first cycle so voices have correct playbackStartTime
         startTimeMs = klangTime.internalMsNow()
+
+        // ===== SCHEDULE FIRST CYCLE IMMEDIATELY =====
+        // This prevents the first events from arriving too late at the backend
+        try {
+            val firstCycleEvents = queryEvents(from = 0.0, to = fetchChunk, sendSignals = false)
+            for (voice in firstCycleEvents) {
+                sendControl(KlangCommLink.Cmd.ScheduleVoice(playbackId = playbackId, voice = voice))
+            }
+            queryCursorCycles = fetchChunk
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
 
         // Emit started signal
         signals.emit(KlangPlaybackSignal.PlaybackStarted)
@@ -359,15 +387,12 @@ internal class StrudelPlaybackController(
             .map { it.data.asSampleRequest() }
             .toSet()
 
-        // Use preloader to ensure samples are loaded (async, non-blocking)
+        // Use preloader async (fire-and-forget, doesn't wait for backend ack)
         // No signals emitted here since this is lookahead, not initial preload
-        scope.launch(fetcherDispatcher) {
-            samplePreloader.ensureLoaded(
-                playbackId = playbackId,
-                requests = sampleRequests,
-                signals = null, // Don't emit signals for lookahead
-            )
-        }
+        samplePreloader.ensureLoadedSilently(
+            playbackId = playbackId,
+            requests = sampleRequests,
+        )
     }
 
     /**
@@ -384,7 +409,7 @@ internal class StrudelPlaybackController(
         val nowFrame = localFrameCounter
         val nowSec = nowFrame.toDouble() / playerOptions.sampleRate.toDouble()
         val nowCycles = nowSec / secPerCycle
-        val targetCycles = nowCycles + (lookaheadSec / secPerCycle)
+        val targetCycles = nowCycles + lookaheadCycles
 
         // Fetch as many new cycles as needed
         while (queryCursorCycles < targetCycles) {
@@ -423,7 +448,7 @@ internal class StrudelPlaybackController(
         try {
             val voices = queryEvents(from = from, to = to, sendSignals = false)
 
-            println("Sync: $from -> $to (nowCycle=$nowCycle) --> ${voices.size} voices")
+            // println("Sync: $from -> $to (nowCycle=$nowCycle) --> ${voices.size} voices")
 
             sendControl(
                 KlangCommLink.Cmd.ReplaceVoices(
@@ -437,13 +462,10 @@ internal class StrudelPlaybackController(
     }
 
     private fun requestAndSendSample(req: SampleRequest) {
-        // Use preloader for backend-requested samples (keeps cache consistent)
-        scope.launch(fetcherDispatcher) {
-            samplePreloader.ensureLoaded(
-                playbackId = playbackId,
-                requests = setOf(req),
-                signals = null, // Don't emit signals for backend requests
-            )
-        }
+        // Use preloader async for backend-requested samples (fire-and-forget)
+        samplePreloader.ensureLoadedSilently(
+            playbackId = playbackId,
+            requests = setOf(req),
+        )
     }
 }

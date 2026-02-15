@@ -15,6 +15,7 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.lang.bank
 import io.peekandpoke.klang.strudel.lang.s
+import io.peekandpoke.klang.strudel.lang.slow
 import io.peekandpoke.klang.strudel.playStrudelOnce
 import kotlinx.html.Tag
 
@@ -114,7 +115,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
             } else {
                 // Specific bank - use bank:sound notation
                 s(soundKey).bank(bankKey)
-            }
+            }.slow(4)  // give enough time to ring out
 
             // Play once for 1 cycle
             val playback = player.playStrudelOnce(pattern, cycles = 1)
