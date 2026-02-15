@@ -86,7 +86,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private var title: String by value(titleStream()) { titleStream(it) }
 
     private var cps: Double by value(cpsStream()) {
+        // store cps
         cpsStream(it)
+        // clear highlight buffer
+        highlightBuffer.cancelAll()
+        // Update the playback
         playback?.updateCyclesPerSecond(it)
     }
 
@@ -105,6 +109,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         codeStream(code)
         // set as up to date
         isCodeModified = false
+        // clear the highlight buffer
+        highlightBuffer.cancelAll()
 
         when (val s = playback) {
             null -> launch {
@@ -276,8 +282,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     key = "dashboard-form-code"
 
                     // CodeMirror editor container
-                    CodeMirrorComp(code = code, onCodeChanged = { code = it })
-                        .track(editorRef)
+                    CodeMirrorComp(code = code, onCodeChanged = { code = it }).track(editorRef)
                 }
             }
         }

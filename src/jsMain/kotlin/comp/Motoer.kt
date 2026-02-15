@@ -57,10 +57,34 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
             }
 
             div {
+                key = "spectrum-visualizer"
+
+                val spectHeight = 150
+                css {
+                    zIndex = 1
+                    position = Position.absolute
+                    pointerEvents = PointerEvents.none
+                    // Anchor to bottom
+                    bottom = 0.px
+                    left = 0.px
+                    right = 0.px
+                    // Dimensions
+                    height = spectHeight.px
+                    width = 100.pct
+
+                    opacity = 0.5
+                }
+
+                Spectrumeter { Player.get() }
+            }
+
+            div {
                 key = "title"
 
                 css {
+                    zIndex = 100
                     marginBottom = 16.px
+                    opacity = 0.95
                 }
 
                 div {
@@ -85,27 +109,6 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
 
                     icon.music { css { transform { scaleX(-1.0) }; marginLeft = 8.px } }
                 }
-            }
-
-            div {
-                key = "spectrum-visualizer"
-
-                val spectHeight = 150
-                css {
-                    position = Position.absolute
-                    pointerEvents = PointerEvents.none
-                    // Anchor to bottom
-                    bottom = 0.px
-                    left = 0.px
-                    right = 0.px
-                    // Dimensions
-                    height = spectHeight.px
-                    width = 100.pct
-
-                    opacity = 0.5
-                }
-
-                Spectrumeter { Player.get() }
             }
         }
     }

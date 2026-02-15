@@ -11,6 +11,7 @@ import de.peekandpoke.ultra.semanticui.semanticIcon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.externals.ResizeObserver
 import io.peekandpoke.klang.utils.mixColor
+import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.canvas
@@ -71,6 +72,9 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
     private var ctx2d: CanvasRenderingContext2D? = null
     private var resizeObserver: ResizeObserver? = null
 
+    private var logicalWidth = 0.0
+    private var logicalHeight = 0.0
+
     // Smoothed value for smooth needle movement
     private var smoothedValue: Double by value(props.value())
 
@@ -85,11 +89,20 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
                     resizeObserver = ResizeObserver { entries, _ ->
                         for (entry in entries) {
-                            val width = entry.contentRect.width
-                            val height = entry.contentRect.height
+                            val rect = (entry.target as? org.w3c.dom.HTMLElement)
+                                ?.getBoundingClientRect()
 
-                            canvas?.width = width.toInt()
-                            canvas?.height = height.toInt()
+                            val width = rect?.width ?: entry.contentRect.width
+                            val height = rect?.height ?: entry.contentRect.height
+                            val dpr = window.devicePixelRatio
+
+                            logicalWidth = width
+                            logicalHeight = height
+
+                            canvas?.width = (width * dpr).toInt()
+                            canvas?.height = (height * dpr).toInt()
+
+                            ctx2d?.setTransform(dpr, 0.0, 0.0, dpr, 0.0, 0.0)
 
                             draw()
                         }
@@ -179,8 +192,8 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val canvas = canvas ?: return
         val ctx = ctx2d ?: return
 
-        val w = canvas.width.toDouble()
-        val h = canvas.height.toDouble()
+        val w = if (logicalWidth > 0.0) logicalWidth else canvas.width.toDouble()
+        val h = if (logicalHeight > 0.0) logicalHeight else canvas.height.toDouble()
         val cx = w / 2
         val cy = h / 2
 

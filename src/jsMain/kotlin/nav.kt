@@ -16,6 +16,8 @@ object Nav {
     val newSongCode = Static("/song/code")
     val editSongCode = Route1("/song/code/{id}")
 
+    val samplesLibrary = Static("/samples/library")
+
     val tour = Static("/tour")
 }
 
@@ -34,6 +36,8 @@ fun RootRouterBuilder.mountNav() {
 
         mount(Nav.newSongCode) { CodeSongPage(id = null) }
         mount(Nav.editSongCode) { CodeSongPage(id = it["id"]) }
+
+        mount(Nav.samplesLibrary) { SamplesLibraryPage() }
     }
 
 
