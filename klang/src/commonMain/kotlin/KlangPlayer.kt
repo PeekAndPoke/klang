@@ -57,6 +57,24 @@ class KlangPlayer(
     val playbackFetcherDispatcher: CoroutineDispatcher get() = fetcherDispatcher
     val playbackCallbackDispatcher: CoroutineDispatcher get() = callbackDispatcher
 
+    // Centralized sample preloader (shared across all playbacks)
+    val samplePreloader = SamplePreloader(
+        samples = options.samples,
+        sendControl = ::sendControl,
+        scope = scope,
+        dispatcher = fetcherDispatcher,
+    )
+
+    // Context bundle for playback implementations (reduces constructor parameter lists)
+    val playbackContext = KlangPlaybackContext(
+        playerOptions = options,
+        samplePreloader = samplePreloader,
+        sendControl = ::sendControl,
+        scope = scope,
+        fetcherDispatcher = fetcherDispatcher,
+        callbackDispatcher = callbackDispatcher,
+    )
+
     /**
      * Read-only list of currently active playbacks
      */
@@ -178,6 +196,9 @@ class KlangPlayer(
             // Shutdown the feedback dispatcher
             feedbackDispatcherJob?.cancel()
             feedbackDispatcherJob = null
+
+            // Clear preloader cache
+            samplePreloader.clear()
 
             // Clear signal listeners
             signals.clear()

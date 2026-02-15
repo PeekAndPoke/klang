@@ -2,11 +2,9 @@ package io.peekandpoke.klang.strudel
 
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlayback
+import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
-import io.peekandpoke.klang.audio_engine.KlangPlayer
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 
 /**
  * One-shot Strudel playback that stops automatically after a specified number of cycles.
@@ -17,11 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 internal class OneShotStrudelPlayback internal constructor(
     override val playbackId: String,
     pattern: StrudelPattern,
-    playerOptions: KlangPlayer.Options,
-    sendControl: (KlangCommLink.Cmd) -> Unit,
-    scope: CoroutineScope,
-    fetcherDispatcher: CoroutineDispatcher,
-    callbackDispatcher: CoroutineDispatcher,
+    context: KlangPlaybackContext,
     private val onStopped: (KlangPlayback) -> Unit = {},
     private val cyclesToPlay: Int = 1,
 ) : StrudelPlayback {
@@ -31,11 +25,7 @@ internal class OneShotStrudelPlayback internal constructor(
     private val controller = StrudelPlaybackController(
         playbackId = playbackId,
         pattern = pattern,
-        playerOptions = playerOptions,
-        sendControl = sendControl,
-        scope = scope,
-        fetcherDispatcher = fetcherDispatcher,
-        callbackDispatcher = callbackDispatcher,
+        context = context,
         onStopped = { handleControllerStopped() },
         signals = signals,
     )

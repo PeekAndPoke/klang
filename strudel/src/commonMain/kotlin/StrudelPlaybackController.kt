@@ -7,9 +7,9 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangAtomicBool
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangLock
 import io.peekandpoke.klang.audio_bridge.infra.withLock
+import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
-import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
@@ -27,14 +27,17 @@ import kotlin.math.floor
 internal class StrudelPlaybackController(
     private val playbackId: String,
     private var pattern: StrudelPattern,
-    private val playerOptions: KlangPlayer.Options,
-    private val sendControl: (KlangCommLink.Cmd) -> Unit,
-    private val scope: CoroutineScope,
-    private val fetcherDispatcher: CoroutineDispatcher,
-    private val callbackDispatcher: CoroutineDispatcher,
+    private val context: KlangPlaybackContext,
     private val onStopped: () -> Unit,
     private val signals: KlangPlaybackSignals,
 ) {
+    // Extract dependencies from context for convenience
+    private val playerOptions = context.playerOptions
+    private val samplePreloader = context.samplePreloader
+    private val sendControl = context.sendControl
+    private val scope = context.scope
+    private val fetcherDispatcher = context.fetcherDispatcher
+    private val callbackDispatcher = context.callbackDispatcher
     // ===== State Management =====
     private val running = KlangAtomicBool(false)
     private val jobLock = KlangLock()
@@ -60,7 +63,6 @@ internal class StrudelPlaybackController(
 
     // ===== Resources =====
     private val samples: Samples = playerOptions.samples
-    private val samplesAlreadySent = mutableSetOf<SampleRequest>()
     private val klangTime = KlangTime.create()
 
     // ===== Latency Compensation =====
@@ -167,77 +169,31 @@ internal class StrudelPlaybackController(
     }
 
     /**
-     * Pre-fetches samples needed for the first cycles of the pattern.
+     * Pre-fetches samples needed for the first cycles of the pattern using the centralized preloader.
      */
     private suspend fun preloadSamples() {
-        scope.async {
-            val preloadStartMs = klangTime.internalMsNow()
+        // Query first 2 cycles for sample discovery
+        val prefetchCycles = 2.0
+        val preloadVoices = try {
+            queryEvents(from = 0.0, to = prefetchCycles, sendSignals = false)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return
+        }
 
-            // Query first 2 cycles for sample discovery
-            val prefetchCycles = 2.0
-            val preloadVoices = try {
-                queryEvents(from = 0.0, to = prefetchCycles, sendSignals = false)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return@async
-            }
+        // Identify unique sample requests (non-oscillator sounds)
+        val sampleRequests = preloadVoices
+            .map { it.data.asSampleRequest() }
+            .toSet()
 
-            // Identify unique sample requests (non-oscillator sounds)
-            val sampleRequests = preloadVoices
-                .map { it.data.asSampleRequest() }
-                .toSet()
+        if (sampleRequests.isEmpty()) return
 
-            if (sampleRequests.isEmpty()) return@async
-
-            // Emit preloading signal
-            signals.emit(
-                KlangPlaybackSignal.PreloadingSamples(
-                    count = sampleRequests.size,
-                    samples = sampleRequests.map { "${it.bank ?: ""}/${it.sound ?: ""}:${it.index ?: 0}" },
-                )
-            )
-
-            // Load all samples concurrently and send to backend
-            val jobs = sampleRequests.map { req ->
-                scope.async(fetcherDispatcher) {
-                    // Remember this sample so lookAheadForSampleSounds doesn't re-request it
-                    samplesAlreadySent.add(req)
-
-                    // Resolve and load
-                    val loaded = samples.get(req)
-                    val loadedSample = loaded?.sample
-                    val loadedPcm = loaded?.pcm
-
-                    val cmd = if (loadedSample == null || loadedPcm == null) {
-                        KlangCommLink.Cmd.Sample.NotFound(playbackId = playbackId, req = req)
-                    } else {
-                        KlangCommLink.Cmd.Sample.Complete(
-                            playbackId = playbackId,
-                            req = req,
-                            note = loadedSample.note,
-                            pitchHz = loadedSample.pitchHz,
-                            sample = loadedPcm,
-                        )
-                    }
-
-                    // Send to backend
-                    sendControl(cmd)
-                }
-            }
-
-            // Wait for ALL samples to be loaded and sent
-            jobs.forEach { it.await() }
-
-            val durationMs = (klangTime.internalMsNow() - preloadStartMs).toLong()
-
-            // Emit completion signal
-            signals.emit(
-                KlangPlaybackSignal.SamplesPreloaded(
-                    count = sampleRequests.size,
-                    durationMs = durationMs,
-                )
-            )
-        }.await()
+        // Use centralized preloader (emits signals, caches across playbacks)
+        samplePreloader.ensureLoaded(
+            playbackId = playbackId,
+            requests = sampleRequests,
+            signals = signals,
+        )
     }
 
     private suspend fun run(scope: CoroutineScope) {
@@ -398,16 +354,19 @@ internal class StrudelPlaybackController(
         // Lookup events
         val events = queryEvents(from = from, to = to, sendSignals = false)
 
-        // Figure out which samples we need to send to the backend
-        val newSamples = events
+        // Get unique sample requests
+        val sampleRequests = events
             .map { it.data.asSampleRequest() }
-            .toSet().minus(samplesAlreadySent)
+            .toSet()
 
-        for (sample in newSamples) {
-            // 1. Remember this one
-            samplesAlreadySent.add(sample)
-            // 2. Request the sample and send it to the backend
-            requestAndSendSample(sample)
+        // Use preloader to ensure samples are loaded (async, non-blocking)
+        // No signals emitted here since this is lookahead, not initial preload
+        scope.launch(fetcherDispatcher) {
+            samplePreloader.ensureLoaded(
+                playbackId = playbackId,
+                requests = sampleRequests,
+                signals = null, // Don't emit signals for lookahead
+            )
         }
     }
 
@@ -478,26 +437,13 @@ internal class StrudelPlaybackController(
     }
 
     private fun requestAndSendSample(req: SampleRequest) {
-        samples.getWithCallback(req) { result ->
-            val sample = result?.sample
-            val pcm = result?.pcm
-
-            val cmd = if (sample == null || pcm == null) {
-                KlangCommLink.Cmd.Sample.NotFound(
-                    playbackId = playbackId,
-                    req = req,
-                )
-            } else {
-                KlangCommLink.Cmd.Sample.Complete(
-                    playbackId = playbackId,
-                    req = req,
-                    note = sample.note,
-                    pitchHz = sample.pitchHz,
-                    sample = pcm,
-                )
-            }
-
-            sendControl(cmd)
+        // Use preloader for backend-requested samples (keeps cache consistent)
+        scope.launch(fetcherDispatcher) {
+            samplePreloader.ensureLoaded(
+                playbackId = playbackId,
+                requests = setOf(req),
+                signals = null, // Don't emit signals for backend requests
+            )
         }
     }
 }

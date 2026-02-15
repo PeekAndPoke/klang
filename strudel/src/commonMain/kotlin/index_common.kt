@@ -19,11 +19,7 @@ fun KlangPlayer.playStrudel(
     val playback = ContinuousStrudelPlayback(
         playbackId = generatePlaybackId(),
         pattern = pattern,
-        playerOptions = options,
-        sendControl = ::sendControl,
-        scope = playbackScope,
-        fetcherDispatcher = playbackFetcherDispatcher,
-        callbackDispatcher = playbackCallbackDispatcher,
+        context = playbackContext,
         onStopped = { unregisterPlayback(it) }
     )
     registerPlayback(playback)
@@ -44,11 +40,7 @@ fun KlangPlayer.playStrudelOnce(
     val playback = OneShotStrudelPlayback(
         playbackId = generatePlaybackId(),
         pattern = pattern,
-        playerOptions = options,
-        sendControl = ::sendControl,
-        scope = playbackScope,
-        fetcherDispatcher = playbackFetcherDispatcher,
-        callbackDispatcher = playbackCallbackDispatcher,
+        context = playbackContext,
         onStopped = { unregisterPlayback(it) },
         cyclesToPlay = cycles,
     )
