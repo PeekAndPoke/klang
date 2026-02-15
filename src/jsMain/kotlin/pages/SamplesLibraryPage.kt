@@ -6,6 +6,7 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
@@ -13,14 +14,11 @@ import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.strudel.lang.bank
-import io.peekandpoke.klang.strudel.lang.n
-import io.peekandpoke.klang.strudel.lang.s
-import io.peekandpoke.klang.strudel.lang.slow
+import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.playStrudelOnce
-import kotlinx.html.DIV
-import kotlinx.html.Tag
-import kotlinx.html.b
+import kotlinx.css.*
+import kotlinx.html.*
+import org.w3c.dom.HTMLInputElement
 
 @Suppress("FunctionName")
 fun Tag.SamplesLibraryPage() = comp {
@@ -49,6 +47,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
     private val samples: Samples? by subscribingTo(Player.samplesStream)
     private var searchText: String by value("")
     private var groupBy: GroupBy by value(GroupBy.BANK)
+    private var lastStrudelCode: String by value("")
 
     init {
         lifecycle {
@@ -120,43 +119,110 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
         // Ensure player is ready
         val player = Player.get() ?: return
 
-        val pattern = s(sound).n(index).bank(bank)
+        val effectiveIndex = index?.takeIf { it > 0 }?.let { it + 1 }
+
+        val pattern = s(sound)
+            .n(effectiveIndex)
+            .bank(bank.takeIf { it.isNotEmpty() })
+            .adsr("0.01:1.0:1.8:1.0")
             .slow(4)  // give enough time to ring out
+
+        // Format as code string for display
+        lastStrudelCode = buildStrudelCodeString(sound, effectiveIndex, bank)
 
         // Play once for 1 cycle
         val playback = player.playStrudelOnce(pattern, cycles = 1)
         playback.start()
     }
 
+    private fun buildStrudelCodeString(
+        sound: String,
+        index: Int?,
+        bank: String,
+    ): String {
+        val parts = mutableListOf<String>()
+
+        val soundStr = listOfNotNull(
+            sound,
+            index?.takeIf { it > 1 }
+        ).joinToString(":")
+
+        // Always start with s()
+        parts.add("s(\"$soundStr\")")
+
+        // Add bank() if not empty (empty = default bank)
+        if (bank.isNotEmpty()) {
+            parts.add("bank(\"$bank\")")
+        }
+
+        return parts.joinToString(".")
+    }
+
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        ui.fluid.container.with("noise-bg") {
+        div {
             key = "samples-library-page"
+            attributes["class"] = "ui fluid container noise-bg"
 
-            // Controls section
-            ui.basic.segment {
-                ui.form {
-                    ui.two.fields {
-                        UiInputField(searchText, { searchText = it }) {
-                            leftLabel {
-                                ui.basic.label { icon.search(); +"Search" }
+            css {
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                height = 100.vh
+                overflow = Overflow.hidden
+            }
+
+            // Fixed header section (search + strudel code display)
+            div {
+                css {
+                    flexShrink = 0.0  // Don't shrink
+                    overflowY = Overflow.visible
+                }
+
+                // Controls section
+                ui.basic.segment {
+                    ui.form {
+                        ui.two.fields {
+                            UiInputField(searchText, { searchText = it }) {
+                                leftLabel {
+                                    ui.basic.label { icon.search(); +"Search" }
+                                }
+                            }
+
+                            ui.field {
+                                ui.menu {
+                                    ui.item.with(if (groupBy == GroupBy.BANK) "active" else "") {
+                                        +"Group by Bank"
+                                        onClick { groupBy = GroupBy.BANK }
+                                    }
+                                    ui.item.with(if (groupBy == GroupBy.SOUND) "active" else "") {
+                                        +"Group by Sound"
+                                        onClick { groupBy = GroupBy.SOUND }
+                                    }
+                                    ui.item.with(if (groupBy == GroupBy.NONE) "active" else "") {
+                                        +"No Grouping"
+                                        onClick { groupBy = GroupBy.NONE }
+                                    }
+                                }
                             }
                         }
+                    }
+                }
 
-                        ui.field {
-                            ui.menu {
-                                ui.item.with(if (groupBy == GroupBy.BANK) "active" else "") {
-                                    +"Group by Bank"
-                                    onClick { groupBy = GroupBy.BANK }
-                                }
-                                ui.item.with(if (groupBy == GroupBy.SOUND) "active" else "") {
-                                    +"Group by Sound"
-                                    onClick { groupBy = GroupBy.SOUND }
-                                }
-                                ui.item.with(if (groupBy == GroupBy.NONE) "active" else "") {
-                                    +"No Grouping"
-                                    onClick { groupBy = GroupBy.NONE }
+                // Strudel code display
+                if (lastStrudelCode.isNotEmpty()) {
+                    ui.secondary.segment {
+                        ui.form {
+                            ui.left.labeled.input {
+                                ui.basic.label { icon.code(); +"Strudel Code" }
+                                input {
+                                    type = InputType.text
+                                    value = lastStrudelCode
+                                    readonly = true
+                                    onClick {
+                                        // Select all text on click for easy copying
+                                        (it.target as? HTMLInputElement)?.select()
+                                    }
                                 }
                             }
                         }
@@ -164,34 +230,42 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            // Results section
-            when {
-                samples == null -> {
-                    ui.segment {
-                        ui.active.loader {}
-                    }
+            // Scrollable results section
+            div {
+                css {
+                    flexGrow = 1.0
+                    overflowY = Overflow.auto
+                    minHeight = 0.px  // Critical for flex containers
                 }
 
-                displayGroups.isEmpty() || displayGroups.all { it.second.isEmpty() } -> {
-                    ui.placeholder.segment {
-                        ui.header {
-                            +"No samples found"
+                when {
+                    samples == null -> {
+                        ui.segment {
+                            ui.active.loader {}
                         }
                     }
-                }
 
-                else -> {
-                    displayGroups.forEach { (groupName, entries) ->
-                        ui.segment {
-                            key = "group-$groupName"
-
+                    displayGroups.isEmpty() || displayGroups.all { it.second.isEmpty() } -> {
+                        ui.placeholder.segment {
                             ui.header {
-                                +"$groupName (${entries.size})"
+                                +"No samples found"
                             }
+                        }
+                    }
 
-                            ui.four.column.stackable.doubling.cards {
-                                entries.forEach { entry ->
-                                    renderCard(entry)
+                    else -> {
+                        displayGroups.forEach { (groupName, entries) ->
+                            ui.segment {
+                                key = "group-$groupName"
+
+                                ui.header {
+                                    +"$groupName (${entries.size})"
+                                }
+
+                                ui.four.column.stackable.doubling.cards {
+                                    entries.forEach { entry ->
+                                        renderCard(entry)
+                                    }
                                 }
                             }
                         }
