@@ -41,6 +41,18 @@ sealed class KlangPlaybackSignal {
     data object PlaybackStopped : KlangPlaybackSignal()
 
     /**
+     * Emitted when a full cycle has been completed.
+     * Stall-safe: if multiple cycles are missed due to CPU stalls, all cycles are emitted in order.
+     *
+     * @param cycleIndex The cycle that just completed (0-based). cycleIndex=0 means cycle [0,1) completed.
+     * @param atTimeSec Wall-clock boundary time in seconds (from KlangTime epoch), with latency offset applied.
+     */
+    data class CycleCompleted(
+        val cycleIndex: Long,
+        val atTimeSec: Double,
+    ) : KlangPlaybackSignal()
+
+    /**
      * Emitted when voices are scheduled for a cycle chunk.
      * Contains all voices scheduled in this batch for efficient processing.
      *

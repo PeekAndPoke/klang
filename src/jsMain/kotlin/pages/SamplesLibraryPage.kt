@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.NoProps
 import de.peekandpoke.kraft.components.PureComponent
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
+import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
@@ -12,6 +13,9 @@ import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.strudel.lang.bank
+import io.peekandpoke.klang.strudel.lang.s
+import io.peekandpoke.klang.strudel.playStrudelOnce
 import kotlinx.html.Tag
 
 @Suppress("FunctionName")
@@ -99,7 +103,23 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
     //  ACTIONS  ////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun playSample(bankKey: String, soundKey: String) {
-        TODO("Implement sample playback for bank='$bankKey', sound='$soundKey'")
+        launch {
+            // Ensure player is ready
+            val player = Player.ensure().await()
+
+            // Build a pattern that plays this specific sample
+            val pattern = if (bankKey.isEmpty()) {
+                // Default bank - no bank specifier needed
+                s(soundKey)
+            } else {
+                // Specific bank - use bank:sound notation
+                s(soundKey).bank(bankKey)
+            }
+
+            // Play once for 1 cycle
+            val playback = player.playStrudelOnce(pattern, cycles = 1)
+            playback.start()
+        }
     }
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////

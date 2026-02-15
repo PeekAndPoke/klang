@@ -47,11 +47,11 @@ object BuiltInSongs {
             title = "Stranger Synths",
             cps = 0.57,
             code = TestTextPatterns.strangerThingsNetflix,
-            icon = "music",
+            icon = "film",
         )
     )
 
-    val finalFantasty7Prelude = add(
+    val finalFantasy7Prelude = add(
         Song(
             id = "$PREFIX-0005",
             title = "Final Fantasy VII Prelude",
