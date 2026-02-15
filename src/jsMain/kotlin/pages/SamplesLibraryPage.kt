@@ -14,10 +14,13 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.lang.bank
+import io.peekandpoke.klang.strudel.lang.n
 import io.peekandpoke.klang.strudel.lang.s
 import io.peekandpoke.klang.strudel.lang.slow
 import io.peekandpoke.klang.strudel.playStrudelOnce
+import kotlinx.html.DIV
 import kotlinx.html.Tag
+import kotlinx.html.b
 
 @Suppress("FunctionName")
 fun Tag.SamplesLibraryPage() = comp {
@@ -46,6 +49,16 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
     private val samples: Samples? by subscribingTo(Player.samplesStream)
     private var searchText: String by value("")
     private var groupBy: GroupBy by value(GroupBy.BANK)
+
+    init {
+        lifecycle {
+            onMount {
+                launch {
+                    Player.ensure().await()
+                }
+            }
+        }
+    }
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -103,24 +116,16 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  ACTIONS  ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun playSample(bankKey: String, soundKey: String) {
-        launch {
-            // Ensure player is ready
-            val player = Player.ensure().await()
+    private fun playSample(bank: String, sound: String, index: Int? = null) {
+        // Ensure player is ready
+        val player = Player.get() ?: return
 
-            // Build a pattern that plays this specific sample
-            val pattern = if (bankKey.isEmpty()) {
-                // Default bank - no bank specifier needed
-                s(soundKey)
-            } else {
-                // Specific bank - use bank:sound notation
-                s(soundKey).bank(bankKey)
-            }.slow(4)  // give enough time to ring out
+        val pattern = s(sound).n(index).bank(bank)
+            .slow(4)  // give enough time to ring out
 
-            // Play once for 1 cycle
-            val playback = player.playStrudelOnce(pattern, cycles = 1)
-            playback.start()
-        }
+        // Play once for 1 cycle
+        val playback = player.playStrudelOnce(pattern, cycles = 1)
+        playback.start()
     }
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -130,7 +135,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
             key = "samples-library-page"
 
             // Controls section
-            ui.segment {
+            ui.basic.segment {
                 ui.form {
                     ui.two.fields {
                         UiInputField(searchText, { searchText = it }) {
@@ -184,30 +189,100 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
                                 +"$groupName (${entries.size})"
                             }
 
-                            ui.eight.column.stackable.doubling.cards {
+                            ui.four.column.stackable.doubling.cards {
                                 entries.forEach { entry ->
-                                    noui.card {
-                                        key = "sample-${entry.bankKey}-${entry.soundKey}"
+                                    renderCard(entry)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-                                        ui.content {
-                                            ui.horizontal.list {
-                                                noui.item {
-                                                    +"${entry.soundKey} "
-                                                }
-                                                if (groupBy != GroupBy.BANK) {
-                                                    noui.item {
-                                                        ui.label {
-                                                            +entry.displayBankName
-                                                        }
-                                                    }
-                                                }
-                                            }
+    private fun DIV.renderCard(entry: SampleEntry) {
+        val provider =
+            samples?.index?.banksByKey?.get(entry.bankKey)?.getSound(entry.soundKey)
+
+        val variantCount = provider?.variantCount ?: 1
+        val sampleType = provider?.sampleType ?: Samples.SampleType.SINGLE
+        val noteRange = provider?.noteRange
+
+        noui.card {
+            key = "sample-${entry.bankKey}-${entry.soundKey}"
+
+            ui.content {
+                ui.horizontal.list {
+                    noui.item {
+                        b { +entry.soundKey }
+                    }
+                    if (groupBy != GroupBy.BANK) {
+                        noui.item {
+                            ui.basic.label { +"Bank: ${entry.displayBankName}" }
+                        }
+                    }
+                    noui.item {
+                        when (sampleType) {
+                            Samples.SampleType.SINGLE -> {
+                                // noop
+                            }
+
+                            Samples.SampleType.PITCHED -> {
+                                // Show note range badge + single play button
+                                ui.basic.label {
+                                    +"Pitched"
+                                    if (noteRange != null) {
+                                        ui.detail { +noteRange }
+                                    }
+                                }
+                            }
+
+                            Samples.SampleType.VARIANTS -> {
+                                // Show variant count + individual play buttons
+                                ui.basic.label {
+                                    +"$variantCount variants"
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ui.divider {}
+
+                when (sampleType) {
+                    Samples.SampleType.SINGLE -> {
+                        // Single play button
+                        ui.basic.fluid.button {
+                            onClick {
+                                playSample(bank = entry.bankKey, sound = entry.soundKey, index = null)
+                            }
+                            icon.play()
+                        }
+                    }
+
+                    Samples.SampleType.PITCHED -> {
+                        // Show note range badge + single play button
+                        ui.basic.fluid.icon.button {
+                            onClick {
+                                playSample(bank = entry.bankKey, sound = entry.soundKey, index = null)
+                            }
+                            icon.play()
+                        }
+                    }
+
+                    Samples.SampleType.VARIANTS -> {
+                        // Show variant count + individual play buttons
+                        ui.horizontal.list {
+                            for (i in 0 until variantCount) {
+                                noui.item {
+                                    ui.mini.basic.label.button {
+                                        onClick {
+                                            playSample(bank = entry.bankKey, sound = entry.soundKey, index = i)
                                         }
 
-                                        ui.button {
-                                            icon.play()
-                                            onClick { playSample(entry.bankKey, entry.soundKey) }
-                                        }
+                                        icon.play()
+                                        +"#${i + 1}"
                                     }
                                 }
                             }

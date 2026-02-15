@@ -4,10 +4,6 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 /**
  * Registry for resolving and decoding samples.
@@ -20,14 +16,27 @@ class Samples(
     val index: Index,
     private val loader: AssetLoader,
     private val decoder: AudioDecoder,
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) {
     companion object {
         // used for platform specific extension functions
     }
 
+    enum class SampleType {
+        /** Single sample - only one recording */
+        SINGLE,
+
+        /** Multiple recordings at different pitches - DSL picks by note */
+        PITCHED,
+
+        /** Multiple different versions - user selects variant */
+        VARIANTS
+    }
+
     interface SoundProvider {
         val key: String
+        val variantCount: Int
+        val sampleType: SampleType
+        val noteRange: String? get() = null  // Override in implementations that support it
 
         suspend fun provide(request: SampleRequest): ResolvedSample?
     }
@@ -173,16 +182,6 @@ class Samples(
                     pcm = pcm,
                 )
             }
-        }
-    }
-
-    /**
-     * Gets a sound and calls the [callback] with the result
-     */
-    fun getWithCallback(request: SampleRequest, callback: (LoadedSample?) -> Unit) {
-        scope.launch {
-            val resolved = get(request)
-            callback(resolved)
         }
     }
 }

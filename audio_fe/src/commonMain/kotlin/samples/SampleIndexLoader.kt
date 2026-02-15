@@ -80,6 +80,11 @@ class SampleIndexLoader(
             private val index: SoundfontIndex,
             private val variants: List<SoundfontIndex.Variant>,
         ) : Samples.SoundProvider {
+            override val variantCount: Int = 1
+
+            // Soundfonts handle pitch internally, so always treat as single
+            override val sampleType: Samples.SampleType = Samples.SampleType.SINGLE
+
             override suspend fun provide(request: SampleRequest): ResolvedSample? {
                 if (variants.isEmpty()) return null
 
@@ -156,6 +161,24 @@ class SampleIndexLoader(
             override val key: String,
             val sound: Sound,
         ) : Samples.SoundProvider {
+            override val variantCount: Int = sound.samples.size
+
+            override val sampleType: Samples.SampleType = when {
+                sound.samples.size == 1 -> Samples.SampleType.SINGLE
+                // If all samples have notes and there are multiple, it's pitched
+                sound.samples.all { it.note != null } && sound.samples.size > 1 -> Samples.SampleType.PITCHED
+                else -> Samples.SampleType.VARIANTS
+            }
+
+            override val noteRange: String? = when (sampleType) {
+                Samples.SampleType.PITCHED -> {
+                    val notes = sound.samples.mapNotNull { it.note }.sorted()
+                    if (notes.isNotEmpty()) "${notes.first()}-${notes.last()}" else null
+                }
+
+                else -> null
+            }
+
             data class Sound(
                 /** The to look up the sound ... case sensitive */
                 val key: String,
