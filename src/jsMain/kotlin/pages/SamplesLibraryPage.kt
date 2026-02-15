@@ -173,7 +173,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
                                                 noui.item {
                                                     +"${entry.soundKey} "
                                                 }
-                                                if (groupBy == GroupBy.NONE) {
+                                                if (groupBy != GroupBy.BANK) {
                                                     noui.item {
                                                         ui.label {
                                                             +entry.displayBankName
