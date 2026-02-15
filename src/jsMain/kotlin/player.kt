@@ -23,6 +23,9 @@ object Player {
     private val _status = StreamSource<Status>(Status.NOT_LOADED)
     val status: Stream<Status> = _status.readonly
 
+    private val _samplesStream = StreamSource<Samples?>(null)
+    val samplesStream: Stream<Samples?> = _samplesStream.readonly
+
     private var _player: KlangPlayer? = null
 
     private var deferred: CompletableDeferred<KlangPlayer>? = null
@@ -31,6 +34,13 @@ object Player {
     private val samplesDeferred: Deferred<Samples> = async {
         Samples.create(catalogue = SampleCatalogue.default)
     }.also { it.start() }
+
+    init {
+        launch {
+            val samples = samplesDeferred.await()
+            _samplesStream(samples)
+        }
+    }
 
     fun get(): KlangPlayer? = _player
 
@@ -43,6 +53,8 @@ object Player {
             _status(Status.LOADING)
 
             val samples = samplesDeferred.await()
+            _samplesStream(samples)
+
             val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = 48000)
             val player = klangPlayer(playerOptions)
 

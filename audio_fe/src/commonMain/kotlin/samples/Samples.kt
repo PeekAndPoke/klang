@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
  * - DO NOT call from the audio render loop unless you know it's already loaded (see getIfLoaded)
  */
 class Samples(
-    private val index: Index,
+    val index: Index,
     private val loader: AssetLoader,
     private val decoder: AudioDecoder,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
