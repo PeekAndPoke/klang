@@ -10,7 +10,6 @@ import io.peekandpoke.klang.audio_bridge.infra.withLock
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
-import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.coroutines.*
@@ -27,7 +26,7 @@ import kotlin.math.floor
 internal class StrudelPlaybackController(
     private val playbackId: String,
     private var pattern: StrudelPattern,
-    private val context: KlangPlaybackContext,
+    context: KlangPlaybackContext,
     private val onStopped: () -> Unit,
     private val signals: KlangPlaybackSignals,
 ) {
@@ -38,6 +37,7 @@ internal class StrudelPlaybackController(
     private val scope = context.scope
     private val fetcherDispatcher = context.fetcherDispatcher
     private val callbackDispatcher = context.callbackDispatcher
+
     // ===== State Management =====
     private val running = KlangAtomicBool(false)
     private val jobLock = KlangLock()
@@ -62,7 +62,6 @@ internal class StrudelPlaybackController(
     private var lastEmittedCycle = -1L
 
     // ===== Resources =====
-    private val samples: Samples = playerOptions.samples
     private val klangTime = KlangTime.create()
 
     // ===== Latency Compensation =====
@@ -70,7 +69,6 @@ internal class StrudelPlaybackController(
     private var backendLatencyMs: Double = 0.0
 
     // ===== Public API =====
-
     val isRunning: Boolean get() = running.get()
 
     /**
@@ -194,15 +192,12 @@ internal class StrudelPlaybackController(
 
         // Use centralized preloader with deferred (waits for backend ack)
         // Emits signals and caches across playbacks
-        val deferred = samplePreloader.ensureLoadedDeferred(
-            playbackId = playbackId,
-            requests = sampleRequests,
-            signals = signals,
-        )
+        val deferred = samplePreloader
+            .ensureLoadedDeferred(requests = sampleRequests, signals = signals)
 
         // Wait for backend acknowledgement (with timeout to prevent hanging)
         try {
-            kotlinx.coroutines.withTimeout(5000) {
+            withTimeout(5000) {
                 deferred.await()
             }
         } catch (e: Exception) {
@@ -389,10 +384,7 @@ internal class StrudelPlaybackController(
 
         // Use preloader async (fire-and-forget, doesn't wait for backend ack)
         // No signals emitted here since this is lookahead, not initial preload
-        samplePreloader.ensureLoadedSilently(
-            playbackId = playbackId,
-            requests = sampleRequests,
-        )
+        samplePreloader.ensureLoadedSilently(requests = sampleRequests)
     }
 
     /**
@@ -463,9 +455,6 @@ internal class StrudelPlaybackController(
 
     private fun requestAndSendSample(req: SampleRequest) {
         // Use preloader async for backend-requested samples (fire-and-forget)
-        samplePreloader.ensureLoadedSilently(
-            playbackId = playbackId,
-            requests = setOf(req),
-        )
+        samplePreloader.ensureLoadedSilently(requests = setOf(req))
     }
 }

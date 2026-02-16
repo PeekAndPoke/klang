@@ -39,12 +39,10 @@ class SamplePreloader(
      *
      * Use this for initial preload where caller needs to wait for backend confirmation.
      *
-     * @param playbackId The playback requesting these samples
      * @param requests Set of sample requests to ensure are loaded
      * @param signals Optional signal bus to emit preloading progress signals
      */
     fun ensureLoadedDeferred(
-        playbackId: String,
         requests: Set<SampleRequest>,
         signals: KlangPlaybackSignals? = null,
     ): Deferred<Unit> = scope.async(dispatcher) {
@@ -70,7 +68,7 @@ class SamplePreloader(
 
         // Load and send all new samples
         val jobs = newRequests.map { request ->
-            getOrStartLoad(playbackId, request)
+            getOrStartLoad(request)
         }
 
         // Capture ack deferreds immediately BEFORE awaiting jobs
@@ -100,10 +98,9 @@ class SamplePreloader(
      * Trigger loading and sending of samples without waiting for backend acknowledgement.
      * Fire-and-forget for lookahead and backend-requested samples.
      *
-     * @param playbackId The playback requesting these samples
      * @param requests Set of sample requests to ensure are loaded
      */
-    fun ensureLoadedSilently(playbackId: String, requests: Set<SampleRequest>) {
+    fun ensureLoadedSilently(requests: Set<SampleRequest>) {
         scope.launch(dispatcher) {
             // Find which samples are not yet sent
             val newRequests = lock.withLock {
@@ -117,7 +114,7 @@ class SamplePreloader(
 
             // Load and send all new samples (don't wait for acks)
             val jobs = newRequests.map { request ->
-                getOrStartLoad(playbackId, request)
+                getOrStartLoad(request)
             }
 
             jobs.forEach { it.await() }
@@ -130,7 +127,7 @@ class SamplePreloader(
      * Get existing in-flight load job, or start a new one if needed.
      * Ensures only one load per sample even if multiple playbacks request it concurrently.
      */
-    private fun getOrStartLoad(playbackId: String, request: SampleRequest): Deferred<Unit> {
+    private fun getOrStartLoad(request: SampleRequest): Deferred<Unit> {
         return lock.withLock {
             // Check if already in flight
             inFlight[request]?.let { return@withLock it }
@@ -143,7 +140,7 @@ class SamplePreloader(
 
             // Start new load job
             val job = scope.async(dispatcher) {
-                loadAndSend(playbackId, request)
+                loadAndSend(request)
             }
 
             inFlight[request] = job
@@ -167,7 +164,7 @@ class SamplePreloader(
      * Load a sample and send it to the backend.
      * Note: pendingAcks entry is created by getOrStartLoad before this runs.
      */
-    private suspend fun loadAndSend(playbackId: String, request: SampleRequest) {
+    private suspend fun loadAndSend(request: SampleRequest) {
         // Load the sample
         val loaded = samples.get(request)
         val loadedSample = loaded?.sample
@@ -176,10 +173,9 @@ class SamplePreloader(
         // Build command
         val isNotFound = loadedSample == null || loadedPcm == null
         val cmd = if (isNotFound) {
-            KlangCommLink.Cmd.Sample.NotFound(playbackId = playbackId, req = request)
+            KlangCommLink.Cmd.Sample.NotFound(req = request)
         } else {
             KlangCommLink.Cmd.Sample.Complete(
-                playbackId = playbackId,
                 req = request,
                 note = loadedSample.note,
                 pitchHz = loadedSample.pitchHz,

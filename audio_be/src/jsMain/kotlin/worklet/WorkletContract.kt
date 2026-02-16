@@ -73,13 +73,11 @@ object WorkletContract {
 
             is Cmd.Sample.NotFound -> jsObject {
                 it.type = Cmd.Sample.NotFound.SERIAL_NAME
-                it[Cmd::playbackId.name] = playbackId
                 it[Cmd.Sample.NotFound::req.name] = req.encode()
             }
 
             is Cmd.Sample.Complete -> jsObject {
                 it.type = Cmd.Sample.Complete.SERIAL_NAME
-                it[Cmd::playbackId.name] = playbackId
                 it[Cmd.Sample.Complete::req.name] = req.encode()
                 it[Cmd.Sample.Complete::note.name] = note
                 it[Cmd.Sample.Complete::pitchHz.name] = pitchHz
@@ -88,7 +86,6 @@ object WorkletContract {
 
             is Cmd.Sample.Chunk -> jsObject {
                 it.type = Cmd.Sample.Chunk.SERIAL_NAME
-                it[Cmd::playbackId.name] = playbackId
                 it[Cmd.Sample.Chunk::req.name] = req.encode()
                 it[Cmd.Sample.Chunk::note.name] = note
                 it[Cmd.Sample.Chunk::pitchHz.name] = pitchHz
@@ -126,12 +123,10 @@ object WorkletContract {
             )
 
             Cmd.Sample.NotFound.SERIAL_NAME -> Cmd.Sample.NotFound(
-                playbackId = msg[Cmd::playbackId.name],
                 req = decodeSampleRequest(msg[Cmd.Sample.NotFound::req.name])
             )
 
             Cmd.Sample.Complete.SERIAL_NAME -> Cmd.Sample.Complete(
-                playbackId = msg[Cmd::playbackId.name],
                 req = decodeSampleRequest(msg[Cmd.Sample.Complete::req.name]),
                 note = msg[Cmd.Sample.Complete::note.name],
                 pitchHz = msg[Cmd.Sample.Complete::pitchHz.name],
@@ -139,7 +134,6 @@ object WorkletContract {
             )
 
             Cmd.Sample.Chunk.SERIAL_NAME -> Cmd.Sample.Chunk(
-                playbackId = msg[Cmd::playbackId.name],
                 req = decodeSampleRequest(msg[Cmd.Sample.Chunk::req.name]),
                 note = msg[Cmd.Sample.Chunk::note.name],
                 pitchHz = msg[Cmd.Sample.Chunk::pitchHz.name],

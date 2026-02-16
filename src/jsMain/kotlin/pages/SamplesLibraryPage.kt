@@ -49,16 +49,6 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
     private var groupBy: GroupBy by value(GroupBy.BANK)
     private var lastStrudelCode: String by value("")
 
-    init {
-        lifecycle {
-            onMount {
-                launch {
-                    Player.ensure().await()
-                }
-            }
-        }
-    }
-
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
 
     private val allEntries: List<SampleEntry>
@@ -115,9 +105,9 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  ACTIONS  ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun playSample(bank: String, sound: String, index: Int? = null) {
+    private fun playSample(bank: String, sound: String, index: Int? = null) = launch {
         // Ensure player is ready
-        val player = Player.get() ?: return
+        val player = Player.ensure().await()
 
         val effectiveIndex = index?.takeIf { it > 0 }?.let { it + 1 }
 

@@ -56,16 +56,16 @@ class KlangCommLink(capacity: Int = 8192) {
 
         sealed interface Sample : Cmd {
             data class NotFound(
-                override val playbackId: String,
                 override val req: SampleRequest,
             ) : Sample {
                 companion object {
                     const val SERIAL_NAME = "sample-not-found"
                 }
+
+                override val playbackId: String = SYSTEM_PLAYBACK_ID
             }
 
             data class Complete(
-                override val playbackId: String,
                 override val req: SampleRequest,
                 val note: String?,
                 val pitchHz: Double,
@@ -75,6 +75,8 @@ class KlangCommLink(capacity: Int = 8192) {
                     const val SERIAL_NAME = "sample-complete"
                 }
 
+                override val playbackId: String = SYSTEM_PLAYBACK_ID
+
                 fun toChunks(chunkSizeBytes: Int = 16 * 1024): List<Chunk> {
                     val numChunks = (sample.pcm.size / chunkSizeBytes) + 1
 
@@ -83,7 +85,6 @@ class KlangCommLink(capacity: Int = 8192) {
                         val endByte = minOf(sample.pcm.size, (i + 1) * chunkSizeBytes)
 
                         Chunk(
-                            playbackId = playbackId,
                             req = req,
                             note = note,
                             pitchHz = pitchHz,
@@ -100,7 +101,6 @@ class KlangCommLink(capacity: Int = 8192) {
 
             @Suppress("ArrayInDataClass")
             data class Chunk(
-                override val playbackId: String,
                 override val req: SampleRequest,
                 val note: String?,
                 val pitchHz: Double,
@@ -114,6 +114,8 @@ class KlangCommLink(capacity: Int = 8192) {
                 companion object {
                     const val SERIAL_NAME = "sample-chunk"
                 }
+
+                override val playbackId: String = SYSTEM_PLAYBACK_ID
             }
 
             val req: SampleRequest

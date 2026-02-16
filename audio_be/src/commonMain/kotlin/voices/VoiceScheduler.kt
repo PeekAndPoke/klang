@@ -317,18 +317,16 @@ class VoiceScheduler(
 
     fun scheduleVoice(voice: ScheduledVoice, clearScheduled: Boolean = false) {
         val pid = voice.playbackId
-
         // Clear scheduled voices if requested (for tempo/pattern changes)
         if (clearScheduled) {
             this.clearScheduled(pid)
         }
-
         // Make sure we are synced
         ensureEpoch(voice)
-
         // Move to queue
         scheduled.push(voice)
-
+        // promote scheduled right away ... the new voice might be just due
+        promoteScheduled(lastProcessedFrame, lastProcessedFrame + options.blockFrames)
         // Prefetch sound samples
         prefetchSampleSound(voice)
     }
@@ -454,23 +452,16 @@ class VoiceScheduler(
 
         // Auto-register playback epoch on first voice
         if (pid !in playbackEpochs) {
+            // Get the current backend time
             val nowSec = backendStartTimeSec + (lastProcessedFrame.toDouble() / options.sampleRate.toDouble())
-
-            val performanceNowMs = options.performanceTimeMs()
-            val performanceNowSec = performanceNowMs / 1000.0
-            val latency = maxOf(0.0, performanceNowSec - voice.playbackStartTime)
-
-            // Calculate epoch from frontend's playbackStartTime
-            // Both clocks are seeded from Date.now(), so times are comparable
-            // Epoch = backend time when frontend playback started
-            val frontendElapsed = nowSec - voice.playbackStartTime
-            playbackEpochs[pid] = (nowSec - frontendElapsed) + latency
-
+            val nowMs = nowSec * 1000.0
+            // Calculate the frontend latency
+            val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
+            // Set the epoch of the playback including the latency
+            playbackEpochs[pid] = voice.playbackStartTime + latency
             // Send the backend's current wall-clock time to the frontend.
-            // Both clocks are seeded from Date.now(), so the frontend can compute:
-            //   latencyMs = backendTimestampMs - frontendStartTimeMs
             options.commLink.feedback.send(
-                KlangCommLink.Feedback.PlaybackLatency(playbackId = pid, backendTimestampMs = performanceNowMs)
+                KlangCommLink.Feedback.PlaybackLatency(playbackId = pid, backendTimestampMs = nowMs)
             )
         }
     }
@@ -498,6 +489,9 @@ class VoiceScheduler(
 
     private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
         val blockEndSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
+        val nowSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
+        // Allow events up to 5 blocks in the past (normal scheduling jitter)
+        val oldestAllowedSec = nowSec - (5 * (options.blockFrames.toDouble() / options.sampleRate.toDouble()))
 
         while (true) {
             val head = scheduled.peek() ?: break
@@ -518,6 +512,11 @@ class VoiceScheduler(
 
             // Remove from heap
             scheduled.pop()
+
+            // Drop if too old
+            if (absoluteStartSec < oldestAllowedSec) {
+                continue
+            }
 
             // Convert the voice to use absolute times for makeVoice
             val absoluteVoice = head.copy(
