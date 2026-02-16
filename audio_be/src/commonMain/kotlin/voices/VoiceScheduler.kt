@@ -76,7 +76,7 @@ class VoiceScheduler(
     private val active = ArrayList<ActiveVoice>(64)
 
     // Smooth gain transition for solo/mute (background voices fade based on max soloAmount)
-    private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = 2.0, ease = Ease.InOut.cubic)
+    private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = 1.0, ease = Ease.InOut.cubic)
 
     /**
      * Tracks solo state for source IDs with delayed cleanup.
@@ -457,7 +457,7 @@ class VoiceScheduler(
             val nowMs = nowSec * 1000.0
             // Calculate the frontend latency
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
-            // Set the epoch of the playback including the latency
+            // Set the epoch of the playback (without latency - latency is only for UI feedback)
             playbackEpochs[pid] = voice.playbackStartTime + latency
             // Send the backend's current wall-clock time to the frontend.
             options.commLink.feedback.send(
@@ -490,8 +490,8 @@ class VoiceScheduler(
     private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
         val blockEndSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
         val nowSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
-        // Allow events up to 5 blocks in the past (normal scheduling jitter)
-        val oldestAllowedSec = nowSec - (5 * (options.blockFrames.toDouble() / options.sampleRate.toDouble()))
+        val blockSizeSec = options.blockFrames.toDouble() / options.sampleRate.toDouble()
+        val oldestAllowedSec = nowSec - (5 * blockSizeSec)
 
         while (true) {
             val head = scheduled.peek() ?: break

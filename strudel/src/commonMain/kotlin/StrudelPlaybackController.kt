@@ -222,7 +222,7 @@ internal class StrudelPlaybackController(
         // ===== SCHEDULE FIRST CYCLE IMMEDIATELY =====
         // This prevents the first events from arriving too late at the backend
         try {
-            val firstCycleEvents = queryEvents(from = 0.0, to = fetchChunk, sendSignals = false)
+            val firstCycleEvents = queryEvents(from = 0.0, to = fetchChunk, sendSignals = true)
             for (voice in firstCycleEvents) {
                 sendControl(KlangCommLink.Cmd.ScheduleVoice(playbackId = playbackId, voice = voice))
             }
@@ -408,7 +408,7 @@ internal class StrudelPlaybackController(
             val from = queryCursorCycles
             val to = from + fetchChunk
 
-            println("Advance: $from -> $to")
+            // println("Advance: $from -> $to")
 
             try {
                 val events = queryEvents(from = from, to = to, sendSignals = true)
@@ -438,7 +438,7 @@ internal class StrudelPlaybackController(
         val to = ceil(queryCursorCycles)
 
         try {
-            val voices = queryEvents(from = from, to = to, sendSignals = false)
+            val voices = queryEvents(from = from, to = to, sendSignals = true)
 
             // println("Sync: $from -> $to (nowCycle=$nowCycle) --> ${voices.size} voices")
 
