@@ -109,7 +109,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
         // Ensure player is ready
         val player = Player.ensure().await()
 
-        val effectiveIndex = index?.takeIf { it > 0 }?.let { it + 1 }
+        val effectiveIndex = index?.takeIf { it > 0 }
 
         val pattern = s(sound)
             .n(effectiveIndex)
@@ -134,7 +134,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
 
         val soundStr = listOfNotNull(
             sound,
-            index?.takeIf { it > 1 }
+            index?.takeIf { it > 0 }
         ).joinToString(":")
 
         // Always start with s()
@@ -337,17 +337,15 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
 
                     Samples.SampleType.VARIANTS -> {
                         // Show variant count + individual play buttons
-                        ui.horizontal.list {
+                        div {
                             for (i in 0 until variantCount) {
-                                noui.item {
-                                    ui.mini.basic.label.button {
-                                        onClick {
-                                            playSample(bank = entry.bankKey, sound = entry.soundKey, index = i)
-                                        }
-
-                                        icon.play()
-                                        +"#${i + 1}"
+                                ui.mini.basic.label.button {
+                                    onClick {
+                                        playSample(bank = entry.bankKey, sound = entry.soundKey, index = i)
                                     }
+
+                                    icon.play()
+                                    +"#$i"
                                 }
                             }
                         }

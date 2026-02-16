@@ -76,7 +76,7 @@ class VoiceScheduler(
     private val active = ArrayList<ActiveVoice>(64)
 
     // Smooth gain transition for solo/mute (background voices fade based on max soloAmount)
-    private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = 1.0, ease = Ease.InOut.cubic)
+    private val soloMuteRamp = ValueRamp(initialValue = 1.0, duration = 1.5, ease = Ease.InOut.cubic)
 
     /**
      * Tracks solo state for source IDs with delayed cleanup.

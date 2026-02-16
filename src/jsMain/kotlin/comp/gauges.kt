@@ -61,7 +61,7 @@ fun Tag.activeVoicesGauge(
     iconColors = listOf(
         0.0..30.0 to Color.lightSkyBlue,
         20.0..50.0 to Color.yellowGreen,
-        40.0..50.0 to Color.yellow,
+        40.0..70.0 to Color.yellow,
         60.0..90.0 to Color.orange,
         80.0..Double.MAX_VALUE to Color.red,
     ),
