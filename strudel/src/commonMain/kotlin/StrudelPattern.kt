@@ -43,7 +43,14 @@ interface StrudelPattern {
 
             val beforeCompile = MpInstant.now()
 
-            return klangScriptEngine.execute(code).toObjectOrNull<StrudelPattern>().also {
+            val result = klangScriptEngine.execute(code + "\n")
+
+            println("Compilation result: $result")
+            println("Result type: ${result::class.simpleName}")
+            println("Result value type: ${result.value?.let { it::class.simpleName }}")
+            println("Is StrudelPattern? ${result.value is StrudelPattern}")
+
+            return result.toObjectOrNull<StrudelPattern>().also {
                 println("Compiling pattern took: ${MpInstant.now() - beforeCompile}")
             }
         }

@@ -22,7 +22,7 @@ class CodeHighlightBuffer(
     private val editorRef: ComponentRef.Tracker<CodeMirrorComp>,
     private val maxRefreshRatePerLocation: Int = 16,
     private val maxSimultaneousHighlights: Int = 100,
-    var maxHighlightsPerEvent: Int = 15,
+    var maxHighlightsPerEvent: Int = 10,
 ) {
     /**
      * Active highlight information for tracking and cancellation.

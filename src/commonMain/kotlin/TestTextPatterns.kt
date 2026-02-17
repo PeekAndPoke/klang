@@ -147,7 +147,7 @@ stack(
    """.trimIndent()
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
-    val aTruthWorthFightingFor = """
+    val aTruthWorthLyingFor = """
 import * from "stdlib"
 import * from "strudel"
 

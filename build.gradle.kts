@@ -45,9 +45,7 @@ kotlin {
     js {
         browser {
             commonWebpackConfig {
-                cssSupport {
-                    enabled.set(true)
-                }
+                devtool = "source-map"
             }
             // This generates index.html
             binaries.executable()
@@ -69,15 +67,15 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(Deps.KotlinX.coroutines_core)
-                implementation(Deps.KotlinX.serialization_core)
-                implementation(Deps.KotlinX.serialization_json)
+                api(Deps.KotlinX.coroutines_core)
+                api(Deps.KotlinX.serialization_core)
+                api(Deps.KotlinX.serialization_json)
 
-                implementation(Deps.Ktor.Client.core)
-                implementation(Deps.Ktor.Client.cio)
+                api(Deps.Ktor.Client.core)
+                api(Deps.Ktor.Client.cio)
 
-                implementation(project(":klang"))
-                implementation(project(":strudel"))
+                api(project(":klang"))
+                api(project(":strudel"))
             }
         }
 
@@ -91,16 +89,16 @@ kotlin {
 
         jsMain {
             dependencies {
-                implementation(Deps.KotlinLibs.Kraft.core)
-                implementation(Deps.KotlinLibs.Kraft.semanticui)
+                api(Deps.KotlinLibs.Kraft.core)
+                api(Deps.KotlinLibs.Kraft.semanticui)
 
                 // CodeMirror 6
-                implementation(Deps.Npm { codemirrorState() })
-                implementation(Deps.Npm { codemirrorView() })
-                implementation(Deps.Npm { codemirrorCommands() })
-                implementation(Deps.Npm { codemirrorLanguage() })
-                implementation(Deps.Npm { codemirrorLangJavascript() })
-                implementation(Deps.Npm { codemirrorBasicSetup() })
+                api(Deps.Npm { codemirrorState() })
+                api(Deps.Npm { codemirrorView() })
+                api(Deps.Npm { codemirrorCommands() })
+                api(Deps.Npm { codemirrorLanguage() })
+                api(Deps.Npm { codemirrorLangJavascript() })
+                api(Deps.Npm { codemirrorBasicSetup() })
             }
         }
 
@@ -123,6 +121,7 @@ kotlin {
         }
     }
 }
+
 
 tasks {
     // Task to copy the audio_be JS output to the root resources as dsp.js

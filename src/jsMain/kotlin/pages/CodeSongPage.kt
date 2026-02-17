@@ -102,6 +102,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         return Player.ensure().await()
     }
 
+    init {
+        lifecycle {
+            onUnmount {
+                onStop()
+            }
+        }
+    }
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun onPlay() {
@@ -116,7 +124,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             null -> launch {
                 if (!loading) {
                     getPlayer().let { p ->
-                        val pattern = StrudelPattern.compileRaw(code)!!
+                        val pattern = StrudelPattern.compileRaw(code)
+                            ?: error("Failed to compile Strudel pattern from code")
 
                         playback = p.playStrudel(pattern)
 
@@ -144,7 +153,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             }
 
             else -> {
-                val pattern = StrudelPattern.compileRaw(code)!!
+                val pattern = StrudelPattern.compileRaw(code)
+                    ?: error("Failed to compile Strudel pattern from code")
                 s.updatePattern(pattern)
             }
         }

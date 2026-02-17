@@ -19,6 +19,18 @@ version = VERSION_NAME
 kotlin {
     js {
         browser {
+            commonWebpackConfig {
+                devtool = "source-map"
+            }
+        }
+
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions.freeCompilerArgs.addAll(
+                    "-Xir-property-lazy-initialization=false",
+                    "-Xir-minimized-member-names=false",
+                )
+            }
         }
     }
 
@@ -35,7 +47,7 @@ kotlin {
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
 
-                implementation(Deps.KotlinLibs.better_parse)
+                api(Deps.KotlinLibs.better_parse)
             }
         }
 

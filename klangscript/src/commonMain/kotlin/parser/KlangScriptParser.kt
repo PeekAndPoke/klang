@@ -7,7 +7,6 @@ import com.github.h0tk3y.betterParse.grammar.parser
 import com.github.h0tk3y.betterParse.lexer.TokenMatch
 import com.github.h0tk3y.betterParse.lexer.literalToken
 import com.github.h0tk3y.betterParse.lexer.regexToken
-import com.github.h0tk3y.betterParse.parser.ParseException
 import com.github.h0tk3y.betterParse.parser.Parser
 import io.peekandpoke.klang.script.ast.*
 
@@ -32,13 +31,16 @@ import io.peekandpoke.klang.script.ast.*
  * - Multiple statements (newline-separated)
  * - Source location tracking (line, column, source file name)
  */
-object KlangScriptParser : Grammar<Program>() {
 
-    /**
-     * Current source file name for location tracking
-     * This is set before parsing and used in all AST node creation
-     */
-    private var currentSource: String? = null
+class KlangScriptParser private constructor(
+    private val currentSource: String? = null,
+) : Grammar<Program>() {
+
+    companion object {
+        fun parse(source: String, sourceName: String? = null): Program {
+            return KlangScriptParser(currentSource = sourceName).parseToEnd(source)
+        }
+    }
 
     /**
      * Helper function to create SourceLocation from TokenMatch
@@ -633,21 +635,4 @@ object KlangScriptParser : Grammar<Program>() {
      */
     override val rootParser: Parser<Program> by
     zeroOrMore(statement).map { Program(it) }
-
-    /**
-     * Parse source code into an AST
-     *
-     * @param source The KlangScript source code
-     * @param sourceName Optional source file name for error reporting (e.g., "main.klang", "math.klang")
-     * @return Program AST node
-     * @throws ParseException on syntax errors
-     */
-    fun parse(source: String, sourceName: String? = null): Program {
-        currentSource = sourceName
-        try {
-            return parseToEnd(source)
-        } finally {
-            currentSource = null  // Clean up after parsing
-        }
-    }
 }

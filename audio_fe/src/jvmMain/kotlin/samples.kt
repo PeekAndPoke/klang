@@ -7,9 +7,6 @@ import io.peekandpoke.klang.audio_fe.samples.SampleIndexLoader
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.audio_fe.utils.AssetLoader
 import io.peekandpoke.klang.audio_fe.utils.withDiskCache
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import java.nio.file.Path
 
 suspend fun Samples.Companion.create(
@@ -17,7 +14,6 @@ suspend fun Samples.Companion.create(
     loader: AssetLoader = AssetLoader.default,
     decoder: AudioDecoder = JvmAudioDecoder(),
     catalogue: SampleCatalogue = SampleCatalogue.default,
-    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ): Samples {
     val indexLoader = SampleIndexLoader(
         loader = loader.withDiskCache(cacheDir.resolve("index")),
@@ -29,6 +25,5 @@ suspend fun Samples.Companion.create(
         index = index,
         loader = loader.withDiskCache(cacheDir.resolve("samples")),
         decoder = decoder,
-        scope = scope,
     )
 }

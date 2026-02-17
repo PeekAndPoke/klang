@@ -13,7 +13,6 @@ import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
-import org.graalvm.polyglot.Context
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -24,29 +23,7 @@ suspend fun main() {
     println("VM Vendor:    ${System.getProperty("java.vendor")}")
     println("VM Version:   ${System.getProperty("java.vm.version")}")
 
-    helloJs()
     helloStrudel()
-}
-
-private fun helloJs() {
-
-    // Create a context for JavaScript
-    Context.create("js").use { context ->
-        // Evaluate a simple JS snippet
-        val result = context.eval("js", "const x = 10; const y = 20; x + y")
-
-        println("JS Result: ${result.asInt()}") // Should print 30
-
-        // You can also run more complex logic
-        context.eval(
-            "js", """
-            function greet(name) {
-                return 'Hello from JS, ' + name + '!';
-            }
-            console.log(greet('Kotlin User'));
-        """.trimIndent()
-        )
-    }
 }
 
 private suspend fun helloStrudel() {
@@ -124,7 +101,7 @@ private suspend fun helloStrudel() {
 
 //        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
 
-        val pattern1 = StrudelPattern.compile(TestTextPatterns.strangerThingsNetflix)!!
+        val pattern1 = StrudelPattern.compile(TestTextPatterns.aTruthWorthLyingFor)!!
 //        val pattern1 = s("bd hh sd oh").chunk(2, { x -> x.fast(2) }).slow(2)
 //        val pattern1 = note("c d e f").swingBy("[0.5 0.0]", 2)
 //        val pattern1 = note("a b c d").pan(cosine.range(0.0, 1.0))
@@ -151,7 +128,7 @@ private suspend fun helloStrudel() {
         val playback1 = player.playStrudel(pattern1)
         playback1.start(
             StrudelPlayback.Options(
-                cyclesPerSecond = 0.6,
+                cyclesPerSecond = 0.5,
             )
         )
 

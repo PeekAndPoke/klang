@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.NoProps
 import de.peekandpoke.kraft.components.PureComponent
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.routing.JoinedPageTitle
+import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.datetime.Kronos
@@ -14,6 +15,7 @@ import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.ops.ticker
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlayerMiniStats
@@ -110,6 +112,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     override fun VDom.render() {
         JoinedPageTitle { listOf("KLANG", "AUDIO", "MOTÖR") }
+
+        router.navToUri(Nav.newSongCode())
 
         div {
             key = "start-page"
