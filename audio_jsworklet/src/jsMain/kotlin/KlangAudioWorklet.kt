@@ -1,10 +1,9 @@
-package io.peekandpoke.klang.audio_be.worklet
+package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
-import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendFeed
 import io.peekandpoke.klang.audio_bridge.AudioWorkletProcessor
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -24,7 +23,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         }
 
         val commLink = KlangCommLink()
-        val klangTime = KlangTime.create()  // Creates AudioWorklet-specific time source
+        val klangTime = KlangTime.Companion.create()  // Creates AudioWorklet-specific time source
 
         // Core DSP components
         val orbits = Orbits(
@@ -40,7 +39,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                 oscillators = oscillators(sampleRate = sampleRate),
                 orbits = orbits,
                 // Used for performance measurement only
-                performanceTimeMs = { Date.now() },
+                performanceTimeMs = { Date.Companion.now() },
             )
         )
 
@@ -81,17 +80,11 @@ class KlangAudioWorklet : AudioWorkletProcessor {
             // Set backend start time
             ctx.voices.setBackendStartTime(ctx.klangTime.internalMsNow() / 1000.0)
 
-            return ctx
-        }
-
-        return (ctx ?: makeContext()).let { ctx ->
-            this.ctx = ctx
-
             // Listening (Receiving from Main Thread)
             port.onmessage = { message ->
-                WorkletContract.decodeCmd(message).also { cmd ->
-                    // console.log("[WORKLET] decoded cmd", cmd::class.simpleName, cmd)
+                // console.log("[WORKLET] Received cmd from main thread:", message)
 
+                WorkletContract.decodeCmd(message).also { cmd ->
                     when (cmd) {
                         is KlangCommLink.Cmd.ScheduleVoice -> {
                             ctx.voices.scheduleVoice(voice = cmd.voice, clearScheduled = cmd.clearScheduled)
@@ -114,8 +107,18 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                 }
             }
 
-            block(ctx)
+            // CRITICAL: Start the MessagePort on worklet side (required for Safari)
+            console.log("[WORKLET] Starting MessagePort")
+            port.start()
+            console.log("[WORKLET] MessagePort started")
+
+            return ctx
         }
+
+        val ctx = ctx ?: makeContext()
+        this.ctx = ctx
+
+        return block(ctx)
     }
 
     override fun process(
@@ -136,6 +139,9 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         // 1. Render the block into our intermediate ShortArray
         renderer.renderBlock(cursorFrame, renderBuffer)
 
+        val output0 = output[0]
+        val output1 = output.getOrNull(1)
+
         // 2. Convert PCM 16-bit back to Float32 for Web Audio
         // renderer.renderBlock interleaves L/R: [L, R, L, R, ...]
         for (i in 0 until blockFrames) {
@@ -146,9 +152,10 @@ class KlangAudioWorklet : AudioWorkletProcessor {
             val rSample = renderBuffer[idx + 1].toFloat() / Short.MAX_VALUE
 
             // Write to output channels
-            output[0][i] = lSample
-            if (numChannels > 1) {
-                output[1][i] = rSample
+            output0[i] = lSample
+
+            if (output1 != null) {
+                output1[i] = rSample
             }
         }
 
@@ -159,7 +166,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
             val feed = commLink.frontend.feedback.receive() ?: break
             port.sendFeed(feed)
 
-            // console.log("[WORKLET] Sending feedback to frontend:", feed)
+            // console.log("[WORKLET] Sending feedback to frontend:", feed::class.simpleName)
         }
 
         true

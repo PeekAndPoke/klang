@@ -52,11 +52,6 @@ class KlangPlayer(
     val signals = KlangPlaybackSignals()
     private var feedbackDispatcherJob: Job? = null
 
-    // Expose scope and dispatchers for playback implementations
-    val playbackScope: CoroutineScope get() = scope
-    val playbackFetcherDispatcher: CoroutineDispatcher get() = fetcherDispatcher
-    val playbackCallbackDispatcher: CoroutineDispatcher get() = callbackDispatcher
-
     // Centralized sample preloader (shared across all playbacks)
     val samplePreloader = SamplePreloader(
         samples = options.samples,

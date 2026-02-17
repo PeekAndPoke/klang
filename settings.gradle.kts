@@ -14,6 +14,7 @@ include(
     ":audio_fe",
     ":audio_be",
     ":audio_bridge",
+    ":audio_jsworklet",
 
     // utils
     ":klangscript",

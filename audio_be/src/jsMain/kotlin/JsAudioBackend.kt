@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.worklet.WorkletContract
-import io.peekandpoke.klang.audio_be.worklet.WorkletContract.sendCmd
+import io.peekandpoke.klang.audio_be.WorkletContract.sendCmd
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangRingBuffer
@@ -38,6 +37,8 @@ class JsAudioBackend(
     }
 
     override suspend fun run(scope: CoroutineScope) {
+        console.log("JsAudioBackend starting")
+
         // Init the audio context with the given sample rate
         // latencyHint="playback" prioritizes glitch-free audio with larger buffers
         // This provides more headroom to prevent buffer starvation during CPU spikes or GC pauses
@@ -47,14 +48,25 @@ class JsAudioBackend(
         }
         val ctx = AudioContext(contextOpts)
 
-        // 1. Resume Audio Context (Browser policy usually requires this on interaction)
+        console.log("JsAudioBackend AudioContext created successfully", ctx)
+
+        // 1. Audio Context State
+        // Note: We intentionally do NOT call ctx.resume() here because:
+        // - Safari's resume() can hang indefinitely without user gesture
+        // - Modern browsers auto-resume AudioContext on first audio playback
+        // - This allows the app to initialize without waiting for user interaction
+        console.log("JsAudioBackend AudioContext state: ${ctx.state}")
+
         if (ctx.state == "suspended") {
-            ctx.resume().await()
+            console.log("AudioContext is suspended - this is normal before user interaction")
+            console.log("It will auto-resume when audio playback starts")
         }
 
         lateinit var node: AudioWorkletNode
 
         try {
+            console.log("JsAudioBackend loading worklet")
+
             // 2. Load the compiled DSP module
             // This file "dsp.js" must contain the AudioWorkletProcessor registration
             ctx.audioWorklet.addModule("klang-worklet.js").await()
@@ -67,8 +79,11 @@ class JsAudioBackend(
 
             node = AudioWorkletNode(ctx, "klang-audio-processor", nodeOpts)
 
+            console.log("JsAudioBackend AudioWorkletNode created successfully", node)
+
             // Create AnalyserNode for visualization (with fallback if it fails)
             try {
+                console.log("Creating AnalyserNode")
                 analyser = ctx.createAnalyser().apply {
                     fftSize = 2048
                     smoothingTimeConstant = 0.8
@@ -91,12 +106,7 @@ class JsAudioBackend(
                 }
             }
 
-            // 3. Send Command
-            if (ctx.state == "suspended") {
-                ctx.resume().await()
-            }
-
-            // 4. Setup Feedback Loop (Worklet -> Frontend)
+            // 3. Setup Feedback Loop (Worklet -> Frontend)
             // We listen for messages from the worklet (e.g. Sample Requests, Position Updates)
             node.port.onmessage = { message: MessageEvent ->
                 // We pass all feedback through to the frontend
@@ -105,10 +115,18 @@ class JsAudioBackend(
                 // Forward
                 commLink.feedback.send(decoded)
 
-                // console.log("Forwarded message from Worklet:", message.data)
+                // console.log("JsAudioBackend received message from Worklet:", decoded::class.simpleName)
             }
 
+            // CRITICAL: Start the MessagePort (required for Safari)
+            // Safari requires explicit port.start() to activate MessagePort communication
+            console.log("JsAudioBackend starting MessagePort")
+            node.port.start()
+            console.log("JsAudioBackend MessagePort started")
+
             fun loop() {
+                // console.log("JsAudioBackend running feedback loop")
+
                 // Upload the next sample chunk ... we send them one at a time
                 sampleUploadBuffer.receive()?.let { cmd ->
                     node.port.sendCmd(cmd)
@@ -147,6 +165,8 @@ class JsAudioBackend(
                     window.setTimeout({ loop() }, 10)
                 }
             }
+
+            console.log("JsAudioBackend starting feedback loop")
 
             // Start the loop
             loop()
