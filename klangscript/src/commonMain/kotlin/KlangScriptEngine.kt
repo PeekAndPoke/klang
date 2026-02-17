@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.script
 
-import com.github.h0tk3y.betterParse.parser.ParseException
 import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import io.peekandpoke.klang.script.parser.ParseException
 import io.peekandpoke.klang.script.runtime.*
 
 /**

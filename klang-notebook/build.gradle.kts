@@ -34,7 +34,6 @@ kotlin {
                 api(Deps.KotlinX.coroutines_core)
                 api(Deps.KotlinX.serialization_core)
                 api(Deps.KotlinX.serialization_json)
-                api(Deps.KotlinLibs.better_parse)
 
                 // GraalVM for script execution
                 api(Deps.JavaLibs.GraalVM.polyglot)

@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.script.parser
 
-import com.github.h0tk3y.betterParse.parser.ParseException
 import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

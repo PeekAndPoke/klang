@@ -35,7 +35,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0003",
             title = "A Synth Worth Lying For",
-            cps = 0.43,
+            cps = 0.47,
             code = TestTextPatterns.aTruthWorthLyingFor,
             icon = "guitar",
         )
@@ -45,7 +45,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0004",
             title = "Stranger Synths",
-            cps = 0.57,
+            cps = 0.58,
             code = TestTextPatterns.strangerThingsNetflix,
             icon = "film",
         )
