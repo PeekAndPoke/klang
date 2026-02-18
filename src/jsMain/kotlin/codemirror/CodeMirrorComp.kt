@@ -150,12 +150,22 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         // Create update listener extension
         val updateListenerExtension = EditorView.updateListener.of(updateFn)
 
+        // Create a linter extension with autoPanel
+        // linter() takes TWO parameters: source function and config object
+        val linterSource: (EditorView) -> Array<Diagnostic> = js("(function(view) { return []; })")
+        val linterConfig = jsObject<dynamic> {
+            autoPanel = true
+        }
+        val linterExtension = linter(linterSource, linterConfig)
+
         // Create extensions array - combine basicSetup with our custom extensions
         val allExtensions = basicSetup.asDynamic().concat(
             arrayOf(
                 javascript(),
                 updateListenerExtension,
-                createHighlightExtension()
+                createHighlightExtension(),
+                linterExtension,  // Initialize lint state with autoPanel
+                lintGutter()      // Add lint gutter for error markers
             )
         ).unsafeCast<Array<Extension>>()
 
@@ -307,6 +317,52 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
             view.dispatch(transaction)
         } catch (e: Throwable) {
             console.error("Error clearing highlights:", e)
+        }
+    }
+
+    /**
+     * Set errors to display in the editor
+     * Call this method to show error markers and the error panel
+     */
+    fun setErrors(errors: List<EditorError>) {
+        val view = editor ?: return
+
+        try {
+            // Convert EditorError list to CodeMirror Diagnostic array
+            val diagnostics = errors.mapNotNull { error ->
+                try {
+                    // Get the line (1-based in EditorError, 1-based in CodeMirror's line() function)
+                    val lineObj = view.state.doc.line(error.line)
+                    val from = lineObj.from + (error.col - 1)
+                    val to = from + error.len
+
+                    // Ensure positions are valid
+                    if (from < 0 || to > view.state.doc.length) {
+                        console.warn(
+                            "Diagnostic position out of bounds: from=$from, to=$to, doc.length=${view.state.doc.length}"
+                        )
+                        return@mapNotNull null
+                    }
+
+                    // Create diagnostic object using dynamic (since we don't have full external definitions)
+                    jsObject<Diagnostic> {
+                        this.from = from
+                        this.to = to
+                        this.severity = "error"
+                        this.message = error.message
+                    }
+                } catch (e: Throwable) {
+                    console.error("Error converting EditorError to Diagnostic:", e)
+                    null
+                }
+            }.toTypedArray()
+
+            // setDiagnostics returns a TransactionSpec, not a StateEffect
+            // Dispatch it directly
+            val transactionSpec = setDiagnostics(view.state, diagnostics)
+            view.dispatch(transactionSpec.unsafeCast<dynamic>())
+        } catch (e: Throwable) {
+            console.error("Error updating diagnostics:", e)
         }
     }
 

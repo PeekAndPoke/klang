@@ -136,9 +136,9 @@ class MiniNotationParser(
             else -> {
                 // Determine what went wrong for better error
                 if (isAtEnd()) {
-                    error("Unexpected end of input")
+                    parseError("Unexpected end of input")
                 } else {
-                    error("Unexpected token: ${peek().text} at index $pos")
+                    parseError("Unexpected token: ${peek().text}")
                 }
             }
         }
@@ -180,17 +180,17 @@ class MiniNotationParser(
             } else if (match(TokenType.L_PAREN)) {
                 // Euclidean rhythm: (pulses, steps) or (pulses, steps, rotation)
                 val pulsesStr = consume(TokenType.LITERAL, "Expected pulses number").text
-                val pulses = pulsesStr.toIntOrNull() ?: error("Invalid pulses number: $pulsesStr")
+                val pulses = pulsesStr.toIntOrNull() ?: parseError("Invalid pulses number: $pulsesStr")
 
                 consume(TokenType.COMMA, "Expected ',' in Euclidean rhythm")
 
                 val stepsStr = consume(TokenType.LITERAL, "Expected steps number").text
-                val steps = stepsStr.toIntOrNull() ?: error("Invalid steps number: $stepsStr")
+                val steps = stepsStr.toIntOrNull() ?: parseError("Invalid steps number: $stepsStr")
 
                 var rotation = 0
                 if (match(TokenType.COMMA)) {
                     val rotationStr = consume(TokenType.LITERAL, "Expected rotation number").text
-                    rotation = rotationStr.toIntOrNull() ?: error("Invalid rotation number: $rotationStr")
+                    rotation = rotationStr.toIntOrNull() ?: parseError("Invalid rotation number: $rotationStr")
                 }
 
                 consume(TokenType.R_PAREN, "Expected ')' after Euclidean rhythm")
@@ -556,6 +556,22 @@ class MiniNotationParser(
         if (check(type)) {
             return tokens[pos++]
         }
-        error(message)
+        parseError(message)
+    }
+
+    /**
+     * Throw a parse error with position information
+     */
+    private fun parseError(message: String): Nothing {
+        // Calculate position in the input string
+        val charPos = if (pos < tokens.size) {
+            tokens[pos].start
+        } else if (tokens.isNotEmpty()) {
+            tokens.last().start + tokens.last().text.length
+        } else {
+            0
+        }
+
+        throw MiniNotationParseException(message, charPos, baseLocation)
     }
 }

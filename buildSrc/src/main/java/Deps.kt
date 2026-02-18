@@ -424,6 +424,9 @@ object Deps {
 
         // https://www.npmjs.com/package/codemirror
         fun KotlinDependencyHandler.codemirrorBasicSetup() = npm("codemirror", "6.0.1")
+
+        // https://www.npmjs.com/package/@codemirror/lint
+        fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.4")
     }
 
     // // Test dependencies ////////////////////////////////////////////////////////////////////////
