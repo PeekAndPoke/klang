@@ -136,7 +136,7 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
 
         // Check if silent
         var silent = true
-        val threshold = 0.0001 // -80dB approx
+        val threshold = 0.00001 // -90dB approx
 
         // Check left channel
         for (sample in mixBuffer.left) {

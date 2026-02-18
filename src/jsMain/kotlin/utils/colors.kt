@@ -6,7 +6,15 @@ fun mixColor(value: Number, colors: List<Pair<ClosedRange<Double>, Color>>): Col
     val dbl = value.toDouble()
     val initial = colors.firstOrNull()?.second ?: return Color.white
 
-    return colors.fold(initial) { acc, color ->
-        if (color.first.contains(dbl)) color.second.blend(acc) else acc
+    val matched = colors.filter { it.first.contains(dbl) }
+
+    if (matched.isEmpty()) return Color.white
+
+    if (matched.size == 1) return matched.first().second
+
+    val blended = matched.drop(1).fold(matched.first().second) { acc, color ->
+        acc.blend(color.second)
     }
+
+    return blended
 }

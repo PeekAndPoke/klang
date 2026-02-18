@@ -23,6 +23,7 @@
             <option value="$PROJECT_DIR$/audio_be" />
             <option value="$PROJECT_DIR$/audio_bridge" />
             <option value="$PROJECT_DIR$/audio_fe" />
+            <option value="$PROJECT_DIR$/audio_jsworklet" />
             <option value="$PROJECT_DIR$/buildSrc" />
             <option value="$PROJECT_DIR$/common" />
             <option value="$PROJECT_DIR$/klang" />

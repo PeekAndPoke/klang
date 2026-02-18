@@ -122,49 +122,25 @@ kotlin {
     }
 }
 
-
 tasks {
-    // Task to copy the audio_be JS output to the root resources as dsp.js
-    val copyAudioWorklet = register<Copy>("copyAudioWorklet") {
-        group = "build"
-        description = "Copies the audio_be JS bundle to jsMain resources as dsp.js"
+//    named("jsProcessResources") {
+//        val taskNames = gradle.startParameter.taskNames
+//        // Determine if we are in a production flow based on the requested tasks
+//        val isProduction = taskNames.any {
+//            it.contains("Distribution", ignoreCase = true) ||
+//                    it.contains("Production", ignoreCase = true) ||
+//                    it.endsWith("build") ||
+//                    it.endsWith("assemble")
+//        }
+//
+//        if (isProduction) {
+//            dependsOn(":audio_jsworklet:copyWorkletToResources")
+//        } else {
+//            dependsOn(":audio_jsworklet:copyWorkletToResourcesDev")
+//        }
+//    }
 
-        // TODO: figure out why the productionWebpack files do not work...
-
-        val prod = false
-
-        if (prod) {
-            // Depends on the production webpack build of the backend module
-            dependsOn(":audio_be:jsBrowserProductionWebpack")
-
-            val path = project(":audio_be").layout.buildDirectory.dir("kotlin-webpack/js/productionExecutable/")
-
-            println("PROD Path ${path.get().asFile.absolutePath}")
-
-            from(path) {
-                include("*.*")
-            }
-        } else {
-            // Depends on the production webpack build of the backend module
-            dependsOn(":audio_be:jsBrowserDevelopmentWebpack")
-
-            val path = project(":audio_be").layout.buildDirectory.dir("kotlin-webpack/js/developmentExecutable/")
-
-            println("DEV Path ${path.get().asFile.absolutePath}")
-
-            from(path) {
-                include("*.*")
-            }
-        }
-
-        // Copy mapping file too if needed for debugging
-        // from(...) { include("*.map"); rename { "dsp.js.map" } }
-
-        into(file("src/jsMain/resources"))
-    }
-
-    // Hook this into the standard resource processing
     named("jsProcessResources") {
-        dependsOn(copyAudioWorklet)
+        dependsOn(":audio_jsworklet:copyWorkletToResourcesDev")
     }
 }

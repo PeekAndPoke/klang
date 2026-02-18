@@ -46,8 +46,6 @@ kotlin {
                 implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
                 implementation(Deps.KotlinX.serialization_json)
-
-                api(Deps.KotlinLibs.better_parse)
             }
         }
 

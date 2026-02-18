@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.script
 
-import com.github.h0tk3y.betterParse.parser.ParseException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -8,6 +7,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ImportStatement
 import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import io.peekandpoke.klang.script.parser.ParseException
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.ObjectValue
 

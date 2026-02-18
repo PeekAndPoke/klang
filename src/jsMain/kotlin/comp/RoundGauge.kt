@@ -132,7 +132,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val iconColor = if (isDisabled) {
             Color.grey
         } else {
-            mixColor(props.value(), props.iconColors)
+            mixColor(smoothedValue, props.iconColors)
         }
 
         div {
