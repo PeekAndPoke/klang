@@ -43,7 +43,7 @@ import * from "strudel"
 let wind      = 0.1
 let water     = 0.05
 let waves     = 0.15
-let windSpiel = 2.5
+let windSpiel = 2.25
 
 stack(
   // Wind ----------------------------------------------------------------------------------------
@@ -61,7 +61,8 @@ stack(
   , // Windspiel ---------------------------------------------------------------------------------
   n(randrun(16)).fast(4).sound("glockenspiel").scale("c2:pentatonic")
     .gain(0.25).distort(0.2).postgain(windSpiel)
-    .adsr("0.1:1.0:1.0:5.0").hpf(400).degradeBy(0.99) // . solo()
+    .adsr("0.1:1.0:1.0:5.0").hpf(400).degradeBy(0.99)
+    .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.5) // . solo()
 ).room(0.25).rsize(10.0)
 
             """.trimIndent(),
