@@ -40,24 +40,24 @@ object BuiltInSongs {
 import * from "stdlib"
 import * from "strudel"
 
-let wind      = 0.1
-let water     = 0.05
+let wind      = 0.035
+let water     = 0.035
 let waves     = 0.15
-let windSpiel = 2.25
+let windSpiel = 2.0
 
 stack(
   // Wind ----------------------------------------------------------------------------------------
   note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
     .gain(wind).pan(sine.range(0.4, 0.6).slow(21))
-    .hpf(1000).bandf(perlin.range(220, 220 * 3).slow(64)).bandq(berlin.range(1.0, 3.0).slow(39))
+    .hpf(1000).bandf(perlin.range(220, 220 * 8).slow(64)).bandq(berlin.range(1.0, 3.0).slow(39))
   , // Water -------------------------------------------------------------------------------------
   note("c").fast(6).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
     .gain(water)
     .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
   , // Waves -------------------------------------------------------------------------------------
-  note("<c ~ ~ ~>").slow(2).sound("pink").adsr("0.7:0.5:1.0:3.0").warmth(0.2) // . solo()
+  note("<c ~ ~ ~ ~ ~ ~ ~>").slow(1).sound("pink").adsr("0.5:0.5:1.0:8.0").warmth(0.2) // . solo()
     .gain(waves).pan(sine.range(0.4, 0.6).slow(21))
-    .hpf(90).lpf(4000).bandf(perlin.range(300, 660).slow(2)).bandq(1.0).early(3)
+    .hpf(90).lpf(4000).bandf(perlin.range(200, 660).slow(22)).bandq(rand.range(1.0, 1.5))
   , // Windspiel ---------------------------------------------------------------------------------
   n(randrun(16)).fast(4).sound("glockenspiel").scale("c2:pentatonic")
     .gain(0.25).distort(0.2).postgain(windSpiel)

@@ -94,7 +94,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
 
                     onClick { router.navToUri(Nav.tour()) }
 
-                    icon.music { css { marginRight = 8.px } }
+                    icon.music { css { marginRight = 10.px } }
 
                     ui.big.text {
                         css {
@@ -107,7 +107,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
                         +"KLANG AUDIO MOTÖR"
                     }
 
-                    icon.music { css { transform { scaleX(-1.0) }; marginLeft = 8.px } }
+                    icon.music { css { transform { scaleX(-1.0) }; marginLeft = 10.px } }
                 }
             }
         }
