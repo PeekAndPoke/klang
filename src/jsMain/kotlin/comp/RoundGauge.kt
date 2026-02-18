@@ -113,7 +113,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
             onNextProps { _, newProps ->
                 // Smooth the value changes (90% old + 10% new)
-                smoothedValue = (smoothedValue * 9.0 + newProps.value()) / 10.0
+                smoothedValue = (smoothedValue * 14.0 + newProps.value()) / 15.0
 
                 draw()
             }

@@ -31,41 +31,59 @@ object BuiltInSongs {
         )
     )
 
-    val atTheBeach = add(
+    val soundOfTheSea = add(
         Song(
             id = "$PREFIX-0006",
-            title = "At the beach",
+            title = "Sound of the sea",
             cps = 0.5,
             code = """
-import * from "stdlib"
-import * from "strudel"
 
-let wind      = 0.035
-let water     = 0.035
-let waves     = 0.15
-let windSpiel = 2.0
 
-stack(
-  // Wind ----------------------------------------------------------------------------------------
-  note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
-    .gain(wind).pan(sine.range(0.4, 0.6).slow(21))
-    .hpf(1000).bandf(perlin.range(220, 220 * 8).slow(64)).bandq(berlin.range(1.0, 3.0).slow(39))
-  , // Water -------------------------------------------------------------------------------------
-  note("c").fast(6).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
-    .gain(water)
-    .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
-  , // Waves -------------------------------------------------------------------------------------
-  note("<c ~ ~ ~ ~ ~ ~ ~>").slow(1).sound("pink").adsr("0.5:0.5:1.0:8.0").warmth(0.2) // . solo()
-    .gain(waves).pan(sine.range(0.4, 0.6).slow(21))
-    .hpf(90).lpf(4000).bandf(perlin.range(200, 660).slow(22)).bandq(rand.range(1.0, 1.5))
-  , // Windspiel ---------------------------------------------------------------------------------
-  n(randrun(16)).fast(4).sound("glockenspiel").scale("c2:pentatonic")
-    .gain(0.25).distort(0.2).postgain(windSpiel)
-    .adsr("0.1:1.0:1.0:5.0").hpf(400).degradeBy(0.99)
-    .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.5) // . solo()
-).room(0.25).rsize(10.0)
 
-            """.trimIndent(),
+
+
+
+            import * from  "stdlib"
+             import * from "strudel"
+              let wind       = 0.045
+               let water      = 0.035
+                let waves      = 0.150
+                 let windSpiel  = 2.000
+           
+                   stack( //       Lean back and relax... let the waves carry you away
+                // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+             note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
+               .gain(wind).pan(sine.range(0.4, 0.6).slow(21))
+               .hpf(1000).bandf(perlin.range(110, 110 * 20).slow(64)).bandq(berlin.range(1.0, 4.0).slow(39))
+           , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            note("c").fast(5).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
+              .gain(water)
+              .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
+           , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            note("<c@4 ~ ~ ~ ~ ~ ~ ~>").slow(1).sound("pink").adsr("0.5:0.5:1.0:7.0").warmth(0.2) // . solo()
+             .gain(waves).pan(sine.range(0.4, 0.6).slow(21))
+              .hpf(90).lpf(4000).bandf(perlin.range(200, 660).slow(22)).bandq(rand.range(1.0, 1.5))
+              , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                n(randrun(16)).fast(4).sound("glockenspiel").scale("c2:pentatonic")
+                  .gain(0.25).distort(0.2).postgain(windSpiel).adsr("0.1:1.0:1.0:5.0").hpf(400).degradeBy(0.99)
+                      .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.5) // . solo()
+                           ).room(0.25).rsize(10.0)             
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                  
+            """,
             icon = "umbrella beach",
         )
     )
@@ -108,7 +126,7 @@ stack(
   .adsr("0.05:0.2:0.5:0.15")
   
 ).room(0.2).rsize(5.0)
-            """.trimIndent(),
+            """,
         )
     )
 }
