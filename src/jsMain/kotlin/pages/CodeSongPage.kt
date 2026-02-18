@@ -192,7 +192,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 ui.large.circular.black.button {
                                     onClick {
                                         onPlay()
-                                        document.documentElement?.requestFullscreen()
                                     }
 
                                     if (loading) {
@@ -211,15 +210,15 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                             }
 
-                            ui.large.circular.icon.givenNot(isPlaying) { disabled }
-                                .given(isPlaying) { white }.button {
+//                            ui.large.circular.icon.givenNot(isPlaying) { disabled }
+//                                .given(isPlaying) { white }.button {
 //                                            onClick {
 //                                                song?.stop()
 //                                                song = null
 //                                            }
-
-                                    icon.black.pause()
-                                }
+//
+//                                    icon.black.pause()
+//                                }
 
                             ui.large.circular.icon.givenNot(isPlaying) { disabled }
                                 .given(isPlaying) { white }.button {

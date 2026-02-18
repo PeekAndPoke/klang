@@ -122,9 +122,24 @@ kotlin {
     }
 }
 
-
 tasks {
-    // Hook this into the standard resource processing
+//    named("jsProcessResources") {
+//        val taskNames = gradle.startParameter.taskNames
+//        // Determine if we are in a production flow based on the requested tasks
+//        val isProduction = taskNames.any {
+//            it.contains("Distribution", ignoreCase = true) ||
+//                    it.contains("Production", ignoreCase = true) ||
+//                    it.endsWith("build") ||
+//                    it.endsWith("assemble")
+//        }
+//
+//        if (isProduction) {
+//            dependsOn(":audio_jsworklet:copyWorkletToResources")
+//        } else {
+//            dependsOn(":audio_jsworklet:copyWorkletToResourcesDev")
+//        }
+//    }
+
     named("jsProcessResources") {
         dependsOn(":audio_jsworklet:copyWorkletToResourcesDev")
     }

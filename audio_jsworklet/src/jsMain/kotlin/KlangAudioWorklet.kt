@@ -1,5 +1,5 @@
-package io.peekandpoke.klang.audio_be
-
+import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.oscillators
@@ -23,7 +23,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
         }
 
         val commLink = KlangCommLink()
-        val klangTime = KlangTime.Companion.create()  // Creates AudioWorklet-specific time source
+        val klangTime = KlangTime.create()  // Creates AudioWorklet-specific time source
 
         // Core DSP components
         val orbits = Orbits(
@@ -39,7 +39,7 @@ class KlangAudioWorklet : AudioWorkletProcessor {
                 oscillators = oscillators(sampleRate = sampleRate),
                 orbits = orbits,
                 // Used for performance measurement only
-                performanceTimeMs = { Date.Companion.now() },
+                performanceTimeMs = { Date.now() },
             )
         )
 
@@ -63,6 +63,8 @@ class KlangAudioWorklet : AudioWorkletProcessor {
     private fun init(outputs: Array<Array<Float32Array>>, block: Ctx.() -> Boolean): Boolean {
 
         fun makeContext(): Ctx {
+            console.log("[WORKLET] Creating context")
+
             // Dynamic detection of environment parameters
             val sampleRate = (js("sampleRate") as Number).toInt()
 

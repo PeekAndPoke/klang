@@ -18,7 +18,6 @@ kotlin {
 
             webpackTask {
                 mainOutputFileName = "klang-worklet.js"
-                cssSupport { enabled.set(false) }
             }
         }
 
@@ -39,31 +38,36 @@ kotlin {
     }
 }
 
+@Suppress("unused")
 tasks {
     // Copy compiled worklet to main project's resources
     val copyWorkletToResources by registering(Copy::class) {
+        dependsOn("jsBrowserProductionWebpack")
         description = "Copy compiled AudioWorklet to main project resources"
 
         from("build/kotlin-webpack/js/productionExecutable")
         into("${project.rootDir}/src/jsMain/resources")
+
         include("klang-worklet.js")
+        include("klang-worklet.js.map")
     }
 
     val copyWorkletToResourcesDev by registering(Copy::class) {
+        dependsOn("jsBrowserDevelopmentWebpack")
         description = "Copy development AudioWorklet to main project resources"
+
         from("build/kotlin-webpack/js/developmentExecutable")
         into("${project.rootDir}/src/jsMain/resources")
+
         include("klang-worklet.js")
+        include("klang-worklet.js.map")
     }
 
-    // Auto-copy after webpack bundles
     named("jsBrowserProductionWebpack") {
-        mustRunAfter("jsDevelopmentExecutableCompileSync")
         finalizedBy(copyWorkletToResources)
     }
 
     named("jsBrowserDevelopmentWebpack") {
-        mustRunAfter("jsProductionExecutableCompileSync")
         finalizedBy(copyWorkletToResourcesDev)
     }
 }
