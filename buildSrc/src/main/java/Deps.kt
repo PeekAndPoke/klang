@@ -54,7 +54,7 @@ object Deps {
             const val security = "io.peekandpoke.ultra:security:$ultra_version"
             const val semanticui = "io.peekandpoke.ultra:semanticui:$ultra_version"
             const val slumber = "io.peekandpoke.ultra:slumber:$ultra_version"
-            const val streams = "io.peekandpoke.ultra:streams:$ultra_version"
+            const val streams = "io.peekandpoke.ultra:stream:$ultra_version"
             const val vault = "io.peekandpoke.ultra:vault:$ultra_version"
         }
 
@@ -63,6 +63,7 @@ object Deps {
             const val semanticui = "io.peekandpoke.kraft:semanticui:$ultra_version"
             const val testing = "io.peekandpoke.kraft:testing:$ultra_version"
 
+            const val addons_browserdetect = "io.peekandpoke.kraft:addons-browserdetect:$ultra_version"
             const val addons_chartjs = "io.peekandpoke.kraft:addons-chartjs:$ultra_version"
             const val addons_konva = "io.peekandpoke.kraft:addons-konva:$ultra_version"
             const val addons_marked = "io.peekandpoke.kraft:addons-marked:$ultra_version"

@@ -32,6 +32,7 @@ fun Tag.RoundGauge(
     iconColors: List<Pair<ClosedRange<Double>, Color>>,
     disabled: Boolean,
     size: LinearDimension = 50.px,
+    smoothing: Double = 0.933, // Default: 14/15 = heavy smoothing (0.0 = instant, 1.0 = maximum)
 ) = comp(
     RoundGauge.Props(
         value = value,
@@ -42,6 +43,7 @@ fun Tag.RoundGauge(
         iconColors = iconColors,
         disabled = disabled,
         size = size,
+        smoothing = smoothing,
     )
 ) {
     RoundGauge(it)
@@ -64,6 +66,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val iconColors: List<Pair<ClosedRange<Double>, Color>>,
         val disabled: Boolean,
         val size: LinearDimension,
+        val smoothing: Double, // 0.0 = instant, higher = more smoothing (e.g., 0.933 = heavy smoothing)
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -112,8 +115,15 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
             }
 
             onNextProps { _, newProps ->
-                // Smooth the value changes (90% old + 10% new)
-                smoothedValue = (smoothedValue * 14.0 + newProps.value()) / 15.0
+                // Smooth the value changes based on smoothing factor
+                // smoothing = 0.0 means instant update (no smoothing)
+                // smoothing = 0.933 means heavy smoothing (93.3% old + 6.7% new)
+                val newValue = newProps.value()
+                smoothedValue = if (newProps.smoothing > 0.0) {
+                    smoothedValue * newProps.smoothing + newValue * (1.0 - newProps.smoothing)
+                } else {
+                    newValue  // Instant update, no smoothing
+                }
 
                 draw()
             }

@@ -47,6 +47,8 @@ kotlin {
                 implementation(Deps.Ktor.Client.core)
                 implementation(Deps.Ktor.Client.cio)
 
+                api(Deps.KotlinLibs.Ultra.streams)
+
                 // Audio engine
                 api(project(":audio_fe"))
                 api(project(":audio_be"))
@@ -62,6 +64,11 @@ kotlin {
                 Deps.Test {
                     commonTestDeps()
                 }
+            }
+        }
+
+        jsMain {
+            dependencies {
             }
         }
 

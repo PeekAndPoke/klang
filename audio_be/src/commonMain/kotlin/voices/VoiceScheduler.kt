@@ -273,6 +273,11 @@ class VoiceScheduler(
     }
 
     /**
+     * Returns the number of currently active voices being rendered
+     */
+    fun getActiveVoiceCount(): Int = active.size
+
+    /**
      * Cleans up state for the given playbackId.
      *
      * - Removes playback epoch (prevents new voices from this playback)

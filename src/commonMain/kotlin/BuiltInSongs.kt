@@ -25,7 +25,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0002",
             title = "Synthtown Boy",
-            cps = 0.58,
+            cps = 0.62,
             code = TestTextPatterns.smallTownBoy,
             icon = "record vinyl",
         )
@@ -43,17 +43,17 @@ object BuiltInSongs {
 
 
 
-            import * from  "stdlib"
-             import * from "strudel"
-              let wind       = 0.045
-               let water      = 0.035
-                let waves      = 0.150
-                 let windSpiel  = 2.000
+             import * from  "stdlib"
+              import * from "strudel"
+               let wind       = 0.045
+                let water      = 0.035
+                 let waves      = 0.150
+                  let windSpiel  = 2.000
            
-                   stack( //       Lean back and relax... let the waves carry you away
+                    stack( //       Lean back and relax... let the waves carry you away
                 // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-             note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
-               .gain(wind).pan(sine.range(0.4, 0.6).slow(21))
+              note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
+               .gain(wind).pan(sine.range(0.3, 0.7).slow(21))
                .hpf(1000).bandf(perlin.range(110, 110 * 20).slow(64)).bandq(berlin.range(1.0, 4.0).slow(39))
            , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             note("c").fast(5).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
@@ -61,7 +61,7 @@ object BuiltInSongs {
               .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
            , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             note("<c@4 ~ ~ ~ ~ ~ ~ ~>").slow(1).sound("pink").adsr("0.5:0.5:1.0:7.0").warmth(0.2) // . solo()
-             .gain(waves).pan(sine.range(0.4, 0.6).slow(21))
+             .gain(waves).pan(sine.range(0.45, 0.55).slow(21))
               .hpf(90).lpf(4000).bandf(perlin.range(200, 660).slow(22)).bandq(rand.range(1.0, 1.5))
               , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 n(randrun(16)).fast(4).sound("glockenspiel").scale("c2:pentatonic")

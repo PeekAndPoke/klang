@@ -28,16 +28,16 @@ stack(
       [8, silence],
       [8, n("<[~ 0] 2 [0 2] [~ 2][~ 0] 1 [0 1] [~ 1][~ 0] 3 [0 3] [~ 3][~ 0] 2 [0 2] [~ 2]>*4")],
     ).sound("triangle").scale("C4:minor")
-    .orbit(1).gain(0.3).adsr("0.05:0.7:0.0:0.2")
+    .orbit(1).gain(0.3).adsr("0.05:0.2:0.3:0.2")
     .hpf(800)
     .superimpose(x => x.transpose("12").gain(0.5))
     , // bass  ---------------------------------------------------------
     note("<[c2 c3]*4 [bb1 bb2]*4 [f2 f3]*4 [eb2 eb3]*4>")
     .orbit(3).sound("supersaw").unison(8).detune(0.1)
-    .adsr("0.02:0.3:0.0:0.1").lpf(1200).hpf(80).gain(1.0).postgain(1.5)
+    .adsr("0.02:0.3:0.0:0.1").lpf(1200).hpf(80).gain(1.0).postgain(1.25)
     , // Drums ---------------------------------------------------------
     sound("[bd hh sd hh] [bd [bd, hh] sd oh]").fast(1)
-     .orbit(4).pan(0.5).gain(0.9)
+     .orbit(4).pan(0.5).gain(0.95)
      .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.3),
 ).room(0.1).rsize(5.0)
                                 
@@ -99,6 +99,7 @@ import * from "strudel"
 
 let wait = 16
 let keep = 32 * 6
+let notch = 880 // 440, 880, 1560 ?
 
 stack(
   // Claps --------------------------------------------------------------------------------------------------
@@ -122,7 +123,7 @@ stack(
     .gain(0.75).pan(sine.range(0.3, 0.7).slow(16)).adsr("0.02:0.5:0.5:0.2")
     .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.65).legato(1.2))
     .s("supersaw").unison(8).detune(saw.range(0.05, 0.4).slow(16))
-    .lpf(6 * 440).hpf(80).crush(sine.range(3.5, 12.0).slow(32))
+    .lpf(6 * 440).hpf(80).crush(sine.range(3.5, 12.0).slow(32)).notchf(notch
     .filterWhen(x => x >= wait * 0.5 && x < (wait * 3 + keep))
   , // Perc 2 -----------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
@@ -130,11 +131,11 @@ stack(
     .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
   , // Perc 1 -----------------------------------------------------------------------------------------------
   sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-    .gain(0.8).pan(0.5).adsr("0.01:0.2:0.5:1.0").degrade(0.01).hpf(60)        
+    .gain(0.8).pan(0.5).adsr("0.01:0.3:0.5:1.0").degrade(0.01).hpf(60)        
     .filterWhen(x => x >= wait * 0.5 && x < (wait * 1 + keep))
   , // Shore ------------------------------------------------------------------------------------------------
   note("c").fast(8).sound("brown")
-    .gain(0.07).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
+    .gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(64)).bandq(sine.range(-0.05, 5.0).slow(12))
   ,
 ).delay(0.15).delaytime(pure(1/8).div(cps)).delayfeedback(0.33)
@@ -151,11 +152,11 @@ stack(
 import * from "stdlib"
 import * from "strudel"
 
-let tp = "[0 -1 -3 -5 -7  1  2  4]/8".slow(64) // <---- transposition ... wait for it ... or change it ...
+let tp = "[0 -1 -3 -5 -7  1  3  6]/8".slow(64) // <---- transposition ... wait for it ... or change it ...
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").fast(2).transpose(tp)
-    .gain(1.0).distort(0.5).postgain("1.0 0.0!3".slow(64)).hpf(4350).lpf(4450).pan(0.6) //.solo()
+    .gain(1.0).distort(0.4).postgain("1.0 0.0!3".slow(64)).hpf(4350).lpf(4450).pan(0.6) //.solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
