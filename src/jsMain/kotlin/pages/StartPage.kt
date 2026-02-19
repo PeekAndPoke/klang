@@ -215,7 +215,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // Wait for the song to finish before navigating
             playback?.signals?.on<PlaybackStopped> {
                 playback.signals.clear()
-                delay(500.milliseconds)
+                delay(1000.milliseconds)
                 console.log("Playback stopped, navigating to new song page")
                 router.navToUri(Nav.editSongCode(BuiltInSongs.tetris.id))
             }
@@ -359,15 +359,21 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun DIV.renderStateOffline() {
-        renderOfflineState()
+        renderFlexGrowContent {
+            renderOfflineState()
+        }
     }
 
     private fun DIV.renderStateBrowserCheck(browserCheckState: StateBrowserCheck) {
-        renderBrowserCheck(browserCheckState)
+        renderFlexGrowContent {
+            renderBrowserCheck(browserCheckState)
+        }
     }
 
     private fun DIV.renderStateBooting() {
-        renderBootingState()
+        renderFlexGrowContent {
+            renderBootingState()
+        }
     }
 
     private fun DIV.renderStateBenchmarking() {
@@ -410,7 +416,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     css {
                         fontFamily = "monospace"
                         fontSize = 3.em
-                        lineHeight = LineHeight("2.0em")
+//                        lineHeight = LineHeight("2.0em")
                         color = Color.white
                         display = Display.inlineBlock
                         fontWeight = FontWeight.bold
@@ -431,9 +437,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             div {
                 css {
                     fontSize = 1.4.em
-                    color = Color("#888")
+                    color = Color.grey
                     opacity = currentOpacity
-                    marginTop = 8.px
                 }
                 +"pre-alpha"
             }
@@ -444,10 +449,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             RoundButton(
                 icon = { power_off },
-                color = Color.red,
+                color = GaugeColors.excellent,
                 onClick = {
                     state.gotoNext()
-                }
+                },
+                size = 75.px
             )
         }
     }
@@ -521,9 +527,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 css {
                     marginTop = 10.px
                     fontSize = 0.9.em
-                    color = Color("#aaa")
+                    color = Color.white
                 }
-                +"Initializing Audio Engine..."
+                +"..:: Starting Motör ::.."
             }
         }
     }
@@ -763,7 +769,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                         css {
                             fontSize = 3.em
                             fontWeight = FontWeight.bold
-                            color = rating.color
+                            color = Color.white
                             marginRight = 12.px
                         }
                         +"${result.maxSafeVoices}"

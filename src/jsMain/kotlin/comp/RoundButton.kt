@@ -68,6 +68,10 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                     borderWidth = 1.8.px
                     width = props.size
                     height = props.size
+                    // Explicit centering for icon
+                    display = Display.flex
+                    alignItems = Align.center
+                    justifyContent = JustifyContent.center
                 }
 
                 props.title?.let { title = it }
@@ -76,9 +80,14 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
 
                 icon.iconFn().then {
                     css {
+                        // Icon size: 50% of button height
+                        fontSize = props.size * 0.5
                         color = iconColor
+                        // Glow effect - stronger glow scaled to button size
                         if (!isDisabled) {
-                            put("text-shadow", "0 0 10px")
+                            // Blur radius: 25% of button size for strong glow
+                            val glowBlur = props.size * 0.25
+                            put("text-shadow", "0 0 $glowBlur")
                         }
                     }
                 }
