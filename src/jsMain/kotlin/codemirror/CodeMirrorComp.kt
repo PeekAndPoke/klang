@@ -187,7 +187,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
             this.dispatch = null
         }
 
-        console.log("viewConfig", viewConfig)
+        // console.log("viewConfig", viewConfig)
 
         // Create editor view
         try {

@@ -22,17 +22,6 @@ interface StrudelPattern {
         /** Small epsilon value for point queries (sampling control patterns at a specific time) */
         val QUERY_EPSILON = 1e-6.toRational()
 
-        fun compile(code: String): StrudelPattern? {
-            val code = """
-                import * from "stdlib"
-                import * from "strudel"
-                
-                
-            """.trimIndent() + code
-
-            return compileRaw(code)
-        }
-
         fun compileRaw(code: String): StrudelPattern? {
             val beforeEngine = MpInstant.now()
 
@@ -44,6 +33,49 @@ interface StrudelPattern {
 
             val beforeCompile = MpInstant.now()
 
+            val result = klangScriptEngine.execute(code + "\n")
+
+            println("Compilation result: $result")
+            println("Result type: ${result::class.simpleName}")
+            println("Result value type: ${result.value?.let { it::class.simpleName }}")
+            println("Is StrudelPattern? ${result.value is StrudelPattern}")
+
+            return result.toObjectOrNull<StrudelPattern>().also {
+                println("Compiling pattern took: ${MpInstant.now() - beforeCompile}")
+            }
+        }
+
+        /**
+         * Compile Strudel code with pre-imported libraries, maintaining accurate source locations.
+         *
+         * Unlike compile() which prepends import statements (shifting line numbers by 5),
+         * this method pre-executes imports in the engine environment, then executes the
+         * user code with accurate line/column numbers starting from line 1.
+         *
+         * This is essential for code highlighting during playback, where highlight events
+         * reference source locations that must match the editor display.
+         *
+         * @param code The Strudel pattern code to compile (without import statements)
+         * @return The compiled pattern, or null if compilation fails
+         */
+        fun compile(code: String): StrudelPattern? {
+            val beforeEngine = MpInstant.now()
+
+            // Create engine with native registrations
+            val klangScriptEngine = klangScript {
+                registerLibrary(strudelLib)
+            }
+
+            println("Creating klangscript engine took: ${MpInstant.now() - beforeEngine}")
+
+            // Pre-execute import statements to populate the environment
+            // These imports don't affect source locations of user code
+            klangScriptEngine.execute("""import * from "stdlib"""")
+            klangScriptEngine.execute("""import * from "strudel"""")
+
+            val beforeCompile = MpInstant.now()
+
+            // Execute user code with accurate source locations (starting at line 1)
             val result = klangScriptEngine.execute(code + "\n")
 
             println("Compilation result: $result")

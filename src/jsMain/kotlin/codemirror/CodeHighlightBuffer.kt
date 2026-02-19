@@ -52,12 +52,16 @@ class CodeHighlightBuffer(
      * limited to the first [maxHighlightsPerEvent] locations.
      */
     fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
-        // Cast to SourceLocationChain - if not, nothing to highlight
-        val chain = event.sourceLocations as? SourceLocationChain ?: return
+        try {
+            // Cast to SourceLocationChain - if not, nothing to highlight
+            val chain = event.sourceLocations as? SourceLocationChain ?: return
 
-        // Schedule each location in the chain (limited by maxHighlightsPerEvent)
-        chain.locations.asReversed().take(maxHighlightsPerEvent).forEach { location ->
-            scheduleForLocation(location, event)
+            // Schedule each location in the chain (limited by maxHighlightsPerEvent)
+            chain.locations.asReversed().take(maxHighlightsPerEvent).forEach { location ->
+                scheduleForLocation(location, event)
+            }
+        } catch (e: Exception) {
+            console.error("CodeHighlightBuffer: Failed to schedule highlight", e)
         }
     }
 
@@ -93,61 +97,70 @@ class CodeHighlightBuffer(
         var startTimeoutId = 0
 
         startTimeoutId = window.setTimeout({
-            // Deduplication: Remove existing highlight for this location
-            activeHighlights[key]?.let { existing ->
-                // Cancel removal timeout
-                existing.removeTimeoutId?.let { id ->
-                    window.clearTimeout(id)
-                    pendingTimeouts.remove(id)
+            try {
+                // Deduplication: Remove existing highlight for this location
+                activeHighlights[key]?.let { existing ->
+                    // Cancel removal timeout
+                    existing.removeTimeoutId?.let { id ->
+                        window.clearTimeout(id)
+                        pendingTimeouts.remove(id)
+                    }
+                    // Remove from editor
+                    editorRef { it.removeHighlight(existing.highlightId) }
+                    // Remove from tracking
+                    activeHighlights.remove(key)
                 }
-                // Remove from editor
-                editorRef { it.removeHighlight(existing.highlightId) }
-                // Remove from tracking
-                activeHighlights.remove(key)
-            }
 
-            // Add new highlight
-            var highlightId = ""
-            editorRef { editor ->
-                highlightId = editor.addHighlight(
-                    line = location.startLine,
-                    column = location.startColumn,
-                    length = if (location.startLine == location.endLine) {
-                        location.endColumn - location.startColumn
-                    } else {
-                        2 // multiline fallback
-                    },
-                    durationMs = durationMs,
+                // Add new highlight
+                var highlightId = ""
+                editorRef { editor ->
+                    highlightId = editor.addHighlight(
+                        line = location.startLine,
+                        column = location.startColumn,
+                        length = if (location.startLine == location.endLine) {
+                            location.endColumn - location.startColumn
+                        } else {
+                            2 // multiline fallback
+                        },
+                        durationMs = durationMs,
+                    )
+                }
+
+                // If editor didn't create highlight (empty ID), cleanup and return
+                if (highlightId.isEmpty()) {
+                    pendingTimeouts.remove(startTimeoutId)
+                    return@setTimeout
+                }
+
+                // Record last highlight time
+                lastHighlightTime[key] = Date.now()
+
+                // Schedule removal (durationMs + 50ms buffer for animation to finish)
+                var removeTimeoutId = 0
+
+                removeTimeoutId = window.setTimeout({
+                    try {
+                        editorRef { it.removeHighlight(highlightId) }
+                        activeHighlights.remove(key)
+                        pendingTimeouts.remove(removeTimeoutId)
+                    } catch (e: Exception) {
+                        console.error("CodeHighlightBuffer: Failed to remove highlight", e)
+                    }
+                }, (durationMs + 50.0).toInt())
+
+                pendingTimeouts.add(removeTimeoutId)
+
+                // Store active highlight
+                activeHighlights[key] = ActiveHighlight(
+                    locationKey = key,
+                    highlightId = highlightId,
+                    startTimeoutId = startTimeoutId,
+                    removeTimeoutId = removeTimeoutId,
                 )
-            }
-
-            // If editor didn't create highlight (empty ID), cleanup and return
-            if (highlightId.isEmpty()) {
+            } catch (e: Exception) {
+                console.error("CodeHighlightBuffer: Failed to add highlight", e)
                 pendingTimeouts.remove(startTimeoutId)
-                return@setTimeout
             }
-
-            // Record last highlight time
-            lastHighlightTime[key] = Date.now()
-
-            // Schedule removal (durationMs + 50ms buffer for animation to finish)
-            var removeTimeoutId = 0
-
-            removeTimeoutId = window.setTimeout({
-                editorRef { it.removeHighlight(highlightId) }
-                activeHighlights.remove(key)
-                pendingTimeouts.remove(removeTimeoutId)
-            }, (durationMs + 50.0).toInt())
-
-            pendingTimeouts.add(removeTimeoutId)
-
-            // Store active highlight
-            activeHighlights[key] = ActiveHighlight(
-                locationKey = key,
-                highlightId = highlightId,
-                startTimeoutId = startTimeoutId,
-                removeTimeoutId = removeTimeoutId,
-            )
         }, startFromNowMs.toInt())
 
         pendingTimeouts.add(startTimeoutId)
@@ -158,18 +171,22 @@ class CodeHighlightBuffer(
      * Call this when playback stops.
      */
     fun cancelAll() {
-        // 1. Cancel all pending timeouts
-        for (id in pendingTimeouts) {
-            window.clearTimeout(id)
+        try {
+            // 1. Cancel all pending timeouts
+            for (id in pendingTimeouts) {
+                window.clearTimeout(id)
+            }
+            pendingTimeouts.clear()
+
+            // 2. Clear all active highlights from editor
+            editorRef { it.clearHighlights() }
+
+            // 3. Reset state
+            activeHighlights.clear()
+            lastHighlightTime.clear()
+        } catch (e: Exception) {
+            console.error("CodeHighlightBuffer: Failed to cancel highlights", e)
         }
-        pendingTimeouts.clear()
-
-        // 2. Clear all active highlights from editor
-        editorRef { it.clearHighlights() }
-
-        // 3. Reset state
-        activeHighlights.clear()
-        lastHighlightTime.clear()
     }
 
     /**

@@ -442,7 +442,7 @@ class DslFunctionProvider(
     private val handler: StrudelDslFn,
 ) {
     operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, DslFunction> {
-        val name = prop.name
+        val name = prop.name.trimStart('_')
         val func = DslFunction(handler)
 
         // Register in the evaluator registry - convert RuntimeValue to Any? for the handler
@@ -464,7 +464,7 @@ class DslPatternExtensionProvider(
         thisRef: Any?,
         prop: KProperty<*>,
     ): ReadOnlyProperty<StrudelPattern, DslPatternMethod> {
-        val name = prop.name
+        val name = prop.name.trimStart('_')
 
         // Register in the evaluator registry
         StrudelRegistry.patternExtensionMethods[name] = { recv, args, callInfo ->
@@ -488,7 +488,7 @@ class DslStringExtensionProvider(
         thisRef: Any?,
         prop: KProperty<*>,
     ): ReadOnlyProperty<String, DslPatternMethod> {
-        val name = prop.name
+        val name = prop.name.trimStart('_')
 
         // Register in the evaluator registry
         StrudelRegistry.stringExtensionMethods[name] = { recv, args, callInfo ->

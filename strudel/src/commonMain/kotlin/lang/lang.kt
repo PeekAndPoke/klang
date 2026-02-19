@@ -3,9 +3,16 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.lang.addons.*
+import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
 
 @DslMarker
 annotation class StrudelDsl
+
+/**
+ * Type alias for pattern-like values that can be converted to patterns.
+ * Accepts: StrudelPattern, String, Number, Boolean, and other types that can be converted to patterns.
+ */
+typealias PatternLike = Any
 
 /**
  * Registers all Strudel DSL functions by accessing the init properties of all lang_*.kt files.
@@ -38,4 +45,7 @@ fun initStrudelLang() {
     strudelLangOscAddonsInit = true
     strudelLangStructuralAddonsInit = true
     strudelLangTempoAddonsInit = true
+
+    // Register DSL documentation
+    registerStrudelDocs()
 }

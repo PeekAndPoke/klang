@@ -207,6 +207,107 @@ Use `@sample` tag for code examples:
 - Existing KlangScript code continues to work
 - Internal code can still pass callInfo when needed
 
+### Step 1b: Create/Update Test Spec
+
+**File**: `strudel/src/commonTest/kotlin/lang/LangSeqSpec.kt`
+
+**IMPORTANT**: Every new function MUST have corresponding tests in a `LangXXXSpec` file.
+
+For `seq`, create or update `LangSeqSpec.kt` with tests covering:
+
+1. **Basic functionality**: Test that overloads work correctly
+   - Top-level `seq()` with multiple patterns
+   - Pattern extension `pattern.seq()`
+   - String extension `"string".seq()`
+
+2. **Type flexibility**: Test PatternLike accepts different types
+   - Strings: `seq("c d", "e f")`
+   - Patterns: `seq(note("c"), sound("bd"))`
+   - Numbers: `seq(1, 2, 3)`
+   - Mixed: `seq("c", note("d"), 3)`
+
+3. **Edge cases**:
+   - Empty: `seq()` should return silence
+   - Single pattern: `seq(pattern)` should return the pattern
+   - Many patterns: Test with 10+ patterns
+
+4. **Behavior validation**:
+   - Each pattern plays for exactly 1 cycle
+   - Sequence loops back to start
+   - Extension methods chain correctly
+
+**Test Template**:
+
+```kotlin
+package io.peekandpoke.klang.strudel.lang
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+
+class LangSeqSpec : StringSpec({
+
+   "seq() with multiple string patterns should sequence them" {
+      val pattern = seq("c d", "e f", "g a")
+
+      // Query first cycle - should get first pattern
+      val cycle0 = pattern.queryArc(0.0, 1.0)
+      cycle0.size shouldBe 2  // "c d" has 2 events
+
+      // Query second cycle - should get second pattern
+      val cycle1 = pattern.queryArc(1.0, 2.0)
+      cycle1.size shouldBe 2  // "e f" has 2 events
+
+      // Query third cycle - should get third pattern
+      val cycle2 = pattern.queryArc(2.0, 3.0)
+      cycle2.size shouldBe 2  // "g a" has 2 events
+   }
+
+   "seq() with pattern extension should append patterns" {
+      val pattern = note("c e").seq("g a")
+
+      // First cycle: "c e"
+      val cycle0 = pattern.queryArc(0.0, 1.0)
+      cycle0.map { it.data.note }.shouldContainExactly("c", "e")
+
+      // Second cycle: "g a"
+      val cycle1 = pattern.queryArc(1.0, 2.0)
+      cycle1.map { it.data.note }.shouldContainExactly("g", "a")
+   }
+
+   "seq() should accept mixed types (PatternLike)" {
+      // This should compile and work
+      val pattern = seq("c", note("d"), 60, sound("bd"))
+
+      // Just verify it produces events
+      val events = pattern.queryArc(0.0, 4.0)
+      events.size shouldBeGreaterThan 0
+   }
+
+   "seq() with empty args should return silence" {
+      val pattern = seq()
+      val events = pattern.queryArc(0.0, 1.0)
+      events.size shouldBe 0
+   }
+
+   "seq() with single pattern should return that pattern" {
+      val single = note("c d e f")
+      val pattern = seq(single)
+
+      val direct = single.queryArc(0.0, 1.0)
+      val wrapped = pattern.queryArc(0.0, 1.0)
+
+      direct shouldBe wrapped
+   }
+})
+```
+
+**Expected outcome**:
+
+- All tests pass ✅
+- Function behavior is validated
+- Edge cases are covered
+- Future refactoring is protected
+
 ### Step 2: Hand-Write Documentation Data Structure
 
 **File**: `strudel/src/commonMain/kotlin/lang/docs/DslDocs.kt` (new)
@@ -488,12 +589,14 @@ fun generateHtmlDocs(): String {
 
 ### Step 4: Validation Checklist
 
-- [ ] IDE shows `seq()` with full documentation in autocomplete
-- [ ] CodeMirror JSON export contains seq documentation
-- [ ] Frontend docs page displays seq correctly
-- [ ] Static HTML generation produces readable docs
-- [ ] Existing KlangScript code using `seq` still works
-- [ ] Internal code can pass callInfo when needed
+- [ ] **Tests**: All tests in `LangSeqSpec` pass
+- [ ] **IDE**: Shows `seq()` with full documentation in autocomplete
+- [ ] **CodeMirror**: JSON export contains seq documentation
+- [ ] **Frontend**: Docs page displays seq correctly
+- [ ] **Static HTML**: Generation produces readable docs
+- [ ] **Compatibility**: Existing KlangScript code using `seq` still works
+- [ ] **Internal**: Code can pass callInfo when needed
+- [ ] **Coverage**: Edge cases and type flexibility tested
 
 ### Step 5: Document the Pattern
 
@@ -634,6 +737,89 @@ dependencies {
 - New functions automatically get documentation
 - Update KDoc = update all output formats
 - Continuous improvement of generated docs
+
+---
+
+## Testing Requirements
+
+### Test File Naming Convention
+
+For each DSL function, create a corresponding test spec:
+
+- Function: `seq` → Test: `LangSeqSpec.kt`
+- Function: `stack` → Test: `LangStackSpec.kt`
+- Function: `fast` → Test: `LangFastSpec.kt`
+
+**Location**: `strudel/src/commonTest/kotlin/lang/`
+
+### Required Test Coverage
+
+Every function implementation MUST include tests for:
+
+1. **Basic Functionality**
+   - Top-level function works
+   - Pattern extension works
+   - String extension works
+
+2. **Type Flexibility (PatternLike)**
+   - Accepts strings
+   - Accepts patterns
+   - Accepts numbers
+   - Accepts mixed types
+
+3. **Edge Cases**
+   - Empty arguments (if applicable)
+   - Single argument
+   - Many arguments (10+)
+   - Null/invalid inputs (if applicable)
+
+4. **Behavior Validation**
+   - Function produces correct output
+   - Timing is correct (query specific cycles)
+   - Patterns compose correctly
+   - Control patterns work (if applicable)
+
+5. **Regression Protection**
+   - Test known issues/bugs that were fixed
+   - Document expected behavior for edge cases
+
+### Test Style
+
+Use Kotest `StringSpec` with descriptive test names:
+
+```kotlin
+"function should do X when Y" {
+    // Arrange
+    val pattern = functionUnderTest(args)
+
+    // Act
+    val result = pattern.queryArc(0.0, 1.0)
+
+    // Assert
+    result.size shouldBe expectedSize
+    result.map { it.data.field } shouldContainExactly expected
+}
+```
+
+### When to Run Tests
+
+- **Before committing**: Always run tests for the file you modified
+- **After implementing function**: Run full test suite
+- **During refactoring**: Run tests continuously
+- **Before KSP generation**: Ensure manual implementation works
+
+### Test Command
+
+```bash
+# Run specific test file
+./gradlew :strudel:jvmTest --tests LangSeqSpec
+
+# Run all lang tests
+./gradlew :strudel:jvmTest --tests "io.peekandpoke.klang.strudel.lang.*"
+
+# Run all tests
+./gradlew :strudel:jvmTest
+```
 
 ---
 

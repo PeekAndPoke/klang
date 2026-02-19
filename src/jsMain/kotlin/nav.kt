@@ -18,6 +18,8 @@ object Nav {
 
     val samplesLibrary = Static("/samples/library")
 
+    val strudelDocs = Static("/docs/strudel")
+
     val tour = Static("/tour")
 }
 
@@ -38,6 +40,8 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.editSongCode) { CodeSongPage(id = it["id"]) }
 
         mount(Nav.samplesLibrary) { SamplesLibraryPage() }
+
+        mount(Nav.strudelDocs) { StrudelDocsPage() }
     }
 
 

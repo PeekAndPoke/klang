@@ -1,4 +1,4 @@
-@file:Suppress("DuplicatedCode")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName")
 
 package io.peekandpoke.klang.strudel.lang
 
@@ -124,17 +124,68 @@ fun applySeq(patterns: List<StrudelPattern>): StrudelPattern {
     }
 }
 
-/** Creates a sequence pattern. */
-@StrudelDsl
-val seq by dslFunction { args, /* callInfo */ _ -> args.toPattern() }
+// Private delegates - still register with KlangScript
+private val _seq by dslFunction { args, callInfo -> applySeq(args.toListOfPatterns()) }
 
-@StrudelDsl
-val StrudelPattern.seq by dslPatternExtension { p, args, /* callInfo */ _ ->
+private val StrudelPattern._seq by dslPatternExtension { p, args, callInfo ->
     applySeq(patterns = listOf(p) + args.toListOfPatterns())
 }
 
+private val String._seq by dslStringExtension { p, args, callInfo -> p._seq(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Creates a sequence pattern that plays patterns one after another.
+ *
+ * Each pattern in the sequence occupies exactly one cycle. If you have
+ * three patterns, the sequence takes three cycles to complete before
+ * looping back to the start.
+ *
+ * Sequences are fundamental for creating musical phrases, chord progressions,
+ * and melodic patterns that unfold over time.
+ *
+ * @param patterns Patterns to play in sequence. Accepts patterns, strings, numbers,
+ *                 and other values that can be converted to patterns.
+ * @return A sequential pattern that cycles through each input pattern
+ * @sample seq("c d e", "f g a")  // Two patterns, each plays for 1 cycle
+ * @sample seq(note("c"), note("e"), note("g"))  // Three note patterns in sequence
+ * @sample seq("bd", sound("sd"), "hh")  // Mix strings and patterns
+ * @category structural
+ * @tags sequence, timing, control, order
+ */
 @StrudelDsl
-val String.seq by dslStringExtension { p, args, callInfo -> p.seq(args, callInfo) }
+fun seq(vararg patterns: PatternLike): StrudelPattern {
+    return _seq(patterns.toList())
+}
+
+/**
+ * Appends patterns to this pattern in sequence.
+ *
+ * Extends the current pattern by adding more patterns that play after it.
+ * Each appended pattern plays for one cycle.
+ *
+ * @param patterns Additional patterns to append to the sequence
+ * @return Combined sequential pattern
+ * @sample note("c e").seq("g a")  // c-e for cycle 1, then g-a for cycle 2
+ * @sample "bd sd".seq("hh hh", "cp")  // Three cycles total
+ */
+@StrudelDsl
+fun StrudelPattern.seq(vararg patterns: PatternLike): StrudelPattern {
+    return this._seq(patterns.toList())
+}
+
+/**
+ * Converts string to pattern and appends additional patterns in sequence.
+ *
+ * @param patterns Additional patterns to append after this string
+ * @return Combined sequential pattern
+ * @sample "c e".seq("g a")  // String converted and sequenced
+ */
+@StrudelDsl
+fun String.seq(vararg patterns: PatternLike): StrudelPattern {
+    return this._seq(patterns.toList())
+}
 
 // -- mini() -----------------------------------------------------------------------------------------------------------
 

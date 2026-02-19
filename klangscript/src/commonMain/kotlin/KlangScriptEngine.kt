@@ -114,6 +114,44 @@ class KlangScriptEngine private constructor(
     }
 
     /**
+     * Execute a KlangScript program with a pre-configured ExecutionContext
+     *
+     * This overload allows you to provide an ExecutionContext that has been
+     * pre-configured with imported libraries, avoiding the need to prepend
+     * import statements to the source code. This is particularly useful when
+     * you need to maintain accurate source location mappings (e.g., for code
+     * highlighting during playback).
+     *
+     * @param source The KlangScript source code to execute
+     * @param sourceName Optional name for the source (e.g., "main.klang", "user-script")
+     * @param executionContext Pre-configured execution context with imported libraries
+     * @return The runtime value of the last statement
+     * @throws ParseException if the source contains syntax errors
+     * @throws RuntimeException if execution fails (e.g., undefined variable)
+     *
+     * Example:
+     * ```kotlin
+     * val ctx = ExecutionContext(sourceName = "example.klang")
+     * ctx.importLibrary("stdlib", engine)
+     * ctx.importLibrary("strudel", engine)
+     * val result = engine.execute("""note("c d e")""", executionContext = ctx)
+     * ```
+     */
+    fun execute(source: String, sourceName: String? = null, executionContext: ExecutionContext): RuntimeValue {
+        val program = KlangScriptParser.parse(source, sourceName)
+
+        // Create interpreter with provided execution context
+        val interpreter = Interpreter(
+            env = environment,
+            engine = this,
+            callStack = CallStack(),
+            executionContext = executionContext
+        )
+
+        return interpreter.execute(program)
+    }
+
+    /**
      * Load library source code by name (LibraryLoader interface implementation)
      *
      * This is called by the interpreter when executing import statements.
