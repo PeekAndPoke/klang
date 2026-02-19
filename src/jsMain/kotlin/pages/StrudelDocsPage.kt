@@ -25,6 +25,13 @@ fun Tag.StrudelDocsPage() = comp {
 
 class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
+    //  REGISTRY  ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // Create isolated registry for Strudel docs only
+    private val registry = DslDocsRegistry().apply {
+        io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs(this)
+    }
+
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var searchQuery: String by value("")
@@ -33,7 +40,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
 
     private val allCategories: List<String>
-        get() = DslDocsRegistry.categories
+        get() = registry.categories
 
     private val filteredFunctions: List<FunctionDoc>
         get() {
@@ -42,11 +49,11 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
             return when {
                 // Search has priority
-                query.isNotEmpty() -> DslDocsRegistry.search(query)
+                query.isNotEmpty() -> registry.search(query)
                 // Then category filter
-                category != null -> DslDocsRegistry.getFunctionsByCategory(category)
+                category != null -> registry.getFunctionsByCategory(category)
                 // Show all by default
-                else -> DslDocsRegistry.functions.values.sortedBy { it.name }
+                else -> registry.functions.values.sortedBy { it.name }
             }
         }
 

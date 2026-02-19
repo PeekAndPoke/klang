@@ -7,9 +7,11 @@ import io.peekandpoke.klang.script.docs.*
  *
  * This should be called during initialization to make Strudel documentation available
  * for IDE completion, CodeMirror autocomplete, and documentation pages.
+ *
+ * @param registry The registry to register docs into (defaults to global registry)
  */
-fun registerStrudelDocs() {
-    DslDocsRegistry.registerAll(strudelFunctionDocs)
+fun registerStrudelDocs(registry: DslDocsRegistry = DslDocsRegistry.global) {
+    registry.registerAll(strudelFunctionDocs)
 }
 
 /**

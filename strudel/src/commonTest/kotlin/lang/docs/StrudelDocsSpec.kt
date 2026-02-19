@@ -18,7 +18,7 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "seq documentation should be registered" {
-        val seqDoc = DslDocsRegistry.get("seq")
+        val seqDoc = DslDocsRegistry.global.get("seq")
 
         seqDoc shouldNotBe null
         seqDoc!!.name shouldBe "seq"
@@ -28,7 +28,7 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "seq should have 3 variants" {
-        val seqDoc = DslDocsRegistry.get("seq")!!
+        val seqDoc = DslDocsRegistry.global.get("seq")!!
 
         seqDoc.variants shouldHaveSize 3
 
@@ -39,7 +39,7 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "seq top-level variant should have complete documentation" {
-        val seqDoc = DslDocsRegistry.get("seq")!!
+        val seqDoc = DslDocsRegistry.global.get("seq")!!
         val topLevel = seqDoc.variants.first { it.type == DslType.TOP_LEVEL }
 
         topLevel.signature shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
@@ -50,35 +50,35 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "DslDocsRegistry.search should find seq by name" {
-        val results = DslDocsRegistry.search("seq")
+        val results = DslDocsRegistry.global.search("seq")
 
         results shouldHaveSize 1
         results[0].name shouldBe "seq"
     }
 
     "DslDocsRegistry.search should find seq by category" {
-        val results = DslDocsRegistry.search("structural")
+        val results = DslDocsRegistry.global.search("structural")
         val names = results.map { it.name }
 
         names shouldContain "seq"
     }
 
     "DslDocsRegistry.search should find seq by tag" {
-        val results = DslDocsRegistry.search("sequence")
+        val results = DslDocsRegistry.global.search("sequence")
         val names = results.map { it.name }
 
         names shouldContain "seq"
     }
 
     "DslDocsRegistry.getFunctionsByCategory should return seq" {
-        val structural = DslDocsRegistry.getFunctionsByCategory("structural")
+        val structural = DslDocsRegistry.global.getFunctionsByCategory("structural")
         val names = structural.map { it.name }
 
         names shouldContain "seq"
     }
 
     "DslDocsRegistry.getFunctionsByLibrary should return seq" {
-        val strudelFuncs = DslDocsRegistry.getFunctionsByLibrary("strudel")
+        val strudelFuncs = DslDocsRegistry.global.getFunctionsByLibrary("strudel")
         val names = strudelFuncs.map { it.name }
 
         names shouldContain "seq"

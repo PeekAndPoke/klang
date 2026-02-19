@@ -49,10 +49,17 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private val highlightBuffer = CodeHighlightBuffer(editorRef)
 
     private var currentCode: String by value(props.code)
-    private val isModified get() = currentCode != props.code
+    private var playingCode: String? by value(null)
+
+    // True when editor code differs from what's currently playing
+    private val isModified get() = playingCode != null && currentCode != playingCode
+
+    // True when editor code differs from original props (for reset button)
+    private val isModifiedFromOriginal get() = currentCode != props.code
+
+    private var currentCycle: Long by value(0)
 
     private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
-    private val playerReady: Boolean by subscribingTo(Player.status.map { it == Player.Status.READY })
 
     init {
         lifecycle {
@@ -73,11 +80,9 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
         launch {
             try {
-                console.log("PlayableCodeExample: Getting player...")
-                val player = getPlayer()
-                console.log("PlayableCodeExample: Player obtained, compiling code:", currentCode)
+                console.log("PlayableCodeExample: Compiling code:", currentCode)
 
-                // Use compileWithPreImportedLibraries() to maintain accurate source locations
+                // Use compile() to maintain accurate source locations
                 // This pre-executes imports without prepending lines, so highlighting line numbers match the editor
                 val pattern = StrudelPattern.compile(currentCode)
 
@@ -86,26 +91,53 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     return@launch
                 }
 
-                console.log("PlayableCodeExample: Pattern compiled successfully, stopping existing playback...")
+                console.log("PlayableCodeExample: Pattern compiled successfully")
 
-                // Stop existing playback
-                stopPlayback()
+                when (val currentPlayback = playback) {
+                    null -> {
+                        // First play - create new playback
+                        console.log("PlayableCodeExample: Getting player...")
+                        val player = getPlayer()
+                        console.log("PlayableCodeExample: Starting new playback...")
 
-                console.log("PlayableCodeExample: Starting new playback...")
-                // Start new playback
-                playback = player.playStrudel(pattern)
-                playback?.start()
+                        playback = player.playStrudel(pattern)
+                        playback?.start()
 
-                console.log("PlayableCodeExample: Playback started, setting up highlighting...")
+                        // Mark code as playing
+                        playingCode = currentCode
 
-                // Set up code highlighting
-                playback?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
-                    signal.voices.forEach { voiceEvent ->
-                        highlightBuffer.scheduleHighlight(voiceEvent)
+                        console.log("PlayableCodeExample: Playback started, setting up signals...")
+
+                        // Reset cycle counter
+                        currentCycle = 0
+
+                        // Set up cycle counter
+                        playback?.signals?.on<KlangPlaybackSignal.CycleCompleted> { signal ->
+                            currentCycle =
+                                signal.cycleIndex + 1 // +1 because we want to show the current cycle being played
+                        }
+
+                        // Set up code highlighting
+                        playback?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
+                            signal.voices.forEach { voiceEvent ->
+                                highlightBuffer.scheduleHighlight(voiceEvent)
+                            }
+                        }
+
+                        console.log("PlayableCodeExample: Play setup complete!")
+                    }
+
+                    else -> {
+                        // Update existing playback
+                        console.log("PlayableCodeExample: Updating pattern on existing playback...")
+                        currentPlayback.updatePattern(pattern)
+
+                        // Mark code as playing
+                        playingCode = currentCode
+
+                        console.log("PlayableCodeExample: Pattern updated!")
                     }
                 }
-
-                console.log("PlayableCodeExample: Play setup complete!")
 
             } catch (e: Exception) {
                 console.error("PlayableCodeExample: Failed to play example", e)
@@ -118,6 +150,8 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
         playback?.stop()
         playback = null
         highlightBuffer.cancelAll()
+        currentCycle = 0
+        playingCode = null
     }
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -169,22 +203,15 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         icon.black.stop()
                     }
 
-                // Reset button (only show if modified)
-                if (isModified) {
-                    ui.mini.circular.basic.button {
-                        onClick {
-                            stopPlayback()
-                            currentCode = props.code
-                            editorRef { it.setCode(props.code) }
-                        }
-                        icon.undo()
-                        +"Reset"
+                // Reset button (only show if modified from original)
+                ui.mini.circular.givenNot(isModifiedFromOriginal) { disabled }.button {
+                    onClick {
+                        stopPlayback()
+                        currentCode = props.code
+                        editorRef { it.setCode(props.code) }
                     }
-                }
-
-                // Spacer
-                div {
-                    css { flexGrow = 1.0 }
+                    icon.undo()
+                    +"Reset"
                 }
 
                 // Info text
@@ -196,7 +223,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     }
                     if (isPlaying) {
                         icon.music()
-                        +" Playing"
+                        +" Playing - Cycle $currentCycle"
                     } else {
                         +"Try this example"
                     }

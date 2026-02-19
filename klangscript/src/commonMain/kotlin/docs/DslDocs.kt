@@ -75,12 +75,22 @@ data class FunctionDoc(
 )
 
 /**
- * Central registry of DSL function documentation for all libraries.
+ * Registry of DSL function documentation for all libraries.
  *
- * This serves as the single source of truth for documentation,
+ * This serves as a source of truth for documentation,
  * consumed by IDE completion, CodeMirror autocomplete, frontend UI, and static docs.
+ *
+ * Can be instantiated for testing or used via the global [DslDocsRegistry.global] instance.
  */
-object DslDocsRegistry {
+class DslDocsRegistry {
+
+    companion object {
+        /**
+         * Global default registry instance.
+         * Use this for production code. Tests can create their own isolated instances.
+         */
+        val global = DslDocsRegistry()
+    }
 
     private val _functions = mutableMapOf<String, FunctionDoc>()
 
