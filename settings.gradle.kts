@@ -22,6 +22,7 @@ include(
 
     // Sequencers
     ":strudel",
+    ":strudel-ksp",
 
     // Interactive/Notebook support
     ":klang-notebook",

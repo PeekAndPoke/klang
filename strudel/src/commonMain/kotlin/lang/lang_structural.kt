@@ -1126,7 +1126,7 @@ fun StrudelPattern.zoom(start: Double, end: Double): StrudelPattern =
 val String.zoom by dslStringExtension { p, args, callInfo -> p.zoom(args, callInfo) }
 
 @StrudelDsl
-fun String.zoon(start: Double, end: Double): StrudelPattern = this.zoom(start, end)
+fun String.zoom(start: Double, end: Double): StrudelPattern = this.zoom(start, end)
 
 // -- within() ---------------------------------------------------------------------------------------------------------
 

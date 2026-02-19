@@ -40,6 +40,11 @@ kotlin {
 
 @Suppress("unused")
 tasks {
+    val syncTasks = listOf(
+        "jsDevelopmentExecutableCompileSync",
+        "jsProductionExecutableCompileSync"
+    )
+
     // Copy compiled worklet to main project's resources
     val copyWorkletToResources by registering(Copy::class) {
         dependsOn("jsBrowserProductionWebpack")
@@ -64,10 +69,12 @@ tasks {
     }
 
     named("jsBrowserProductionWebpack") {
+        dependsOn(syncTasks)
         finalizedBy(copyWorkletToResources)
     }
 
     named("jsBrowserDevelopmentWebpack") {
+        dependsOn(syncTasks)
         finalizedBy(copyWorkletToResourcesDev)
     }
 }

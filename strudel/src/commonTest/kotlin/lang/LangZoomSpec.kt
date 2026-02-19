@@ -29,7 +29,7 @@ class LangZoomSpec : StringSpec({
     }
 
     "zoom() works with string extension" {
-        val p = "0 1 2 3".zoon(start = 0.0, end = 0.5)
+        val p = "0 1 2 3".zoom(start = 0.0, end = 0.5)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
