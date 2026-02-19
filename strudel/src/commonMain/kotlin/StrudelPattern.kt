@@ -2,6 +2,7 @@
 
 package io.peekandpoke.klang.strudel
 
+import de.peekandpoke.ultra.common.datetime.Kronos
 import de.peekandpoke.ultra.common.datetime.MpInstant
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -65,6 +66,7 @@ interface StrudelPattern {
         companion object {
             val randomSeedKey = Key<Long>("randomSeed")
             val cpsKey = Key<Double>("cps")
+            val kronosKey = Key<Kronos>("kronos")
 
             val empty = QueryContext()
 
@@ -168,6 +170,9 @@ interface StrudelPattern {
 
         /** Gets the cycles per second (cps) for this context. */
         fun getCps() = getOrDefault(cpsKey, 0.5)
+
+        /** Gets the time source (Kronos) for this context, defaults to system UTC time. */
+        fun getKronos() = getOrNull(kronosKey) ?: Kronos.systemUtc
 
         /** Makes a copy of the context. */
         private fun clone(): QueryContext = QueryContext(data)

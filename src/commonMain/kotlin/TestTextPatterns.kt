@@ -152,7 +152,7 @@ stack(
 import * from "stdlib"
 import * from "strudel"
 
-let tp = "[0 -1 -3 -5 -7  1  3  6]/8".slow(64) // <---- transposition ... wait for it ... or change it ...
+let tp = "[0 -1 -3 -5 -7  1  2  4]/8".slow(64) // <---- transposition ... wait for it ... or change it ...
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").fast(2).transpose(tp)

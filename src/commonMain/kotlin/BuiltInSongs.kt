@@ -60,7 +60,7 @@ object BuiltInSongs {
               .gain(water)
               .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
            , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            note("<c@4 ~ ~ ~ ~ ~ ~ ~>").slow(1).sound("pink").adsr("0.5:0.5:1.0:7.0").warmth(0.2) // . solo()
+            note("<c@4 ~!15>").fast(2).sound("pink").adsr("0.75:0.5:1.0:10.0").warmth(0.2) // . solo()
              .gain(waves).pan(sine.range(0.45, 0.55).slow(21))
               .hpf(90).lpf(4000).bandf(perlin.range(200, 660).slow(22)).bandq(rand.range(1.0, 1.5))
               , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
