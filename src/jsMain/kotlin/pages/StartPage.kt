@@ -17,14 +17,14 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.ops.ticker
+import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.comp.*
 import io.peekandpoke.klang.strudel.StrudelPlayback
-import io.peekandpoke.klang.strudel.lang.fast
-import io.peekandpoke.klang.strudel.lang.sound
+import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.playStrudelOnce
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
@@ -208,14 +208,16 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         override fun gotoNext() {
             val song = sound("[bd bd bd bd  [ds, cr] ~ ~ ~]").fast(1)
+                .adsr("0.01:1.0:1.0:2.0").room(0.1).rsize(5.0)
 
             val playback = Player.get()?.playStrudelOnce(song)
 
             // Wait for the song to finish before navigating
             playback?.signals?.on<PlaybackStopped> {
                 playback.signals.clear()
+                delay(500.milliseconds)
                 console.log("Playback stopped, navigating to new song page")
-                router.navToUri(Nav.newSongCode())
+                router.navToUri(Nav.editSongCode(BuiltInSongs.tetris.id))
             }
 
             playback?.start(StrudelPlayback.Options(cyclesPerSecond = 1.0))
@@ -590,7 +592,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                         (85.0..100.0) to GaugeColors.critical
                     ),
                     disabled = false,
-                    size = 100.px
+                    size = 90.px
                 )
             }
 
@@ -770,15 +772,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     div {
                         css {
                             fontSize = 1.1.em
-                            color = Color("#ccc")
+                            color = Color.white
                             textAlign = TextAlign.left
                         }
-                        div {
-                            +"simultaneous"
-                        }
-                        div {
-                            +"voices"
-                        }
+                        div { +"simultaneous" }
+                        div { +"supersaw voices" }
                     }
                 }
 

@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
+import io.peekandpoke.klang.strudel.lang.filterWhen
 
 /**
  * One-shot Strudel playback that stops automatically after a specified number of cycles.
@@ -22,9 +23,12 @@ internal class OneShotStrudelPlayback internal constructor(
 
     override val signals = KlangPlaybackSignals()
 
+    // Wrap the pattern to only return events within the target cycle range
+    private val limitedPattern = pattern.filterWhen { it < cyclesToPlay }
+
     private val controller = StrudelPlaybackController(
         playbackId = playbackId,
-        pattern = pattern,
+        pattern = limitedPattern,
         context = context,
         onStopped = { handleControllerStopped() },
         signals = signals,
@@ -58,11 +62,9 @@ internal class OneShotStrudelPlayback internal constructor(
             }
         }
 
-        // Override lookahead and prefetch for one-shot playback
-        // This prevents scheduling events beyond the target cycles
+        // Use standard options with adjusted prefetch
+        // The pattern is already wrapped with withTimeClip to prevent events beyond cyclesToPlay
         val oneShotOptions = options.copy(
-            // Reduce lookahead to 90% of target cycles to prevent scheduling beyond target
-            lookaheadCycles = minOf(options.lookaheadCycles, cyclesToPlay * 0.9),
             // Set prefetch to match cyclesToPlay
             prefetchCycles = cyclesToPlay,
         )
