@@ -20,8 +20,9 @@ import de.peekandpoke.ultra.streams.ops.ticker
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
+import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.comp.*
-import io.peekandpoke.klang.strudel.lang.delay
+import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.fast
 import io.peekandpoke.klang.strudel.lang.sound
 import io.peekandpoke.klang.strudel.playStrudelOnce
@@ -34,7 +35,6 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlin.math.ceil
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 @Suppress("FunctionName")
 fun Tag.StartPage() = comp {
@@ -207,16 +207,18 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override fun getOpacity(): Double = 1.0
 
         override fun gotoNext() {
-            val song = sound("bd bd [ds, cr] ~ ~ ~ ~ ~").fast(2)
+            val song = sound("[bd bd bd bd  [ds, cr] ~ ~ ~]").fast(1)
 
             val playback = Player.get()?.playStrudelOnce(song)
-            playback?.start()
 
-            launch {
-                delay(1.seconds)
-                console.log("Navigating to new song page")
+            // Wait for the song to finish before navigating
+            playback?.signals?.on<PlaybackStopped> {
+                playback.signals.clear()
+                console.log("Playback stopped, navigating to new song page")
                 router.navToUri(Nav.newSongCode())
             }
+
+            playback?.start(StrudelPlayback.Options(cyclesPerSecond = 1.0))
         }
 
         fun getResult() = result
@@ -227,7 +229,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     private val benchmark = KlangBenchmark()
 
     private val benchmarkProgress: KlangBenchmark.Progress? by subscribingTo(benchmark.progress) { progress ->
-        if (progress?.isComplete == true) {
+        if (progress.isComplete) {
             val result = progress.result
             if (result != null) {
                 state = StateBenchmarkComplete(result)
