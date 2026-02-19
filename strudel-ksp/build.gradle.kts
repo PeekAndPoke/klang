@@ -1,3 +1,5 @@
+import Deps.Test.configureJvmTests
+
 plugins {
     kotlin("jvm")
     `kotlin-kapt`
@@ -16,6 +18,15 @@ dependencies {
     // Add kapt dependency for JVM target
     add("kapt", Deps.JavaLibs.Google.auto_service)
     add("kaptTest", Deps.JavaLibs.Google.auto_service)
+
+    // Test dependencies
+    Deps.Test {
+        jvmTestDeps()
+    }
+}
+
+tasks {
+    configureJvmTests()
 }
 
 // KSP processors must use a lower JVM target for compatibility

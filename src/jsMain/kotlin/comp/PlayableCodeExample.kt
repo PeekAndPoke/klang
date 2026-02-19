@@ -218,8 +218,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 div {
                     css {
                         alignSelf = Align.center
-                        fontSize = 0.85.rem
-                        color = Color("#666")
+                        color = Color.grey
                     }
                     if (isPlaying) {
                         icon.music()

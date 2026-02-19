@@ -148,9 +148,9 @@ private val String._seq by dslStringExtension { p, args, callInfo -> p._seq(args
  * @param patterns Patterns to play in sequence. Accepts patterns, strings, numbers,
  *                 and other values that can be converted to patterns.
  * @return A sequential pattern that cycles through each input pattern
- * @sample seq("c d e", "f g a")  // Two patterns, each plays for 1 cycle
- * @sample seq(note("c"), note("e"), note("g"))  // Three note patterns in sequence
- * @sample seq("bd", sound("sd"), "hh")  // Mix strings and patterns
+ * @sample seq("c d e", "f g a").note()            // Two patterns, all played in one cycle
+ * @sample seq(note("c"), note("e"), note("g"))    // Three note patterns in sequence
+ * @sample seq("bd", ["sd", "sd"], "hh").s()       // Mix strings and patterns
  * @category structural
  * @tags sequence, timing, control, order
  */
@@ -167,8 +167,8 @@ fun seq(vararg patterns: PatternLike): StrudelPattern {
  *
  * @param patterns Additional patterns to append to the sequence
  * @return Combined sequential pattern
- * @sample note("c e").seq("g a")  // c-e for cycle 1, then g-a for cycle 2
- * @sample "bd sd".seq("hh hh", "cp")  // Three cycles total
+ * @sample note("c e").seq("g a".note())
+ * @sample "bd sd".seq("hh hh", "cp").s()
  */
 @StrudelDsl
 fun StrudelPattern.seq(vararg patterns: PatternLike): StrudelPattern {

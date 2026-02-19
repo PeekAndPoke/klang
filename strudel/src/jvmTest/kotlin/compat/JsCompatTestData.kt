@@ -85,6 +85,7 @@ object JsCompatTestData {
 
         // Sequences
         Example(skip = SKIP, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
+        Example("Sequences nested", """seq("bd", ["sd", "sd"], "hh").s()"""),
 
         // Sounds
         Example("Sound | Drums", """s("bd hh sd oh")"""),
