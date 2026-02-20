@@ -55,6 +55,29 @@ class LangSeqSpec : StringSpec({
         events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
+    "seq() with multiple nested arguments sequences them" {
+        // seq("a", "b") -> sequence of a then b
+        val p = seq("bd", listOf("sd", "oh"), "hh").s()
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 4
+        events[0].data.sound shouldBe "bd"
+        events[0].whole.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].whole.end.toDouble() shouldBe (1.0 / 3.0 plusOrMinus EPSILON)
+
+        events[1].data.sound shouldBe "sd"
+        events[1].whole.begin.toDouble() shouldBe (1.0 / 3.0 plusOrMinus EPSILON)
+        events[1].whole.end.toDouble() shouldBe (1.0 / 2.0 plusOrMinus EPSILON)
+
+        events[2].data.sound shouldBe "oh"
+        events[2].whole.begin.toDouble() shouldBe (1.0 / 2.0 plusOrMinus EPSILON)
+        events[2].whole.end.toDouble() shouldBe (2.0 / 3.0 plusOrMinus EPSILON)
+
+        events[3].data.sound shouldBe "hh"
+        events[3].whole.begin.toDouble() shouldBe (2.0 / 3.0 plusOrMinus EPSILON)
+        events[3].whole.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
     "seq() works as method on StrudelPattern" {
         // note("a").seq("b") -> sequence of a then b
         val p = note("a").seq("b")

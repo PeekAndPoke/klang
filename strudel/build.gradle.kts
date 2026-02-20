@@ -7,7 +7,7 @@ plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
-//    id("io.kotest") version Deps.Test.kotest_plugin_version
+    id("io.kotest") version Deps.Test.kotest_plugin_version
 }
 
 val GROUP: String by project

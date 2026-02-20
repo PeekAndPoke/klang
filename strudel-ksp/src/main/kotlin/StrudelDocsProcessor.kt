@@ -218,8 +218,9 @@ class StrudelDocsProcessor(
         // Build parameter list
         val params = function.parameters.joinToString(", ") { param ->
             val name = param.name?.asString() ?: "_"
-            val type = param.type.resolve().toString()
-            "$name: $type"
+            val type = cleanTypeName(param.type.resolve().toString())
+            val vararg = if (param.isVararg) "vararg " else ""
+            "$vararg$name: $type"
         }
 
         // Get return type
@@ -230,6 +231,17 @@ class StrudelDocsProcessor(
             "$receiverType.$functionName($params): $returnType"
         } else {
             "$functionName($params): $returnType"
+        }
+    }
+
+    /**
+     * KSP renders type aliases as "[typealias Foo]" - strip that to just "Foo".
+     */
+    private fun cleanTypeName(type: String): String {
+        return if (type.startsWith("[typealias ") && type.endsWith("]")) {
+            type.removePrefix("[typealias ").removeSuffix("]")
+        } else {
+            type
         }
     }
 }

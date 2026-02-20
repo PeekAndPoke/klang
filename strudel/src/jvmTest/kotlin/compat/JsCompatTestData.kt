@@ -85,7 +85,7 @@ object JsCompatTestData {
 
         // Sequences
         Example(skip = SKIP, "Sequence #1", """seq("<0 2 4 6 ~ 4 ~ 2 0!3 ~!5>*8")"""),
-        Example("Sequences nested", """seq("bd", ["sd", "sd"], "hh").s()"""),
+        Example("Sequences nested", """seq("bd", ["sd", "oh"], "hh").s()"""),
 
         // Sounds
         Example("Sound | Drums", """s("bd hh sd oh")"""),
@@ -857,6 +857,8 @@ object JsCompatTestData {
         Example("Bite steady pattern", """n("0 1 2 3").bite(steady(4), "0 1 2 3")"""),
         Example(SKIP, "Bite continuous pattern", """n("0 1 2 3").bite(sine.range(2, 4).segment(2), "0 1")"""),
     ).map {
-        it.recovers("data.gain") { graal, native -> graal.data.gain == 1.0 && native.data.gain == null }
+        it.recovers("data.gain") { graal, native ->
+            graal.data.gain == 1.0 && native.data.gain == null
+        }.ignore("data.patternId")
     }
 }

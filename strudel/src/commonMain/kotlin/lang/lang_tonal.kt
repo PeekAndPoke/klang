@@ -195,6 +195,8 @@ private val soundMutation = voiceModifier {
         soundIndex = split.getOrNull(1)?.toIntOrNull() ?: soundIndex,
         // Preserve existing gain if the string doesn't specify one.
         gain = split.getOrNull(2)?.toDoubleOrNull() ?: gain,
+        // clear the value
+        value = null,
     )
 }
 

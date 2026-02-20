@@ -479,12 +479,18 @@ object Deps {
         fun TaskContainerScope.configureJvmTests(
             configure: org.gradle.api.tasks.testing.Test.() -> Unit = {},
         ) {
+            // Lazily matches KSP tasks - resolves to empty collection for modules without KSP
+            val kspTasks = matching { it.name.startsWith("ksp") }
+
             listOfNotNull(
                 findByName("test") as? org.gradle.api.tasks.testing.Test,
                 findByName("jvmTest") as? org.gradle.api.tasks.testing.Test,
             ).firstOrNull()?.apply {
                 useJUnitPlatform {
                 }
+
+                // Ensure KSP processing always runs before tests execute
+                dependsOn(kspTasks)
 
 //                filter {
 //                    isFailOnNoMatchingTests = false

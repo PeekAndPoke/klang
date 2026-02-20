@@ -325,34 +325,36 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
         )
     }
 
-    return this.flatMap { dslArg ->
+    return this.mapNotNull { dslArg ->
         val loc = dslArg.location
         val locChain = loc?.asChain()
 
         when (val arg = dslArg.value) {
+            is StrudelPattern -> arg
+
             // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
-            is String -> listOf(
-                parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
-            )
+            is String -> parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
 
-            is Rational -> listOf(atomFactory(arg, locChain))
+            is Rational -> atomFactory(arg, locChain)
 
-            is Number -> listOf(atomFactory(arg, locChain))
+            is Number -> atomFactory(arg, locChain)
 
-            is Boolean -> listOf(atomFactory(arg, locChain))
+            is Boolean -> atomFactory(arg, locChain)
 
-            is StrudelPattern -> listOf(arg)
+            is List<*> -> {
+                val innerPatterns = arg.map {
+                    when (it) {
+                        is StrudelDslArg<*> -> it
+                        else -> StrudelDslArg(value = it, location = loc)
+                    }
+                }.toListOfPatterns(modify)
 
-            is List<*> -> arg.map {
-                when (it) {
-                    is StrudelDslArg<*> -> it
-                    else -> StrudelDslArg(value = it, location = loc)
-                }
-            }.toListOfPatterns(modify)
+                SequencePattern.create(innerPatterns)
+            }
 
             // -- empty or null ----------------------------------------------------------------------------------------
-            null -> emptyList()
-            else -> emptyList()
+            null -> null
+            else -> null
         }
     }
 }
