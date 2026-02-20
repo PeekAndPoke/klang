@@ -1971,111 +1971,114 @@ fun applyChunk(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return pattern.`when`(binaryIter, transform)
 }
 
-/**
- * Divides a pattern into a given number of parts, then cycles through those parts in turn,
- * applying the given function to each part in turn (one part per cycle).
- *
- * Ported from JavaScript _chunk() implementation in pattern.mjs.
- *
- * @param {n}         Number of chunks to divide the pattern into
- * @param {transform} Function to apply to each chunk
- * @param {back}      If true, cycles backward through chunks (default: false)
- * @param {fast}      If true, doesn't repeat the pattern (default: false)
- *
- * @example
- * seq("0 1 2 3").chunk(4) { it.add(7) }
- * // Cycle 0: "7 1 2 3"  (chunk 0 transformed)
- * // Cycle 1: "0 8 2 3"  (chunk 1 transformed)
- * // Cycle 2: "0 1 9 3"  (chunk 2 transformed)
- * // Cycle 3: "0 1 2 10" (chunk 3 transformed)
- */
-@StrudelDsl
-val StrudelPattern.chunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
+// delegates - still register with KlangScript
+internal val StrudelPattern._chunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
+internal val String._chunk by dslStringExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
 
-/** Alias for chunk - supports function call syntax */
+internal val StrudelPattern._slowchunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
+internal val String._slowchunk by dslStringExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
+
+internal val StrudelPattern._slowChunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
+internal val String._slowChunk by dslStringExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Divides the pattern into `n` chunks and cycles through them, applying [transform] to one chunk per cycle.
+ *
+ * Over `n` cycles the whole pattern plays `n` times, with each cycle highlighting one of the `n` equal
+ * segments via [transform]. Use `back = true` to cycle backward, and `fast = true` to let the pattern
+ * progress at its natural speed (without the `n`-times repetition).
+ *
+ * @param n         Number of chunks to divide the pattern into.
+ * @param transform Function applied to the currently active chunk each cycle.
+ * @param back      If `true`, cycles backward through chunks (default `false`).
+ * @param fast      If `true`, the source pattern is not repeated — it runs at natural speed (default `false`).
+ * @return A new pattern with the transform cycling through chunks.
+ * @sample seq("0 1 2 3").chunk(4, x => x.add(7)).scale("c:minor").n()  // one chunk transformed per cycle
+ * @sample s("bd sd ht lt").chunk(4, x => x.gain(1.5))                  // one hit louder, cycling forward
+ * @alias slowchunk, slowChunk
+ * @category structural
+ * @tags chunk, cycle, transform, rotate, slice
+ */
 @StrudelDsl
 fun StrudelPattern.chunk(
     n: Int,
     transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
-): StrudelPattern {
-    return applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
-}
+): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
-@StrudelDsl
-val String.chunk by dslStringExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
-
-/** Alias for chunk - supports function call syntax */
+/** Like [chunk] applied to a mini-notation string. */
 @StrudelDsl
 fun String.chunk(
     n: Int,
     transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
-): StrudelPattern {
-    return this.chunk(listOf(n, transform, back, fast).asStrudelDslArgs())
-}
+): StrudelPattern = this._chunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
-/** Alias for [chunk] */
-@StrudelDsl
-val StrudelPattern.slowchunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
-
-/** Alias for [chunk] */
+/**
+ * Alias for [chunk] — divides the pattern into `n` chunks and cycles through them.
+ *
+ * @param n         Number of chunks to divide the pattern into.
+ * @param transform Function applied to the currently active chunk each cycle.
+ * @param back      If `true`, cycles backward through chunks (default `false`).
+ * @param fast      If `true`, the source pattern is not repeated (default `false`).
+ * @return A new pattern with the transform cycling through chunks.
+ * @sample s("bd sd ht lt").slowchunk(4, x => x.gain(1.5))  // alias for chunk
+ * @sample note("c d e f").slowchunk(4, x => x.transpose(5))
+ * @alias chunk, slowChunk
+ * @category structural
+ * @tags slowchunk, chunk, cycle, transform, rotate, slice
+ */
 @StrudelDsl
 fun StrudelPattern.slowchunk(
     n: Int,
     transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
-): StrudelPattern {
-    return applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
-}
+): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
-/** Alias for [chunk] */
-@StrudelDsl
-val String.slowchunk by dslStringExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
-
-/** Alias for [chunk] */
+/** Alias for [chunk]. */
 @StrudelDsl
 fun String.slowchunk(
     n: Int,
     transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
-): StrudelPattern {
-    return this.slowchunk(listOf(n, transform, back, fast).asStrudelDslArgs())
-}
+): StrudelPattern = this._slowchunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
-/** Alias for [chunk] */
-@StrudelDsl
-val StrudelPattern.slowChunk by dslPatternExtension { p, args, /* callInfo */ _ -> applyChunk(p, args) }
-
-/** Alias for [chunk] */
+/**
+ * Alias for [chunk] — divides the pattern into `n` chunks and cycles through them.
+ *
+ * @param n         Number of chunks to divide the pattern into.
+ * @param transform Function applied to the currently active chunk each cycle.
+ * @param back      If `true`, cycles backward through chunks (default `false`).
+ * @param fast      If `true`, the source pattern is not repeated (default `false`).
+ * @return A new pattern with the transform cycling through chunks.
+ * @sample s("bd sd ht lt").slowChunk(4, x => x.gain(1.5))  // alias for chunk
+ * @sample note("c d e f").slowChunk(4, x => x.transpose(5))
+ * @alias chunk, slowchunk
+ * @category structural
+ * @tags slowChunk, chunk, cycle, transform, rotate, slice
+ */
 @StrudelDsl
 fun StrudelPattern.slowChunk(
     n: Int,
     transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
-): StrudelPattern {
-    return applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
-}
+): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
-/** Alias for [chunk] */
-@StrudelDsl
-val String.slowChunk by dslStringExtension { p, args, /*callInfo */ _ -> applyChunk(p, args) }
-
-/** Alias for [chunk] */
+/** Alias for [chunk]. */
 @StrudelDsl
 fun String.slowChunk(
     n: Int,
     transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
-): StrudelPattern {
-    return this.slowChunk(listOf(n, transform, back, fast).asStrudelDslArgs())
-}
+): StrudelPattern = this._slowChunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
 // -- chunkBack() / chunkback() ----------------------------------------------------------------------------------------
 
@@ -2223,74 +2226,71 @@ fun String.fastchunk(n: Int, transform: PatternMapper): StrudelPattern =
 
 // -- chunkInto() ------------------------------------------------------------------------------------------------------
 
-/**
- * Like `chunk`, but the function is applied to a looped subcycle of the source pattern.
- * Effectively an alias for `fastChunk`.
- *
- * @name chunkInto
- * @synonyms chunkinto
- * @memberof Pattern
- * @example
- * sound("bd sd ht lt bd - cp lt").chunkInto(4, hurry(2))
- *   .bank("tr909")
- */
-@StrudelDsl
-val StrudelPattern.chunkInto by dslPatternExtension { p, args, /* callInfo */ _ ->
+// delegates - still register with KlangScript
+internal val StrudelPattern._chunkInto by dslPatternExtension { p, args, /* callInfo */ _ ->
     // TODO: support control patterns
     val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
     applyChunk(p, listOf(nArg, transform, false, true).asStrudelDslArgs())
 }
+internal val String._chunkInto by dslStringExtension { p, args, callInfo -> p._chunkInto(args, callInfo) }
+internal val StrudelPattern._chunkinto by dslPatternExtension { p, args, callInfo -> p._chunkInto(args, callInfo) }
+internal val String._chunkinto by dslStringExtension { p, args, callInfo -> p._chunkInto(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
- * Like `chunk`, but the function is applied to a looped subcycle of the source pattern.
+ * Like [chunk], but applies [transform] to a fast-looped subcycle instead of repeating the pattern `n` times.
+ *
+ * Equivalent to `fastChunk` — the source pattern plays at its natural speed while the transformed
+ * chunk cycles through the `n` parts independently each cycle.
+ *
+ * @param n         Number of chunks to divide the pattern into.
+ * @param transform Function applied to the active chunk each cycle.
+ * @return A pattern at natural speed with the transform cycling through chunks.
+ * @sample s("bd sd ht lt").chunkInto(4, x => x.hurry(2))         // transform cycles, no repeat
+ * @sample note("c d e f g h").chunkInto(3, x => x.transpose(7))  // 3 chunks, each transposed
+ * @alias chunkinto
+ * @category structural
+ * @tags chunkInto, chunk, cycle, transform, fast, slice
  */
 @StrudelDsl
 fun StrudelPattern.chunkInto(
     n: Int,
     transform: PatternMapper,
-): StrudelPattern {
-    return applyChunk(this, listOf(n, transform, false, true).asStrudelDslArgs())
-}
+): StrudelPattern = applyChunk(this, listOf(n, transform, false, true).asStrudelDslArgs())
 
-@StrudelDsl
-val String.chunkInto by dslStringExtension { p, args, callInfo -> p.chunkInto(args, callInfo) }
-
-/**
- * Like `chunk`, but the function is applied to a looped subcycle of the source pattern.
- */
+/** Like [chunkInto] applied to a mini-notation string. */
 @StrudelDsl
 fun String.chunkInto(
     n: Int,
     transform: PatternMapper,
-): StrudelPattern {
-    return this.chunkInto(listOf(n, transform).asStrudelDslArgs())
-}
+): StrudelPattern = this._chunkInto(listOf(n, transform).asStrudelDslArgs())
 
-/** Alias for [chunkInto] */
-@StrudelDsl
-val StrudelPattern.chunkinto by dslPatternExtension { p, args, callInfo -> p.chunkInto(args, callInfo) }
-
-/** Alias for [chunkInto] */
+/**
+ * Alias for [chunkInto] — applies [transform] to a fast-looped subcycle.
+ *
+ * @param n         Number of chunks to divide the pattern into.
+ * @param transform Function applied to the active chunk each cycle.
+ * @return A pattern at natural speed with the transform cycling through chunks.
+ * @sample s("bd sd ht lt").chunkinto(4, x => x.hurry(2))  // lowercase alias
+ * @sample note("c d e f").chunkinto(4, x => x.rev())      // reversed active chunk
+ * @alias chunkInto
+ * @category structural
+ * @tags chunkinto, chunkInto, chunk, cycle, transform, fast, slice
+ */
 @StrudelDsl
 fun StrudelPattern.chunkinto(
     n: Int,
     transform: PatternMapper,
-): StrudelPattern {
-    return chunkInto(n, transform)
-}
+): StrudelPattern = chunkInto(n, transform)
 
-@StrudelDsl
-val String.chunkinto by dslStringExtension { p, args, callInfo -> p.chunkInto(args, callInfo) }
-
-/** Alias for [chunkInto] */
+/** Alias for [chunkInto]. */
 @StrudelDsl
 fun String.chunkinto(
     n: Int,
     transform: PatternMapper,
-): StrudelPattern {
-    return this.chunkInto(n, transform)
-}
+): StrudelPattern = this.chunkInto(n, transform)
 
 // -- chunkBackInto() --------------------------------------------------------------------------------------------------
 

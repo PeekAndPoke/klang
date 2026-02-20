@@ -224,7 +224,7 @@ internal val String._when by dslStringExtension { p, args, callInfo -> p._when(a
  * @param transform The function to apply when [condition] is truthy.
  * @return A new pattern that conditionally applies [transform].
  * @sample note("c d e f").when(pure(1).struct("t ~ t ~"), x => x.add(12))
- * @sample s("bd sd").when(pure(1).slowcat(pure(0)), x => x.fast(2))
+ * @sample s("bd sd").when("<1 0>", x => x.fast(2))
  * @category conditional
  * @tags when, conditional, binary, gate, transform
  */
