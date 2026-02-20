@@ -23,12 +23,6 @@ import kotlin.reflect.KProperty
  */
 var strudelLangHelpersInit = false
 
-// --- Type Aliases ---
-
-typealias VoiceModifier = StrudelVoiceData.(Any?) -> StrudelVoiceData
-
-typealias VoiceMerger = (source: StrudelVoiceData, control: StrudelVoiceData) -> StrudelVoiceData
-
 // --- Source ID Generation ---
 
 private var sourceIdCounter = 0
@@ -51,12 +45,6 @@ internal fun generateSourceId(sourceLocation: SourceLocation? = null): String {
         "id_${++sourceIdCounter}"
     }
 }
-
-typealias StrudelPatternMapper = (source: StrudelPattern) -> StrudelPattern
-
-typealias StrudelDslFn = (args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
-
-typealias StrudelDslExtFn<R> = (recv: R, args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
 
 // --- Registry ---
 
@@ -158,13 +146,13 @@ internal fun Any.asLongOrNull(): Long? = when (this) {
 fun voiceModifier(modify: VoiceModifier): VoiceModifier = modify
 
 /** Creates a pattern mapper */
-fun patternMapper(mapper: Any?): StrudelPatternMapper? {
+fun patternMapper(mapper: Any?): PatternMapper? {
     return when (mapper) {
         is Function1<*, *> -> {
             { input ->
                 try {
                     @Suppress("UNCHECKED_CAST")
-                    (mapper as? StrudelPatternMapper)?.invoke(input) ?: input
+                    (mapper as? PatternMapper)?.invoke(input) ?: input
                 } catch (e: Exception) {
                     println("Error while invoking pattern mapper: $mapper: \n${e.stackTraceToString()}")
                     input
@@ -239,9 +227,9 @@ fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPatt
 }
 
 /**
- * Safely converts a single argument into a [StrudelPatternMapper].
+ * Safely converts a single argument into a [PatternMapper].
  */
-fun StrudelDslArg<Any?>?.toPatternMapper(): StrudelPatternMapper? = patternMapper(this?.value)
+fun StrudelDslArg<Any?>?.toPatternMapper(): PatternMapper? = patternMapper(this?.value)
 
 /**
  * Extracts choice arguments for choose* functions.
@@ -410,15 +398,15 @@ class DslPatternMethod(
     operator fun invoke() = invoke(args = emptyList())
 
     @JvmName("invokeBlock")
-    operator fun invoke(block: StrudelPatternMapper) =
+    operator fun invoke(block: PatternMapper) =
         invoke(args = listOf(block).asStrudelDslArgs())
 
     @JvmName("invokeBlock")
-    operator fun invoke(p1: Any, block: StrudelPatternMapper) =
+    operator fun invoke(p1: Any, block: PatternMapper) =
         invoke(args = listOf(p1, block).asStrudelDslArgs())
 
     @JvmName("invokeBlocksVararg")
-    operator fun invoke(vararg block: StrudelPatternMapper) =
+    operator fun invoke(vararg block: PatternMapper) =
         invoke(args = block.toList().asStrudelDslArgs())
 
     @JvmName("invokeVararg")

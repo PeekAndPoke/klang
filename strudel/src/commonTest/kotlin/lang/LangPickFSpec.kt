@@ -26,7 +26,7 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickF() with different indices - transpose" {
-        val functions = listOf<StrudelPatternMapper>(
+        val functions = listOf<PatternMapper>(
             { it }, // identity
             { it.transpose(2) }
         )
@@ -43,7 +43,7 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickF() with different indices" {
-        val functions = listOf<StrudelPatternMapper>(
+        val functions = listOf<PatternMapper>(
             { it }, // identity
             { it.add("1") }
         )

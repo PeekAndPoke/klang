@@ -120,7 +120,6 @@ private val noteMutation = voiceModifier { input ->
 
 fun applyNote(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return if (args.isEmpty()) {
-        // TODO: test this
         source.reinterpretVoice {
             it.resolveNote().copy(soundIndex = null, value = null)
         }

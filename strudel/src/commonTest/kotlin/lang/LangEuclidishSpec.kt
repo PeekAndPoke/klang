@@ -10,7 +10,7 @@ class LangEuclidishSpec : StringSpec({
     "euclidish(3, 8, 0) behaves like euclid(3, 8)" {
         // groove 0 -> standard euclidean
         // 3,8 -> 10010010 -> indices 0, 3, 6 -> times 0.0, 0.375, 0.75
-        val p = note("a").euclidish(3, 8, 0)
+        val p = note("a").euclidish(pulses = 3, steps = 8, groove = 0.0)
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
@@ -22,7 +22,7 @@ class LangEuclidishSpec : StringSpec({
     "euclidish(3, 8, 1) behaves like steady pulses" {
         // groove 1 -> evenly distributed pulses
         // 3 pulses -> 0, 1/3, 2/3
-        val p = note("a").euclidish(3, 8, 1)
+        val p = note("a").euclidish(pulses = 3, steps = 8, groove = 1.0)
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 3
@@ -33,7 +33,7 @@ class LangEuclidishSpec : StringSpec({
 
     "euclidish morphs positions with pattern groove" {
         // groove <0 1> -> first cycle euclidean, second cycle steady
-        val p = note("a").euclidish(3, 8, "<0 1>")
+        val p = note("a").euclidish(3, 8, groove = "<0 1>")
 
         // Cycle 1: Euclidean
         val events1 = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
@@ -47,17 +47,17 @@ class LangEuclidishSpec : StringSpec({
     }
 
     "euclidish works as top-level function" {
-        val p = euclidish(3, 8, 0, note("a"))
+        val p = euclidish(pulses = 3, steps = 8, groove = 0.0, pattern = note("a"))
         p.queryArc(0.0, 1.0).size shouldBe 3
     }
 
     "euclidish works as string extension" {
-        val p = "a".euclidish(3, 8, 0)
+        val p = "a".euclidish(pulses = 3, steps = 8, groove = 0.0)
         p.queryArc(0.0, 1.0).size shouldBe 3
     }
 
     "eish alias works" {
-        val p = "a".eish(3, 8, 0)
+        val p = "a".eish(pulses = 3, steps = 8, groove = 0.0)
         p.queryArc(0.0, 1.0).size shouldBe 3
     }
 })

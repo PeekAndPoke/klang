@@ -174,7 +174,7 @@ val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
 @StrudelDsl
 fun StrudelPattern.`when`(
     condition: StrudelPattern,
-    transform: StrudelPatternMapper,
+    transform: PatternMapper,
 ): StrudelPattern {
     return this.`when`(listOf(condition, transform).asStrudelDslArgs())
 }
@@ -186,7 +186,7 @@ val String.`when` by dslStringExtension { p, args, callInfo -> p.`when`(args, ca
 @StrudelDsl
 fun String.`when`(
     condition: StrudelPattern,
-    transform: StrudelPatternMapper,
+    transform: PatternMapper,
 ): StrudelPattern {
     return this.`when`(listOf(condition, transform).asStrudelDslArgs())
 }

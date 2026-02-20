@@ -118,9 +118,7 @@ fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return result
 }
 
-/** Speeds up all inner patterns by the given factor */
-@StrudelDsl
-val fast by dslFunction { args, /* callInfo */ _ ->
+internal val _fast by dslFunction { args, /* callInfo */ _ ->
     val factorArg: StrudelDslArg<Any?>
     val sourceParts: List<StrudelDslArg<Any?>>
 
@@ -136,12 +134,38 @@ val fast by dslFunction { args, /* callInfo */ _ ->
     applyFast(source, listOf(factorArg))
 }
 
-/** Speeds up all inner patterns by the given factor */
-@StrudelDsl
-val StrudelPattern.fast by dslPatternExtension { p, args, /* callInfo */ _ -> applyFast(p, args) }
+internal val StrudelPattern._fast by dslPatternExtension { p, args, /* callInfo */ _ -> applyFast(p, args) }
 
+internal val String._fast by dslStringExtension { p, args, callInfo -> p._fast(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Speeds up the pattern by the given factor.
+ *
+ * `fast(2)` plays the pattern twice per cycle. Accepts mini-notation strings and control patterns.
+ *
+ * @param factor Speed-up factor. Values > 1 play faster; values < 1 play slower.
+ * @param pattern The pattern to speed up (top-level call only).
+ * @return A pattern sped up by `factor`.
+ * @sample note("c d e f").fast(2)           // 8 events per cycle instead of 4
+ * @sample s("bd sd hh").fast("<1 2 4>")     // varying speed each cycle
+ * @category tempo
+ * @tags fast, speed, tempo, accelerate
+ */
 @StrudelDsl
-val String.fast by dslStringExtension { p, args, callInfo -> p.fast(args, callInfo) }
+fun fast(factor: PatternLike, pattern: PatternLike): StrudelPattern =
+    _fast(listOf(factor, pattern).asStrudelDslArgs())
+
+/** Speeds up the pattern by `factor`. */
+@StrudelDsl
+fun StrudelPattern.fast(factor: PatternLike): StrudelPattern =
+    this._fast(listOf(factor).asStrudelDslArgs())
+
+/** Speeds up the mini-notation string pattern by `factor`. */
+@StrudelDsl
+fun String.fast(factor: PatternLike): StrudelPattern =
+    this._fast(listOf(factor).asStrudelDslArgs())
 
 // -- rev() ------------------------------------------------------------------------------------------------------------
 
@@ -436,7 +460,7 @@ val String.ply by dslStringExtension { p, args, callInfo -> p.ply(args, callInfo
  * Helper function to apply a function n times to a value.
  * Equivalent to JS applyN(n, func, p).
  */
-fun applyFunctionNTimes(n: Int, func: StrudelPatternMapper, pattern: StrudelPattern): StrudelPattern {
+fun applyFunctionNTimes(n: Int, func: PatternMapper, pattern: StrudelPattern): StrudelPattern {
     var result = pattern
     repeat(n) {
         result = func(result)
@@ -503,7 +527,7 @@ val StrudelPattern.plyWith by dslPatternExtension { p, args, /* callInfo */ _ ->
 
 /** Convenience function that takes lambda directly */
 @StrudelDsl
-fun StrudelPattern.plyWith(factor: Int, transform: StrudelPatternMapper): StrudelPattern {
+fun StrudelPattern.plyWith(factor: Int, transform: PatternMapper): StrudelPattern {
     return this.plyWith(listOf(factor, transform).asStrudelDslArgs())
 }
 
@@ -513,7 +537,7 @@ val String.plyWith by dslStringExtension { p, args, callInfo -> p.plyWith(args, 
 
 /** Convenience function that takes lambda directly */
 @StrudelDsl
-fun String.plyWith(factor: Int, transform: StrudelPatternMapper): StrudelPattern {
+fun String.plyWith(factor: Int, transform: PatternMapper): StrudelPattern {
     return this.plyWith(listOf(factor, transform).asStrudelDslArgs())
 }
 
@@ -527,7 +551,7 @@ val StrudelPattern.plywith by dslPatternExtension { p, args, callInfo -> p.plyWi
 
 /** Alias for plyWith */
 @StrudelDsl
-fun StrudelPattern.plywith(factor: Int, transform: StrudelPatternMapper): StrudelPattern {
+fun StrudelPattern.plywith(factor: Int, transform: PatternMapper): StrudelPattern {
     return this.plyWith(factor, transform)
 }
 
@@ -537,7 +561,7 @@ val String.plywith by dslStringExtension { p, args, callInfo -> p.plyWith(args, 
 
 /** Alias for plyWith */
 @StrudelDsl
-fun String.plywith(factor: Int, transform: StrudelPatternMapper): StrudelPattern {
+fun String.plywith(factor: Int, transform: PatternMapper): StrudelPattern {
     return this.plyWith(factor, transform)
 }
 
@@ -796,7 +820,7 @@ fun applySwingBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
         val timing = seq(Rational.ZERO, swingValue / 2)
         val stretch = seq(Rational.ONE + swingValue, Rational.ONE - swingValue)
 
-        val transform: StrudelPatternMapper = { innerPat ->
+        val transform: PatternMapper = { innerPat ->
             if (swingValue >= Rational.ZERO) {
                 innerPat.lateInCycle(timing).stretchBy(stretch)
             } else {

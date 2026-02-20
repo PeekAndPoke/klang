@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang.docs
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldHaveAtLeastSize
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -52,7 +53,7 @@ class StrudelDocsSpec : StringSpec({
     "DslDocsRegistry.search should find seq by name" {
         val results = DslDocsRegistry.global.search("seq")
 
-        results shouldHaveSize 1
+        results shouldHaveAtLeastSize 10
         results[0].name shouldBe "seq"
     }
 

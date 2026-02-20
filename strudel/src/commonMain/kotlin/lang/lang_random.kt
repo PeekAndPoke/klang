@@ -655,7 +655,7 @@ val String.shuffle by dslStringExtension { p, args, /* callInfo */ _ -> p.shuffl
 @StrudelDsl
 val StrudelPattern.scramble by dslPatternExtension { p, args, /* callInfo */ _ ->
     val nArg: StrudelDslArg<Any?> = args.getOrNull(0) ?: StrudelDslArg.of(4)
-    val indices = irand(listOf(nArg)).segment(nArg)
+    val indices = irand(listOf(nArg))._segment(nArg)
 
     p.bite(nArg, indices)
 }
@@ -663,7 +663,7 @@ val StrudelPattern.scramble by dslPatternExtension { p, args, /* callInfo */ _ -
 @StrudelDsl
 val String.scramble by dslStringExtension { p, args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0) ?: 4
-    val indices = irand(listOf(nArg)).segment(nArg)
+    val indices = irand(listOf(nArg))._segment(nArg)
     p.bite(nArg, indices)
 }
 
