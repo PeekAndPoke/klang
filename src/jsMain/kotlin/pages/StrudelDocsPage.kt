@@ -141,43 +141,45 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun DIV.renderFunctionDoc(func: FunctionDoc) {
-        ui.segment {
+        ui.segments {
             key = func.name
             css {
                 marginBottom = 2.rem
             }
 
             // Function name and category
-            ui.header H2 {
-                +func.name
+            ui.segment {
+                ui.header H2 {
+                    +func.name
 
-                // Aliases
-                if (func.aliases.isNotEmpty()) {
+                    // Aliases
+                    if (func.aliases.isNotEmpty()) {
+                        noui.sub.header {
+                            css {
+                                display = Display.inlineBlock
+                                marginLeft = 1.rem
+                                color = Color("#666")
+                            }
+                            +"(aliases: ${func.aliases.joinToString(", ")})"
+                        }
+                    }
+
                     noui.sub.header {
                         css {
                             display = Display.inlineBlock
                             marginLeft = 1.rem
-                            color = Color("#666")
                         }
-                        +"(aliases: ${func.aliases.joinToString(", ")})"
-                    }
-                }
-
-                noui.sub.header {
-                    css {
-                        display = Display.inlineBlock
-                        marginLeft = 1.rem
-                    }
-                    ui.label {
-                        icon.tag()
-                        +func.category
-                    }
-                    // Tags
-                    func.tags.forEach { tag ->
                         ui.label {
-                            key = tag
-                            icon.hashtag()
-                            +tag
+                            icon.tag()
+                            +func.category
+                        }
+                        // Tags
+                        func.tags.forEach { tag ->
+                            ui.label {
+                                key = tag
+                                icon.hashtag()
+                                +tag
+                            }
                         }
                     }
                 }
@@ -185,7 +187,9 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
             // Variants
             func.variants.forEach { variant ->
-                renderVariant(variant)
+                ui.attached.segment {
+                    renderVariant(variant)
+                }
             }
         }
     }
@@ -198,10 +202,10 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             // Variant type badge
-            ui.mini.label {
+            ui.label {
                 +when (variant.type) {
-                    DslType.TOP_LEVEL -> "Function"
-                    DslType.EXTENSION_METHOD -> "Extension"
+                    DslType.TOP_LEVEL -> "Top Level Function"
+                    DslType.EXTENSION_METHOD -> "Extension Function"
                     DslType.PROPERTY -> "Property"
                 }
             }

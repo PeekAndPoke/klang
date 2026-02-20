@@ -43,7 +43,7 @@ class StrudelDocsSpec : StringSpec({
         val topLevel = seqDoc.variants.first { it.type == DslType.TOP_LEVEL }
 
         topLevel.signature shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
-        topLevel.description.stringShouldContain("sequence pattern")
+        topLevel.description.stringShouldContain("one cycle")
         topLevel.params shouldHaveSize 1
         topLevel.params[0].name shouldBe "patterns"
         topLevel.samples.size shouldBe 3
