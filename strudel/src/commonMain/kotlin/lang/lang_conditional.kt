@@ -58,7 +58,7 @@ internal val String._firstOf by dslStringExtension { source, args, callInfo -> s
  * @return A new pattern that applies [transform] periodically.
  *
  * ```KlangScript
- * note("c3 d3 e3 g3").firstOf(4, x => x.rev())          // reverse every 4th cycle
+ * note("c3 d3 e3 g3").firstOf(4, x => x.rev())  // reverse every 4th cycle
  * ```
  *
  * ```KlangScript
@@ -105,11 +105,11 @@ internal val String._every by dslStringExtension { source, args, callInfo -> sou
  * @return A new pattern that applies [transform] periodically.
  *
  * ```KlangScript
- * note("c3 d3 e3 g3").every(4, x => x.rev())             // reverse every 4th cycle
+ * note("c3 d3 e3 g3").every(4, x => x.rev())  // reverse every 4th cycle
  * ```
  *
  * ```KlangScript
- * note("c3 d3 e3 g3").every("<2 4>", x => x.fast(2))     // alternating period
+ * note("c3 d3 e3 g3").every("<2 4>", x => x.fast(2))  // alternating period
  * ```
  * @alias firstOf
  * @category conditional
@@ -181,11 +181,11 @@ internal val String._lastOf by dslStringExtension { source, args, callInfo -> so
  * @return A new pattern that applies [transform] at the end of each period.
  *
  * ```KlangScript
- * note("c3 d3 e3 g3").lastOf(4, x => x.rev())           // reverse on 4th of every 4
+ * note("c3 d3 e3 g3").lastOf(4, x => x.rev())  // reverse on 4th of every 4
  * ```
  *
  * ```KlangScript
- * note("c3 d3 e3 g3").lastOf("<2 4>", x => x.fast(2))   // alternating period
+ * note("c3 d3 e3 g3").lastOf("<2 4>", x => x.fast(2))  // alternating period
  * ```
  * @category conditional
  * @tags lastOf, conditional, cycle, periodic, transform

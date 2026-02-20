@@ -66,11 +66,11 @@ internal val String._hush by dslStringExtension { p, args, callInfo -> p._hush(a
  * @return Silence, or the original pattern gated by the condition
  *
  * ```KlangScript
- * s("bd sd").hush()          // Unconditional silence
+ * s("bd sd").hush()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * s("bd sd").hush("<1 0>")   // Silence on odd cycles, play on even
+ * s("bd sd").hush("<1 0>")  // Silence on odd cycles, play on even
  * ```
  * @alias bypass, mute
  * @category structural
@@ -84,11 +84,11 @@ fun hush(vararg args: PatternLike): StrudelPattern = _hush(args.toList())
  * With a condition, silences when truthy.
  *
  * ```KlangScript
- * s("bd sd").hush()            // Unconditional silence
+ * s("bd sd").hush()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * s("bd sd").hush("<1 0>")     // Silent on odd cycles, audible on even
+ * s("bd sd").hush("<1 0>")  // Silent on odd cycles, audible on even
  * ```
  */
 @StrudelDsl
@@ -98,11 +98,11 @@ fun StrudelPattern.hush(vararg args: PatternLike): StrudelPattern = this._hush(a
  * Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence.
  *
  * ```KlangScript
- * "bd sd".hush()              // Unconditional silence
+ * "bd sd".hush()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * "bd sd".hush("<1 0>")       // Silent on odd cycles, audible on even
+ * "bd sd".hush("<1 0>")  // Silent on odd cycles, audible on even
  * ```
  */
 @StrudelDsl
@@ -123,11 +123,11 @@ internal val String._bypass by dslStringExtension { p, args, callInfo -> p._bypa
  * @return Silence, or the original pattern gated by the condition
  *
  * ```KlangScript
- * s("bd sd").bypass()          // Unconditional silence
+ * s("bd sd").bypass()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * s("bd sd").bypass("<1 0>")   // Silence on odd cycles, play on even
+ * s("bd sd").bypass("<1 0>")  // Silence on odd cycles, play on even
  * ```
  * @alias hush, mute
  * @category structural
@@ -141,11 +141,11 @@ fun bypass(vararg args: PatternLike): StrudelPattern = _bypass(args.toList())
  * With a condition, silences when truthy.
  *
  * ```KlangScript
- * s("bd sd").bypass()          // Unconditional silence
+ * s("bd sd").bypass()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * s("bd sd").bypass("<1 0>")   // Silent on odd cycles, audible on even
+ * s("bd sd").bypass("<1 0>")  // Silent on odd cycles, audible on even
  * ```
  */
 @StrudelDsl
@@ -155,11 +155,11 @@ fun StrudelPattern.bypass(vararg args: PatternLike): StrudelPattern = this._bypa
  * Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence.
  *
  * ```KlangScript
- * "bd sd".bypass()             // Unconditional silence
+ * "bd sd".bypass()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * "bd sd".bypass("<1 0>")      // Silent on odd cycles, audible on even
+ * "bd sd".bypass("<1 0>")  // Silent on odd cycles, audible on even
  * ```
  */
 @StrudelDsl
@@ -180,11 +180,11 @@ internal val String._mute by dslStringExtension { p, args, callInfo -> p._mute(a
  * @return Silence, or the original pattern gated by the condition
  *
  * ```KlangScript
- * s("bd sd").mute()          // Unconditional silence
+ * s("bd sd").mute()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * s("bd sd").mute("<1 0>")   // Silence on odd cycles, play on even
+ * s("bd sd").mute("<1 0>")  // Silence on odd cycles, play on even
  * ```
  * @alias hush, bypass
  * @category structural
@@ -198,11 +198,11 @@ fun mute(vararg args: PatternLike): StrudelPattern = _mute(args.toList())
  * With a condition, silences when truthy.
  *
  * ```KlangScript
- * s("bd sd").mute()            // Unconditional silence
+ * s("bd sd").mute()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * s("bd sd").mute("<1 0>")     // Silent on odd cycles, audible on even
+ * s("bd sd").mute("<1 0>")  // Silent on odd cycles, audible on even
  * ```
  */
 @StrudelDsl
@@ -212,11 +212,11 @@ fun StrudelPattern.mute(vararg args: PatternLike): StrudelPattern = this._mute(a
  * Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence.
  *
  * ```KlangScript
- * "bd sd".mute()               // Unconditional silence
+ * "bd sd".mute()  // Unconditional silence
  * ```
  *
  * ```KlangScript
- * "bd sd".mute("<1 0>")        // Silent on odd cycles, audible on even
+ * "bd sd".mute("<1 0>")  // Silent on odd cycles, audible on even
  * ```
  */
 @StrudelDsl
@@ -265,11 +265,11 @@ internal val String._gap by dslStringExtension { p, args, callInfo -> p._gap(arg
  * @return A silent pattern with the given step weight
  *
  * ```KlangScript
- * seq("bd", gap(), "hh").s()       // bd, 1-step rest, hh — each gets 1/3 of the cycle
+ * seq("bd", gap(), "hh").s()  // bd, 1-step rest, hh — each gets 1/3 of the cycle
  * ```
  *
  * ```KlangScript
- * seq("bd", gap(2), "hh").s()      // bd=1/4, rest=2/4, hh=1/4
+ * seq("bd", gap(2), "hh").s()  // bd=1/4, rest=2/4, hh=1/4
  * ```
  * @category structural
  * @tags silence, rest, gap, rhythm
@@ -281,11 +281,11 @@ fun gap(vararg steps: PatternLike): StrudelPattern = _gap(steps.toList())
  * Replaces this pattern with a silent slot occupying the given number of steps.
  *
  * ```KlangScript
- * note("c").gap()              // Replaces with 1-step silence
+ * note("c").gap()  // Replaces with 1-step silence
  * ```
  *
  * ```KlangScript
- * note("c").gap(2)             // Replaces with 2-step silence
+ * note("c").gap(2)  // Replaces with 2-step silence
  * ```
  */
 @StrudelDsl
@@ -295,7 +295,7 @@ fun StrudelPattern.gap(vararg steps: PatternLike): StrudelPattern = this._gap(st
  * Replaces this string pattern with a silent slot occupying the given number of steps.
  *
  * ```KlangScript
- * seq("bd", "hh".gap(), "sd").s()   // Middle step replaced by silence
+ * seq("bd", "hh".gap(), "sd").s()  // Middle step replaced by silence
  * ```
  */
 @StrudelDsl
@@ -336,15 +336,15 @@ internal val String._seq by dslStringExtension { p, args, callInfo -> p._seq(arg
  * @return A pattern with all inputs squeezed into one cycle
  *
  * ```KlangScript
- * seq("c d e", "f g a").note()            // Two patterns squeezed into one cycle
+ * seq("c d e", "f g a").note()  // Two patterns squeezed into one cycle
  * ```
  *
  * ```KlangScript
- * seq(note("c"), note("e"), note("g"))    // Three notes, each gets 1/3 of the cycle
+ * seq(note("c"), note("e"), note("g"))  // Three notes, each gets 1/3 of the cycle
  * ```
  *
  * ```KlangScript
- * seq("bd", ["sd", "oh"], "hh").s()       // Nested list as sub-sequence within its slot
+ * seq("bd", ["sd", "oh"], "hh").s()  // Nested list as sub-sequence within its slot
  * ```
  * @category structural
  * @tags sequence, timing, control, order
@@ -408,11 +408,11 @@ internal val String._mini by dslStringExtension { p, /* args */ _, /* callInfo *
  * @return A pattern built from the mini-notation input
  *
  * ```KlangScript
- * mini("c d e f").note()       // Four notes, one per quarter cycle
+ * mini("c d e f").note()  // Four notes, one per quarter cycle
  * ```
  *
  * ```KlangScript
- * mini("bd [sd cp] hh").s()    // Nested sub-sequence in square brackets
+ * mini("bd [sd cp] hh").s()  // Nested sub-sequence in square brackets
  * ```
  * @category structural
  * @tags mini, notation, parse, sequence
@@ -424,7 +424,7 @@ fun mini(vararg patterns: PatternLike): StrudelPattern = _mini(patterns.toList()
  * Parses this string as mini-notation and returns the resulting pattern.
  *
  * ```KlangScript
- * "c d e f".mini().note()      // Four notes from mini-notation string
+ * "c d e f".mini().note()  // Four notes from mini-notation string
  * ```
  */
 @StrudelDsl
@@ -464,11 +464,11 @@ internal val String._stack by dslStringExtension { p, args, callInfo -> p._stack
  * @return A pattern that plays all inputs simultaneously
  *
  * ```KlangScript
- * stack(note("c e g"), s("bd sd"))   // Chord with beat underneath
+ * stack(note("c e g"), s("bd sd"))  // Chord with beat underneath
  * ```
  *
  * ```KlangScript
- * stack("c e", "g b").note()         // Two melodic lines at the same time
+ * stack("c e", "g b").note()  // Two melodic lines at the same time
  * ```
  * @category structural
  * @tags stack, layer, chord, polyrhythm, simultaneous
@@ -480,11 +480,11 @@ fun stack(vararg patterns: PatternLike): StrudelPattern = _stack(patterns.toList
  * Layers this pattern together with additional patterns so they all play simultaneously.
  *
  * ```KlangScript
- * note("c e g").stack(s("bd sd"))   // Melody on top of a beat
+ * note("c e g").stack(s("bd sd"))  // Melody on top of a beat
  * ```
  *
  * ```KlangScript
- * note("c e").stack("g b".note())   // Two melodic lines layered
+ * note("c e").stack("g b".note())  // Two melodic lines layered
  * ```
  */
 @StrudelDsl
@@ -494,7 +494,7 @@ fun StrudelPattern.stack(vararg patterns: PatternLike): StrudelPattern = this._s
  * Parses this string as a pattern and layers it together with additional patterns.
  *
  * ```KlangScript
- * "c e g".stack("g b d").note()     // Two chord voicings layered
+ * "c e g".stack("g b d").note()  // Two chord voicings layered
  * ```
  */
 @StrudelDsl
@@ -545,7 +545,7 @@ internal val String._arrange by dslStringExtension { p, args, callInfo -> p._arr
  * @return A pattern that plays each segment for its specified number of cycles, then repeats
  *
  * ```KlangScript
- * arrange([2, "a b"], [1, "c"]).note()                        // "a b" for 2 cycles, "c" for 1
+ * arrange([2, "a b"], [1, "c"]).note()  // "a b" for 2 cycles, "c" for 1
  * ```
  *
  * ```KlangScript
@@ -553,7 +553,7 @@ internal val String._arrange by dslStringExtension { p, args, callInfo -> p._arr
  * ```
  *
  * ```KlangScript
- * arrange(note("c e g"), [2, note("f a c")]).s("piano")       // Pattern without weight
+ * arrange(note("c e g"), [2, note("f a c")]).s("piano")  // Pattern without weight
  * ```
  * @category structural
  * @tags arrange, sequence, timing, duration, loop
@@ -643,11 +643,11 @@ internal val String._s_cat by dslStringExtension { p, args, callInfo -> p._s_cat
  * @return A pattern with all segments proportionally distributed within one cycle
  *
  * ```KlangScript
- * stepcat([1, "a"], [3, "b"]).note()        // "a" takes 1/4, "b" takes 3/4 of the cycle
+ * stepcat([1, "a"], [3, "b"]).note()  // "a" takes 1/4, "b" takes 3/4 of the cycle
  * ```
  *
  * ```KlangScript
- * stepcat([2, note("c")], [1, note("e g")]) // "c" takes 2/3, "e g" takes 1/3
+ * stepcat([2, note("c")], [1, note("e g")])  // "c" takes 2/3, "e g" takes 1/3
  * ```
  * @alias timeCat, timecat, s_cat
  * @category structural
@@ -1100,7 +1100,7 @@ internal val String._slowcat by dslStringExtension { p, args, callInfo -> p._slo
  * ```
  *
  * ```KlangScript
- * cat(s("bd sd"), s("hh hh hh hh"))           // alternates between patterns each cycle
+ * cat(s("bd sd"), s("hh hh hh hh"))  // alternates between patterns each cycle
  * ```
  * @alias slowcat
  * @category structural
@@ -1136,7 +1136,7 @@ fun String.cat(vararg patterns: PatternLike): StrudelPattern = this._cat(pattern
  * @return A pattern with all inputs squeezed into one cycle
  *
  * ```KlangScript
- * fastcat("bd", "sd").s()       // same as seq("bd", "sd") or "bd sd"
+ * fastcat("bd", "sd").s()  // same as seq("bd", "sd") or "bd sd"
  * ```
  * @alias seq
  * @category structural
@@ -1368,7 +1368,7 @@ internal val _pure by dslFunction { args, /* callInfo */ _ ->
  * ```
  *
  * ```KlangScript
- * polymeter(s("bd sd"), s("hh hh hh"))              // 2-beat and 3-beat polyrhythm
+ * polymeter(s("bd sd"), s("hh hh hh"))  // 2-beat and 3-beat polyrhythm
  * ```
  * @category structural
  * @tags polymeter, rhythm, timing, alignment
@@ -1424,11 +1424,11 @@ fun polymeterSteps(vararg args: PatternLike): StrudelPattern = _polymeterSteps(a
  * @return A pattern that emits `value` once per cycle
  *
  * ```KlangScript
- * pure("c").note()   // repeats note "c" every cycle
+ * pure("c").note()  // repeats note "c" every cycle
  * ```
  *
  * ```KlangScript
- * pure(1)            // repeats the number 1 every cycle
+ * pure(1)  // repeats the number 1 every cycle
  * ```
  * @category structural
  * @tags pure, value, atomic, repeat
@@ -1474,11 +1474,11 @@ internal val String._struct by dslStringExtension { p, args, callInfo -> p._stru
  * @return The source pattern reshaped to the mask's rhythm
  *
  * ```KlangScript
- * s("hh").struct("x ~ x x ~ x x ~")   // hats shaped by a boolean rhythm pattern
+ * s("hh").struct("x ~ x x ~ x x ~")  // hats shaped by a boolean rhythm pattern
  * ```
  *
  * ```KlangScript
- * note("c e g").struct("x*4")           // chord hits restructured to 4 equal beats
+ * note("c e g").struct("x*4")  // chord hits restructured to 4 equal beats
  * ```
  * @category structural
  * @tags struct, mask, rhythm, structure, timing
@@ -1611,11 +1611,11 @@ internal val String._mask by dslStringExtension { p, args, callInfo -> p._mask(a
  * @return The source pattern gated by the mask
  *
  * ```KlangScript
- * s("bd sd hh cp").mask("1 0 1 1")   // second beat silenced by the mask
+ * s("bd sd hh cp").mask("1 0 1 1")  // second beat silenced by the mask
  * ```
  *
  * ```KlangScript
- * note("c d e f").mask("<1 0>")       // entire pattern alternates on/off each cycle
+ * note("c d e f").mask("<1 0>")  // entire pattern alternates on/off each cycle
  * ```
  * @category structural
  * @tags mask, gate, filter, rhythm, boolean
@@ -1738,11 +1738,11 @@ internal val String._jux by dslStringExtension { p, args, callInfo -> p._jux(arg
  * @return A stereo pattern with the original on the left and the transformed copy on the right.
  *
  * ```KlangScript
- * s("bd sd").jux(x => x.rev())          // reversed pattern panned right
+ * s("bd sd").jux(x => x.rev())  // reversed pattern panned right
  * ```
  *
  * ```KlangScript
- * note("c e g").jux(x => x.fast(2))    // double-speed version panned right
+ * note("c e g").jux(x => x.fast(2))  // double-speed version panned right
  * ```
  * @category structural
  * @tags jux, pan, stereo, spatial, transform
@@ -1801,11 +1801,11 @@ internal val String._juxBy by dslStringExtension { p, args, callInfo -> p._juxBy
  * @return A stereo pattern with width controlled by `amount`.
  *
  * ```KlangScript
- * s("bd sd").juxBy(0.5, x => x.rev())        // half stereo width, reversed on right
+ * s("bd sd").juxBy(0.5, x => x.rev())  // half stereo width, reversed on right
  * ```
  *
  * ```KlangScript
- * note("c e g").juxBy(0.75, x => x.fast(2)) // 75% stereo, faster on right
+ * note("c e g").juxBy(0.75, x => x.fast(2))  // 75% stereo, faster on right
  * ```
  * @category structural
  * @tags jux, pan, stereo, spatial, width
@@ -1853,11 +1853,11 @@ internal val String._off by dslStringExtension { p, args, callInfo -> p._off(arg
  * @return The original pattern stacked with a time-shifted, transformed copy.
  *
  * ```KlangScript
- * s("bd sd").off(0.125, x => x.gain(0.2))    // quiet echo 1/8 cycle behind
+ * s("bd sd").off(0.125, x => x.gain(0.2))  // quiet echo 1/8 cycle behind
  * ```
  *
  * ```KlangScript
- * note("c e g").off(0.25, x => x.transpose(12))   // octave-up copy a quarter cycle behind
+ * note("c e g").off(0.25, x => x.transpose(12))  // octave-up copy a quarter cycle behind
  * ```
  * @category structural
  * @tags off, delay, echo, layer, stack, time
@@ -1919,7 +1919,7 @@ internal val String._filter by dslStringExtension { p, args, callInfo -> p._filt
  * ```
  *
  * ```KlangScript
- * note("c d e f").filter(x => x.isOnset)           // keep only onset events
+ * note("c d e f").filter(x => x.isOnset)  // keep only onset events
  * ```
  * @category structural
  * @tags filter, gate, conditional, predicate
@@ -1976,11 +1976,11 @@ internal val String._filterWhen by dslStringExtension { source, args, callInfo -
  * @return A new pattern with only the events whose begin time satisfies the predicate.
  *
  * ```KlangScript
- * note("c d e f").filterWhen(t => t < 0.5)          // keep only first-half events
+ * note("c d e f").filterWhen(t => t < 0.5)  // keep only first-half events
  * ```
  *
  * ```KlangScript
- * s("bd sd hh cp").filterWhen(t => t % 0.25 == 0)   // keep only events on beat boundaries
+ * s("bd sd hh cp").filterWhen(t => t % 0.25 == 0)  // keep only events on beat boundaries
  * ```
  * @category structural
  * @tags filter, time, conditional, predicate
@@ -2028,11 +2028,11 @@ internal val String._superimpose by dslStringExtension { p, args, callInfo -> p.
  * @return The original pattern stacked with its transformed copy.
  *
  * ```KlangScript
- * s("bd sd").superimpose(x => x.fast(2))            // double-speed layer on top of original
+ * s("bd sd").superimpose(x => x.fast(2))  // double-speed layer on top of original
  * ```
  *
  * ```KlangScript
- * note("c e g").superimpose(x => x.transpose(7), x => x.transpose(12)) // fifth and octave stacked on original
+ * note("c e g").superimpose(x => x.transpose(7), x => x.transpose(12))  // fifth and octave stacked on original
  * ```
  * @category structural
  * @tags superimpose, layer, stack, transform
@@ -2096,11 +2096,11 @@ internal val String._apply by dslStringExtension { p, args, callInfo -> p._apply
  * @return All transformed copies stacked as a single pattern.
  *
  * ```KlangScript
- * s("bd hh sd oh").layer(x => x.fast(2), x => x.rev())        // two transformed layers stacked
+ * s("bd hh sd oh").layer(x => x.fast(2), x => x.rev())  // two transformed layers stacked
  * ```
  *
  * ```KlangScript
- * note("c e g").layer(x => x.transpose(7), x => x.transpose(12)) // fifth and octave layers stacked
+ * note("c e g").layer(x => x.transpose(7), x => x.transpose(12))  // fifth and octave layers stacked
  * ```
  * @alias apply
  * @category structural
@@ -2133,7 +2133,7 @@ fun String.layer(vararg transforms: PatternMapper): StrudelPattern =
  * ```
  *
  * ```KlangScript
- * note("c e").apply(x => x.transpose(7))             // fifth layer stacked
+ * note("c e").apply(x => x.transpose(7))  // fifth layer stacked
  * ```
  * @alias layer
  * @category structural
@@ -2212,11 +2212,11 @@ internal val String._zoom by dslStringExtension { p, args, callInfo -> p._zoom(a
  * @return The zoomed portion of the pattern stretched to one full cycle.
  *
  * ```KlangScript
- * s("bd hh sd hh").zoom(0.0, 0.5)       // plays only first half, stretched to full cycle
+ * s("bd hh sd hh").zoom(0.0, 0.5)  // plays only first half, stretched to full cycle
  * ```
  *
  * ```KlangScript
- * note("c d e f").zoom(0.25, 0.75)       // plays middle two notes, stretched to full cycle
+ * note("c d e f").zoom(0.25, 0.75)  // plays middle two notes, stretched to full cycle
  * ```
  * @category structural
  * @tags zoom, window, time, stretch, slice
@@ -2290,7 +2290,7 @@ internal val String._within by dslStringExtension { p, args, callInfo -> p._with
  * ```
  *
  * ```KlangScript
- * note("c d e f").within(0.25, 0.75, x => x.transpose(12)) // octave up in the middle
+ * note("c d e f").within(0.25, 0.75, x => x.transpose(12))  // octave up in the middle
  * ```
  * @category structural
  * @tags within, window, time, conditional, transform
@@ -2385,7 +2385,7 @@ internal val String._slowChunk by dslStringExtension { p, args, /* callInfo */ _
  * ```
  *
  * ```KlangScript
- * s("bd sd ht lt").chunk(4) { it.gain(1.5) }                   // one hit louder, cycling forward
+ * s("bd sd ht lt").chunk(4) { it.gain(1.5) }  // one hit louder, cycling forward
  * ```
  * @alias slowchunk, slowChunk
  * @category structural
@@ -2512,7 +2512,7 @@ internal val String._chunkback by dslStringExtension { p, args, callInfo -> p._c
  * @return Pattern cycling backward through transformed chunks.
  *
  * ```KlangScript
- * seq("0 1 2 3").chunkBack(4, x => x.add(7)).scale("c:minor").n() // backward: 0, 3, 2, 1
+ * seq("0 1 2 3").chunkBack(4, x => x.add(7)).scale("c:minor").n()  // backward: 0, 3, 2, 1
  * ```
  *
  * ```KlangScript
@@ -2546,7 +2546,7 @@ fun String.chunkBack(n: Int, transform: PatternMapper): StrudelPattern =
  * @return Pattern cycling backward through transformed chunks.
  *
  * ```KlangScript
- * seq("0 1 2 3").chunkback(4, x => x.add(7))       // backward: 0, 3, 2, 1
+ * seq("0 1 2 3").chunkback(4, x => x.add(7))  // backward: 0, 3, 2, 1
  * ```
  *
  * ```KlangScript
@@ -2602,7 +2602,7 @@ internal val String._fastchunk by dslStringExtension { p, args, callInfo -> p._f
  * @return Pattern at natural speed with chunks cycling through the transformation.
  *
  * ```KlangScript
- * seq("0 1 2 3").fastChunk(4, x => x.add(10)).scale("c:minor").n() // no repeat: chunks at normal speed
+ * seq("0 1 2 3").fastChunk(4, x => x.add(10)).scale("c:minor").n()  // no repeat: chunks at normal speed
  * ```
  *
  * ```KlangScript
@@ -2636,7 +2636,7 @@ fun String.fastChunk(n: Int, transform: PatternMapper): StrudelPattern =
  * @return Pattern at natural speed with chunks cycling through the transformation.
  *
  * ```KlangScript
- * seq("0 1 2 3").fastchunk(4, x => x.add(10)).scale("c:minor").n() // no repeat: chunks at normal speed
+ * seq("0 1 2 3").fastchunk(4, x => x.add(10)).scale("c:minor").n()  // no repeat: chunks at normal speed
  * ```
  *
  * ```KlangScript
@@ -2688,7 +2688,7 @@ internal val String._chunkinto by dslStringExtension { p, args, callInfo -> p._c
  * @return A pattern at natural speed with the transform cycling through chunks.
  *
  * ```KlangScript
- * s("bd sd ht lt").chunkInto(4, x => x.hurry(2))         // transform cycles, no repeat
+ * s("bd sd ht lt").chunkInto(4, x => x.hurry(2))  // transform cycles, no repeat
  * ```
  *
  * ```KlangScript
@@ -2723,7 +2723,7 @@ fun String.chunkInto(
  * ```
  *
  * ```KlangScript
- * note("c d e f").chunkinto(4, x => x.rev())      // reversed active chunk
+ * note("c d e f").chunkinto(4, x => x.rev())  // reversed active chunk
  * ```
  * @alias chunkInto
  * @category structural
@@ -2776,11 +2776,11 @@ internal val String._chunkbackinto by dslStringExtension { p, args, callInfo ->
  * @return A new pattern with the transform cycling backwards through chunks.
  *
  * ```KlangScript
- * s("bd sd ht lt").chunkBackInto(4, x => x.hurry(2))   // transform cycles backward
+ * s("bd sd ht lt").chunkBackInto(4, x => x.hurry(2))  // transform cycles backward
  * ```
  *
  * ```KlangScript
- * note("c d e f g h").chunkBackInto(3, x => x.transpose(7)) // 3 chunks, reversed order
+ * note("c d e f g h").chunkBackInto(3, x => x.transpose(7))  // 3 chunks, reversed order
  * ```
  * @alias chunkbackinto
  * @category structural
@@ -2803,11 +2803,11 @@ fun String.chunkBackInto(n: Int, transform: PatternMapper): StrudelPattern =
  * @return A new pattern with the transform cycling backwards through chunks.
  *
  * ```KlangScript
- * s("bd sd ht lt").chunkbackinto(4, x => x.hurry(2))   // backwards chunk transform
+ * s("bd sd ht lt").chunkbackinto(4, x => x.hurry(2))  // backwards chunk transform
  * ```
  *
  * ```KlangScript
- * note("c d e f").chunkbackinto(4, x => x.rev())       // reversed active chunk
+ * note("c d e f").chunkbackinto(4, x => x.rev())  // reversed active chunk
  * ```
  * @alias chunkBackInto
  * @category structural
@@ -2864,7 +2864,7 @@ internal val String._linger by dslStringExtension { p, args, callInfo -> p._ling
  * @return A pattern of the selected fraction, looped to fill the cycle.
  *
  * ```KlangScript
- * s("bd sd ht lt").linger(0.5)                             // repeats "bd sd" throughout the cycle
+ * s("bd sd ht lt").linger(0.5)  // repeats "bd sd" throughout the cycle
  * ```
  *
  * ```KlangScript
@@ -2927,7 +2927,7 @@ internal val String._stut by dslStringExtension { p, args, callInfo -> p._echo(a
  * @return A stacked pattern of the original plus decayed, delayed echoes.
  *
  * ```KlangScript
- * s("bd sd").echo(3, 0.125, 0.7)    // original + 2 echoes, 0.125 cycles apart
+ * s("bd sd").echo(3, 0.125, 0.7)  // original + 2 echoes, 0.125 cycles apart
  * ```
  *
  * ```KlangScript
@@ -2955,11 +2955,11 @@ fun String.echo(times: Int, delay: Double, decay: Double): StrudelPattern =
  * @return A stacked pattern of the original plus decayed, delayed echoes.
  *
  * ```KlangScript
- * n("0").stut(4, 0.5, 0.5)          // 4 echoes, half-cycle spacing, halving gain
+ * n("0").stut(4, 0.5, 0.5)  // 4 echoes, half-cycle spacing, halving gain
  * ```
  *
  * ```KlangScript
- * s("hh").stut(3, 0.125, 0.8)       // hi-hat with 2 trailing echoes
+ * s("hh").stut(3, 0.125, 0.8)  // hi-hat with 2 trailing echoes
  * ```
  * @alias echo
  * @category structural
@@ -3031,7 +3031,7 @@ internal val String._echowith by dslStringExtension { p, args, callInfo -> p._ec
  * ```
  *
  * ```KlangScript
- * s("bd").echoWith(3, 0.25, x => x.fast(2)) // original + 2× and 4× faster copies
+ * s("bd").echoWith(3, 0.25, x => x.fast(2))  // original + 2× and 4× faster copies
  * ```
  * @alias stutWith, stutwith, echowith
  * @category structural
@@ -3059,7 +3059,7 @@ fun String.echoWith(times: Int, delay: Double, transform: PatternMapper): Strude
  * ```
  *
  * ```KlangScript
- * s("hh").stutWith(3, 0.25, x => x.gain(0.7)) // quieter copies
+ * s("hh").stutWith(3, 0.25, x => x.gain(0.7))  // quieter copies
  * ```
  * @alias echoWith, stutwith, echowith
  * @category structural
@@ -3087,7 +3087,7 @@ fun String.stutWith(times: Int, delay: Double, transform: PatternMapper): Strude
  * ```
  *
  * ```KlangScript
- * s("sd").stutwith(3, 0.25, x => x.speed(1.5)) // each copy 50% faster
+ * s("sd").stutwith(3, 0.25, x => x.speed(1.5))  // each copy 50% faster
  * ```
  * @alias echoWith, stutWith, echowith
  * @category structural
@@ -3115,7 +3115,7 @@ fun String.stutwith(times: Int, delay: Double, transform: PatternMapper): Strude
  * ```
  *
  * ```KlangScript
- * s("bd").echowith(3, 0.5, x => x.rev())    // each copy reversed
+ * s("bd").echowith(3, 0.5, x => x.rev())  // each copy reversed
  * ```
  * @alias echoWith, stutWith, stutwith
  * @category structural
@@ -3173,11 +3173,11 @@ internal val String._bite by dslStringExtension { p, args, callInfo -> p._bite(a
  * @return A new pattern built by playing slices in the order specified by `indices`.
  *
  * ```KlangScript
- * n("0 1 2 3").bite(4, "3 2 1 0").scale("c3:major")    // reverse the pattern
+ * n("0 1 2 3").bite(4, "3 2 1 0").scale("c3:major")  // reverse the pattern
  * ```
  *
  * ```KlangScript
- * n("0 1 2 3").bite(4, "0!2 1").scale("c3:major")      // play slice 0 twice then slice 1
+ * n("0 1 2 3").bite(4, "0!2 1").scale("c3:major")  // play slice 0 twice then slice 1
  * ```
  * @category structural
  * @tags bite, slice, rearrange, index, stutter
@@ -3238,11 +3238,11 @@ internal val String._seg by dslStringExtension { p, args, callInfo -> p._segment
  * @return A discrete pattern with `n` evenly-spaced samples per cycle.
  *
  * ```KlangScript
- * note(saw.range(40, 52).segment(24))    // smooth saw wave sampled at 24 steps
+ * note(saw.range(40, 52).segment(24))  // smooth saw wave sampled at 24 steps
  * ```
  *
  * ```KlangScript
- * note(sine.range(48, 60).segment(8))    // sine wave at 8 steps per cycle
+ * note(sine.range(48, 60).segment(8))  // sine wave at 8 steps per cycle
  * ```
  * @alias seg
  * @category structural
@@ -3262,11 +3262,11 @@ fun String.segment(n: PatternLike): StrudelPattern = this._segment(listOf(n).asS
  * @return A discrete pattern with `n` evenly-spaced samples per cycle.
  *
  * ```KlangScript
- * note(saw.range(40, 52).seg(24))    // smooth saw wave sampled at 24 steps
+ * note(saw.range(40, 52).seg(24))  // smooth saw wave sampled at 24 steps
  * ```
  *
  * ```KlangScript
- * note(sine.range(48, 60).seg(8))    // sine wave at 8 steps per cycle
+ * note(sine.range(48, 60).seg(8))  // sine wave at 8 steps per cycle
  * ```
  * @alias segment
  * @category structural
@@ -3342,11 +3342,11 @@ internal val String._euclid by dslStringExtension { p, args, callInfo -> p._eucl
  * @return A pattern with the Euclidean rhythm applied as structure.
  *
  * ```KlangScript
- * s("hh").euclid(3, 8)    // classic 3-over-8 Euclidean rhythm
+ * s("hh").euclid(3, 8)  // classic 3-over-8 Euclidean rhythm
  * ```
  *
  * ```KlangScript
- * s("bd").euclid(5, 16)   // 5 beats distributed across 16 steps
+ * s("bd").euclid(5, 16)  // 5 beats distributed across 16 steps
  * ```
  * @category structural
  * @tags euclid, rhythm, euclidean, structure, pattern
@@ -3432,11 +3432,11 @@ internal val String._euclidrot by dslStringExtension { p, args, callInfo -> p._e
  * @return A rotated Euclidean rhythm pattern.
  *
  * ```KlangScript
- * s("hh").euclidRot(3, 8, 2)    // 3-over-8 rhythm, shifted by 2 steps
+ * s("hh").euclidRot(3, 8, 2)  // 3-over-8 rhythm, shifted by 2 steps
  * ```
  *
  * ```KlangScript
- * s("bd").euclidRot(5, 16, 1)   // 5-over-16 shifted by 1 step
+ * s("bd").euclidRot(5, 16, 1)  // 5-over-16 shifted by 1 step
  * ```
  * @alias euclidrot
  * @category structural
@@ -3465,11 +3465,11 @@ fun String.euclidRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
  * @return A rotated Euclidean rhythm pattern.
  *
  * ```KlangScript
- * s("hh").euclidrot(3, 8, 2)    // lowercase alias
+ * s("hh").euclidrot(3, 8, 2)  // lowercase alias
  * ```
  *
  * ```KlangScript
- * s("sd").euclidrot(5, 16, 3)   // 5-over-16, rotated by 3
+ * s("sd").euclidrot(5, 16, 3)  // 5-over-16, rotated by 3
  * ```
  * @alias euclidRot
  * @category structural
@@ -3566,7 +3566,7 @@ internal val String._bjork by dslStringExtension { p, args, callInfo -> p._bjork
  * @return A pattern with the Euclidean rhythm applied.
  *
  * ```KlangScript
- * s("hh").bjork(3, 8, 0)   // equivalent to euclid(3, 8)
+ * s("hh").bjork(3, 8, 0)  // equivalent to euclid(3, 8)
  * ```
  *
  * ```KlangScript
@@ -3642,7 +3642,7 @@ internal val String._euclidLegato by dslStringExtension { p, args, callInfo -> p
  * @return A legato Euclidean rhythm pattern (no rests between onsets).
  *
  * ```KlangScript
- * s("hh").euclidLegato(3, 8)    // 3-over-8 legato (held notes)
+ * s("hh").euclidLegato(3, 8)  // 3-over-8 legato (held notes)
  * ```
  *
  * ```KlangScript
@@ -3738,7 +3738,7 @@ internal val String._euclidLegatoRot by dslStringExtension { p, args, callInfo -
  * @return A legato Euclidean rhythm with rotation applied.
  *
  * ```KlangScript
- * s("hh").euclidLegatoRot(3, 8, 2)    // legato 3-over-8, rotated by 2
+ * s("hh").euclidLegatoRot(3, 8, 2)  // legato 3-over-8, rotated by 2
  * ```
  *
  * ```KlangScript
@@ -3847,11 +3847,11 @@ internal val String._eish by dslStringExtension { p, args, callInfo -> p._euclid
  * @return A pattern with the morphed Euclidean rhythm applied as structure.
  *
  * ```KlangScript
- * s("hh").euclidish(3, 8, 0.5)    // halfway between strict and even
+ * s("hh").euclidish(3, 8, 0.5)  // halfway between strict and even
  * ```
  *
  * ```KlangScript
- * s("bd").euclidish(5, 16, 0.0)   // same as euclid(5, 16)
+ * s("bd").euclidish(5, 16, 0.0)  // same as euclid(5, 16)
  * ```
  * @alias eish
  * @category structural
@@ -3880,11 +3880,11 @@ fun String.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): Strude
  * @return A pattern with the morphed Euclidean rhythm applied.
  *
  * ```KlangScript
- * s("hh").eish(3, 8, 0.5)    // halfway between strict and even
+ * s("hh").eish(3, 8, 0.5)  // halfway between strict and even
  * ```
  *
  * ```KlangScript
- * s("bd").eish(5, 16, 1.0)   // completely even spacing
+ * s("bd").eish(5, 16, 1.0)  // completely even spacing
  * ```
  * @alias euclidish
  * @category structural
@@ -3936,11 +3936,11 @@ internal val _run by dslFunction { args, /* callInfo */ _ ->
  * @return A sequential pattern of integers from 0 to n-1.
  *
  * ```KlangScript
- * n(run(4)).scale("C4:pentatonic")   // 4 scale degrees per cycle
+ * n(run(4)).scale("C4:pentatonic")  // 4 scale degrees per cycle
  * ```
  *
  * ```KlangScript
- * n(run(8)).s("piano")               // 8 sequential notes
+ * n(run(8)).s("piano")  // 8 sequential notes
  * ```
  * @category structural
  * @tags run, sequence, range, index, discrete
@@ -3984,11 +3984,11 @@ internal val _binaryN by dslFunction { args, /* callInfo */ _ ->
  * @return A sequential pattern of 0s and 1s representing the binary value.
  *
  * ```KlangScript
- * s("hh").struct(binaryN(9, 4))     // 1 0 0 1 — binary 9 in 4 bits
+ * s("hh").struct(binaryN(9, 4))  // 1 0 0 1 — binary 9 in 4 bits
  * ```
  *
  * ```KlangScript
- * s("hh").struct(binaryN(146, 8))   // 1 0 0 1 0 0 1 0 - binary 146 in 8 bits
+ * s("hh").struct(binaryN(146, 8))  // 1 0 0 1 0 0 1 0 - binary 146 in 8 bits
  * ```
  * @category structural
  * @tags binaryN, binary, bits, structure, pattern
@@ -4018,11 +4018,11 @@ internal val _binary by dslFunction { args, /* callInfo */ _ ->
  * @return A sequential pattern of 0s and 1s with minimal bit width.
  *
  * ```KlangScript
- * s("hh").struct(binary(5))     // 1 0 1 — 3 bits
+ * s("hh").struct(binary(5))  // 1 0 1 — 3 bits
  * ```
  *
  * ```KlangScript
- * s("hh").struct(binary(13))    // 1 1 0 1 — 4 bits
+ * s("hh").struct(binary(13))  // 1 1 0 1 — 4 bits
  * ```
  * @category structural
  * @tags binary, binaryN, bits, structure, pattern
@@ -4067,7 +4067,7 @@ internal val _binaryNL by dslFunction { args, /* callInfo */ _ ->
  * @return A single-event pattern whose value is a list of 0s and 1s.
  *
  * ```KlangScript
- * s("hh").struct(binaryNL(5, 4))    // list [0, 1, 0, 1]
+ * s("hh").struct(binaryNL(5, 4))  // list [0, 1, 0, 1]
  * ```
  *
  * ```KlangScript
@@ -4103,11 +4103,11 @@ internal val _binaryL by dslFunction { args, /* callInfo */ _ ->
  * @return A single-event pattern whose value is a list of 0s and 1s with minimal bit width.
  *
  * ```KlangScript
- * s("hh").struct(binaryL(5))    // list [1, 0, 1]
+ * s("hh").struct(binaryL(5))  // list [1, 0, 1]
  * ```
  *
  * ```KlangScript
- * s("hh").struct(binaryL(13))   // list [1, 1, 0, 1]
+ * s("hh").struct(binaryL(13))  // list [1, 1, 0, 1]
  * ```
  * @category structural
  * @tags binaryL, binaryNL, binary, bits, list, structure
@@ -4157,11 +4157,11 @@ internal val String._ratio by dslStringExtension { p, /* args */ _, /* callInfo 
  * @return A pattern of the computed ratio values.
  *
  * ```KlangScript
- * ratio("5:4", "3:2", "2:1").note()    // major third, fifth, octave as ratios
+ * ratio("5:4", "3:2", "2:1").note()  // major third, fifth, octave as ratios
  * ```
  *
  * ```KlangScript
- * ratio("3:2").note()                   // perfect fifth ratio
+ * ratio("3:2").note()  // perfect fifth ratio
  * ```
  * @category structural
  * @tags ratio, tuning, fraction, colon, notation
@@ -4219,11 +4219,11 @@ internal val String._steps by dslStringExtension { p, args, callInfo -> p._pace(
  * @return The pattern sped up or slowed down to fit `n` steps per cycle.
  *
  * ```KlangScript
- * note("c d e f").pace(8)     // 4-step pattern runs at 8 steps/cycle (double speed)
+ * note("c d e f").pace(8)  // 4-step pattern runs at 8 steps/cycle (double speed)
  * ```
  *
  * ```KlangScript
- * note("c d e f g").pace(4)   // 5-step pattern runs at 4 steps/cycle
+ * note("c d e f g").pace(4)  // 5-step pattern runs at 4 steps/cycle
  * ```
  * @alias steps
  * @category structural
@@ -4248,7 +4248,7 @@ fun String.pace(n: PatternLike): StrudelPattern = this._pace(listOf(n).asStrudel
  * @return The pattern sped up or slowed down to fit `n` steps per cycle.
  *
  * ```KlangScript
- * note("c d e f").steps(8)    // 4-step pattern runs at 8 steps/cycle
+ * note("c d e f").steps(8)  // 4-step pattern runs at 8 steps/cycle
  * ```
  *
  * ```KlangScript
@@ -4323,11 +4323,11 @@ internal val String._take by dslStringExtension { p, args, callInfo -> p._take(a
  * @return A pattern containing only the first `n` steps, stretched to fill one cycle.
  *
  * ```KlangScript
- * note("c d e f").take(2)    // keeps "c d", stretched to fill the cycle
+ * note("c d e f").take(2)  // keeps "c d", stretched to fill the cycle
  * ```
  *
  * ```KlangScript
- * s("bd sd hh cp").take(3)   // keeps first 3 sounds
+ * s("bd sd hh cp").take(3)  // keeps first 3 sounds
  * ```
  * @category structural
  * @tags take, slice, truncate, steps, cycle
@@ -4413,11 +4413,11 @@ internal val String._drop by dslStringExtension { p, args, callInfo -> p._drop(a
  * @return A pattern with the first `n` steps removed, stretched to fill one cycle.
  *
  * ```KlangScript
- * note("c d e f").drop(1)    // drops "c", plays "d e f" stretched
+ * note("c d e f").drop(1)  // drops "c", plays "d e f" stretched
  * ```
  *
  * ```KlangScript
- * s("bd sd hh cp").drop(2)   // drops "bd sd", plays "hh cp" stretched
+ * s("bd sd hh cp").drop(2)  // drops "bd sd", plays "hh cp" stretched
  * ```
  * @category structural
  * @tags drop, skip, slice, steps, cycle
@@ -4480,11 +4480,11 @@ internal val String._repeatCycles by dslStringExtension { p, args, callInfo ->
  * @return A pattern where each cycle is repeated `n` times.
  *
  * ```KlangScript
- * note("c d e f").repeatCycles(3)    // each cycle repeats 3 times
+ * note("c d e f").repeatCycles(3)  // each cycle repeats 3 times
  * ```
  *
  * ```KlangScript
- * s("bd sd").repeatCycles("<1 2 4>") // varying repetitions each cycle
+ * s("bd sd").repeatCycles("<1 2 4>")  // varying repetitions each cycle
  * ```
  * @category structural
  * @tags repeatCycles, repeat, cycle, loop, stutter
@@ -4524,11 +4524,11 @@ internal val String._extend by dslStringExtension { p, args, callInfo -> p._exte
  * @return A pattern sped up by `factor`.
  *
  * ```KlangScript
- * note("c d e f").extend(2)           // 8 events per cycle instead of 4
+ * note("c d e f").extend(2)  // 8 events per cycle instead of 4
  * ```
  *
  * ```KlangScript
- * s("bd sd hh").extend("<1 2 4>")     // varying speed each cycle
+ * s("bd sd hh").extend("<1 2 4>")  // varying speed each cycle
  * ```
  * @alias fast
  * @category structural
@@ -4595,11 +4595,11 @@ internal val String._iter by dslStringExtension { p, args, callInfo -> p._iter(a
  * @return A pattern that rotates forward by one slice each cycle.
  *
  * ```KlangScript
- * note("c d e f").iter(4)           // cycle 0: c d e f, cycle 1: d e f c, …
+ * note("c d e f").iter(4)  // cycle 0: c d e f, cycle 1: d e f c, …
  * ```
  *
  * ```KlangScript
- * s("bd sd hh cp").iter(4)          // rotating drum pattern every cycle
+ * s("bd sd hh cp").iter(4)  // rotating drum pattern every cycle
  * ```
  * @category structural
  * @tags iter, iterate, rotate, cycle, shift, forward
@@ -4659,11 +4659,11 @@ internal val String._iterBack by dslStringExtension { p, args, callInfo -> p._it
  * @return A pattern that rotates backward by one slice each cycle.
  *
  * ```KlangScript
- * note("c d e f").iterBack(4)       // cycle 0: c d e f, cycle 1: f c d e, …
+ * note("c d e f").iterBack(4)  // cycle 0: c d e f, cycle 1: f c d e, …
  * ```
  *
  * ```KlangScript
- * s("bd sd hh cp").iterBack(4)      // backward-rotating drum pattern
+ * s("bd sd hh cp").iterBack(4)  // backward-rotating drum pattern
  * ```
  * @category structural
  * @tags iterBack, iterate, rotate, cycle, shift, backward
@@ -4725,11 +4725,11 @@ internal val String._inv by dslStringExtension { p, args, callInfo -> p._inv(arg
  * @return A pattern with all boolean values toggled.
  *
  * ```KlangScript
- * "1 0 1 1".invert()                         // produces 0 1 0 0
+ * "1 0 1 1".invert()  // produces 0 1 0 0
  * ```
  *
  * ```KlangScript
- * note("c d e f").struct("1 0 1 0").invert() // swaps active and silent beats
+ * note("c d e f").struct("1 0 1 0").invert()  // swaps active and silent beats
  * ```
  * @alias inv
  * @category structural
@@ -4753,11 +4753,11 @@ fun String.invert(): StrudelPattern = this._invert()
  * @return A pattern with all boolean values toggled.
  *
  * ```KlangScript
- * "1 0 1 1".inv()                         // produces 0 1 0 0
+ * "1 0 1 1".inv()  // produces 0 1 0 0
  * ```
  *
  * ```KlangScript
- * note("c d e f").struct("1 0 1 0").inv() // swaps active and silent beats
+ * note("c d e f").struct("1 0 1 0").inv()  // swaps active and silent beats
  * ```
  * @alias invert
  * @category structural
@@ -4824,11 +4824,11 @@ internal val String._applyN by dslStringExtension { p, args, callInfo -> p._appl
  * @return A pattern with `transform` applied `n` times.
  *
  * ```KlangScript
- * note("c d e f").applyN(2, x => x.fast(2))      // fast(2) applied twice
+ * note("c d e f").applyN(2, x => x.fast(2))  // fast(2) applied twice
  * ```
  *
  * ```KlangScript
- * s("bd sd").applyN(3, x => x.echo(2, 0.25, 0.5)) // echo applied 3 times
+ * s("bd sd").applyN(3, x => x.echo(2, 0.25, 0.5))  // echo applied 3 times
  * ```
  * @category structural
  * @tags applyN, apply, repeat, transform, function, iterate
@@ -4906,11 +4906,11 @@ internal val String._pressBy by dslStringExtension { p, args, callInfo -> p._pre
  * @return A syncopated pattern.
  *
  * ```KlangScript
- * s("bd mt sd ht").pressBy(0.5)              // classic syncopation
+ * s("bd mt sd ht").pressBy(0.5)  // classic syncopation
  * ```
  *
  * ```KlangScript
- * s("bd mt sd ht").pressBy("<0 0.5 0.25>")   // varying syncopation each cycle
+ * s("bd mt sd ht").pressBy("<0 0.5 0.25>")  // varying syncopation each cycle
  * ```
  * @category structural
  * @tags pressBy, press, syncopate, compress, rhythm, timing
@@ -4964,11 +4964,11 @@ internal val String._press by dslStringExtension { p, args, callInfo -> p._press
  * @return A syncopated pattern where events start halfway through their slots.
  *
  * ```KlangScript
- * s("bd mt sd ht").press()                       // classic off-beat feel
+ * s("bd mt sd ht").press()  // classic off-beat feel
  * ```
  *
  * ```KlangScript
- * note("c d e f").every(4, x => x.press())      // press every 4th cycle
+ * note("c d e f").every(4, x => x.press())  // press every 4th cycle
  * ```
  * @category structural
  * @tags press, pressBy, syncopate, compress, rhythm, timing, off-beat
@@ -5027,7 +5027,7 @@ internal val String._rib by dslStringExtension { p, args, callInfo -> p._ribbon(
  * @return A pattern that loops the specified segment.
  *
  * ```KlangScript
- * note("<c d e f>").ribbon(1, 2)    // loops the 2-cycle segment starting at cycle 1
+ * note("<c d e f>").ribbon(1, 2)  // loops the 2-cycle segment starting at cycle 1
  * ```
  *
  * ```KlangScript
@@ -5054,7 +5054,7 @@ fun String.ribbon(offset: PatternLike, cycles: PatternLike = 1.0): StrudelPatter
  * @return A pattern that loops the specified segment.
  *
  * ```KlangScript
- * note("<c d e f>").rib(1, 2)    // loops the 2-cycle segment starting at cycle 1
+ * note("<c d e f>").rib(1, 2)  // loops the 2-cycle segment starting at cycle 1
  * ```
  *
  * ```KlangScript

@@ -54,11 +54,11 @@ internal val String._toBipolar by dslStringExtension { p, /* args */ _, /* callI
  * @return A new pattern whose values are remapped to `-1..1`.
  *
  * ```KlangScript
- * sine.toBipolar().range2(-12, 12).note()   // bipolar pitch vibrato in semitones
+ * sine.toBipolar().range2(40, 60).note()  // bipolar pitch vibrato in semitones
  * ```
  *
  * ```KlangScript
- * saw.toBipolar().range2(-1, 1).pan()        // panning sweep using a bipolar saw
+ * saw.toBipolar().range2(-1, 1).pan()  // panning sweep using a bipolar saw
  * ```
  * @category continuous
  * @tags toBipolar, bipolar, unipolar, range, lfo, oscillator
@@ -99,11 +99,11 @@ internal val String._fromBipolar by dslStringExtension { p, /* args */ _, /* cal
  * @return A new pattern whose values are remapped to `0..1`.
  *
  * ```KlangScript
- * sine2.fromBipolar().range(200, 2000).freq().segment(128)   // bipolar sine to frequency range
+ * sine2.fromBipolar().range(200, 2000).freq().segment(128)  // bipolar sine to frequency range
  * ```
  *
  * ```KlangScript
- * tri2.fromBipolar().range(0.2, 0.8).gain().segment(128)     // bipolar triangle to gain range
+ * tri2.fromBipolar().range(0.2, 0.8).gain().segment(128)  // bipolar triangle to gain range
  * ```
  * @category continuous
  * @tags fromBipolar, bipolar, unipolar, range, lfo, oscillator
@@ -150,11 +150,11 @@ internal val String._range by dslStringExtension { p, args, /* callInfo */ _ -> 
  * @return A new pattern with values linearly scaled to `[min, max]`.
  *
  * ```KlangScript
- * sine.range(200, 2000).freq().segment(128)            // sine frequency sweep 200–2000 Hz
+ * sine.range(200, 2000).freq().segment(128)  // sine frequency sweep 200–2000 Hz
  * ```
  *
  * ```KlangScript
- * perlin.range(0.2, 0.9).gain().segment(128)           // noise-modulated gain
+ * perlin.range(0.2, 0.9).gain().segment(128)  // noise-modulated gain
  * ```
  * @category continuous
  * @tags range, scale, min, max, oscillator, lfo, continuous
@@ -213,11 +213,11 @@ internal val String._rangex by dslStringExtension { p, args, /* callInfo */ _ ->
  * @return A new pattern with values exponentially scaled to `[min, max]`.
  *
  * ```KlangScript
- * sine.rangex(100, 1000).freq().segment(128)           // frequency sweep with musical spacing
+ * sine.rangex(100, 1000).freq().segment(128)  // frequency sweep with musical spacing
  * ```
  *
  * ```KlangScript
- * perlin.rangex(50, 1000).freq().segment(128)        // exponential filter cutoff sweep
+ * perlin.rangex(50, 1000).freq().segment(128)  // exponential filter cutoff sweep
  * ```
  * @category continuous
  * @tags rangex, range, exponential, logarithmic, scale, frequency, oscillator, lfo, continuous
@@ -256,11 +256,11 @@ internal val String._range2 by dslStringExtension { p, args, /* callInfo */ _ ->
  * @return A new pattern with bipolar values scaled to `[min, max]`.
  *
  * ```KlangScript
- * sine2.range2(200, 2000).freq().segment(128)          // bipolar sine mapped to frequency range
+ * sine2.range2(200, 2000).freq().segment(128)  // bipolar sine mapped to frequency range
  * ```
  *
  * ```KlangScript
- * tri2.range2(-24, 24).note().segment(128)             // pitch vibrato in semitones
+ * tri2.range2(-24, 24).note().segment(128)  // pitch vibrato in semitones
  * ```
  * @category continuous
  * @tags range2, bipolar, range, scale, lfo, oscillator, continuous
@@ -284,11 +284,11 @@ fun String.range2(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.
  *
  *
  * ```KlangScript
- * seq("c3", silence, "e3", "g3").note()        // rest on the second step
+ * seq("c3", silence, "e3", "g3").note()  // rest on the second step
  * ```
  *
  * ```KlangScript
- * cat(s("bd sd"), silence)                      // phrase followed by a silent cycle
+ * cat(s("bd sd"), silence)  // phrase followed by a silent cycle
  * ```
  * @alias rest, nothing
  * @category continuous
@@ -302,11 +302,11 @@ val silence by dslObject { EmptyPattern }
  *
  *
  * ```KlangScript
- * seq("c3", rest, "e3", "g3").note()           // rest on the second step
+ * seq("c3", rest, "e3", "g3").note()  // rest on the second step
  * ```
  *
  * ```KlangScript
- * cat(s("bd sd"), rest)                         // phrase followed by a silent cycle
+ * cat(s("bd sd"), rest)  // phrase followed by a silent cycle
  * ```
  * @alias silence, nothing
  * @category continuous
@@ -320,11 +320,11 @@ val rest by dslObject { EmptyPattern }
  *
  *
  * ```KlangScript
- * seq("c3", nothing, "e3", "g3").note()        // rest on the second step
+ * seq("c3", nothing, "e3", "g3").note()  // rest on the second step
  * ```
  *
  * ```KlangScript
- * cat(s("bd sd"), nothing)                      // phrase followed by a silent cycle
+ * cat(s("bd sd"), nothing)  // phrase followed by a silent cycle
  * ```
  * @alias silence, rest
  * @category continuous
@@ -387,11 +387,11 @@ internal val _steady by dslFunction { args, /* callInfo */ _ ->
  * @return A continuous pattern that always evaluates to [value].
  *
  * ```KlangScript
- * steady(440.0).freq().segment(128)         // constant 440 Hz carrier frequency
+ * steady(440.0).freq().segment(128)  // constant 440 Hz carrier frequency
  * ```
  *
  * ```KlangScript
- * steady("c").note().segment(128)           // constant note "c" on every event
+ * steady("c").note().segment(128)  // constant note "c" on every event
  * ```
  * @category continuous
  * @tags steady, constant, continuous, signal, dc
@@ -412,11 +412,11 @@ private val timeBase: StrudelPattern by lazy { signal { t -> t } }
  *
  *
  * ```KlangScript
- * time.range(100.0, 255.0).freq().segment(128)     // linearly rising frequency per cycle
+ * time.range(100.0, 255.0).freq().segment(128)  // linearly rising frequency per cycle
  * ```
  *
  * ```KlangScript
- * time.rangex(100.0, 2000.0).freq().segment(128)   // exponentially rising frequency over time
+ * time.rangex(100.0, 2000.0).freq().segment(128)  // exponentially rising frequency over time
  * ```
  * @category continuous
  * @tags time, continuous, linear, ramp
@@ -437,11 +437,11 @@ private val sine2Base: StrudelPattern by lazy { sineBase.toBipolar() }
  * For a centred (`-1..1`) LFO use [sine2]. Use [range] to map to a target parameter range.
  *
  * ```KlangScript
- * sine.range(200, 2000).freq().segment(128)                      // sinusoidal frequency sweep
+ * sine.range(200, 2000).freq().segment(128)  // sinusoidal frequency sweep
  * ```
  *
  * ```KlangScript
- * note("a!8").adsr("0.2:1.0:1.0:0.2").gain(sine.slow(4))         // gain modulation
+ * note("a!8").adsr("0.2:1.0:1.0:0.2").gain(sine.slow(4))  // gain modulation
  * ```
  *
  * @category continuous
@@ -456,11 +456,11 @@ val sine by dslObject { sineBase }
  * Identical to `sine.toBipolar()`. Use [range2] to scale to any target range.
  *
  * ```KlangScript
- * sine2.range2(200, 2000).freq().segment(128)                     // bipolar sine frequency sweep
+ * sine2.range2(200, 2000).freq().segment(128)  // bipolar sine frequency sweep
  * ```
  *
  * ```KlangScript
- * sine2.range2(-12, 12).note().segment(128)                       // pitch vibrato in semitones
+ * sine2.range2(40, 60).note().segment(128)  // pitch vibrato in semitones
  * ```
  *
  * @category continuous
@@ -483,11 +483,11 @@ private val cosine2Base: StrudelPattern by lazy { cosineBase.toBipolar() }
  *
  *
  * ```KlangScript
- * cosine.range(200, 2000).freq().segment(128)                         // cosine frequency sweep
+ * cosine.range(200, 2000).freq().segment(128)  // cosine frequency sweep
  * ```
  *
  * ```KlangScript
- * note("a!8").adsr("0.2:1.0:1.0:0.2").pan(cosine.slow(4))             // stereo panning with cosine
+ * note("a!8").adsr("0.2:1.0:1.0:0.2").pan(cosine.slow(4))  // stereo panning with cosine
  * ```
  * @category continuous
  * @tags cosine, oscillator, lfo, continuous, wave
@@ -502,11 +502,11 @@ val cosine by dslObject { cosineBase }
  *
  *
  * ```KlangScript
- * cosine2.range2(200, 2000).freq().segment(128)                   // bipolar cosine frequency sweep
+ * cosine2.range2(200, 2000).freq().segment(128)  // bipolar cosine frequency sweep
  * ```
  *
  * ```KlangScript
- * cosine2.range2(-1, 1).pan().segment(128)                        // stereo panning with bipolar cosine
+ * cosine2.range2(-1, 1).pan().segment(128)  // stereo panning with bipolar cosine
  * ```
  * @category continuous
  * @tags cosine2, cosine, oscillator, lfo, bipolar, continuous, wave
@@ -527,11 +527,11 @@ private val saw2Base: StrudelPattern by lazy { sawBase.toBipolar() }
  *
  *
  * ```KlangScript
- * saw.range(200, 2000).freq()                       // linearly rising frequency sweep per cycle
+ * saw.range(200, 2000).freq()  // linearly rising frequency sweep per cycle
  * ```
  *
  * ```KlangScript
- * saw.range(0.0, 0.8).gain()                        // linearly increasing gain per cycle
+ * saw.range(0.0, 0.8).gain()  // linearly increasing gain per cycle
  * ```
  * @category continuous
  * @tags saw, sawtooth, oscillator, lfo, continuous, wave
@@ -546,11 +546,11 @@ val saw by dslObject { sawBase }
  *
  *
  * ```KlangScript
- * saw2.range2(200, 2000).freq().segment(128)                      // bipolar saw frequency sweep
+ * saw2.range2(200, 2000).freq().segment(128)  // bipolar saw frequency sweep
  * ```
  *
  * ```KlangScript
- * saw2.range2(-12, 12).note().segment(128)                        // rising pitch slide per cycle
+ * saw2.range2(40, 60).note().segment(128)  // rising pitch slide per cycle
  * ```
  * @category continuous
  * @tags saw2, saw, sawtooth, oscillator, lfo, bipolar, continuous, wave
@@ -571,11 +571,11 @@ private val isaw2Base: StrudelPattern by lazy { isawBase.toBipolar() }
  *
  *
  * ```KlangScript
- * isaw.range(200, 2000).freq()                      // linearly falling frequency sweep per cycle
+ * isaw.range(200, 2000).freq().slow(8).segment(64)  // linearly falling frequency sweep per cycle
  * ```
  *
  * ```KlangScript
- * isaw.range(0.0, 0.8).gain()                       // linearly decreasing gain per cycle
+ * isaw.range(0.0, 0.8).gain()  // linearly decreasing gain per cycle
  * ```
  * @category continuous
  * @tags isaw, sawtooth, oscillator, lfo, continuous, wave
@@ -590,11 +590,11 @@ val isaw by dslObject { isawBase }
  *
  *
  * ```KlangScript
- * isaw2.range2(200, 2000).freq().segment(128)                     // descending frequency sweep per cycle
+ * isaw2.range2(200, 2000).freq().segment(128)  // descending frequency sweep per cycle
  * ```
  *
  * ```KlangScript
- * isaw2.range2(-12, 12).note().segment(128)                       // descending pitch slide per cycle
+ * isaw2.range2(40, 60).note().segment(128)  // descending pitch slide per cycle
  * ```
  * @category continuous
  * @tags isaw2, isaw, sawtooth, oscillator, lfo, bipolar, continuous, wave
@@ -620,11 +620,11 @@ private val tri2Base: StrudelPattern by lazy { triBase.toBipolar() }
  *
  *
  * ```KlangScript
- * tri.range(200, 2000).freq().segment(128)                       // triangular frequency oscillation
+ * tri.range(200, 2000).freq().segment(128)  // triangular frequency oscillation
  * ```
  *
  * ```KlangScript
- * tri.range(0.2, 0.9).gain().segment(128)                        // triangular amplitude tremolo
+ * tri.range(0.2, 0.9).gain().segment(128)  // triangular amplitude tremolo
  * ```
  * @category continuous
  * @tags tri, triangle, oscillator, lfo, continuous, wave
@@ -639,11 +639,11 @@ val tri by dslObject { triBase }
  *
  *
  * ```KlangScript
- * tri2.range2(200, 2000).freq()                      // symmetric frequency oscillation
+ * tri2.range2(200, 2000).freq()  // symmetric frequency oscillation
  * ```
  *
  * ```KlangScript
- * tri2.range2(-12, 12).note()                        // symmetric pitch vibrato in semitones
+ * tri2.range2(40, 60).note()  // symmetric pitch vibrato in semitones
  * ```
  * @category continuous
  * @tags tri2, tri, triangle, oscillator, lfo, bipolar, continuous, wave
@@ -669,11 +669,11 @@ private val itri2Base: StrudelPattern by lazy { itriBase.toBipolar() }
  *
  *
  * ```KlangScript
- * itri.range(200, 2000).freq().segment(128)                      // inverted triangular frequency oscillation
+ * itri.range(200, 2000).freq().segment(128)  // inverted triangular frequency oscillation
  * ```
  *
  * ```KlangScript
- * itri.range(0.2, 0.9).gain().segment(128)                       // inverted triangle gain tremolo
+ * itri.range(0.2, 0.9).gain().segment(128)  // inverted triangle gain tremolo
  * ```
  * @category continuous
  * @tags itri, triangle, oscillator, lfo, continuous, wave
@@ -688,11 +688,11 @@ val itri by dslObject { itriBase }
  *
  *
  * ```KlangScript
- * itri2.range2(200, 2000).freq().segment(128)                     // inverted symmetric frequency oscillation
+ * itri2.range2(200, 2000).freq().segment(128)  // inverted symmetric frequency oscillation
  * ```
  *
  * ```KlangScript
- * itri2.range2(-12, 12).note().segment(128)                       // inverted pitch vibrato in semitones
+ * itri2.range2(40, 60).note().segment(128)  // inverted pitch vibrato in semitones
  * ```
  * @category continuous
  * @tags itri2, itri, triangle, oscillator, lfo, bipolar, continuous, wave
@@ -713,11 +713,11 @@ private val square2Base: StrudelPattern by lazy { squareBase.toBipolar() }
  *
  *
  * ```KlangScript
- * square.range(200, 800).freq().segment(128)                     // frequency alternates between two values
+ * square.range(200, 800).freq().segment(128)  // frequency alternates between two values
  * ```
  *
  * ```KlangScript
- * square.range(0.0, 1.0).gain().segment(128)                     // alternates between silence and full volume
+ * square.range(0.0, 1.0).gain().segment(128)  // alternates between silence and full volume
  * ```
  * @category continuous
  * @tags square, oscillator, lfo, continuous, wave, gate
@@ -732,11 +732,11 @@ val square by dslObject { squareBase }
  *
  *
  * ```KlangScript
- * square2.range2(200, 800).freq().segment(128)                    // frequency jumps via bipolar square
+ * square2.range2(200, 800).freq().segment(128)  // frequency jumps via bipolar square
  * ```
  *
  * ```KlangScript
- * square2.range2(-12, 12).note().segment(128)                     // pitch alternates between two values
+ * square2.range2(40, 60).note().segment(128)  // pitch alternates between two values
  * ```
  * @category continuous
  * @tags square2, square, oscillator, lfo, bipolar, continuous, wave, gate
@@ -765,11 +765,11 @@ private fun createPerlin(): StrudelPattern {
  *
  *
  * ```KlangScript
- * perlin.range(200, 2000).freq().segment(128)                    // smooth random frequency drift
+ * perlin.range(200, 2000).freq().segment(128)  // smooth random frequency drift
  * ```
  *
  * ```KlangScript
- * perlin.range(0.2, 0.9).gain().segment(128)                     // smooth random gain modulation
+ * perlin.range(0.2, 0.9).gain().segment(128)  // smooth random gain modulation
  * ```
  * @category continuous
  * @tags perlin, noise, random, smooth, continuous, lfo
@@ -784,7 +784,7 @@ val perlin by dslObject { createPerlin() }
  *
  *
  * ```KlangScript
- * perlin2.range2(200, 2000).freq().segment(128)                        // bipolar smooth random frequency drift
+ * perlin2.range2(200, 2000).freq().segment(128)  // bipolar smooth random frequency drift
  * ```
  *
  * ```KlangScript
@@ -821,11 +821,11 @@ private fun createBerlin2(): StrudelPattern {
  *
  *
  * ```KlangScript
- * berlin.range(200, 2000).freq().segment(128)                    // sawtooth-textured random frequency
+ * berlin.range(200, 2000).freq().segment(128)  // sawtooth-textured random frequency
  * ```
  *
  * ```KlangScript
- * berlin.range(0.2, 0.9).gain().segment(128)                     // sawtooth-textured gain variation
+ * berlin.range(0.2, 0.9).gain().segment(128)  // sawtooth-textured gain variation
  * ```
  * @category continuous
  * @tags berlin, noise, random, sawtooth, continuous, lfo
@@ -840,11 +840,11 @@ val berlin by dslObject { createBerlin() }
  *
  *
  * ```KlangScript
- * berlin2.range2(200, 2000).slow(4).freq().segment(128)                 // bipolar berlin noise frequency drift
+ * berlin2.range2(200, 2000).slow(4).freq().segment(128)  // bipolar berlin noise frequency drift
  * ```
  *
  * ```KlangScript
- * berlin2.range2(40, 80).slow(4).note().segment(64).s("sine").hpf(90)   // random pitch drift in semitones
+ * berlin2.range2(40, 80).slow(4).note().segment(64).s("sine").hpf(90)  // random pitch drift in semitones
  * ```
  * @category continuous
  * @tags berlin2, berlin, noise, random, bipolar, sawtooth, continuous, lfo

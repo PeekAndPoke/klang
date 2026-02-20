@@ -74,11 +74,11 @@ internal val String._add by dslStringExtension { p, args, callInfo -> p._add(arg
  * Examples:
  *
  * ```KlangScript
- * seq("0 2").add(5).scale("c3:major").n()            // n values become 5 and 7
+ * seq("0 2").add(5).scale("c3:major").n()  // n values become 5 and 7
  * ```
  *
  * ```KlangScript
- * seq("0 2").add("<0 12>").scale("c3:major").n()     // add 0 or 12 alternately each cycle
+ * seq("0 2").add("<0 12>").scale("c3:major").n()  // add 0 or 12 alternately each cycle
  * ```
  *
  * @category arithmetic
@@ -113,11 +113,11 @@ internal val String._sub by dslStringExtension { p, args, callInfo -> p._sub(arg
  * @return A new pattern with each numeric value decreased by [amount].
  *
  * ```KlangScript
- * seq("10 20").sub(5).scale("c3:major").n()          // n values become 5 and 15
+ * seq("10 20").sub(5).scale("c3:major").n()  // n values become 5 and 15
  * ```
  *
  * ```KlangScript
- * seq("10").sub("<0 5>").scale("c3:major").n()       // subtract 0 or 5 alternately each cycle
+ * seq("10").sub("<0 5>").scale("c3:major").n()  // subtract 0 or 5 alternately each cycle
  * ```
  * @category arithmetic
  * @tags sub, subtract, arithmetic, math, offset
@@ -151,11 +151,11 @@ internal val String._mul by dslStringExtension { p, args, callInfo -> p._mul(arg
  * @return A new pattern with each numeric value multiplied by [factor].
  *
  * ```KlangScript
- * seq("2 3").mul(4).scale("c3:major").n()            // values become 8 and 12
+ * seq("2 3").mul(4).scale("c3:major").n()  // values become 8 and 12
  * ```
  *
  * ```KlangScript
- * seq("1 2").mul("<1 2>").scale("c3:major").n()      // double every other cycle
+ * seq("1 2").mul("<1 2>").scale("c3:major").n()  // double every other cycle
  * ```
  * @category arithmetic
  * @tags mul, multiply, arithmetic, math, scale
@@ -189,11 +189,11 @@ internal val String._div by dslStringExtension { p, args, callInfo -> p._div(arg
  * @return A new pattern with each numeric value divided by [divisor].
  *
  * ```KlangScript
- * seq("10 20").div(2).scale("c3:major").n()          // values become 5 and 10
+ * seq("10 20").div(2).scale("c3:major").n()  // values become 5 and 10
  * ```
  *
  * ```KlangScript
- * seq("10 20").div("<1 2>").scale("c3:major").n()    // halve every other cycle
+ * seq("10 20").div("<1 2>").scale("c3:major").n()  // halve every other cycle
  * ```
  * @category arithmetic
  * @tags div, divide, arithmetic, math, scale
@@ -227,11 +227,11 @@ internal val String._mod by dslStringExtension { p, args, callInfo -> p._mod(arg
  * @return A new pattern where each value is replaced by `value % divisor`.
  *
  * ```KlangScript
- * seq("10 11").mod(3).scale("c3:major").n()              // values become 1 and 2
+ * seq("10 11").mod(3).scale("c3:major").n()  // values become 1 and 2
  * ```
  *
  * ```KlangScript
- * seq("0 1 2 3 4 5 6 7").mod(4).scale("c3:major").n()   // wraps at 4: 0 1 2 3 0 1 2 3
+ * seq("0 1 2 3 4 5 6 7").mod(4).scale("c3:major").n()  // wraps at 4: 0 1 2 3 0 1 2 3
  * ```
  * @category arithmetic
  * @tags mod, modulo, arithmetic, math, wrap
@@ -266,11 +266,11 @@ internal val String._pow by dslStringExtension { p, args, callInfo -> p._pow(arg
  * @return A new pattern where each value is replaced by `value ^ exponent`.
  *
  * ```KlangScript
- * seq("2 3").pow(3).scale("c3:major").n()            // values become 8 (2³) and 27 (3³)
+ * seq("2 3").pow(3).scale("c3:major").n()  // values become 8 (2³) and 27 (3³)
  * ```
  *
  * ```KlangScript
- * seq("2").pow("<1 2 3>").scale("c3:major").n()      // 2, 4, 8 over three cycles
+ * seq("2").pow("<1 2 3>").scale("c3:major").n()  // 2, 4, 8 over three cycles
  * ```
  * @category arithmetic
  * @tags pow, power, exponent, arithmetic, math
@@ -305,7 +305,7 @@ internal val String._band by dslStringExtension { p, args, callInfo -> p._band(a
  * @return A new pattern where each value is replaced by `value & mask`.
  *
  * ```KlangScript
- * "12 15".band(10).scale("c3:major").n()        // 12&10=8, 15&10=10
+ * "12 15".band(10).scale("c3:major").n()  // 12&10=8, 15&10=10
  * ```
  *
  * ```KlangScript
@@ -344,11 +344,11 @@ internal val String._bor by dslStringExtension { p, args, callInfo -> p._bor(arg
  * @return A new pattern where each value is replaced by `value | mask`.
  *
  * ```KlangScript
- * "8 4".bor(2).scale("c3:major").n()            // 8|2=10, 4|2=6
+ * "8 4".bor(2).scale("c3:major").n()  // 8|2=10, 4|2=6
  * ```
  *
  * ```KlangScript
- * "0".bor("<1 2 4 8>").scale("c3:major").n()    // set individual bits each cycle
+ * "0".bor("<1 2 4 8>").scale("c3:major").n()  // set individual bits each cycle
  * ```
  * @category arithmetic
  * @tags bor, bitwise, or, arithmetic, binary
@@ -383,11 +383,11 @@ internal val String._bxor by dslStringExtension { p, args, callInfo -> p._bxor(a
  * @return A new pattern where each value is replaced by `value ^ mask`.
  *
  * ```KlangScript
- * "12 10".bxor(6).scale("c3:major").n()         // 12^6=10, 10^6=12
+ * "12 10".bxor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
  * ```
  *
  * ```KlangScript
- * "5".bxor("<3 5>").scale("c3:major").n()       // toggle bits each cycle
+ * "5".bxor("<3 5>").scale("c3:major").n()  // toggle bits each cycle
  * ```
  * @category arithmetic
  * @tags bxor, bitwise, xor, arithmetic, binary
@@ -423,11 +423,11 @@ internal val String._blshift by dslStringExtension { p, args, callInfo -> p._bls
  * @return A new pattern where each value is replaced by `value << bits`.
  *
  * ```KlangScript
- * "1 2".blshift(2).scale("c3:major").n()         // 1<<2=4, 2<<2=8
+ * "1 2".blshift(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
  * ```
  *
  * ```KlangScript
- * "1".blshift("<0 1 2 3>").scale("c3:major").n() // 1, 2, 4, 8 over four cycles
+ * "1".blshift("<0 1 2 3>").scale("c3:major").n()  // 1, 2, 4, 8 over four cycles
  * ```
  * @category arithmetic
  * @tags blshift, bitwise, shift, left shift, arithmetic, binary
@@ -463,11 +463,11 @@ internal val String._brshift by dslStringExtension { p, args, callInfo -> p._brs
  * @return A new pattern where each value is replaced by `value >> bits`.
  *
  * ```KlangScript
- * "8 12".brshift(2).scale("c3:major").n()         // 8>>2=2, 12>>2=3
+ * "8 12".brshift(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
  * ```KlangScript
- * "16".brshift("<0 1 2 3>").scale("c3:major").n() // 16, 8, 4, 2 over four cycles
+ * "16".brshift("<0 1 2 3>").scale("c3:major").n()  // 16, 8, 4, 2 over four cycles
  * ```
  * @category arithmetic
  * @tags brshift, bitwise, shift, right shift, arithmetic, binary
@@ -499,11 +499,11 @@ internal val String._log2 by dslStringExtension { p, args, callInfo -> p._log2(a
  * @return A new pattern where each value is replaced by `log₂(value)`.
  *
  * ```KlangScript
- * "8 16".log2().scale("c3:major").n()           // log₂(8)=3, log₂(16)=4
+ * "8 16".log2().scale("c3:major").n()  // log₂(8)=3, log₂(16)=4
  * ```
  *
  * ```KlangScript
- * "1 2 4 8".log2().scale("c3:major").n()        // 0, 1, 2, 3
+ * "1 2 4 8".log2().scale("c3:major").n()  // 0, 1, 2, 3
  * ```
  * @category arithmetic
  * @tags log2, logarithm, arithmetic, math
@@ -538,11 +538,11 @@ internal val String._lt by dslStringExtension { p, args, callInfo -> p._lt(args,
  * @return A new pattern of `0`/`1` values.
  *
  * ```KlangScript
- * "5 10".lt(8).scale("c3:major").n()            // 5<8 → 1, 10<8 → 0
+ * "5 10".lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
  * ```
  *
  * ```KlangScript
- * "5 10".lt("<8 6>").scale("c3:major").n()      // threshold changes each cycle
+ * "5 10".lt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  * @category arithmetic
  * @tags lt, less than, comparison, arithmetic
@@ -577,11 +577,11 @@ internal val String._gt by dslStringExtension { p, args, callInfo -> p._gt(args,
  * @return A new pattern of `0`/`1` values.
  *
  * ```KlangScript
- * "5 10".gt(8).scale("c3:major").n()            // 5>8 → 0, 10>8 → 1
+ * "5 10".gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
  * ```
  *
  * ```KlangScript
- * "5 10".gt("<8 6>").scale("c3:major").n()      // threshold changes each cycle
+ * "5 10".gt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  * @category arithmetic
  * @tags gt, greater than, comparison, arithmetic
@@ -616,11 +616,11 @@ internal val String._lte by dslStringExtension { p, args, callInfo -> p._lte(arg
  * @return A new pattern of `0`/`1` values.
  *
  * ```KlangScript
- * "5 8 10".lte(8).scale("c3:major").n()         // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
+ * "5 8 10".lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
  * ```
  *
  * ```KlangScript
- * "5 8 10".lte("<8 6>").scale("c3:major").n()   // threshold changes each cycle
+ * "5 8 10".lte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  * @category arithmetic
  * @tags lte, less than or equal, comparison, arithmetic
@@ -655,11 +655,11 @@ internal val String._gte by dslStringExtension { p, args, callInfo -> p._gte(arg
  * @return A new pattern of `0`/`1` values.
  *
  * ```KlangScript
- * "5 8 10".gte(8).scale("c3:major").n()         // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
+ * "5 8 10".gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
  * ```
  *
  * ```KlangScript
- * "5 8 10".gte("<8 6>").scale("c3:major").n()   // threshold changes each cycle
+ * "5 8 10".gte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  * @category arithmetic
  * @tags gte, greater than or equal, comparison, arithmetic
@@ -694,11 +694,11 @@ internal val String._eq by dslStringExtension { p, args, callInfo -> p._eq(args,
  * @return A new pattern of `0`/`1` values.
  *
  * ```KlangScript
- * "5 8".eq(8).scale("c3:major").n()             // 5==8 → 0, 8==8 → 1
+ * "5 8".eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
  * ```
  *
  * ```KlangScript
- * "0 1 2 3".eq("<0 1>").scale("c3:major").n()   // equality alternates between 0 and 1 each cycle
+ * "0 1 2 3".eq("<0 1>").scale("c3:major").n()  // equality alternates between 0 and 1 each cycle
  * ```
  * @category arithmetic
  * @tags eq, equal, equality, comparison, arithmetic
@@ -735,11 +735,11 @@ internal val String._eqt by dslStringExtension { p, args, callInfo -> p._eqt(arg
  * @return A new pattern of `0`/`1` values.
  *
  * ```KlangScript
- * "0 5".eqt(0).scale("c3:major").n()            // 0~=0 → 1, 5~=0 → 0
+ * "0 5".eqt(0).scale("c3:major").n()  // 0~=0 → 1, 5~=0 → 0
  * ```
  *
  * ```KlangScript
- * "0 5".eqt(3).scale("c3:major").n()            // 0~=3 → 0, 5~=3 → 1 (both truthy)
+ * "0 5".eqt(3).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
  * ```
  * @category arithmetic
  * @tags eqt, truthiness, equal, comparison, arithmetic
@@ -774,11 +774,11 @@ internal val String._ne by dslStringExtension { p, args, callInfo -> p._ne(args,
  * @return A new pattern of `0`/`1` values.
  *
  * ```KlangScript
- * "5 8".ne(8).scale("c3:major").n()             // 5!=8 → 1, 8!=8 → 0
+ * "5 8".ne(8).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
  * ```
  *
  * ```KlangScript
- * "0 1 2 3".ne("<0 1>").scale("c3:major").n()   // inequality alternates between 0 and 1 each cycle
+ * "0 1 2 3".ne("<0 1>").scale("c3:major").n()  // inequality alternates between 0 and 1 each cycle
  * ```
  * @category arithmetic
  * @tags ne, not equal, inequality, comparison, arithmetic
@@ -815,11 +815,11 @@ internal val String._net by dslStringExtension { p, args, callInfo -> p._net(arg
  * @return A new pattern of `0`/`1` values.
  *
  * ```KlangScript
- * "0 5".net(0).scale("c3:major").n()            // 0~!=0 → 0, 5~!=0 → 1
+ * "0 5".net(0).scale("c3:major").n()  // 0~!=0 → 0, 5~!=0 → 1
  * ```
  *
  * ```KlangScript
- * "0 5".net(3).scale("c3:major").n()            // 0~!=3 → 1, 5~!=3 → 0 (both truthy)
+ * "0 5".net(3).scale("c3:major").n()  // 0~!=3 → 1, 5~!=3 → 0 (both truthy)
  * ```
  * @category arithmetic
  * @tags net, truthiness, not equal, inequality, comparison, arithmetic
@@ -855,11 +855,11 @@ internal val String._and by dslStringExtension { p, args, callInfo -> p._and(arg
  * @return A new pattern where each value is `value && other`.
  *
  * ```KlangScript
- * "0 5".and(10).scale("c3:major").n()           // 0&&10 → 0, 5&&10 → 10
+ * "0 5".and(10).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
  * ```
  *
  * ```KlangScript
- * "5".and("<0 10>").scale("c3:major").n()       // gate on/off each cycle
+ * "5".and("<0 10>").scale("c3:major").n()  // gate on/off each cycle
  * ```
  * @category arithmetic
  * @tags and, logical, boolean, arithmetic
@@ -895,11 +895,11 @@ internal val String._or by dslStringExtension { p, args, callInfo -> p._or(args,
  * @return A new pattern where each value is `value || other`.
  *
  * ```KlangScript
- * "0 5".or(10).scale("c3:major").n()            // 0||10 → 10, 5||10 → 5
+ * "0 5".or(10).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
  * ```
  *
  * ```KlangScript
- * "0 5".or("<1 2>").scale("c3:major").n()       // fallback alternates each cycle
+ * "0 5".or("<1 2>").scale("c3:major").n()  // fallback alternates each cycle
  * ```
  * @category arithmetic
  * @tags or, logical, boolean, arithmetic
@@ -932,11 +932,11 @@ internal val String._round by dslStringExtension { p, _, _ -> p._round() }
  * @return A new pattern with each value rounded to the nearest integer.
  *
  * ```KlangScript
- * "2.4 2.5 2.6".round().scale("c3:major").n()   // 2, 3, 3
+ * "2.4 2.5 2.6".round().scale("c3:major").n()  // 2, 3, 3
  * ```
  *
  * ```KlangScript
- * "0.1 0.9".round().scale("c3:major").n()       // 0, 1
+ * "0.1 0.9".round().scale("c3:major").n()  // 0, 1
  * ```
  * @category arithmetic
  * @tags round, rounding, arithmetic, math
@@ -966,11 +966,11 @@ internal val String._floor by dslStringExtension { p, _, _ -> p._floor() }
  * @return A new pattern with each value floored to an integer.
  *
  * ```KlangScript
- * "2.1 2.9".floor().scale("c3:major").n()       // 2, 2
+ * "2.1 2.9".floor().scale("c3:major").n()  // 2, 2
  * ```
  *
  * ```KlangScript
- * "-2.1 -2.9".floor().scale("c3:major").n()     // -3, -3
+ * "-2.1 -2.9".floor().scale("c3:major").n()  // -3, -3
  * ```
  * @category arithmetic
  * @tags floor, rounding, arithmetic, math
@@ -1000,11 +1000,11 @@ internal val String._ceil by dslStringExtension { p, _, _ -> p._ceil() }
  * @return A new pattern with each value ceiled to an integer.
  *
  * ```KlangScript
- * "2.1 2.9".ceil().scale("c3:major").n()        // 3, 3
+ * "2.1 2.9".ceil().scale("c3:major").n()  // 3, 3
  * ```
  *
  * ```KlangScript
- * "-2.9 -2.1".ceil().scale("c3:major").n()      // -2, -2
+ * "-2.9 -2.1".ceil().scale("c3:major").n()  // -2, -2
  * ```
  * @category arithmetic
  * @tags ceil, ceiling, rounding, arithmetic, math
