@@ -347,16 +347,45 @@ fun applyArrange(args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return SequencePattern(processedPatterns).slow(totalDuration)
 }
 
-@StrudelDsl
-val arrange by dslFunction { args, /* callInfo */ _ -> applyArrange(args) }
+// Private delegates - still register with KlangScript
+private val _arrange by dslFunction { args, /* callInfo */ _ -> applyArrange(args) }
 
-@StrudelDsl
-val StrudelPattern.arrange by dslPatternExtension { p, args, /* callInfo */ _ ->
+private val StrudelPattern._arrange by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyArrange(listOf(StrudelDslArg.of(p)) + args)
 }
 
+private val String._arrange by dslStringExtension { p, args, callInfo -> p._arrange(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Plays each segment for a specified number of cycles, forming a repeating arrangement.
+ *
+ * Each segment is a `[duration, pattern]` pair where `duration` is the number of cycles that
+ * pattern plays at its natural speed. A bare pattern without a duration defaults to 1 cycle.
+ * The whole arrangement repeats after the sum of all durations.
+ *
+ * Unlike [stepcat], which compresses all patterns into a single cycle, `arrange` keeps each
+ * pattern's internal tempo — a 2-cycle segment genuinely plays the pattern for 2 full cycles.
+ *
+ * @param segments Pairs of `[duration, pattern]`, or bare patterns (duration defaults to 1).
+ * @return A pattern that plays each segment for its specified number of cycles, then repeats
+ * @sample arrange([2, "a b"], [1, "c"]).note()                        // "a b" for 2 cycles, "c" for 1
+ * @sample arrange([3, note("c e g")], [1, note("f a c")]).s("piano")  // chord changes over 4 cycles
+ * @sample arrange(note("c e g"), [2, note("f a c")]).s("piano")       // Pattern without weight
+ * @category structural
+ * @tags arrange, sequence, timing, duration, loop
+ */
 @StrudelDsl
-val String.arrange by dslStringExtension { p, args, callInfo -> p.arrange(args, callInfo) }
+fun arrange(vararg segments: PatternLike): StrudelPattern = _arrange(segments.toList())
+
+/** Prepends this pattern (duration 1) and plays it followed by the given segments. */
+@StrudelDsl
+fun StrudelPattern.arrange(vararg segments: PatternLike): StrudelPattern = this._arrange(segments.toList())
+
+/** Parses this string as a pattern (duration 1) and arranges it together with the given segments. */
+@StrudelDsl
+fun String.arrange(vararg segments: PatternLike): StrudelPattern = this._arrange(segments.toList())
 
 // -- stepcat() / timeCat() --------------------------------------------------------------------------------------------
 
