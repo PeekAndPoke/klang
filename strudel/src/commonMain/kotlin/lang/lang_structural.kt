@@ -3406,8 +3406,8 @@ internal val _binaryN by dslFunction { args, /* callInfo */ _ ->
  * @param n    The integer to convert to binary.
  * @param bits Total pattern length in bits (default 16).
  * @return A sequential pattern of 0s and 1s representing the binary value.
- * @sample s("hh").struct(binaryN(5, 4))     // 0 1 0 1 — binary 5 in 4 bits
- * @sample s("hh").struct(binaryN(170, 8))   // 1 0 1 0 1 0 1 0 — alternating
+ * @sample s("hh").struct(binaryN(9, 4))     // 1 0 0 1 — binary 9 in 4 bits
+ * @sample s("hh").struct(binaryN(146, 8))   // 1 0 0 1 0 0 1 0 - binary 146 in 8 bits
  * @category structural
  * @tags binaryN, binary, bits, structure, pattern
  */

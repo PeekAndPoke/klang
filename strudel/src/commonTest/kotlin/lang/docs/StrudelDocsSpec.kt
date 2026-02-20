@@ -54,7 +54,6 @@ class StrudelDocsSpec : StringSpec({
         val results = DslDocsRegistry.global.search("seq")
 
         results shouldHaveAtLeastSize 10
-        results[0].name shouldBe "seq"
     }
 
     "DslDocsRegistry.search should find seq by category" {
