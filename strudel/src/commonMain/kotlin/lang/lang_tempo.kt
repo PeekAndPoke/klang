@@ -148,8 +148,14 @@ internal val String._fast by dslStringExtension { p, args, callInfo -> p._fast(a
  * @param factor Speed-up factor. Values > 1 play faster; values < 1 play slower.
  * @param pattern The pattern to speed up (top-level call only).
  * @return A pattern sped up by `factor`.
- * @sample note("c d e f").fast(2)           // 8 events per cycle instead of 4
- * @sample s("bd sd hh").fast("<1 2 4>")     // varying speed each cycle
+ *
+ * ```KlangScript
+ * note("c d e f").fast(2)           // 8 events per cycle instead of 4
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd hh").fast("<1 2 4>")     // varying speed each cycle
+ * ```
  * @category tempo
  * @tags fast, speed, tempo, accelerate
  */

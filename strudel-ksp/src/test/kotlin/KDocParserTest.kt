@@ -104,11 +104,13 @@ class KDocParserTest : StringSpec({
         result.returnDoc shouldBe "A new StrudelPattern instance that plays the sequence"
     }
 
-    "parse single sample" {
+    "parse single KlangScript fenced block" {
         val kdoc = """
             Creates a sequence.
 
-            @sample sound(seq("bd sd", "hh oh"))
+            ```KlangScript
+            sound(seq("bd sd", "hh oh"))
+            ```
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
@@ -116,13 +118,21 @@ class KDocParserTest : StringSpec({
         result.samples shouldContainExactly listOf("""sound(seq("bd sd", "hh oh"))""")
     }
 
-    "parse multiple samples" {
+    "parse multiple KlangScript fenced blocks" {
         val kdoc = """
             Creates a sequence.
 
-            @sample sound(seq("bd sd", "hh oh"))
-            @sample note(seq("c e", "g b"))
-            @sample seq("bd", "sd", "hh").s()
+            ```KlangScript
+            sound(seq("bd sd", "hh oh"))
+            ```
+
+            ```KlangScript
+            note(seq("c e", "g b"))
+            ```
+
+            ```KlangScript
+            seq("bd", "sd", "hh").s()
+            ```
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
@@ -134,20 +144,79 @@ class KDocParserTest : StringSpec({
         )
     }
 
-    "parse multi-line sample" {
+    "parse multi-line KlangScript fenced block" {
         val kdoc = """
             Creates a complex pattern.
 
-            @sample sound(seq("bd sd", "hh oh"))
-                    .gain(0.8)
-                    .pan(sine.range(0, 1))
+            ```KlangScript
+            stack(
+                sound("bd").every(4),
+                sound("hh").fast(2)
+            )
+            ```
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
 
-        result.samples shouldContainExactly listOf(
-            """sound(seq("bd sd", "hh oh")) .gain(0.8) .pan(sine.range(0, 1))"""
-        )
+        result.samples.size shouldBe 1
+        result.samples[0] shouldBe "stack(\n    sound(\"bd\").every(4),\n    sound(\"hh\").fast(2)\n)"
+    }
+
+    "fenced blocks can appear anywhere — in description section" {
+        val kdoc = """
+            Creates a sequence.
+
+            ```KlangScript
+            seq("a b c").note()
+            ```
+
+            @category structural
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.samples shouldContainExactly listOf("""seq("a b c").note()""")
+        result.category shouldBe "structural"
+        // description should not include the code block content
+        result.description shouldBe "Creates a sequence."
+    }
+
+    "fenced blocks can appear anywhere — in tag section" {
+        val kdoc = """
+            Creates a sequence.
+
+            @return A new pattern.
+
+            ```KlangScript
+            seq("a b c").note()
+            ```
+
+            @category structural
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.samples shouldContainExactly listOf("""seq("a b c").note()""")
+        result.returnDoc shouldBe "A new pattern."
+        result.category shouldBe "structural"
+    }
+
+    "fenced blocks do not bleed into description" {
+        val kdoc = """
+            Short description.
+
+            ```KlangScript
+            example().code()
+            ```
+
+            @category structural
+            @tags foo, bar
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.description shouldBe "Short description."
+        result.samples shouldContainExactly listOf("example().code()")
     }
 
     "parse category tag" {
@@ -174,19 +243,26 @@ class KDocParserTest : StringSpec({
         result.tags shouldContainExactly listOf("sequence", "timing", "control")
     }
 
-    "parse complete KDoc with all tags" {
+    "parse complete KDoc with all fields" {
         val kdoc = """
             Creates a sequence pattern that plays patterns one after another.
 
             Each pattern in the sequence occupies exactly one cycle.
 
-            @category structural
-            @tags sequence, timing, control, order
             @param patterns Patterns to play in sequence.
                             Accepts patterns, strings, numbers.
             @return A sequential pattern that cycles through each input pattern
-            @sample sound(seq("bd sd", "hh oh"))
-            @sample note(seq("c e", "g b"))
+
+            ```KlangScript
+            sound(seq("bd sd", "hh oh"))
+            ```
+
+            ```KlangScript
+            note(seq("c e", "g b"))
+            ```
+
+            @category structural
+            @tags sequence, timing, control, order
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
@@ -212,9 +288,16 @@ class KDocParserTest : StringSpec({
             @category test
             @param x First param
             @tags tag1, tag2
-            @sample example1()
+
+            ```KlangScript
+            example1()
+            ```
+
             @param y Second param
-            @sample example2()
+
+            ```KlangScript
+            example2()
+            ```
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
@@ -230,23 +313,7 @@ class KDocParserTest : StringSpec({
         result.samples shouldContainExactly listOf("example1()", "example2()")
     }
 
-    "parse KDoc with code block in sample" {
-        val kdoc = """
-            Complex function.
-
-            @sample stack(
-                        sound("bd").every(4),
-                        sound("hh").fast(2)
-                    )
-        """.trimIndent()
-
-        val result = KDocParser.parse(kdoc)
-
-        result.samples.size shouldBe 1
-        result.samples[0] shouldBe """stack( sound("bd").every(4), sound("hh").fast(2) )"""
-    }
-
-    "normalize excessive whitespace" {
+    "normalize excessive whitespace in description and params" {
         val kdoc = """
             This    has     excessive
 
@@ -273,5 +340,32 @@ class KDocParserTest : StringSpec({
         val result = KDocParser.parse(kdoc)
 
         result.tags shouldContainExactly listOf("valid", "another")
+    }
+
+    "empty fenced block is ignored" {
+        val kdoc = """
+            Function.
+
+            ```KlangScript
+            ```
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.samples shouldBe emptyList()
+    }
+
+    "whitespace-only fenced block is ignored" {
+        val kdoc = """
+            Function.
+
+            ```KlangScript
+
+            ```
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.samples shouldBe emptyList()
     }
 })

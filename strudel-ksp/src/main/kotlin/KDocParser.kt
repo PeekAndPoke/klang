@@ -10,7 +10,7 @@ data class ParsedKDoc(
     val params: Map<String, String>,
     /** @return tag description */
     val returnDoc: String,
-    /** @sample tags (code examples) */
+    /** Code examples extracted from ```KlangScript...``` fenced blocks */
     val samples: List<String>,
     /** @category tag (custom) */
     val category: String?,
@@ -38,14 +38,45 @@ object KDocParser {
             )
         }
 
-        val lines = kdoc.lines().map { it.trim() }
+        // Phase 1: extract ```KlangScript...``` fenced code blocks as samples.
+        // Build a cleaned line list that excludes the fenced blocks entirely.
+        // Note: raw (untrimmed) lines are used inside code blocks to preserve indentation;
+        // only non-code lines are trimmed before being passed to phase 2.
+        val samples = mutableListOf<String>()
+        val cleanedLines = mutableListOf<String>()
+        var inCodeBlock = false
+        val currentBlock = StringBuilder()
 
-        // Find description (everything before first @ tag)
+        for (rawLine in kdoc.lines()) {
+            val line = rawLine.trim()
+            when {
+                !inCodeBlock && line.startsWith("```KlangScript") -> {
+                    inCodeBlock = true
+                    currentBlock.clear()
+                }
+
+                inCodeBlock && line.startsWith("```") -> {
+                    inCodeBlock = false
+                    val s = currentBlock.toString().trimEnd()
+                    if (s.isNotEmpty()) samples.add(s)
+                    currentBlock.clear()
+                }
+
+                inCodeBlock -> {
+                    if (currentBlock.isNotEmpty()) currentBlock.append("\n")
+                    currentBlock.append(rawLine)  // preserve original indentation
+                }
+
+                else -> cleanedLines.add(line)
+            }
+        }
+
+        // Phase 2: parse cleaned lines (description + @param/@return/@category/@tags/@alias).
         val descriptionLines = mutableListOf<String>()
         val tagLines = mutableListOf<String>()
         var inTags = false
 
-        for (line in lines) {
+        for (line in cleanedLines) {
             when {
                 line.startsWith("@") -> {
                     inTags = true
@@ -60,11 +91,9 @@ object KDocParser {
         val description = descriptionLines
             .joinToString(" ")
             .trim()
-            .replace(Regex("\\s+"), " ") // Normalize whitespace
+            .replace(Regex("\\s+"), " ")
 
-        // Parse tags
         val params = mutableMapOf<String, String>()
-        val samples = mutableListOf<String>()
         var returnDoc = ""
         var category: String? = null
         val tags = mutableListOf<String>()
@@ -77,7 +106,7 @@ object KDocParser {
             val tag = currentTag ?: return
             val content = currentContent.toString()
                 .trim()
-                .replace(Regex("\\s+"), " ") // Normalize whitespace
+                .replace(Regex("\\s+"), " ")
             if (content.isEmpty()) return
 
             when {
@@ -87,25 +116,18 @@ object KDocParser {
                 }
 
                 tag == "return" -> returnDoc = content
-                tag == "sample" -> samples.add(content)
                 tag == "category" -> category = content
                 tag == "tags" -> {
-                    // Parse comma-separated tags
                     content.split(",").forEach { t ->
                         val trimmed = t.trim()
-                        if (trimmed.isNotEmpty()) {
-                            tags.add(trimmed)
-                        }
+                        if (trimmed.isNotEmpty()) tags.add(trimmed)
                     }
                 }
 
                 tag == "alias" -> {
-                    // Parse comma-separated alias names
                     content.split(",").forEach { a ->
                         val trimmed = a.trim()
-                        if (trimmed.isNotEmpty()) {
-                            aliases.add(trimmed)
-                        }
+                        if (trimmed.isNotEmpty()) aliases.add(trimmed)
                     }
                 }
             }
@@ -115,8 +137,6 @@ object KDocParser {
             when {
                 line.startsWith("@param") -> {
                     saveCurrentTag()
-
-                    // Parse @param name description
                     val match = Regex("@param\\s+(\\w+)\\s*(.*)").matchEntire(line)
                     if (match != null) {
                         currentTag = "param:${match.groupValues[1]}"
@@ -128,12 +148,6 @@ object KDocParser {
                     saveCurrentTag()
                     currentTag = "return"
                     currentContent = StringBuilder(line.removePrefix("@return").trim())
-                }
-
-                line.startsWith("@sample") -> {
-                    saveCurrentTag()
-                    currentTag = "sample"
-                    currentContent = StringBuilder(line.removePrefix("@sample").trim())
                 }
 
                 line.startsWith("@category") -> {
@@ -155,16 +169,12 @@ object KDocParser {
                 }
 
                 else -> {
-                    // Continuation of current tag
-                    if (currentContent.isNotEmpty()) {
-                        currentContent.append(" ")
-                    }
+                    if (currentContent.isNotEmpty()) currentContent.append(" ")
                     currentContent.append(line.trim())
                 }
             }
         }
 
-        // Save last tag
         saveCurrentTag()
 
         return ParsedKDoc(

@@ -56,8 +56,14 @@ internal val String._firstOf by dslStringExtension { source, args, callInfo -> s
  *   Supports control patterns.
  * @param transform The function to apply on the first cycle of each period.
  * @return A new pattern that applies [transform] periodically.
- * @sample note("c3 d3 e3 g3").firstOf(4, x => x.rev())          // reverse every 4th cycle
- * @sample note("c3 d3 e3 g3").firstOf("<2 4>", x => x.fast(2))  // alternating period
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 g3").firstOf(4, x => x.rev())          // reverse every 4th cycle
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 g3").firstOf("<2 4>", x => x.fast(2))  // alternating period
+ * ```
  * @alias every
  * @category conditional
  * @tags firstOf, every, conditional, cycle, periodic, transform
@@ -97,8 +103,14 @@ internal val String._every by dslStringExtension { source, args, callInfo -> sou
  *   Supports control patterns.
  * @param transform The function to apply on the first cycle of each period.
  * @return A new pattern that applies [transform] periodically.
- * @sample note("c3 d3 e3 g3").every(4, x => x.rev())             // reverse every 4th cycle
- * @sample note("c3 d3 e3 g3").every("<2 4>", x => x.fast(2))     // alternating period
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 g3").every(4, x => x.rev())             // reverse every 4th cycle
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 g3").every("<2 4>", x => x.fast(2))     // alternating period
+ * ```
  * @alias firstOf
  * @category conditional
  * @tags every, firstOf, conditional, cycle, periodic, transform
@@ -167,8 +179,14 @@ internal val String._lastOf by dslStringExtension { source, args, callInfo -> so
  *   Supports control patterns.
  * @param transform The function to apply on the last cycle of each period.
  * @return A new pattern that applies [transform] at the end of each period.
- * @sample note("c3 d3 e3 g3").lastOf(4, x => x.rev())           // reverse on 4th of every 4
- * @sample note("c3 d3 e3 g3").lastOf("<2 4>", x => x.fast(2))   // alternating period
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 g3").lastOf(4, x => x.rev())           // reverse on 4th of every 4
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 g3").lastOf("<2 4>", x => x.fast(2))   // alternating period
+ * ```
  * @category conditional
  * @tags lastOf, conditional, cycle, periodic, transform
  */
@@ -223,8 +241,14 @@ internal val String._when by dslStringExtension { p, args, callInfo -> p._when(a
  *   Zero is falsy; any other value is truthy.
  * @param transform The function to apply when [condition] is truthy.
  * @return A new pattern that conditionally applies [transform].
- * @sample note("c d e f").when(pure(1).struct("t ~ t ~"), x => x.add(12))
- * @sample s("bd sd").when("<1 0>", x => x.fast(2))
+ *
+ * ```KlangScript
+ * note("c d e f").when(pure(1).struct("t ~ t ~"), x => x.add(12))
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd").when("<1 0>", x => x.fast(2))
+ * ```
  * @category conditional
  * @tags when, conditional, binary, gate, transform
  */

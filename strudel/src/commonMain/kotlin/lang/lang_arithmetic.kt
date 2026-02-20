@@ -70,8 +70,17 @@ internal val String._add by dslStringExtension { p, args, callInfo -> p._add(arg
  *
  * @param amount The value to add. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern with each numeric value increased by [amount].
- * @sample seq("0 2").add(5).scale("c3:major").n()            // n values become 5 and 7
- * @sample seq("0 2").add("<0 12>").scale("c3:major").n()     // add 0 or 12 alternately each cycle
+ *
+ * Examples:
+ *
+ * ```KlangScript
+ * seq("0 2").add(5).scale("c3:major").n()            // n values become 5 and 7
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 2").add("<0 12>").scale("c3:major").n()     // add 0 or 12 alternately each cycle
+ * ```
+ *
  * @category arithmetic
  * @tags add, arithmetic, math, offset
  */
@@ -102,8 +111,14 @@ internal val String._sub by dslStringExtension { p, args, callInfo -> p._sub(arg
  *
  * @param amount The value to subtract. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern with each numeric value decreased by [amount].
- * @sample seq("10 20").sub(5).scale("c3:major").n()          // n values become 5 and 15
- * @sample seq("10").sub("<0 5>").scale("c3:major").n()       // subtract 0 or 5 alternately each cycle
+ *
+ * ```KlangScript
+ * seq("10 20").sub(5).scale("c3:major").n()          // n values become 5 and 15
+ * ```
+ *
+ * ```KlangScript
+ * seq("10").sub("<0 5>").scale("c3:major").n()       // subtract 0 or 5 alternately each cycle
+ * ```
  * @category arithmetic
  * @tags sub, subtract, arithmetic, math, offset
  */
@@ -134,8 +149,14 @@ internal val String._mul by dslStringExtension { p, args, callInfo -> p._mul(arg
  *
  * @param factor The multiplier. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern with each numeric value multiplied by [factor].
- * @sample seq("2 3").mul(4).scale("c3:major").n()            // values become 8 and 12
- * @sample seq("1 2").mul("<1 2>").scale("c3:major").n()      // double every other cycle
+ *
+ * ```KlangScript
+ * seq("2 3").mul(4).scale("c3:major").n()            // values become 8 and 12
+ * ```
+ *
+ * ```KlangScript
+ * seq("1 2").mul("<1 2>").scale("c3:major").n()      // double every other cycle
+ * ```
  * @category arithmetic
  * @tags mul, multiply, arithmetic, math, scale
  */
@@ -166,8 +187,14 @@ internal val String._div by dslStringExtension { p, args, callInfo -> p._div(arg
  *
  * @param divisor The divisor. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern with each numeric value divided by [divisor].
- * @sample seq("10 20").div(2).scale("c3:major").n()          // values become 5 and 10
- * @sample seq("10 20").div("<1 2>").scale("c3:major").n()    // halve every other cycle
+ *
+ * ```KlangScript
+ * seq("10 20").div(2).scale("c3:major").n()          // values become 5 and 10
+ * ```
+ *
+ * ```KlangScript
+ * seq("10 20").div("<1 2>").scale("c3:major").n()    // halve every other cycle
+ * ```
  * @category arithmetic
  * @tags div, divide, arithmetic, math, scale
  */
@@ -198,8 +225,14 @@ internal val String._mod by dslStringExtension { p, args, callInfo -> p._mod(arg
  *
  * @param divisor The modulus. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value % divisor`.
- * @sample seq("10 11").mod(3).scale("c3:major").n()              // values become 1 and 2
- * @sample seq("0 1 2 3 4 5 6 7").mod(4).scale("c3:major").n()   // wraps at 4: 0 1 2 3 0 1 2 3
+ *
+ * ```KlangScript
+ * seq("10 11").mod(3).scale("c3:major").n()              // values become 1 and 2
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 1 2 3 4 5 6 7").mod(4).scale("c3:major").n()   // wraps at 4: 0 1 2 3 0 1 2 3
+ * ```
  * @category arithmetic
  * @tags mod, modulo, arithmetic, math, wrap
  */
@@ -231,8 +264,14 @@ internal val String._pow by dslStringExtension { p, args, callInfo -> p._pow(arg
  *
  * @param exponent The exponent. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value ^ exponent`.
- * @sample seq("2 3").pow(3).scale("c3:major").n()            // values become 8 (2³) and 27 (3³)
- * @sample seq("2").pow("<1 2 3>").scale("c3:major").n()      // 2, 4, 8 over three cycles
+ *
+ * ```KlangScript
+ * seq("2 3").pow(3).scale("c3:major").n()            // values become 8 (2³) and 27 (3³)
+ * ```
+ *
+ * ```KlangScript
+ * seq("2").pow("<1 2 3>").scale("c3:major").n()      // 2, 4, 8 over three cycles
+ * ```
  * @category arithmetic
  * @tags pow, power, exponent, arithmetic, math
  */
@@ -264,8 +303,14 @@ internal val String._band by dslStringExtension { p, args, callInfo -> p._band(a
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value & mask`.
- * @sample "12 15".band(10).scale("c3:major").n()        // 12&10=8, 15&10=10
- * @sample "255".band("<15 240>").scale("c3:major").n()  // mask low or high nibble alternately
+ *
+ * ```KlangScript
+ * "12 15".band(10).scale("c3:major").n()        // 12&10=8, 15&10=10
+ * ```
+ *
+ * ```KlangScript
+ * "255".band("<15 240>").scale("c3:major").n()  // mask low or high nibble alternately
+ * ```
  * @category arithmetic
  * @tags band, bitwise, and, arithmetic, binary
  */
@@ -297,8 +342,14 @@ internal val String._bor by dslStringExtension { p, args, callInfo -> p._bor(arg
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value | mask`.
- * @sample "8 4".bor(2).scale("c3:major").n()            // 8|2=10, 4|2=6
- * @sample "0".bor("<1 2 4 8>").scale("c3:major").n()    // set individual bits each cycle
+ *
+ * ```KlangScript
+ * "8 4".bor(2).scale("c3:major").n()            // 8|2=10, 4|2=6
+ * ```
+ *
+ * ```KlangScript
+ * "0".bor("<1 2 4 8>").scale("c3:major").n()    // set individual bits each cycle
+ * ```
  * @category arithmetic
  * @tags bor, bitwise, or, arithmetic, binary
  */
@@ -330,8 +381,14 @@ internal val String._bxor by dslStringExtension { p, args, callInfo -> p._bxor(a
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value ^ mask`.
- * @sample "12 10".bxor(6).scale("c3:major").n()         // 12^6=10, 10^6=12
- * @sample "5".bxor("<3 5>").scale("c3:major").n()       // toggle bits each cycle
+ *
+ * ```KlangScript
+ * "12 10".bxor(6).scale("c3:major").n()         // 12^6=10, 10^6=12
+ * ```
+ *
+ * ```KlangScript
+ * "5".bxor("<3 5>").scale("c3:major").n()       // toggle bits each cycle
+ * ```
  * @category arithmetic
  * @tags bxor, bitwise, xor, arithmetic, binary
  */
@@ -364,8 +421,14 @@ internal val String._blshift by dslStringExtension { p, args, callInfo -> p._bls
  * @param bits The number of bit positions to shift. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value << bits`.
- * @sample "1 2".blshift(2).scale("c3:major").n()         // 1<<2=4, 2<<2=8
- * @sample "1".blshift("<0 1 2 3>").scale("c3:major").n() // 1, 2, 4, 8 over four cycles
+ *
+ * ```KlangScript
+ * "1 2".blshift(2).scale("c3:major").n()         // 1<<2=4, 2<<2=8
+ * ```
+ *
+ * ```KlangScript
+ * "1".blshift("<0 1 2 3>").scale("c3:major").n() // 1, 2, 4, 8 over four cycles
+ * ```
  * @category arithmetic
  * @tags blshift, bitwise, shift, left shift, arithmetic, binary
  */
@@ -398,8 +461,14 @@ internal val String._brshift by dslStringExtension { p, args, callInfo -> p._brs
  * @param bits The number of bit positions to shift. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value >> bits`.
- * @sample "8 12".brshift(2).scale("c3:major").n()         // 8>>2=2, 12>>2=3
- * @sample "16".brshift("<0 1 2 3>").scale("c3:major").n() // 16, 8, 4, 2 over four cycles
+ *
+ * ```KlangScript
+ * "8 12".brshift(2).scale("c3:major").n()         // 8>>2=2, 12>>2=3
+ * ```
+ *
+ * ```KlangScript
+ * "16".brshift("<0 1 2 3>").scale("c3:major").n() // 16, 8, 4, 2 over four cycles
+ * ```
  * @category arithmetic
  * @tags brshift, bitwise, shift, right shift, arithmetic, binary
  */
@@ -428,8 +497,14 @@ internal val String._log2 by dslStringExtension { p, args, callInfo -> p._log2(a
  * Useful for converting exponential frequency ratios to linear semitone or octave values.
  *
  * @return A new pattern where each value is replaced by `log₂(value)`.
- * @sample "8 16".log2().scale("c3:major").n()           // log₂(8)=3, log₂(16)=4
- * @sample "1 2 4 8".log2().scale("c3:major").n()        // 0, 1, 2, 3
+ *
+ * ```KlangScript
+ * "8 16".log2().scale("c3:major").n()           // log₂(8)=3, log₂(16)=4
+ * ```
+ *
+ * ```KlangScript
+ * "1 2 4 8".log2().scale("c3:major").n()        // 0, 1, 2, 3
+ * ```
  * @category arithmetic
  * @tags log2, logarithm, arithmetic, math
  */
@@ -461,8 +536,14 @@ internal val String._lt by dslStringExtension { p, args, callInfo -> p._lt(args,
  * @param threshold The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- * @sample "5 10".lt(8).scale("c3:major").n()            // 5<8 → 1, 10<8 → 0
- * @sample "5 10".lt("<8 6>").scale("c3:major").n()      // threshold changes each cycle
+ *
+ * ```KlangScript
+ * "5 10".lt(8).scale("c3:major").n()            // 5<8 → 1, 10<8 → 0
+ * ```
+ *
+ * ```KlangScript
+ * "5 10".lt("<8 6>").scale("c3:major").n()      // threshold changes each cycle
+ * ```
  * @category arithmetic
  * @tags lt, less than, comparison, arithmetic
  */
@@ -494,8 +575,14 @@ internal val String._gt by dslStringExtension { p, args, callInfo -> p._gt(args,
  * @param threshold The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- * @sample "5 10".gt(8).scale("c3:major").n()            // 5>8 → 0, 10>8 → 1
- * @sample "5 10".gt("<8 6>").scale("c3:major").n()      // threshold changes each cycle
+ *
+ * ```KlangScript
+ * "5 10".gt(8).scale("c3:major").n()            // 5>8 → 0, 10>8 → 1
+ * ```
+ *
+ * ```KlangScript
+ * "5 10".gt("<8 6>").scale("c3:major").n()      // threshold changes each cycle
+ * ```
  * @category arithmetic
  * @tags gt, greater than, comparison, arithmetic
  */
@@ -527,8 +614,14 @@ internal val String._lte by dslStringExtension { p, args, callInfo -> p._lte(arg
  * @param threshold The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- * @sample "5 8 10".lte(8).scale("c3:major").n()         // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
- * @sample "5 8 10".lte("<8 6>").scale("c3:major").n()   // threshold changes each cycle
+ *
+ * ```KlangScript
+ * "5 8 10".lte(8).scale("c3:major").n()         // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
+ * ```
+ *
+ * ```KlangScript
+ * "5 8 10".lte("<8 6>").scale("c3:major").n()   // threshold changes each cycle
+ * ```
  * @category arithmetic
  * @tags lte, less than or equal, comparison, arithmetic
  */
@@ -560,8 +653,14 @@ internal val String._gte by dslStringExtension { p, args, callInfo -> p._gte(arg
  * @param threshold The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- * @sample "5 8 10".gte(8).scale("c3:major").n()         // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
- * @sample "5 8 10".gte("<8 6>").scale("c3:major").n()   // threshold changes each cycle
+ *
+ * ```KlangScript
+ * "5 8 10".gte(8).scale("c3:major").n()         // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
+ * ```
+ *
+ * ```KlangScript
+ * "5 8 10".gte("<8 6>").scale("c3:major").n()   // threshold changes each cycle
+ * ```
  * @category arithmetic
  * @tags gte, greater than or equal, comparison, arithmetic
  */
@@ -593,8 +692,14 @@ internal val String._eq by dslStringExtension { p, args, callInfo -> p._eq(args,
  * @param other The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- * @sample "5 8".eq(8).scale("c3:major").n()             // 5==8 → 0, 8==8 → 1
- * @sample "0 1 2 3".eq("<0 1>").scale("c3:major").n()   // equality alternates between 0 and 1 each cycle
+ *
+ * ```KlangScript
+ * "5 8".eq(8).scale("c3:major").n()             // 5==8 → 0, 8==8 → 1
+ * ```
+ *
+ * ```KlangScript
+ * "0 1 2 3".eq("<0 1>").scale("c3:major").n()   // equality alternates between 0 and 1 each cycle
+ * ```
  * @category arithmetic
  * @tags eq, equal, equality, comparison, arithmetic
  */
@@ -628,8 +733,14 @@ internal val String._eqt by dslStringExtension { p, args, callInfo -> p._eqt(arg
  * @param other The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- * @sample "0 5".eqt(0).scale("c3:major").n()            // 0~=0 → 1, 5~=0 → 0
- * @sample "0 5".eqt(3).scale("c3:major").n()            // 0~=3 → 0, 5~=3 → 1 (both truthy)
+ *
+ * ```KlangScript
+ * "0 5".eqt(0).scale("c3:major").n()            // 0~=0 → 1, 5~=0 → 0
+ * ```
+ *
+ * ```KlangScript
+ * "0 5".eqt(3).scale("c3:major").n()            // 0~=3 → 0, 5~=3 → 1 (both truthy)
+ * ```
  * @category arithmetic
  * @tags eqt, truthiness, equal, comparison, arithmetic
  */
@@ -661,8 +772,14 @@ internal val String._ne by dslStringExtension { p, args, callInfo -> p._ne(args,
  * @param other The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- * @sample "5 8".ne(8).scale("c3:major").n()             // 5!=8 → 1, 8!=8 → 0
- * @sample "0 1 2 3".ne("<0 1>").scale("c3:major").n()   // inequality alternates between 0 and 1 each cycle
+ *
+ * ```KlangScript
+ * "5 8".ne(8).scale("c3:major").n()             // 5!=8 → 1, 8!=8 → 0
+ * ```
+ *
+ * ```KlangScript
+ * "0 1 2 3".ne("<0 1>").scale("c3:major").n()   // inequality alternates between 0 and 1 each cycle
+ * ```
  * @category arithmetic
  * @tags ne, not equal, inequality, comparison, arithmetic
  */
@@ -696,8 +813,14 @@ internal val String._net by dslStringExtension { p, args, callInfo -> p._net(arg
  * @param other The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- * @sample "0 5".net(0).scale("c3:major").n()            // 0~!=0 → 0, 5~!=0 → 1
- * @sample "0 5".net(3).scale("c3:major").n()            // 0~!=3 → 1, 5~!=3 → 0 (both truthy)
+ *
+ * ```KlangScript
+ * "0 5".net(0).scale("c3:major").n()            // 0~!=0 → 0, 5~!=0 → 1
+ * ```
+ *
+ * ```KlangScript
+ * "0 5".net(3).scale("c3:major").n()            // 0~!=3 → 1, 5~!=3 → 0 (both truthy)
+ * ```
  * @category arithmetic
  * @tags net, truthiness, not equal, inequality, comparison, arithmetic
  */
@@ -730,8 +853,14 @@ internal val String._and by dslStringExtension { p, args, callInfo -> p._and(arg
  *
  * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is `value && other`.
- * @sample "0 5".and(10).scale("c3:major").n()           // 0&&10 → 0, 5&&10 → 10
- * @sample "5".and("<0 10>").scale("c3:major").n()       // gate on/off each cycle
+ *
+ * ```KlangScript
+ * "0 5".and(10).scale("c3:major").n()           // 0&&10 → 0, 5&&10 → 10
+ * ```
+ *
+ * ```KlangScript
+ * "5".and("<0 10>").scale("c3:major").n()       // gate on/off each cycle
+ * ```
  * @category arithmetic
  * @tags and, logical, boolean, arithmetic
  */
@@ -764,8 +893,14 @@ internal val String._or by dslStringExtension { p, args, callInfo -> p._or(args,
  *
  * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is `value || other`.
- * @sample "0 5".or(10).scale("c3:major").n()            // 0||10 → 10, 5||10 → 5
- * @sample "0 5".or("<1 2>").scale("c3:major").n()       // fallback alternates each cycle
+ *
+ * ```KlangScript
+ * "0 5".or(10).scale("c3:major").n()            // 0||10 → 10, 5||10 → 5
+ * ```
+ *
+ * ```KlangScript
+ * "0 5".or("<1 2>").scale("c3:major").n()       // fallback alternates each cycle
+ * ```
  * @category arithmetic
  * @tags or, logical, boolean, arithmetic
  */
@@ -795,8 +930,14 @@ internal val String._round by dslStringExtension { p, _, _ -> p._round() }
  * Halfway values (e.g. 2.5) round up. Non-numeric values are passed through unchanged.
  *
  * @return A new pattern with each value rounded to the nearest integer.
- * @sample "2.4 2.5 2.6".round().scale("c3:major").n()   // 2, 3, 3
- * @sample "0.1 0.9".round().scale("c3:major").n()       // 0, 1
+ *
+ * ```KlangScript
+ * "2.4 2.5 2.6".round().scale("c3:major").n()   // 2, 3, 3
+ * ```
+ *
+ * ```KlangScript
+ * "0.1 0.9".round().scale("c3:major").n()       // 0, 1
+ * ```
  * @category arithmetic
  * @tags round, rounding, arithmetic, math
  */
@@ -823,8 +964,14 @@ internal val String._floor by dslStringExtension { p, _, _ -> p._floor() }
  * Non-numeric values are passed through unchanged.
  *
  * @return A new pattern with each value floored to an integer.
- * @sample "2.1 2.9".floor().scale("c3:major").n()       // 2, 2
- * @sample "-2.1 -2.9".floor().scale("c3:major").n()     // -3, -3
+ *
+ * ```KlangScript
+ * "2.1 2.9".floor().scale("c3:major").n()       // 2, 2
+ * ```
+ *
+ * ```KlangScript
+ * "-2.1 -2.9".floor().scale("c3:major").n()     // -3, -3
+ * ```
  * @category arithmetic
  * @tags floor, rounding, arithmetic, math
  */
@@ -851,8 +998,14 @@ internal val String._ceil by dslStringExtension { p, _, _ -> p._ceil() }
  * Non-numeric values are passed through unchanged.
  *
  * @return A new pattern with each value ceiled to an integer.
- * @sample "2.1 2.9".ceil().scale("c3:major").n()        // 3, 3
- * @sample "-2.9 -2.1".ceil().scale("c3:major").n()      // -2, -2
+ *
+ * ```KlangScript
+ * "2.1 2.9".ceil().scale("c3:major").n()        // 3, 3
+ * ```
+ *
+ * ```KlangScript
+ * "-2.9 -2.1".ceil().scale("c3:major").n()      // -2, -2
+ * ```
  * @category arithmetic
  * @tags ceil, ceiling, rounding, arithmetic, math
  */

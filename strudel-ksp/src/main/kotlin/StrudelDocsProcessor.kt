@@ -284,6 +284,14 @@ class StrudelDocsProcessor(
 
         val description = kdoc.description.replace("\n", " ")
 
+        val samplesString = if (kdoc.samples.isNotEmpty()) {
+            kdoc.samples.joinToString(",\n") { sample ->
+                "                \"\"\"$sample\"\"\""
+            }
+        } else {
+            ""
+        }
+
         return buildString {
             appendLine("            VariantDoc(")
             appendLine("                type = $variantType,")
@@ -291,7 +299,14 @@ class StrudelDocsProcessor(
             appendLine("                description = \"\"\"$description\"\"\",")
             appendLine("                params = emptyList(),")
             appendLine("                returnDoc = \"\",")
-            appendLine("                samples = emptyList()")
+            if (kdoc.samples.isNotEmpty()) {
+                appendLine("                samples = listOf(")
+                append(samplesString)
+                appendLine()
+                appendLine("                )")
+            } else {
+                appendLine("                samples = emptyList()")
+            }
             append("            )")
         }
     }

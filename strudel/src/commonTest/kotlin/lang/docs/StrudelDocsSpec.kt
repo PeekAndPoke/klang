@@ -83,4 +83,27 @@ class StrudelDocsSpec : StringSpec({
 
         names shouldContain "seq"
     }
+
+    // --- Property / dslObject docs ---
+
+    "sine documentation should be registered as OBJECT variant" {
+        val doc = DslDocsRegistry.global.get("sine")
+
+        doc shouldNotBe null
+        doc!!.name shouldBe "sine"
+        doc.category shouldBe "continuous"
+        doc.library shouldBe "strudel"
+        doc.tags shouldContain "oscillator"
+
+        val variant = doc.variants.first { it.type == DslType.OBJECT }
+        variant.signature shouldBe "sine: StrudelPattern"
+    }
+
+    "sine OBJECT variant should have samples parsed from fenced KlangScript blocks" {
+        val variant = DslDocsRegistry.global.get("sine")!!
+            .variants.first { it.type == DslType.OBJECT }
+
+        variant.samples shouldHaveAtLeastSize 2
+        variant.samples.any { it.contains("sine") } shouldBe true
+    }
 })
