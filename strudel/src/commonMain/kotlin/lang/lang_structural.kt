@@ -73,11 +73,20 @@ private val String._hush by dslStringExtension { p, args, callInfo -> p._hush(ar
 @StrudelDsl
 fun hush(vararg args: PatternLike): StrudelPattern = _hush(args.toList())
 
-/** Silences this pattern. Without arguments, unconditionally returns silence. With a condition, silences when truthy. */
+/**
+ * Silences this pattern. Without arguments, unconditionally returns silence.
+ * With a condition, silences when truthy.
+ * @sample s("bd sd").hush()            // Unconditional silence
+ * @sample s("bd sd").hush("<1 0>")     // Silent on odd cycles, audible on even
+ */
 @StrudelDsl
 fun StrudelPattern.hush(vararg args: PatternLike): StrudelPattern = this._hush(args.toList())
 
-/** Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence. */
+/**
+ * Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence.
+ * @sample "bd sd".hush()              // Unconditional silence
+ * @sample "bd sd".hush("<1 0>")       // Silent on odd cycles, audible on even
+ */
 @StrudelDsl
 fun String.hush(vararg args: PatternLike): StrudelPattern = this._hush(args.toList())
 
@@ -104,12 +113,19 @@ private val String._bypass by dslStringExtension { p, args, callInfo -> p._bypas
 fun bypass(vararg args: PatternLike): StrudelPattern = _bypass(args.toList())
 
 /**
- * Silences this pattern. Without arguments, unconditionally returns silence. With a condition, silences when truthy.
+ * Silences this pattern. Without arguments, unconditionally returns silence.
+ * With a condition, silences when truthy.
+ * @sample s("bd sd").bypass()          // Unconditional silence
+ * @sample s("bd sd").bypass("<1 0>")   // Silent on odd cycles, audible on even
  */
 @StrudelDsl
 fun StrudelPattern.bypass(vararg args: PatternLike): StrudelPattern = this._bypass(args.toList())
 
-/** Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence. */
+/**
+ * Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence.
+ * @sample "bd sd".bypass()             // Unconditional silence
+ * @sample "bd sd".bypass("<1 0>")      // Silent on odd cycles, audible on even
+ */
 @StrudelDsl
 fun String.bypass(vararg args: PatternLike): StrudelPattern = this._bypass(args.toList())
 
@@ -135,11 +151,20 @@ private val String._mute by dslStringExtension { p, args, callInfo -> p._mute(ar
 @StrudelDsl
 fun mute(vararg args: PatternLike): StrudelPattern = _mute(args.toList())
 
-/** Silences this pattern. Without arguments, unconditionally returns silence. With a condition, silences when truthy. */
+/**
+ * Silences this pattern. Without arguments, unconditionally returns silence.
+ * With a condition, silences when truthy.
+ * @sample s("bd sd").mute()            // Unconditional silence
+ * @sample s("bd sd").mute("<1 0>")     // Silent on odd cycles, audible on even
+ */
 @StrudelDsl
 fun StrudelPattern.mute(vararg args: PatternLike): StrudelPattern = this._mute(args.toList())
 
-/** Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence. */
+/**
+ * Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence.
+ * @sample "bd sd".mute()               // Unconditional silence
+ * @sample "bd sd".mute("<1 0>")        // Silent on odd cycles, audible on even
+ */
 @StrudelDsl
 fun String.mute(vararg args: PatternLike): StrudelPattern = this._mute(args.toList())
 
@@ -192,11 +217,18 @@ private val String._gap by dslStringExtension { p, args, callInfo -> p._gap(args
 @StrudelDsl
 fun gap(vararg steps: PatternLike): StrudelPattern = _gap(steps.toList())
 
-/** Replaces this pattern with a silent slot occupying the given number of steps. */
+/**
+ * Replaces this pattern with a silent slot occupying the given number of steps.
+ * @sample note("c").gap()              // Replaces with 1-step silence
+ * @sample note("c").gap(2)             // Replaces with 2-step silence
+ */
 @StrudelDsl
 fun StrudelPattern.gap(vararg steps: PatternLike): StrudelPattern = this._gap(steps.toList())
 
-/** Replaces this string pattern with a silent slot occupying the given number of steps. */
+/**
+ * Replaces this string pattern with a silent slot occupying the given number of steps.
+ * @sample seq("bd", "hh".gap(), "sd").s()   // Middle step replaced by silence
+ */
 @StrudelDsl
 fun String.gap(vararg steps: PatternLike): StrudelPattern = this._gap(steps.toList())
 
@@ -273,11 +305,34 @@ fun String.seq(vararg patterns: PatternLike): StrudelPattern {
 
 // -- mini() -----------------------------------------------------------------------------------------------------------
 
-/** Parses input as mini-notation. Effectively an alias for `seq`. */
-val mini by dslFunction { args, /* callInfo */ _ -> args.toPattern() }
+// Private delegates - still register with KlangScript
+private val _mini by dslFunction { args, /* callInfo */ _ -> args.toPattern() }
+private val String._mini by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p }
 
-/** Parses input as mini-notation. Effectively an alias for `seq`. */
-val String.mini by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p }
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Parses mini-notation and returns the resulting pattern. Effectively an alias for [seq].
+ *
+ * Mini-notation is the compact pattern language for expressing sequences, sub-sequences,
+ * alternations, and other rhythmic structures inline as strings.
+ *
+ * @param patterns Strings or other pattern-like values to parse as mini-notation.
+ * @return A pattern built from the mini-notation input
+ * @sample mini("c d e f").note()       // Four notes, one per quarter cycle
+ * @sample mini("bd [sd cp] hh").s()    // Nested sub-sequence in square brackets
+ * @category structural
+ * @tags mini, notation, parse, sequence
+ */
+@StrudelDsl
+fun mini(vararg patterns: PatternLike): StrudelPattern = _mini(patterns.toList())
+
+/**
+ * Parses this string as mini-notation and returns the resulting pattern.
+ * @sample "c d e f".mini().note()      // Four notes from mini-notation string
+ */
+@StrudelDsl
+fun String.mini(): StrudelPattern = this._mini()
 
 // -- stack() ----------------------------------------------------------------------------------------------------------
 
@@ -319,11 +374,18 @@ private val String._stack by dslStringExtension { p, args, callInfo -> p._stack(
 @StrudelDsl
 fun stack(vararg patterns: PatternLike): StrudelPattern = _stack(patterns.toList())
 
-/** Layers this pattern together with additional patterns so they all play simultaneously. */
+/**
+ * Layers this pattern together with additional patterns so they all play simultaneously.
+ * @sample note("c e g").stack(s("bd sd"))   // Melody on top of a beat
+ * @sample note("c e").stack("g b".note())   // Two melodic lines layered
+ */
 @StrudelDsl
 fun StrudelPattern.stack(vararg patterns: PatternLike): StrudelPattern = this._stack(patterns.toList())
 
-/** Parses this string as a pattern and layers it together with additional patterns. */
+/**
+ * Parses this string as a pattern and layers it together with additional patterns.
+ * @sample "c e g".stack("g b d").note()     // Two chord voicings layered
+ */
 @StrudelDsl
 fun String.stack(vararg patterns: PatternLike): StrudelPattern = this._stack(patterns.toList())
 
@@ -379,11 +441,17 @@ private val String._arrange by dslStringExtension { p, args, callInfo -> p._arra
 @StrudelDsl
 fun arrange(vararg segments: PatternLike): StrudelPattern = _arrange(segments.toList())
 
-/** Prepends this pattern (duration 1) and plays it followed by the given segments. */
+/**
+ * Prepends this pattern (duration 1) and plays it followed by the given segments.
+ * @sample note("c e g").arrange([2, note("f a c")]).s("piano")  // 1 cycle chord, then 2 cycles
+ */
 @StrudelDsl
 fun StrudelPattern.arrange(vararg segments: PatternLike): StrudelPattern = this._arrange(segments.toList())
 
-/** Parses this string as a pattern (duration 1) and arranges it together with the given segments. */
+/**
+ * Parses this string as a pattern (duration 1) and arranges it together with the given segments.
+ * @sample "c e g".arrange([2, "f a c"]).note()  // 1 cycle, then 2 cycles of second chord
+ */
 @StrudelDsl
 fun String.arrange(vararg segments: PatternLike): StrudelPattern = this._arrange(segments.toList())
 
