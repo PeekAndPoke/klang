@@ -101,13 +101,21 @@ class StrudelDocsProcessor(
             KDocParser.parse(kdoc)
         }
 
-        // Merge categories and tags from all overloads (prefer non-empty values)
+        // Merge categories, tags and aliases from all overloads (prefer non-empty values)
         val category = parsedKDocs.mapNotNull { it.category }.firstOrNull() ?: "uncategorized"
         val allTags = parsedKDocs.flatMap { it.tags }.distinct()
+        val allAliases = parsedKDocs.flatMap { it.aliases }.distinct()
 
         // Extract tags
         val tagsString = if (allTags.isNotEmpty()) {
             allTags.joinToString(", ") { "\"$it\"" }
+        } else {
+            ""
+        }
+
+        // Extract aliases
+        val aliasesString = if (allAliases.isNotEmpty()) {
+            allAliases.joinToString(", ") { "\"$it\"" }
         } else {
             ""
         }
@@ -123,6 +131,7 @@ class StrudelDocsProcessor(
             appendLine("        name = \"$functionName\",")
             appendLine("        category = \"$category\",")
             appendLine("        tags = listOf($tagsString),")
+            appendLine("        aliases = listOf($aliasesString),")
             appendLine("        library = \"strudel\",")
             appendLine("        variants = listOf(")
             variants.forEachIndexed { index, variant ->

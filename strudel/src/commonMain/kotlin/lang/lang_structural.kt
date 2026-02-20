@@ -35,7 +35,7 @@ var strudelLangStructuralInit = false
  * Returns silence when the condition is true.
  * When called without arguments, unconditionally returns silence.
  */
-private fun applyHush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyHush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     // No arguments: unconditionally mute
     if (args.isEmpty()) return silence
 
@@ -51,48 +51,97 @@ private fun applyHush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     )
 }
 
-/**
- * Stops/mutes the pattern. Without arguments, unconditionally returns silence.
- * With arguments (including control patterns), mutes when the condition is truthy.
- * Example: s("bd sd").hush("<1 0>") mutes on alternating cycles.
- */
-@StrudelDsl
-val hush by dslFunction { _, _ -> silence }
+// Private delegates - still register with KlangScript
+private val _hush by dslFunction { _, _ -> silence }
+private val StrudelPattern._hush by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
+private val String._hush by dslStringExtension { p, args, callInfo -> p._hush(args, callInfo) }
 
-@StrudelDsl
-val StrudelPattern.hush by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
-
-@StrudelDsl
-val String.hush by dslStringExtension { p, args, callInfo -> p.hush(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
 /**
- * Returns silence when the condition is true (bypasses the pattern).
- * Supports both static values and control patterns.
- * Example: s("bd sd").bypass("<1 0>") plays on alternating cycles.
+ * Silences the pattern. Without arguments, unconditionally returns silence.
+ * With a condition, silences when the condition is truthy — supports control patterns.
+ *
+ * @param args Optional condition pattern. When truthy the pattern is silenced.
+ * @return Silence, or the original pattern gated by the condition
+ * @sample s("bd sd").hush()          // Unconditional silence
+ * @sample s("bd sd").hush("<1 0>")   // Silence on odd cycles, play on even
+ * @alias bypass, mute
+ * @category structural
+ * @tags silence, mute, control
  */
 @StrudelDsl
-val bypass by dslFunction { _, _ -> silence }
+fun hush(vararg args: PatternLike): StrudelPattern = _hush(args.toList())
 
+/** Silences this pattern. Without arguments, unconditionally returns silence. With a condition, silences when truthy. */
 @StrudelDsl
-val StrudelPattern.bypass by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
+fun StrudelPattern.hush(vararg args: PatternLike): StrudelPattern = this._hush(args.toList())
 
+/** Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence. */
 @StrudelDsl
-val String.bypass by dslStringExtension { p, args, callInfo -> p.bypass(args, callInfo) }
+fun String.hush(vararg args: PatternLike): StrudelPattern = this._hush(args.toList())
+
+// Private delegates - still register with KlangScript
+private val _bypass by dslFunction { _, _ -> silence }
+private val StrudelPattern._bypass by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
+private val String._bypass by dslStringExtension { p, args, callInfo -> p._bypass(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
- * Alias for hush()/bypass(). Mutes the pattern based on a condition.
- * Without arguments, unconditionally returns silence.
- * With arguments (including control patterns), mutes when the condition is truthy.
- * Example: s("bd sd").mute("<1 0>") mutes on alternating cycles.
+ * Alias for [hush]. Silences the pattern. Without arguments, unconditionally returns silence.
+ * With a condition, silences when the condition is truthy — supports control patterns.
+ *
+ * @param args Optional condition pattern. When truthy the pattern is silenced.
+ * @return Silence, or the original pattern gated by the condition
+ * @sample s("bd sd").bypass()          // Unconditional silence
+ * @sample s("bd sd").bypass("<1 0>")   // Silence on odd cycles, play on even
+ * @alias hush, mute
+ * @category structural
+ * @tags silence, mute, bypass, control
  */
 @StrudelDsl
-val mute by dslFunction { _, _ -> silence }
+fun bypass(vararg args: PatternLike): StrudelPattern = _bypass(args.toList())
 
+/**
+ * Silences this pattern. Without arguments, unconditionally returns silence. With a condition, silences when truthy.
+ */
 @StrudelDsl
-val StrudelPattern.mute by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
+fun StrudelPattern.bypass(vararg args: PatternLike): StrudelPattern = this._bypass(args.toList())
 
+/** Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence. */
 @StrudelDsl
-val String.mute by dslStringExtension { p, args, callInfo -> p.mute(args, callInfo) }
+fun String.bypass(vararg args: PatternLike): StrudelPattern = this._bypass(args.toList())
+
+// Private delegates - still register with KlangScript
+private val _mute by dslFunction { _, _ -> silence }
+private val StrudelPattern._mute by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
+private val String._mute by dslStringExtension { p, args, callInfo -> p._mute(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Alias for [hush]. Silences the pattern. Without arguments, unconditionally returns silence.
+ * With a condition, silences when the condition is truthy — supports control patterns.
+ *
+ * @param args Optional condition pattern. When truthy the pattern is silenced.
+ * @return Silence, or the original pattern gated by the condition
+ * @sample s("bd sd").mute()          // Unconditional silence
+ * @sample s("bd sd").mute("<1 0>")   // Silence on odd cycles, play on even
+ * @alias hush, bypass
+ * @category structural
+ * @tags silence, mute, control
+ */
+@StrudelDsl
+fun mute(vararg args: PatternLike): StrudelPattern = _mute(args.toList())
+
+/** Silences this pattern. Without arguments, unconditionally returns silence. With a condition, silences when truthy. */
+@StrudelDsl
+fun StrudelPattern.mute(vararg args: PatternLike): StrudelPattern = this._mute(args.toList())
+
+/** Parses this string as a pattern and silences it. Without arguments, unconditionally returns silence. */
+@StrudelDsl
+fun String.mute(vararg args: PatternLike): StrudelPattern = this._mute(args.toList())
 
 // -- gap() ------------------------------------------------------------------------------------------------------------
 

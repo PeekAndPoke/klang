@@ -18,6 +18,62 @@ import io.peekandpoke.klang.script.docs.FunctionDoc
 import kotlinx.css.*
 import kotlinx.html.*
 
+/**
+ * Search syntax constants and matching logic for the docs page.
+ *
+ * Supported prefixed terms (may be combined with whitespace for logical AND):
+ *   category:XYZ  — matches functions whose category contains XYZ
+ *   tag:XYZ       — matches functions with a tag containing XYZ
+ *   function:XYZ  — matches functions whose name contains XYZ
+ *   XYZ           — plain term: matches name, aliases, tags, category, or library
+ */
+private object DocSearch {
+    const val PREFIX_CATEGORY = "category:"
+    const val PREFIX_TAG = "tag:"
+    const val PREFIX_FUNCTION = "function:"
+
+    fun categoryQuery(name: String) = "$PREFIX_CATEGORY$name"
+    fun tagQuery(name: String) = "$PREFIX_TAG$name"
+    fun functionQuery(name: String) = "$PREFIX_FUNCTION$name"
+
+    /** Splits a raw query string into individual search terms (whitespace-separated). */
+    fun parseTerms(query: String): List<String> =
+        query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+
+    /** Returns true if [func] matches ALL given search terms (logical AND). */
+    fun matches(func: FunctionDoc, terms: List<String>): Boolean =
+        terms.all { term -> matchesTerm(func, term) }
+
+    private fun matchesTerm(func: FunctionDoc, term: String): Boolean {
+        val lower = term.lowercase()
+        return when {
+            lower.startsWith(PREFIX_CATEGORY) -> {
+                val value = lower.removePrefix(PREFIX_CATEGORY)
+                func.category.lowercase().contains(value)
+            }
+
+            lower.startsWith(PREFIX_TAG) -> {
+                val value = lower.removePrefix(PREFIX_TAG)
+                func.tags.any { it.lowercase().contains(value) }
+            }
+
+            lower.startsWith(PREFIX_FUNCTION) -> {
+                val value = lower.removePrefix(PREFIX_FUNCTION)
+                func.name.lowercase().contains(value)
+            }
+
+            else -> {
+                // Plain term: search across name, aliases, tags, category, library
+                func.name.lowercase().contains(lower) ||
+                        func.aliases.any { it.lowercase().contains(lower) } ||
+                        func.tags.any { it.lowercase().contains(lower) } ||
+                        func.category.lowercase().contains(lower) ||
+                        func.library.lowercase().contains(lower)
+            }
+        }
+    }
+}
+
 @Suppress("FunctionName")
 fun Tag.StrudelDocsPage() = comp {
     StrudelDocsPage(it)
@@ -35,25 +91,19 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var searchQuery: String by value("")
-    private var selectedCategory: String? by value(null)
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
 
-    private val allCategories: List<String>
-        get() = registry.categories
-
     private val filteredFunctions: List<FunctionDoc>
         get() {
-            val query = searchQuery.trim()
-            val category = selectedCategory
+            val terms = DocSearch.parseTerms(searchQuery)
+            val all = registry.functions.values.sortedBy { it.name }
 
             return when {
-                // Search has priority
-                query.isNotEmpty() -> registry.search(query)
-                // Then category filter
-                category != null -> registry.getFunctionsByCategory(category)
+                // Smart search (supports prefixed terms + logical AND)
+                terms.isNotEmpty() -> all.filter { DocSearch.matches(it, terms) }
                 // Show all by default
-                else -> registry.functions.values.sortedBy { it.name }
+                else -> all
             }
         }
 
@@ -65,52 +115,20 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                 padding = Padding(2.rem)
             }
 
-            // Header
-            ui.header H1 {
-                css {
-                    marginBottom = 2.rem
-                }
-                +"Strudel DSL Reference"
-            }
-
             // Search and filters
-            ui.segment {
+            div {
                 ui.form {
                     // Search box
                     div {
                         UiInputField(value = searchQuery, onChange = { searchQuery = it }) {
+                            placeholder(
+                                "Search: plain text, category:structural, tag:timing, function:seq"
+                            )
 
-                            placeholder("Search functions, categories, or tags")
+                            rightClearingIcon()
 
                             leftLabel {
                                 ui.basic.label { icon.search(); +"Search" }
-                            }
-                        }
-                    }
-
-                    // Category filter buttons
-                    ui.buttons {
-                        css {
-                            marginTop = 1.rem
-                        }
-
-                        // "All" button
-                        button(classes = "ui ${if (selectedCategory == null) "primary" else ""} button") {
-                            onClick {
-                                selectedCategory = null
-                            }
-                            +"All"
-                        }
-
-                        // Category buttons
-                        allCategories.forEach { category ->
-                            key = category
-
-                            button(classes = "ui ${if (selectedCategory == category) "primary" else ""} button") {
-                                onClick {
-                                    selectedCategory = category
-                                }
-                                +category.replaceFirstChar { it.uppercase() }
                             }
                         }
                     }
@@ -119,10 +137,8 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
             // Results count
             ui.message {
-                css {
-                    marginTop = 1.rem
-                }
-                +"Showing ${filteredFunctions.size} function(s)"
+                css { marginTop = 1.rem }
+                +"Found ${filteredFunctions.size} entries"
             }
 
             // Function list
@@ -149,36 +165,44 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
             // Function name and category
             ui.segment {
-                ui.header H2 {
-                    +func.name
-
-                    // Aliases
-                    if (func.aliases.isNotEmpty()) {
-                        noui.sub.header {
-                            css {
-                                display = Display.inlineBlock
-                                marginLeft = 1.rem
-                                color = Color("#666")
-                            }
-                            +"(aliases: ${func.aliases.joinToString(", ")})"
+                ui.relaxed.horizontal.list {
+                    noui.item {
+                        ui.large.header {
+                            +func.name
                         }
                     }
 
-                    noui.sub.header {
-                        css {
-                            display = Display.inlineBlock
-                            marginLeft = 1.rem
-                        }
+                    noui.item {
+                        // Category label — click to search by category
                         ui.label {
+                            css { cursor = Cursor.pointer }
+                            onClick { searchQuery = DocSearch.categoryQuery(func.category) }
                             icon.tag()
                             +func.category
                         }
-                        // Tags
+                        // Tag labels — click to search by tag
                         func.tags.forEach { tag ->
                             ui.label {
                                 key = tag
+                                css { cursor = Cursor.pointer }
+                                onClick { searchQuery = DocSearch.tagQuery(tag) }
                                 icon.hashtag()
                                 +tag
+                            }
+                        }
+                    }
+
+                    // Alias labels — click to search by function name
+                    if (func.aliases.isNotEmpty()) {
+                        noui.item {
+                            func.aliases.forEach { alias ->
+                                key = alias
+                                ui.label {
+                                    css { cursor = Cursor.pointer }
+                                    onClick { searchQuery = DocSearch.functionQuery(alias) }
+                                    icon.at()
+                                    +alias
+                                }
                             }
                         }
                     }

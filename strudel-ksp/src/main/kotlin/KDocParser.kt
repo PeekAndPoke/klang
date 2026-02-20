@@ -16,6 +16,8 @@ data class ParsedKDoc(
     val category: String?,
     /** @tags tag (custom, comma-separated) */
     val tags: List<String>,
+    /** @alias tag (custom, comma-separated alternative function names) */
+    val aliases: List<String>,
 )
 
 /**
@@ -31,7 +33,8 @@ object KDocParser {
                 returnDoc = "",
                 samples = emptyList(),
                 category = null,
-                tags = emptyList()
+                tags = emptyList(),
+                aliases = emptyList(),
             )
         }
 
@@ -65,6 +68,7 @@ object KDocParser {
         var returnDoc = ""
         var category: String? = null
         val tags = mutableListOf<String>()
+        val aliases = mutableListOf<String>()
 
         var currentTag: String? = null
         var currentContent = StringBuilder()
@@ -91,6 +95,16 @@ object KDocParser {
                         val trimmed = t.trim()
                         if (trimmed.isNotEmpty()) {
                             tags.add(trimmed)
+                        }
+                    }
+                }
+
+                tag == "alias" -> {
+                    // Parse comma-separated alias names
+                    content.split(",").forEach { a ->
+                        val trimmed = a.trim()
+                        if (trimmed.isNotEmpty()) {
+                            aliases.add(trimmed)
                         }
                     }
                 }
@@ -134,6 +148,12 @@ object KDocParser {
                     currentContent = StringBuilder(line.removePrefix("@tags").trim())
                 }
 
+                line.startsWith("@alias") -> {
+                    saveCurrentTag()
+                    currentTag = "alias"
+                    currentContent = StringBuilder(line.removePrefix("@alias").trim())
+                }
+
                 else -> {
                     // Continuation of current tag
                     if (currentContent.isNotEmpty()) {
@@ -153,7 +173,8 @@ object KDocParser {
             returnDoc = returnDoc,
             samples = samples,
             category = category,
-            tags = tags
+            tags = tags,
+            aliases = aliases,
         )
     }
 }
