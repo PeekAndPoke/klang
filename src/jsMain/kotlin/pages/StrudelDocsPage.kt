@@ -3,6 +3,7 @@ package io.peekandpoke.klang.pages
 import de.peekandpoke.kraft.components.NoProps
 import de.peekandpoke.kraft.components.PureComponent
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.routing.urlParam
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
@@ -81,6 +82,10 @@ fun Tag.StrudelDocsPage() = comp {
 
 class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
+    companion object {
+        const val PARAM_SEARCH = "search"
+    }
+
     //  REGISTRY  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Create isolated registry for Strudel docs only
@@ -90,7 +95,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private var searchQuery: String by value("")
+    private var searchQuery: String by urlParam(name = PARAM_SEARCH, default = "")
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
 

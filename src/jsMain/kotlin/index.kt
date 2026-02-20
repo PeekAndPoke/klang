@@ -9,7 +9,7 @@ val kraft = kraftApp {
     semanticUI()
 
     routing {
-//        usePathStrategy()
+        usePathStrategy()
         // Mount app routes
         mountNav()
     }

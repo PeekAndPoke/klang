@@ -69,7 +69,7 @@ class JsAudioBackend(
 
             // 2. Load the compiled DSP module
             // This file "dsp.js" must contain the AudioWorkletProcessor registration
-            ctx.audioWorklet.addModule("klang-worklet.js").await()
+            ctx.audioWorklet.addModule("/klang-worklet.js").await()
 
             // 2. Create the Node (this instantiates the Processor in the Audio Thread)
             // We need to explicitly request 2 output channels, otherwise it defaults to 1 (Mono)

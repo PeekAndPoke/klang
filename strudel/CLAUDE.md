@@ -246,16 +246,142 @@ event.copy(
 4. Write a unit test to isolate the issue
 5. Trace through what `fmap` and `squeezeJoin` do with the values
 
+## DSL Documentation Refactoring Pattern
+
+When refactoring an existing `@StrudelDsl` DSL function in `lang_*.kt` files, follow this pattern exactly.
+Use `seq()` and `gap()` in `lang_structural.kt` as the reference implementation.
+
+### Step-by-step
+
+**1. Make existing `val` delegates private and prefix with `_`**
+
+```kotlin
+// Before
+@StrudelDsl
+val foo by dslFunction { args, _ -> applyFoo(args) }
+
+@StrudelDsl
+val StrudelPattern.foo by dslPatternExtension { p, args, _ -> applyFoo(p, args) }
+
+@StrudelDsl
+val String.foo by dslStringExtension { p, args, callInfo -> p.foo(args, callInfo) }
+
+// After
+private val _foo by dslFunction { args, _ -> applyFoo(args) }
+private val StrudelPattern._foo by dslPatternExtension { p, args, _ -> applyFoo(p, args) }
+private val String._foo by dslStringExtension { p, args, callInfo -> p._foo(args, callInfo) }
+```
+
+The private delegates still register the function name with KlangScript — that is intentional.
+
+**2. Add public `fun` overloads with full KDoc**
+
+```kotlin
+// Private delegates - still register with KlangScript
+private val _foo by dslFunction { ... }
+private val StrudelPattern._foo by dslPatternExtension { ... }
+private val String._foo by dslStringExtension { ... }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * One-line summary of what foo does.
+ *
+ * Longer explanation of the behaviour, when to use it, edge cases.
+ *
+ * @param patterns Description of parameter.
+ * @return Description of return value.
+ * @sample foo("a", "b").note()         // Short comment
+ * @sample foo("bd", "sd").s()          // Another example
+ * @alias bar, baz                      // Only if aliases exist
+ * @category structural                 // Category for docs page
+ * @tags foo, rhythm, timing            // Comma-separated searchable tags
+ */
+@StrudelDsl
+fun foo(vararg patterns: PatternLike): StrudelPattern = _foo(patterns.toList())
+
+/** One-line description for this receiver variant. */
+@StrudelDsl
+fun StrudelPattern.foo(vararg patterns: PatternLike): StrudelPattern = this._foo(patterns.toList())
+
+/** One-line description for the String receiver variant. */
+@StrudelDsl
+fun String.foo(vararg patterns: PatternLike): StrudelPattern = this._foo(patterns.toList())
+```
+
+**Always call through the private delegate** — never call `applyFoo()` directly from the `fun` overloads.
+
+### KDoc rules
+
+| Tag         | Required        | Notes                                                   |
+|-------------|-----------------|---------------------------------------------------------|
+| Description | ✅               | First sentence is shown in search results               |
+| `@param`    | ✅               | One per parameter                                       |
+| `@return`   | ✅               | Describe the returned pattern                           |
+| `@sample`   | ✅               | At least 2 runnable examples with inline comments       |
+| `@category` | ✅               | Single word: `structural`, `synthesis`, `effects`, etc. |
+| `@tags`     | ✅               | Comma-separated; drives tag-search in docs page         |
+| `@alias`    | when applicable | Comma-separated; all aliases must point at each other   |
+
+### Line length
+
+- **Max 120 characters per line** — applies to KDoc comments too.
+- Multi-line KDoc blocks for anything that won't fit on one line.
+- Single-line `/** ... */` only when the full comment including `/** */` fits within 120 chars.
+
+### Aliases
+
+When two or more functions are aliases of each other, every one of them must list all the others:
+
+```kotlin
+// hush lists both aliases
+@alias bypass, mute
+
+// bypass lists both aliases
+@alias hush, mute
+
+// mute lists both aliases
+@alias hush, bypass
+```
+
+### Example: `gap()` (vararg PatternLike, same as seq/stack)
+
+`gap()` uses `vararg PatternLike` because the underlying delegate accepts any pattern-like value
+(numbers, strings, patterns). Pass the args list directly to the delegate:
+
+```kotlin
+@StrudelDsl
+fun gap(vararg steps: PatternLike): StrudelPattern = _gap(steps.toList())
+
+@StrudelDsl
+fun StrudelPattern.gap(vararg steps: PatternLike): StrudelPattern = this._gap(steps.toList())
+
+@StrudelDsl
+fun String.gap(vararg steps: PatternLike): StrudelPattern = this._gap(steps.toList())
+```
+
+### KSP and docs generation
+
+- The KSP processor (`strudel-ksp`) picks up all `@StrudelDsl`-annotated **functions** (`fun`).
+- `val` delegates are **not** picked up — that is why we add `fun` overloads.
+- After changing KDoc, run `./gradlew :strudel:jvmTest` — the KSP step regenerates docs automatically
+  before compilation.
+- The `StrudelDocsSpec` tests verify that docs are correctly registered.
+
 ---
 
-**Last Updated**: 2026-02-04
+**Last Updated**: 2026-02-20
 **Recent Work**:
 
 - Implemented `fmap` and `squeezeJoin` for pattern-of-patterns composition
 - Added `StrudelVoiceValue.Pattern` variant
 - Implemented `press()` and `pressBy()` DSL functions with control pattern support
 - Documented `_innerJoin` pattern for control pattern support
+- DSL docs refactoring: `hush`, `bypass`, `mute`, `gap`, `seq` fully documented
+- KSP processor extended with `@alias` tag support
+- `StrudelDocsPage` smart search (`category:`, `tag:`, `function:` prefixes + logical AND)
 
 **Test Status**: LangPressSpec - 8/8 tests passing ✅
 
-**Next**: Continue with remaining DSL functions (`linger`, `ribbon`, etc.)
+**Next**: Continue DSL docs refactoring top-to-bottom through `lang_structural.kt`
+(`stack`, `arrange`, `stepcat`/`timeCat`, `stackBy`, `cat`, `fastcat`, `slowcat`, `polymeter`, …)

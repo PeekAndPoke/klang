@@ -1,7 +1,9 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangGapSpec : StringSpec({
@@ -122,5 +124,47 @@ class LangGapSpec : StringSpec({
 
         p1.queryArc(0.0, 2.0).size shouldBe p2.queryArc(0.0, 2.0).size
         p1.queryArc(0.0, 2.0).size shouldBe 0
+    }
+
+    // -- Proportional space --------------------------------------------------------------------------------------------
+
+    "gap(2) takes twice the proportional space of adjacent 1-step elements in seq" {
+        // Total weight = 1 + 2 + 1 = 4  →  bd=[0,1/4]  gap=[1/4,3/4] (silent)  hh=[3/4,1]
+        val p = seq("bd", gap(2), "hh")
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        events.size shouldBe 2
+
+        events[0].data.value?.asString shouldBe "bd"
+        events[0].whole.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].whole.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+
+        events[1].data.value?.asString shouldBe "hh"
+        events[1].whole.begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        events[1].whole.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "gap(1) gives equal space to all elements in seq" {
+        // Total weight = 1 + 1 + 1 = 3  →  bd=[0,1/3]  gap=[1/3,2/3] (silent)  hh=[2/3,1]
+        val p = seq("bd", gap(1), "hh")
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        events.size shouldBe 2
+
+        events[0].whole.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].whole.end.toDouble() shouldBe (1.0 / 3.0 plusOrMinus EPSILON)
+
+        events[1].whole.begin.toDouble() shouldBe (2.0 / 3.0 plusOrMinus EPSILON)
+        events[1].whole.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    // -- Control pattern support ---------------------------------------------------------------------------------------
+
+    "gap() with alternating control pattern produces silence in every cycle" {
+        val p = gap("<1 2>")
+
+        repeat(4) { cycle ->
+            p.queryArc(cycle.toDouble(), cycle + 1.0).size shouldBe 0
+        }
     }
 })

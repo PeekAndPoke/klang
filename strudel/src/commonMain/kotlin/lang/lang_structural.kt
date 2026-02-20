@@ -145,22 +145,60 @@ fun String.mute(vararg args: PatternLike): StrudelPattern = this._mute(args.toLi
 
 // -- gap() ------------------------------------------------------------------------------------------------------------
 
-/** Creates silence with a specific duration in steps (metrical steps). */
+/** Creates a silent pattern occupying the given number of steps. Supports control patterns via _innerJoin. */
 fun applyGap(args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val steps = args.firstOrNull()?.value?.asRationalOrNull() ?: Rational.ONE
+    val stepsArg = args.getOrNull(0) ?: return GapPattern(Rational.ONE)
 
-    return GapPattern(steps)
+    // For static values create GapPattern directly so its weight is preserved.
+    // SequencePattern reads .weight once at construction for proportional allocation.
+    val staticSteps = stepsArg.value?.asRationalOrNull()
+    if (staticSteps != null) {
+        return GapPattern(staticSteps)
+    }
+
+    // For control patterns evaluate the step count per event via _innerJoin.
+    // Proportional weight in sequences is not supported for control patterns (defaults to 1).
+    return silence._innerJoin(stepsArg) { _, stepsVal ->
+        val steps = stepsVal?.asRationalOrNull() ?: Rational.ONE
+        GapPattern(steps)
+    }
 }
 
-/** Creates silence with a specific duration in steps (metrical steps). */
-@StrudelDsl
-val gap by dslFunction { args, /* callInfo */ _ -> applyGap(args) }
+// Private delegates - still register with KlangScript
+private val _gap by dslFunction { args, /* callInfo */ _ -> applyGap(args) }
+private val StrudelPattern._gap by dslPatternExtension { _, args, /* callInfo */ _ -> applyGap(args) }
+private val String._gap by dslStringExtension { p, args, callInfo -> p._gap(args, callInfo) }
 
-@StrudelDsl
-val StrudelPattern.gap by dslPatternExtension { _, args, /* callInfo */ _ -> applyGap(args) }
+// ===== USER-FACING OVERLOADS =====
 
+/**
+ * Creates a silent slot that produces no events.
+ *
+ * When called with a static step count and used inside [seq] or [cat], the gap occupies
+ * proportionally more space than adjacent 1-step elements. Equivalent to the `~` rest character
+ * in mini-notation.
+ *
+ * Control patterns (e.g. `gap("<1 2>")`) are supported — the step count is evaluated per event —
+ * but proportional space allocation in sequences is not affected (weight defaults to 1 for
+ * control patterns, since [seq] reads weights once at construction time).
+ *
+ * @param steps Step count for the silence (default 1). Accepts static numbers and control patterns.
+ * @return A silent pattern with the given step weight
+ * @sample seq("bd", gap(), "hh").s()       // bd, 1-step rest, hh — each gets 1/3 of the cycle
+ * @sample seq("bd", gap(2), "hh").s()      // bd=1/4, rest=2/4, hh=1/4
+ * @category structural
+ * @tags silence, rest, gap, rhythm
+ */
 @StrudelDsl
-val String.gap by dslStringExtension { p, args, callInfo -> p.gap(args, callInfo) }
+fun gap(vararg steps: PatternLike): StrudelPattern = _gap(steps.toList())
+
+/** Replaces this pattern with a silent slot occupying the given number of steps. */
+@StrudelDsl
+fun StrudelPattern.gap(vararg steps: PatternLike): StrudelPattern = this._gap(steps.toList())
+
+/** Replaces this string pattern with a silent slot occupying the given number of steps. */
+@StrudelDsl
+fun String.gap(vararg steps: PatternLike): StrudelPattern = this._gap(steps.toList())
 
 // -- seq() ------------------------------------------------------------------------------------------------------------
 
@@ -251,19 +289,43 @@ fun applyStack(patterns: List<StrudelPattern>): StrudelPattern {
     }
 }
 
-/** Plays multiple patterns at the same time. */
-@StrudelDsl
-val stack by dslFunction { args, /* callInfo */ _ ->
+// Private delegates - still register with KlangScript
+private val _stack by dslFunction { args, /* callInfo */ _ ->
     applyStack(patterns = args.toListOfPatterns())
 }
 
-@StrudelDsl
-val StrudelPattern.stack by dslPatternExtension { p, args, /* callInfo */ _ ->
+private val StrudelPattern._stack by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyStack(patterns = listOf(p) + args.toListOfPatterns())
 }
 
+private val String._stack by dslStringExtension { p, args, callInfo -> p._stack(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Plays multiple patterns simultaneously, layering them on top of each other.
+ *
+ * Unlike [seq], which plays patterns one after another, `stack` overlays all patterns so they all
+ * sound at the same time over the full cycle. This is useful for chords, polyrhythms, and combining
+ * independent pattern layers.
+ *
+ * @param patterns Patterns to layer. Accepts patterns, strings, numbers, and other pattern-like values.
+ * @return A pattern that plays all inputs simultaneously
+ * @sample stack(note("c e g"), s("bd sd"))   // Chord with beat underneath
+ * @sample stack("c e", "g b").note()         // Two melodic lines at the same time
+ * @category structural
+ * @tags stack, layer, chord, polyrhythm, simultaneous
+ */
 @StrudelDsl
-val String.stack by dslStringExtension { p, args, callInfo -> p.stack(args, callInfo) }
+fun stack(vararg patterns: PatternLike): StrudelPattern = _stack(patterns.toList())
+
+/** Layers this pattern together with additional patterns so they all play simultaneously. */
+@StrudelDsl
+fun StrudelPattern.stack(vararg patterns: PatternLike): StrudelPattern = this._stack(patterns.toList())
+
+/** Parses this string as a pattern and layers it together with additional patterns. */
+@StrudelDsl
+fun String.stack(vararg patterns: PatternLike): StrudelPattern = this._stack(patterns.toList())
 
 // -- arrange() --------------------------------------------------------------------------------------------------------
 
