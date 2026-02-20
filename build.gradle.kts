@@ -142,7 +142,27 @@ tasks {
 //        }
 //    }
 
-    named("jsProcessResources") {
-        dependsOn(":audio_jsworklet:copyWorkletToResourcesDev")
+    val copyWorkletDev by registering(Copy::class) {
+        dependsOn(":audio_jsworklet:jsBrowserDevelopmentWebpack")
+        from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/developmentExecutable"))
+        into(layout.projectDirectory.dir("src/jsMain/resources"))
+        include("klang-worklet.js", "klang-worklet.js.map")
+    }
+
+    val copyWorkletProd by registering(Copy::class) {
+        dependsOn(":audio_jsworklet:jsBrowserProductionWebpack")
+        from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/productionExecutable"))
+        into(layout.projectDirectory.dir("src/jsMain/resources"))
+        include("klang-worklet.js", "klang-worklet.js.map")
+    }
+
+
+    // Force the worklet to be built and copied before resources are processed
+    named<ProcessResources>("jsProcessResources") {
+        // NOTICE: For now always dev, as the production build does not work yet
+        dependsOn(copyWorkletDev)
+
+        // Ensure we don't accidentally cache an old version of the worklet
+        outputs.upToDateWhen { false }
     }
 }

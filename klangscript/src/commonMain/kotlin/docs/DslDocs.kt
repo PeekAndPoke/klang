@@ -11,7 +11,10 @@ enum class DslType {
     EXTENSION_METHOD,
 
     /** Property accessor: `pattern.prop` */
-    PROPERTY
+    PROPERTY,
+
+    /** Named object/constant pattern: `sine`, `berlin`, `silence` */
+    OBJECT
 }
 
 /**

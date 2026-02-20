@@ -64,7 +64,7 @@ object BuiltInSongs {
            , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             note("<c@4 ~!15>").fast(2).sound("pink").adsr("0.75:0.5:1.0:10.0").warmth(0.2) // . solo()
              .gain(waves).pan(sine.range(0.45, 0.55).slow(21))
-              .hpf(90).lpf(4000).bandf(perlin.range(100, 660).slow(22)).bandq(rand.range(1.0, 1.5))
+              .hpf(90).lpf(3500).bandf(perlin.range(100, 660).slow(22)).bandq(rand.range(1.0, 1.5))
                  .pan(0.39).superimpose(x => x.pan(0.61))
               , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 n(randrun(16)).fast(4).sound("glockenspiel").scale("c2:pentatonic").pan(0.3)

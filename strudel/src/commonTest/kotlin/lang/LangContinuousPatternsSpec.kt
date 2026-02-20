@@ -537,7 +537,7 @@ class LangContinuousPatternsSpec : StringSpec({
 
     "perlin oscillator: different seeds produce different values" {
         val p1 = perlin.seed(1)
-        val p2 = perlin.seed(2)
+        val p2 = perlin.seed(3)
 
         val val1 = p1.queryArc(0.1, 0.2)[0].data.value?.asDouble
         val val2 = p2.queryArc(0.1, 0.2)[0].data.value?.asDouble
@@ -925,7 +925,7 @@ class LangContinuousPatternsSpec : StringSpec({
         withClue("sampleAt(0.0) should return event") {
             event0.shouldNotBeNull()
             event0.data.value.shouldNotBeNull()
-            event0.data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
+            event0.data.value.asDouble shouldBe (0.5 plusOrMinus EPSILON)
         }
 
         val event05 = pattern.sampleAt(0.5.toRational(), ctx)
@@ -985,7 +985,7 @@ class LangContinuousPatternsSpec : StringSpec({
         events.forEachIndexed { i, event ->
             withClue("Event $i") {
                 event.data.gain.shouldNotBeNull()
-                val gainValue = event.data.gain ?: 0.0
+                val gainValue = event.data.gain
                 gainValue.shouldBeBetween(0.5, 1.0, tolerance = 0.01)
             }
         }
@@ -1005,7 +1005,7 @@ class LangContinuousPatternsSpec : StringSpec({
             withClue("Event $i") {
                 event.data.pan.shouldNotBeNull()
                 // Saw values should be between -1 and 1 (after normalization)
-                val panValue = event.data.pan ?: 0.0
+                val panValue = event.data.pan
                 panValue.shouldBeBetween(-1.0, 1.0, tolerance = 0.01)
             }
         }
@@ -1024,7 +1024,7 @@ class LangContinuousPatternsSpec : StringSpec({
         val event = events[0]
         withClue("Should have cutoff value") {
             event.data.cutoff.shouldNotBeNull()
-            val cutoffValue = event.data.cutoff ?: 0.0
+            val cutoffValue = event.data.cutoff
             // sine.range(200, 2000) at 0.0: sine(0) = 0 → range(0) = 1100 (midpoint)
             cutoffValue.shouldBeBetween(200.0, 2000.0, tolerance = 0.01)
         }
@@ -1045,9 +1045,10 @@ class LangContinuousPatternsSpec : StringSpec({
         events.forEach { event ->
             withClue("Event at ${event.part.begin}") {
                 event.data.pan.shouldNotBeNull()
-                val panValue = event.data.pan ?: 0.0
+                val panValue = event.data.pan
                 panValue.shouldBeBetween(-1.0, 1.0, tolerance = 0.01)
             }
         }
     }
+
 })

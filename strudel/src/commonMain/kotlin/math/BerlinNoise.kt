@@ -7,19 +7,28 @@ import kotlin.random.Random
  * 1D Berlin Noise implementation.
  */
 class BerlinNoise(private val random: Random) {
-    private val cache = mutableMapOf<Int, Double>()
+    // Use a stable seed for hashing to ensure different noise instances
+    // produce different results even for the same indices.
+    private val seed = random.nextLong()
 
-    private fun getRandAt(t: Int): Double = cache.getOrPut(t) { random.nextDouble() }
+    /** Generates a deterministic random Double for a specific integer index */
+    private fun getValAt(index: Int): Double {
+        // Combine the instance seed with the index to get a stable unique seed
+        val stableSeed = (seed * 2862933555777941757L) + (index.toLong() * 3037000493L)
+        return Random(stableSeed).nextDouble()
+    }
 
     fun noise(t: Double): Double {
-        val prevRidgeStartIndex = floor(t).toInt()
-        val nextRidgeStartIndex = prevRidgeStartIndex + 1
+        val currentIndex = floor(t).toInt()
+        val nextIndex = currentIndex + 1
 
-        val prevRidgeBottomPoint = getRandAt(prevRidgeStartIndex)
-        val height = getRandAt(nextRidgeStartIndex)
-        val nextRidgeTopPoint = prevRidgeBottomPoint + height
+        // Always fetch the values for the boundaries of the current segment
+        val v0 = getValAt(currentIndex)
+        val v1 = getValAt(nextIndex)
 
-        val currentPercent = t - prevRidgeStartIndex
-        return (prevRidgeBottomPoint + currentPercent * (nextRidgeTopPoint - prevRidgeBottomPoint)) / 2.0
+        val currentPercent = t - currentIndex
+
+        // Linearly interpolate between the two stable points
+        return v0 + currentPercent * (v1 - v0)
     }
 }

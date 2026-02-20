@@ -710,7 +710,18 @@ val String.transpose by dslStringExtension { p, args, callInfo -> p.transpose(ar
 private val freqMutation = voiceModifier { copy(freqHz = it?.asDoubleOrNull()) }
 
 fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, freqMutation)
+
+    return if (args.isEmpty()) {
+        source.reinterpretVoice {
+            it.freqMutation(it.value)
+        }
+    } else {
+        source._applyControlFromParams(args, freqMutation) { src, ctrl ->
+            src.freqMutation(
+                ctrl.freqHz ?: ctrl.value
+            )
+        }
+    }
 }
 
 /** Sets the frequency in Hz */

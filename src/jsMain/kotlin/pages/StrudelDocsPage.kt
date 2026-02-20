@@ -237,6 +237,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                     DslType.TOP_LEVEL -> "Top Level Function"
                     DslType.EXTENSION_METHOD -> "Extension Function"
                     DslType.PROPERTY -> "Property"
+                    DslType.OBJECT -> "Object"
                 }
             }
 

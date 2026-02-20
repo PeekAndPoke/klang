@@ -16,6 +16,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
+import io.peekandpoke.klang.codemirror.EditorError
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
@@ -75,6 +76,36 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
         return Player.ensure().await()
     }
 
+    private fun mapToEditorError(e: Throwable): EditorError {
+        val message = e.message ?: "Unknown error"
+
+        val atLineColRegex = Regex("at\\s+(\\d+):(\\d+)", RegexOption.IGNORE_CASE)
+        val atLineColMatch = atLineColRegex.find(message)
+
+        val line: Int
+        val col: Int
+
+        if (atLineColMatch != null) {
+            line = atLineColMatch.groupValues.getOrNull(1)?.toIntOrNull() ?: 1
+            col = atLineColMatch.groupValues.getOrNull(2)?.toIntOrNull() ?: 1
+        } else {
+            val lineRegex = Regex("line[:\\s]+(\\d+)", RegexOption.IGNORE_CASE)
+            val columnRegex = Regex("column[:\\s]+(\\d+)", RegexOption.IGNORE_CASE)
+
+            line = lineRegex.find(message)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+            col = columnRegex.find(message)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+        }
+
+        val cleanMessage = message
+            .replace(Regex("Parse error at \\d+:\\d+[:\\s]*", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("at line \\d+(, column \\d+)?[:\\s]*", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("line \\d+[:\\s]*", RegexOption.IGNORE_CASE), "")
+            .trim()
+            .takeIf { it.isNotEmpty() } ?: message
+
+        return EditorError(message = "Line $line: $cleanMessage", line = line, col = col, len = 1)
+    }
+
     private fun play() {
         highlightBuffer.cancelAll()
 
@@ -125,6 +156,9 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         }
 
                         console.log("PlayableCodeExample: Play setup complete!")
+
+                        // Clear errors on success
+                        editorRef { it.setErrors(emptyList()) }
                     }
 
                     else -> {
@@ -136,12 +170,16 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         playingCode = currentCode
 
                         console.log("PlayableCodeExample: Pattern updated!")
+
+                        // Clear errors on success
+                        editorRef { it.setErrors(emptyList()) }
                     }
                 }
 
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 console.error("PlayableCodeExample: Failed to play example", e)
-                e.printStackTrace()
+                val editorError = mapToEditorError(e)
+                editorRef { it.setErrors(listOf(editorError)) }
             }
         }
     }
@@ -234,6 +272,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 code = currentCode,
                 onCodeChanged = { newCode ->
                     currentCode = newCode
+                    editorRef { it.setErrors(emptyList()) }
                 }
             ).track(editorRef)
         }

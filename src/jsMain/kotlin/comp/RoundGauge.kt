@@ -163,6 +163,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
                 icon.iconFn().then {
                     css {
+                        paddingTop = props.size * 0.075
                         color = iconColor
                         if (!isDisabled) {
                             put("text-shadow", "0 0 10px")

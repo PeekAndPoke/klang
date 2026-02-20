@@ -1991,12 +1991,12 @@ internal val String._slowChunk by dslStringExtension { p, args, /* callInfo */ _
  * progress at its natural speed (without the `n`-times repetition).
  *
  * @param n         Number of chunks to divide the pattern into.
- * @param transform Function applied to the currently active chunk each cycle.
  * @param back      If `true`, cycles backward through chunks (default `false`).
  * @param fast      If `true`, the source pattern is not repeated — it runs at natural speed (default `false`).
+ * @param transform Function applied to the currently active chunk each cycle.
  * @return A new pattern with the transform cycling through chunks.
- * @sample seq("0 1 2 3").chunk(4, x => x.add(7)).scale("c:minor").n()  // one chunk transformed per cycle
- * @sample s("bd sd ht lt").chunk(4, x => x.gain(1.5))                  // one hit louder, cycling forward
+ * @sample seq("0 1 2 3").chunk(4) { it.add(7) }.scale("c:minor").n()  // one chunk transformed per cycle
+ * @sample s("bd sd ht lt").chunk(4) { it.gain(1.5) }                   // one hit louder, cycling forward
  * @alias slowchunk, slowChunk
  * @category structural
  * @tags chunk, cycle, transform, rotate, slice
@@ -2004,18 +2004,18 @@ internal val String._slowChunk by dslStringExtension { p, args, /* callInfo */ _
 @StrudelDsl
 fun StrudelPattern.chunk(
     n: Int,
-    transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
+    transform: PatternMapper,
 ): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /** Like [chunk] applied to a mini-notation string. */
 @StrudelDsl
 fun String.chunk(
     n: Int,
-    transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
+    transform: PatternMapper,
 ): StrudelPattern = this._chunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /**
@@ -2035,18 +2035,18 @@ fun String.chunk(
 @StrudelDsl
 fun StrudelPattern.slowchunk(
     n: Int,
-    transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
+    transform: PatternMapper,
 ): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /** Alias for [chunk]. */
 @StrudelDsl
 fun String.slowchunk(
     n: Int,
-    transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
+    transform: PatternMapper,
 ): StrudelPattern = this._slowchunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /**
@@ -2066,18 +2066,18 @@ fun String.slowchunk(
 @StrudelDsl
 fun StrudelPattern.slowChunk(
     n: Int,
-    transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
+    transform: PatternMapper,
 ): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /** Alias for [chunk]. */
 @StrudelDsl
 fun String.slowChunk(
     n: Int,
-    transform: PatternMapper,
     back: Boolean = false,
     fast: Boolean = false,
+    transform: PatternMapper,
 ): StrudelPattern = this._slowChunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
 // -- chunkBack() / chunkback() ----------------------------------------------------------------------------------------
