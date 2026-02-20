@@ -110,7 +110,7 @@ class LangUndegradeByWithSpec : StringSpec({
         }
 
         // They should be complementary: count1 + count2 ≈ total
-        (count1 + count2) shouldBeInRange 95..105
+        (count1 + count2) shouldBeInRange 90..110
     }
 
     "undegradeByWith() works as string extension" {

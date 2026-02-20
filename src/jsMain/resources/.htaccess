@@ -1,0 +1,7 @@
+RewriteEngine On
+# If the requested filename is not a directory
+RewriteCond %{REQUEST_FILENAME} !-d
+# AND if the requested filename is not a file
+RewriteCond %{REQUEST_FILENAME} !-f
+# Then redirect everything to index.html
+RewriteRule ^ index.html [L]

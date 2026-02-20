@@ -1,5 +1,5 @@
 // strudel/src/commonMain/kotlin/lang/lang_conditional.kt
-@file:Suppress("DuplicatedCode")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName")
 
 package io.peekandpoke.klang.strudel.lang
 
@@ -31,53 +31,97 @@ fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     }
 }
 
-/**
- * Applies the given function every n cycles, starting from the first cycle.
- *
- * It essentially says: "Every n cycles, do this special thing on the first one."
- *
- * If you call:
- *
- * note("a b c d").firstOf(4, { it.rev() })
- *
- * then:
- * - Cycle 1: The pattern plays in reverse.
- * - Cycle 2: The pattern plays normally.
- * - Cycle 3: The pattern plays normally.
- * - Cycle 4: The pattern plays normally.
- * - Cycle 5: The pattern plays in reverse again (loop restarts).
- *
- * @param {n} - the number of cycles to repeat the function
- * @param {transform} - the function to apply to the first cycle
- */
-@StrudelDsl
-val firstOf by dslFunction { args, _ ->
+internal val _firstOf by dslFunction { args, _ ->
     val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
     val pat = args.getOrNull(2)?.toPattern() ?: silence
-
     applyFirstOf(pat, listOf(nArg, transform).asStrudelDslArgs())
 }
 
-@StrudelDsl
-val StrudelPattern.firstOf by dslPatternExtension { source, args, /* callInfo */ _ -> applyFirstOf(source, args) }
+internal val StrudelPattern._firstOf by dslPatternExtension { source, args, _ -> applyFirstOf(source, args) }
+internal val String._firstOf by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Applies [transform] on the **first** cycle of every [n] cycles; all other cycles play unchanged.
+ *
+ * The pattern rotates through [n] cycles: the transformed version plays on cycle 1, then the
+ * original plays on cycles 2 through [n], then the sequence repeats.
+ *
+ * [n] supports control patterns — pass a mini-notation string or another [StrudelPattern] to
+ * vary the period each cycle.
+ *
+ * @param n How many cycles make one period. The transform fires on the first of these.
+ *   Supports control patterns.
+ * @param transform The function to apply on the first cycle of each period.
+ * @return A new pattern that applies [transform] periodically.
+ * @sample note("c3 d3 e3 g3").firstOf(4, x => x.rev())          // reverse every 4th cycle
+ * @sample note("c3 d3 e3 g3").firstOf("<2 4>", x => x.fast(2))  // alternating period
+ * @alias every
+ * @category conditional
+ * @tags firstOf, every, conditional, cycle, periodic, transform
+ */
 @StrudelDsl
-val String.firstOf by dslStringExtension { source, args, /* callInfo */ _ -> applyFirstOf(source, args) }
+fun StrudelPattern.firstOf(n: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._firstOf(listOf(n, transform).asStrudelDslArgs())
+
+/** Parses this string as a pattern, then applies [transform] on the first of every [n] cycles. */
+@StrudelDsl
+fun String.firstOf(n: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._firstOf(listOf(n, transform).asStrudelDslArgs())
+
+/**
+ * Top-level form of [firstOf]: applies [transform] to [pattern] on the first of every [n] cycles.
+ *
+ * @alias every
+ * @category conditional
+ * @tags firstOf, every, conditional, cycle, periodic, transform
+ */
+@StrudelDsl
+fun firstOf(n: PatternLike, transform: PatternMapper, pattern: PatternLike = silence): StrudelPattern =
+    _firstOf(listOf(n, transform, pattern).asStrudelDslArgs())
 
 // -- every() ----------------------------------------------------------------------------------------------------------
 
-/** Alias for [firstOf] */
-@StrudelDsl
-val every by dslFunction { args, callInfo -> firstOf(args, callInfo) }
+internal val _every by dslFunction { args, callInfo -> _firstOf(args, callInfo) }
+internal val StrudelPattern._every by dslPatternExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
+internal val String._every by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 
-/** Alias for [firstOf] */
-@StrudelDsl
-val StrudelPattern.every by dslPatternExtension { source, args, callInfo -> source.firstOf(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Alias for [firstOf] */
+/**
+ * Alias for [firstOf]. Applies [transform] on the **first** cycle of every [n] cycles.
+ *
+ * @param n How many cycles make one period. The transform fires on the first of these.
+ *   Supports control patterns.
+ * @param transform The function to apply on the first cycle of each period.
+ * @return A new pattern that applies [transform] periodically.
+ * @sample note("c3 d3 e3 g3").every(4, x => x.rev())             // reverse every 4th cycle
+ * @sample note("c3 d3 e3 g3").every("<2 4>", x => x.fast(2))     // alternating period
+ * @alias firstOf
+ * @category conditional
+ * @tags every, firstOf, conditional, cycle, periodic, transform
+ */
 @StrudelDsl
-val String.every by dslStringExtension { source, args, callInfo -> source.firstOf(args, callInfo) }
+fun StrudelPattern.every(n: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._every(listOf(n, transform).asStrudelDslArgs())
+
+/** Parses this string as a pattern, then applies [transform] on the first of every [n] cycles. */
+@StrudelDsl
+fun String.every(n: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._every(listOf(n, transform).asStrudelDslArgs())
+
+/**
+ * Top-level form of [every]: applies [transform] to [pattern] on the first of every [n] cycles.
+ *
+ * @alias firstOf
+ * @category conditional
+ * @tags every, firstOf, conditional, cycle, periodic, transform
+ */
+@StrudelDsl
+fun every(n: PatternLike, transform: PatternMapper, pattern: PatternLike = silence): StrudelPattern =
+    _every(listOf(n, transform, pattern).asStrudelDslArgs())
 
 // -- lastOf() ---------------------------------------------------------------------------------------------------------
 
@@ -98,67 +142,58 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     }
 }
 
-/**
- * Applies the given function every n cycles, starting from the last cycle.
- *
- * It essentially says: "Every n cycles, do this special thing on the last one."
- *
- * If you call:
- *
- * note("a b c d").lastOf(4, { it.rev() })
- *
- * then:
- * - Cycle 1: The pattern plays normally.
- * - Cycle 2: The pattern plays normally.
- * - Cycle 3: The pattern plays normally.
- * - Cycle 4: The pattern plays in reverse again (loop restarts).
- * - Cycle 5: The pattern plays normally.
- *
- * @param {n} - the number of cycles to repeat the function
- * @param {transform} - the function to apply to the first cycle
- */
-@StrudelDsl
-val lastOf by dslFunction { args, /* callInfo */ _ ->
+internal val _lastOf by dslFunction { args, _ ->
     val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
     val pat = args.getOrNull(2)?.toPattern() ?: silence
-
     applyLastOf(pat, listOf(nArg, transform).asStrudelDslArgs())
 }
 
-@StrudelDsl
-val StrudelPattern.lastOf by dslPatternExtension { source, args, /* callInfo */ _ ->
-    applyLastOf(source, args)
-}
+internal val StrudelPattern._lastOf by dslPatternExtension { source, args, _ -> applyLastOf(source, args) }
+internal val String._lastOf by dslStringExtension { source, args, callInfo -> source._lastOf(args, callInfo) }
 
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Applies [transform] on the **last** cycle of every [n] cycles; all other cycles play unchanged.
+ *
+ * The pattern rotates through [n] cycles: the original plays on cycles 1 through n−1, then the
+ * transformed version plays on cycle [n], then the sequence repeats.
+ *
+ * [n] supports control patterns — pass a mini-notation string or another [StrudelPattern] to
+ * vary the period each cycle.
+ *
+ * @param n How many cycles make one period. The transform fires on the last of these.
+ *   Supports control patterns.
+ * @param transform The function to apply on the last cycle of each period.
+ * @return A new pattern that applies [transform] at the end of each period.
+ * @sample note("c3 d3 e3 g3").lastOf(4, x => x.rev())           // reverse on 4th of every 4
+ * @sample note("c3 d3 e3 g3").lastOf("<2 4>", x => x.fast(2))   // alternating period
+ * @category conditional
+ * @tags lastOf, conditional, cycle, periodic, transform
+ */
 @StrudelDsl
-val String.lastOf by dslStringExtension { source, args, /* callInfo */ _ ->
-    applyLastOf(source, args)
-}
+fun StrudelPattern.lastOf(n: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._lastOf(listOf(n, transform).asStrudelDslArgs())
+
+/** Parses this string as a pattern, then applies [transform] on the last of every [n] cycles. */
+@StrudelDsl
+fun String.lastOf(n: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._lastOf(listOf(n, transform).asStrudelDslArgs())
+
+/**
+ * Top-level form of [lastOf]: applies [transform] to [pattern] on the last of every [n] cycles.
+ *
+ * @category conditional
+ * @tags lastOf, conditional, cycle, periodic, transform
+ */
+@StrudelDsl
+fun lastOf(n: PatternLike, transform: PatternMapper, pattern: PatternLike = silence): StrudelPattern =
+    _lastOf(listOf(n, transform, pattern).asStrudelDslArgs())
 
 // -- when() -----------------------------------------------------------------------------------------------------------
 
-/**
- * Conditionally applies a transformation based on a pattern.
- *
- * Samples the condition pattern at each event's midpoint. If truthy, applies the transformation;
- * otherwise, keeps the event unchanged.
- *
- * Equivalent to JavaScript: pat.when(condition, func)
- *
- * @param {condition} Pattern to test for truthiness
- * @param {transform} Function to apply when condition is true
- *
- * @example
- * note("c d e f").when(pure(1).struct("t ~ t ~")) { it.add(12) }
- * // Transforms notes on beats 1 and 3 (where struct is truthy)
- *
- * @example
- * s("bd sd").when(pure(1).slowcat(pure(1), pure(0))) { it.fast(2) }
- * // Doubles speed on alternating cycles
- */
-@StrudelDsl
-val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
+internal val StrudelPattern._when by dslPatternExtension { p, args, _ ->
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
 
     // JavaScript: when(on, func, pat) => on ? func(pat) : pat
@@ -170,23 +205,38 @@ val StrudelPattern.`when` by dslPatternExtension { p, args, _ ->
     }
 }
 
-/** Direct function call support */
+internal val String._when by dslStringExtension { p, args, callInfo -> p._when(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Conditionally applies [transform] to every event whose position in the cycle falls within a
+ * truthy region of [condition].
+ *
+ * The [condition] pattern is sampled at each event's time. If the sampled value is truthy
+ * (non-zero), [transform] is applied; otherwise the event plays unchanged.
+ *
+ * A common idiom is to use binary patterns (`0`/`1`) as the condition — for example a pattern
+ * created with [struct] or a slow alternation like `pure(1).slowcat(pure(0))`.
+ *
+ * @param condition A pattern whose values determine when to apply [transform].
+ *   Zero is falsy; any other value is truthy.
+ * @param transform The function to apply when [condition] is truthy.
+ * @return A new pattern that conditionally applies [transform].
+ * @sample note("c d e f").when(pure(1).struct("t ~ t ~"), x => x.add(12))
+ * @sample s("bd sd").when(pure(1).slowcat(pure(0)), x => x.fast(2))
+ * @category conditional
+ * @tags when, conditional, binary, gate, transform
+ */
 @StrudelDsl
 fun StrudelPattern.`when`(
-    condition: StrudelPattern,
+    condition: PatternLike,
     transform: PatternMapper,
-): StrudelPattern {
-    return this.`when`(listOf(condition, transform).asStrudelDslArgs())
-}
+): StrudelPattern = this._when(listOf(condition, transform).asStrudelDslArgs())
 
-@StrudelDsl
-val String.`when` by dslStringExtension { p, args, callInfo -> p.`when`(args, callInfo) }
-
-/** Direct function call support */
+/** Parses this string as a pattern, then applies [transform] whenever [condition] is truthy. */
 @StrudelDsl
 fun String.`when`(
-    condition: StrudelPattern,
+    condition: PatternLike,
     transform: PatternMapper,
-): StrudelPattern {
-    return this.`when`(listOf(condition, transform).asStrudelDslArgs())
-}
+): StrudelPattern = this._when(listOf(condition, transform).asStrudelDslArgs())
