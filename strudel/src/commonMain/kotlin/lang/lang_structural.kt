@@ -2400,8 +2400,8 @@ internal val String._linger by dslStringExtension { p, args, callInfo -> p._ling
  *
  * @param t Fraction to select (positive = from start, negative = from end, 0 = silence).
  * @return A pattern of the selected fraction, looped to fill the cycle.
- * @sample s("bd sd ht lt").linger(0.5)                    // repeats "bd sd" throughout the cycle
- * @sample s("lt ht mt cp").linger("<1 .5 .25 .125>")      // different fraction each cycle
+ * @sample s("bd sd ht lt").linger(0.5)                             // repeats "bd sd" throughout the cycle
+ * @sample s("lt ht mt cp").linger("<1 .5 .25 .125 .0625 .03125>")  // different fraction each cycle
  * @category structural
  * @tags linger, loop, fraction, repeat, slice
  */

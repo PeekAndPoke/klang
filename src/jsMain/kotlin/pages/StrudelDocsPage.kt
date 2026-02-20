@@ -12,6 +12,7 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.docs.DslDocsRegistry
 import io.peekandpoke.klang.script.docs.DslType
@@ -305,7 +306,9 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                 }
                 variant.samples.forEach { sample ->
                     key = sample
-                    PlayableCodeExample(code = sample)
+                    InViewport {
+                        PlayableCodeExample(code = sample)
+                    }
                 }
             }
         }
