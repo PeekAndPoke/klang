@@ -469,6 +469,7 @@ fun StrudelPattern._innerJoin(
     val sourcePattern = this
     return arg1._bind { event ->
         transform(sourcePattern, event.data.value)
+            .mapEvents { it.prependLocations(event.sourceLocations) }
     }
 }
 

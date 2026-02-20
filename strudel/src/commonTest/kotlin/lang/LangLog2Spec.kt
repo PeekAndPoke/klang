@@ -16,7 +16,7 @@ class LangLog2Spec : StringSpec({
     }
 
     "log2() works as top-level function" {
-        val p = log2(seq("4"))
+        val p = log2()
         p.queryArc(0.0, 1.0).shouldBeEmpty()
     }
 
