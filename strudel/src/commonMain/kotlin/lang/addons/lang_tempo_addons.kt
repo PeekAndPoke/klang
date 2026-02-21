@@ -1,3 +1,5 @@
+@file:Suppress("ObjectPropertyName")
+
 package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -5,6 +7,7 @@ import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel._outerJoin
 import io.peekandpoke.klang.strudel._splitQueries
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
@@ -52,39 +55,78 @@ fun applyTimeMoveInCycle(
 
 // -- lateInCycle() ----------------------------------------------------------------------------------------------------
 
-/**
- * Nudges the pattern to start later in time, but only shifts events that are already within the time window.
- * Does not pull events from future/past cycles. Used for swing and inner-cycle timing adjustments.
- */
-@StrudelDsl
-val StrudelPattern.lateInCycle by dslPatternExtension { p, args, _ ->
+internal val StrudelPattern._lateInCycle by dslPatternExtension { p, args, _ ->
     applyTimeMoveInCycle(pattern = p, args = args, factor = Rational.ONE)
 }
 
-@StrudelDsl
-val String.lateInCycle by dslStringExtension { p, args, callInfo -> p.lateInCycle(args, callInfo) }
+internal val String._lateInCycle by dslStringExtension { p, args, callInfo -> p._lateInCycle(args, callInfo) }
 
-/** Nudges the pattern to start later in time (intra-cycle) */
+internal val _lateInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Nudges events later within their cycle by the given fraction of a cycle.
+ *
+ * Only shifts events already within the queried time window — does not pull events
+ * from adjacent cycles. Useful for swing and intra-cycle timing adjustments.
+ *
+ * ```KlangScript
+ * s("bd sd hh cp").lateInCycle(0.02)          // subtle late nudge
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd").lateInCycle("<0 0.05 0.1>")       // cycle through nudge amounts
+ * ```
+ *
+ * @category tempo
+ * @tags lateInCycle, timing, swing, nudge, offset, addon
+ */
 @StrudelDsl
-val lateInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+fun StrudelPattern.lateInCycle(amount: PatternLike): StrudelPattern =
+    this._lateInCycle(listOf(amount).asStrudelDslArgs())
+
+/** Nudges events later within their cycle in a string pattern. */
+@StrudelDsl
+fun String.lateInCycle(amount: PatternLike): StrudelPattern = this._lateInCycle(listOf(amount).asStrudelDslArgs())
 
 // -- earlyInCycle() ---------------------------------------------------------------------------------------------------
 
-/**
- * Nudges the pattern to start earlier in time, but only shifts events that are already within the time window.
- * Does not pull events from future/past cycles.
- */
-@StrudelDsl
-val StrudelPattern.earlyInCycle by dslPatternExtension { p, args, _ ->
+internal val StrudelPattern._earlyInCycle by dslPatternExtension { p, args, _ ->
     applyTimeMoveInCycle(pattern = p, args = args, factor = Rational.MINUS_ONE)
 }
 
-@StrudelDsl
-val String.earlyInCycle by dslStringExtension { p, args, callInfo -> p.earlyInCycle(args, callInfo) }
+internal val String._earlyInCycle by dslStringExtension { p, args, callInfo -> p._earlyInCycle(args, callInfo) }
 
-/** Nudges the pattern to start earlier in time (intra-cycle) */
+internal val _earlyInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Nudges events earlier within their cycle by the given fraction of a cycle.
+ *
+ * Only shifts events already within the queried time window — does not pull events
+ * from adjacent cycles. Complementary to [lateInCycle].
+ *
+ * ```KlangScript
+ * s("bd sd hh cp").earlyInCycle(0.02)         // subtle early nudge
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd").earlyInCycle("<0 0.05 0.1>")      // cycle through nudge amounts
+ * ```
+ *
+ * @category tempo
+ * @tags earlyInCycle, timing, nudge, offset, addon
+ */
 @StrudelDsl
-val earlyInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+fun StrudelPattern.earlyInCycle(amount: PatternLike): StrudelPattern =
+    this._earlyInCycle(listOf(amount).asStrudelDslArgs())
+
+/** Nudges events earlier within their cycle in a string pattern. */
+@StrudelDsl
+fun String.earlyInCycle(amount: PatternLike): StrudelPattern =
+    this._earlyInCycle(listOf(amount).asStrudelDslArgs())
 
 // -- stretchBy() ------------------------------------------------------------------------------------------------------
 
@@ -107,20 +149,46 @@ private fun applyStretchBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any
     }
 }
 
-/** Multiplies the duration of each event by the given factor */
-@StrudelDsl
-val stretchBy by dslFunction { args, /* callInfo */ _ ->
+internal val _stretchBy by dslFunction { args, /* callInfo */ _ ->
     if (args.size < 2) return@dslFunction silence
     val pattern = args.drop(1).toPattern(voiceValueModifier)
     applyStretchBy(pattern, args.take(1))
 }
 
-/** Multiplies the duration of each event by the given factor */
-@StrudelDsl
-val StrudelPattern.stretchBy by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val StrudelPattern._stretchBy by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyStretchBy(p, args)
 }
 
-/** Multiplies the duration of each event by the given factor */
+internal val String._stretchBy by dslStringExtension { p, args, callInfo -> p._stretchBy(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Multiplies the duration of each event by the given factor, without affecting its onset time.
+ *
+ * A factor of `2.0` doubles each event's duration; `0.5` halves it. Events can overlap
+ * (factor > 1) or leave gaps (factor < 1).
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").stretchBy(2)       // each note lasts twice as long
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd").stretchBy("<1 2 0.5>")   // cycle through duration multipliers
+ * ```
+ *
+ * @category tempo
+ * @tags stretchBy, duration, stretch, event length, addon
+ */
 @StrudelDsl
-val String.stretchBy by dslStringExtension { p, args, callInfo -> p.stretchBy(args, callInfo) }
+fun stretchBy(factor: PatternLike, pattern: PatternLike): StrudelPattern =
+    _stretchBy(listOf(factor, pattern).asStrudelDslArgs())
+
+/** Multiplies the duration of each event in this pattern by the given factor. */
+@StrudelDsl
+fun StrudelPattern.stretchBy(factor: PatternLike): StrudelPattern =
+    this._stretchBy(listOf(factor).asStrudelDslArgs())
+
+/** Multiplies the duration of each event in a string pattern by the given factor. */
+@StrudelDsl
+fun String.stretchBy(factor: PatternLike): StrudelPattern = this._stretchBy(listOf(factor).asStrudelDslArgs())

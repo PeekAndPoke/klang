@@ -1,10 +1,11 @@
-@file:Suppress("DuplicatedCode")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName")
 
 package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel._liftNumericField
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
  * ADDONS: Oscillator-related functions that are NOT available in the original strudel impl
@@ -26,18 +27,41 @@ private fun applyWarmth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, warmthMutation)
 }
 
-/** Controls the oscillator warmth (low-pass filtering amount). 0.0 = bright, 1.0 = muffled */
-@StrudelDsl
-val StrudelPattern.warmth by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val StrudelPattern._warmth by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyWarmth(p, args)
 }
 
-/** Creates a pattern with warmth values */
-@StrudelDsl
-val warmth by dslFunction { args, /* callInfo */ _ -> args.toPattern(warmthMutation) }
+internal val _warmth by dslFunction { args, /* callInfo */ _ -> args.toPattern(warmthMutation) }
 
-/** Modifies the warmth of a pattern defined by a string */
-@StrudelDsl
-val String.warmth by dslStringExtension { p, args, callInfo ->
-    p.warmth(args, callInfo)
+internal val String._warmth by dslStringExtension { p, args, callInfo ->
+    p._warmth(args, callInfo)
 }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Controls the oscillator warmth (low-pass filtering amount).
+ *
+ * A value of `0.0` gives a bright, unfiltered sound; `1.0` gives a muffled, warm sound.
+ *
+ * ```KlangScript
+ * s("sawtooth").warmth(0.8)          // warm, muffled sawtooth
+ * ```
+ *
+ * ```KlangScript
+ * s("sawtooth").warmth("<0 0.5 1>")  // cycle through warmth values
+ * ```
+ *
+ * @category tonal
+ * @tags warmth, oscillator, filter, low-pass, addon
+ */
+@StrudelDsl
+fun warmth(amount: PatternLike): StrudelPattern = _warmth(listOf(amount).asStrudelDslArgs())
+
+/** Controls the oscillator warmth on this pattern. */
+@StrudelDsl
+fun StrudelPattern.warmth(amount: PatternLike): StrudelPattern = this._warmth(listOf(amount).asStrudelDslArgs())
+
+/** Controls the oscillator warmth on a string pattern. */
+@StrudelDsl
+fun String.warmth(amount: PatternLike): StrudelPattern = this._warmth(listOf(amount).asStrudelDslArgs())

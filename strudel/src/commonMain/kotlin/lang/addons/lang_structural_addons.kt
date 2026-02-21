@@ -1,9 +1,12 @@
+@file:Suppress("ObjectPropertyName")
+
 package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.PropertyOverridePattern
@@ -152,33 +155,46 @@ private fun applyMorse(textArg: StrudelDslArg<Any?>?): StrudelPattern {
     return seq.slow(totalWeight / 16.0) // using 1/16th cycle per unit for a tighter rhythm
 }
 
-/**
- * Creates a pattern from a string using Morse code.
- * Dots are 1 step, dashes are 3 steps.
- * Gaps are inserted automatically: 1 step between symbols, 3 steps between letters, 7 steps between words.
- */
-@StrudelDsl
-val morse by dslFunction { args, /* callInfo */ _ ->
+internal val _morse by dslFunction { args, /* callInfo */ _ ->
     applyMorse(args.firstOrNull())
 }
 
-/**
- * Structures the pattern using a Morse code rhythm.
- *
- * @example
- * note("a").morse("sos")
- * // equivalent to: note("a").struct(morse("sos"))
- */
-@StrudelDsl
-val StrudelPattern.morse by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val StrudelPattern._morse by dslPatternExtension { p, args, /* callInfo */ _ ->
     p.struct(applyMorse(args.firstOrNull()))
 }
 
+internal val String._morse by dslStringExtension { p, args, callInfo -> p._morse(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
 /**
- * Structures the pattern using a Morse code rhythm.
+ * Creates a rhythmic pattern from a string using Morse code timing.
+ *
+ * Dots are 1 unit; dashes are 3 units. Gaps are inserted automatically:
+ * 1 unit between symbols, 3 units between letters, 7 units between words.
+ * When called as an extension, it structures the source pattern with the Morse rhythm.
+ *
+ * ```KlangScript
+ * morse("sos").note("c4")            // SOS rhythm as notes
+ * ```
+ *
+ * ```KlangScript
+ * s("bd").morse("hi")               // structure a kick with "hi" Morse code
+ * ```
+ *
+ * @category structural
+ * @tags morse, code, rhythm, structure, pattern, addon
  */
 @StrudelDsl
-val String.morse by dslStringExtension { p, args, callInfo -> p.morse(args, callInfo) }
+fun morse(text: PatternLike): StrudelPattern = _morse(listOf(text).asStrudelDslArgs())
+
+/** Structures this pattern using a Morse code rhythm derived from the given text. */
+@StrudelDsl
+fun StrudelPattern.morse(text: PatternLike): StrudelPattern = this._morse(listOf(text).asStrudelDslArgs())
+
+/** Structures a string pattern using a Morse code rhythm derived from the given text. */
+@StrudelDsl
+fun String.morse(text: PatternLike): StrudelPattern = this._morse(listOf(text).asStrudelDslArgs())
 
 // -- timeLoop() -------------------------------------------------------------------------------------------------------
 
@@ -255,15 +271,7 @@ fun applyRepeat(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return applyCat(patterns)
 }
 
-/**
- * Repeats the pattern n times sequentially.
- * The total duration will be n * original_duration.
- *
- * @param {n} number of repetitions
- * @example note("a b").repeat(2) // plays "a b a b" over 2 cycles
- */
-@StrudelDsl
-val repeat by dslFunction { args, /* callInfo */ _ ->
+internal val _repeat by dslFunction { args, /* callInfo */ _ ->
     if (args.isEmpty()) return@dslFunction silence
 
     // If called as function: repeat(3, note("a"))
@@ -277,13 +285,42 @@ val repeat by dslFunction { args, /* callInfo */ _ ->
     applyRepeat(patterns.first(), listOf(timesArg))
 }
 
-@StrudelDsl
-val StrudelPattern.repeat by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val StrudelPattern._repeat by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyRepeat(p, args)
 }
 
+internal val String._repeat by dslStringExtension { p, args, callInfo -> p._repeat(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Repeats the pattern `n` times sequentially.
+ *
+ * The total duration will be `n × original_duration`. Unlike [fast], which compresses the
+ * pattern, `repeat` stretches it out so each repetition occupies a full cycle.
+ *
+ * ```KlangScript
+ * note("a b").repeat(2)          // plays "a b a b" over 2 cycles
+ * ```
+ *
+ * ```KlangScript
+ * repeat(3, s("bd sd"))          // repeat a drum pattern 3 times
+ * ```
+ *
+ * @category structural
+ * @tags repeat, loop, duplicate, sequence, addon
+ */
 @StrudelDsl
-val String.repeat by dslStringExtension { p, args, callInfo -> p.repeat(args, callInfo) }
+fun repeat(times: PatternLike, pattern: PatternLike): StrudelPattern =
+    _repeat(listOf(times, pattern).asStrudelDslArgs())
+
+/** Repeats this pattern `n` times sequentially. */
+@StrudelDsl
+fun StrudelPattern.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(times).asStrudelDslArgs())
+
+/** Repeats a string pattern `n` times sequentially. */
+@StrudelDsl
+fun String.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(times).asStrudelDslArgs())
 
 // -- solo() -----------------------------------------------------------------------------------------------------------
 
@@ -312,28 +349,44 @@ fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-/**
- * Solos the pattern. If any pattern is soloed, all non-soloed patterns are muted.
- * Can be disabled by passing 0 or false: .solo(0)
- * Supports control patterns: .solo("<1 0 1 0>")
- */
-@StrudelDsl
-val solo by dslFunction { args, /* callInfo */ _ ->
+internal val _solo by dslFunction { args, /* callInfo */ _ ->
     applySolo(AtomicPattern.value(null), args)
 }
 
-/**
- * Solos the pattern. If any pattern is soloed, all non-soloed patterns are muted.
- * Can be disabled by passing 0 or false: .solo(0)
- * Supports control patterns: .solo("<1 0 1 0>")
- */
-@StrudelDsl
-val StrudelPattern.solo by dslPatternExtension { p, args, /* callInfo */ _ -> applySolo(p, args) }
+internal val StrudelPattern._solo by dslPatternExtension { p, args, /* callInfo */ _ -> applySolo(p, args) }
+
+internal val String._solo by dslStringExtension { p, args, callInfo -> p._solo(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
- * Solos the pattern. If any pattern is soloed, all non-soloed patterns are muted.
- * Can be disabled by passing 0 or false: .solo(0)
- * Supports control patterns: .solo("<1 0 1 0>")
+ * Solos this pattern so all non-soloed patterns are muted during playback.
+ *
+ * When any pattern in the active set is soloed, all others are silenced. Pass `0` or `false`
+ * to disable. Supports control patterns for dynamic toggling.
+ *
+ * ```KlangScript
+ * s("bd sd").solo()               // solo this drum pattern
+ * ```
+ *
+ * ```KlangScript
+ * s("hh").solo("<1 0 1 0>")       // toggle solo every other cycle
+ * ```
+ *
+ * @category structural
+ * @tags solo, mute, isolate, playback, addon
  */
 @StrudelDsl
-val String.solo by dslStringExtension { p, args, callInfo -> p.solo(args, callInfo) }
+fun StrudelPattern.solo(): StrudelPattern = this._solo(emptyList())
+
+/** Solos this pattern with an explicit enabled flag (or control pattern). */
+@StrudelDsl
+fun StrudelPattern.solo(enabled: PatternLike): StrudelPattern = this._solo(listOf(enabled).asStrudelDslArgs())
+
+/** Solos a string pattern so all non-soloed patterns are muted. */
+@StrudelDsl
+fun String.solo(): StrudelPattern = this._solo(emptyList())
+
+/** Solos a string pattern with an explicit enabled flag (or control pattern). */
+@StrudelDsl
+fun String.solo(enabled: PatternLike): StrudelPattern = this._solo(listOf(enabled).asStrudelDslArgs())
