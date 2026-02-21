@@ -1,3 +1,5 @@
+@file:Suppress("ObjectPropertyName")
+
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -25,6 +27,10 @@ fun applyBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftData(control)
 }
 
+internal val _begin by dslFunction { args, /* callInfo */ _ -> args.toPattern(beginMutation) }
+internal val StrudelPattern._begin by dslPatternExtension { p, args, /* callInfo */ _ -> applyBegin(p, args) }
+internal val String._begin by dslStringExtension { p, args, callInfo -> p._begin(args, callInfo) }
+
 /**
  * Sets the sample start position as a fraction of the total sample length (0–1).
  *
@@ -44,15 +50,15 @@ fun applyBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
  * @tags begin, start, sample, position, offset
  */
 @StrudelDsl
-val begin by dslFunction { args, /* callInfo */ _ -> args.toPattern(beginMutation) }
+fun begin(pos: PatternLike): StrudelPattern = _begin(listOf(pos).asStrudelDslArgs())
 
 /** Sets the sample start position (0–1) on this pattern. */
 @StrudelDsl
-val StrudelPattern.begin by dslPatternExtension { p, args, /* callInfo */ _ -> applyBegin(p, args) }
+fun StrudelPattern.begin(pos: PatternLike): StrudelPattern = this._begin(listOf(pos).asStrudelDslArgs())
 
 /** Sets the sample start position (0–1) on a string pattern. */
 @StrudelDsl
-val String.begin by dslStringExtension { p, args, callInfo -> p.begin(args, callInfo) }
+fun String.begin(pos: PatternLike): StrudelPattern = this._begin(listOf(pos).asStrudelDslArgs())
 
 // -- end() ------------------------------------------------------------------------------------------------------------
 
@@ -63,6 +69,10 @@ fun applyEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     val control = args.toPattern(endMutation)
     return source._liftData(control)
 }
+
+internal val _end by dslFunction { args, /* callInfo */ _ -> args.toPattern(endMutation) }
+internal val StrudelPattern._end by dslPatternExtension { p, args, /* callInfo */ _ -> applyEnd(p, args) }
+internal val String._end by dslStringExtension { p, args, callInfo -> p._end(args, callInfo) }
 
 /**
  * Sets the sample end position as a fraction of the total sample length (0–1).
@@ -82,15 +92,15 @@ fun applyEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
  * @tags end, stop, sample, position, offset
  */
 @StrudelDsl
-val end by dslFunction { args, /* callInfo */ _ -> args.toPattern(endMutation) }
+fun end(pos: PatternLike): StrudelPattern = _end(listOf(pos).asStrudelDslArgs())
 
 /** Sets the sample end position (0–1) on this pattern. */
 @StrudelDsl
-val StrudelPattern.end by dslPatternExtension { p, args, /* callInfo */ _ -> applyEnd(p, args) }
+fun StrudelPattern.end(pos: PatternLike): StrudelPattern = this._end(listOf(pos).asStrudelDslArgs())
 
 /** Sets the sample end position (0–1) on a string pattern. */
 @StrudelDsl
-val String.end by dslStringExtension { p, args, callInfo -> p.end(args, callInfo) }
+fun String.end(pos: PatternLike): StrudelPattern = this._end(listOf(pos).asStrudelDslArgs())
 
 // -- speed() ----------------------------------------------------------------------------------------------------------
 
@@ -101,6 +111,10 @@ fun applySpeed(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     val control = args.toPattern(speedMutation)
     return source._liftData(control)
 }
+
+internal val _speed by dslFunction { args, /* callInfo */ _ -> args.toPattern(speedMutation) }
+internal val StrudelPattern._speed by dslPatternExtension { p, args, /* callInfo */ _ -> applySpeed(p, args) }
+internal val String._speed by dslStringExtension { p, args, callInfo -> p._speed(args, callInfo) }
 
 /**
  * Sets the sample playback speed as a multiplier.
@@ -120,15 +134,15 @@ fun applySpeed(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
  * @tags speed, playback, pitch, rate, reverse
  */
 @StrudelDsl
-val speed by dslFunction { args, /* callInfo */ _ -> args.toPattern(speedMutation) }
+fun speed(rate: PatternLike): StrudelPattern = _speed(listOf(rate).asStrudelDslArgs())
 
 /** Sets the sample playback speed on this pattern. */
 @StrudelDsl
-val StrudelPattern.speed by dslPatternExtension { p, args, /* callInfo */ _ -> applySpeed(p, args) }
+fun StrudelPattern.speed(rate: PatternLike): StrudelPattern = this._speed(listOf(rate).asStrudelDslArgs())
 
 /** Sets the sample playback speed on a string pattern. */
 @StrudelDsl
-val String.speed by dslStringExtension { p, args, callInfo -> p.speed(args, callInfo) }
+fun String.speed(rate: PatternLike): StrudelPattern = this._speed(listOf(rate).asStrudelDslArgs())
 
 // -- unit() -----------------------------------------------------------------------------------------------------------
 
@@ -139,6 +153,10 @@ fun applyUnit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     val control = args.toPattern(unitMutation)
     return source._liftData(control)
 }
+
+internal val _unit by dslFunction { args, /* callInfo */ _ -> args.toPattern(unitMutation) }
+internal val StrudelPattern._unit by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnit(p, args) }
+internal val String._unit by dslStringExtension { p, args, callInfo -> p._unit(args, callInfo) }
 
 /**
  * Sets the time unit used for sample playback duration.
@@ -159,15 +177,15 @@ fun applyUnit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
  * @tags unit, time unit, cycles, sample, timing
  */
 @StrudelDsl
-val unit by dslFunction { args, /* callInfo */ _ -> args.toPattern(unitMutation) }
+fun unit(value: PatternLike): StrudelPattern = _unit(listOf(value).asStrudelDslArgs())
 
 /** Sets the time unit for sample playback on this pattern. */
 @StrudelDsl
-val StrudelPattern.unit by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnit(p, args) }
+fun StrudelPattern.unit(value: PatternLike): StrudelPattern = this._unit(listOf(value).asStrudelDslArgs())
 
 /** Sets the time unit for sample playback on a string pattern. */
 @StrudelDsl
-val String.unit by dslStringExtension { p, args, callInfo -> p.unit(args, callInfo) }
+fun String.unit(value: PatternLike): StrudelPattern = this._unit(listOf(value).asStrudelDslArgs())
 
 // -- loop() -----------------------------------------------------------------------------------------------------------
 
@@ -178,6 +196,10 @@ fun applyLoop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     val control = effectiveArgs.toPattern(loopMutation)
     return source._liftData(control)
 }
+
+internal val _loop by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopMutation) }
+internal val StrudelPattern._loop by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoop(p, args) }
+internal val String._loop by dslStringExtension { p, args, callInfo -> p._loop(args, callInfo) }
 
 /**
  * Enables continuous looping of the sample.
@@ -197,15 +219,15 @@ fun applyLoop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
  * @tags loop, looping, repeat, sample
  */
 @StrudelDsl
-val loop by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopMutation) }
+fun loop(flag: PatternLike): StrudelPattern = _loop(listOf(flag).asStrudelDslArgs())
 
 /** Enables sample looping on this pattern. */
 @StrudelDsl
-val StrudelPattern.loop by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoop(p, args) }
+fun StrudelPattern.loop(flag: PatternLike): StrudelPattern = this._loop(listOf(flag).asStrudelDslArgs())
 
 /** Enables sample looping on a string pattern. */
 @StrudelDsl
-val String.loop by dslStringExtension { p, args, callInfo -> p.loop(args, callInfo) }
+fun String.loop(flag: PatternLike): StrudelPattern = this._loop(listOf(flag).asStrudelDslArgs())
 
 // -- loopBegin() / loopb() --------------------------------------------------------------------------------------------
 
@@ -216,6 +238,14 @@ fun applyLoopBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     val control = args.toPattern(loopBeginMutation)
     return source._liftData(control)
 }
+
+internal val _loopBegin by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopBeginMutation) }
+internal val StrudelPattern._loopBegin by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopBegin(p, args) }
+internal val String._loopBegin by dslStringExtension { p, args, _ -> applyLoopBegin(p, args) }
+
+internal val _loopb by dslFunction { args, callInfo -> _loopBegin(args, callInfo) }
+internal val StrudelPattern._loopb by dslPatternExtension { p, args, callInfo -> p._loopBegin(args, callInfo) }
+internal val String._loopb by dslStringExtension { p, args, callInfo -> p._loopb(args, callInfo) }
 
 /**
  * Sets the loop start position as a fraction of the total sample length (0–1).
@@ -236,19 +266,15 @@ fun applyLoopBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
  * @tags loopBegin, loopb, loop, start, sample, position
  */
 @StrudelDsl
-val loopBegin by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopBeginMutation) }
+fun loopBegin(pos: PatternLike): StrudelPattern = _loopBegin(listOf(pos).asStrudelDslArgs())
 
 /** Sets the loop start position (0–1) on this pattern. */
 @StrudelDsl
-val StrudelPattern.loopBegin by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopBegin(p, args) }
+fun StrudelPattern.loopBegin(pos: PatternLike): StrudelPattern = this._loopBegin(listOf(pos).asStrudelDslArgs())
 
 /** Sets the loop start position (0–1) on a string pattern. */
 @StrudelDsl
-val String.loopBegin by dslStringExtension { p, args, _ -> applyLoopBegin(p, args) }
-
-/** Alias for [loopBegin] on this pattern. */
-@StrudelDsl
-val StrudelPattern.loopb by dslPatternExtension { p, args, callInfo -> p.loopBegin(args, callInfo) }
+fun String.loopBegin(pos: PatternLike): StrudelPattern = this._loopBegin(listOf(pos).asStrudelDslArgs())
 
 /**
  * Alias for [loopBegin]. Sets the loop start position.
@@ -258,11 +284,15 @@ val StrudelPattern.loopb by dslPatternExtension { p, args, callInfo -> p.loopBeg
  * @tags loopb, loopBegin, loop, start, sample, position
  */
 @StrudelDsl
-val loopb by dslFunction { args, callInfo -> loopBegin(args, callInfo) }
+fun loopb(pos: PatternLike): StrudelPattern = _loopb(listOf(pos).asStrudelDslArgs())
+
+/** Alias for [loopBegin] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.loopb(pos: PatternLike): StrudelPattern = this._loopb(listOf(pos).asStrudelDslArgs())
 
 /** Alias for [loopBegin] on a string pattern. */
 @StrudelDsl
-val String.loopb by dslStringExtension { p, args, callInfo -> p.loopBegin(args, callInfo) }
+fun String.loopb(pos: PatternLike): StrudelPattern = this._loopb(listOf(pos).asStrudelDslArgs())
 
 // -- loopEnd() / loope() ----------------------------------------------------------------------------------------------
 
@@ -273,6 +303,14 @@ fun applyLoopEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     val control = args.toPattern(loopEndMutation)
     return source._liftData(control)
 }
+
+internal val _loopEnd by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopEndMutation) }
+internal val StrudelPattern._loopEnd by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopEnd(p, args) }
+internal val String._loopEnd by dslStringExtension { p, args, _ -> applyLoopEnd(p, args) }
+
+internal val _loope by dslFunction { args, callInfo -> _loopEnd(args, callInfo) }
+internal val StrudelPattern._loope by dslPatternExtension { p, args, callInfo -> p._loopEnd(args, callInfo) }
+internal val String._loope by dslStringExtension { p, args, callInfo -> p._loope(args, callInfo) }
 
 /**
  * Sets the loop end position as a fraction of the total sample length (0–1).
@@ -293,19 +331,15 @@ fun applyLoopEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
  * @tags loopEnd, loope, loop, end, sample, position
  */
 @StrudelDsl
-val loopEnd by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopEndMutation) }
+fun loopEnd(pos: PatternLike): StrudelPattern = _loopEnd(listOf(pos).asStrudelDslArgs())
 
 /** Sets the loop end position (0–1) on this pattern. */
 @StrudelDsl
-val StrudelPattern.loopEnd by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopEnd(p, args) }
+fun StrudelPattern.loopEnd(pos: PatternLike): StrudelPattern = this._loopEnd(listOf(pos).asStrudelDslArgs())
 
 /** Sets the loop end position (0–1) on a string pattern. */
 @StrudelDsl
-val String.loopEnd by dslStringExtension { p, args, _ -> applyLoopEnd(p, args) }
-
-/** Alias for [loopEnd] on this pattern. */
-@StrudelDsl
-val StrudelPattern.loope by dslPatternExtension { p, args, callInfo -> p.loopEnd(args, callInfo) }
+fun String.loopEnd(pos: PatternLike): StrudelPattern = this._loopEnd(listOf(pos).asStrudelDslArgs())
 
 /**
  * Alias for [loopEnd]. Sets the loop end position.
@@ -315,11 +349,15 @@ val StrudelPattern.loope by dslPatternExtension { p, args, callInfo -> p.loopEnd
  * @tags loope, loopEnd, loop, end, sample, position
  */
 @StrudelDsl
-val loope by dslFunction { args, callInfo -> loopEnd(args, callInfo) }
+fun loope(pos: PatternLike): StrudelPattern = _loope(listOf(pos).asStrudelDslArgs())
+
+/** Alias for [loopEnd] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.loope(pos: PatternLike): StrudelPattern = this._loope(listOf(pos).asStrudelDslArgs())
 
 /** Alias for [loopEnd] on a string pattern. */
 @StrudelDsl
-val String.loope by dslStringExtension { p, args, callInfo -> p.loopEnd(args, callInfo) }
+fun String.loope(pos: PatternLike): StrudelPattern = this._loope(listOf(pos).asStrudelDslArgs())
 
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 
@@ -346,6 +384,10 @@ fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return slowed._liftData(speedControl)
 }
 
+internal val _loopAt by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopAtSpeedMutation) }
+internal val StrudelPattern._loopAt by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAt(p, args) }
+internal val String._loopAt by dslStringExtension { p, args, callInfo -> p._loopAt(args, callInfo) }
+
 /**
  * Fits the sample playback duration to the given number of cycles.
  *
@@ -365,15 +407,15 @@ fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
  * @tags loopAt, loop, fit, cycles, tempo, stretch
  */
 @StrudelDsl
-val loopAt by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopAtSpeedMutation) }
+fun loopAt(cycles: PatternLike): StrudelPattern = _loopAt(listOf(cycles).asStrudelDslArgs())
 
 /** Fits the sample to the specified number of cycles on this pattern. */
 @StrudelDsl
-val StrudelPattern.loopAt by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAt(p, args) }
+fun StrudelPattern.loopAt(cycles: PatternLike): StrudelPattern = this._loopAt(listOf(cycles).asStrudelDslArgs())
 
 /** Fits the sample to the specified number of cycles on a string pattern. */
 @StrudelDsl
-val String.loopAt by dslStringExtension { p, args, callInfo -> p.loopAt(args, callInfo) }
+fun String.loopAt(cycles: PatternLike): StrudelPattern = this._loopAt(listOf(cycles).asStrudelDslArgs())
 
 // -- loopAtCps() ------------------------------------------------------------------------------------------------------
 
@@ -389,6 +431,24 @@ fun applyLoopAtCps(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
         pat.speed(speed).unit("c").slow(factor)
     }
 }
+
+internal val _loopAtCps by dslFunction { args, /* callInfo */ _ ->
+    if (args.isEmpty()) {
+        return@dslFunction silence
+    }
+
+    // In JavaScript: function (factor, cps, pat)
+    // So args are: [factor, cps, ...pattern parts]
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
+    applyLoopAtCps(pattern, args.take(2))
+}
+
+internal val StrudelPattern._loopAtCps by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAtCps(p, args) }
+internal val String._loopAtCps by dslStringExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
+
+internal val _loopatcps by dslFunction { args, callInfo -> _loopAtCps(args, callInfo) }
+internal val StrudelPattern._loopatcps by dslPatternExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
+internal val String._loopatcps by dslStringExtension { p, args, callInfo -> p._loopatcps(args, callInfo) }
 
 /**
  * Fits the sample to the given number of cycles, taking the current cycles-per-second into account.
@@ -410,36 +470,28 @@ fun applyLoopAtCps(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
  * @tags loopAtCps, loopatcps, loop, fit, cycles, cps, tempo, stretch
  */
 @StrudelDsl
-val loopAtCps by dslFunction { args, /* callInfo */ _ ->
-    if (args.isEmpty()) {
-        return@dslFunction silence
-    }
-
-    // In JavaScript: function (factor, cps, pat)
-    // So args are: [factor, cps, ...pattern parts]
-    val pattern = args.drop(2).toPattern(voiceValueModifier)
-    applyLoopAtCps(pattern, args.take(2))
-}
+fun loopAtCps(factor: PatternLike, cps: PatternLike): StrudelPattern =
+    _loopAtCps(listOf(factor, cps).asStrudelDslArgs())
 
 /** Fits the sample to the given number of cycles and cps value on this pattern. */
 @StrudelDsl
-val StrudelPattern.loopAtCps by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAtCps(p, args) }
+fun StrudelPattern.loopAtCps(factor: PatternLike, cps: PatternLike): StrudelPattern =
+    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
 
 /** Fits the sample to the given number of cycles and cps value on this pattern (numeric overload). */
 @StrudelDsl
-fun StrudelPattern.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern {
-    return this.loopAtCps(listOf(factor, cps).asStrudelDslArgs())
-}
+fun StrudelPattern.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern =
+    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
 
 /** Fits the sample to the given number of cycles and cps value on a string pattern. */
 @StrudelDsl
-val String.loopAtCps by dslStringExtension { p, args, callInfo -> p.loopAtCps(args, callInfo) }
+fun String.loopAtCps(factor: PatternLike, cps: PatternLike): StrudelPattern =
+    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
 
 /** Fits the sample to the given number of cycles and cps value on a string pattern (numeric overload). */
 @StrudelDsl
-fun String.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern {
-    return this.loopAtCps(listOf(factor, cps).asStrudelDslArgs())
-}
+fun String.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern =
+    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
 
 /**
  * Alias for [loopAtCps]. Fits the sample to the given number of cycles and cps.
@@ -449,27 +501,26 @@ fun String.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern {
  * @tags loopatcps, loopAtCps, loop, fit, cycles, cps, tempo, stretch
  */
 @StrudelDsl
-val loopatcps by dslFunction { args, callInfo -> loopAtCps(args, callInfo) }
+fun loopatcps(factor: PatternLike, cps: PatternLike): StrudelPattern =
+    _loopatcps(listOf(factor, cps).asStrudelDslArgs())
 
 /** Alias for [loopAtCps] on this pattern. */
 @StrudelDsl
-val StrudelPattern.loopatcps by dslPatternExtension { p, args, callInfo -> p.loopAtCps(args, callInfo) }
+fun StrudelPattern.loopatcps(factor: PatternLike, cps: PatternLike): StrudelPattern =
+    this._loopatcps(listOf(factor, cps).asStrudelDslArgs())
 
 /** Alias for [loopAtCps] on this pattern (numeric overload). */
 @StrudelDsl
-fun StrudelPattern.loopatcps(factor: Number, cps: Number = 0.5): StrudelPattern {
-    return this.loopAtCps(factor, cps)
-}
+fun StrudelPattern.loopatcps(factor: Number, cps: Number = 0.5): StrudelPattern = this.loopAtCps(factor, cps)
 
 /** Alias for [loopAtCps] on a string pattern. */
 @StrudelDsl
-val String.loopatcps by dslStringExtension { p, args, callInfo -> p.loopAtCps(args, callInfo) }
+fun String.loopatcps(factor: PatternLike, cps: PatternLike): StrudelPattern =
+    this._loopatcps(listOf(factor, cps).asStrudelDslArgs())
 
 /** Alias for [loopAtCps] on a string pattern (numeric overload). */
 @StrudelDsl
-fun String.loopatcps(factor: Number, cps: Number = 0.5): StrudelPattern {
-    return this.loopAtCps(factor, cps)
-}
+fun String.loopatcps(factor: Number, cps: Number = 0.5): StrudelPattern = this.loopAtCps(factor, cps)
 
 // -- cut() ------------------------------------------------------------------------------------------------------------
 
@@ -480,6 +531,10 @@ fun applyCut(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     val control = effectiveArgs.toPattern(cutMutation)
     return source._liftData(control)
 }
+
+internal val _cut by dslFunction { args, /* callInfo */ _ -> args.toPattern(cutMutation) }
+internal val StrudelPattern._cut by dslPatternExtension { p, args, /* callInfo */ _ -> applyCut(p, args) }
+internal val String._cut by dslStringExtension { p, args, callInfo -> p._cut(args, callInfo) }
 
 /**
  * Assigns the sample to a cut group (choke group) by number.
@@ -500,15 +555,15 @@ fun applyCut(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
  * @tags cut, choke, group, hi-hat, sample
  */
 @StrudelDsl
-val cut by dslFunction { args, /* callInfo */ _ -> args.toPattern(cutMutation) }
+fun cut(group: PatternLike): StrudelPattern = _cut(listOf(group).asStrudelDslArgs())
 
 /** Assigns the sample to a cut group (choke group) on this pattern. */
 @StrudelDsl
-val StrudelPattern.cut by dslPatternExtension { p, args, /* callInfo */ _ -> applyCut(p, args) }
+fun StrudelPattern.cut(group: PatternLike): StrudelPattern = this._cut(listOf(group).asStrudelDslArgs())
 
 /** Assigns the sample to a cut group (choke group) on a string pattern. */
 @StrudelDsl
-val String.cut by dslStringExtension { p, args, callInfo -> p.cut(args, callInfo) }
+fun String.cut(group: PatternLike): StrudelPattern = this._cut(listOf(group).asStrudelDslArgs())
 
 // -- slice() ----------------------------------------------------------------------------------------------------------
 
@@ -526,6 +581,9 @@ fun applySlice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
 
     return source.begin(start).end(end)
 }
+
+internal val StrudelPattern._slice by dslPatternExtension { p, args, /* callInfo */ _ -> applySlice(p, args) }
+internal val String._slice by dslStringExtension { p, args, callInfo -> p._slice(args, callInfo) }
 
 /**
  * Plays a specific slice of the sample by dividing it into equal parts.
@@ -546,14 +604,16 @@ fun applySlice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
  * @tags slice, segment, chop, sample, begin, end
  */
 @StrudelDsl
-val StrudelPattern.slice by dslPatternExtension { p, args, /* callInfo */ _ -> applySlice(p, args) }
+fun StrudelPattern.slice(n: PatternLike, index: PatternLike): StrudelPattern =
+    this._slice(listOf(n, index).asStrudelDslArgs())
 
 /**
  * Plays a specific slice of the sample on a string pattern.
  * See [StrudelPattern.slice] for full documentation.
  */
 @StrudelDsl
-val String.slice by dslStringExtension { p, args, callInfo -> p.slice(args, callInfo) }
+fun String.slice(n: PatternLike, index: PatternLike): StrudelPattern =
+    this._slice(listOf(n, index).asStrudelDslArgs())
 
 // -- splice() ---------------------------------------------------------------------------------------------------------
 
@@ -563,8 +623,11 @@ fun applySplice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     val nVal = maxOf(1, nArg?.value?.asIntOrNull() ?: 1)
 
     // Apply slice, then multiply speed by n to maintain timing
-    return source.slice(args).speed(nVal.toDouble())
+    return applySlice(source, args).speed(nVal.toDouble())
 }
+
+internal val StrudelPattern._splice by dslPatternExtension { p, args, /* callInfo */ _ -> applySplice(p, args) }
+internal val String._splice by dslStringExtension { p, args, callInfo -> p._splice(args, callInfo) }
 
 /**
  * Plays a specific slice of the sample at the original sample tempo.
@@ -585,11 +648,13 @@ fun applySplice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
  * @tags splice, slice, chop, sample, speed, tempo
  */
 @StrudelDsl
-val StrudelPattern.splice by dslPatternExtension { p, args, /* callInfo */ _ -> applySplice(p, args) }
+fun StrudelPattern.splice(n: PatternLike, index: PatternLike): StrudelPattern =
+    this._splice(listOf(n, index).asStrudelDslArgs())
 
 /**
  * Plays a specific slice of the sample at the original tempo on a string pattern.
  * See [StrudelPattern.splice] for full documentation.
  */
 @StrudelDsl
-val String.splice by dslStringExtension { p, args, callInfo -> p.splice(args, callInfo) }
+fun String.splice(n: PatternLike, index: PatternLike): StrudelPattern =
+    this._splice(listOf(n, index).asStrudelDslArgs())
