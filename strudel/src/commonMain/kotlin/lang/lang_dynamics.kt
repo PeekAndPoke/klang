@@ -1,10 +1,11 @@
-@file:Suppress("DuplicatedCode")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName")
 
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel._applyControlFromParams
 import io.peekandpoke.klang.strudel._liftNumericField
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -20,17 +21,38 @@ fun applyGain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return source._liftNumericField(args, gainMutation)
 }
 
-/** Modifies the gains of a pattern */
-@StrudelDsl
-val StrudelPattern.gain by dslPatternExtension { p, args, /* callInfo */ _ -> applyGain(p, args) }
+internal val _gain by dslFunction { args, /* callInfo */ _ -> args.toPattern(gainMutation) }
+internal val StrudelPattern._gain by dslPatternExtension { p, args, /* callInfo */ _ -> applyGain(p, args) }
+internal val String._gain by dslStringExtension { p, args, callInfo -> p._gain(args, callInfo) }
 
-/** Creates a pattern with gains */
-@StrudelDsl
-val gain by dslFunction { args, /* callInfo */ _ -> args.toPattern(gainMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Modifies the gains of a pattern defined by a string */
+/**
+ * Sets the gain (volume multiplier) for each event in the pattern.
+ *
+ * Values below 1 reduce volume; above 1 amplify. Accepts control patterns for per-event modulation.
+ *
+ * ```KlangScript
+ * s("bd sd hh cp").gain(0.5)              // all hits at half volume
+ * ```
+ *
+ * ```KlangScript
+ * s("bd*4").gain("<0.2 0.5 0.8 1.0>")    // different gain each beat
+ * ```
+ *
+ * @category dynamics
+ * @tags gain, volume, amplitude, dynamics
+ */
 @StrudelDsl
-val String.gain by dslStringExtension { p, args, callInfo -> p.gain(args, callInfo) }
+fun gain(amount: PatternLike): StrudelPattern = _gain(listOf(amount).asStrudelDslArgs())
+
+/** Sets the gain for each event in this pattern. */
+@StrudelDsl
+fun StrudelPattern.gain(amount: PatternLike): StrudelPattern = this._gain(listOf(amount).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the gain for each event. */
+@StrudelDsl
+fun String.gain(amount: PatternLike): StrudelPattern = this._gain(listOf(amount).asStrudelDslArgs())
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
@@ -40,19 +62,40 @@ fun applyPan(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     return source._liftNumericField(args, panMutation)
 }
 
-/** Modifies the pans of a pattern */
-@StrudelDsl
-val StrudelPattern.pan by dslPatternExtension { p, args, /* callInfo */ _ -> applyPan(p, args) }
+internal val _pan by dslFunction { args, /* callInfo */ _ -> args.toPattern(panMutation) }
+internal val StrudelPattern._pan by dslPatternExtension { p, args, /* callInfo */ _ -> applyPan(p, args) }
+internal val String._pan by dslStringExtension { p, args, callInfo -> p._pan(args, callInfo) }
 
-/** Creates a pattern with pans */
-@StrudelDsl
-val pan by dslFunction { args, /* callInfo */ _ -> args.toPattern(panMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Modifies the pans of a pattern defined by a string */
+/**
+ * Sets the stereo panning position for each event (0 = full left, 0.5 = centre, 1 = full right).
+ *
+ * Accepts control patterns or continuous patterns for animated panning effects.
+ *
+ * ```KlangScript
+ * s("bd sd").pan(0.25)                   // slightly left
+ * ```
+ *
+ * ```KlangScript
+ * s("hh*8").pan(sine.range(0, 1))        // smooth left-right sweep
+ * ```
+ *
+ * @category dynamics
+ * @tags pan, stereo, panning, position
+ */
 @StrudelDsl
-val String.pan by dslStringExtension { p, args, callInfo -> p.pan(args, callInfo) }
+fun pan(amount: PatternLike): StrudelPattern = _pan(listOf(amount).asStrudelDslArgs())
 
-// -- velocity() -------------------------------------------------------------------------------------------------------
+/** Sets the stereo panning position for each event in this pattern. */
+@StrudelDsl
+fun StrudelPattern.pan(amount: PatternLike): StrudelPattern = this._pan(listOf(amount).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the stereo panning position. */
+@StrudelDsl
+fun String.pan(amount: PatternLike): StrudelPattern = this._pan(listOf(amount).asStrudelDslArgs())
+
+// -- velocity() / vel() -----------------------------------------------------------------------------------------------
 
 private val velocityMutation = voiceModifier { copy(velocity = it?.asDoubleOrNull()) }
 
@@ -60,29 +103,69 @@ fun applyVelocity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, velocityMutation)
 }
 
-/** Modifies the velocity (volume scaling) of a pattern */
-@StrudelDsl
-val StrudelPattern.velocity by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
+internal val _velocity by dslFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
+internal val StrudelPattern._velocity by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
+internal val String._velocity by dslStringExtension { p, args, callInfo -> p._velocity(args, callInfo) }
 
-/** Creates a pattern with velocity */
-@StrudelDsl
-val velocity by dslFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
+internal val _vel by dslFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
+internal val StrudelPattern._vel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
+internal val String._vel by dslStringExtension { p, args, callInfo -> p._vel(args, callInfo) }
 
-/** Modifies the velocity of a pattern defined by a string */
-@StrudelDsl
-val String.velocity by dslStringExtension { p, args, callInfo -> p.velocity(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Alias for velocity */
+/**
+ * Sets the velocity (MIDI-style volume scaling, 0–1) for each event in the pattern.
+ *
+ * Unlike `gain`, velocity is typically used as a MIDI note velocity or soft scaling factor.
+ *
+ * ```KlangScript
+ * note("c d e f").velocity(0.8)               // slightly softer notes
+ * ```
+ *
+ * ```KlangScript
+ * note("c*4").velocity("<0.3 0.6 0.9 1.0>")  // crescendo pattern
+ * ```
+ *
+ * @alias vel
+ * @category dynamics
+ * @tags velocity, vel, volume, midi, dynamics
+ */
 @StrudelDsl
-val StrudelPattern.vel by dslPatternExtension { p, args, callInfo -> p.velocity(args, callInfo) }
+fun velocity(amount: PatternLike): StrudelPattern = _velocity(listOf(amount).asStrudelDslArgs())
 
-/** Alias for velocity */
+/** Sets the velocity for each event in this pattern. */
 @StrudelDsl
-val vel by dslFunction { args, callInfo -> velocity(args, callInfo) }
+fun StrudelPattern.velocity(amount: PatternLike): StrudelPattern = this._velocity(listOf(amount).asStrudelDslArgs())
 
-/** Alias for velocity on a string */
+/** Parses this string as a pattern and sets the velocity for each event. */
 @StrudelDsl
-val String.vel by dslStringExtension { p, args, callInfo -> p.velocity(args, callInfo) }
+fun String.velocity(amount: PatternLike): StrudelPattern = this._velocity(listOf(amount).asStrudelDslArgs())
+
+/**
+ * Alias for [velocity]. Sets the velocity (MIDI-style volume scaling, 0–1) for each event.
+ *
+ * ```KlangScript
+ * note("c d e f").vel(0.8)               // slightly softer notes
+ * ```
+ *
+ * ```KlangScript
+ * note("c*4").vel("<0.3 0.6 0.9 1.0>")  // crescendo pattern
+ * ```
+ *
+ * @alias velocity
+ * @category dynamics
+ * @tags vel, velocity, volume, midi, dynamics
+ */
+@StrudelDsl
+fun vel(amount: PatternLike): StrudelPattern = _vel(listOf(amount).asStrudelDslArgs())
+
+/** Alias for [velocity]. Sets the velocity for each event in this pattern. */
+@StrudelDsl
+fun StrudelPattern.vel(amount: PatternLike): StrudelPattern = this._vel(listOf(amount).asStrudelDslArgs())
+
+/** Alias for [velocity]. Parses this string as a pattern and sets the velocity. */
+@StrudelDsl
+fun String.vel(amount: PatternLike): StrudelPattern = this._vel(listOf(amount).asStrudelDslArgs())
 
 // -- postgain() -------------------------------------------------------------------------------------------------------
 
@@ -92,19 +175,40 @@ fun applyPostgain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, postgainMutation)
 }
 
-/** Modifies the post-gain (applied after voice processing) of a pattern */
-@StrudelDsl
-val StrudelPattern.postgain by dslPatternExtension { p, args, /* callInfo */ _ -> applyPostgain(p, args) }
+internal val _postgain by dslFunction { args, /* callInfo */ _ -> args.toPattern(postgainMutation) }
+internal val StrudelPattern._postgain by dslPatternExtension { p, args, /* callInfo */ _ -> applyPostgain(p, args) }
+internal val String._postgain by dslStringExtension { p, args, callInfo -> p._postgain(args, callInfo) }
 
-/** Creates a pattern with post-gain */
-@StrudelDsl
-val postgain by dslFunction { args, /* callInfo */ _ -> args.toPattern(postgainMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Modifies the post-gain of a pattern defined by a string */
+/**
+ * Sets the post-gain (applied after voice processing) for each event in the pattern.
+ *
+ * Unlike `gain` which is applied before synthesis, `postgain` is a final output multiplier.
+ *
+ * ```KlangScript
+ * s("bd sd").postgain(1.5)                    // amplify after processing
+ * ```
+ *
+ * ```KlangScript
+ * s("hh*8").postgain(rand.range(0.5, 1.0))   // random post-gain per hit
+ * ```
+ *
+ * @category dynamics
+ * @tags postgain, gain, volume, post-processing
+ */
 @StrudelDsl
-val String.postgain by dslStringExtension { p, args, callInfo -> p.postgain(args, callInfo) }
+fun postgain(amount: PatternLike): StrudelPattern = _postgain(listOf(amount).asStrudelDslArgs())
 
-// -- compressor() -----------------------------------------------------------------------------------------------------
+/** Sets the post-gain for each event in this pattern. */
+@StrudelDsl
+fun StrudelPattern.postgain(amount: PatternLike): StrudelPattern = this._postgain(listOf(amount).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the post-gain for each event. */
+@StrudelDsl
+fun String.postgain(amount: PatternLike): StrudelPattern = this._postgain(listOf(amount).asStrudelDslArgs())
+
+// -- compressor() / comp() --------------------------------------------------------------------------------------------
 
 private val compressorMutation = voiceModifier { shape -> copy(compressor = shape?.toString()) }
 
@@ -114,31 +218,72 @@ fun applyCompressor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): St
     }
 }
 
-/** Sets dynamic range compression parameters (threshold:ratio:knee:attack:release) */
-@StrudelDsl
-val StrudelPattern.compressor by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
+internal val _compressor by dslFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
+internal val StrudelPattern._compressor by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
+internal val String._compressor by dslStringExtension { p, args, callInfo -> p._compressor(args, callInfo) }
 
-/** Sets dynamic range compression parameters (threshold:ratio:knee:attack:release) */
-@StrudelDsl
-val compressor by dslFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
+internal val _comp by dslFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
+internal val StrudelPattern._comp by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
+internal val String._comp by dslStringExtension { p, args, callInfo -> p._comp(args, callInfo) }
 
-/** Sets dynamic range compression parameters on a string */
-@StrudelDsl
-val String.compressor by dslStringExtension { p, args, callInfo -> p.compressor(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Alias for compressor */
+/**
+ * Sets dynamic range compression parameters as a colon-separated string
+ * `"threshold:ratio:knee:attack:release"`.
+ *
+ * ```KlangScript
+ * s("bd sd").compressor("-20:4:3:0.01:0.3")                        // standard compression
+ * ```
+ *
+ * ```KlangScript
+ * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * ```
+ *
+ * @alias comp
+ * @category dynamics
+ * @tags compressor, comp, compression, threshold, ratio, dynamics
+ */
 @StrudelDsl
-val StrudelPattern.comp by dslPatternExtension { p, args, callInfo -> p.compressor(args, callInfo) }
+fun compressor(params: PatternLike): StrudelPattern = _compressor(listOf(params).asStrudelDslArgs())
 
-/** Alias for compressor */
+/** Sets dynamic range compression parameters for this pattern. */
 @StrudelDsl
-val comp by dslFunction { args, callInfo -> compressor(args, callInfo) }
+fun StrudelPattern.compressor(params: PatternLike): StrudelPattern =
+    this._compressor(listOf(params).asStrudelDslArgs())
 
-/** Alias for compressor on a string */
+/** Parses this string as a pattern and sets dynamic range compression parameters. */
 @StrudelDsl
-val String.comp by dslStringExtension { p, args, callInfo -> p.compressor(args, callInfo) }
+fun String.compressor(params: PatternLike): StrudelPattern = this._compressor(listOf(params).asStrudelDslArgs())
 
-// -- unison() ---------------------------------------------------------------------------------------------------------
+/**
+ * Alias for [compressor]. Sets dynamic range compression parameters as a colon-separated string
+ * `"threshold:ratio:knee:attack:release"`.
+ *
+ * ```KlangScript
+ * s("bd sd").comp("-20:4:3:0.01:0.3")                        // standard compression
+ * ```
+ *
+ * ```KlangScript
+ * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * ```
+ *
+ * @alias compressor
+ * @category dynamics
+ * @tags comp, compressor, compression, threshold, ratio, dynamics
+ */
+@StrudelDsl
+fun comp(params: PatternLike): StrudelPattern = _comp(listOf(params).asStrudelDslArgs())
+
+/** Alias for [compressor]. Sets dynamic range compression parameters for this pattern. */
+@StrudelDsl
+fun StrudelPattern.comp(params: PatternLike): StrudelPattern = this._comp(listOf(params).asStrudelDslArgs())
+
+/** Alias for [compressor]. Parses this string as a pattern and sets compression parameters. */
+@StrudelDsl
+fun String.comp(params: PatternLike): StrudelPattern = this._comp(listOf(params).asStrudelDslArgs())
+
+// -- unison() / uni() -------------------------------------------------------------------------------------------------
 
 private val unisonMutation = voiceModifier { copy(voices = it?.asDoubleOrNull()) }
 
@@ -146,29 +291,70 @@ private fun applyUnison(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, unisonMutation)
 }
 
-/** Modifies the voices of a pattern */
-@StrudelDsl
-val StrudelPattern.unison by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
+internal val _unison by dslFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
+internal val StrudelPattern._unison by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
+internal val String._unison by dslStringExtension { p, args, callInfo -> p._unison(args, callInfo) }
 
-/** Creates a pattern with unison */
-@StrudelDsl
-val unison by dslFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
+internal val _uni by dslFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
+internal val StrudelPattern._uni by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
+internal val String._uni by dslStringExtension { p, args, callInfo -> p._uni(args, callInfo) }
 
-/** Modifies the voices of a pattern defined by a string */
-@StrudelDsl
-val String.unison by dslStringExtension { p, args, callInfo -> p.unison(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Alias for [unison] */
+/**
+ * Sets the number of unison voices for oscillator stacking effects (e.g. supersaw).
+ *
+ * Higher values produce a thicker, chorus-like sound. Use with `detune` and `spread`
+ * to control the detuning and panning spread of the voices.
+ *
+ * ```KlangScript
+ * note("c3").s("sawtooth").unison(5)               // 5 stacked sawtooth oscillators
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("sine").unison(3).detune(10)  // triple unison with spread
+ * ```
+ *
+ * @alias uni
+ * @category dynamics
+ * @tags unison, uni, voices, stacking, supersaw
+ */
 @StrudelDsl
-val StrudelPattern.uni by dslPatternExtension { p, args, callInfo -> p.unison(args, callInfo) }
+fun unison(voices: PatternLike): StrudelPattern = _unison(listOf(voices).asStrudelDslArgs())
 
-/** Alias for [unison] */
+/** Sets the number of unison voices for this pattern. */
 @StrudelDsl
-val uni by dslFunction { args, callInfo -> unison(args, callInfo) }
+fun StrudelPattern.unison(voices: PatternLike): StrudelPattern = this._unison(listOf(voices).asStrudelDslArgs())
 
-/** Alias for [unison] on a string */
+/** Parses this string as a pattern and sets the number of unison voices. */
 @StrudelDsl
-val String.uni by dslStringExtension { p, args, callInfo -> p.unison(args, callInfo) }
+fun String.unison(voices: PatternLike): StrudelPattern = this._unison(listOf(voices).asStrudelDslArgs())
+
+/**
+ * Alias for [unison]. Sets the number of unison voices for oscillator stacking effects.
+ *
+ * ```KlangScript
+ * note("c3").s("sawtooth").uni(5)               // 5 stacked sawtooth oscillators
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("sine").uni(3).detune(10)  // triple unison with spread
+ * ```
+ *
+ * @alias unison
+ * @category dynamics
+ * @tags uni, unison, voices, stacking, supersaw
+ */
+@StrudelDsl
+fun uni(voices: PatternLike): StrudelPattern = _uni(listOf(voices).asStrudelDslArgs())
+
+/** Alias for [unison]. Sets the number of unison voices for this pattern. */
+@StrudelDsl
+fun StrudelPattern.uni(voices: PatternLike): StrudelPattern = this._uni(listOf(voices).asStrudelDslArgs())
+
+/** Alias for [unison]. Parses this string as a pattern and sets the number of unison voices. */
+@StrudelDsl
+fun String.uni(voices: PatternLike): StrudelPattern = this._uni(listOf(voices).asStrudelDslArgs())
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
@@ -178,17 +364,39 @@ private fun applyDetune(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, detuneMutation)
 }
 
-/** Sets the oscillator frequency spread (for supersaw) */
-@StrudelDsl
-val StrudelPattern.detune by dslPatternExtension { p, args, /* callInfo */ _ -> applyDetune(p, args) }
+internal val _detune by dslFunction { args, /* callInfo */ _ -> args.toPattern(detuneMutation) }
+internal val StrudelPattern._detune by dslPatternExtension { p, args, /* callInfo */ _ -> applyDetune(p, args) }
+internal val String._detune by dslStringExtension { p, args, callInfo -> p._detune(args, callInfo) }
 
-/** Sets the oscillator frequency spread (for supersaw) */
-@StrudelDsl
-val detune by dslFunction { args, /* callInfo */ _ -> args.toPattern(detuneMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Sets the oscillator frequency spread (for supersaw) on a string */
+/**
+ * Sets the oscillator frequency spread in cents for unison/supersaw effects.
+ *
+ * Controls how much each unison voice is detuned from the base pitch. Use with `unison`
+ * to set the number of voices. Higher values produce a wider, more detuned sound.
+ *
+ * ```KlangScript
+ * note("c3").s("sawtooth").unison(5).detune(20)   // 5 voices spread ±20 cents
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").detune("<5 10 20 40>")             // escalating detune each beat
+ * ```
+ *
+ * @category dynamics
+ * @tags detune, spread, unison, cents, supersaw
+ */
 @StrudelDsl
-val String.detune by dslStringExtension { p, args, callInfo -> p.detune(args, callInfo) }
+fun detune(amount: PatternLike): StrudelPattern = _detune(listOf(amount).asStrudelDslArgs())
+
+/** Sets the oscillator frequency spread for this pattern. */
+@StrudelDsl
+fun StrudelPattern.detune(amount: PatternLike): StrudelPattern = this._detune(listOf(amount).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the oscillator frequency spread. */
+@StrudelDsl
+fun String.detune(amount: PatternLike): StrudelPattern = this._detune(listOf(amount).asStrudelDslArgs())
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
@@ -198,19 +406,41 @@ private fun applySpread(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, spreadMutation)
 }
 
-/** Sets the oscillator pan spread (for supersaw) */
-@StrudelDsl
-val StrudelPattern.spread by dslPatternExtension { p, args, /* callInfo */ _ -> applySpread(p, args) }
+internal val _spread by dslFunction { args, /* callInfo */ _ -> args.toPattern(spreadMutation) }
+internal val StrudelPattern._spread by dslPatternExtension { p, args, /* callInfo */ _ -> applySpread(p, args) }
+internal val String._spread by dslStringExtension { p, args, callInfo -> p._spread(args, callInfo) }
 
-/** Sets the oscillator pan spread (for supersaw) */
-@StrudelDsl
-val spread by dslFunction { args, /* callInfo */ _ -> args.toPattern(spreadMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Sets the oscillator pan spread (for supersaw) on a string */
+/**
+ * Sets the stereo pan spread for unison/supersaw voices (0 = mono, 1 = full stereo spread).
+ *
+ * Controls how widely the unison voices are spread across the stereo field. Use with
+ * `unison` to set the number of voices.
+ *
+ * ```KlangScript
+ * note("c3").s("sawtooth").unison(5).spread(0.8)   // wide stereo spread
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").spread("<0.2 0.5 0.8 1.0>")         // gradually widen each beat
+ * ```
+ *
+ * @category dynamics
+ * @tags spread, pan, stereo, unison, supersaw
+ */
 @StrudelDsl
-val String.spread by dslStringExtension { p, args, callInfo -> p.spread(args, callInfo) }
+fun spread(amount: PatternLike): StrudelPattern = _spread(listOf(amount).asStrudelDslArgs())
 
-// -- density() --------------------------------------------------------------------------------------------------------
+/** Sets the stereo pan spread for unison voices in this pattern. */
+@StrudelDsl
+fun StrudelPattern.spread(amount: PatternLike): StrudelPattern = this._spread(listOf(amount).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the stereo pan spread for unison voices. */
+@StrudelDsl
+fun String.spread(amount: PatternLike): StrudelPattern = this._spread(listOf(amount).asStrudelDslArgs())
+
+// -- density() / d() --------------------------------------------------------------------------------------------------
 
 private val densityMutation = voiceModifier { copy(density = it?.asDoubleOrNull()) }
 
@@ -218,29 +448,70 @@ private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     return source._liftNumericField(args, densityMutation)
 }
 
-/** Sets the oscillator density (for supersaw) or noise density (for dust/crackle) */
-@StrudelDsl
-val StrudelPattern.density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
+internal val _density by dslFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
+internal val StrudelPattern._density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
+internal val String._density by dslStringExtension { p, args, callInfo -> p._density(args, callInfo) }
 
-/** Sets the oscillator density (for supersaw) or noise density (for dust/crackle) */
-@StrudelDsl
-val density by dslFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
+internal val _d by dslFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
+internal val StrudelPattern._d by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
+internal val String._d by dslStringExtension { p, args, callInfo -> p._d(args, callInfo) }
 
-/** Sets the oscillator density (for supersaw) or noise density (for dust/crackle) on a string */
-@StrudelDsl
-val String.density by dslStringExtension { p, args, callInfo -> p.density(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Alias for [density] */
+/**
+ * Sets the oscillator density for supersaw or noise density for dust/crackle generators.
+ *
+ * For supersaw: controls how tightly packed the oscillators are.
+ * For noise generators (e.g. `dust`): controls the number of events per second.
+ *
+ * ```KlangScript
+ * s("dust").density(40)                            // 40 noise events per second
+ * ```
+ *
+ * ```KlangScript
+ * note("c3").s("sawtooth").unison(7).density(0.5)  // tight supersaw
+ * ```
+ *
+ * @alias d
+ * @category dynamics
+ * @tags density, d, supersaw, dust, noise
+ */
 @StrudelDsl
-val StrudelPattern.d by dslPatternExtension { p, args, callInfo -> p.density(args, callInfo) }
+fun density(amount: PatternLike): StrudelPattern = _density(listOf(amount).asStrudelDslArgs())
 
-/** Alias for [density] */
+/** Sets the oscillator or noise density for this pattern. */
 @StrudelDsl
-val d by dslFunction { args, callInfo -> density(args, callInfo) }
+fun StrudelPattern.density(amount: PatternLike): StrudelPattern = this._density(listOf(amount).asStrudelDslArgs())
 
-/** Alias for [density] on a string */
+/** Parses this string as a pattern and sets the oscillator or noise density. */
 @StrudelDsl
-val String.d by dslStringExtension { p, args, callInfo -> p.density(args, callInfo) }
+fun String.density(amount: PatternLike): StrudelPattern = this._density(listOf(amount).asStrudelDslArgs())
+
+/**
+ * Alias for [density]. Sets the oscillator density for supersaw or noise density for dust/crackle.
+ *
+ * ```KlangScript
+ * s("dust").d(40)                            // 40 noise events per second
+ * ```
+ *
+ * ```KlangScript
+ * note("c3").s("sawtooth").unison(7).d(0.5)  // tight supersaw
+ * ```
+ *
+ * @alias density
+ * @category dynamics
+ * @tags d, density, supersaw, dust, noise
+ */
+@StrudelDsl
+fun d(amount: PatternLike): StrudelPattern = _d(listOf(amount).asStrudelDslArgs())
+
+/** Alias for [density]. Sets the oscillator or noise density for this pattern. */
+@StrudelDsl
+fun StrudelPattern.d(amount: PatternLike): StrudelPattern = this._d(listOf(amount).asStrudelDslArgs())
+
+/** Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density. */
+@StrudelDsl
+fun String.d(amount: PatternLike): StrudelPattern = this._d(listOf(amount).asStrudelDslArgs())
 
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
 
@@ -250,17 +521,39 @@ private fun applyAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, attackMutation)
 }
 
-/** Sets the note envelope attack */
-@StrudelDsl
-val StrudelPattern.attack by dslPatternExtension { p, args, /* callInfo */ _ -> applyAttack(p, args) }
+internal val _attack by dslFunction { args, /* callInfo */ _ -> args.toPattern(attackMutation) }
+internal val StrudelPattern._attack by dslPatternExtension { p, args, /* callInfo */ _ -> applyAttack(p, args) }
+internal val String._attack by dslStringExtension { p, args, callInfo -> p._attack(args, callInfo) }
 
-/** Sets the note envelope attack */
-@StrudelDsl
-val attack by dslFunction { args, /* callInfo */ _ -> args.toPattern(attackMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Sets the note envelope attack on a string */
+/**
+ * Sets the ADSR envelope attack time in seconds for synthesised notes.
+ *
+ * Controls how quickly the note rises from silence to full volume at the start.
+ * Short values produce a sharp, percussive onset; longer values create a gradual fade-in.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("sine").attack(0.01)     // sharp attack
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").attack("<0.01 0.1 0.5 1.0>")   // varying attacks
+ * ```
+ *
+ * @category dynamics
+ * @tags attack, adsr, envelope, fade-in
+ */
 @StrudelDsl
-val String.attack by dslStringExtension { p, args, callInfo -> p.attack(args, callInfo) }
+fun attack(time: PatternLike): StrudelPattern = _attack(listOf(time).asStrudelDslArgs())
+
+/** Sets the ADSR envelope attack time for this pattern. */
+@StrudelDsl
+fun StrudelPattern.attack(time: PatternLike): StrudelPattern = this._attack(listOf(time).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the ADSR envelope attack time. */
+@StrudelDsl
+fun String.attack(time: PatternLike): StrudelPattern = this._attack(listOf(time).asStrudelDslArgs())
 
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
@@ -270,17 +563,38 @@ private fun applyDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     return source._liftNumericField(args, decayMutation)
 }
 
-/** Sets the note envelope decay */
-@StrudelDsl
-val StrudelPattern.decay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDecay(p, args) }
+internal val _decay by dslFunction { args, /* callInfo */ _ -> args.toPattern(decayMutation) }
+internal val StrudelPattern._decay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDecay(p, args) }
+internal val String._decay by dslStringExtension { p, args, callInfo -> p._decay(args, callInfo) }
 
-/** Sets the note envelope decay */
-@StrudelDsl
-val decay by dslFunction { args, /* callInfo */ _ -> args.toPattern(decayMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Sets the note envelope decay on a string */
+/**
+ * Sets the ADSR envelope decay time in seconds for synthesised notes.
+ *
+ * Controls how quickly the volume falls from its peak to the sustain level after the attack phase.
+ *
+ * ```KlangScript
+ * note("c3 e3").s("sawtooth").decay(0.2)       // short decay
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").decay("<0.05 0.2 0.5 1.0>")    // varying decays
+ * ```
+ *
+ * @category dynamics
+ * @tags decay, adsr, envelope
+ */
 @StrudelDsl
-val String.decay by dslStringExtension { p, args, callInfo -> p.decay(args, callInfo) }
+fun decay(time: PatternLike): StrudelPattern = _decay(listOf(time).asStrudelDslArgs())
+
+/** Sets the ADSR envelope decay time for this pattern. */
+@StrudelDsl
+fun StrudelPattern.decay(time: PatternLike): StrudelPattern = this._decay(listOf(time).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the ADSR envelope decay time. */
+@StrudelDsl
+fun String.decay(time: PatternLike): StrudelPattern = this._decay(listOf(time).asStrudelDslArgs())
 
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
@@ -290,17 +604,39 @@ private fun applySustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     return source._liftNumericField(args, sustainMutation)
 }
 
-/** Sets the note envelope sustain */
-@StrudelDsl
-val StrudelPattern.sustain by dslPatternExtension { p, args, /* callInfo */ _ -> applySustain(p, args) }
+internal val _sustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(sustainMutation) }
+internal val StrudelPattern._sustain by dslPatternExtension { p, args, /* callInfo */ _ -> applySustain(p, args) }
+internal val String._sustain by dslStringExtension { p, args, callInfo -> p._sustain(args, callInfo) }
 
-/** Sets the note envelope sustain */
-@StrudelDsl
-val sustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(sustainMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Sets the note envelope sustain on a string */
+/**
+ * Sets the ADSR envelope sustain level (0–1) for synthesised notes.
+ *
+ * The sustain level is held while the note is pressed, after the attack and decay phases.
+ * `0` = silence after decay; `1` = hold at full peak level.
+ *
+ * ```KlangScript
+ * note("c3 e3").s("sine").sustain(0.7)        // 70% sustain level
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").sustain("<0 0.3 0.7 1.0>")    // varying sustain
+ * ```
+ *
+ * @category dynamics
+ * @tags sustain, adsr, envelope, hold
+ */
 @StrudelDsl
-val String.sustain by dslStringExtension { p, args, callInfo -> p.sustain(args, callInfo) }
+fun sustain(level: PatternLike): StrudelPattern = _sustain(listOf(level).asStrudelDslArgs())
+
+/** Sets the ADSR envelope sustain level for this pattern. */
+@StrudelDsl
+fun StrudelPattern.sustain(level: PatternLike): StrudelPattern = this._sustain(listOf(level).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the ADSR envelope sustain level. */
+@StrudelDsl
+fun String.sustain(level: PatternLike): StrudelPattern = this._sustain(listOf(level).asStrudelDslArgs())
 
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 
@@ -310,17 +646,39 @@ private fun applyRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     return source._liftNumericField(args, releaseMutation)
 }
 
-/** Sets the note envelope release */
-@StrudelDsl
-val StrudelPattern.release by dslPatternExtension { p, args, /* callInfo */ _ -> applyRelease(p, args) }
+internal val _release by dslFunction { args, /* callInfo */ _ -> args.toPattern(releaseMutation) }
+internal val StrudelPattern._release by dslPatternExtension { p, args, /* callInfo */ _ -> applyRelease(p, args) }
+internal val String._release by dslStringExtension { p, args, callInfo -> p._release(args, callInfo) }
 
-/** Sets the note envelope release */
-@StrudelDsl
-val release by dslFunction { args, /* callInfo */ _ -> args.toPattern(releaseMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Sets the note envelope release on a string */
+/**
+ * Sets the ADSR envelope release time in seconds for synthesised notes.
+ *
+ * Controls how long the note takes to fade to silence after a note-off event.
+ * Short values produce an abrupt cut; longer values create a smooth fade-out.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("sine").release(0.5)     // half-second release
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").release("<0.1 0.3 0.8 2.0>")  // varying releases
+ * ```
+ *
+ * @category dynamics
+ * @tags release, adsr, envelope, fade-out
+ */
 @StrudelDsl
-val String.release by dslStringExtension { p, args, callInfo -> p.release(args, callInfo) }
+fun release(time: PatternLike): StrudelPattern = _release(listOf(time).asStrudelDslArgs())
+
+/** Sets the ADSR envelope release time for this pattern. */
+@StrudelDsl
+fun StrudelPattern.release(time: PatternLike): StrudelPattern = this._release(listOf(time).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the ADSR envelope release time. */
+@StrudelDsl
+fun String.release(time: PatternLike): StrudelPattern = this._release(listOf(time).asStrudelDslArgs())
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
@@ -347,23 +705,46 @@ private fun applyAdsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     }
 }
 
-/** Sets the note envelope via string or pattern */
-@StrudelDsl
-val StrudelPattern.adsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyAdsr(p, args) }
+internal val _adsr by dslFunction { args, /* callInfo */ _ -> args.toPattern(adsrMutation) }
+internal val StrudelPattern._adsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyAdsr(p, args) }
+internal val String._adsr by dslStringExtension { p, args, callInfo -> p._adsr(args, callInfo) }
 
-/** Sets the note envelope via string or pattern */
-@StrudelDsl
-val adsr by dslFunction { args, /* callInfo */ _ -> args.toPattern(adsrMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Sets the note envelope via string or pattern on a string */
+/**
+ * Sets all four ADSR envelope parameters at once via a colon-separated string
+ * `"attack:decay:sustain:release"`.
+ *
+ * Each field is a number: attack/decay/release in seconds, sustain in 0–1 range.
+ * Missing trailing fields keep their previous values.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("sine").adsr("0.01:0.2:0.7:0.5")          // standard ADSR
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>")     // alternate envelopes
+ * ```
+ *
+ * @category dynamics
+ * @tags adsr, attack, decay, sustain, release, envelope
+ */
 @StrudelDsl
-val String.adsr by dslStringExtension { p, args, callInfo -> p.adsr(args, callInfo) }
+fun adsr(params: PatternLike): StrudelPattern = _adsr(listOf(params).asStrudelDslArgs())
+
+/** Sets all four ADSR envelope parameters for this pattern via a colon-separated string. */
+@StrudelDsl
+fun StrudelPattern.adsr(params: PatternLike): StrudelPattern = this._adsr(listOf(params).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets all ADSR envelope parameters. */
+@StrudelDsl
+fun String.adsr(params: PatternLike): StrudelPattern = this._adsr(listOf(params).asStrudelDslArgs())
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
-// ///
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// -- orbit() ----------------------------------------------------------------------------------------------------------
+// -- orbit() / o() ----------------------------------------------------------------------------------------------------
 
 private val orbitMutation = voiceModifier {
     copy(orbit = it?.asIntOrNull())
@@ -373,32 +754,76 @@ private fun applyOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     return source._liftNumericField(args, orbitMutation)
 }
 
-@StrudelDsl
-val StrudelPattern.orbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
+internal val _orbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
+internal val StrudelPattern._orbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
+internal val String._orbit by dslStringExtension { p, args, callInfo -> p._orbit(args, callInfo) }
 
-@StrudelDsl
-val orbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
+internal val _o by dslFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
+internal val StrudelPattern._o by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
+internal val String._o by dslStringExtension { p, args, callInfo -> p._o(args, callInfo) }
 
-@StrudelDsl
-val String.orbit by dslStringExtension { p, args, callInfo -> p.orbit(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Alias for [orbit] */
+/**
+ * Routes the pattern to an audio output orbit (channel group) for independent effect processing.
+ *
+ * Each orbit can have its own reverb, delay, and other effects applied independently.
+ * Use different orbit numbers to send patterns to different effect buses.
+ *
+ * ```KlangScript
+ * s("bd sd").orbit(1)                           // send drums to orbit 1
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3").orbit(2).room(0.8).roomsize(4)  // melodic line on orbit 2 with reverb
+ * ```
+ *
+ * @alias o
+ * @category dynamics
+ * @tags orbit, o, routing, effects, bus, channel
+ */
 @StrudelDsl
-val StrudelPattern.o by dslPatternExtension { p, args, callInfo -> p.orbit(args, callInfo) }
+fun orbit(index: PatternLike): StrudelPattern = _orbit(listOf(index).asStrudelDslArgs())
 
-/** Alias for [orbit] */
+/** Routes this pattern to the given audio output orbit. */
 @StrudelDsl
-val o by dslFunction { args, callInfo -> orbit(args, callInfo) }
+fun StrudelPattern.orbit(index: PatternLike): StrudelPattern = this._orbit(listOf(index).asStrudelDslArgs())
 
-/** Alias for [orbit] on a string */
+/** Parses this string as a pattern and routes it to the given audio output orbit. */
 @StrudelDsl
-val String.o by dslStringExtension { p, args, callInfo -> p.orbit(args, callInfo) }
+fun String.orbit(index: PatternLike): StrudelPattern = this._orbit(listOf(index).asStrudelDslArgs())
+
+/**
+ * Alias for [orbit]. Routes the pattern to an audio output orbit for independent effect processing.
+ *
+ * ```KlangScript
+ * s("bd sd").o(1)                       // send drums to orbit 1
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3").o(2).room(0.8)          // melodic line on orbit 2 with reverb
+ * ```
+ *
+ * @alias orbit
+ * @category dynamics
+ * @tags o, orbit, routing, effects, bus, channel
+ */
+@StrudelDsl
+fun o(index: PatternLike): StrudelPattern = _o(listOf(index).asStrudelDslArgs())
+
+/** Alias for [orbit]. Routes this pattern to the given audio output orbit. */
+@StrudelDsl
+fun StrudelPattern.o(index: PatternLike): StrudelPattern = this._o(listOf(index).asStrudelDslArgs())
+
+/** Alias for [orbit]. Parses this string as a pattern and routes it to the given orbit. */
+@StrudelDsl
+fun String.o(index: PatternLike): StrudelPattern = this._o(listOf(index).asStrudelDslArgs())
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Ducking / Sidechain
-// ///
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// -- duckorbit() / duck() -----------------------------------------------------------------------------------------
+// -- duckorbit() / duck() ---------------------------------------------------------------------------------------------
 
 private val duckOrbitMutation = voiceModifier {
     copy(duckOrbit = it?.asIntOrNull())
@@ -408,31 +833,73 @@ private fun applyDuckOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?
     return source._liftNumericField(args, duckOrbitMutation)
 }
 
-/** Sets the target orbit to listen to for ducking (sidechain source) */
-@StrudelDsl
-val StrudelPattern.duckorbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
+internal val _duckorbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
+internal val StrudelPattern._duckorbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
+internal val String._duckorbit by dslStringExtension { p, args, callInfo -> p._duckorbit(args, callInfo) }
 
-/** Sets the target orbit to listen to for ducking (sidechain source) */
-@StrudelDsl
-val duckorbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
+internal val _duck by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
+internal val StrudelPattern._duck by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
+internal val String._duck by dslStringExtension { p, args, callInfo -> p._duck(args, callInfo) }
 
-/** Sets the target orbit to listen to for ducking (sidechain source) on a string */
-@StrudelDsl
-val String.duckorbit by dslStringExtension { p, args, callInfo -> p.duckorbit(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Alias for [duckorbit] */
+/**
+ * Sets the target orbit to listen to for sidechain ducking.
+ *
+ * The pattern's volume is reduced when audio is detected on the specified orbit.
+ * Use with `duckdepth` to set the attenuation amount and `duckattack` for the recovery time.
+ *
+ * ```KlangScript
+ * s("bd*4").orbit(1)                              // kick drum on orbit 1
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").duckorbit(1).duckdepth(0.8)   // duck when kick plays on orbit 1
+ * ```
+ *
+ * @alias duck
+ * @category dynamics
+ * @tags duckorbit, duck, sidechain, ducking, dynamics
+ */
 @StrudelDsl
-val StrudelPattern.duck by dslPatternExtension { p, args, callInfo -> p.duckorbit(args, callInfo) }
+fun duckorbit(orbitIndex: PatternLike): StrudelPattern = _duckorbit(listOf(orbitIndex).asStrudelDslArgs())
 
-/** Alias for [duckorbit] */
+/** Sets the sidechain source orbit for ducking this pattern. */
 @StrudelDsl
-val duck by dslFunction { args, callInfo -> duckorbit(args, callInfo) }
+fun StrudelPattern.duckorbit(orbitIndex: PatternLike): StrudelPattern =
+    this._duckorbit(listOf(orbitIndex).asStrudelDslArgs())
 
-/** Alias for [duckorbit] on a string */
+/** Parses this string as a pattern and sets the sidechain source orbit for ducking. */
 @StrudelDsl
-val String.duck by dslStringExtension { p, args, callInfo -> p.duckorbit(args, callInfo) }
+fun String.duckorbit(orbitIndex: PatternLike): StrudelPattern =
+    this._duckorbit(listOf(orbitIndex).asStrudelDslArgs())
 
-// -- duckattack() / duckatt() -------------------------------------------------------------------------------------
+/**
+ * Alias for [duckorbit]. Sets the target orbit to listen to for sidechain ducking.
+ *
+ * ```KlangScript
+ * stack(
+ *   s("bd*4").orbit(0),                               // kick drum on orbit 0
+ *   note("c3 e3").orbit(1).duck(0).duckdepth(1.0),    // duck when kick plays on orbit 1
+ * )
+ * ```
+ *
+ * @alias duckorbit
+ * @category dynamics
+ * @tags duck, duckorbit, sidechain, ducking, dynamics
+ */
+@StrudelDsl
+fun duck(orbitIndex: PatternLike): StrudelPattern = _duck(listOf(orbitIndex).asStrudelDslArgs())
+
+/** Alias for [duckorbit]. Sets the sidechain source orbit for ducking this pattern. */
+@StrudelDsl
+fun StrudelPattern.duck(orbitIndex: PatternLike): StrudelPattern = this._duck(listOf(orbitIndex).asStrudelDslArgs())
+
+/** Alias for [duckorbit]. Parses this string as a pattern and sets the sidechain source orbit. */
+@StrudelDsl
+fun String.duck(orbitIndex: PatternLike): StrudelPattern = this._duck(listOf(orbitIndex).asStrudelDslArgs())
+
+// -- duckattack() / duckatt() -----------------------------------------------------------------------------------------
 
 private val duckAttackMutation = voiceModifier { copy(duckAttack = it?.asDoubleOrNull()) }
 
@@ -440,31 +907,74 @@ private fun applyDuckAttack(source: StrudelPattern, args: List<StrudelDslArg<Any
     return source._liftNumericField(args, duckAttackMutation)
 }
 
-/** Sets duck return-to-normal time in seconds (attack/release time) */
-@StrudelDsl
-val StrudelPattern.duckattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
+internal val _duckattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
+internal val StrudelPattern._duckattack by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyDuckAttack(p, args)
+}
+internal val String._duckattack by dslStringExtension { p, args, callInfo -> p._duckattack(args, callInfo) }
 
-/** Sets duck return-to-normal time in seconds (attack/release time) */
-@StrudelDsl
-val duckattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
+internal val _duckatt by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
+internal val StrudelPattern._duckatt by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
+internal val String._duckatt by dslStringExtension { p, args, callInfo -> p._duckatt(args, callInfo) }
 
-/** Sets duck return-to-normal time in seconds (attack/release time) on a string */
-@StrudelDsl
-val String.duckattack by dslStringExtension { p, args, callInfo -> p.duckattack(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Alias for [duckattack] */
+/**
+ * Sets the duck release (return-to-normal) time in seconds for sidechain ducking.
+ *
+ * Controls how quickly the ducked pattern returns to its full volume after the sidechain
+ * trigger stops. Shorter values snap back quickly; longer values create a pumping effect.
+ *
+ * ```KlangScript
+ * note("c3 e3").duck(1).duckdepth(0.8).duckattack(0.2)   // 200 ms recovery
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").duckattack("<0.05 0.1 0.3 0.5>")          // varying recovery times
+ * ```
+ *
+ * @alias duckatt
+ * @category dynamics
+ * @tags duckattack, duckatt, sidechain, ducking, release, dynamics
+ */
 @StrudelDsl
-val StrudelPattern.duckatt by dslPatternExtension { p, args, callInfo -> p.duckattack(args, callInfo) }
+fun duckattack(time: PatternLike): StrudelPattern = _duckattack(listOf(time).asStrudelDslArgs())
 
-/** Alias for [duckattack] */
+/** Sets the duck release time for this pattern. */
 @StrudelDsl
-val duckatt by dslFunction { args, callInfo -> duckattack(args, callInfo) }
+fun StrudelPattern.duckattack(time: PatternLike): StrudelPattern = this._duckattack(listOf(time).asStrudelDslArgs())
 
-/** Alias for [duckattack] on a string */
+/** Parses this string as a pattern and sets the duck release time. */
 @StrudelDsl
-val String.duckatt by dslStringExtension { p, args, callInfo -> p.duckattack(args, callInfo) }
+fun String.duckattack(time: PatternLike): StrudelPattern = this._duckattack(listOf(time).asStrudelDslArgs())
 
-// -- duckdepth() --------------------------------------------------------------------------------------------------
+/**
+ * Alias for [duckattack]. Sets the duck release (return-to-normal) time in seconds.
+ *
+ * ```KlangScript
+ * note("c3 e3").duck(1).duckdepth(0.8).duckatt(0.2)   // 200 ms recovery
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").duckatt("<0.05 0.1 0.3 0.5>")          // varying recovery times
+ * ```
+ *
+ * @alias duckattack
+ * @category dynamics
+ * @tags duckatt, duckattack, sidechain, ducking, release, dynamics
+ */
+@StrudelDsl
+fun duckatt(time: PatternLike): StrudelPattern = _duckatt(listOf(time).asStrudelDslArgs())
+
+/** Alias for [duckattack]. Sets the duck release time for this pattern. */
+@StrudelDsl
+fun StrudelPattern.duckatt(time: PatternLike): StrudelPattern = this._duckatt(listOf(time).asStrudelDslArgs())
+
+/** Alias for [duckattack]. Parses this string as a pattern and sets the duck release time. */
+@StrudelDsl
+fun String.duckatt(time: PatternLike): StrudelPattern = this._duckatt(listOf(time).asStrudelDslArgs())
+
+// -- duckdepth() ------------------------------------------------------------------------------------------------------
 
 private val duckDepthMutation = voiceModifier { copy(duckDepth = it?.asDoubleOrNull()) }
 
@@ -472,14 +982,36 @@ private fun applyDuckDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?
     return source._liftNumericField(args, duckDepthMutation)
 }
 
-/** Sets ducking amount (0.0 = no ducking, 1.0 = full silence) */
-@StrudelDsl
-val StrudelPattern.duckdepth by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckDepth(p, args) }
+internal val _duckdepth by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckDepthMutation) }
+internal val StrudelPattern._duckdepth by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckDepth(p, args) }
+internal val String._duckdepth by dslStringExtension { p, args, callInfo -> p._duckdepth(args, callInfo) }
 
-/** Sets ducking amount (0.0 = no ducking, 1.0 = full silence) */
-@StrudelDsl
-val duckdepth by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckDepthMutation) }
+// ===== USER-FACING OVERLOADS =====
 
-/** Sets ducking amount (0.0 = no ducking, 1.0 = full silence) on a string */
+/**
+ * Sets the ducking depth (0.0 = no ducking, 1.0 = full silence) for sidechain ducking.
+ *
+ * Controls how much the pattern is attenuated when the sidechain trigger fires.
+ * Use with `duckorbit` to set the sidechain source and `duckattack` for recovery time.
+ *
+ * ```KlangScript
+ * note("c3 e3").duck(1).duckdepth(0.8)           // 80% attenuation on sidechain
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").duckdepth("<0.3 0.6 0.9 1.0>")   // escalating ducking depth
+ * ```
+ *
+ * @category dynamics
+ * @tags duckdepth, sidechain, ducking, attenuation, dynamics
+ */
 @StrudelDsl
-val String.duckdepth by dslStringExtension { p, args, callInfo -> p.duckdepth(args, callInfo) }
+fun duckdepth(amount: PatternLike): StrudelPattern = _duckdepth(listOf(amount).asStrudelDslArgs())
+
+/** Sets the ducking depth for this pattern. */
+@StrudelDsl
+fun StrudelPattern.duckdepth(amount: PatternLike): StrudelPattern = this._duckdepth(listOf(amount).asStrudelDslArgs())
+
+/** Parses this string as a pattern and sets the ducking depth. */
+@StrudelDsl
+fun String.duckdepth(amount: PatternLike): StrudelPattern = this._duckdepth(listOf(amount).asStrudelDslArgs())
