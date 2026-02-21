@@ -18,18 +18,85 @@ enum class DslType {
 }
 
 /**
- * Documentation for a single parameter.
+ * Represents a Kotlin type in structured form.
+ *
+ * Used to build DSL function signatures from structured data rather than raw strings.
  */
-data class ParamDoc(
+data class TypeModel(
+    /** Simple (unqualified) type name, e.g. "StrudelPattern", "PatternLike" */
+    val simpleName: String,
+
+    /** True when this type is a type alias (e.g. PatternLike = Any) */
+    val isTypeAlias: Boolean = false,
+
+    /** True when the type is nullable (e.g. String?) */
+    val isNullable: Boolean = false,
+) {
+    /** Renders the type as a human-readable string. */
+    fun render(): String = buildString {
+        append(simpleName)
+        if (isNullable) append("?")
+    }
+
+    override fun toString(): String = render()
+}
+
+/**
+ * Represents a single parameter in a DSL function signature.
+ */
+data class ParamModel(
     /** Parameter name */
     val name: String,
 
-    /** Parameter type signature */
-    val type: String,
+    /** Parameter type */
+    val type: TypeModel,
+
+    /** True when the parameter is a vararg */
+    val isVararg: Boolean = false,
 
     /** Description of what the parameter does */
-    val description: String,
-)
+    val description: String = "",
+) {
+    /** Renders the parameter as it appears in a signature string. */
+    fun render(): String = buildString {
+        if (isVararg) append("vararg ")
+        append("$name: ${type.render()}")
+    }
+}
+
+/**
+ * Structured representation of a DSL function or property signature.
+ *
+ * Three modes based on the `params` field:
+ * - `params = null`        → property/object, renders without parentheses: `sine: StrudelPattern`
+ * - `params = emptyList()` → callable with no parameter info: `accelerate(): StrudelPattern`
+ * - `params = [...]`       → fully-parameterized: `seq(vararg patterns: PatternLike): StrudelPattern`
+ */
+data class SignatureModel(
+    /** Function or property name */
+    val name: String,
+
+    /** Receiver type for extension functions/properties, null for top-level */
+    val receiver: TypeModel? = null,
+
+    /** Parameter list. null = property (no parens); emptyList = callable with no params */
+    val params: List<ParamModel>? = null,
+
+    /** Return type */
+    val returnType: TypeModel? = null,
+) {
+    /** Renders the signature as a human-readable string. */
+    fun render(): String = buildString {
+        receiver?.let { append("${it.render()}.") }
+        append(name)
+        if (params != null) {
+            append("(")
+            append(params.joinToString(", ") { it.render() })
+            append(")")
+        }
+        returnType?.let { append(": ${it.render()}") }
+    }
+}
 
 /**
  * Documentation for one overload variant of a function.
@@ -38,21 +105,24 @@ data class VariantDoc(
     /** Type of variant (top-level, extension, property) */
     val type: DslType,
 
-    /** Full signature (Kotlin or JavaScript style) */
-    val signature: String,
+    /** Structured signature model — primary source of truth */
+    val signatureModel: SignatureModel,
 
     /** Description of what this variant does */
     val description: String,
-
-    /** Parameter documentation */
-    val params: List<ParamDoc> = emptyList(),
 
     /** Description of return value */
     val returnDoc: String = "",
 
     /** Example code snippets */
     val samples: List<String> = emptyList(),
-)
+) {
+    /** Full signature rendered from the structured model */
+    val signature: String get() = signatureModel.render()
+
+    /** Parameter list derived from the signature model */
+    val params: List<ParamModel> get() = signatureModel.params ?: emptyList()
+}
 
 /**
  * Documentation for a complete DSL function (all variants).

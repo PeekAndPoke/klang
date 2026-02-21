@@ -6,6 +6,9 @@ import de.peekandpoke.kraft.routing.Static
 import io.peekandpoke.klang.layouts.FullscreenLayout
 import io.peekandpoke.klang.layouts.MenuLayout
 import io.peekandpoke.klang.pages.*
+import io.peekandpoke.klang.pages.docs.DocsPage
+import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
+import io.peekandpoke.klang.pages.docs.StrudelDocsPage
 
 object Nav {
     val start = Static("")
@@ -18,7 +21,10 @@ object Nav {
 
     val samplesLibrary = Static("/samples/library")
 
-    val strudelDocs = Static("/docs/strudel")
+    val docsBase = "/docs"
+    val docs = Static(docsBase)
+    val docsStrudel = Static("$docsBase/strudel")
+    val docsKlangScript = Static("$docsBase/klang-script")
 
     val tour = Static("/tour")
 }
@@ -41,7 +47,9 @@ fun RootRouterBuilder.mountNav() {
 
         mount(Nav.samplesLibrary) { SamplesLibraryPage() }
 
-        mount(Nav.strudelDocs) { StrudelDocsPage() }
+        mount(Nav.docs) { DocsPage() }
+        mount(Nav.docsStrudel) { StrudelDocsPage() }
+        mount(Nav.docsKlangScript) { KlangScriptDocsPage() }
     }
 
 

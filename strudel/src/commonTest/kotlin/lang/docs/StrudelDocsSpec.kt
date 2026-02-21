@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.lang.docs
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveAtLeastSize
 import io.kotest.matchers.collections.shouldHaveSize
@@ -105,5 +106,101 @@ class StrudelDocsSpec : StringSpec({
 
         variant.samples shouldHaveAtLeastSize 2
         variant.samples.any { it.contains("sine") } shouldBe true
+    }
+
+    // ─── SignatureModel integration tests ────────────────────────────────────
+
+    "seq top-level variant SignatureModel should have full param details" {
+        val topLevel = DslDocsRegistry.global.get("seq")!!
+            .variants.first { it.type == DslType.TOP_LEVEL }
+
+        val model = topLevel.signatureModel
+        model.name shouldBe "seq"
+        model.receiver shouldBe null
+        model.params shouldNotBe null
+        model.params!! shouldHaveSize 1
+
+        val param = model.params!![0]
+        param.name shouldBe "patterns"
+        param.isVararg shouldBe true
+        param.type.simpleName shouldBe "PatternLike"
+        param.type.isTypeAlias shouldBe true          // PatternLike is a type alias
+
+        model.returnType shouldNotBe null
+        model.returnType!!.simpleName shouldBe "StrudelPattern"
+    }
+
+    "seq extension method should have StrudelPattern receiver in SignatureModel" {
+        val extension = DslDocsRegistry.global.get("seq")!!
+            .variants.first {
+                it.type == DslType.EXTENSION_METHOD &&
+                        it.signatureModel.receiver?.simpleName == "StrudelPattern"
+            }
+
+        val model = extension.signatureModel
+        model.name shouldBe "seq"
+        model.receiver shouldNotBe null
+        model.receiver!!.simpleName shouldBe "StrudelPattern"
+        model.params shouldNotBe null
+        model.returnType?.simpleName shouldBe "StrudelPattern"
+    }
+
+    "seq String extension should have String receiver in SignatureModel" {
+        val extension = DslDocsRegistry.global.get("seq")!!
+            .variants.first {
+                it.type == DslType.EXTENSION_METHOD &&
+                        it.signatureModel.receiver?.simpleName == "String"
+            }
+
+        extension.signatureModel.receiver!!.simpleName shouldBe "String"
+        extension.signature shouldBe "String.seq(vararg patterns: PatternLike): StrudelPattern"
+    }
+
+    "accelerate property-based delegate should be classified as TOP_LEVEL (not OBJECT)" {
+        val doc = DslDocsRegistry.global.get("accelerate")!!
+        val types = doc.variants.map { it.type }
+        types shouldContain DslType.TOP_LEVEL
+    }
+
+    "accelerate top-level variant should have emptyList params (callable but no param info from property)" {
+        val topLevel = DslDocsRegistry.global.get("accelerate")!!
+            .variants.first { it.type == DslType.TOP_LEVEL }
+
+        val model = topLevel.signatureModel
+        model.name shouldBe "accelerate"
+        model.receiver shouldBe null
+        model.params shouldNotBe null         // not null — it IS callable
+        model.params!!.shouldBeEmpty()        // but no param info available from property delegate
+        model.returnType?.simpleName shouldBe "StrudelPattern"
+
+        // Signature renders with empty parens, not as a bare property name
+        topLevel.signature shouldBe "accelerate(): StrudelPattern"
+    }
+
+    "accelerate extension variants should have receiver in SignatureModel" {
+        val extensions = DslDocsRegistry.global.get("accelerate")!!
+            .variants.filter { it.type == DslType.EXTENSION_METHOD }
+
+        extensions shouldHaveAtLeastSize 1
+        val receivers = extensions.map { it.signatureModel.receiver?.simpleName }
+        receivers shouldContain "StrudelPattern"
+        receivers shouldContain "String"
+    }
+
+    "sine OBJECT variant should have params=null in SignatureModel (renders without parens)" {
+        val variant = DslDocsRegistry.global.get("sine")!!
+            .variants.first { it.type == DslType.OBJECT }
+
+        val model = variant.signatureModel
+        model.name shouldBe "sine"
+        model.receiver shouldBe null
+        model.params shouldBe null                    // null = no parens in signature
+        model.returnType?.simpleName shouldBe "StrudelPattern"
+
+        // VariantDoc.params computed property returns emptyList when model.params is null
+        variant.params.shouldBeEmpty()
+
+        // Rendered signature has no parens
+        variant.signature shouldBe "sine: StrudelPattern"
     }
 })

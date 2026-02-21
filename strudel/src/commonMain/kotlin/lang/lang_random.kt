@@ -613,7 +613,7 @@ fun applyAlmostNever(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
  * Applies `transform` with 10% probability per event. Shorthand for `sometimesBy(0.1, fn)`.
  *
  * ```KlangScript
- * s("bd sd").almostNever { it.speed(0.5) }   // very rarely at half speed
+ * s("bd hh sd oh").almostNever(x => x.speed(0.5))   // very rarely at half sample speed
  * ```
  *
  * @category random
@@ -687,7 +687,7 @@ fun applyAlways(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
  * `fn` directly, but useful for consistency when toggling between probability variants.
  *
  * ```KlangScript
- * s("bd sd").always { it.rev() }      // rev is always applied
+ * s("bd hh hh sd hh hh").always(x => x.rev())    // rev is always applied
  * ```
  *
  * @category random

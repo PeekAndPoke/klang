@@ -215,15 +215,30 @@ fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
  * @return A pattern with events reversed per cycle (or per `n`-cycle group).
  *
  * ```KlangScript
- * s("bd sd hh cp").rev()               // cp hh sd bd — reversed each cycle
+ * stack(
+ *   s("bd hh sd hh hh cp"),          // bd sd hh cp
+ *   s("bd hh sd hh hh cp").rev()     // cp hh sd bd — reversed each cycle
+ * )
  * ```
  *
  * ```KlangScript
- * note("c d e f").rev()                // f e d c per cycle
+ * note("c d e f").rev()                     // f e d c per cycle
  * ```
  *
  * ```KlangScript
- * note("c d e f").rev(2)              // reverses across every 2-cycle span
+ * note("<[c d] [e f]>").rev(1)              // reverses across every 1-cycle span
+ * ```
+ *
+ * ```KlangScript
+ * note("<[c d] [e f] [g a]>").rev(1)        // reverses across every 1-cycle span
+ * ```
+ *
+ * ```KlangScript
+ * note("<[c d] [e f]>").rev(2)              // reverses across every 2-cycle span
+ * ```
+ *
+ * ```KlangScript
+ * note("<[c d] [e f] [g a]>").rev(2)        // reverses across every 2-cycle span
  * ```
  *
  * @category tempo

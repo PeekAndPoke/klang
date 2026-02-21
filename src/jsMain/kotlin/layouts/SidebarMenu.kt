@@ -38,10 +38,10 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         data object Docs : State
     }
 
-    private fun inferState(): State = when (currentRoute.route) {
-        Nav.editSongCode, Nav.newSongCode -> State.Songs
-        Nav.samplesLibrary -> State.Samples
-        Nav.strudelDocs -> State.Docs
+    private fun inferState(): State = when {
+        currentRoute.route in listOf(Nav.editSongCode, Nav.newSongCode) -> State.Songs
+        currentRoute.route in listOf(Nav.samplesLibrary) -> State.Samples
+        currentRoute.route.pattern.startsWith(Nav.docsBase) -> State.Docs
         else -> State.Main
     }
 
@@ -152,29 +152,46 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     private fun DIV.renderDefaultMenu() {
         menuItemsList {
+            val isSelected = state == State.Songs
             noui.item {
-                itemCss(false)
+                itemCss(isSelected)
                 onItemClick {
                     state = State.Songs
                     router.navToUri(Nav.newSongCode())
                 }
-                +"Songs"
+                icon.music()
+                noui.content {
+                    itemContentCss(isSelected)
+                    +"Songs"
+                }
             }
+
             noui.item {
-                itemCss(false)
+                val isSelected = state == State.Samples
+                itemCss(isSelected)
                 onItemClick {
                     state = State.Samples
                     router.navToUri(Nav.samplesLibrary())
                 }
-                +"Sound Samples Library"
+                icon.wave_square()
+                noui.content {
+                    itemContentCss(isSelected)
+                    +"Samples Library"
+                }
             }
+
             noui.item {
-                itemCss(false)
+                val isSelected = state == State.Docs
+                itemCss(isSelected)
                 onItemClick {
                     state = State.Docs
-                    router.navToUri(Nav.strudelDocs())
+                    router.navToUri(Nav.docs())
                 }
-                +"Strudel DSL Documentation"
+                icon.book()
+                noui.content {
+                    itemContentCss(isSelected)
+                    +"Motör Manuals"
+                }
             }
         }
     }
@@ -234,17 +251,28 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun DIV.renderDocsMenu() {
-        renderCategory("Strudel DSL Documentation")
+        renderCategory("Motör Manuals")
 
         menuItemsList {
             noui.item {
-                val isSelected = currentRoute.route == Nav.strudelDocs
+                val isSelected = currentRoute.route == Nav.docsStrudel
                 itemCss(isSelected)
-                onItemClick { router.navToUri(Nav.strudelDocs()) }
-                icon.book()
+                onItemClick { router.navToUri(Nav.docsStrudel()) }
+                icon.wind()
                 noui.content {
                     itemContentCss(isSelected)
-                    +"Functions"
+                    +"Strudel"
+                }
+            }
+
+            noui.item {
+                val isSelected = currentRoute.route == Nav.docsKlangScript
+                itemCss(isSelected)
+                onItemClick { router.navToUri(Nav.docsKlangScript()) }
+                icon.code()
+                noui.content {
+                    itemContentCss(isSelected)
+                    +"KlangScript"
                 }
             }
         }

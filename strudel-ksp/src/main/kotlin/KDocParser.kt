@@ -57,7 +57,7 @@ object KDocParser {
 
                 inCodeBlock && line.startsWith("```") -> {
                     inCodeBlock = false
-                    val s = currentBlock.toString().trimEnd()
+                    val s = currentBlock.toString().trimEnd().trimIndent()
                     if (s.isNotEmpty()) samples.add(s)
                     currentBlock.clear()
                 }

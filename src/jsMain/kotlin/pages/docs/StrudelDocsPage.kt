@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.pages
+package io.peekandpoke.klang.pages.docs
 
 import de.peekandpoke.kraft.components.NoProps
 import de.peekandpoke.kraft.components.PureComponent
@@ -17,6 +17,8 @@ import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.docs.DslDocsRegistry
 import io.peekandpoke.klang.script.docs.DslType
 import io.peekandpoke.klang.script.docs.FunctionDoc
+import io.peekandpoke.klang.script.docs.VariantDoc
+import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
 import kotlinx.css.*
 import kotlinx.html.*
 
@@ -91,7 +93,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     // Create isolated registry for Strudel docs only
     private val registry = DslDocsRegistry().apply {
-        io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs(this)
+        registerStrudelDocs(this)
     }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -224,7 +226,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun DIV.renderVariant(variant: io.peekandpoke.klang.script.docs.VariantDoc) {
+    private fun DIV.renderVariant(variant: VariantDoc) {
         div {
             css {
                 marginTop = 1.rem
