@@ -313,15 +313,39 @@ fun String.foo(vararg patterns: PatternLike): StrudelPattern = this._foo(pattern
 
 ### KDoc rules
 
-| Tag         | Required        | Notes                                                   |
-|-------------|-----------------|---------------------------------------------------------|
-| Description | ✅               | First sentence is shown in search results               |
-| `@param`    | ✅               | One per parameter                                       |
-| `@return`   | ✅               | Describe the returned pattern                           |
-| `@sample`   | ✅               | At least 2 runnable examples with inline comments       |
-| `@category` | ✅               | Single word: `structural`, `synthesis`, `effects`, etc. |
-| `@tags`     | ✅               | Comma-separated; drives tag-search in docs page         |
-| `@alias`    | when applicable | Comma-separated; all aliases must point at each other   |
+| Tag         | Required        | Notes                                                         |
+|-------------|-----------------|---------------------------------------------------------------|
+| Description | ✅               | First sentence is shown in search results                     |
+| `@param`    | ✅               | One per parameter                                             |
+| `@return`   | ✅               | Describe the returned pattern                                 |
+| Examples    | ✅               | At least 2 fenced ` ```KlangScript ``` ` blocks with comments |
+| `@category` | ✅               | Single word: `structural`, `synthesis`, `effects`, etc.       |
+| `@tags`     | ✅               | Comma-separated; drives tag-search in docs page               |
+| `@alias`    | when applicable | Comma-separated; all aliases must point at each other         |
+
+**Examples format** — use fenced `KlangScript` blocks, NOT `@sample` tags:
+
+```kotlin
+/**
+ * ...
+ *
+ * ```KlangScript
+ * seq("c d e f").note()             // four notes, one per quarter cycle
+ * ```
+
+*
+* ```KlangScript
+* note("c e g").stack(s("bd sd"))   // chord + beat layered
+* ```
+*
+* @category structural
+* @tags ...
+  */
+
+```
+
+- Each block is one example (can be multi-line).
+- `@sample` tags are **no longer used** — the KSP processor reads fenced blocks instead.
 
 ### Line length
 
@@ -362,15 +386,25 @@ fun String.gap(vararg steps: PatternLike): StrudelPattern = this._gap(steps.toLi
 
 ### KSP and docs generation
 
-- The KSP processor (`strudel-ksp`) picks up all `@StrudelDsl`-annotated **functions** (`fun`).
-- `val` delegates are **not** picked up — that is why we add `fun` overloads.
+- The KSP processor (`strudel-ksp`) picks up all `@StrudelDsl`-annotated **functions** (`fun`)
+  AND **properties** (`val`).
 - After changing KDoc, run `./gradlew :strudel:jvmTest` — the KSP step regenerates docs automatically
   before compilation.
 - The `StrudelDocsSpec` tests verify that docs are correctly registered.
 
+### Documentation-only work rule
+
+When the task is **only adding/improving KDoc** (no logic changes):
+
+1. **Do not change any code** — only edit KDoc comments.
+2. Add examples as fenced `KlangScript` blocks (see format above).
+3. If unsure what a function does, check `LangXYZSpec.kt` in `commonTest`.
+4. If still unsure, check https://strudel.cc/workshop/getting-started online docs.
+5. Work file-by-file, function-by-function. After each file run `./gradlew :strudel:jvmTest`.
+
 ---
 
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-02-21
 **Recent Work**:
 
 - Implemented `fmap` and `squeezeJoin` for pattern-of-patterns composition
@@ -380,8 +414,25 @@ fun String.gap(vararg steps: PatternLike): StrudelPattern = this._gap(steps.toLi
 - DSL docs refactoring: `hush`, `bypass`, `mute`, `gap`, `seq` fully documented
 - KSP processor extended with `@alias` tag support
 - `StrudelDocsPage` smart search (`category:`, `tag:`, `function:` prefixes + logical AND)
+- `@sample` replaced with fenced `KlangScript` blocks across all lang files (348 occurrences)
+- KSP: `MethodTooLargeException` fixed by chunking generated map (8 entries/chunk)
+- KSP: properties now emit samples correctly (`generatePropertyVariantDoc` fix)
+- `createPerlin` / `createBerlin`: per-seed cache (fixes seed isolation)
+- `chunk`/`slowchunk`/`slowChunk`: `transform` moved to last param (enables trailing lambda)
+- Full KDoc added to all `@StrudelDsl` items in `lang_tempo.kt` and `lang_random.kt`
 
-**Test Status**: LangPressSpec - 8/8 tests passing ✅
+**Test Status**: All JVM tests passing ✅
 
-**Next**: Continue DSL docs refactoring top-to-bottom through `lang_structural.kt`
-(`stack`, `arrange`, `stepcat`/`timeCat`, `stackBy`, `cat`, `fastcat`, `slowcat`, `polymeter`, …)
+**Documentation Status**: ALL `@StrudelDsl` items fully documented across all lang files:
+
+- `lang_structural.kt` ✅
+- `lang_arithmetic.kt` ✅
+- `lang_conditional.kt` ✅
+- `lang_tempo.kt` ✅ (slow, fast, rev, revv, palindrome, early, late, compress, focus,
+  ply, plyWith, plyForEach, hurry, fastGap, densityGap, inside, outside, swingBy, swing, brak)
+- `lang_random.kt` ✅ (seed, rand, rand2, randCycle, brand, brandBy, irand, degradeBy,
+  degrade, degradeByWith, undegradeBy, undegrade, undegradeByWith, sometimesBy, sometimes,
+  often, rarely, almostNever, almostAlways, never, always, someCyclesBy, someCycles,
+  randL, randrun, shuffle, scramble, chooseWith, chooseInWith, choose, chooseIn,
+  chooseCycles, randcat, wchoose, wchooseCycles, wrandcat)
+- `lang_continuous.kt` ✅
