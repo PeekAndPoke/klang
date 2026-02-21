@@ -640,7 +640,7 @@ fun applyAlmostAlways(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>):
  * Applies `transform` with 90% probability per event. Shorthand for `sometimesBy(0.9, fn)`.
  *
  * ```KlangScript
- * s("hh*8").almostAlways { it.gain(0.8) }   // 90% of hi-hats at 80% gain
+ * s("hh*8").almostAlways(x => x.gain(0.2)).seed(3)   // 90% of hi-hats at 20% gain
  * ```
  *
  * @category random

@@ -419,11 +419,11 @@ When the task is **only adding/improving KDoc** (no logic changes):
 - KSP: properties now emit samples correctly (`generatePropertyVariantDoc` fix)
 - `createPerlin` / `createBerlin`: per-seed cache (fixes seed isolation)
 - `chunk`/`slowchunk`/`slowChunk`: `transform` moved to last param (enables trailing lambda)
-- Full KDoc added to all `@StrudelDsl` items in `lang_tempo.kt` and `lang_random.kt`
+- Full KDoc added to all `@StrudelDsl` items in all lang files (completed 2026-02-21)
 
 **Test Status**: All JVM tests passing ✅
 
-**Documentation Status**: ALL `@StrudelDsl` items fully documented across all lang files:
+**Documentation Status**: ALL `@StrudelDsl` items fully documented across ALL lang files:
 
 - `lang_structural.kt` ✅
 - `lang_arithmetic.kt` ✅
@@ -436,3 +436,16 @@ When the task is **only adding/improving KDoc** (no logic changes):
   randL, randrun, shuffle, scramble, chooseWith, chooseInWith, choose, chooseIn,
   chooseCycles, randcat, wchoose, wchooseCycles, wrandcat)
 - `lang_continuous.kt` ✅
+- `lang_pattern_picking.kt` ✅ (pick, pickmod, pickOut, pickmodOut, inhabit/pickSqueeze,
+  inhabitmod/pickmodSqueeze, squeeze, pickRestart, pickmodRestart, pickReset, pickmodReset,
+  pickF, pickmodF families)
+- `lang_tonal.kt` ✅ (scale, note, n, sound/s, bank, legato/clip, vibrato/vib,
+  vibratoMod/vibmod, pattack/patt, pdecay/pdec, prelease/prel, penv/pamt, pcurve/pcrv,
+  panchor/panc, accelerate, transpose, freq, scaleTranspose, chord, rootNotes, voicing)
+- `lang_filters.kt` ✅ (lpf/cutoff/ctf/lp, hpf/hp/hcutoff, bandf/bpf/bp, notchf,
+  resonance/res/lpq, hresonance/hres/hpq, bandq/bpq, nresonance/nres; all LPF/HPF/BPF/NF
+  envelope families: attack/decay/sustain/release/env with short aliases)
+- `lang_sample.kt` ✅ (begin, end, speed, unit, loop, loopBegin/loopb, loopEnd/loope,
+  loopAt, loopAtCps/loopatcps, cut, slice, splice)
+- `lang_synthesis.kt` ✅ (fmh, fmattack/fmatt, fmdecay/fmdec, fmsustain/fmsus,
+  fmenv/fmmod)

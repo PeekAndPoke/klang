@@ -458,6 +458,10 @@ data class StrudelVoiceData(
         return valueTruthy || noteTruthy
     }
 
+    fun isNotTruthy(): Boolean {
+        return !isTruthy()
+    }
+
     /**
      * Converts this Strudel-specific voice data to audio engine [VoiceData].
      *

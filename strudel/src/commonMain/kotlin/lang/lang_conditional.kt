@@ -4,8 +4,12 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel._innerJoin
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.strudel.sampleAt
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -212,15 +216,32 @@ fun lastOf(n: PatternLike, transform: PatternMapper, pattern: PatternLike = sile
 // -- when() -----------------------------------------------------------------------------------------------------------
 
 internal val StrudelPattern._when by dslPatternExtension { p, args, _ ->
+    val condition = args.getOrNull(0)?.toPattern() ?: return@dslPatternExtension p
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
 
-    // JavaScript: when(on, func, pat) => on ? func(pat) : pat
-    p._innerJoin(args.take(1)) { src, onValue ->
-        when (onValue?.isTruthy()) {
-            true -> transform(src)
-            else -> src
+    // The true part: events where the condition is sampled as truthy.
+    val truePart = object : StrudelPattern by p {
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            return p.queryArcContextual(from, to, ctx).filter { event ->
+                // Keep if condition is missing OR if the found event is not truthy
+                condition.sampleAt(event.part.begin, ctx)?.data?.isTruthy() ?: false
+            }
         }
     }
+
+    // The false part: events where the condition is NOT truthy (falsy OR silent).
+    // We implement this as a custom pattern to ensure complete coverage of the source pattern.
+    val falsePart = object : StrudelPattern by p {
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+            return p.queryArcContextual(from, to, ctx).filter { event ->
+                // Keep if condition is missing OR if the found event is not truthy
+                condition.sampleAt(event.part.begin, ctx)?.data?.isNotTruthy() ?: true
+            }
+        }
+    }
+
+    // Apply transform only to the 'true' part and stack with the complementary 'false' part
+    stack(transform(truePart), falsePart)
 }
 
 internal val String._when by dslStringExtension { p, args, callInfo -> p._when(args, callInfo) }

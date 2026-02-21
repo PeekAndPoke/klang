@@ -170,7 +170,24 @@ private fun dispatchPick(
     }
 }
 
-/** pick() - Pattern extension */
+/**
+ * Selects patterns from a list or map using the values of this pattern as indices.
+ *
+ * Each event's numeric value is used as a zero-based index into the lookup. Out-of-bounds
+ * indices are clamped to the nearest valid position. The lookup can be a list (integer
+ * indices) or a map (string keys). The selected pattern's timing structure is preserved.
+ *
+ * ```KlangScript
+ * "0 1 2 1".pick("bd", "sd", "hh").s()              // index selects drum each event
+ * ```
+ *
+ * ```KlangScript
+ * n("0 1 2 0").pick(note("c3"), note("e3"), note("g3"))  // pick chord tones by index
+ * ```
+ *
+ * @category structural
+ * @tags pick, select, index, lookup
+ */
 @StrudelDsl
 val StrudelPattern.pick by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -182,7 +199,24 @@ val StrudelPattern.pick by dslPatternExtension { p, args, _ ->
     dispatchPick(lookup, p, modulo = false, lookupLocation)
 }
 
-/** pick() - Standalone function */
+/**
+ * Selects patterns from a list or map using an index pattern, clamping out-of-bounds indices.
+ *
+ * When the first argument is a list or map, the second argument is used as the index pattern.
+ * Otherwise all arguments except the last are treated as the lookup list, and the last
+ * argument is the index pattern. Out-of-bounds indices are clamped.
+ *
+ * ```KlangScript
+ * pick("bd", "sd", "hh", n("0 1 2 1")).s()    // varargs: last arg is index pattern
+ * ```
+ *
+ * ```KlangScript
+ * pick(["c3", "e3", "g3"], n("0 1 2")).note()  // list lookup, index pattern as second arg
+ * ```
+ *
+ * @category structural
+ * @tags pick, select, index, lookup
+ */
 @StrudelDsl
 val pick by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -207,7 +241,7 @@ val pick by dslFunction { args, _ ->
     dispatchPick(lookup, pat, modulo = false, lookupLocation)
 }
 
-/** pick() - String extension */
+/** Selects patterns from a list using this string as the index pattern, clamping out-of-bounds. */
 @StrudelDsl
 val String.pick by dslStringExtension { p, args, callInfo ->
     p.pick(args, callInfo)
@@ -223,7 +257,23 @@ fun pick(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
 
 // -- pickmod() --------------------------------------------------------------------------------------------------------
 
-/** pickmod() - Pattern extension */
+/**
+ * Like [pick] but wraps out-of-bounds indices with modulo arithmetic.
+ *
+ * Each event's numeric value is used as a zero-based index into the lookup; indices beyond
+ * the list length wrap cyclically. Negative indices are also handled correctly.
+ *
+ * ```KlangScript
+ * "0 1 2 3 4".pickmod("bd", "sd", "hh").s()    // index 3→0, 4→1 (wrap modulo 3)
+ * ```
+ *
+ * ```KlangScript
+ * n("0 1 -1 4").pickmod(note("c3"), note("e3"), note("g3"))  // negatives wrap too
+ * ```
+ *
+ * @category structural
+ * @tags pickmod, pick, modulo, wrap, index, lookup
+ */
 @StrudelDsl
 val StrudelPattern.pickmod by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -235,7 +285,24 @@ val StrudelPattern.pickmod by dslPatternExtension { p, args, _ ->
     dispatchPick(lookup, p, modulo = true, lookupLocation)
 }
 
-/** pickmod() - Standalone function */
+/**
+ * Like [pick] but wraps out-of-bounds indices with modulo.
+ *
+ * When the first argument is a list or map, the second argument is used as the index pattern.
+ * Otherwise all arguments except the last form the lookup list, and the last is the index
+ * pattern. Indices wrap cyclically; see [pick] for clamped behaviour.
+ *
+ * ```KlangScript
+ * pickmod("bd", "sd", "hh", n("0 1 2 3 4")).s()  // 3→0, 4→1 wrapping
+ * ```
+ *
+ * ```KlangScript
+ * pickmod(["c3", "e3", "g3"], n("0 4 8")).note()  // all indices wrap to valid range
+ * ```
+ *
+ * @category structural
+ * @tags pickmod, pick, modulo, wrap, index, lookup
+ */
 @StrudelDsl
 val pickmod by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -259,7 +326,7 @@ val pickmod by dslFunction { args, _ ->
     dispatchPick(lookup, pat, modulo = true, lookupLocation)
 }
 
-/** pickmod() - String extension */
+/** Selects patterns from a list using this string as the index pattern, wrapping with modulo. */
 @StrudelDsl
 val String.pickmod by dslStringExtension { p, args, callInfo ->
     p.pickmod(args, callInfo)
@@ -332,7 +399,25 @@ private fun dispatchPickOuter(
     }
 }
 
-/** pickOut() - Pattern extension */
+/**
+ * Like [pick] but uses outer-join semantics: onset structure is determined by the selector.
+ *
+ * Whereas [pick] uses inner-join (onset from the *selected* pattern), `pickOut` forces all
+ * resulting events to share the onset of the selecting event. Useful when you want events
+ * to fire exactly where the selector fires, regardless of the selected pattern's rhythm.
+ * Indices are clamped.
+ *
+ * ```KlangScript
+ * "0 1 2".pickOut("bd sd", "rim hh", "cp").s()       // outer structure from selector
+ * ```
+ *
+ * ```KlangScript
+ * n("0 1").pickOut(note("c3 e3"), note("g3 b3"))      // onset always follows selector
+ * ```
+ *
+ * @category structural
+ * @tags pickOut, pick, select, index, outer, outerJoin
+ */
 @StrudelDsl
 val StrudelPattern.pickOut by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -344,7 +429,24 @@ val StrudelPattern.pickOut by dslPatternExtension { p, args, _ ->
     dispatchPickOuter(lookup, p, modulo = false, lookupLocation)
 }
 
-/** pickOut() - Standalone function */
+/**
+ * Like [pick] but uses outer-join semantics; clamped indices.
+ *
+ * Onsets are determined by the index pattern, not the selected pattern. When the first
+ * argument is a list or map, the second is the index pattern; otherwise the last argument
+ * is the index pattern and the rest form the lookup.
+ *
+ * ```KlangScript
+ * pickOut("bd sd", "hh rim", n("0 1 0 1")).s()   // outer structure from index pattern
+ * ```
+ *
+ * ```KlangScript
+ * pickOut(["c3 e3", "g3 b3"], n("0 1")).note()   // list lookup, outer-join mode
+ * ```
+ *
+ * @category structural
+ * @tags pickOut, pick, select, index, outer, outerJoin
+ */
 @StrudelDsl
 val pickOut by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -369,7 +471,7 @@ val pickOut by dslFunction { args, _ ->
     dispatchPickOuter(lookup, pat, modulo = false, lookupLocation)
 }
 
-/** pickOut() - String extension */
+/** Selects patterns by index (clamped) using this string as the selector; outer-join semantics. */
 @StrudelDsl
 val String.pickOut by dslStringExtension { p, args, callInfo ->
     p.pickOut(args, callInfo)
@@ -377,7 +479,23 @@ val String.pickOut by dslStringExtension { p, args, callInfo ->
 
 // -- pickmodOut() -----------------------------------------------------------------------------------------------------
 
-/** pickmodOut() - Pattern extension */
+/**
+ * Like [pickOut] but wraps out-of-bounds indices with modulo arithmetic.
+ *
+ * Combines modulo index wrapping with outer-join merging; see [pickOut] and [pickmod]
+ * for details of each feature. Onsets are determined by the selector pattern.
+ *
+ * ```KlangScript
+ * "0 1 2 3".pickmodOut("bd sd", "hh", "cp").s()          // index 3 wraps; outer onset
+ * ```
+ *
+ * ```KlangScript
+ * n("0 1 4").pickmodOut(note("c3"), note("e3"), note("g3"))  // 4→1 mod 3; outer onset
+ * ```
+ *
+ * @category structural
+ * @tags pickmodOut, pickOut, pickmod, modulo, select, index, outer
+ */
 @StrudelDsl
 val StrudelPattern.pickmodOut by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -389,7 +507,23 @@ val StrudelPattern.pickmodOut by dslPatternExtension { p, args, _ ->
     dispatchPickOuter(lookup, p, modulo = true, lookupLocation)
 }
 
-/** pickmodOut() - Standalone function */
+/**
+ * Like [pickOut] but wraps indices with modulo; outer-join semantics.
+ *
+ * Onsets are driven by the index pattern; selected pattern indices wrap cyclically.
+ * When the first argument is a list or map, the second is the index pattern.
+ *
+ * ```KlangScript
+ * pickmodOut("bd", "sd", "hh", n("0 1 2 3 4")).s()  // 3→0, 4→1; outer onset
+ * ```
+ *
+ * ```KlangScript
+ * pickmodOut(["c3", "e3", "g3"], n("0 5")).note()    // 5→2 mod 3; outer onset
+ * ```
+ *
+ * @category structural
+ * @tags pickmodOut, pickOut, pickmod, modulo, select, index, outer
+ */
 @StrudelDsl
 val pickmodOut by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -414,7 +548,7 @@ val pickmodOut by dslFunction { args, _ ->
     dispatchPickOuter(lookup, pat, modulo = true, lookupLocation)
 }
 
-/** pickmodOut() - String extension */
+/** Selects patterns by index (modulo-wrapped) using this string as the selector; outer-join. */
 @StrudelDsl
 val String.pickmodOut by dslStringExtension { p, args, callInfo ->
     p.pickmodOut(args, callInfo)
@@ -472,7 +606,25 @@ private fun dispatchInhabit(
     }
 }
 
-/** inhabit() - Pattern extension */
+/**
+ * Selects patterns from a list by index and squeezes each into the timespan of the trigger.
+ *
+ * Each event of this pattern picks a pattern from the lookup by index (clamped) and squeezes
+ * it so that the full cycle of the chosen pattern fits within the duration of the event.
+ * This is equivalent to [squeeze] with arguments reversed.
+ *
+ * ```KlangScript
+ * "0 1 2".inhabit("bd sd hh", "rim cp", "hh*4").s()         // chosen pattern fills event
+ * ```
+ *
+ * ```KlangScript
+ * n("0 1").inhabit(note("c3 e3 g3"), note("b3 d4"))          // pattern squeezed per index
+ * ```
+ *
+ * @alias pickSqueeze
+ * @category structural
+ * @tags inhabit, pickSqueeze, squeeze, select, index, lookup
+ */
 @StrudelDsl
 val StrudelPattern.inhabit by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -483,7 +635,25 @@ val StrudelPattern.inhabit by dslPatternExtension { p, args, _ ->
     dispatchInhabit(lookup, p, modulo = false, args.firstOrNull()?.location)
 }
 
-/** inhabit() - Standalone function */
+/**
+ * Selects patterns from a list or map by index and squeezes each into the trigger's timespan.
+ *
+ * The last argument (or the second when the first is a list/map) is the index pattern.
+ * Selected patterns are squeezed so their full cycle fits within the selecting event's duration.
+ * Indices are clamped to valid bounds.
+ *
+ * ```KlangScript
+ * inhabit("bd sd hh", "rim cp", n("0 1 2 0"))   // picked pattern fills event duration
+ * ```
+ *
+ * ```KlangScript
+ * inhabit(["c3 e3", "g3 b3"], n("0 1 0"))        // each chosen pattern is squeezed in
+ * ```
+ *
+ * @alias pickSqueeze
+ * @category structural
+ * @tags inhabit, pickSqueeze, squeeze, select, index, lookup
+ */
 @StrudelDsl
 val inhabit by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -507,27 +677,44 @@ val inhabit by dslFunction { args, _ ->
     dispatchInhabit(lookup, pat, modulo = false, lookupLocation)
 }
 
-/** inhabit() - String extension */
+/** Selects patterns from a list (clamped index) and squeezes them into event timespans. */
 @StrudelDsl
 val String.inhabit by dslStringExtension { p, args, callInfo ->
     p.inhabit(args, callInfo)
 }
 
-/** alias pickSqueeze */
+/** Alias for [inhabit]. Selects patterns from a list by index and squeezes into event duration. */
 @StrudelDsl
 val StrudelPattern.pickSqueeze by dslPatternExtension { p, args, callInfo -> p.inhabit(args, callInfo) }
 
-/** alias pickSqueeze */
+/** Alias for [inhabit]. Selects patterns from a list by index and squeezes into event duration. */
 @StrudelDsl
 val pickSqueeze by dslFunction { args, callInfo -> inhabit(args, callInfo) }
 
-/** alias pickSqueeze */
+/** Alias for [inhabit]. Selects patterns from a list by index and squeezes into event duration. */
 @StrudelDsl
 val String.pickSqueeze by dslStringExtension { p, args, callInfo -> p.inhabit(args, callInfo) }
 
 // -- inhabitmod() -----------------------------------------------------------------------------------------------------
 
-/** inhabitmod() - Pattern extension */
+/**
+ * Like [inhabit] but wraps out-of-bounds indices with modulo arithmetic.
+ *
+ * Selects patterns from the lookup using modulo-wrapped indices and squeezes each selected
+ * pattern into the timespan of the event that triggered it. Negative indices are handled.
+ *
+ * ```KlangScript
+ * "0 1 2 3".inhabitmod("bd sd", "hh rim", "cp").s()       // 3→0 mod 3; squeezed
+ * ```
+ *
+ * ```KlangScript
+ * n("0 5").inhabitmod(note("c3"), note("e3"), note("g3"))  // 5→2 mod 3; squeezed
+ * ```
+ *
+ * @alias pickmodSqueeze
+ * @category structural
+ * @tags inhabitmod, pickmodSqueeze, modulo, squeeze, select, index, lookup
+ */
 @StrudelDsl
 val StrudelPattern.inhabitmod by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -538,7 +725,24 @@ val StrudelPattern.inhabitmod by dslPatternExtension { p, args, _ ->
     dispatchInhabit(lookup, p, modulo = true, args.firstOrNull()?.location)
 }
 
-/** inhabitmod() - Standalone function */
+/**
+ * Like [inhabit] but wraps indices with modulo.
+ *
+ * The last argument (or the second when the first is a list/map) is the index pattern.
+ * Selected patterns are squeezed into each triggering event's timespan; indices wrap cyclically.
+ *
+ * ```KlangScript
+ * inhabitmod("bd", "sd", "hh", n("0 1 2 3"))   // 3→0 mod 3; squeezed into event
+ * ```
+ *
+ * ```KlangScript
+ * inhabitmod(["c3 e3", "g3 b3"], n("0 5"))      // 5→1 mod 2; squeezed in
+ * ```
+ *
+ * @alias pickmodSqueeze
+ * @category structural
+ * @tags inhabitmod, pickmodSqueeze, modulo, squeeze, select, index, lookup
+ */
 @StrudelDsl
 val inhabitmod by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -559,31 +763,42 @@ val inhabitmod by dslFunction { args, _ ->
     dispatchInhabit(lookup, pat, modulo = true)
 }
 
-/** inhabitmod() - String extension */
+/** Selects patterns from a list (modulo-wrapped index) and squeezes them into event timespans. */
 @StrudelDsl
 val String.inhabitmod by dslStringExtension { p, args, callInfo ->
     p.inhabitmod(args, callInfo)
 }
 
-/** alias for [inhabitmod] */
+/** Alias for [inhabitmod]. Selects patterns by modulo-wrapped index and squeezes into events. */
 @StrudelDsl
 val StrudelPattern.pickmodSqueeze by dslPatternExtension { p, args, callInfo -> p.inhabitmod(args, callInfo) }
 
-/** alias for [inhabitmod] */
+/** Alias for [inhabitmod]. Selects patterns by modulo-wrapped index and squeezes into events. */
 @StrudelDsl
 val pickmodSqueeze by dslFunction { args, callInfo -> inhabitmod(args, callInfo) }
 
-/** alias for [inhabitmod] */
+/** Alias for [inhabitmod]. Selects patterns by modulo-wrapped index and squeezes into events. */
 @StrudelDsl
 val String.pickmodSqueeze by dslStringExtension { p, args, callInfo -> p.inhabitmod(args, callInfo) }
 
 // -- squeeze() --------------------------------------------------------------------------------------------------------
 
 /**
- * Selects patterns from list `xs` using index pattern `pat`, and squeezes each selected pattern
- * into the duration of the event that selected it.
+ * Selects patterns from a list by index and squeezes them into the triggering event's timespan.
  *
- * This is effectively `inhabit` with arguments flipped: `squeeze(selector, lookup)`.
+ * Like [inhabit] but with arguments in the opposite order: the first argument is the selector
+ * (index) pattern and the remaining arguments are the lookup patterns. Indices are clamped.
+ *
+ * ```KlangScript
+ * squeeze(n("0 1 2"), "bd sd hh", "rim cp", "hh*4").s()  // selector first, then lookup
+ * ```
+ *
+ * ```KlangScript
+ * squeeze(n("0 1"), note("c3 e3"), note("g3 b3"))         // index → squeezed pattern
+ * ```
+ *
+ * @category structural
+ * @tags squeeze, inhabit, pickSqueeze, select, index, lookup
  */
 @StrudelDsl
 val squeeze by dslFunction { args, _ ->
@@ -612,8 +827,21 @@ val squeeze by dslFunction { args, _ ->
 }
 
 /**
- * Pattern method for squeeze.
- * `pat.squeeze(lookup)` -> same as `inhabit(lookup, pat)`
+ * Squeezes patterns from a list into the timespans of events in this pattern (clamped index).
+ *
+ * The receiver pattern provides the indices; the arguments are the lookup patterns squeezed
+ * into each event's duration. Equivalent to calling `inhabit(lookup, this)`.
+ *
+ * ```KlangScript
+ * n("0 1 2").squeeze("bd sd hh", "rim cp", "hh*4").s()  // receiver is index pattern
+ * ```
+ *
+ * ```KlangScript
+ * "0 1".squeeze(note("c3 e3"), note("g3 b3"))            // string receiver; squeezes in
+ * ```
+ *
+ * @category structural
+ * @tags squeeze, inhabit, select, index, lookup
  */
 @StrudelDsl
 val StrudelPattern.squeeze by dslPatternExtension { p, args, _ ->
@@ -631,6 +859,7 @@ val StrudelPattern.squeeze by dslPatternExtension { p, args, _ ->
     dispatchInhabit(lookup, p, modulo = false, args.firstOrNull()?.location)
 }
 
+/** Squeezes patterns from a list into the timespans of events in this string pattern (clamped). */
 @StrudelDsl
 val String.squeeze by dslStringExtension { p, args, callInfo -> p.squeeze(args, callInfo) }
 
@@ -683,7 +912,21 @@ private fun dispatchPickRestart(
 }
 
 /**
- * Like pick but restarts the chosen pattern when triggered.
+ * Like [pick] but restarts the chosen pattern from the beginning when triggered.
+ *
+ * Each time an event selects a pattern from the lookup, the chosen pattern restarts from its
+ * cycle boundary. Indices are clamped to valid bounds.
+ *
+ * ```KlangScript
+ * "0 1 2".pickRestart("bd sd hh", "rim cp", "hh*4").s()       // restarts on each trigger
+ * ```
+ *
+ * ```KlangScript
+ * n("<0 1 2>").pickRestart(note("c3 e3"), note("g3"), note("b3"))  // restarts per cycle
+ * ```
+ *
+ * @category structural
+ * @tags pickRestart, pick, restart, trigger, select, index
  */
 @StrudelDsl
 val StrudelPattern.pickRestart by dslPatternExtension { p, args, _ ->
@@ -693,6 +936,24 @@ val StrudelPattern.pickRestart by dslPatternExtension { p, args, _ ->
     dispatchPickRestart(lookup, p, modulo = false, args.firstOrNull()?.location)
 }
 
+/**
+ * Like [pick] but restarts the chosen pattern from its beginning on each new trigger.
+ *
+ * The last argument is the index pattern; remaining arguments form the lookup list.
+ * When the first argument is a list or map, the second is the index pattern.
+ * Indices are clamped.
+ *
+ * ```KlangScript
+ * pickRestart("bd sd", "hh rim", n("0 1 0 1")).s()     // restarts on each select
+ * ```
+ *
+ * ```KlangScript
+ * pickRestart(["c3 e3 g3", "b3 d4"], n("0 1 0")).note()  // chosen pattern restarts
+ * ```
+ *
+ * @category structural
+ * @tags pickRestart, pick, restart, trigger, select, index
+ */
 @StrudelDsl
 val pickRestart by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -716,11 +977,29 @@ val pickRestart by dslFunction { args, _ ->
     dispatchPickRestart(lookup, pat, modulo = false, lookupLocation)
 }
 
+/** Like [pick] but restarts selected patterns on trigger; this string provides indices (clamped). */
 @StrudelDsl
 val String.pickRestart by dslStringExtension { p, args, callInfo -> p.pickRestart(args, callInfo) }
 
 // -- pickmodRestart() -------------------------------------------------------------------------------------------------
 
+/**
+ * Like [pickRestart] but wraps out-of-bounds indices with modulo arithmetic.
+ *
+ * Selects patterns using modulo-wrapped indices and restarts the chosen pattern from its
+ * beginning whenever it is triggered.
+ *
+ * ```KlangScript
+ * "0 1 2 3".pickmodRestart("bd sd", "hh rim", "cp").s()       // 3→0 mod 3; restarts
+ * ```
+ *
+ * ```KlangScript
+ * n("0 5").pickmodRestart(note("c3"), note("e3"), note("g3"))  // 5→2 mod 3; restart
+ * ```
+ *
+ * @category structural
+ * @tags pickmodRestart, pickRestart, modulo, restart, trigger, index
+ */
 @StrudelDsl
 val StrudelPattern.pickmodRestart by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -729,6 +1008,23 @@ val StrudelPattern.pickmodRestart by dslPatternExtension { p, args, _ ->
     dispatchPickRestart(lookup, p, modulo = true)
 }
 
+/**
+ * Like [pickRestart] but wraps indices with modulo.
+ *
+ * The last argument is the index pattern (or second when first is a list/map). Selected
+ * patterns restart from their beginning on each trigger; indices wrap cyclically.
+ *
+ * ```KlangScript
+ * pickmodRestart("bd", "sd", "hh", n("0 1 2 3")).s()     // 3→0 mod 3; restart
+ * ```
+ *
+ * ```KlangScript
+ * pickmodRestart(["c3 e3", "g3 b3"], n("0 5")).note()    // 5→1 mod 2; restart
+ * ```
+ *
+ * @category structural
+ * @tags pickmodRestart, pickRestart, modulo, restart, trigger, index
+ */
 @StrudelDsl
 val pickmodRestart by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -752,6 +1048,7 @@ val pickmodRestart by dslFunction { args, _ ->
     dispatchPickRestart(lookup, pat, modulo = true, lookupLocation)
 }
 
+/** Like [pickmod] but restarts selected patterns on trigger; this string provides indices (modulo). */
 @StrudelDsl
 val String.pickmodRestart by dslStringExtension { p, args, callInfo -> p.pickmodRestart(args, callInfo) }
 
@@ -804,7 +1101,21 @@ private fun dispatchPickReset(
 }
 
 /**
- * Like pick but resets the chosen pattern when triggered.
+ * Like [pick] but resets the chosen pattern to its initial state when triggered.
+ *
+ * Similar to [pickRestart] but uses "reset" semantics: the selected pattern is reset to its
+ * initial phase on each trigger event. Indices are clamped to valid bounds.
+ *
+ * ```KlangScript
+ * "0 1 2".pickReset("bd sd hh", "rim cp", "hh*4").s()         // resets on each trigger
+ * ```
+ *
+ * ```KlangScript
+ * n("<0 1 2>").pickReset(note("c3 e3"), note("g3"), note("b3"))  // resets per cycle
+ * ```
+ *
+ * @category structural
+ * @tags pickReset, pick, reset, trigger, select, index
  */
 @StrudelDsl
 val StrudelPattern.pickReset by dslPatternExtension { p, args, _ ->
@@ -814,6 +1125,23 @@ val StrudelPattern.pickReset by dslPatternExtension { p, args, _ ->
     dispatchPickReset(lookup, p, modulo = false, args.firstOrNull()?.location)
 }
 
+/**
+ * Like [pick] but resets the chosen pattern to its initial state on each new trigger.
+ *
+ * The last argument is the index pattern (or second when first is a list/map). Selected
+ * patterns are reset to their initial phase on each trigger. Indices are clamped.
+ *
+ * ```KlangScript
+ * pickReset("bd sd", "hh rim", n("0 1 0 1")).s()     // resets on each select
+ * ```
+ *
+ * ```KlangScript
+ * pickReset(["c3 e3 g3", "b3 d4"], n("0 1 0")).note()  // chosen pattern resets
+ * ```
+ *
+ * @category structural
+ * @tags pickReset, pick, reset, trigger, select, index
+ */
 @StrudelDsl
 val pickReset by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -837,11 +1165,29 @@ val pickReset by dslFunction { args, _ ->
     dispatchPickReset(lookup, pat, modulo = false, lookupLocation)
 }
 
+/** Like [pick] but resets selected patterns on trigger; this string provides indices (clamped). */
 @StrudelDsl
 val String.pickReset by dslStringExtension { p, args, callInfo -> p.pickReset(args, callInfo) }
 
 // -- pickmodReset() ---------------------------------------------------------------------------------------------------
 
+/**
+ * Like [pickReset] but wraps out-of-bounds indices with modulo arithmetic.
+ *
+ * Selects patterns using modulo-wrapped indices and resets the chosen pattern to its initial
+ * state whenever it is triggered.
+ *
+ * ```KlangScript
+ * "0 1 2 3".pickmodReset("bd sd", "hh rim", "cp").s()       // 3→0 mod 3; resets
+ * ```
+ *
+ * ```KlangScript
+ * n("0 5").pickmodReset(note("c3"), note("e3"), note("g3"))  // 5→2 mod 3; reset
+ * ```
+ *
+ * @category structural
+ * @tags pickmodReset, pickReset, modulo, reset, trigger, index
+ */
 @StrudelDsl
 val StrudelPattern.pickmodReset by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -850,6 +1196,23 @@ val StrudelPattern.pickmodReset by dslPatternExtension { p, args, _ ->
     dispatchPickReset(lookup, p, modulo = true)
 }
 
+/**
+ * Like [pickReset] but wraps indices with modulo.
+ *
+ * The last argument is the index pattern (or second when first is a list/map). Selected
+ * patterns are reset to their initial phase on each trigger; indices wrap cyclically.
+ *
+ * ```KlangScript
+ * pickmodReset("bd", "sd", "hh", n("0 1 2 3")).s()     // 3→0 mod 3; reset
+ * ```
+ *
+ * ```KlangScript
+ * pickmodReset(["c3 e3", "g3 b3"], n("0 5")).note()    // 5→1 mod 2; reset
+ * ```
+ *
+ * @category structural
+ * @tags pickmodReset, pickReset, modulo, reset, trigger, index
+ */
 @StrudelDsl
 val pickmodReset by dslFunction { args, _ ->
     if (args.size < 2) return@dslFunction silence
@@ -873,6 +1236,7 @@ val pickmodReset by dslFunction { args, _ ->
     dispatchPickReset(lookup, pat, modulo = true, lookupLocation)
 }
 
+/** Like [pickmod] but resets selected patterns on trigger; this string provides indices (modulo). */
 @StrudelDsl
 val String.pickmodReset by dslStringExtension { p, args, callInfo -> p.pickmodReset(args, callInfo) }
 
@@ -902,11 +1266,43 @@ fun applyPickF(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     }
 }
 
-/** Apply functions based on index pattern (clamp indices) */
+/**
+ * Applies functions from a list to this pattern, selected by an index pattern (clamped).
+ *
+ * The first argument is the index pattern and the second is a list of pattern-transforming
+ * functions. Each index (clamped to bounds) selects a function which is applied to this pattern.
+ *
+ * ```KlangScript
+ * s("bd rim hh").pickF("<0 1 2>", [rev, fast(2), jux(rev)])  // apply fn by index
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").pickF(n("0 1"), [slow(2), fast(3)])       // 0→slow(2), 1→fast(3)
+ * ```
+ *
+ * @category structural
+ * @tags pickF, pick, apply, transform, function, index
+ */
 @StrudelDsl
 val StrudelPattern.pickF by dslPatternExtension { p, args, _ -> applyPickF(p, args) }
 
-/** Apply functions based on index pattern (clamp indices) */
+/**
+ * Applies functions from a list to a pattern, selected by an index pattern (clamped).
+ *
+ * Arguments: index pattern, function list, source pattern. The index pattern drives which
+ * function from the list is applied to the source pattern. Out-of-bounds indices are clamped.
+ *
+ * ```KlangScript
+ * pickF("<0 1 2>", [rev, fast(2), jux(rev)], s("bd rim hh"))  // fn selected by index
+ * ```
+ *
+ * ```KlangScript
+ * pickF(n("0 1"), [slow(2), fast(3)], note("c3 e3"))           // 0→slow(2), 1→fast(3)
+ * ```
+ *
+ * @category structural
+ * @tags pickF, pick, apply, transform, function, index
+ */
 @StrudelDsl
 val pickF by dslFunction { args, _ ->
     if (args.size < 3) return@dslFunction silence
@@ -917,7 +1313,7 @@ val pickF by dslFunction { args, _ ->
     applyPickF(pattern, listOf(lookupArg, funcsArg))
 }
 
-/** Apply functions based on index pattern (clamp indices) */
+/** Applies functions from a list to this string pattern, selected by an index pattern (clamped). */
 @StrudelDsl
 val String.pickF by dslStringExtension { p, args, callInfo ->
     p.pickF(args, callInfo)
@@ -950,13 +1346,45 @@ fun applyPickmodF(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
-/** Apply functions based on index pattern (wrap indices) */
+/**
+ * Like [pickF] but wraps out-of-bounds indices with modulo arithmetic.
+ *
+ * Applies functions from a list to this pattern. The first argument is the index pattern and
+ * the second is the function list. Indices exceeding the list length wrap cyclically.
+ *
+ * ```KlangScript
+ * s("bd rim hh").pickmodF("<0 1 2 3>", [rev, fast(2)])  // 2→0, 3→1 mod 2; apply fn
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3").pickmodF(n("0 5"), [slow(2), fast(3), jux(rev)])  // 5→2 mod 3; fn applied
+ * ```
+ *
+ * @category structural
+ * @tags pickmodF, pickF, modulo, apply, transform, function, index
+ */
 @StrudelDsl
 val StrudelPattern.pickmodF by dslPatternExtension { p, args, _ ->
     applyPickmodF(p, args)
 }
 
-/** Apply functions based on index pattern (wrap indices) */
+/**
+ * Like [pickF] but wraps indices with modulo.
+ *
+ * Arguments: index pattern, function list, source pattern. The index selects a function from
+ * the list with modulo wrapping when out of bounds.
+ *
+ * ```KlangScript
+ * pickmodF("<0 1 2 3>", [rev, fast(2)], s("bd rim hh"))  // 2→0, 3→1 mod 2; apply fn
+ * ```
+ *
+ * ```KlangScript
+ * pickmodF(n("0 5"), [slow(2), fast(3)], note("c3 e3"))   // 5→1 mod 2; apply fn
+ * ```
+ *
+ * @category structural
+ * @tags pickmodF, pickF, modulo, apply, transform, function, index
+ */
 @StrudelDsl
 val pickmodF by dslFunction { args, _ ->
     if (args.size < 3) return@dslFunction silence
@@ -967,7 +1395,7 @@ val pickmodF by dslFunction { args, _ ->
     applyPickmodF(pattern, listOf(lookupArg, funcsArg))
 }
 
-/** Apply functions based on index pattern (wrap indices) */
+/** Applies functions from a list to this string pattern, selected by an index pattern (modulo). */
 @StrudelDsl
 val String.pickmodF by dslStringExtension { p, args, callInfo ->
     p.pickmodF(args, callInfo)

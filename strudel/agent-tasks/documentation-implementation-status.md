@@ -1,5 +1,12 @@
 # Strudel DSL Documentation - Implementation Status
 
+**Date**: 2026-02-21
+
+## Functions that need docs and examples
+
+- adsr() and it four separate functions
+-
+
 **Date**: 2026-02-19
 
 ## ✅ Completed

@@ -97,12 +97,32 @@ fun applyScale(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     }
 }
 
+/**
+ * Sets the musical scale context for resolving note indices to note names.
+ *
+ * When a scale is set, numeric values passed to [n] are resolved against the scale's note
+ * list using `Scale.steps()`. Scale names use the format `"root:mode"` or `"root mode"`,
+ * e.g. `"c4:major"` or `"c4 minor"`. If no scale is set, numeric indices map to semitones.
+ *
+ * ```KlangScript
+ * n("0 1 2 3").scale("c4:major").note()          // C4, D4, E4, F4
+ * ```
+ *
+ * ```KlangScript
+ * n("0 2 4").scale("<c4:major a3:minor>").note()  // alternates scale per cycle
+ * ```
+ *
+ * @category tonal
+ * @tags scale, pitch, musical scale, mode, tuning
+ */
 @StrudelDsl
 val scale by dslFunction { args, /* callInfo */ _ -> args.toPattern(scaleMutation) }
 
+/** Applies scale context to this pattern; numeric event values are resolved to scale notes. */
 @StrudelDsl
 val StrudelPattern.scale by dslPatternExtension { p, args, /* callInfo */ _ -> applyScale(p, args) }
 
+/** Applies scale context to a string pattern; numeric values are resolved to scale notes. */
 @StrudelDsl
 val String.scale by dslStringExtension { p, args, callInfo -> p.scale(args, callInfo) }
 
@@ -132,15 +152,31 @@ fun applyNote(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-/** Creates a pattern with notes */
+/**
+ * Creates a pattern of musical notes from a mini-notation string or sequence of note names.
+ *
+ * Note values can be scientific notation (`"c4"`, `"d#3"`, `"bb2"`), MIDI note numbers, or
+ * numeric indices resolved via the active [scale] context.
+ *
+ * ```KlangScript
+ * note("c4 e4 g4")          // arpeggiate a C major chord
+ * ```
+ *
+ * ```KlangScript
+ * note("<c3 e3 g3> b2")     // alternating chord tones with a bass note
+ * ```
+ *
+ * @category tonal
+ * @tags note, pitch, frequency, MIDI, note name
+ */
 @StrudelDsl
 val note by dslFunction { args, /* callInfo */ _ -> args.toPattern(noteMutation).note() }
 
-/** Modifies the notes of a pattern */
+/** Applies note values from arguments (or reinterprets current value as a note name). */
 @StrudelDsl
 val StrudelPattern.note by dslPatternExtension { p, args, /* callInfo */ _ -> applyNote(p, args) }
 
-/** Modifies the notes of a pattern defined by a string */
+/** Applies note values to a string pattern. */
 @StrudelDsl
 val String.note by dslStringExtension { p, args, callInfo -> p.note(args, callInfo) }
 
@@ -171,15 +207,31 @@ fun applyN(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPatt
     }
 }
 
-/** Sets the note number or sample index */
+/**
+ * Creates a pattern of note numbers or sample indices.
+ *
+ * Sets the integer index used to select notes within a [scale] or samples within a [sound]
+ * bank. When a scale is active, `n` values are resolved to note names via `Scale.steps()`.
+ *
+ * ```KlangScript
+ * n("0 2 4").scale("c4:major").note()   // indices 0, 2, 4 → C4, E4, G4
+ * ```
+ *
+ * ```KlangScript
+ * s("hh").n("0 1 2")                    // selects different hh samples by index
+ * ```
+ *
+ * @category tonal
+ * @tags n, note number, sample index, pitch index
+ */
 @StrudelDsl
 val n by dslFunction { args, /* callInfo */ _ -> args.toPattern(nMutation).n() }
 
-/** Sets the note number or sample index */
+/** Sets the note number or sample index on this pattern. */
 @StrudelDsl
 val StrudelPattern.n by dslPatternExtension { p, args, /* callInfo */ _ -> applyN(p, args) }
 
-/** Sets the note number or sample index on a string pattern */
+/** Sets the note number or sample index on this string pattern. */
 @StrudelDsl
 val String.n by dslStringExtension { p, args, callInfo -> p.n(args, callInfo) }
 
@@ -216,27 +268,45 @@ fun applySound(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     }
 }
 
-/** Modifies the sounds of a pattern */
+/** Modifies the sounds (instrument/sample) of this pattern. */
 @StrudelDsl
 val StrudelPattern.sound by dslPatternExtension { p, args, /* callInfo */ _ -> applySound(p, args) }
 
-/** Creates a pattern with sounds */
+/**
+ * Creates a pattern selecting a sound (instrument or sample bank) by name.
+ *
+ * Each event's value selects the instrument or sample bank used during playback.
+ * The format `"name:index"` also sets the sample index, e.g. `"bd:2"` selects sample 2
+ * from the `bd` bank.
+ *
+ * ```KlangScript
+ * sound("bd sd hh")                  // basic drum pattern
+ * ```
+ *
+ * ```KlangScript
+ * sound("<piano guitar>").n("0 2 4")  // alternating instrument with arpeggio
+ * ```
+ *
+ * @alias s
+ * @category tonal
+ * @tags sound, sample, instrument, s
+ */
 @StrudelDsl
 val sound by dslFunction { args, /* callInfo */ _ -> args.toPattern(soundMutation) }
 
-/** Modifies the sounds of a pattern defined by a string */
+/** Modifies the sounds of a string pattern. */
 @StrudelDsl
 val String.sound by dslStringExtension { p, args, callInfo -> p.sound(args, callInfo) }
 
-/** Alias for [sound] */
+/** Alias for [sound]. Sets the sound/instrument on this pattern. */
 @StrudelDsl
 val StrudelPattern.s by dslPatternExtension { p, args, callInfo -> p.sound(args, callInfo) }
 
-/** Alias for [sound] */
+/** Alias for [sound]. Creates a sound pattern. */
 @StrudelDsl
 val s by dslFunction { args, callInfo -> sound(args, callInfo) }
 
-/** Alias for [sound] on a string */
+/** Alias for [sound] on a string pattern. */
 @StrudelDsl
 val String.s by dslStringExtension { p, args, callInfo -> p.sound(args, callInfo) }
 
@@ -259,15 +329,31 @@ fun applyBank(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-/** Modifies the banks of a pattern */
+/** Sets the sample bank on this pattern. */
 @StrudelDsl
 val StrudelPattern.bank by dslPatternExtension { p, args, /* callInfo */ _ -> applyBank(p, args) }
 
-/** Creates a pattern with banks */
+/**
+ * Sets the sample bank for each event, overriding which collection of samples is used.
+ *
+ * The bank determines where samples are loaded from, independently of the sound name.
+ * Useful when you want to switch sample collections without changing sound identifiers.
+ *
+ * ```KlangScript
+ * s("bd sd hh").bank("RolandTR808")     // load all sounds from the TR-808 bank
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd").bank("<TR808 TR909>")      // alternate sample banks each cycle
+ * ```
+ *
+ * @category tonal
+ * @tags bank, sample bank, instrument
+ */
 @StrudelDsl
 val bank by dslFunction { args, /* callInfo */ _ -> args.toPattern(bankMutation) }
 
-/** Modifies the banks of a pattern defined by a string */
+/** Sets the sample bank on a string pattern. */
 @StrudelDsl
 val String.bank by dslStringExtension { p, args, callInfo -> p.bank(args, callInfo) }
 
@@ -279,27 +365,44 @@ fun applyLegato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return source._liftNumericField(args, legatoMutation)
 }
 
-/** Creates a pattern with legatos */
+/**
+ * Sets the legato (duration scaling) factor for events in this pattern.
+ *
+ * A legato of `1.0` fills the full event duration; values above `1.0` create overlapping
+ * notes (true legato), while values below `1.0` create staccato-like gaps between notes.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").legato(1.5)   // notes overlap slightly (legato)
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").legato(0.5)   // notes are shorter (staccato)
+ * ```
+ *
+ * @alias clip
+ * @category tonal
+ * @tags legato, clip, duration, sustain, staccato
+ */
 @StrudelDsl
 val legato by dslFunction { args, /* callInfo */ _ -> args.toPattern(legatoMutation) }
 
-/** Modifies the legatos of a pattern */
+/** Sets the legato (duration scaling) factor on this pattern. */
 @StrudelDsl
 val StrudelPattern.legato by dslPatternExtension { p, args, /* callInfo */ _ -> applyLegato(p, args) }
 
-/** Modifies the legatos of a pattern defined by a string */
+/** Sets the legato (duration scaling) factor on a string pattern. */
 @StrudelDsl
 val String.legato by dslStringExtension { p, args, callInfo -> p.legato(args, callInfo) }
 
-/** Alias for [legato] */
+/** Alias for [legato]. Sets the duration scaling factor. */
 @StrudelDsl
 val clip by dslFunction { args, callInfo -> legato(args, callInfo) }
 
-/** Alias for [legato] */
+/** Alias for [legato]. Sets the duration scaling factor on this pattern. */
 @StrudelDsl
 val StrudelPattern.clip by dslPatternExtension { p, args, callInfo -> p.legato(args, callInfo) }
 
-/** Alias for [legato] on a string */
+/** Alias for [legato] on a string pattern. */
 @StrudelDsl
 val String.clip by dslStringExtension { p, args, callInfo -> p.legato(args, callInfo) }
 
@@ -311,27 +414,44 @@ fun applyVibrato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, vibratoMutation)
 }
 
-/** Sets the vibrato frequency (speed) in Hz. */
+/**
+ * Sets the vibrato frequency (oscillation speed) in Hz.
+ *
+ * Vibrato is a periodic pitch modulation applied to a note. Higher values create faster
+ * vibrato; lower values create a slower, wider wobble. Use [vibratoMod] to set the depth.
+ *
+ * ```KlangScript
+ * note("c4 e4 g4").vibrato(5)      // 5 Hz vibrato (moderate speed)
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").vibrato("<2 8>")       // alternating slow/fast vibrato per cycle
+ * ```
+ *
+ * @alias vib
+ * @category tonal
+ * @tags vibrato, vib, pitch modulation, oscillation, LFO
+ */
 @StrudelDsl
 val vibrato by dslFunction { args, /* callInfo */ _ -> args.toPattern(vibratoMutation) }
 
-/** Sets the vibrato frequency (speed) in Hz. */
+/** Sets the vibrato frequency (speed) in Hz on this pattern. */
 @StrudelDsl
 val StrudelPattern.vibrato by dslPatternExtension { p, args, /* callInfo */ _ -> applyVibrato(p, args) }
 
-/** Sets the vibrato frequency (speed) in Hz on a string. */
+/** Sets the vibrato frequency (speed) in Hz on a string pattern. */
 @StrudelDsl
 val String.vibrato by dslStringExtension { p, args, callInfo -> p.vibrato(args, callInfo) }
 
-/** Alias for [vibrato] */
+/** Alias for [vibrato]. Sets vibrato frequency in Hz. */
 @StrudelDsl
 val vib by dslFunction { args, /* callInfo */ _ -> args.toPattern(vibratoMutation) }
 
-/** Alias for [vibrato] */
+/** Alias for [vibrato]. Sets vibrato frequency in Hz on this pattern. */
 @StrudelDsl
 val StrudelPattern.vib by dslPatternExtension { p, args, callInfo -> p.vibrato(args, callInfo) }
 
-/** Alias for [vibrato] on a string */
+/** Alias for [vibrato] on a string pattern. */
 @StrudelDsl
 val String.vib by dslStringExtension { p, args, callInfo -> p.vibrato(args, callInfo) }
 
@@ -343,27 +463,44 @@ fun applyVibratoMod(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): St
     return source._liftNumericField(args, vibratoModMutation)
 }
 
-/** Sets the vibratoMod depth (amplitude). */
+/**
+ * Sets the vibrato depth (amplitude of pitch oscillation) in semitones.
+ *
+ * Controls how many semitones the vibrato deviates from the base pitch. Higher values
+ * create wider, more pronounced pitch wobble. Use [vibrato] to set the speed.
+ *
+ * ```KlangScript
+ * note("c4 e4").vibratoMod(0.5)       // half-semitone vibrato depth
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").vibratoMod("<0.2 1>")    // alternating subtle/wide vibrato depth
+ * ```
+ *
+ * @alias vibmod
+ * @category tonal
+ * @tags vibratoMod, vibmod, vibrato depth, pitch modulation
+ */
 @StrudelDsl
 val vibratoMod by dslFunction { args, /* callInfo */ _ -> args.toPattern(vibratoModMutation) }
 
-/** Sets the vibratoMod depth (amplitude). */
+/** Sets the vibrato depth on this pattern. */
 @StrudelDsl
 val StrudelPattern.vibratoMod by dslPatternExtension { p, args, /* callInfo */ _ -> applyVibratoMod(p, args) }
 
-/** Sets the vibratoMod depth (amplitude) on a string. */
+/** Sets the vibrato depth on a string pattern. */
 @StrudelDsl
 val String.vibratoMod by dslStringExtension { p, args, callInfo -> p.vibratoMod(args, callInfo) }
 
-/** Alias for [vibratoMod] */
+/** Alias for [vibratoMod]. Sets vibrato depth. */
 @StrudelDsl
 val vibmod by dslFunction { args, callInfo -> vibratoMod(args, callInfo) }
 
-/** Alias for [vibratoMod] */
+/** Alias for [vibratoMod]. Sets vibrato depth on this pattern. */
 @StrudelDsl
 val StrudelPattern.vibmod by dslPatternExtension { p, args, callInfo -> p.vibratoMod(args, callInfo) }
 
-/** Alias for [vibratoMod] on a string */
+/** Alias for [vibratoMod] on a string pattern. */
 @StrudelDsl
 val String.vibmod by dslStringExtension { p, args, callInfo -> p.vibratoMod(args, callInfo) }
 
@@ -375,27 +512,45 @@ fun applyPAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, pAttackMutation)
 }
 
-/** Sets the pitch envelope attack time. */
+/**
+ * Sets the pitch envelope attack time in seconds.
+ *
+ * The pitch envelope shapes how the pitch changes over a note's duration. The attack
+ * phase determines how quickly the pitch rises from its anchor to the target pitch.
+ * Use with [penv], [pdecay], [prelease], [pcurve], and [panchor].
+ *
+ * ```KlangScript
+ * note("c4 e4").pattack(0.1).penv(12)   // pitch rises over 100 ms by 12 semitones
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").pattack("<0.01 0.5>")       // fast vs slow pitch attack per cycle
+ * ```
+ *
+ * @alias patt
+ * @category tonal
+ * @tags pattack, patt, pitch envelope, attack, envelope
+ */
 @StrudelDsl
 val pattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(pAttackMutation) }
 
-/** Sets the pitch envelope attack time. */
+/** Sets the pitch envelope attack time on this pattern. */
 @StrudelDsl
 val StrudelPattern.pattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyPAttack(p, args) }
 
-/** Sets the pitch envelope attack time on a string. */
+/** Sets the pitch envelope attack time on a string pattern. */
 @StrudelDsl
 val String.pattack by dslStringExtension { p, args, _ -> applyPAttack(p, args) }
 
-/** Alias for [pattack] */
+/** Alias for [pattack]. Sets pitch envelope attack time on this pattern. */
 @StrudelDsl
 val StrudelPattern.patt by dslPatternExtension { p, args, callInfo -> p.pattack(args, callInfo) }
 
-/** Alias for [pattack] */
+/** Alias for [pattack]. Sets pitch envelope attack time. */
 @StrudelDsl
 val patt by dslFunction { args, callInfo -> pattack(args, callInfo) }
 
-/** Alias for [pattack] on a string */
+/** Alias for [pattack] on a string pattern. */
 @StrudelDsl
 val String.patt by dslStringExtension { p, args, callInfo -> p.pattack(args, callInfo) }
 
@@ -407,27 +562,45 @@ fun applyPDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return source._liftNumericField(args, pDecayMutation)
 }
 
-/** Sets the pitch envelope decay time. */
+/**
+ * Sets the pitch envelope decay time in seconds.
+ *
+ * After the attack phase, the pitch envelope decays towards the sustain level. The decay
+ * time determines how quickly this transition happens.
+ * Use with [pattack], [penv], [prelease], [pcurve], and [panchor].
+ *
+ * ```KlangScript
+ * note("c4 e4").pdecay(0.2).penv(12)   // pitch decays over 200 ms
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").pdecay("<0.05 0.5>")       // short vs long decay per cycle
+ * ```
+ *
+ * @alias pdec
+ * @category tonal
+ * @tags pdecay, pdec, pitch envelope, decay, envelope
+ */
 @StrudelDsl
 val pdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(pDecayMutation) }
 
-/** Sets the pitch envelope decay time. */
+/** Sets the pitch envelope decay time on this pattern. */
 @StrudelDsl
 val StrudelPattern.pdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyPDecay(p, args) }
 
-/** Sets the pitch envelope decay time on a string. */
+/** Sets the pitch envelope decay time on a string pattern. */
 @StrudelDsl
 val String.pdecay by dslStringExtension { p, args, _ -> applyPDecay(p, args) }
 
-/** Alias for [pdecay] */
+/** Alias for [pdecay]. Sets pitch envelope decay time on this pattern. */
 @StrudelDsl
 val StrudelPattern.pdec by dslPatternExtension { p, args, callInfo -> p.pdecay(args, callInfo) }
 
-/** Alias for [pdecay] */
+/** Alias for [pdecay]. Sets pitch envelope decay time. */
 @StrudelDsl
 val pdec by dslFunction { args, callInfo -> pdecay(args, callInfo) }
 
-/** Alias for [pdecay] on a string */
+/** Alias for [pdecay] on a string pattern. */
 @StrudelDsl
 val String.pdec by dslStringExtension { p, args, callInfo -> p.pdecay(args, callInfo) }
 
@@ -439,27 +612,44 @@ fun applyPRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, pReleaseMutation)
 }
 
-/** Sets the pitch envelope release time. */
+/**
+ * Sets the pitch envelope release time in seconds.
+ *
+ * The release phase determines how quickly the pitch envelope returns to its resting state
+ * after the note ends. Use with [pattack], [pdecay], [penv], [pcurve], and [panchor].
+ *
+ * ```KlangScript
+ * note("c4 e4").prelease(0.3).penv(12)  // pitch releases over 300 ms
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").prelease("<0.1 1.0>")       // short vs long release per cycle
+ * ```
+ *
+ * @alias prel
+ * @category tonal
+ * @tags prelease, prel, pitch envelope, release, envelope
+ */
 @StrudelDsl
 val prelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(pReleaseMutation) }
 
-/** Sets the pitch envelope release time. */
+/** Sets the pitch envelope release time on this pattern. */
 @StrudelDsl
 val StrudelPattern.prelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyPRelease(p, args) }
 
-/** Sets the pitch envelope release time on a string. */
+/** Sets the pitch envelope release time on a string pattern. */
 @StrudelDsl
 val String.prelease by dslStringExtension { p, args, _ -> applyPRelease(p, args) }
 
-/** Alias for [prelease] */
+/** Alias for [prelease]. Sets pitch envelope release time on this pattern. */
 @StrudelDsl
 val StrudelPattern.prel by dslPatternExtension { p, args, callInfo -> p.prelease(args, callInfo) }
 
-/** Alias for [prelease] */
+/** Alias for [prelease]. Sets pitch envelope release time. */
 @StrudelDsl
 val prel by dslFunction { args, callInfo -> prelease(args, callInfo) }
 
-/** Alias for [prelease] on a string */
+/** Alias for [prelease] on a string pattern. */
 @StrudelDsl
 val String.prel by dslStringExtension { p, args, callInfo -> p.prelease(args, callInfo) }
 
@@ -471,27 +661,45 @@ fun applyPEnv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return source._liftNumericField(args, pEnvMutation)
 }
 
-/** Sets the pitch envelope depth/amount (in semitones). */
+/**
+ * Sets the pitch envelope depth (amount) in semitones.
+ *
+ * Determines how far the pitch deviates from the base note during the envelope cycle.
+ * Positive values raise the pitch; negative values lower it.
+ * Use with [pattack], [pdecay], [prelease], [pcurve], and [panchor].
+ *
+ * ```KlangScript
+ * note("c4").penv(12).pattack(0.1)   // 1-octave pitch rise over 100 ms
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").penv(-7).pdecay(0.2)    // pitch falls a perfect fifth then decays
+ * ```
+ *
+ * @alias pamt
+ * @category tonal
+ * @tags penv, pamt, pitch envelope, depth, semitones, envelope
+ */
 @StrudelDsl
 val penv by dslFunction { args, /* callInfo */ _ -> args.toPattern(pEnvMutation) }
 
-/** Sets the pitch envelope depth/amount (in semitones). */
+/** Sets the pitch envelope depth (in semitones) on this pattern. */
 @StrudelDsl
 val StrudelPattern.penv by dslPatternExtension { p, args, /* callInfo */ _ -> applyPEnv(p, args) }
 
-/** Sets the pitch envelope depth/amount (in semitones) on a string. */
+/** Sets the pitch envelope depth (in semitones) on a string pattern. */
 @StrudelDsl
 val String.penv by dslStringExtension { p, args, _ -> applyPEnv(p, args) }
 
-/** Alias for [penv] */
+/** Alias for [penv]. Sets pitch envelope depth on this pattern. */
 @StrudelDsl
 val StrudelPattern.pamt by dslPatternExtension { p, args, callInfo -> p.penv(args, callInfo) }
 
-/** Alias for [penv] */
+/** Alias for [penv]. Sets pitch envelope depth. */
 @StrudelDsl
 val pamt by dslFunction { args, callInfo -> penv(args, callInfo) }
 
-/** Alias for [penv] on a string */
+/** Alias for [penv] on a string pattern. */
 @StrudelDsl
 val String.pamt by dslStringExtension { p, args, callInfo -> p.penv(args, callInfo) }
 
@@ -503,27 +711,44 @@ fun applyPCurve(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return source._liftNumericField(args, pCurveMutation)
 }
 
-/** Sets the pitch envelope curve shape. */
+/**
+ * Sets the pitch envelope curve shape.
+ *
+ * Controls the curvature of the pitch envelope segments. A value of `0` gives a linear
+ * curve; positive values create logarithmic curves; negative values create exponential ones.
+ *
+ * ```KlangScript
+ * note("c4").pcurve(2).penv(12).pattack(0.2)   // logarithmic pitch rise
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").pcurve(-2).penv(12).pattack(0.2)  // exponential pitch rise
+ * ```
+ *
+ * @alias pcrv
+ * @category tonal
+ * @tags pcurve, pcrv, pitch envelope, curve, shape, envelope
+ */
 @StrudelDsl
 val pcurve by dslFunction { args, /* callInfo */ _ -> args.toPattern(pCurveMutation) }
 
-/** Sets the pitch envelope curve shape. */
+/** Sets the pitch envelope curve shape on this pattern. */
 @StrudelDsl
 val StrudelPattern.pcurve by dslPatternExtension { p, args, /* callInfo */ _ -> applyPCurve(p, args) }
 
-/** Sets the pitch envelope curve shape on a string. */
+/** Sets the pitch envelope curve shape on a string pattern. */
 @StrudelDsl
 val String.pcurve by dslStringExtension { p, args, _ -> applyPCurve(p, args) }
 
-/** Alias for [pcurve] */
+/** Alias for [pcurve]. Sets pitch envelope curve shape on this pattern. */
 @StrudelDsl
 val StrudelPattern.pcrv by dslPatternExtension { p, args, callInfo -> p.pcurve(args, callInfo) }
 
-/** Alias for [pcurve] */
+/** Alias for [pcurve]. Sets pitch envelope curve shape. */
 @StrudelDsl
 val pcrv by dslFunction { args, callInfo -> pcurve(args, callInfo) }
 
-/** Alias for [pcurve] on a string */
+/** Alias for [pcurve] on a string pattern. */
 @StrudelDsl
 val String.pcrv by dslStringExtension { p, args, callInfo -> p.pcurve(args, callInfo) }
 
@@ -535,27 +760,44 @@ fun applyPAnchor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, pAnchorMutation)
 }
 
-/** Sets the pitch envelope anchor point. */
+/**
+ * Sets the pitch envelope anchor point.
+ *
+ * The anchor determines the relative position within the note duration where the pitch
+ * envelope reaches its peak (or trough). `0` anchors at the start; `1` at the end.
+ *
+ * ```KlangScript
+ * note("c4").panchor(0).penv(12)   // pitch peaks at note start
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").panchor(1).penv(12)   // pitch peaks at note end
+ * ```
+ *
+ * @alias panc
+ * @category tonal
+ * @tags panchor, panc, pitch envelope, anchor, envelope
+ */
 @StrudelDsl
 val panchor by dslFunction { args, /* callInfo */ _ -> args.toPattern(pAnchorMutation) }
 
-/** Sets the pitch envelope anchor point. */
+/** Sets the pitch envelope anchor point on this pattern. */
 @StrudelDsl
 val StrudelPattern.panchor by dslPatternExtension { p, args, /* callInfo */ _ -> applyPAnchor(p, args) }
 
-/** Sets the pitch envelope anchor point on a string. */
+/** Sets the pitch envelope anchor point on a string pattern. */
 @StrudelDsl
 val String.panchor by dslStringExtension { p, args, _ -> applyPAnchor(p, args) }
 
-/** Alias for [panchor] */
+/** Alias for [panchor]. Sets pitch envelope anchor point on this pattern. */
 @StrudelDsl
 val StrudelPattern.panc by dslPatternExtension { p, args, callInfo -> p.panchor(args, callInfo) }
 
-/** Alias for [panchor] */
+/** Alias for [panchor]. Sets pitch envelope anchor point. */
 @StrudelDsl
 val panc by dslFunction { args, callInfo -> panchor(args, callInfo) }
 
-/** Alias for [panchor] on a string */
+/** Alias for [panchor] on a string pattern. */
 @StrudelDsl
 val String.panc by dslStringExtension { p, args, callInfo -> p.panchor(args, callInfo) }
 
@@ -567,12 +809,32 @@ fun applyAccelerate(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): St
     return source._liftNumericField(args, accelerateMutation)
 }
 
+/**
+ * Sets the playback acceleration (pitch ramp) for each event.
+ *
+ * Controls a continuous pitch change during sample playback. Positive values pitch up over
+ * the event's duration; negative values pitch down. Useful for creating pitched percussion
+ * or sweep effects.
+ *
+ * ```KlangScript
+ * s("cr").accelerate(2)              // crash pitches up during playback
+ * ```
+ *
+ * ```KlangScript
+ * s("hh").accelerate("<0 -2 2>")     // alternate: no ramp, down, up per cycle
+ * ```
+ *
+ * @category tonal
+ * @tags accelerate, pitch ramp, pitch bend, playback speed
+ */
 @StrudelDsl
 val accelerate by dslFunction { args, /* callInfo */ _ -> args.toPattern(accelerateMutation) }
 
+/** Sets the playback acceleration (pitch ramp) on this pattern. */
 @StrudelDsl
 val StrudelPattern.accelerate by dslPatternExtension { p, args, /* callInfo */ _ -> applyAccelerate(p, args) }
 
+/** Sets the playback acceleration on a string pattern. */
 @StrudelDsl
 val String.accelerate by dslStringExtension { p, args, callInfo -> p.accelerate(args, callInfo) }
 
@@ -683,7 +945,22 @@ fun applyTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
 }
 
 /**
- * Top-level transpose function.
+ * Transposes a pattern by a number of semitones or an interval name.
+ *
+ * Shifts all note pitches by the given amount. Numeric arguments are treated as semitones;
+ * string arguments can be interval names (e.g. `"P5"` for a perfect fifth). When used as
+ * a top-level function, the last argument is the source pattern.
+ *
+ * ```KlangScript
+ * note("c4 e4 g4").transpose(7)       // transpose up a perfect fifth
+ * ```
+ *
+ * ```KlangScript
+ * note("c4 e4").transpose("<0 12>")   // alternate: no transpose vs octave up per cycle
+ * ```
+ *
+ * @category tonal
+ * @tags transpose, pitch shift, semitones, interval, pitch
  */
 @StrudelDsl
 val transpose by dslFunction { args, /* callInfo */ _ ->
@@ -697,11 +974,11 @@ val transpose by dslFunction { args, /* callInfo */ _ ->
     }
 }
 
-/** Transposes the pattern by a number of semitones */
+/** Transposes this pattern by a number of semitones or interval name. */
 @StrudelDsl
 val StrudelPattern.transpose by dslPatternExtension { p, args, /* callInfo */ _ -> applyTranspose(p, args) }
 
-/** Transposes a pattern defined by a string */
+/** Transposes a string pattern by a number of semitones or interval name. */
 @StrudelDsl
 val String.transpose by dslStringExtension { p, args, callInfo -> p.transpose(args, callInfo) }
 
@@ -724,15 +1001,31 @@ fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-/** Sets the frequency in Hz */
+/**
+ * Sets the playback frequency in Hz directly, bypassing note name resolution.
+ *
+ * Overrides the computed frequency for each event. Useful for precise tuning or
+ * microtonal work where standard note names are insufficient.
+ *
+ * ```KlangScript
+ * freq("440 550 660")          // A4, roughly C#5, roughly E5 by raw Hz
+ * ```
+ *
+ * ```KlangScript
+ * note("c4 e4").freq(432)      // force all events to 432 Hz
+ * ```
+ *
+ * @category tonal
+ * @tags freq, frequency, Hz, pitch, tuning
+ */
 @StrudelDsl
 val freq by dslFunction { args, /* callInfo */ _ -> args.toPattern(freqMutation) }
 
-/** Sets the frequency in Hz */
+/** Sets the playback frequency in Hz on this pattern. */
 @StrudelDsl
 val StrudelPattern.freq by dslPatternExtension { p, args, /* callInfo */ _ -> applyFreq(p, args) }
 
-/** Sets the frequency in Hz on a string */
+/** Sets the playback frequency in Hz on a string pattern. */
 @StrudelDsl
 val String.freq by dslStringExtension { p, args, callInfo -> p.freq(args, callInfo) }
 
@@ -821,7 +1114,24 @@ fun applyScaleTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     )
 }
 
-/** Transposes by scale degrees within the active scale */
+/**
+ * Transposes notes by a number of scale degrees within the active [scale].
+ *
+ * Unlike [transpose] which shifts by semitones, `scaleTranspose` steps through the notes of
+ * the current scale context. Falls back to chromatic (semitone) transposition when no scale
+ * is active.
+ *
+ * ```KlangScript
+ * n("0 2 4").scale("c4:major").note().scaleTranspose(1)  // shift up 1 scale degree
+ * ```
+ *
+ * ```KlangScript
+ * note("c4 e4 g4").scale("c4:major").scaleTranspose(-2)  // shift down 2 scale degrees
+ * ```
+ *
+ * @category tonal
+ * @tags scaleTranspose, scale degrees, pitch, transpose
+ */
 @StrudelDsl
 val scaleTranspose by dslFunction { args, _ ->
     val source = args.lastOrNull()?.value as? StrudelPattern
@@ -843,11 +1153,11 @@ val scaleTranspose by dslFunction { args, _ ->
     }
 }
 
-/** Transposes by scale degrees within the active scale */
+/** Transposes this pattern by a number of scale degrees within the active scale. */
 @StrudelDsl
 val StrudelPattern.scaleTranspose by dslPatternExtension { p, args, _ -> applyScaleTranspose(p, args) }
 
-/** Transposes by scale degrees within the active scale */
+/** Transposes a string pattern by a number of scale degrees within the active scale. */
 @StrudelDsl
 val String.scaleTranspose by dslStringExtension { p, args, callInfo -> p.scaleTranspose(args, callInfo) }
 
@@ -872,13 +1182,30 @@ private val chordMutation = voiceModifier { chordName ->
 // REMOVED expandChordToVoiceData and applyChord with BindPattern
 // Instead, chord() is now a simple property setter pattern
 
-/** Creates a pattern of chords */
+/**
+ * Sets the chord name for each event, establishing harmonic context for [voicing].
+ *
+ * Chord names follow the format `"root quality"` (e.g. `"C major"`, `"Am"`, `"Gmaj7"`).
+ * The chord root is also set as the event's note. Use [voicing] to expand into voiced
+ * notes, or [rootNotes] to extract just the bass note.
+ *
+ * ```KlangScript
+ * chord("C:major Am:minor F:major G:major").voicing()  // I-vi-IV-V with voice leading
+ * ```
+ *
+ * ```KlangScript
+ * chord("<Cmaj7 Am7>").voicing()                       // jazzy chord alternation per cycle
+ * ```
+ *
+ * @category tonal
+ * @tags chord, harmony, chords, voicing, progression
+ */
 @StrudelDsl
 val chord by dslFunction { args, _ ->
     args.toPattern(chordMutation)
 }
 
-/** Applies chord expansion to a pattern */
+/** Sets the chord name on this pattern for use with [voicing] and [rootNotes]. */
 @StrudelDsl
 val StrudelPattern.chord by dslPatternExtension { p, args, _ ->
     p._applyControlFromParams(args, chordMutation) { src, ctrl ->
@@ -886,7 +1213,7 @@ val StrudelPattern.chord by dslPatternExtension { p, args, _ ->
     }
 }
 
-/** Applies chord expansion to a string pattern */
+/** Sets the chord name on a string pattern. */
 @StrudelDsl
 val String.chord by dslStringExtension { p, args, callInfo -> p.chord(args, callInfo) }
 
@@ -941,18 +1268,34 @@ fun applyRootNotes(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
-/** Extracts root notes from chord patterns */
+/**
+ * Extracts the root (bass) note from a chord pattern.
+ *
+ * Given a pattern with chord names set via [chord], `rootNotes` produces events carrying
+ * only the chord root note. An optional integer argument forces the root to a specific octave.
+ *
+ * ```KlangScript
+ * chord("C:major Am:minor F:major").rootNotes()   // root notes: C, A, F
+ * ```
+ *
+ * ```KlangScript
+ * chord("Cmaj7 Am7 Fmaj7").rootNotes(3)           // roots forced to octave 3
+ * ```
+ *
+ * @category tonal
+ * @tags rootNotes, chord root, bass, harmony
+ */
 @StrudelDsl
 val rootNotes by dslFunction { args, _ ->
     // When used standalone, just returns a pattern that will extract roots when applied
     args.toPattern(voiceValueModifier)
 }
 
-/** Extracts root notes from chord patterns */
+/** Extracts root notes from chord events in this pattern. */
 @StrudelDsl
 val StrudelPattern.rootNotes by dslPatternExtension { p, args, _ -> applyRootNotes(p, args) }
 
-/** Extracts root notes from chord patterns */
+/** Extracts root notes from chord events in a string pattern. */
 @StrudelDsl
 val String.rootNotes by dslStringExtension { p, args, callInfo -> p.rootNotes(args, callInfo) }
 
@@ -1070,17 +1413,34 @@ fun applyVoicing(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     }
 }
 
-/** Applies voice leading to chord patterns */
+/**
+ * Expands chord patterns into voiced notes using voice leading.
+ *
+ * Converts each event carrying a chord name (set via [chord]) into a stack of notes that
+ * form the chord, applying smooth voice leading to minimise large jumps between chords.
+ * An optional pair of note-string arguments sets the register range (default `"C3"` to `"C5"`).
+ *
+ * ```KlangScript
+ * chord("C:major Am:minor F:major G:major").voicing()         // voiced I-vi-IV-V
+ * ```
+ *
+ * ```KlangScript
+ * chord("Cmaj7 Am7 Fmaj7").voicing("C3", "C5")  // voiced within C3–C5 range
+ * ```
+ *
+ * @category tonal
+ * @tags voicing, voice leading, chord, harmony
+ */
 @StrudelDsl
 val voicing by dslFunction { args, _ ->
     // When used standalone, creates a modifier pattern
     args.toPattern(voiceValueModifier)
 }
 
-/** Applies voice leading to chord patterns */
+/** Expands chord events in this pattern into voiced notes with voice leading. */
 @StrudelDsl
 val StrudelPattern.voicing by dslPatternExtension { p, args, _ -> applyVoicing(p, args) }
 
-/** Applies voice leading to chord patterns */
+/** Expands chord events in a string pattern into voiced notes with voice leading. */
 @StrudelDsl
 val String.voicing by dslStringExtension { p, args, callInfo -> p.voicing(args, callInfo) }

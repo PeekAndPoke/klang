@@ -191,13 +191,17 @@ interface StrudelPattern {
         fun update(block: Updater.() -> Unit): QueryContext = Updater(this).runBlock(block)
 
         /** Gets the random generator for this context. */
-        fun getRandom(): Random = getOrNull(randomSeedKey)?.let { Random(it) } ?: Random.Default
+        fun getRandom(): Random {
+            val seed = getOrNull(randomSeedKey) ?: 0L
+            return Random(seed)
+        }
 
         /** Gets a new random generator seeded with the context's random seed and the given seed. */
         fun getSeededRandom(seed: Any, vararg seeds: Any): Random {
-            val s = getRandom().nextInt() + seeds.fold(seed.hashCode()) { acc, it -> acc + it.hashCode() }
+            val baseSeed = getOrNull(randomSeedKey) ?: 0L
+            val s = baseSeed.hashCode() + seeds.fold(seed.hashCode()) { acc, it -> acc + it.hashCode() }
 
-            return Random((s * 2862933555777941757L) + 3037000493L)
+            return Random((s.toLong() * 2862933555777941757L) + 3037000493L)
         }
 
         /** Gets the cycles per second (cps) for this context. */
