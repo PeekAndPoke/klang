@@ -1,4 +1,4 @@
-@file:Suppress("DuplicatedCode")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName")
 
 package io.peekandpoke.klang.strudel.lang
 
@@ -66,6 +66,27 @@ fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return result
 }
 
+internal val _slow by dslFunction { args, /* callInfo */ _ ->
+    val factorArg: StrudelDslArg<Any?>
+    val sourceParts: List<StrudelDslArg<Any?>>
+
+    // Heuristic: If >1 args, the first one is the factor, the rest is the source.
+    // If only 1 arg, it is treated as the source (with factor 1.0).
+    if (args.size > 1) {
+        factorArg = args[0]
+        sourceParts = args.drop(1)
+    } else {
+        factorArg = StrudelDslArg(1.0, null)
+        sourceParts = args
+    }
+
+    val source = sourceParts.toPattern(voiceValueModifier)
+    applySlow(source, listOf(factorArg))
+}
+
+internal val StrudelPattern._slow by dslPatternExtension { p, args, /* callInfo */ _ -> applySlow(p, args) }
+internal val String._slow by dslStringExtension { p, args, callInfo -> p._slow(args, callInfo) }
+
 /**
  * Slows down a pattern by the given factor.
  *
@@ -91,29 +112,16 @@ fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
  * @tags slow, tempo, stretch, speed
  */
 @StrudelDsl
-val slow by dslFunction { args, /* callInfo */ _ ->
-    val factorArg: StrudelDslArg<Any?>
-    val sourceParts: List<StrudelDslArg<Any?>>
+fun slow(factor: PatternLike, pattern: PatternLike): StrudelPattern =
+    _slow(listOf(factor, pattern).asStrudelDslArgs())
 
-    // Heuristic: If >1 args, the first one is the factor, the rest is the source.
-    // If only 1 arg, it is treated as the source (with factor 1.0).
-    if (args.size > 1) {
-        factorArg = args[0]
-        sourceParts = args.drop(1)
-    } else {
-        factorArg = StrudelDslArg(1.0, null)
-        sourceParts = args
-    }
-
-    val source = sourceParts.toPattern(voiceValueModifier)
-    applySlow(source, listOf(factorArg))
-}
-
+/** Slows down this pattern by the given factor. */
 @StrudelDsl
-val StrudelPattern.slow by dslPatternExtension { p, args, /* callInfo */ _ -> applySlow(p, args) }
+fun StrudelPattern.slow(factor: PatternLike): StrudelPattern = this._slow(listOf(factor).asStrudelDslArgs())
 
+/** Slows down this string pattern by the given factor. */
 @StrudelDsl
-val String.slow by dslStringExtension { p, args, callInfo -> p.slow(args, callInfo) }
+fun String.slow(factor: PatternLike): StrudelPattern = this._slow(listOf(factor).asStrudelDslArgs())
 
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
@@ -205,6 +213,16 @@ fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return ReversePattern(inner = pattern, nProvider = nProvider)
 }
 
+internal val _rev by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
+
+    applyRev(pattern, args.take(1))
+}
+
+internal val StrudelPattern._rev by dslPatternExtension { p, args, /* callInfo */ _ -> applyRev(p, args) }
+internal val String._rev by dslStringExtension { p, args, callInfo -> p._rev(args, callInfo) }
+
 /**
  * Reverses the order of events within each cycle (or across `n` cycles when given an argument).
  *
@@ -230,35 +248,26 @@ fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
  * ```
  *
  * ```KlangScript
- * note("<[c d] [e f] [g a]>").rev(1)        // reverses across every 1-cycle span
- * ```
- *
- * ```KlangScript
  * note("<[c d] [e f]>").rev(2)              // reverses across every 2-cycle span
- * ```
- *
- * ```KlangScript
- * note("<[c d] [e f] [g a]>").rev(2)        // reverses across every 2-cycle span
  * ```
  *
  * @category tempo
  * @tags rev, reverse, order, retrograde
  */
 @StrudelDsl
-val rev by dslFunction { args, /* callInfo */ _ ->
-    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
-        ?: return@dslFunction silence
+fun StrudelPattern.rev(): StrudelPattern = this._rev(emptyList())
 
-    applyRev(pattern, args.take(1))
-}
+/** Reverses the order of events, applying the reversal across every `n`-cycle span. */
+@StrudelDsl
+fun StrudelPattern.rev(n: PatternLike): StrudelPattern = this._rev(listOf(n).asStrudelDslArgs())
 
 /** Reverses the order of events within each cycle. */
 @StrudelDsl
-val StrudelPattern.rev by dslPatternExtension { p, args, /* callInfo */ _ -> applyRev(p, args) }
+fun String.rev(): StrudelPattern = this._rev(emptyList())
 
-/** Reverses the order of events within each cycle. */
+/** Reverses the order of events, applying the reversal across every `n`-cycle span. */
 @StrudelDsl
-val String.rev by dslStringExtension { p, args, callInfo -> p.rev(args, callInfo) }
+fun String.rev(n: PatternLike): StrudelPattern = this._rev(listOf(n).asStrudelDslArgs())
 
 // -- revv() -----------------------------------------------------------------------------------------------------------
 
@@ -275,6 +284,16 @@ fun applyRevv(pattern: StrudelPattern): StrudelPattern {
     // Transform both query spans and event spans
     return pattern._withQuerySpan(negateSpan)._withHapSpan(negateSpan)
 }
+
+internal val _revv by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
+
+    applyRevv(pattern)
+}
+
+internal val StrudelPattern._revv by dslPatternExtension { p, /* args */ _, /* callInfo */ _ -> applyRevv(p) }
+internal val String._revv by dslStringExtension { p, args, callInfo -> p._revv(args, callInfo) }
 
 /**
  * Reverses the pattern in absolute time across all cycles.
@@ -293,22 +312,11 @@ fun applyRevv(pattern: StrudelPattern): StrudelPattern {
  * @tags revv, reverse, retrograde, time, global
  */
 @StrudelDsl
-val revv by dslFunction { args, /* callInfo */ _ ->
-    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
-        ?: return@dslFunction silence
-
-    applyRevv(pattern)
-}
+fun StrudelPattern.revv(): StrudelPattern = this._revv(emptyList())
 
 /** Reverses the pattern in absolute time across all cycles. */
 @StrudelDsl
-val StrudelPattern.revv by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
-    applyRevv(p)
-}
-
-/** Reverses the pattern in absolute time across all cycles. */
-@StrudelDsl
-val String.revv by dslStringExtension { p, args, callInfo -> p.revv(args, callInfo) }
+fun String.revv(): StrudelPattern = this._revv(emptyList())
 
 // -- palindrome() -----------------------------------------------------------------------------------------------------
 
@@ -319,6 +327,19 @@ fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
     // Matches JS: pat.lastOf(2, rev) -> equivalent to slowcatPrime(pat, rev(pat))
     return applySlowcatPrime(listOf(pattern, applyRev(pattern, listOf(StrudelDslArg(1, null)))))
 }
+
+internal val _palindrome by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
+        ?: return@dslFunction silence
+
+    applyPalindrome(pattern)
+}
+
+internal val StrudelPattern._palindrome by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+    applyPalindrome(p)
+}
+
+internal val String._palindrome by dslStringExtension { p, args, callInfo -> p._palindrome(args, callInfo) }
 
 /**
  * Plays the pattern forward then backward, creating a two-cycle palindrome.
@@ -341,24 +362,21 @@ fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
  * @tags palindrome, reverse, mirror, order, retrograde
  */
 @StrudelDsl
-val palindrome by dslFunction { args, /* callInfo */ _ ->
-    val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
-        ?: return@dslFunction silence
-
-    applyPalindrome(pattern)
-}
+fun StrudelPattern.palindrome(): StrudelPattern = this._palindrome(emptyList())
 
 /** Plays the pattern forward then backward, creating a two-cycle palindrome. */
 @StrudelDsl
-val StrudelPattern.palindrome by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
-    applyPalindrome(p)
-}
-
-/** Plays the pattern forward then backward, creating a two-cycle palindrome. */
-@StrudelDsl
-val String.palindrome by dslStringExtension { p, args, callInfo -> p.palindrome(args, callInfo) }
+fun String.palindrome(): StrudelPattern = this._palindrome(emptyList())
 
 // -- early() ----------------------------------------------------------------------------------------------------------
+
+internal val _early by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+
+internal val StrudelPattern._early by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyTimeShift(pattern = p, args = args, factor = Rational.MINUS_ONE)
+}
+
+internal val String._early by dslStringExtension { p, args, callInfo -> p._early(args, callInfo) }
 
 /**
  * Nudges the pattern to start earlier by the given number of cycles.
@@ -381,21 +399,21 @@ val String.palindrome by dslStringExtension { p, args, callInfo -> p.palindrome(
  * @tags early, shift, time, offset, nudge, ahead
  */
 @StrudelDsl
-val early by dslFunction { /* args */ _, /* callInfo */ _ ->
-    silence
-}
+fun StrudelPattern.early(amount: PatternLike): StrudelPattern = this._early(listOf(amount).asStrudelDslArgs())
 
 /** Nudges the pattern to start earlier by the given number of cycles. */
 @StrudelDsl
-val StrudelPattern.early by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTimeShift(pattern = p, args = args, factor = Rational.MINUS_ONE)
-}
-
-/** Nudges the pattern to start earlier by the given number of cycles. */
-@StrudelDsl
-val String.early by dslStringExtension { p, args, callInfo -> p.early(args, callInfo) }
+fun String.early(amount: PatternLike): StrudelPattern = this._early(listOf(amount).asStrudelDslArgs())
 
 // -- late() -----------------------------------------------------------------------------------------------------------
+
+internal val StrudelPattern._late by dslPatternExtension { p, args, _ ->
+    applyTimeShift(pattern = p, args = args, factor = Rational.ONE)
+}
+
+internal val String._late by dslStringExtension { p, args, callInfo -> p._late(args, callInfo) }
+
+internal val _late by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
 
 /**
  * Nudges the pattern to start later by the given number of cycles.
@@ -418,17 +436,11 @@ val String.early by dslStringExtension { p, args, callInfo -> p.early(args, call
  * @tags late, shift, time, offset, nudge, delay, behind
  */
 @StrudelDsl
-val StrudelPattern.late by dslPatternExtension { p, args, _ ->
-    applyTimeShift(pattern = p, args = args, factor = Rational.ONE)
-}
+fun StrudelPattern.late(amount: PatternLike): StrudelPattern = this._late(listOf(amount).asStrudelDslArgs())
 
 /** Nudges the pattern to start later by the given number of cycles. */
 @StrudelDsl
-val String.late by dslStringExtension { p, args, callInfo -> p.late(args, callInfo) }
-
-/** Nudges the pattern to start later by the given number of cycles. */
-@StrudelDsl
-val late by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+fun String.late(amount: PatternLike): StrudelPattern = this._late(listOf(amount).asStrudelDslArgs())
 
 // -- compress() -------------------------------------------------------------------------------------------------------
 
@@ -469,6 +481,21 @@ fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
+internal val _compress by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 3) {
+        return@dslFunction silence
+    }
+
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
+    applyCompress(pattern, args.take(2))
+}
+
+internal val StrudelPattern._compress by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyCompress(p, args)
+}
+
+internal val String._compress by dslStringExtension { p, args, callInfo -> p._compress(args, callInfo) }
+
 /**
  * Compresses the pattern into a sub-range of each cycle, leaving silence outside that range.
  *
@@ -494,24 +521,18 @@ fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
  * @tags compress, squeeze, timespan, gap, range
  */
 @StrudelDsl
-val compress by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 3) {
-        return@dslFunction silence
-    }
-
-    val pattern = args.drop(2).toPattern(voiceValueModifier)
-    applyCompress(pattern, args.take(2))
-}
+fun compress(start: PatternLike, end: PatternLike, pattern: PatternLike): StrudelPattern =
+    _compress(listOf(start, end, pattern).asStrudelDslArgs())
 
 /** Compresses the pattern into `[start, end]` within each cycle, leaving silence outside. */
 @StrudelDsl
-val StrudelPattern.compress by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyCompress(p, args)
-}
+fun StrudelPattern.compress(start: PatternLike, end: PatternLike): StrudelPattern =
+    this._compress(listOf(start, end).asStrudelDslArgs())
 
 /** Compresses the pattern into `[start, end]` within each cycle, leaving silence outside. */
 @StrudelDsl
-val String.compress by dslStringExtension { p, args, callInfo -> p.compress(args, callInfo) }
+fun String.compress(start: PatternLike, end: PatternLike): StrudelPattern =
+    this._compress(listOf(start, end).asStrudelDslArgs())
 
 // -- focus() ----------------------------------------------------------------------------------------------------------
 
@@ -541,6 +562,21 @@ fun applyFocus(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     }
 }
 
+internal val _focus by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 3) {
+        return@dslFunction silence
+    }
+
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
+    applyFocus(pattern, args.take(2))
+}
+
+internal val StrudelPattern._focus by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyFocus(p, args)
+}
+
+internal val String._focus by dslStringExtension { p, args, callInfo -> p._focus(args, callInfo) }
+
 /**
  * Zooms in on a sub-range of a cycle, stretching that portion to fill the whole cycle.
  *
@@ -566,24 +602,18 @@ fun applyFocus(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
  * @tags focus, zoom, timespan, range, stretch
  */
 @StrudelDsl
-val focus by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 3) {
-        return@dslFunction silence
-    }
-
-    val pattern = args.drop(2).toPattern(voiceValueModifier)
-    applyFocus(pattern, args.take(2))
-}
+fun focus(start: PatternLike, end: PatternLike, pattern: PatternLike): StrudelPattern =
+    _focus(listOf(start, end, pattern).asStrudelDslArgs())
 
 /** Zooms in on `[start, end]` of a cycle and stretches that portion to fill each cycle. */
 @StrudelDsl
-val StrudelPattern.focus by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyFocus(p, args)
-}
+fun StrudelPattern.focus(start: PatternLike, end: PatternLike): StrudelPattern =
+    this._focus(listOf(start, end).asStrudelDslArgs())
 
 /** Zooms in on `[start, end]` of a cycle and stretches that portion to fill each cycle. */
 @StrudelDsl
-val String.focus by dslStringExtension { p, args, callInfo -> p.focus(args, callInfo) }
+fun String.focus(start: PatternLike, end: PatternLike): StrudelPattern =
+    this._focus(listOf(start, end).asStrudelDslArgs())
 
 // -- ply() ------------------------------------------------------------------------------------------------------------
 
@@ -622,6 +652,18 @@ fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
 
+internal val _ply by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslFunction silence
+    }
+
+    val pattern = args.drop(1).toPattern(voiceValueModifier)
+    applyPly(pattern, args.take(1))
+}
+
+internal val StrudelPattern._ply by dslPatternExtension { p, args, /* callInfo */ _ -> applyPly(p, args) }
+internal val String._ply by dslStringExtension { p, args, callInfo -> p._ply(args, callInfo) }
+
 /**
  * Repeats each event `n` times within its original timespan.
  *
@@ -647,24 +689,15 @@ fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
  * @tags ply, repeat, subdivide, multiply, density
  */
 @StrudelDsl
-val ply by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 2) {
-        return@dslFunction silence
-    }
-
-    val pattern = args.drop(1).toPattern(voiceValueModifier)
-    applyPly(pattern, args.take(1))
-}
+fun ply(n: PatternLike, pattern: PatternLike): StrudelPattern = _ply(listOf(n, pattern).asStrudelDslArgs())
 
 /** Repeats each event `n` times within its original timespan. */
 @StrudelDsl
-val StrudelPattern.ply by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPly(p, args)
-}
+fun StrudelPattern.ply(n: PatternLike): StrudelPattern = this._ply(listOf(n).asStrudelDslArgs())
 
 /** Repeats each event `n` times within its original timespan. */
 @StrudelDsl
-val String.ply by dslStringExtension { p, args, callInfo -> p.ply(args, callInfo) }
+fun String.ply(n: PatternLike): StrudelPattern = this._ply(listOf(n).asStrudelDslArgs())
 
 // -- plyWith() --------------------------------------------------------------------------------------------------------
 
@@ -720,6 +753,25 @@ fun applyPlyWith(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
 
+internal val _plyWith by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 3) {
+        return@dslFunction silence
+    }
+
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
+    applyPlyWith(pattern, args.take(2))
+}
+
+internal val StrudelPattern._plyWith by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPlyWith(p, args)
+}
+
+internal val String._plyWith by dslStringExtension { p, args, callInfo -> p._plyWith(args, callInfo) }
+
+internal val _plywith by dslFunction { args, callInfo -> _plyWith(args, callInfo) }
+internal val StrudelPattern._plywith by dslPatternExtension { p, args, callInfo -> p._plyWith(args, callInfo) }
+internal val String._plywith by dslStringExtension { p, args, callInfo -> p._plywith(args, callInfo) }
+
 /**
  * Repeats each event `n` times within its timespan, applying `transform` cumulatively.
  *
@@ -743,36 +795,18 @@ fun applyPlyWith(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
  * @tags plyWith, repeat, transform, cumulative, subdivide
  */
 @StrudelDsl
-val plyWith by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 3) {
-        return@dslFunction silence
-    }
-
-    val pattern = args.drop(2).toPattern(voiceValueModifier)
-    applyPlyWith(pattern, args.take(2))
-}
+fun plyWith(factor: Int, transform: PatternMapper, pattern: PatternLike): StrudelPattern =
+    _plyWith(listOf(factor, transform, pattern).asStrudelDslArgs())
 
 /** Repeats each event `n` times, applying `transform` cumulatively (0, 1, 2 … times). */
 @StrudelDsl
-val StrudelPattern.plyWith by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPlyWith(p, args)
-}
+fun StrudelPattern.plyWith(factor: Int, transform: PatternMapper): StrudelPattern =
+    this._plyWith(listOf(factor, transform).asStrudelDslArgs())
 
 /** Repeats each event `n` times, applying `transform` cumulatively (0, 1, 2 … times). */
 @StrudelDsl
-fun StrudelPattern.plyWith(factor: Int, transform: PatternMapper): StrudelPattern {
-    return this.plyWith(listOf(factor, transform).asStrudelDslArgs())
-}
-
-/** Repeats each event `n` times, applying `transform` cumulatively (0, 1, 2 … times). */
-@StrudelDsl
-val String.plyWith by dslStringExtension { p, args, callInfo -> p.plyWith(args, callInfo) }
-
-/** Repeats each event `n` times, applying `transform` cumulatively (0, 1, 2 … times). */
-@StrudelDsl
-fun String.plyWith(factor: Int, transform: PatternMapper): StrudelPattern {
-    return this.plyWith(listOf(factor, transform).asStrudelDslArgs())
-}
+fun String.plyWith(factor: Int, transform: PatternMapper): StrudelPattern =
+    this._plyWith(listOf(factor, transform).asStrudelDslArgs())
 
 /**
  * Alias for `plyWith`.
@@ -782,27 +816,18 @@ fun String.plyWith(factor: Int, transform: PatternMapper): StrudelPattern {
  * @tags plywith, plyWith, repeat, transform, cumulative
  */
 @StrudelDsl
-val plywith by dslFunction { args, callInfo -> plyWith(args, callInfo) }
+fun plywith(factor: Int, transform: PatternMapper, pattern: PatternLike): StrudelPattern =
+    _plywith(listOf(factor, transform, pattern).asStrudelDslArgs())
 
-/** Alias for `plyWith`. */
+/** Alias for [plyWith] on this pattern. */
 @StrudelDsl
-val StrudelPattern.plywith by dslPatternExtension { p, args, callInfo -> p.plyWith(args, callInfo) }
+fun StrudelPattern.plywith(factor: Int, transform: PatternMapper): StrudelPattern =
+    this._plywith(listOf(factor, transform).asStrudelDslArgs())
 
-/** Alias for `plyWith`. */
+/** Alias for [plyWith] on a string pattern. */
 @StrudelDsl
-fun StrudelPattern.plywith(factor: Int, transform: PatternMapper): StrudelPattern {
-    return this.plyWith(factor, transform)
-}
-
-/** Alias for `plyWith`. */
-@StrudelDsl
-val String.plywith by dslStringExtension { p, args, callInfo -> p.plyWith(args, callInfo) }
-
-/** Alias for `plyWith`. */
-@StrudelDsl
-fun String.plywith(factor: Int, transform: PatternMapper): StrudelPattern {
-    return this.plyWith(factor, transform)
-}
+fun String.plywith(factor: Int, transform: PatternMapper): StrudelPattern =
+    this._plywith(listOf(factor, transform).asStrudelDslArgs())
 
 // -- plyForEach() -----------------------------------------------------------------------------------------------------
 
@@ -854,6 +879,25 @@ fun applyPlyForEach(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
 
+internal val _plyForEach by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 3) {
+        return@dslFunction silence
+    }
+
+    val pattern = args.drop(2).toPattern(voiceValueModifier)
+    applyPlyForEach(pattern, args.take(2))
+}
+
+internal val StrudelPattern._plyForEach by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPlyForEach(p, args)
+}
+
+internal val String._plyForEach by dslStringExtension { p, args, callInfo -> p._plyForEach(args, callInfo) }
+
+internal val _plyforeach by dslFunction { args, callInfo -> _plyForEach(args, callInfo) }
+internal val StrudelPattern._plyforeach by dslPatternExtension { p, args, callInfo -> p._plyForEach(args, callInfo) }
+internal val String._plyforeach by dslStringExtension { p, args, callInfo -> p._plyforeach(args, callInfo) }
+
 /**
  * Repeats each event `n` times within its timespan, passing the iteration index to `transform`.
  *
@@ -877,36 +921,18 @@ fun applyPlyForEach(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
  * @tags plyForEach, repeat, transform, index, subdivide
  */
 @StrudelDsl
-val plyForEach by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 3) {
-        return@dslFunction silence
-    }
-
-    val pattern = args.drop(2).toPattern(voiceValueModifier)
-    applyPlyForEach(pattern, args.take(2))
-}
+fun plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern, pattern: PatternLike): StrudelPattern =
+    _plyForEach(listOf(factor, transform, pattern).asStrudelDslArgs())
 
 /** Repeats each event `n` times, passing the iteration index to `transform`. */
 @StrudelDsl
-val StrudelPattern.plyForEach by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPlyForEach(p, args)
-}
+fun StrudelPattern.plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern =
+    this._plyForEach(listOf(factor, transform).asStrudelDslArgs())
 
 /** Repeats each event `n` times, passing the iteration index to `transform`. */
 @StrudelDsl
-fun StrudelPattern.plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern {
-    return this.plyForEach(listOf(factor, transform).asStrudelDslArgs())
-}
-
-/** Repeats each event `n` times, passing the iteration index to `transform`. */
-@StrudelDsl
-val String.plyForEach by dslStringExtension { p, args, callInfo -> p.plyForEach(args, callInfo) }
-
-/** Repeats each event `n` times, passing the iteration index to `transform`. */
-@StrudelDsl
-fun String.plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern {
-    return this.plyForEach(listOf(factor, transform).asStrudelDslArgs())
-}
+fun String.plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern =
+    this._plyForEach(listOf(factor, transform).asStrudelDslArgs())
 
 /**
  * Alias for `plyForEach`.
@@ -916,27 +942,21 @@ fun String.plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPa
  * @tags plyforeach, plyForEach, repeat, transform, index
  */
 @StrudelDsl
-val plyforeach by dslFunction { args, callInfo -> plyForEach(args, callInfo) }
+fun plyforeach(
+    factor: Int,
+    transform: (StrudelPattern, Int) -> StrudelPattern,
+    pattern: PatternLike,
+): StrudelPattern = _plyforeach(listOf(factor, transform, pattern).asStrudelDslArgs())
 
-/** Alias for `plyForEach`. */
+/** Alias for [plyForEach] on this pattern. */
 @StrudelDsl
-val StrudelPattern.plyforeach by dslPatternExtension { p, args, callInfo -> p.plyForEach(args, callInfo) }
+fun StrudelPattern.plyforeach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern =
+    this._plyforeach(listOf(factor, transform).asStrudelDslArgs())
 
-/** Alias for `plyForEach`. */
+/** Alias for [plyForEach] on a string pattern. */
 @StrudelDsl
-fun StrudelPattern.plyforeach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern {
-    return this.plyForEach(factor, transform)
-}
-
-/** Alias for `plyForEach`. */
-@StrudelDsl
-val String.plyforeach by dslStringExtension { p, args, callInfo -> p.plyForEach(args, callInfo) }
-
-/** Alias for `plyForEach`. */
-@StrudelDsl
-fun String.plyforeach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern {
-    return this.plyForEach(factor, transform)
-}
+fun String.plyforeach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): StrudelPattern =
+    this._plyforeach(listOf(factor, transform).asStrudelDslArgs())
 
 // -- hurry() ----------------------------------------------------------------------------------------------------------
 
@@ -951,6 +971,18 @@ fun applyHurry(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
         copy(speed = currentSpeed * f)
     }
 }
+
+internal val _hurry by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslFunction silence
+    }
+
+    val pattern = args.drop(1).toPattern(voiceValueModifier)
+    applyHurry(pattern, args.take(1))
+}
+
+internal val StrudelPattern._hurry by dslPatternExtension { p, args, /* callInfo */ _ -> applyHurry(p, args) }
+internal val String._hurry by dslStringExtension { p, args, callInfo -> p._hurry(args, callInfo) }
 
 /**
  * Speeds up the pattern like `fast()` and multiplies the `speed` audio parameter by the same factor.
@@ -973,24 +1005,16 @@ fun applyHurry(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
  * @tags hurry, fast, speed, pitch, accelerate
  */
 @StrudelDsl
-val hurry by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 2) {
-        return@dslFunction silence
-    }
-
-    val pattern = args.drop(1).toPattern(voiceValueModifier)
-    applyHurry(pattern, args.take(1))
-}
+fun hurry(factor: PatternLike, pattern: PatternLike): StrudelPattern =
+    _hurry(listOf(factor, pattern).asStrudelDslArgs())
 
 /** Speeds up pattern and multiplies the `speed` audio parameter by the same factor. */
 @StrudelDsl
-val StrudelPattern.hurry by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyHurry(p, args)
-}
+fun StrudelPattern.hurry(factor: PatternLike): StrudelPattern = this._hurry(listOf(factor).asStrudelDslArgs())
 
 /** Speeds up pattern and multiplies the `speed` audio parameter by the same factor. */
 @StrudelDsl
-val String.hurry by dslStringExtension { p, args, callInfo -> p.hurry(args, callInfo) }
+fun String.hurry(factor: PatternLike): StrudelPattern = this._hurry(listOf(factor).asStrudelDslArgs())
 
 // -- fastGap() --------------------------------------------------------------------------------------------------------
 
@@ -1004,6 +1028,29 @@ fun applyFastGap(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
 
     return FastGapPattern(source = pattern, factorProvider = factorProvider)
 }
+
+internal val _fastGap by dslFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) {
+        return@dslFunction silence
+    }
+
+    val factor = args[0].value?.asRationalOrNull() ?: Rational.ONE
+
+    val pattern = args.drop(1).toPattern(voiceValueModifier)
+
+    if (factor <= Rational.ZERO || factor == Rational.ONE) {
+        pattern
+    } else {
+        FastGapPattern.static(source = pattern, factor = factor)
+    }
+}
+
+internal val StrudelPattern._fastGap by dslPatternExtension { p, args, /* callInfo */ _ -> applyFastGap(p, args) }
+internal val String._fastGap by dslStringExtension { p, args, callInfo -> p._fastGap(args, callInfo) }
+
+internal val _densityGap by dslFunction { args, callInfo -> _fastGap(args, callInfo) }
+internal val StrudelPattern._densityGap by dslPatternExtension { p, args, callInfo -> p._fastGap(args, callInfo) }
+internal val String._densityGap by dslStringExtension { p, args, callInfo -> p._densityGap(args, callInfo) }
 
 /**
  * Speeds up the pattern by `factor` but plays it only once per cycle, leaving a gap.
@@ -1027,31 +1074,16 @@ fun applyFastGap(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
  * @tags fastGap, fast, gap, silence, compress, density
  */
 @StrudelDsl
-val fastGap by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 2) {
-        return@dslFunction silence
-    }
-
-    val factor = args[0].value?.asRationalOrNull() ?: Rational.ONE
-
-    val pattern = args.drop(1).toPattern(voiceValueModifier)
-
-    if (factor <= Rational.ZERO || factor == Rational.ONE) {
-        pattern
-    } else {
-        FastGapPattern.static(source = pattern, factor = factor)
-    }
-}
+fun fastGap(factor: PatternLike, pattern: PatternLike): StrudelPattern =
+    _fastGap(listOf(factor, pattern).asStrudelDslArgs())
 
 /** Speeds up the pattern but plays it only once per cycle, leaving a gap. */
 @StrudelDsl
-val StrudelPattern.fastGap by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyFastGap(p, args)
-}
+fun StrudelPattern.fastGap(factor: PatternLike): StrudelPattern = this._fastGap(listOf(factor).asStrudelDslArgs())
 
 /** Speeds up the pattern but plays it only once per cycle, leaving a gap. */
 @StrudelDsl
-val String.fastGap by dslStringExtension { p, args, callInfo -> p.fastGap(args, callInfo) }
+fun String.fastGap(factor: PatternLike): StrudelPattern = this._fastGap(listOf(factor).asStrudelDslArgs())
 
 /**
  * Alias for `fastGap`.
@@ -1061,15 +1093,17 @@ val String.fastGap by dslStringExtension { p, args, callInfo -> p.fastGap(args, 
  * @tags densityGap, fastGap, gap, compress, density
  */
 @StrudelDsl
-val densityGap by dslFunction { args, callInfo -> fastGap(args, callInfo) }
+fun densityGap(factor: PatternLike, pattern: PatternLike): StrudelPattern =
+    _densityGap(listOf(factor, pattern).asStrudelDslArgs())
 
-/** Alias for `fastGap`. */
+/** Alias for [fastGap]. */
 @StrudelDsl
-val StrudelPattern.densityGap by dslPatternExtension { p, args, callInfo -> p.fastGap(args, callInfo) }
+fun StrudelPattern.densityGap(factor: PatternLike): StrudelPattern =
+    this._densityGap(listOf(factor).asStrudelDslArgs())
 
-/** Alias for `fastGap`. */
+/** Alias for [fastGap]. */
 @StrudelDsl
-val String.densityGap by dslStringExtension { p, args, callInfo -> p.fastGap(args, callInfo) }
+fun String.densityGap(factor: PatternLike): StrudelPattern = this._densityGap(listOf(factor).asStrudelDslArgs())
 
 // -- inside() ---------------------------------------------------------------------------------------------------------
 
@@ -1079,11 +1113,14 @@ fun applyInside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     val factorArg = args[0]
     val func = args[1].toPatternMapper() ?: return pattern
 
-    val slowed = pattern.slow(factorArg)
+    // Use apply functions directly to avoid double-wrapping StrudelDslArg
+    val slowed = applySlow(pattern, listOf(factorArg))
     val transformed = func(slowed)
 
-    return transformed.fast(factorArg)
+    return applyFast(transformed, listOf(factorArg))
 }
+
+internal val StrudelPattern._inside by dslPatternExtension { p, args, /* callInfo */ _ -> applyInside(p, args) }
 
 /**
  * Applies a transformation inside a zoomed-in view of the cycle.
@@ -1105,7 +1142,8 @@ fun applyInside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
  * @tags inside, transform, zoom, slow, fast
  */
 @StrudelDsl
-val StrudelPattern.inside by dslPatternExtension { p, args, /* callInfo */ _ -> applyInside(p, args) }
+fun StrudelPattern.inside(factor: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._inside(listOf(factor, transform).asStrudelDslArgs())
 
 // -- outside() --------------------------------------------------------------------------------------------------------
 
@@ -1119,10 +1157,14 @@ fun applyOutside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
 
     val func = args[1].toPatternMapper() ?: return pattern
 
-    val sped = pattern.fast(factor)
+    val sped = applyFast(pattern, listOf(StrudelDslArg.of(factor)))
     val transformed = func(sped)
 
-    return transformed.slow(factor)
+    return applySlow(transformed, listOf(StrudelDslArg.of(factor)))
+}
+
+internal val StrudelPattern._outside by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyOutside(p, args)
 }
 
 /**
@@ -1144,9 +1186,8 @@ fun applyOutside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
  * @tags outside, transform, zoom, fast, slow
  */
 @StrudelDsl
-val StrudelPattern.outside by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyOutside(p, args)
-}
+fun StrudelPattern.outside(factor: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._outside(listOf(factor, transform).asStrudelDslArgs())
 
 // -- swingBy() --------------------------------------------------------------------------------------------------------
 
@@ -1169,6 +1210,12 @@ fun applySwingBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
         source.inside(nVal, transform)
     }
 }
+
+internal val StrudelPattern._swingBy by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applySwingBy(p, args)
+}
+
+internal val String._swingBy by dslStringExtension { p, args, callInfo -> p._swingBy(args, callInfo) }
 
 /**
  * Creates a swing or shuffle rhythm by adjusting event timing and duration within subdivisions.
@@ -1196,15 +1243,28 @@ fun applySwingBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
  * @tags swingBy, swing, shuffle, rhythm, timing, groove
  */
 @StrudelDsl
-val StrudelPattern.swingBy by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applySwingBy(p, args)
-}
+fun StrudelPattern.swingBy(swing: PatternLike, n: PatternLike): StrudelPattern =
+    this._swingBy(listOf(swing, n).asStrudelDslArgs())
 
 /** Creates a swing rhythm with custom amount; see `swingBy` for details. */
 @StrudelDsl
-val String.swingBy by dslStringExtension { p, args, callInfo -> p.swingBy(args, callInfo) }
+fun String.swingBy(swing: PatternLike, n: PatternLike): StrudelPattern =
+    this._swingBy(listOf(swing, n).asStrudelDslArgs())
 
 // -- swing() ----------------------------------------------------------------------------------------------------------
+
+internal val StrudelPattern._swing by dslPatternExtension { p, args, /* callInfo */ _ ->
+    if (args.isEmpty()) {
+        return@dslPatternExtension p
+    }
+
+    val nArg = args.getOrNull(0)
+
+    // swing(n) = swingBy(1/3, n)
+    applySwingBy(p, listOf(StrudelDslArg.of(1.0 / 3.0), nArg ?: StrudelDslArg.of(1.0)))
+}
+
+internal val String._swing by dslStringExtension { p, args, callInfo -> p._swing(args, callInfo) }
 
 /**
  * Shorthand for `swingBy(1/3, n)` — classic jazz swing feel.
@@ -1226,20 +1286,11 @@ val String.swingBy by dslStringExtension { p, args, callInfo -> p.swingBy(args, 
  * @tags swing, swingBy, shuffle, rhythm, timing, groove
  */
 @StrudelDsl
-val StrudelPattern.swing by dslPatternExtension { p, args, /* callInfo */ _ ->
-    if (args.isEmpty()) {
-        return@dslPatternExtension p
-    }
-
-    val nArg = args.getOrNull(0)
-
-    // swing(n) = swingBy(1/3, n)
-    p.swingBy(StrudelDslArg.of(1.0 / 3.0), nArg ?: StrudelDslArg.of(1.0))
-}
+fun StrudelPattern.swing(n: PatternLike): StrudelPattern = this._swing(listOf(n).asStrudelDslArgs())
 
 /** Shorthand for `swingBy(1/3, n)` — classic jazz swing feel. */
 @StrudelDsl
-val String.swing by dslStringExtension { p, args, callInfo -> p.swing(args, callInfo) }
+fun String.swing(n: PatternLike): StrudelPattern = this._swing(listOf(n).asStrudelDslArgs())
 
 // -- brak() -----------------------------------------------------------------------------------------------------------
 
@@ -1269,6 +1320,14 @@ fun applyBrak(pattern: StrudelPattern): StrudelPattern {
     }
 }
 
+internal val _brak by dslFunction { args, /* callInfo */ _ ->
+    val pattern = args.toPattern(voiceValueModifier)
+    applyBrak(pattern)
+}
+
+internal val StrudelPattern._brak by dslPatternExtension { p, /* args */ _, /* callInfo */ _ -> applyBrak(p) }
+internal val String._brak by dslStringExtension { p, args, callInfo -> p._brak(args, callInfo) }
+
 /**
  * Makes every other cycle syncopated — a classic breakbeat effect.
  *
@@ -1288,17 +1347,8 @@ fun applyBrak(pattern: StrudelPattern): StrudelPattern {
  * @tags brak, breakbeat, syncopation, rhythm, offset, amen
  */
 @StrudelDsl
-val brak by dslFunction { args, /* callInfo */ _ ->
-    val pattern = args.toPattern(voiceValueModifier)
-    applyBrak(pattern)
-}
+fun StrudelPattern.brak(): StrudelPattern = this._brak(emptyList())
 
 /** Makes every other cycle syncopated — a classic breakbeat effect. */
 @StrudelDsl
-val StrudelPattern.brak by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
-    applyBrak(p)
-}
-
-/** Makes every other cycle syncopated — a classic breakbeat effect. */
-@StrudelDsl
-val String.brak by dslStringExtension { p, args, callInfo -> p.brak(args, callInfo) }
+fun String.brak(): StrudelPattern = this._brak(emptyList())
