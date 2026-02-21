@@ -1,9 +1,10 @@
-@file:Suppress("DuplicatedCode")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName")
 
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel._applyControlFromParams
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -24,6 +25,14 @@ fun applyVowel(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     }
 }
 
+internal val StrudelPattern._vowel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVowel(p, args) }
+
+internal val _vowel by dslFunction { args, /* callInfo */ _ -> args.toPattern(vowelMutation) }
+
+internal val String._vowel by dslStringExtension { p, args, callInfo -> p._vowel(args, callInfo) }
+
+// ===== USER-FACING OVERLOADS =====
+
 /**
  * Sets the vowel formant filter.
  *
@@ -43,26 +52,24 @@ fun applyVowel(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
  * - `tenor`
  * - `bass`
  *
- * **Examples:**
- * ```kotlin
+ * ```KlangScript
  * note("c3").vowel("a")             // Soprano 'a' (default)
- * note("c3").vowel("bass:o")        // Bass 'o'
- * note("c3").vowel("tenor:ue")      // Tenor 'ü' (German Umlaut)
- * vowel("a e i o u")                // Sequence different vowels
- * vowel("soprano:a bass:u")         // Sequence different voices and vowels
  * ```
+ *
+ * ```KlangScript
+ * vowel("a e i o u")                // Sequence different vowels
+ * ```
+ *
+ * @category tonal
+ * @tags vowel, formant, vocal, filter, singing
  */
 @StrudelDsl
-val StrudelPattern.vowel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVowel(p, args) }
+fun vowel(vowel: PatternLike): StrudelPattern = _vowel(listOf(vowel).asStrudelDslArgs())
 
-/**
- * Creates a pattern with vowel formant filter.
- */
+/** Sets the vowel formant filter on this pattern. */
 @StrudelDsl
-val vowel by dslFunction { args, /* callInfo */ _ -> args.toPattern(vowelMutation) }
+fun StrudelPattern.vowel(vowel: PatternLike): StrudelPattern = this._vowel(listOf(vowel).asStrudelDslArgs())
 
-/**
- * Sets the vowel formant filter on a string pattern.
- */
+/** Sets the vowel formant filter on a string pattern. */
 @StrudelDsl
-val String.vowel by dslStringExtension { p, args, callInfo -> p.vowel(args, callInfo) }
+fun String.vowel(vowel: PatternLike): StrudelPattern = this._vowel(listOf(vowel).asStrudelDslArgs())
