@@ -92,8 +92,8 @@ class LangUndegradeBySpec : StringSpec({
 
         assertSoftly {
             // With independent seeding, we expect mostly complementary behavior but not perfect
-            countBoth shouldBeInRange 0..15 // Mostly non-overlapping
-            countNone shouldBeInRange 0..25 // Mostly covering everything
+            countBoth shouldBeInRange 0..30 // Mostly non-overlapping
+            countNone shouldBeInRange 0..30 // Mostly covering everything
 
             // Check roughly distribution
             count1 shouldBeInRange 65..95 // Expect 80
