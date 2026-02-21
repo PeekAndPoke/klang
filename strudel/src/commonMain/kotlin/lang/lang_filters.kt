@@ -1,9 +1,10 @@
-@file:Suppress("DuplicatedCode")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName")
 
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel._liftNumericField
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -19,9 +20,9 @@ fun applyLpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     return source._liftNumericField(args, lpfMutation)
 }
 
-/** Applies a Low Pass Filter to this pattern with the given cutoff frequency in Hz. */
-@StrudelDsl
-val StrudelPattern.lpf by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpf(p, args) }
+internal val _lpf by dslFunction { args, _ -> args.toPattern(lpfMutation) }
+internal val StrudelPattern._lpf by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
+internal val String._lpf by dslStringExtension { p, args, callInfo -> p._lpf(args, callInfo) }
 
 /**
  * Applies a Low Pass Filter (LPF) with the given cutoff frequency in Hz.
@@ -43,15 +44,19 @@ val StrudelPattern.lpf by dslPatternExtension { p, args, /* callInfo */ _ -> app
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
 @StrudelDsl
-val lpf by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpfMutation) }
+fun lpf(freq: PatternLike): StrudelPattern = _lpf(listOf(freq).asStrudelDslArgs())
+
+/** Applies a Low Pass Filter to this pattern with the given cutoff frequency in Hz. */
+@StrudelDsl
+fun StrudelPattern.lpf(freq: PatternLike): StrudelPattern = this._lpf(listOf(freq).asStrudelDslArgs())
 
 /** Applies a Low Pass Filter to a string pattern with the given cutoff frequency in Hz. */
 @StrudelDsl
-val String.lpf by dslStringExtension { p, args, callInfo -> p.lpf(args, callInfo) }
+fun String.lpf(freq: PatternLike): StrudelPattern = this._lpf(listOf(freq).asStrudelDslArgs())
 
-/** Alias for [lpf] on this pattern. */
-@StrudelDsl
-val StrudelPattern.cutoff by dslPatternExtension { p, args, callInfo -> p.lpf(args, callInfo) }
+internal val _cutoff by dslFunction { args, _ -> args.toPattern(lpfMutation) }
+internal val StrudelPattern._cutoff by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
+internal val String._cutoff by dslStringExtension { p, args, callInfo -> p._cutoff(args, callInfo) }
 
 /**
  * Alias for [lpf]. Applies a Low Pass Filter with the given cutoff frequency.
@@ -61,15 +66,19 @@ val StrudelPattern.cutoff by dslPatternExtension { p, args, callInfo -> p.lpf(ar
  * @tags cutoff, lpf, low pass filter, filter, frequency
  */
 @StrudelDsl
-val cutoff by dslFunction { args, callInfo -> lpf(args, callInfo) }
-
-/** Alias for [lpf] on a string pattern. */
-@StrudelDsl
-val String.cutoff by dslStringExtension { p, args, callInfo -> p.lpf(args, callInfo) }
+fun cutoff(freq: PatternLike): StrudelPattern = _cutoff(listOf(freq).asStrudelDslArgs())
 
 /** Alias for [lpf] on this pattern. */
 @StrudelDsl
-val StrudelPattern.ctf by dslPatternExtension { p, args, callInfo -> p.lpf(args, callInfo) }
+fun StrudelPattern.cutoff(freq: PatternLike): StrudelPattern = this._cutoff(listOf(freq).asStrudelDslArgs())
+
+/** Alias for [lpf] on a string pattern. */
+@StrudelDsl
+fun String.cutoff(freq: PatternLike): StrudelPattern = this._cutoff(listOf(freq).asStrudelDslArgs())
+
+internal val _ctf by dslFunction { args, _ -> args.toPattern(lpfMutation) }
+internal val StrudelPattern._ctf by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
+internal val String._ctf by dslStringExtension { p, args, callInfo -> p._ctf(args, callInfo) }
 
 /**
  * Alias for [lpf]. Applies a Low Pass Filter with the given cutoff frequency.
@@ -79,15 +88,19 @@ val StrudelPattern.ctf by dslPatternExtension { p, args, callInfo -> p.lpf(args,
  * @tags ctf, lpf, low pass filter, filter, frequency
  */
 @StrudelDsl
-val ctf by dslFunction { args, callInfo -> lpf(args, callInfo) }
-
-/** Alias for [lpf] on a string pattern. */
-@StrudelDsl
-val String.ctf by dslStringExtension { p, args, callInfo -> p.lpf(args, callInfo) }
+fun ctf(freq: PatternLike): StrudelPattern = _ctf(listOf(freq).asStrudelDslArgs())
 
 /** Alias for [lpf] on this pattern. */
 @StrudelDsl
-val StrudelPattern.lp by dslPatternExtension { p, args, callInfo -> p.lpf(args, callInfo) }
+fun StrudelPattern.ctf(freq: PatternLike): StrudelPattern = this._ctf(listOf(freq).asStrudelDslArgs())
+
+/** Alias for [lpf] on a string pattern. */
+@StrudelDsl
+fun String.ctf(freq: PatternLike): StrudelPattern = this._ctf(listOf(freq).asStrudelDslArgs())
+
+internal val _lp by dslFunction { args, _ -> args.toPattern(lpfMutation) }
+internal val StrudelPattern._lp by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
+internal val String._lp by dslStringExtension { p, args, callInfo -> p._lp(args, callInfo) }
 
 /**
  * Alias for [lpf]. Applies a Low Pass Filter with the given cutoff frequency.
@@ -97,11 +110,15 @@ val StrudelPattern.lp by dslPatternExtension { p, args, callInfo -> p.lpf(args, 
  * @tags lp, lpf, low pass filter, filter, frequency
  */
 @StrudelDsl
-val lp by dslFunction { args, callInfo -> lpf(args, callInfo) }
+fun lp(freq: PatternLike): StrudelPattern = _lp(listOf(freq).asStrudelDslArgs())
+
+/** Alias for [lpf] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lp(freq: PatternLike): StrudelPattern = this._lp(listOf(freq).asStrudelDslArgs())
 
 /** Alias for [lpf] on a string pattern. */
 @StrudelDsl
-val String.lp by dslStringExtension { p, args, callInfo -> p.lpf(args, callInfo) }
+fun String.lp(freq: PatternLike): StrudelPattern = this._lp(listOf(freq).asStrudelDslArgs())
 
 // -- hpf() ------------------------------------------------------------------------------------------------------------
 
@@ -111,9 +128,9 @@ fun applyHpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     return source._liftNumericField(args, hpfMutation)
 }
 
-/** Applies a High Pass Filter to this pattern with the given cutoff frequency in Hz. */
-@StrudelDsl
-val StrudelPattern.hpf by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpf(p, args) }
+internal val _hpf by dslFunction { args, _ -> args.toPattern(hpfMutation) }
+internal val StrudelPattern._hpf by dslPatternExtension { p, args, _ -> applyHpf(p, args) }
+internal val String._hpf by dslStringExtension { p, args, callInfo -> p._hpf(args, callInfo) }
 
 /**
  * Applies a High Pass Filter (HPF) with the given cutoff frequency in Hz.
@@ -134,15 +151,19 @@ val StrudelPattern.hpf by dslPatternExtension { p, args, /* callInfo */ _ -> app
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
 @StrudelDsl
-val hpf by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpfMutation) }
+fun hpf(freq: PatternLike): StrudelPattern = _hpf(listOf(freq).asStrudelDslArgs())
+
+/** Applies a High Pass Filter to this pattern with the given cutoff frequency in Hz. */
+@StrudelDsl
+fun StrudelPattern.hpf(freq: PatternLike): StrudelPattern = this._hpf(listOf(freq).asStrudelDslArgs())
 
 /** Applies a High Pass Filter to a string pattern with the given cutoff frequency in Hz. */
 @StrudelDsl
-val String.hpf by dslStringExtension { p, args, callInfo -> p.hpf(args, callInfo) }
+fun String.hpf(freq: PatternLike): StrudelPattern = this._hpf(listOf(freq).asStrudelDslArgs())
 
-/** Alias for [hpf] on this pattern. */
-@StrudelDsl
-val StrudelPattern.hp by dslPatternExtension { p, args, callInfo -> p.hpf(args, callInfo) }
+internal val _hp by dslFunction { args, _ -> args.toPattern(hpfMutation) }
+internal val StrudelPattern._hp by dslPatternExtension { p, args, _ -> applyHpf(p, args) }
+internal val String._hp by dslStringExtension { p, args, callInfo -> p._hp(args, callInfo) }
 
 /**
  * Alias for [hpf]. Applies a High Pass Filter with the given cutoff frequency.
@@ -152,15 +173,19 @@ val StrudelPattern.hp by dslPatternExtension { p, args, callInfo -> p.hpf(args, 
  * @tags hp, hpf, high pass filter, filter, frequency
  */
 @StrudelDsl
-val hp by dslFunction { args, callInfo -> hpf(args, callInfo) }
-
-/** Alias for [hpf] on a string pattern. */
-@StrudelDsl
-val String.hp by dslStringExtension { p, args, callInfo -> p.hpf(args, callInfo) }
+fun hp(freq: PatternLike): StrudelPattern = _hp(listOf(freq).asStrudelDslArgs())
 
 /** Alias for [hpf] on this pattern. */
 @StrudelDsl
-val StrudelPattern.hcutoff by dslPatternExtension { p, args, callInfo -> p.hpf(args, callInfo) }
+fun StrudelPattern.hp(freq: PatternLike): StrudelPattern = this._hp(listOf(freq).asStrudelDslArgs())
+
+/** Alias for [hpf] on a string pattern. */
+@StrudelDsl
+fun String.hp(freq: PatternLike): StrudelPattern = this._hp(listOf(freq).asStrudelDslArgs())
+
+internal val _hcutoff by dslFunction { args, _ -> args.toPattern(hpfMutation) }
+internal val StrudelPattern._hcutoff by dslPatternExtension { p, args, _ -> applyHpf(p, args) }
+internal val String._hcutoff by dslStringExtension { p, args, callInfo -> p._hcutoff(args, callInfo) }
 
 /**
  * Alias for [hpf]. Applies a High Pass Filter with the given cutoff frequency.
@@ -170,11 +195,15 @@ val StrudelPattern.hcutoff by dslPatternExtension { p, args, callInfo -> p.hpf(a
  * @tags hcutoff, hpf, high pass filter, filter, frequency
  */
 @StrudelDsl
-val hcutoff by dslFunction { args, callInfo -> hpf(args, callInfo) }
+fun hcutoff(freq: PatternLike): StrudelPattern = _hcutoff(listOf(freq).asStrudelDslArgs())
+
+/** Alias for [hpf] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hcutoff(freq: PatternLike): StrudelPattern = this._hcutoff(listOf(freq).asStrudelDslArgs())
 
 /** Alias for [hpf] on a string pattern. */
 @StrudelDsl
-val String.hcutoff by dslStringExtension { p, args, callInfo -> p.hpf(args, callInfo) }
+fun String.hcutoff(freq: PatternLike): StrudelPattern = this._hcutoff(listOf(freq).asStrudelDslArgs())
 
 // -- bandf() / bpf() --------------------------------------------------------------------------------------------------
 
@@ -184,9 +213,9 @@ fun applyBandf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftNumericField(args, bandfMutation)
 }
 
-/** Applies a Band Pass Filter to this pattern with the given centre frequency in Hz. */
-@StrudelDsl
-val StrudelPattern.bandf by dslPatternExtension { p, args, /* callInfo */ _ -> applyBandf(p, args) }
+internal val _bandf by dslFunction { args, _ -> args.toPattern(bandfMutation) }
+internal val StrudelPattern._bandf by dslPatternExtension { p, args, _ -> applyBandf(p, args) }
+internal val String._bandf by dslStringExtension { p, args, callInfo -> p._bandf(args, callInfo) }
 
 /**
  * Applies a Band Pass Filter (BPF) with the given centre frequency in Hz.
@@ -207,15 +236,19 @@ val StrudelPattern.bandf by dslPatternExtension { p, args, /* callInfo */ _ -> a
  * @tags bandf, bpf, band pass filter, filter, frequency
  */
 @StrudelDsl
-val bandf by dslFunction { args, /* callInfo */ _ -> args.toPattern(bandfMutation) }
+fun bandf(freq: PatternLike): StrudelPattern = _bandf(listOf(freq).asStrudelDslArgs())
+
+/** Applies a Band Pass Filter to this pattern with the given centre frequency in Hz. */
+@StrudelDsl
+fun StrudelPattern.bandf(freq: PatternLike): StrudelPattern = this._bandf(listOf(freq).asStrudelDslArgs())
 
 /** Applies a Band Pass Filter to a string pattern with the given centre frequency in Hz. */
 @StrudelDsl
-val String.bandf by dslStringExtension { p, args, callInfo -> p.bandf(args, callInfo) }
+fun String.bandf(freq: PatternLike): StrudelPattern = this._bandf(listOf(freq).asStrudelDslArgs())
 
-/** Alias for [bandf] on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpf by dslPatternExtension { p, args, callInfo -> p.bandf(args, callInfo) }
+internal val _bpf by dslFunction { args, _ -> args.toPattern(bandfMutation) }
+internal val StrudelPattern._bpf by dslPatternExtension { p, args, _ -> applyBandf(p, args) }
+internal val String._bpf by dslStringExtension { p, args, callInfo -> p._bpf(args, callInfo) }
 
 /**
  * Alias for [bandf]. Applies a Band Pass Filter with the given centre frequency.
@@ -225,15 +258,19 @@ val StrudelPattern.bpf by dslPatternExtension { p, args, callInfo -> p.bandf(arg
  * @tags bpf, bandf, band pass filter, filter, frequency
  */
 @StrudelDsl
-val bpf by dslFunction { args, callInfo -> bandf(args, callInfo) }
-
-/** Alias for [bandf] on a string pattern. */
-@StrudelDsl
-val String.bpf by dslStringExtension { p, args, callInfo -> p.bandf(args, callInfo) }
+fun bpf(freq: PatternLike): StrudelPattern = _bpf(listOf(freq).asStrudelDslArgs())
 
 /** Alias for [bandf] on this pattern. */
 @StrudelDsl
-val StrudelPattern.bp by dslPatternExtension { p, args, callInfo -> p.bandf(args, callInfo) }
+fun StrudelPattern.bpf(freq: PatternLike): StrudelPattern = this._bpf(listOf(freq).asStrudelDslArgs())
+
+/** Alias for [bandf] on a string pattern. */
+@StrudelDsl
+fun String.bpf(freq: PatternLike): StrudelPattern = this._bpf(listOf(freq).asStrudelDslArgs())
+
+internal val _bp by dslFunction { args, _ -> args.toPattern(bandfMutation) }
+internal val StrudelPattern._bp by dslPatternExtension { p, args, _ -> applyBandf(p, args) }
+internal val String._bp by dslStringExtension { p, args, callInfo -> p._bp(args, callInfo) }
 
 /**
  * Alias for [bandf]. Applies a Band Pass Filter with the given centre frequency.
@@ -243,11 +280,15 @@ val StrudelPattern.bp by dslPatternExtension { p, args, callInfo -> p.bandf(args
  * @tags bp, bandf, band pass filter, filter, frequency
  */
 @StrudelDsl
-val bp by dslFunction { args, callInfo -> bandf(args, callInfo) }
+fun bp(freq: PatternLike): StrudelPattern = _bp(listOf(freq).asStrudelDslArgs())
+
+/** Alias for [bandf] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bp(freq: PatternLike): StrudelPattern = this._bp(listOf(freq).asStrudelDslArgs())
 
 /** Alias for [bandf] on a string pattern. */
 @StrudelDsl
-val String.bp by dslStringExtension { p, args, callInfo -> p.bandf(args, callInfo) }
+fun String.bp(freq: PatternLike): StrudelPattern = this._bp(listOf(freq).asStrudelDslArgs())
 
 // -- notchf() ---------------------------------------------------------------------------------------------------------
 
@@ -257,9 +298,9 @@ fun applyNotchf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return source._liftNumericField(args, notchfMutation)
 }
 
-/** Applies a Notch Filter to this pattern with the given centre frequency in Hz. */
-@StrudelDsl
-val StrudelPattern.notchf by dslPatternExtension { p, args, /* callInfo */ _ -> applyNotchf(p, args) }
+internal val _notchf by dslFunction { args, _ -> args.toPattern(notchfMutation) }
+internal val StrudelPattern._notchf by dslPatternExtension { p, args, _ -> applyNotchf(p, args) }
+internal val String._notchf by dslStringExtension { p, args, callInfo -> p._notchf(args, callInfo) }
 
 /**
  * Applies a Notch Filter with the given centre frequency in Hz.
@@ -279,11 +320,15 @@ val StrudelPattern.notchf by dslPatternExtension { p, args, /* callInfo */ _ -> 
  * @tags notchf, notch filter, filter, frequency
  */
 @StrudelDsl
-val notchf by dslFunction { args, /* callInfo */ _ -> args.toPattern(notchfMutation) }
+fun notchf(freq: PatternLike): StrudelPattern = _notchf(listOf(freq).asStrudelDslArgs())
+
+/** Applies a Notch Filter to this pattern with the given centre frequency in Hz. */
+@StrudelDsl
+fun StrudelPattern.notchf(freq: PatternLike): StrudelPattern = this._notchf(listOf(freq).asStrudelDslArgs())
 
 /** Applies a Notch Filter to a string pattern with the given centre frequency in Hz. */
 @StrudelDsl
-val String.notchf by dslStringExtension { p, args, callInfo -> p.notchf(args, callInfo) }
+fun String.notchf(freq: PatternLike): StrudelPattern = this._notchf(listOf(freq).asStrudelDslArgs())
 
 // -- resonance() / res() - Low Pass Filter resonance -----------------------------------------------------------------
 
@@ -293,9 +338,9 @@ fun applyResonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, resonanceMutation)
 }
 
-/** Sets the LPF resonance/Q on this pattern. */
-@StrudelDsl
-val StrudelPattern.resonance by dslPatternExtension { p, args, /* callInfo */ _ -> applyResonance(p, args) }
+internal val _resonance by dslFunction { args, _ -> args.toPattern(resonanceMutation) }
+internal val StrudelPattern._resonance by dslPatternExtension { p, args, _ -> applyResonance(p, args) }
+internal val String._resonance by dslStringExtension { p, args, callInfo -> p._resonance(args, callInfo) }
 
 /**
  * Sets the resonance (Q factor) of the Low Pass Filter.
@@ -316,15 +361,19 @@ val StrudelPattern.resonance by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags resonance, res, lpq, low pass filter, Q, resonance
  */
 @StrudelDsl
-val resonance by dslFunction { args, /* callInfo */ _ -> args.toPattern(resonanceMutation) }
+fun resonance(q: PatternLike): StrudelPattern = _resonance(listOf(q).asStrudelDslArgs())
+
+/** Sets the LPF resonance/Q on this pattern. */
+@StrudelDsl
+fun StrudelPattern.resonance(q: PatternLike): StrudelPattern = this._resonance(listOf(q).asStrudelDslArgs())
 
 /** Sets the LPF resonance/Q on a string pattern. */
 @StrudelDsl
-val String.resonance by dslStringExtension { p, args, callInfo -> p.resonance(args, callInfo) }
+fun String.resonance(q: PatternLike): StrudelPattern = this._resonance(listOf(q).asStrudelDslArgs())
 
-/** Alias for [resonance] on this pattern. */
-@StrudelDsl
-val StrudelPattern.res by dslPatternExtension { p, args, callInfo -> p.resonance(args, callInfo) }
+internal val _res by dslFunction { args, _ -> args.toPattern(resonanceMutation) }
+internal val StrudelPattern._res by dslPatternExtension { p, args, _ -> applyResonance(p, args) }
+internal val String._res by dslStringExtension { p, args, callInfo -> p._res(args, callInfo) }
 
 /**
  * Alias for [resonance]. Sets the LPF resonance/Q.
@@ -334,15 +383,19 @@ val StrudelPattern.res by dslPatternExtension { p, args, callInfo -> p.resonance
  * @tags res, resonance, lpq, low pass filter, Q
  */
 @StrudelDsl
-val res by dslFunction { args, callInfo -> resonance(args, callInfo) }
-
-/** Alias for [resonance] on a string pattern. */
-@StrudelDsl
-val String.res by dslStringExtension { p, args, callInfo -> p.resonance(args, callInfo) }
+fun res(q: PatternLike): StrudelPattern = _res(listOf(q).asStrudelDslArgs())
 
 /** Alias for [resonance] on this pattern. */
 @StrudelDsl
-val StrudelPattern.lpq by dslPatternExtension { p, args, callInfo -> p.resonance(args, callInfo) }
+fun StrudelPattern.res(q: PatternLike): StrudelPattern = this._res(listOf(q).asStrudelDslArgs())
+
+/** Alias for [resonance] on a string pattern. */
+@StrudelDsl
+fun String.res(q: PatternLike): StrudelPattern = this._res(listOf(q).asStrudelDslArgs())
+
+internal val _lpq by dslFunction { args, _ -> args.toPattern(resonanceMutation) }
+internal val StrudelPattern._lpq by dslPatternExtension { p, args, _ -> applyResonance(p, args) }
+internal val String._lpq by dslStringExtension { p, args, callInfo -> p._lpq(args, callInfo) }
 
 /**
  * Alias for [resonance]. Sets the LPF resonance/Q.
@@ -352,11 +405,15 @@ val StrudelPattern.lpq by dslPatternExtension { p, args, callInfo -> p.resonance
  * @tags lpq, resonance, res, low pass filter, Q
  */
 @StrudelDsl
-val lpq by dslFunction { args, callInfo -> resonance(args, callInfo) }
+fun lpq(q: PatternLike): StrudelPattern = _lpq(listOf(q).asStrudelDslArgs())
+
+/** Alias for [resonance] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpq(q: PatternLike): StrudelPattern = this._lpq(listOf(q).asStrudelDslArgs())
 
 /** Alias for [resonance] on a string pattern. */
 @StrudelDsl
-val String.lpq by dslStringExtension { p, args, callInfo -> p.resonance(args, callInfo) }
+fun String.lpq(q: PatternLike): StrudelPattern = this._lpq(listOf(q).asStrudelDslArgs())
 
 // -- hresonance() / hres() - High Pass Filter resonance --------------------------------------------------------------
 
@@ -366,9 +423,9 @@ fun applyHresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): St
     return source._liftNumericField(args, hresonanceMutation)
 }
 
-/** Sets the HPF resonance/Q on this pattern. */
-@StrudelDsl
-val StrudelPattern.hresonance by dslPatternExtension { p, args, /* callInfo */ _ -> applyHresonance(p, args) }
+internal val _hresonance by dslFunction { args, _ -> args.toPattern(hresonanceMutation) }
+internal val StrudelPattern._hresonance by dslPatternExtension { p, args, _ -> applyHresonance(p, args) }
+internal val String._hresonance by dslStringExtension { p, args, callInfo -> p._hresonance(args, callInfo) }
 
 /**
  * Sets the resonance (Q factor) of the High Pass Filter.
@@ -389,15 +446,19 @@ val StrudelPattern.hresonance by dslPatternExtension { p, args, /* callInfo */ _
  * @tags hresonance, hres, hpq, high pass filter, Q, resonance
  */
 @StrudelDsl
-val hresonance by dslFunction { args, /* callInfo */ _ -> args.toPattern(hresonanceMutation) }
+fun hresonance(q: PatternLike): StrudelPattern = _hresonance(listOf(q).asStrudelDslArgs())
+
+/** Sets the HPF resonance/Q on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hresonance(q: PatternLike): StrudelPattern = this._hresonance(listOf(q).asStrudelDslArgs())
 
 /** Sets the HPF resonance/Q on a string pattern. */
 @StrudelDsl
-val String.hresonance by dslStringExtension { p, args, callInfo -> p.hresonance(args, callInfo) }
+fun String.hresonance(q: PatternLike): StrudelPattern = this._hresonance(listOf(q).asStrudelDslArgs())
 
-/** Alias for [hresonance] on this pattern. */
-@StrudelDsl
-val StrudelPattern.hres by dslPatternExtension { p, args, callInfo -> p.hresonance(args, callInfo) }
+internal val _hres by dslFunction { args, _ -> args.toPattern(hresonanceMutation) }
+internal val StrudelPattern._hres by dslPatternExtension { p, args, _ -> applyHresonance(p, args) }
+internal val String._hres by dslStringExtension { p, args, callInfo -> p._hres(args, callInfo) }
 
 /**
  * Alias for [hresonance]. Sets the HPF resonance/Q.
@@ -407,15 +468,19 @@ val StrudelPattern.hres by dslPatternExtension { p, args, callInfo -> p.hresonan
  * @tags hres, hresonance, hpq, high pass filter, Q
  */
 @StrudelDsl
-val hres by dslFunction { args, callInfo -> hresonance(args, callInfo) }
-
-/** Alias for [hresonance] on a string pattern. */
-@StrudelDsl
-val String.hres by dslStringExtension { p, args, callInfo -> p.hresonance(args, callInfo) }
+fun hres(q: PatternLike): StrudelPattern = _hres(listOf(q).asStrudelDslArgs())
 
 /** Alias for [hresonance] on this pattern. */
 @StrudelDsl
-val StrudelPattern.hpq by dslPatternExtension { p, args, callInfo -> p.hresonance(args, callInfo) }
+fun StrudelPattern.hres(q: PatternLike): StrudelPattern = this._hres(listOf(q).asStrudelDslArgs())
+
+/** Alias for [hresonance] on a string pattern. */
+@StrudelDsl
+fun String.hres(q: PatternLike): StrudelPattern = this._hres(listOf(q).asStrudelDslArgs())
+
+internal val _hpq by dslFunction { args, _ -> args.toPattern(hresonanceMutation) }
+internal val StrudelPattern._hpq by dslPatternExtension { p, args, _ -> applyHresonance(p, args) }
+internal val String._hpq by dslStringExtension { p, args, callInfo -> p._hpq(args, callInfo) }
 
 /**
  * Alias for [hresonance]. Sets the HPF resonance/Q.
@@ -425,11 +490,15 @@ val StrudelPattern.hpq by dslPatternExtension { p, args, callInfo -> p.hresonanc
  * @tags hpq, hresonance, hres, high pass filter, Q
  */
 @StrudelDsl
-val hpq by dslFunction { args, callInfo -> hresonance(args, callInfo) }
+fun hpq(q: PatternLike): StrudelPattern = _hpq(listOf(q).asStrudelDslArgs())
+
+/** Alias for [hresonance] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpq(q: PatternLike): StrudelPattern = this._hpq(listOf(q).asStrudelDslArgs())
 
 /** Alias for [hresonance] on a string pattern. */
 @StrudelDsl
-val String.hpq by dslStringExtension { p, args, callInfo -> p.hresonance(args, callInfo) }
+fun String.hpq(q: PatternLike): StrudelPattern = this._hpq(listOf(q).asStrudelDslArgs())
 
 // -- bandq() - Band Pass Filter resonance ----------------------------------------------------------------------------
 
@@ -439,9 +508,9 @@ fun applyBandq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftNumericField(args, bandqMutation)
 }
 
-/** Sets the BPF Q (bandwidth) on this pattern. */
-@StrudelDsl
-val StrudelPattern.bandq by dslPatternExtension { p, args, /* callInfo */ _ -> applyBandq(p, args) }
+internal val _bandq by dslFunction { args, _ -> args.toPattern(bandqMutation) }
+internal val StrudelPattern._bandq by dslPatternExtension { p, args, _ -> applyBandq(p, args) }
+internal val String._bandq by dslStringExtension { p, args, callInfo -> p._bandq(args, callInfo) }
 
 /**
  * Sets the Q factor (bandwidth) of the Band Pass Filter.
@@ -462,15 +531,19 @@ val StrudelPattern.bandq by dslPatternExtension { p, args, /* callInfo */ _ -> a
  * @tags bandq, bpq, band pass filter, Q, bandwidth
  */
 @StrudelDsl
-val bandq by dslFunction { args, /* callInfo */ _ -> args.toPattern(bandqMutation) }
+fun bandq(q: PatternLike): StrudelPattern = _bandq(listOf(q).asStrudelDslArgs())
+
+/** Sets the BPF Q (bandwidth) on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bandq(q: PatternLike): StrudelPattern = this._bandq(listOf(q).asStrudelDslArgs())
 
 /** Sets the BPF Q (bandwidth) on a string pattern. */
 @StrudelDsl
-val String.bandq by dslStringExtension { p, args, callInfo -> p.bandq(args, callInfo) }
+fun String.bandq(q: PatternLike): StrudelPattern = this._bandq(listOf(q).asStrudelDslArgs())
 
-/** Alias for [bandq] on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpq by dslPatternExtension { p, args, callInfo -> p.bandq(args, callInfo) }
+internal val _bpq by dslFunction { args, _ -> args.toPattern(bandqMutation) }
+internal val StrudelPattern._bpq by dslPatternExtension { p, args, _ -> applyBandq(p, args) }
+internal val String._bpq by dslStringExtension { p, args, callInfo -> p._bpq(args, callInfo) }
 
 /**
  * Alias for [bandq]. Sets the BPF Q (bandwidth).
@@ -480,11 +553,15 @@ val StrudelPattern.bpq by dslPatternExtension { p, args, callInfo -> p.bandq(arg
  * @tags bpq, bandq, band pass filter, Q, bandwidth
  */
 @StrudelDsl
-val bpq by dslFunction { args, callInfo -> bandq(args, callInfo) }
+fun bpq(q: PatternLike): StrudelPattern = _bpq(listOf(q).asStrudelDslArgs())
+
+/** Alias for [bandq] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpq(q: PatternLike): StrudelPattern = this._bpq(listOf(q).asStrudelDslArgs())
 
 /** Alias for [bandq] on a string pattern. */
 @StrudelDsl
-val String.bpq by dslStringExtension { p, args, callInfo -> p.bandq(args, callInfo) }
+fun String.bpq(q: PatternLike): StrudelPattern = this._bpq(listOf(q).asStrudelDslArgs())
 
 // -- nresonance() / nres() - Notch Filter resonance ------------------------------------------------------------------
 
@@ -494,9 +571,9 @@ fun applyNresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): St
     return source._liftNumericField(args, nresonanceMutation)
 }
 
-/** Sets the notch filter Q on this pattern. */
-@StrudelDsl
-val StrudelPattern.nresonance by dslPatternExtension { p, args, /* callInfo */ _ -> applyNresonance(p, args) }
+internal val _nresonance by dslFunction { args, _ -> args.toPattern(nresonanceMutation) }
+internal val StrudelPattern._nresonance by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
+internal val String._nresonance by dslStringExtension { p, args, callInfo -> p._nresonance(args, callInfo) }
 
 /**
  * Sets the resonance (Q factor) of the Notch Filter.
@@ -517,15 +594,19 @@ val StrudelPattern.nresonance by dslPatternExtension { p, args, /* callInfo */ _
  * @tags nresonance, nres, notch filter, Q, resonance
  */
 @StrudelDsl
-val nresonance by dslFunction { args, /* callInfo */ _ -> args.toPattern(nresonanceMutation) }
+fun nresonance(q: PatternLike): StrudelPattern = _nresonance(listOf(q).asStrudelDslArgs())
+
+/** Sets the notch filter Q on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nresonance(q: PatternLike): StrudelPattern = this._nresonance(listOf(q).asStrudelDslArgs())
 
 /** Sets the notch filter Q on a string pattern. */
 @StrudelDsl
-val String.nresonance by dslStringExtension { p, args, callInfo -> p.nresonance(args, callInfo) }
+fun String.nresonance(q: PatternLike): StrudelPattern = this._nresonance(listOf(q).asStrudelDslArgs())
 
-/** Alias for [nresonance] on this pattern. */
-@StrudelDsl
-val StrudelPattern.nres by dslPatternExtension { p, args, callInfo -> p.nresonance(args, callInfo) }
+internal val _nres by dslFunction { args, _ -> args.toPattern(nresonanceMutation) }
+internal val StrudelPattern._nres by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
+internal val String._nres by dslStringExtension { p, args, callInfo -> p._nres(args, callInfo) }
 
 /**
  * Alias for [nresonance]. Sets the notch filter Q.
@@ -535,11 +616,15 @@ val StrudelPattern.nres by dslPatternExtension { p, args, callInfo -> p.nresonan
  * @tags nres, nresonance, notch filter, Q
  */
 @StrudelDsl
-val nres by dslFunction { args, callInfo -> nresonance(args, callInfo) }
+fun nres(q: PatternLike): StrudelPattern = _nres(listOf(q).asStrudelDslArgs())
+
+/** Alias for [nresonance] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nres(q: PatternLike): StrudelPattern = this._nres(listOf(q).asStrudelDslArgs())
 
 /** Alias for [nresonance] on a string pattern. */
 @StrudelDsl
-val String.nres by dslStringExtension { p, args, callInfo -> p.nresonance(args, callInfo) }
+fun String.nres(q: PatternLike): StrudelPattern = this._nres(listOf(q).asStrudelDslArgs())
 
 // -- lpattack() - Low Pass Filter Envelope Attack -----------------------------------------------------------------------
 
@@ -549,9 +634,9 @@ fun applyLpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, lpattackMutation)
 }
 
-/** Sets the LPF envelope attack time on this pattern. */
-@StrudelDsl
-val StrudelPattern.lpattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpattack(p, args) }
+internal val _lpattack by dslFunction { args, _ -> args.toPattern(lpattackMutation) }
+internal val StrudelPattern._lpattack by dslPatternExtension { p, args, _ -> applyLpattack(p, args) }
+internal val String._lpattack by dslStringExtension { p, args, callInfo -> p._lpattack(args, callInfo) }
 
 /**
  * Sets the LPF envelope attack time in seconds.
@@ -572,15 +657,19 @@ val StrudelPattern.lpattack by dslPatternExtension { p, args, /* callInfo */ _ -
  * @tags lpattack, lpa, low pass filter, envelope, attack
  */
 @StrudelDsl
-val lpattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpattackMutation) }
+fun lpattack(seconds: PatternLike): StrudelPattern = _lpattack(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the LPF envelope attack time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpattack(seconds: PatternLike): StrudelPattern = this._lpattack(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the LPF envelope attack time on a string pattern. */
 @StrudelDsl
-val String.lpattack by dslStringExtension { p, args, callInfo -> p.lpattack(args, callInfo) }
+fun String.lpattack(seconds: PatternLike): StrudelPattern = this._lpattack(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [lpattack] on this pattern. */
-@StrudelDsl
-val StrudelPattern.lpa by dslPatternExtension { p, args, callInfo -> p.lpattack(args, callInfo) }
+internal val _lpa by dslFunction { args, _ -> args.toPattern(lpattackMutation) }
+internal val StrudelPattern._lpa by dslPatternExtension { p, args, _ -> applyLpattack(p, args) }
+internal val String._lpa by dslStringExtension { p, args, callInfo -> p._lpa(args, callInfo) }
 
 /**
  * Alias for [lpattack]. Sets the LPF envelope attack time.
@@ -590,11 +679,15 @@ val StrudelPattern.lpa by dslPatternExtension { p, args, callInfo -> p.lpattack(
  * @tags lpa, lpattack, low pass filter, envelope, attack
  */
 @StrudelDsl
-val lpa by dslFunction { args, callInfo -> lpattack(args, callInfo) }
+fun lpa(seconds: PatternLike): StrudelPattern = _lpa(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [lpattack] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpa(seconds: PatternLike): StrudelPattern = this._lpa(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [lpattack] on a string pattern. */
 @StrudelDsl
-val String.lpa by dslStringExtension { p, args, callInfo -> p.lpattack(args, callInfo) }
+fun String.lpa(seconds: PatternLike): StrudelPattern = this._lpa(listOf(seconds).asStrudelDslArgs())
 
 // -- lpdecay() - Low Pass Filter Envelope Decay -------------------------------------------------------------------------
 
@@ -604,9 +697,9 @@ fun applyLpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, lpdecayMutation)
 }
 
-/** Sets the LPF envelope decay time on this pattern. */
-@StrudelDsl
-val StrudelPattern.lpdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpdecay(p, args) }
+internal val _lpdecay by dslFunction { args, _ -> args.toPattern(lpdecayMutation) }
+internal val StrudelPattern._lpdecay by dslPatternExtension { p, args, _ -> applyLpdecay(p, args) }
+internal val String._lpdecay by dslStringExtension { p, args, callInfo -> p._lpdecay(args, callInfo) }
 
 /**
  * Sets the LPF envelope decay time in seconds.
@@ -627,15 +720,19 @@ val StrudelPattern.lpdecay by dslPatternExtension { p, args, /* callInfo */ _ ->
  * @tags lpdecay, lpd, low pass filter, envelope, decay
  */
 @StrudelDsl
-val lpdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpdecayMutation) }
+fun lpdecay(seconds: PatternLike): StrudelPattern = _lpdecay(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the LPF envelope decay time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpdecay(seconds: PatternLike): StrudelPattern = this._lpdecay(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the LPF envelope decay time on a string pattern. */
 @StrudelDsl
-val String.lpdecay by dslStringExtension { p, args, callInfo -> p.lpdecay(args, callInfo) }
+fun String.lpdecay(seconds: PatternLike): StrudelPattern = this._lpdecay(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [lpdecay] on this pattern. */
-@StrudelDsl
-val StrudelPattern.lpd by dslPatternExtension { p, args, callInfo -> p.lpdecay(args, callInfo) }
+internal val _lpd by dslFunction { args, _ -> args.toPattern(lpdecayMutation) }
+internal val StrudelPattern._lpd by dslPatternExtension { p, args, _ -> applyLpdecay(p, args) }
+internal val String._lpd by dslStringExtension { p, args, callInfo -> p._lpd(args, callInfo) }
 
 /**
  * Alias for [lpdecay]. Sets the LPF envelope decay time.
@@ -645,11 +742,15 @@ val StrudelPattern.lpd by dslPatternExtension { p, args, callInfo -> p.lpdecay(a
  * @tags lpd, lpdecay, low pass filter, envelope, decay
  */
 @StrudelDsl
-val lpd by dslFunction { args, callInfo -> lpdecay(args, callInfo) }
+fun lpd(seconds: PatternLike): StrudelPattern = _lpd(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [lpdecay] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpd(seconds: PatternLike): StrudelPattern = this._lpd(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [lpdecay] on a string pattern. */
 @StrudelDsl
-val String.lpd by dslStringExtension { p, args, callInfo -> p.lpdecay(args, callInfo) }
+fun String.lpd(seconds: PatternLike): StrudelPattern = this._lpd(listOf(seconds).asStrudelDslArgs())
 
 // -- lpsustain() - Low Pass Filter Envelope Sustain ---------------------------------------------------------------------
 
@@ -659,9 +760,9 @@ fun applyLpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, lpsustainMutation)
 }
 
-/** Sets the LPF envelope sustain level on this pattern. */
-@StrudelDsl
-val StrudelPattern.lpsustain by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpsustain(p, args) }
+internal val _lpsustain by dslFunction { args, _ -> args.toPattern(lpsustainMutation) }
+internal val StrudelPattern._lpsustain by dslPatternExtension { p, args, _ -> applyLpsustain(p, args) }
+internal val String._lpsustain by dslStringExtension { p, args, callInfo -> p._lpsustain(args, callInfo) }
 
 /**
  * Sets the LPF envelope sustain level (0–1).
@@ -682,15 +783,19 @@ val StrudelPattern.lpsustain by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags lpsustain, lps, low pass filter, envelope, sustain
  */
 @StrudelDsl
-val lpsustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpsustainMutation) }
+fun lpsustain(level: PatternLike): StrudelPattern = _lpsustain(listOf(level).asStrudelDslArgs())
+
+/** Sets the LPF envelope sustain level on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpsustain(level: PatternLike): StrudelPattern = this._lpsustain(listOf(level).asStrudelDslArgs())
 
 /** Sets the LPF envelope sustain level on a string pattern. */
 @StrudelDsl
-val String.lpsustain by dslStringExtension { p, args, callInfo -> p.lpsustain(args, callInfo) }
+fun String.lpsustain(level: PatternLike): StrudelPattern = this._lpsustain(listOf(level).asStrudelDslArgs())
 
-/** Alias for [lpsustain] on this pattern. */
-@StrudelDsl
-val StrudelPattern.lps by dslPatternExtension { p, args, callInfo -> p.lpsustain(args, callInfo) }
+internal val _lps by dslFunction { args, _ -> args.toPattern(lpsustainMutation) }
+internal val StrudelPattern._lps by dslPatternExtension { p, args, _ -> applyLpsustain(p, args) }
+internal val String._lps by dslStringExtension { p, args, callInfo -> p._lps(args, callInfo) }
 
 /**
  * Alias for [lpsustain]. Sets the LPF envelope sustain level.
@@ -700,11 +805,15 @@ val StrudelPattern.lps by dslPatternExtension { p, args, callInfo -> p.lpsustain
  * @tags lps, lpsustain, low pass filter, envelope, sustain
  */
 @StrudelDsl
-val lps by dslFunction { args, callInfo -> lpsustain(args, callInfo) }
+fun lps(level: PatternLike): StrudelPattern = _lps(listOf(level).asStrudelDslArgs())
+
+/** Alias for [lpsustain] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lps(level: PatternLike): StrudelPattern = this._lps(listOf(level).asStrudelDslArgs())
 
 /** Alias for [lpsustain] on a string pattern. */
 @StrudelDsl
-val String.lps by dslStringExtension { p, args, callInfo -> p.lpsustain(args, callInfo) }
+fun String.lps(level: PatternLike): StrudelPattern = this._lps(listOf(level).asStrudelDslArgs())
 
 // -- lprelease() - Low Pass Filter Envelope Release ---------------------------------------------------------------------
 
@@ -714,9 +823,9 @@ fun applyLprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, lpreleaseMutation)
 }
 
-/** Sets the LPF envelope release time on this pattern. */
-@StrudelDsl
-val StrudelPattern.lprelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyLprelease(p, args) }
+internal val _lprelease by dslFunction { args, _ -> args.toPattern(lpreleaseMutation) }
+internal val StrudelPattern._lprelease by dslPatternExtension { p, args, _ -> applyLprelease(p, args) }
+internal val String._lprelease by dslStringExtension { p, args, callInfo -> p._lprelease(args, callInfo) }
 
 /**
  * Sets the LPF envelope release time in seconds.
@@ -737,15 +846,19 @@ val StrudelPattern.lprelease by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags lprelease, lpr, low pass filter, envelope, release
  */
 @StrudelDsl
-val lprelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpreleaseMutation) }
+fun lprelease(seconds: PatternLike): StrudelPattern = _lprelease(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the LPF envelope release time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lprelease(seconds: PatternLike): StrudelPattern = this._lprelease(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the LPF envelope release time on a string pattern. */
 @StrudelDsl
-val String.lprelease by dslStringExtension { p, args, callInfo -> p.lprelease(args, callInfo) }
+fun String.lprelease(seconds: PatternLike): StrudelPattern = this._lprelease(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [lprelease] on this pattern. */
-@StrudelDsl
-val StrudelPattern.lpr by dslPatternExtension { p, args, callInfo -> p.lprelease(args, callInfo) }
+internal val _lpr by dslFunction { args, _ -> args.toPattern(lpreleaseMutation) }
+internal val StrudelPattern._lpr by dslPatternExtension { p, args, _ -> applyLprelease(p, args) }
+internal val String._lpr by dslStringExtension { p, args, callInfo -> p._lpr(args, callInfo) }
 
 /**
  * Alias for [lprelease]. Sets the LPF envelope release time.
@@ -755,11 +868,15 @@ val StrudelPattern.lpr by dslPatternExtension { p, args, callInfo -> p.lprelease
  * @tags lpr, lprelease, low pass filter, envelope, release
  */
 @StrudelDsl
-val lpr by dslFunction { args, callInfo -> lprelease(args, callInfo) }
+fun lpr(seconds: PatternLike): StrudelPattern = _lpr(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [lprelease] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpr(seconds: PatternLike): StrudelPattern = this._lpr(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [lprelease] on a string pattern. */
 @StrudelDsl
-val String.lpr by dslStringExtension { p, args, callInfo -> p.lprelease(args, callInfo) }
+fun String.lpr(seconds: PatternLike): StrudelPattern = this._lpr(listOf(seconds).asStrudelDslArgs())
 
 // -- lpenv() - Low Pass Filter Envelope Depth ---------------------------------------------------------------------------
 
@@ -769,9 +886,9 @@ fun applyLpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftNumericField(args, lpenvMutation)
 }
 
-/** Sets the LPF envelope depth/amount on this pattern. */
-@StrudelDsl
-val StrudelPattern.lpenv by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpenv(p, args) }
+internal val _lpenv by dslFunction { args, _ -> args.toPattern(lpenvMutation) }
+internal val StrudelPattern._lpenv by dslPatternExtension { p, args, _ -> applyLpenv(p, args) }
+internal val String._lpenv by dslStringExtension { p, args, callInfo -> p._lpenv(args, callInfo) }
 
 /**
  * Sets the LPF envelope depth (modulation amount) in Hz.
@@ -793,15 +910,19 @@ val StrudelPattern.lpenv by dslPatternExtension { p, args, /* callInfo */ _ -> a
  * @tags lpenv, lpe, low pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-val lpenv by dslFunction { args, /* callInfo */ _ -> args.toPattern(lpenvMutation) }
+fun lpenv(depth: PatternLike): StrudelPattern = _lpenv(listOf(depth).asStrudelDslArgs())
+
+/** Sets the LPF envelope depth/amount on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpenv(depth: PatternLike): StrudelPattern = this._lpenv(listOf(depth).asStrudelDslArgs())
 
 /** Sets the LPF envelope depth/amount on a string pattern. */
 @StrudelDsl
-val String.lpenv by dslStringExtension { p, args, callInfo -> p.lpenv(args, callInfo) }
+fun String.lpenv(depth: PatternLike): StrudelPattern = this._lpenv(listOf(depth).asStrudelDslArgs())
 
-/** Alias for [lpenv] on this pattern. */
-@StrudelDsl
-val StrudelPattern.lpe by dslPatternExtension { p, args, callInfo -> p.lpenv(args, callInfo) }
+internal val _lpe by dslFunction { args, _ -> args.toPattern(lpenvMutation) }
+internal val StrudelPattern._lpe by dslPatternExtension { p, args, _ -> applyLpenv(p, args) }
+internal val String._lpe by dslStringExtension { p, args, callInfo -> p._lpe(args, callInfo) }
 
 /**
  * Alias for [lpenv]. Sets the LPF envelope depth.
@@ -811,11 +932,15 @@ val StrudelPattern.lpe by dslPatternExtension { p, args, callInfo -> p.lpenv(arg
  * @tags lpe, lpenv, low pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-val lpe by dslFunction { args, callInfo -> lpenv(args, callInfo) }
+fun lpe(depth: PatternLike): StrudelPattern = _lpe(listOf(depth).asStrudelDslArgs())
+
+/** Alias for [lpenv] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.lpe(depth: PatternLike): StrudelPattern = this._lpe(listOf(depth).asStrudelDslArgs())
 
 /** Alias for [lpenv] on a string pattern. */
 @StrudelDsl
-val String.lpe by dslStringExtension { p, args, callInfo -> p.lpenv(args, callInfo) }
+fun String.lpe(depth: PatternLike): StrudelPattern = this._lpe(listOf(depth).asStrudelDslArgs())
 
 // -- hpattack() - High Pass Filter Envelope Attack ----------------------------------------------------------------------
 
@@ -825,9 +950,9 @@ fun applyHpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, hpattackMutation)
 }
 
-/** Sets the HPF envelope attack time on this pattern. */
-@StrudelDsl
-val StrudelPattern.hpattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpattack(p, args) }
+internal val _hpattack by dslFunction { args, _ -> args.toPattern(hpattackMutation) }
+internal val StrudelPattern._hpattack by dslPatternExtension { p, args, _ -> applyHpattack(p, args) }
+internal val String._hpattack by dslStringExtension { p, args, callInfo -> p._hpattack(args, callInfo) }
 
 /**
  * Sets the HPF envelope attack time in seconds.
@@ -848,15 +973,19 @@ val StrudelPattern.hpattack by dslPatternExtension { p, args, /* callInfo */ _ -
  * @tags hpattack, hpa, high pass filter, envelope, attack
  */
 @StrudelDsl
-val hpattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpattackMutation) }
+fun hpattack(seconds: PatternLike): StrudelPattern = _hpattack(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the HPF envelope attack time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpattack(seconds: PatternLike): StrudelPattern = this._hpattack(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the HPF envelope attack time on a string pattern. */
 @StrudelDsl
-val String.hpattack by dslStringExtension { p, args, callInfo -> p.hpattack(args, callInfo) }
+fun String.hpattack(seconds: PatternLike): StrudelPattern = this._hpattack(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [hpattack] on this pattern. */
-@StrudelDsl
-val StrudelPattern.hpa by dslPatternExtension { p, args, callInfo -> p.hpattack(args, callInfo) }
+internal val _hpa by dslFunction { args, _ -> args.toPattern(hpattackMutation) }
+internal val StrudelPattern._hpa by dslPatternExtension { p, args, _ -> applyHpattack(p, args) }
+internal val String._hpa by dslStringExtension { p, args, callInfo -> p._hpa(args, callInfo) }
 
 /**
  * Alias for [hpattack]. Sets the HPF envelope attack time.
@@ -866,11 +995,15 @@ val StrudelPattern.hpa by dslPatternExtension { p, args, callInfo -> p.hpattack(
  * @tags hpa, hpattack, high pass filter, envelope, attack
  */
 @StrudelDsl
-val hpa by dslFunction { args, callInfo -> hpattack(args, callInfo) }
+fun hpa(seconds: PatternLike): StrudelPattern = _hpa(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [hpattack] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpa(seconds: PatternLike): StrudelPattern = this._hpa(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [hpattack] on a string pattern. */
 @StrudelDsl
-val String.hpa by dslStringExtension { p, args, callInfo -> p.hpattack(args, callInfo) }
+fun String.hpa(seconds: PatternLike): StrudelPattern = this._hpa(listOf(seconds).asStrudelDslArgs())
 
 // -- hpdecay() - High Pass Filter Envelope Decay ------------------------------------------------------------------------
 
@@ -880,9 +1013,9 @@ fun applyHpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, hpdecayMutation)
 }
 
-/** Sets the HPF envelope decay time on this pattern. */
-@StrudelDsl
-val StrudelPattern.hpdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpdecay(p, args) }
+internal val _hpdecay by dslFunction { args, _ -> args.toPattern(hpdecayMutation) }
+internal val StrudelPattern._hpdecay by dslPatternExtension { p, args, _ -> applyHpdecay(p, args) }
+internal val String._hpdecay by dslStringExtension { p, args, callInfo -> p._hpdecay(args, callInfo) }
 
 /**
  * Sets the HPF envelope decay time in seconds.
@@ -903,15 +1036,19 @@ val StrudelPattern.hpdecay by dslPatternExtension { p, args, /* callInfo */ _ ->
  * @tags hpdecay, hpd, high pass filter, envelope, decay
  */
 @StrudelDsl
-val hpdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpdecayMutation) }
+fun hpdecay(seconds: PatternLike): StrudelPattern = _hpdecay(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the HPF envelope decay time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpdecay(seconds: PatternLike): StrudelPattern = this._hpdecay(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the HPF envelope decay time on a string pattern. */
 @StrudelDsl
-val String.hpdecay by dslStringExtension { p, args, callInfo -> p.hpdecay(args, callInfo) }
+fun String.hpdecay(seconds: PatternLike): StrudelPattern = this._hpdecay(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [hpdecay] on this pattern. */
-@StrudelDsl
-val StrudelPattern.hpd by dslPatternExtension { p, args, callInfo -> p.hpdecay(args, callInfo) }
+internal val _hpd by dslFunction { args, _ -> args.toPattern(hpdecayMutation) }
+internal val StrudelPattern._hpd by dslPatternExtension { p, args, _ -> applyHpdecay(p, args) }
+internal val String._hpd by dslStringExtension { p, args, callInfo -> p._hpd(args, callInfo) }
 
 /**
  * Alias for [hpdecay]. Sets the HPF envelope decay time.
@@ -921,11 +1058,15 @@ val StrudelPattern.hpd by dslPatternExtension { p, args, callInfo -> p.hpdecay(a
  * @tags hpd, hpdecay, high pass filter, envelope, decay
  */
 @StrudelDsl
-val hpd by dslFunction { args, callInfo -> hpdecay(args, callInfo) }
+fun hpd(seconds: PatternLike): StrudelPattern = _hpd(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [hpdecay] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpd(seconds: PatternLike): StrudelPattern = this._hpd(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [hpdecay] on a string pattern. */
 @StrudelDsl
-val String.hpd by dslStringExtension { p, args, callInfo -> p.hpdecay(args, callInfo) }
+fun String.hpd(seconds: PatternLike): StrudelPattern = this._hpd(listOf(seconds).asStrudelDslArgs())
 
 // -- hpsustain() - High Pass Filter Envelope Sustain --------------------------------------------------------------------
 
@@ -935,9 +1076,9 @@ fun applyHpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, hpsustainMutation)
 }
 
-/** Sets the HPF envelope sustain level on this pattern. */
-@StrudelDsl
-val StrudelPattern.hpsustain by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpsustain(p, args) }
+internal val _hpsustain by dslFunction { args, _ -> args.toPattern(hpsustainMutation) }
+internal val StrudelPattern._hpsustain by dslPatternExtension { p, args, _ -> applyHpsustain(p, args) }
+internal val String._hpsustain by dslStringExtension { p, args, callInfo -> p._hpsustain(args, callInfo) }
 
 /**
  * Sets the HPF envelope sustain level (0–1).
@@ -959,15 +1100,19 @@ val StrudelPattern.hpsustain by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags hpsustain, hps, high pass filter, envelope, sustain
  */
 @StrudelDsl
-val hpsustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpsustainMutation) }
+fun hpsustain(level: PatternLike): StrudelPattern = _hpsustain(listOf(level).asStrudelDslArgs())
+
+/** Sets the HPF envelope sustain level on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpsustain(level: PatternLike): StrudelPattern = this._hpsustain(listOf(level).asStrudelDslArgs())
 
 /** Sets the HPF envelope sustain level on a string pattern. */
 @StrudelDsl
-val String.hpsustain by dslStringExtension { p, args, callInfo -> p.hpsustain(args, callInfo) }
+fun String.hpsustain(level: PatternLike): StrudelPattern = this._hpsustain(listOf(level).asStrudelDslArgs())
 
-/** Alias for [hpsustain] on this pattern. */
-@StrudelDsl
-val StrudelPattern.hps by dslPatternExtension { p, args, callInfo -> p.hpsustain(args, callInfo) }
+internal val _hps by dslFunction { args, _ -> args.toPattern(hpsustainMutation) }
+internal val StrudelPattern._hps by dslPatternExtension { p, args, _ -> applyHpsustain(p, args) }
+internal val String._hps by dslStringExtension { p, args, callInfo -> p._hps(args, callInfo) }
 
 /**
  * Alias for [hpsustain]. Sets the HPF envelope sustain level.
@@ -977,11 +1122,15 @@ val StrudelPattern.hps by dslPatternExtension { p, args, callInfo -> p.hpsustain
  * @tags hps, hpsustain, high pass filter, envelope, sustain
  */
 @StrudelDsl
-val hps by dslFunction { args, callInfo -> hpsustain(args, callInfo) }
+fun hps(level: PatternLike): StrudelPattern = _hps(listOf(level).asStrudelDslArgs())
+
+/** Alias for [hpsustain] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hps(level: PatternLike): StrudelPattern = this._hps(listOf(level).asStrudelDslArgs())
 
 /** Alias for [hpsustain] on a string pattern. */
 @StrudelDsl
-val String.hps by dslStringExtension { p, args, callInfo -> p.hpsustain(args, callInfo) }
+fun String.hps(level: PatternLike): StrudelPattern = this._hps(listOf(level).asStrudelDslArgs())
 
 // -- hprelease() - High Pass Filter Envelope Release --------------------------------------------------------------------
 
@@ -991,9 +1140,9 @@ fun applyHprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, hpreleaseMutation)
 }
 
-/** Sets the HPF envelope release time on this pattern. */
-@StrudelDsl
-val StrudelPattern.hprelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyHprelease(p, args) }
+internal val _hprelease by dslFunction { args, _ -> args.toPattern(hpreleaseMutation) }
+internal val StrudelPattern._hprelease by dslPatternExtension { p, args, _ -> applyHprelease(p, args) }
+internal val String._hprelease by dslStringExtension { p, args, callInfo -> p._hprelease(args, callInfo) }
 
 /**
  * Sets the HPF envelope release time in seconds.
@@ -1014,15 +1163,19 @@ val StrudelPattern.hprelease by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags hprelease, hpr, high pass filter, envelope, release
  */
 @StrudelDsl
-val hprelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpreleaseMutation) }
+fun hprelease(seconds: PatternLike): StrudelPattern = _hprelease(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the HPF envelope release time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hprelease(seconds: PatternLike): StrudelPattern = this._hprelease(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the HPF envelope release time on a string pattern. */
 @StrudelDsl
-val String.hprelease by dslStringExtension { p, args, callInfo -> p.hprelease(args, callInfo) }
+fun String.hprelease(seconds: PatternLike): StrudelPattern = this._hprelease(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [hprelease] on this pattern. */
-@StrudelDsl
-val StrudelPattern.hpr by dslPatternExtension { p, args, callInfo -> p.hprelease(args, callInfo) }
+internal val _hpr by dslFunction { args, _ -> args.toPattern(hpreleaseMutation) }
+internal val StrudelPattern._hpr by dslPatternExtension { p, args, _ -> applyHprelease(p, args) }
+internal val String._hpr by dslStringExtension { p, args, callInfo -> p._hpr(args, callInfo) }
 
 /**
  * Alias for [hprelease]. Sets the HPF envelope release time.
@@ -1032,11 +1185,15 @@ val StrudelPattern.hpr by dslPatternExtension { p, args, callInfo -> p.hprelease
  * @tags hpr, hprelease, high pass filter, envelope, release
  */
 @StrudelDsl
-val hpr by dslFunction { args, callInfo -> hprelease(args, callInfo) }
+fun hpr(seconds: PatternLike): StrudelPattern = _hpr(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [hprelease] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpr(seconds: PatternLike): StrudelPattern = this._hpr(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [hprelease] on a string pattern. */
 @StrudelDsl
-val String.hpr by dslStringExtension { p, args, callInfo -> p.hprelease(args, callInfo) }
+fun String.hpr(seconds: PatternLike): StrudelPattern = this._hpr(listOf(seconds).asStrudelDslArgs())
 
 // -- hpenv() - High Pass Filter Envelope Depth --------------------------------------------------------------------------
 
@@ -1046,9 +1203,9 @@ fun applyHpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftNumericField(args, hpenvMutation)
 }
 
-/** Sets the HPF envelope depth/amount on this pattern. */
-@StrudelDsl
-val StrudelPattern.hpenv by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpenv(p, args) }
+internal val _hpenv by dslFunction { args, _ -> args.toPattern(hpenvMutation) }
+internal val StrudelPattern._hpenv by dslPatternExtension { p, args, _ -> applyHpenv(p, args) }
+internal val String._hpenv by dslStringExtension { p, args, callInfo -> p._hpenv(args, callInfo) }
 
 /**
  * Sets the HPF envelope depth (modulation amount) in Hz.
@@ -1070,15 +1227,19 @@ val StrudelPattern.hpenv by dslPatternExtension { p, args, /* callInfo */ _ -> a
  * @tags hpenv, hpe, high pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-val hpenv by dslFunction { args, /* callInfo */ _ -> args.toPattern(hpenvMutation) }
+fun hpenv(depth: PatternLike): StrudelPattern = _hpenv(listOf(depth).asStrudelDslArgs())
+
+/** Sets the HPF envelope depth/amount on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpenv(depth: PatternLike): StrudelPattern = this._hpenv(listOf(depth).asStrudelDslArgs())
 
 /** Sets the HPF envelope depth/amount on a string pattern. */
 @StrudelDsl
-val String.hpenv by dslStringExtension { p, args, callInfo -> p.hpenv(args, callInfo) }
+fun String.hpenv(depth: PatternLike): StrudelPattern = this._hpenv(listOf(depth).asStrudelDslArgs())
 
-/** Alias for [hpenv] on this pattern. */
-@StrudelDsl
-val StrudelPattern.hpe by dslPatternExtension { p, args, callInfo -> p.hpenv(args, callInfo) }
+internal val _hpe by dslFunction { args, _ -> args.toPattern(hpenvMutation) }
+internal val StrudelPattern._hpe by dslPatternExtension { p, args, _ -> applyHpenv(p, args) }
+internal val String._hpe by dslStringExtension { p, args, callInfo -> p._hpe(args, callInfo) }
 
 /**
  * Alias for [hpenv]. Sets the HPF envelope depth.
@@ -1088,11 +1249,15 @@ val StrudelPattern.hpe by dslPatternExtension { p, args, callInfo -> p.hpenv(arg
  * @tags hpe, hpenv, high pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-val hpe by dslFunction { args, callInfo -> hpenv(args, callInfo) }
+fun hpe(depth: PatternLike): StrudelPattern = _hpe(listOf(depth).asStrudelDslArgs())
+
+/** Alias for [hpenv] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.hpe(depth: PatternLike): StrudelPattern = this._hpe(listOf(depth).asStrudelDslArgs())
 
 /** Alias for [hpenv] on a string pattern. */
 @StrudelDsl
-val String.hpe by dslStringExtension { p, args, callInfo -> p.hpenv(args, callInfo) }
+fun String.hpe(depth: PatternLike): StrudelPattern = this._hpe(listOf(depth).asStrudelDslArgs())
 
 // -- bpattack() - Band Pass Filter Envelope Attack ----------------------------------------------------------------------
 
@@ -1102,9 +1267,9 @@ fun applyBpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, bpattackMutation)
 }
 
-/** Sets the BPF envelope attack time on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpattack(p, args) }
+internal val _bpattack by dslFunction { args, _ -> args.toPattern(bpattackMutation) }
+internal val StrudelPattern._bpattack by dslPatternExtension { p, args, _ -> applyBpattack(p, args) }
+internal val String._bpattack by dslStringExtension { p, args, callInfo -> p._bpattack(args, callInfo) }
 
 /**
  * Sets the BPF envelope attack time in seconds.
@@ -1125,15 +1290,19 @@ val StrudelPattern.bpattack by dslPatternExtension { p, args, /* callInfo */ _ -
  * @tags bpattack, bpa, band pass filter, envelope, attack
  */
 @StrudelDsl
-val bpattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpattackMutation) }
+fun bpattack(seconds: PatternLike): StrudelPattern = _bpattack(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the BPF envelope attack time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpattack(seconds: PatternLike): StrudelPattern = this._bpattack(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the BPF envelope attack time on a string pattern. */
 @StrudelDsl
-val String.bpattack by dslStringExtension { p, args, callInfo -> p.bpattack(args, callInfo) }
+fun String.bpattack(seconds: PatternLike): StrudelPattern = this._bpattack(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [bpattack] on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpa by dslPatternExtension { p, args, callInfo -> p.bpattack(args, callInfo) }
+internal val _bpa by dslFunction { args, _ -> args.toPattern(bpattackMutation) }
+internal val StrudelPattern._bpa by dslPatternExtension { p, args, _ -> applyBpattack(p, args) }
+internal val String._bpa by dslStringExtension { p, args, callInfo -> p._bpa(args, callInfo) }
 
 /**
  * Alias for [bpattack]. Sets the BPF envelope attack time.
@@ -1143,11 +1312,15 @@ val StrudelPattern.bpa by dslPatternExtension { p, args, callInfo -> p.bpattack(
  * @tags bpa, bpattack, band pass filter, envelope, attack
  */
 @StrudelDsl
-val bpa by dslFunction { args, callInfo -> bpattack(args, callInfo) }
+fun bpa(seconds: PatternLike): StrudelPattern = _bpa(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [bpattack] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpa(seconds: PatternLike): StrudelPattern = this._bpa(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [bpattack] on a string pattern. */
 @StrudelDsl
-val String.bpa by dslStringExtension { p, args, callInfo -> p.bpattack(args, callInfo) }
+fun String.bpa(seconds: PatternLike): StrudelPattern = this._bpa(listOf(seconds).asStrudelDslArgs())
 
 // -- bpdecay() - Band Pass Filter Envelope Decay ------------------------------------------------------------------------
 
@@ -1157,9 +1330,9 @@ fun applyBpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, bpdecayMutation)
 }
 
-/** Sets the BPF envelope decay time on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpdecay(p, args) }
+internal val _bpdecay by dslFunction { args, _ -> args.toPattern(bpdecayMutation) }
+internal val StrudelPattern._bpdecay by dslPatternExtension { p, args, _ -> applyBpdecay(p, args) }
+internal val String._bpdecay by dslStringExtension { p, args, callInfo -> p._bpdecay(args, callInfo) }
 
 /**
  * Sets the BPF envelope decay time in seconds.
@@ -1180,15 +1353,19 @@ val StrudelPattern.bpdecay by dslPatternExtension { p, args, /* callInfo */ _ ->
  * @tags bpdecay, bpd, band pass filter, envelope, decay
  */
 @StrudelDsl
-val bpdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpdecayMutation) }
+fun bpdecay(seconds: PatternLike): StrudelPattern = _bpdecay(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the BPF envelope decay time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpdecay(seconds: PatternLike): StrudelPattern = this._bpdecay(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the BPF envelope decay time on a string pattern. */
 @StrudelDsl
-val String.bpdecay by dslStringExtension { p, args, callInfo -> p.bpdecay(args, callInfo) }
+fun String.bpdecay(seconds: PatternLike): StrudelPattern = this._bpdecay(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [bpdecay] on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpd by dslPatternExtension { p, args, callInfo -> p.bpdecay(args, callInfo) }
+internal val _bpd by dslFunction { args, _ -> args.toPattern(bpdecayMutation) }
+internal val StrudelPattern._bpd by dslPatternExtension { p, args, _ -> applyBpdecay(p, args) }
+internal val String._bpd by dslStringExtension { p, args, callInfo -> p._bpd(args, callInfo) }
 
 /**
  * Alias for [bpdecay]. Sets the BPF envelope decay time.
@@ -1198,11 +1375,15 @@ val StrudelPattern.bpd by dslPatternExtension { p, args, callInfo -> p.bpdecay(a
  * @tags bpd, bpdecay, band pass filter, envelope, decay
  */
 @StrudelDsl
-val bpd by dslFunction { args, callInfo -> bpdecay(args, callInfo) }
+fun bpd(seconds: PatternLike): StrudelPattern = _bpd(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [bpdecay] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpd(seconds: PatternLike): StrudelPattern = this._bpd(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [bpdecay] on a string pattern. */
 @StrudelDsl
-val String.bpd by dslStringExtension { p, args, callInfo -> p.bpdecay(args, callInfo) }
+fun String.bpd(seconds: PatternLike): StrudelPattern = this._bpd(listOf(seconds).asStrudelDslArgs())
 
 // -- bpsustain() - Band Pass Filter Envelope Sustain --------------------------------------------------------------------
 
@@ -1212,9 +1393,9 @@ fun applyBpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, bpsustainMutation)
 }
 
-/** Sets the BPF envelope sustain level on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpsustain by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpsustain(p, args) }
+internal val _bpsustain by dslFunction { args, _ -> args.toPattern(bpsustainMutation) }
+internal val StrudelPattern._bpsustain by dslPatternExtension { p, args, _ -> applyBpsustain(p, args) }
+internal val String._bpsustain by dslStringExtension { p, args, callInfo -> p._bpsustain(args, callInfo) }
 
 /**
  * Sets the BPF envelope sustain level (0–1).
@@ -1236,15 +1417,19 @@ val StrudelPattern.bpsustain by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags bpsustain, bps, band pass filter, envelope, sustain
  */
 @StrudelDsl
-val bpsustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpsustainMutation) }
+fun bpsustain(level: PatternLike): StrudelPattern = _bpsustain(listOf(level).asStrudelDslArgs())
+
+/** Sets the BPF envelope sustain level on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpsustain(level: PatternLike): StrudelPattern = this._bpsustain(listOf(level).asStrudelDslArgs())
 
 /** Sets the BPF envelope sustain level on a string pattern. */
 @StrudelDsl
-val String.bpsustain by dslStringExtension { p, args, callInfo -> p.bpsustain(args, callInfo) }
+fun String.bpsustain(level: PatternLike): StrudelPattern = this._bpsustain(listOf(level).asStrudelDslArgs())
 
-/** Alias for [bpsustain] on this pattern. */
-@StrudelDsl
-val StrudelPattern.bps by dslPatternExtension { p, args, callInfo -> p.bpsustain(args, callInfo) }
+internal val _bps by dslFunction { args, _ -> args.toPattern(bpsustainMutation) }
+internal val StrudelPattern._bps by dslPatternExtension { p, args, _ -> applyBpsustain(p, args) }
+internal val String._bps by dslStringExtension { p, args, callInfo -> p._bps(args, callInfo) }
 
 /**
  * Alias for [bpsustain]. Sets the BPF envelope sustain level.
@@ -1254,11 +1439,15 @@ val StrudelPattern.bps by dslPatternExtension { p, args, callInfo -> p.bpsustain
  * @tags bps, bpsustain, band pass filter, envelope, sustain
  */
 @StrudelDsl
-val bps by dslFunction { args, callInfo -> bpsustain(args, callInfo) }
+fun bps(level: PatternLike): StrudelPattern = _bps(listOf(level).asStrudelDslArgs())
+
+/** Alias for [bpsustain] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bps(level: PatternLike): StrudelPattern = this._bps(listOf(level).asStrudelDslArgs())
 
 /** Alias for [bpsustain] on a string pattern. */
 @StrudelDsl
-val String.bps by dslStringExtension { p, args, callInfo -> p.bpsustain(args, callInfo) }
+fun String.bps(level: PatternLike): StrudelPattern = this._bps(listOf(level).asStrudelDslArgs())
 
 // -- bprelease() - Band Pass Filter Envelope Release --------------------------------------------------------------------
 
@@ -1268,9 +1457,9 @@ fun applyBprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, bpreleaseMutation)
 }
 
-/** Sets the BPF envelope release time on this pattern. */
-@StrudelDsl
-val StrudelPattern.bprelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyBprelease(p, args) }
+internal val _bprelease by dslFunction { args, _ -> args.toPattern(bpreleaseMutation) }
+internal val StrudelPattern._bprelease by dslPatternExtension { p, args, _ -> applyBprelease(p, args) }
+internal val String._bprelease by dslStringExtension { p, args, callInfo -> p._bprelease(args, callInfo) }
 
 /**
  * Sets the BPF envelope release time in seconds.
@@ -1291,15 +1480,19 @@ val StrudelPattern.bprelease by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags bprelease, bpr, band pass filter, envelope, release
  */
 @StrudelDsl
-val bprelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpreleaseMutation) }
+fun bprelease(seconds: PatternLike): StrudelPattern = _bprelease(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the BPF envelope release time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bprelease(seconds: PatternLike): StrudelPattern = this._bprelease(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the BPF envelope release time on a string pattern. */
 @StrudelDsl
-val String.bprelease by dslStringExtension { p, args, callInfo -> p.bprelease(args, callInfo) }
+fun String.bprelease(seconds: PatternLike): StrudelPattern = this._bprelease(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [bprelease] on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpr by dslPatternExtension { p, args, callInfo -> p.bprelease(args, callInfo) }
+internal val _bpr by dslFunction { args, _ -> args.toPattern(bpreleaseMutation) }
+internal val StrudelPattern._bpr by dslPatternExtension { p, args, _ -> applyBprelease(p, args) }
+internal val String._bpr by dslStringExtension { p, args, callInfo -> p._bpr(args, callInfo) }
 
 /**
  * Alias for [bprelease]. Sets the BPF envelope release time.
@@ -1309,11 +1502,15 @@ val StrudelPattern.bpr by dslPatternExtension { p, args, callInfo -> p.bprelease
  * @tags bpr, bprelease, band pass filter, envelope, release
  */
 @StrudelDsl
-val bpr by dslFunction { args, callInfo -> bprelease(args, callInfo) }
+fun bpr(seconds: PatternLike): StrudelPattern = _bpr(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [bprelease] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpr(seconds: PatternLike): StrudelPattern = this._bpr(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [bprelease] on a string pattern. */
 @StrudelDsl
-val String.bpr by dslStringExtension { p, args, callInfo -> p.bprelease(args, callInfo) }
+fun String.bpr(seconds: PatternLike): StrudelPattern = this._bpr(listOf(seconds).asStrudelDslArgs())
 
 // -- bpenv() - Band Pass Filter Envelope Depth --------------------------------------------------------------------------
 
@@ -1323,9 +1520,9 @@ fun applyBpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftNumericField(args, bpenvMutation)
 }
 
-/** Sets the BPF envelope depth/amount on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpenv by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpenv(p, args) }
+internal val _bpenv by dslFunction { args, _ -> args.toPattern(bpenvMutation) }
+internal val StrudelPattern._bpenv by dslPatternExtension { p, args, _ -> applyBpenv(p, args) }
+internal val String._bpenv by dslStringExtension { p, args, callInfo -> p._bpenv(args, callInfo) }
 
 /**
  * Sets the BPF envelope depth (modulation amount) in Hz.
@@ -1347,15 +1544,19 @@ val StrudelPattern.bpenv by dslPatternExtension { p, args, /* callInfo */ _ -> a
  * @tags bpenv, bpe, band pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-val bpenv by dslFunction { args, /* callInfo */ _ -> args.toPattern(bpenvMutation) }
+fun bpenv(depth: PatternLike): StrudelPattern = _bpenv(listOf(depth).asStrudelDslArgs())
+
+/** Sets the BPF envelope depth/amount on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpenv(depth: PatternLike): StrudelPattern = this._bpenv(listOf(depth).asStrudelDslArgs())
 
 /** Sets the BPF envelope depth/amount on a string pattern. */
 @StrudelDsl
-val String.bpenv by dslStringExtension { p, args, callInfo -> p.bpenv(args, callInfo) }
+fun String.bpenv(depth: PatternLike): StrudelPattern = this._bpenv(listOf(depth).asStrudelDslArgs())
 
-/** Alias for [bpenv] on this pattern. */
-@StrudelDsl
-val StrudelPattern.bpe by dslPatternExtension { p, args, callInfo -> p.bpenv(args, callInfo) }
+internal val _bpe by dslFunction { args, _ -> args.toPattern(bpenvMutation) }
+internal val StrudelPattern._bpe by dslPatternExtension { p, args, _ -> applyBpenv(p, args) }
+internal val String._bpe by dslStringExtension { p, args, callInfo -> p._bpe(args, callInfo) }
 
 /**
  * Alias for [bpenv]. Sets the BPF envelope depth.
@@ -1365,11 +1566,15 @@ val StrudelPattern.bpe by dslPatternExtension { p, args, callInfo -> p.bpenv(arg
  * @tags bpe, bpenv, band pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-val bpe by dslFunction { args, callInfo -> bpenv(args, callInfo) }
+fun bpe(depth: PatternLike): StrudelPattern = _bpe(listOf(depth).asStrudelDslArgs())
+
+/** Alias for [bpenv] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.bpe(depth: PatternLike): StrudelPattern = this._bpe(listOf(depth).asStrudelDslArgs())
 
 /** Alias for [bpenv] on a string pattern. */
 @StrudelDsl
-val String.bpe by dslStringExtension { p, args, callInfo -> p.bpenv(args, callInfo) }
+fun String.bpe(depth: PatternLike): StrudelPattern = this._bpe(listOf(depth).asStrudelDslArgs())
 
 // -- nfattack() - Notch Filter Envelope Attack (NOT IN ORIGINAL STRUDEL) -------------------------------------------------
 
@@ -1379,9 +1584,9 @@ fun applyNfattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, nfattackMutation)
 }
 
-/** Sets the notch filter envelope attack time on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfattack(p, args) }
+internal val _nfattack by dslFunction { args, _ -> args.toPattern(nfattackMutation) }
+internal val StrudelPattern._nfattack by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
+internal val String._nfattack by dslStringExtension { p, args, callInfo -> p._nfattack(args, callInfo) }
 
 /**
  * Sets the notch filter envelope attack time in seconds.
@@ -1402,15 +1607,19 @@ val StrudelPattern.nfattack by dslPatternExtension { p, args, /* callInfo */ _ -
  * @tags nfattack, nfa, notch filter, envelope, attack
  */
 @StrudelDsl
-val nfattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfattackMutation) }
+fun nfattack(seconds: PatternLike): StrudelPattern = _nfattack(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the notch filter envelope attack time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfattack(seconds: PatternLike): StrudelPattern = this._nfattack(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the notch filter envelope attack time on a string pattern. */
 @StrudelDsl
-val String.nfattack by dslStringExtension { p, args, callInfo -> p.nfattack(args, callInfo) }
+fun String.nfattack(seconds: PatternLike): StrudelPattern = this._nfattack(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [nfattack] on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfa by dslPatternExtension { p, args, callInfo -> p.nfattack(args, callInfo) }
+internal val _nfa by dslFunction { args, _ -> args.toPattern(nfattackMutation) }
+internal val StrudelPattern._nfa by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
+internal val String._nfa by dslStringExtension { p, args, callInfo -> p._nfa(args, callInfo) }
 
 /**
  * Alias for [nfattack]. Sets the notch filter envelope attack time.
@@ -1420,11 +1629,15 @@ val StrudelPattern.nfa by dslPatternExtension { p, args, callInfo -> p.nfattack(
  * @tags nfa, nfattack, notch filter, envelope, attack
  */
 @StrudelDsl
-val nfa by dslFunction { args, callInfo -> nfattack(args, callInfo) }
+fun nfa(seconds: PatternLike): StrudelPattern = _nfa(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [nfattack] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfa(seconds: PatternLike): StrudelPattern = this._nfa(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [nfattack] on a string pattern. */
 @StrudelDsl
-val String.nfa by dslStringExtension { p, args, callInfo -> p.nfattack(args, callInfo) }
+fun String.nfa(seconds: PatternLike): StrudelPattern = this._nfa(listOf(seconds).asStrudelDslArgs())
 
 // -- nfdecay() - Notch Filter Envelope Decay (NOT IN ORIGINAL STRUDEL) ---------------------------------------------------
 
@@ -1434,9 +1647,9 @@ fun applyNfdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, nfdecayMutation)
 }
 
-/** Sets the notch filter envelope decay time on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfdecay(p, args) }
+internal val _nfdecay by dslFunction { args, _ -> args.toPattern(nfdecayMutation) }
+internal val StrudelPattern._nfdecay by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
+internal val String._nfdecay by dslStringExtension { p, args, callInfo -> p._nfdecay(args, callInfo) }
 
 /**
  * Sets the notch filter envelope decay time in seconds.
@@ -1457,15 +1670,19 @@ val StrudelPattern.nfdecay by dslPatternExtension { p, args, /* callInfo */ _ ->
  * @tags nfdecay, nfd, notch filter, envelope, decay
  */
 @StrudelDsl
-val nfdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfdecayMutation) }
+fun nfdecay(seconds: PatternLike): StrudelPattern = _nfdecay(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the notch filter envelope decay time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfdecay(seconds: PatternLike): StrudelPattern = this._nfdecay(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the notch filter envelope decay time on a string pattern. */
 @StrudelDsl
-val String.nfdecay by dslStringExtension { p, args, callInfo -> p.nfdecay(args, callInfo) }
+fun String.nfdecay(seconds: PatternLike): StrudelPattern = this._nfdecay(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [nfdecay] on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfd by dslPatternExtension { p, args, callInfo -> p.nfdecay(args, callInfo) }
+internal val _nfd by dslFunction { args, _ -> args.toPattern(nfdecayMutation) }
+internal val StrudelPattern._nfd by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
+internal val String._nfd by dslStringExtension { p, args, callInfo -> p._nfd(args, callInfo) }
 
 /**
  * Alias for [nfdecay]. Sets the notch filter envelope decay time.
@@ -1475,11 +1692,15 @@ val StrudelPattern.nfd by dslPatternExtension { p, args, callInfo -> p.nfdecay(a
  * @tags nfd, nfdecay, notch filter, envelope, decay
  */
 @StrudelDsl
-val nfd by dslFunction { args, callInfo -> nfdecay(args, callInfo) }
+fun nfd(seconds: PatternLike): StrudelPattern = _nfd(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [nfdecay] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfd(seconds: PatternLike): StrudelPattern = this._nfd(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [nfdecay] on a string pattern. */
 @StrudelDsl
-val String.nfd by dslStringExtension { p, args, callInfo -> p.nfdecay(args, callInfo) }
+fun String.nfd(seconds: PatternLike): StrudelPattern = this._nfd(listOf(seconds).asStrudelDslArgs())
 
 // -- nfsustain() - Notch Filter Envelope Sustain (NOT IN ORIGINAL STRUDEL) -----------------------------------------------
 
@@ -1489,9 +1710,9 @@ fun applyNfsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, nfsustainMutation)
 }
 
-/** Sets the notch filter envelope sustain level on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfsustain by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfsustain(p, args) }
+internal val _nfsustain by dslFunction { args, _ -> args.toPattern(nfsustainMutation) }
+internal val StrudelPattern._nfsustain by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
+internal val String._nfsustain by dslStringExtension { p, args, callInfo -> p._nfsustain(args, callInfo) }
 
 /**
  * Sets the notch filter envelope sustain level (0–1).
@@ -1513,15 +1734,19 @@ val StrudelPattern.nfsustain by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags nfsustain, nfs, notch filter, envelope, sustain
  */
 @StrudelDsl
-val nfsustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfsustainMutation) }
+fun nfsustain(level: PatternLike): StrudelPattern = _nfsustain(listOf(level).asStrudelDslArgs())
+
+/** Sets the notch filter envelope sustain level on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfsustain(level: PatternLike): StrudelPattern = this._nfsustain(listOf(level).asStrudelDslArgs())
 
 /** Sets the notch filter envelope sustain level on a string pattern. */
 @StrudelDsl
-val String.nfsustain by dslStringExtension { p, args, callInfo -> p.nfsustain(args, callInfo) }
+fun String.nfsustain(level: PatternLike): StrudelPattern = this._nfsustain(listOf(level).asStrudelDslArgs())
 
-/** Alias for [nfsustain] on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfs by dslPatternExtension { p, args, callInfo -> p.nfsustain(args, callInfo) }
+internal val _nfs by dslFunction { args, _ -> args.toPattern(nfsustainMutation) }
+internal val StrudelPattern._nfs by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
+internal val String._nfs by dslStringExtension { p, args, callInfo -> p._nfs(args, callInfo) }
 
 /**
  * Alias for [nfsustain]. Sets the notch filter envelope sustain level.
@@ -1531,11 +1756,15 @@ val StrudelPattern.nfs by dslPatternExtension { p, args, callInfo -> p.nfsustain
  * @tags nfs, nfsustain, notch filter, envelope, sustain
  */
 @StrudelDsl
-val nfs by dslFunction { args, callInfo -> nfsustain(args, callInfo) }
+fun nfs(level: PatternLike): StrudelPattern = _nfs(listOf(level).asStrudelDslArgs())
+
+/** Alias for [nfsustain] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfs(level: PatternLike): StrudelPattern = this._nfs(listOf(level).asStrudelDslArgs())
 
 /** Alias for [nfsustain] on a string pattern. */
 @StrudelDsl
-val String.nfs by dslStringExtension { p, args, callInfo -> p.nfsustain(args, callInfo) }
+fun String.nfs(level: PatternLike): StrudelPattern = this._nfs(listOf(level).asStrudelDslArgs())
 
 // -- nfrelease() - Notch Filter Envelope Release (NOT IN ORIGINAL STRUDEL) -----------------------------------------------
 
@@ -1545,9 +1774,9 @@ fun applyNfrelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, nfreleaseMutation)
 }
 
-/** Sets the notch filter envelope release time on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfrelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfrelease(p, args) }
+internal val _nfrelease by dslFunction { args, _ -> args.toPattern(nfreleaseMutation) }
+internal val StrudelPattern._nfrelease by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
+internal val String._nfrelease by dslStringExtension { p, args, callInfo -> p._nfrelease(args, callInfo) }
 
 /**
  * Sets the notch filter envelope release time in seconds.
@@ -1568,15 +1797,19 @@ val StrudelPattern.nfrelease by dslPatternExtension { p, args, /* callInfo */ _ 
  * @tags nfrelease, nfr, notch filter, envelope, release
  */
 @StrudelDsl
-val nfrelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfreleaseMutation) }
+fun nfrelease(seconds: PatternLike): StrudelPattern = _nfrelease(listOf(seconds).asStrudelDslArgs())
+
+/** Sets the notch filter envelope release time on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfrelease(seconds: PatternLike): StrudelPattern = this._nfrelease(listOf(seconds).asStrudelDslArgs())
 
 /** Sets the notch filter envelope release time on a string pattern. */
 @StrudelDsl
-val String.nfrelease by dslStringExtension { p, args, callInfo -> p.nfrelease(args, callInfo) }
+fun String.nfrelease(seconds: PatternLike): StrudelPattern = this._nfrelease(listOf(seconds).asStrudelDslArgs())
 
-/** Alias for [nfrelease] on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfr by dslPatternExtension { p, args, callInfo -> p.nfrelease(args, callInfo) }
+internal val _nfr by dslFunction { args, _ -> args.toPattern(nfreleaseMutation) }
+internal val StrudelPattern._nfr by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
+internal val String._nfr by dslStringExtension { p, args, callInfo -> p._nfr(args, callInfo) }
 
 /**
  * Alias for [nfrelease]. Sets the notch filter envelope release time.
@@ -1586,11 +1819,15 @@ val StrudelPattern.nfr by dslPatternExtension { p, args, callInfo -> p.nfrelease
  * @tags nfr, nfrelease, notch filter, envelope, release
  */
 @StrudelDsl
-val nfr by dslFunction { args, callInfo -> nfrelease(args, callInfo) }
+fun nfr(seconds: PatternLike): StrudelPattern = _nfr(listOf(seconds).asStrudelDslArgs())
+
+/** Alias for [nfrelease] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfr(seconds: PatternLike): StrudelPattern = this._nfr(listOf(seconds).asStrudelDslArgs())
 
 /** Alias for [nfrelease] on a string pattern. */
 @StrudelDsl
-val String.nfr by dslStringExtension { p, args, callInfo -> p.nfrelease(args, callInfo) }
+fun String.nfr(seconds: PatternLike): StrudelPattern = this._nfr(listOf(seconds).asStrudelDslArgs())
 
 // -- nfenv() - Notch Filter Envelope Depth (NOT IN ORIGINAL STRUDEL) -----------------------------------------------------
 
@@ -1600,9 +1837,9 @@ fun applyNfenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftNumericField(args, nfenvMutation)
 }
 
-/** Sets the notch filter envelope depth/amount on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfenv by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfenv(p, args) }
+internal val _nfenv by dslFunction { args, _ -> args.toPattern(nfenvMutation) }
+internal val StrudelPattern._nfenv by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
+internal val String._nfenv by dslStringExtension { p, args, callInfo -> p._nfenv(args, callInfo) }
 
 /**
  * Sets the notch filter envelope depth (modulation amount) in Hz.
@@ -1623,15 +1860,19 @@ val StrudelPattern.nfenv by dslPatternExtension { p, args, /* callInfo */ _ -> a
  * @tags nfenv, nfe, notch filter, envelope, depth, modulation
  */
 @StrudelDsl
-val nfenv by dslFunction { args, /* callInfo */ _ -> args.toPattern(nfenvMutation) }
+fun nfenv(depth: PatternLike): StrudelPattern = _nfenv(listOf(depth).asStrudelDslArgs())
+
+/** Sets the notch filter envelope depth/amount on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfenv(depth: PatternLike): StrudelPattern = this._nfenv(listOf(depth).asStrudelDslArgs())
 
 /** Sets the notch filter envelope depth/amount on a string pattern. */
 @StrudelDsl
-val String.nfenv by dslStringExtension { p, args, callInfo -> p.nfenv(args, callInfo) }
+fun String.nfenv(depth: PatternLike): StrudelPattern = this._nfenv(listOf(depth).asStrudelDslArgs())
 
-/** Alias for [nfenv] on this pattern. */
-@StrudelDsl
-val StrudelPattern.nfe by dslPatternExtension { p, args, callInfo -> p.nfenv(args, callInfo) }
+internal val _nfe by dslFunction { args, _ -> args.toPattern(nfenvMutation) }
+internal val StrudelPattern._nfe by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
+internal val String._nfe by dslStringExtension { p, args, callInfo -> p._nfe(args, callInfo) }
 
 /**
  * Alias for [nfenv]. Sets the notch filter envelope depth.
@@ -1641,8 +1882,12 @@ val StrudelPattern.nfe by dslPatternExtension { p, args, callInfo -> p.nfenv(arg
  * @tags nfe, nfenv, notch filter, envelope, depth, modulation
  */
 @StrudelDsl
-val nfe by dslFunction { args, callInfo -> nfenv(args, callInfo) }
+fun nfe(depth: PatternLike): StrudelPattern = _nfe(listOf(depth).asStrudelDslArgs())
+
+/** Alias for [nfenv] on this pattern. */
+@StrudelDsl
+fun StrudelPattern.nfe(depth: PatternLike): StrudelPattern = this._nfe(listOf(depth).asStrudelDslArgs())
 
 /** Alias for [nfenv] on a string pattern. */
 @StrudelDsl
-val String.nfe by dslStringExtension { p, args, callInfo -> p.nfenv(args, callInfo) }
+fun String.nfe(depth: PatternLike): StrudelPattern = this._nfe(listOf(depth).asStrudelDslArgs())
