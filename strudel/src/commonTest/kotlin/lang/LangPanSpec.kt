@@ -1,15 +1,78 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangPanSpec : StringSpec({
 
+    "pan dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0 0.25"
+
+        dslInterfaceTests(
+            "pattern.pan(ctrl)" to
+                    seq(pat).pan(ctrl),
+            "script pattern.pan(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").pan("$ctrl")"""),
+            "string.pan(ctrl)" to
+                    pat.pan(ctrl),
+            "script string.pan(ctrl)" to
+                    StrudelPattern.compile(""""$pat".pan("$ctrl")"""),
+            "pan(ctrl)" to
+                    seq(pat).apply(pan(ctrl)),
+            "script pan(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(pan("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.pan shouldBe 0.0
+            events[1].data.pan shouldBe 0.25
+        }
+    }
+
+    "reinterpret voice data as pan | seq(\"0 1\").pan()" {
+        val p = seq("0 1").pan()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.pan shouldBe 0.0
+            events[1].data.pan shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as pan | \"0 1\".pan()" {
+        val p = "0 1".pan()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.pan shouldBe 0.0
+            events[1].data.pan shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as pan | seq(\"0 1\").apply(pan())" {
+        val p = seq("0 1").apply(pan())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.pan shouldBe 0.0
+            events[1].data.pan shouldBe 1.0
+        }
+    }
+
     "top-level pan() sets VoiceData.pan correctly" {
-        val p = pan("0.5 -0.5")
+        val p = "0 1".apply(pan("0.5 -0.5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -36,7 +99,7 @@ class LangPanSpec : StringSpec({
     }
 
     "pan() works within compiled code" {
-        val p = StrudelPattern.compile("""pan("-0.5 0.5")""")
+        val p = StrudelPattern.compile(""""0 1".apply(pan("-0.5 0.5"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

@@ -149,11 +149,6 @@ fun voiceModifier(modify: VoiceModifier): VoiceModifier = modify
 /** Creates a pattern mapper */
 fun patternMapper(mapper: Any?): PatternMapper? {
     return when (mapper) {
-        // Is it a provider function? ... for example when we receive a function reference back from KlangScript
-        is Function0<*> -> {
-            patternMapper(mapper())
-        }
-
         // Is it already a mapper function?
         is Function1<*, *> -> {
             { input ->

@@ -48,6 +48,94 @@ private object DocSearch {
     fun matches(func: FunctionDoc, terms: List<String>): Boolean =
         terms.all { term -> matchesTerm(func, term) }
 
+    /**
+     * Returns a relevance score for [func] against all [terms].
+     * Higher score = better match. Scores per term are summed.
+     *
+     * Score tiers (per term):
+     *   1000 — exact name match
+     *    500 — name starts with term
+     *    100 — name contains term
+     *     80 — exact alias match
+     *     40 — alias starts with term
+     *     20 — alias contains term
+     *     10 — tag exact match
+     *      5 — tag contains term
+     *      3 — category / library contains term
+     */
+    fun score(func: FunctionDoc, terms: List<String>): Int =
+        terms.sumOf { term -> scoreTerm(func, term) }
+
+    private fun scoreTerm(func: FunctionDoc, term: String): Int {
+        val lower = term.lowercase()
+        return when {
+            lower.startsWith(PREFIX_CATEGORY) -> {
+                val value = lower.removePrefix(PREFIX_CATEGORY)
+                if (func.category.lowercase().contains(value)) 3 else 0
+            }
+
+            lower.startsWith(PREFIX_TAG) -> {
+                val value = lower.removePrefix(PREFIX_TAG)
+                func.tags.maxOfOrNull { tag ->
+                    val t = tag.lowercase()
+                    when {
+                        t == value -> 10
+                        t.contains(value) -> 5
+                        else -> 0
+                    }
+                } ?: 0
+            }
+
+            lower.startsWith(PREFIX_FUNCTION) -> {
+                val value = lower.removePrefix(PREFIX_FUNCTION)
+                val name = func.name.lowercase()
+                when {
+                    name == value -> 1000
+                    name.startsWith(value) -> 500
+                    name.contains(value) -> 100
+                    else -> 0
+                }
+            }
+
+            else -> {
+                // Name score
+                val name = func.name.lowercase()
+                val nameScore = when {
+                    name == lower -> 1000
+                    name.startsWith(lower) -> 500
+                    name.contains(lower) -> 100
+                    else -> 0
+                }
+                // Alias score
+                val aliasScore = func.aliases.maxOfOrNull { alias ->
+                    val a = alias.lowercase()
+                    when {
+                        a == lower -> 80
+                        a.startsWith(lower) -> 40
+                        a.contains(lower) -> 20
+                        else -> 0
+                    }
+                } ?: 0
+                // Tag score
+                val tagScore = func.tags.maxOfOrNull { tag ->
+                    val t = tag.lowercase()
+                    when {
+                        t == lower -> 10
+                        t.contains(lower) -> 5
+                        else -> 0
+                    }
+                } ?: 0
+                // Category / library score
+                val catScore = when {
+                    func.category.lowercase().contains(lower) -> 3
+                    func.library.lowercase().contains(lower) -> 3
+                    else -> 0
+                }
+                nameScore + aliasScore + tagScore + catScore
+            }
+        }
+    }
+
     private fun matchesTerm(func: FunctionDoc, term: String): Boolean {
         val lower = term.lowercase()
         return when {
@@ -108,8 +196,10 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             val all = registry.functions.values.sortedBy { it.name }
 
             return when {
-                // Smart search (supports prefixed terms + logical AND)
-                terms.isNotEmpty() -> all.filter { DocSearch.matches(it, terms) }
+                // Smart search: filter by match, then sort by score descending (exact matches first)
+                terms.isNotEmpty() -> all
+                    .filter { DocSearch.matches(it, terms) }
+                    .sortedByDescending { DocSearch.score(it, terms) }
                 // Show all by default
                 else -> all
             }

@@ -40,7 +40,7 @@ internal val _gain by dslPatternMapper { args, callInfo -> { p -> p._gain(args, 
  * ```
  *
  * ```KlangScript
- * s("bd*4").gain("<0.2 0.5 0.8 1.0>")    // different gain each beat
+ * s("bd*4").gain("<0.2 0.5 0.8 1.0>")    // different gain each cycle
  * ```
  *
  * @param amount The control value to use for gain.
@@ -56,7 +56,7 @@ fun StrudelPattern.gain(amount: PatternLike? = null): StrudelPattern =
  * Parses this string as a pattern and sets the gain for each event.
  *
  * ```KlangScript
- * "bd*4".gain("<0.2 0.5 0.8 1.0>").s()    // different gain each beat
+ * "bd*4".gain("0.2 0.5 0.8 1.0").s()    // different gain each beat
  * ```
  *
  * @param amount The control value to use for gain.
@@ -77,20 +77,19 @@ fun String.gain(amount: PatternLike? = null): StrudelPattern =
 @StrudelDsl
 fun gain(amount: PatternLike? = null): PatternMapper = _gain(listOfNotNull(amount).asStrudelDslArgs())
 
-@StrudelDsl
-val gain: PatternMapper get() = _gain.asMapper
-
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
 private val panMutation = voiceModifier { copy(pan = it?.asDoubleOrNull()) }
 
 fun applyPan(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, panMutation)
+    return source._liftOrReinterpretNumericalField(args, panMutation)
 }
 
-internal val _pan by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(panMutation) }
 internal val StrudelPattern._pan by dslPatternExtension { p, args, /* callInfo */ _ -> applyPan(p, args) }
+
 internal val String._pan by dslStringExtension { p, args, callInfo -> p._pan(args, callInfo) }
+
+internal val _pan by dslPatternMapper { args, callInfo -> { p -> p._pan(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -104,22 +103,46 @@ internal val String._pan by dslStringExtension { p, args, callInfo -> p._pan(arg
  * ```
  *
  * ```KlangScript
+ * s("bd hh sd cp").pan("0 0.33 0.66 1")  // left to right
+ * ```
+ *
+ * ```KlangScript
  * s("hh*8").pan(sine.range(0, 1))        // smooth left-right sweep
  * ```
+ *
+ * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
  *
  * @category dynamics
  * @tags pan, stereo, panning, position
  */
 @StrudelDsl
-fun pan(amount: PatternLike): StrudelPattern = _pan(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.pan(amount: PatternLike? = null): StrudelPattern =
+    this._pan(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Sets the stereo panning position for each event in this pattern. */
+/**
+ * Parses this string as a pattern and sets the stereo panning position.
+ *
+ * ```KlangScript
+ * "bd hh sd cp".pan("0 0.33 0.66 1").s()  // left to right
+ * ```
+ *
+ * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
+ */
 @StrudelDsl
-fun StrudelPattern.pan(amount: PatternLike): StrudelPattern = this._pan(listOf(amount).asStrudelDslArgs())
+fun String.pan(amount: PatternLike? = null): StrudelPattern =
+    this._pan(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the stereo panning position. */
+/**
+ * Parses this string as a pattern and sets the stereo panning position.
+ *
+ * ```KlangScript
+ * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
+ * ```
+ */
 @StrudelDsl
-fun String.pan(amount: PatternLike): StrudelPattern = this._pan(listOf(amount).asStrudelDslArgs())
+fun pan(amount: PatternLike? = null): PatternMapper =
+    _pan(listOfNotNull(amount).asStrudelDslArgs())
+
 
 // -- velocity() / vel() -----------------------------------------------------------------------------------------------
 
