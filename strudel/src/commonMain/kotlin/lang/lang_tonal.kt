@@ -237,10 +237,9 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Creates a pattern of note numbers or sample indices.
+ * Sets the sound index on this pattern.
  *
- * Sets the integer index used to select notes within a [scale] or samples within a [sound]
- * bank. When a scale is active, `n` values are resolved to note names via `Scale.steps()`.
+ * When param [n] is null, the sequence values will be reinterpreted as sound index.
  *
  * ```KlangScript
  * n("0 2 4").scale("c4:major").note()   // indices 0, 2, 4 → C4, E4, G4
@@ -250,23 +249,24 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
  * s("hh").n("0 1 2")                    // selects different hh samples by index
  * ```
  *
+ * @param n The sound index to set, or null to reparse sequence values as sound index.
+ *
  * @category tonal
  * @tags n, note number, sample index, pitch index
  */
 @StrudelDsl
-fun n(index: PatternLike): StrudelPattern = _n(listOf(index).asStrudelDslArgs())
+fun StrudelPattern.n(index: PatternLike? = null): StrudelPattern =
+    this._n(listOfNotNull(index).asStrudelDslArgs())
 
-/** Reinterprets the current value of this pattern as a sample/note index. */
-@StrudelDsl
-fun StrudelPattern.n(): StrudelPattern = this._n(emptyList())
-
-/** Sets the note number or sample index on this pattern. */
-@StrudelDsl
-fun StrudelPattern.n(index: PatternLike): StrudelPattern = this._n(listOf(index).asStrudelDslArgs())
-
-/** Sets the note number or sample index on this string pattern. */
+/** Sets the sound index on this string pattern. */
 @StrudelDsl
 fun String.n(index: PatternLike): StrudelPattern = this._n(listOf(index).asStrudelDslArgs())
+
+/**
+ * Creates a pattern of sound indices.
+ */
+@StrudelDsl
+fun n(index: PatternLike): StrudelPattern = _n(listOf(index).asStrudelDslArgs())
 
 // -- sound() / s() ----------------------------------------------------------------------------------------------------
 
@@ -407,10 +407,6 @@ internal val String._bank by dslStringExtension { p, args, callInfo -> p._bank(a
 
 // ===== USER-FACING OVERLOADS =====
 
-/** Sets the sample bank on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bank(name: PatternLike): StrudelPattern = this._bank(listOf(name).asStrudelDslArgs())
-
 /**
  * Sets the sample bank for each event, overriding which collection of samples is used.
  *
@@ -429,11 +425,16 @@ fun StrudelPattern.bank(name: PatternLike): StrudelPattern = this._bank(listOf(n
  * @tags bank, sample bank, instrument
  */
 @StrudelDsl
-fun bank(name: PatternLike): StrudelPattern = _bank(listOf(name).asStrudelDslArgs())
+fun StrudelPattern.bank(name: PatternLike? = null): StrudelPattern =
+    this._bank(listOf(name).asStrudelDslArgs())
 
 /** Sets the sample bank on a string pattern. */
 @StrudelDsl
 fun String.bank(name: PatternLike): StrudelPattern = this._bank(listOf(name).asStrudelDslArgs())
+
+/** Sets the sample bank on this pattern. */
+@StrudelDsl
+fun bank(name: PatternLike): StrudelPattern = _bank(listOf(name).asStrudelDslArgs())
 
 // -- legato() / clip() ------------------------------------------------------------------------------------------------
 

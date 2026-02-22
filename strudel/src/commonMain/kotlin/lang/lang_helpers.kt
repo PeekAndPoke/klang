@@ -510,7 +510,7 @@ class DslObjectProvider<T : Any>(
     private val handler: () -> T,
 ) {
     operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, T> {
-        val name = prop.name
+        val name = prop.name.trimStart('_')
         val instance = handler()
 
         // Register in the evaluator registry as a function that returns the instance

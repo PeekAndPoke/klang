@@ -123,7 +123,7 @@ stack(
     .gain(0.75).pan(sine.range(0.3, 0.7).slow(16)).adsr("0.02:0.5:0.5:0.2")
     .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(0.65).legato(1.2))
     .s("supersaw").unison(8).detune(saw.range(0.05, 0.4).slow(16))
-    .lpf(6 * 440).hpf(80).crush(sine.range(3.5, 12.0).slow(32)).notchf(notch
+    .lpf(6 * 440).hpf(80).crush(sine.range(3.5, 12.0).slow(32)).notchf(notch)
     .filterWhen(x => x >= wait * 0.5 && x < (wait * 3 + keep))
   , // Perc 2 -----------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
