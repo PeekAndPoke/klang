@@ -310,7 +310,6 @@ internal class StrudelPlaybackController(
 
         val events: List<StrudelPatternEvent> =
             pattern.queryArcContextual(from = fromRational, to = toRational, ctx = ctx)
-                .filter { it.part.begin >= fromRational && it.part.begin < toRational }
                 .filter { it.isOnset }
                 .sortedBy { it.part.begin }
 

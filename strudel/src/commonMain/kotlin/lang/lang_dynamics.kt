@@ -133,7 +133,7 @@ fun String.pan(amount: PatternLike? = null): StrudelPattern =
     this._pan(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Parses this string as a pattern and sets the stereo panning position.
+ * Creates a [PatternMapper] that sets the pan for each event in a pattern.
  *
  * ```KlangScript
  * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
@@ -149,72 +149,124 @@ fun pan(amount: PatternLike? = null): PatternMapper =
 private val velocityMutation = voiceModifier { copy(velocity = it?.asDoubleOrNull()) }
 
 fun applyVelocity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, velocityMutation)
+    return source._liftOrReinterpretNumericalField(args, velocityMutation)
 }
 
-internal val _velocity by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
-internal val StrudelPattern._velocity by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
+internal val StrudelPattern._velocity by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyVelocity(p, args)
+}
+
 internal val String._velocity by dslStringExtension { p, args, callInfo -> p._velocity(args, callInfo) }
 
-internal val _vel by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
+internal val _velocity by dslPatternMapper { args, callInfo -> { p -> p._velocity(args, callInfo) } }
+
 internal val StrudelPattern._vel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
-internal val String._vel by dslStringExtension { p, args, callInfo -> p._vel(args, callInfo) }
+
+internal val String._vel by dslStringExtension { p, args, callInfo -> p._velocity(args, callInfo) }
+
+internal val _vel by dslPatternMapper { args, callInfo -> { p -> p._velocity(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Sets the velocity (MIDI-style volume scaling, 0–1) for each event in the pattern.
- *
- * Unlike `gain`, velocity is typically used as a MIDI note velocity or soft scaling factor.
+ * Sets the gain 'velocity'. It is multiplied with the gain of the events.
  *
  * ```KlangScript
- * note("c d e f").velocity(0.8)               // slightly softer notes
+ * note("c d e f").gain(0.5).velocity("0.5 2.0")  // gain is multiplied by velocity
  * ```
  *
  * ```KlangScript
  * note("c*4").velocity("<0.3 0.6 0.9 1.0>")  // crescendo pattern
  * ```
  *
+ * ```KlangScript
+ * note("c*4").velocity(saw.range(0.25, 1.0).slow(4))  // crescendo pattern over 4 cycles
+ * ```
+ *
+ * @param amount The velocity value or pattern to apply to the events.
+ *
  * @alias vel
  * @category dynamics
  * @tags velocity, vel, volume, midi, dynamics
  */
 @StrudelDsl
-fun velocity(amount: PatternLike): StrudelPattern = _velocity(listOf(amount).asStrudelDslArgs())
-
-/** Sets the velocity for each event in this pattern. */
-@StrudelDsl
-fun StrudelPattern.velocity(amount: PatternLike): StrudelPattern = this._velocity(listOf(amount).asStrudelDslArgs())
-
-/** Parses this string as a pattern and sets the velocity for each event. */
-@StrudelDsl
-fun String.velocity(amount: PatternLike): StrudelPattern = this._velocity(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.velocity(amount: PatternLike? = null): StrudelPattern =
+    this._velocity(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Alias for [velocity]. Sets the velocity (MIDI-style volume scaling, 0–1) for each event.
+ * Parses this string as a pattern and sets the velocity (gain multiplier) for each event.
  *
  * ```KlangScript
- * note("c d e f").vel(0.8)               // slightly softer notes
+ * "c*4".velocity("<0.3 0.6 0.9 1.0>").note()  // crescendo pattern
+ * ```
+ *
+ * @param amount The velocity value or pattern to apply to the events.
+ */
+@StrudelDsl
+fun String.velocity(amount: PatternLike? = null): StrudelPattern =
+    this._velocity(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Create a [PatternMapper] that sets the velocity (gain multiplier) for each event in a pattern.
+ *
+ * ```KlangScript
+ * note("c*4").apply(velocity("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
+ * ```
+ *
+ * @param amount The velocity value or pattern to apply to the events.
+ */
+@StrudelDsl
+fun velocity(amount: PatternLike? = null): PatternMapper =
+    _velocity(listOfNotNull(amount).asStrudelDslArgs())
+
+
+/**
+ * Alias for [velocity]. Sets the gain 'velocity'. It is multiplied with the gain of the events.
+ *
+ * ```KlangScript
+ * note("c d e f").gain(0.5).vel("0.5 2.0")   // gain is multiplied by velocity
  * ```
  *
  * ```KlangScript
- * note("c*4").vel("<0.3 0.6 0.9 1.0>")  // crescendo pattern
+ * note("c*4").vel(saw.range(0.25, 1.0).slow(4))   // crescendo pattern over 4 cycles
  * ```
+ *
+ * @param amount The velocity value or pattern to apply to the events.
  *
  * @alias velocity
  * @category dynamics
  * @tags vel, velocity, volume, midi, dynamics
  */
 @StrudelDsl
-fun vel(amount: PatternLike): StrudelPattern = _vel(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.vel(amount: PatternLike? = null): StrudelPattern =
+    this._vel(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Alias for [velocity]. Sets the velocity for each event in this pattern. */
+/**
+ * Alias for [velocity]. Sets the velocity (gain multiplier) for each event in this pattern.
+ *
+ * ```KlangScript
+ * "c*4".vel("<0.3 0.6 0.9 1.0>").note()  // crescendo pattern
+ * ```
+ *
+ * @param amount The velocity value or pattern to apply to the events.
+ */
 @StrudelDsl
-fun StrudelPattern.vel(amount: PatternLike): StrudelPattern = this._vel(listOf(amount).asStrudelDslArgs())
+fun String.vel(amount: PatternLike? = null): StrudelPattern =
+    this._vel(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Alias for [velocity]. Parses this string as a pattern and sets the velocity. */
+/**
+ * Alias for [velocity]. Create a [PatternMapper] that sets the velocity (gain multiplier) for each event in a pattern.
+ *
+ * ```KlangScript
+ * note("c*4").apply(vel("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
+ * ```
+ *
+ * @param amount The velocity value or pattern to apply to the events.
+ */
 @StrudelDsl
-fun String.vel(amount: PatternLike): StrudelPattern = this._vel(listOf(amount).asStrudelDslArgs())
+fun vel(amount: PatternLike? = null): PatternMapper =
+    _vel(listOfNotNull(amount).asStrudelDslArgs())
+
 
 // -- postgain() -------------------------------------------------------------------------------------------------------
 
