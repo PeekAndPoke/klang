@@ -219,15 +219,15 @@ internal val String._loop by dslStringExtension { p, args, callInfo -> p._loop(a
  * @tags loop, looping, repeat, sample
  */
 @StrudelDsl
-fun loop(flag: PatternLike): StrudelPattern = _loop(listOf(flag).asStrudelDslArgs())
+fun loop(flag: PatternLike = true): StrudelPattern = _loop(listOf(flag).asStrudelDslArgs())
 
 /** Enables sample looping on this pattern. */
 @StrudelDsl
-fun StrudelPattern.loop(flag: PatternLike): StrudelPattern = this._loop(listOf(flag).asStrudelDslArgs())
+fun StrudelPattern.loop(flag: PatternLike = true): StrudelPattern = this._loop(listOf(flag).asStrudelDslArgs())
 
 /** Enables sample looping on a string pattern. */
 @StrudelDsl
-fun String.loop(flag: PatternLike): StrudelPattern = this._loop(listOf(flag).asStrudelDslArgs())
+fun String.loop(flag: PatternLike = true): StrudelPattern = this._loop(listOf(flag).asStrudelDslArgs())
 
 // -- loopBegin() / loopb() --------------------------------------------------------------------------------------------
 

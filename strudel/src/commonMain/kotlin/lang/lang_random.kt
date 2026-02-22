@@ -346,11 +346,12 @@ internal val String._degrade by dslStringExtension { pattern, args, callInfo -> 
  * @tags degrade, degradeBy, random, remove, probability
  */
 @StrudelDsl
-fun StrudelPattern.degrade(): StrudelPattern = this._degrade(emptyList())
+fun StrudelPattern.degrade(prob: PatternLike = 0.5): StrudelPattern =
+    this._degrade(listOf(prob).asStrudelDslArgs())
 
 /** Randomly removes events with a 50% probability. Shorthand for `degradeBy(0.5)`. */
 @StrudelDsl
-fun String.degrade(): StrudelPattern = this._degrade(emptyList())
+fun String.degrade(prob: PatternLike = 0.5): StrudelPattern = this._degrade(listOf(prob).asStrudelDslArgs())
 
 // -- degradeByWith() --------------------------------------------------------------------------------------------------
 

@@ -187,7 +187,7 @@ internal val String._note by dslStringExtension { p, args, callInfo -> p._note(a
  * @tags note, pitch, frequency, MIDI, note name
  */
 @StrudelDsl
-fun note(noteName: PatternLike): StrudelPattern = _note(listOf(noteName).asStrudelDslArgs())
+fun note(vararg note: PatternLike): StrudelPattern = _note(note.toList().asStrudelDslArgs())
 
 /** Reinterprets the current value of this pattern as a note name. */
 @StrudelDsl
@@ -315,10 +315,6 @@ internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(arg
 
 // ===== USER-FACING OVERLOADS =====
 
-/** Modifies the sounds (instrument/sample) of this pattern. */
-@StrudelDsl
-fun StrudelPattern.sound(name: PatternLike): StrudelPattern = this._sound(listOf(name).asStrudelDslArgs())
-
 /**
  * Creates a pattern selecting a sound (instrument or sample bank) by name.
  *
@@ -327,11 +323,11 @@ fun StrudelPattern.sound(name: PatternLike): StrudelPattern = this._sound(listOf
  * from the `bd` bank.
  *
  * ```KlangScript
- * sound("bd sd hh")                  // basic drum pattern
+ * sound("bd sd hh")  // basic drum pattern
  * ```
  *
  * ```KlangScript
- * sound("<piano guitar>").n("0 2 4")  // alternating instrument with arpeggio
+ * sound("bd bd bd bd ").n("0 1 2 3")  // changes the sound variants
  * ```
  *
  * @alias s
@@ -339,23 +335,50 @@ fun StrudelPattern.sound(name: PatternLike): StrudelPattern = this._sound(listOf
  * @tags sound, sample, instrument, s
  */
 @StrudelDsl
-fun sound(name: PatternLike): StrudelPattern = _sound(listOf(name).asStrudelDslArgs())
+fun StrudelPattern.sound(name: PatternLike): StrudelPattern = this._sound(listOf(name).asStrudelDslArgs())
+
+/**
+ * Reinterprets sequence values as sounds.
+ *
+ * ```KlangScript
+ * seq("bd hh sd hh").sound()  // interprets the sequence values as sounds
+ * ```
+ */
+@StrudelDsl
+fun StrudelPattern.sound(): StrudelPattern = this._sound(emptyList())
 
 /** Modifies the sounds of a string pattern. */
 @StrudelDsl
 fun String.sound(name: PatternLike): StrudelPattern = this._sound(listOf(name).asStrudelDslArgs())
 
+/** Reinterprets sequence values as sounds. */
+@StrudelDsl
+fun String.sound(): StrudelPattern = this._sound(emptyList())
+
+/** Creates a pattern of sounds */
+@StrudelDsl
+fun sound(name: PatternLike): StrudelPattern = _sound(listOf(name).asStrudelDslArgs())
+
 /** Alias for [sound]. Sets the sound/instrument on this pattern. */
 @StrudelDsl
 fun StrudelPattern.s(name: PatternLike): StrudelPattern = this._s(listOf(name).asStrudelDslArgs())
+
+/** Alias for [sound]. Reinterprets sequence values as sounds. */
+@StrudelDsl
+fun StrudelPattern.s(): StrudelPattern = this._s(emptyList())
+
+/** Alias for [sound] on a string pattern. */
+@StrudelDsl
+fun String.s(name: PatternLike): StrudelPattern = this._s(listOf(name).asStrudelDslArgs())
+
+/** Alias for [sound] on a string pattern. */
+@StrudelDsl
+fun String.s(): StrudelPattern = this._s(emptyList())
 
 /** Alias for [sound]. Creates a sound pattern. */
 @StrudelDsl
 fun s(name: PatternLike): StrudelPattern = _s(listOf(name).asStrudelDslArgs())
 
-/** Alias for [sound] on a string pattern. */
-@StrudelDsl
-fun String.s(name: PatternLike): StrudelPattern = this._s(listOf(name).asStrudelDslArgs())
 
 // -- bank() -----------------------------------------------------------------------------------------------------------
 
@@ -1165,19 +1188,28 @@ internal val String._transpose by dslStringExtension { p, args, callInfo -> p._t
  * note("c4 e4").transpose("<0 12>")   // alternate: no transpose vs octave up per cycle
  * ```
  *
+ * @param amount The amount to transpose by, either as a number of semitones or an interval name.
+ *
  * @category tonal
  * @tags transpose, pitch shift, semitones, interval, pitch
  */
 @StrudelDsl
-fun transpose(amount: PatternLike): StrudelPattern = _transpose(listOf(amount).asStrudelDslArgs())
-
-/** Transposes this pattern by a number of semitones or interval name. */
-@StrudelDsl
-fun StrudelPattern.transpose(amount: PatternLike): StrudelPattern = this._transpose(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.transpose(amount: PatternLike): StrudelPattern =
+    this._transpose(listOf(amount).asStrudelDslArgs())
 
 /** Transposes a string pattern by a number of semitones or interval name. */
 @StrudelDsl
 fun String.transpose(amount: PatternLike): StrudelPattern = this._transpose(listOf(amount).asStrudelDslArgs())
+
+/**
+ * Transposes a string pattern by a number of semitones or interval name.
+ *
+ * @param amount The amount to transpose by, either as a number of semitones or an interval name.
+ * @param pattern The source pattern.
+ */
+@StrudelDsl
+fun transpose(amount: PatternLike, pattern: PatternLike): StrudelPattern =
+    _transpose(listOf(amount, pattern).asStrudelDslArgs())
 
 // -- freq() -----------------------------------------------------------------------------------------------------------
 

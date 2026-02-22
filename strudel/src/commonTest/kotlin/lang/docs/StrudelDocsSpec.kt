@@ -170,11 +170,11 @@ class StrudelDocsSpec : StringSpec({
         model.name shouldBe "accelerate"
         model.receiver shouldBe null
         model.params shouldNotBe null         // not null — it IS callable
-        model.params!!.shouldBeEmpty()        // but no param info available from property delegate
+        model.params!!.shouldHaveSize(1)        // but no param info available from property delegate
         model.returnType?.simpleName shouldBe "StrudelPattern"
 
         // Signature renders with empty parens, not as a bare property name
-        topLevel.signature shouldBe "accelerate(): StrudelPattern"
+        topLevel.signature shouldBe "accelerate(amount: PatternLike): StrudelPattern"
     }
 
     "accelerate extension variants should have receiver in SignatureModel" {

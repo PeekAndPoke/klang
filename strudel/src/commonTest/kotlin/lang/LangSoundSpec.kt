@@ -66,6 +66,16 @@ class LangSoundSpec : StringSpec({
         events[0].data.soundIndex shouldBe 1
     }
 
+    "s() without args reinterprets value as sound" {
+        // "bd:1".sound() -> value is "bd:1", should parse to sound="bd", index=1
+        val p = "bd:1".s()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.sound shouldBe "bd"
+        events[0].data.soundIndex shouldBe 1
+    }
+
     "s() is an alias for sound()" {
         val p = s("bd")
         val events = p.queryArc(0.0, 1.0)

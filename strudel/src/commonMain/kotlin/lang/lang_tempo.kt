@@ -255,19 +255,22 @@ internal val String._rev by dslStringExtension { p, args, callInfo -> p._rev(arg
  * @tags rev, reverse, order, retrograde
  */
 @StrudelDsl
-fun StrudelPattern.rev(): StrudelPattern = this._rev(emptyList())
+fun StrudelPattern.rev(n: PatternLike = 1): StrudelPattern = this._rev(listOf(n).asStrudelDslArgs())
 
-/** Reverses the order of events, applying the reversal across every `n`-cycle span. */
+/**
+ * Reverses the order of events, applying the reversal across every `n`-cycle span.
+ * @param n The number of cycles to reverse across
+ */
 @StrudelDsl
-fun StrudelPattern.rev(n: PatternLike): StrudelPattern = this._rev(listOf(n).asStrudelDslArgs())
+fun String.rev(n: PatternLike = 1): StrudelPattern = this._rev(listOf(n).asStrudelDslArgs())
 
-/** Reverses the order of events within each cycle. */
+/**
+ * Reverses the order of events, applying the reversal across every `n`-cycle span.
+ * @param pattern The pattern to reverse
+ * @param n The number of cycles to reverse across
+ */
 @StrudelDsl
-fun String.rev(): StrudelPattern = this._rev(emptyList())
-
-/** Reverses the order of events, applying the reversal across every `n`-cycle span. */
-@StrudelDsl
-fun String.rev(n: PatternLike): StrudelPattern = this._rev(listOf(n).asStrudelDslArgs())
+fun rev(pattern: PatternLike, n: PatternLike = 1) = _rev(listOf(pattern, n).asStrudelDslArgs())
 
 // -- revv() -----------------------------------------------------------------------------------------------------------
 
@@ -318,6 +321,13 @@ fun StrudelPattern.revv(): StrudelPattern = this._revv(emptyList())
 @StrudelDsl
 fun String.revv(): StrudelPattern = this._revv(emptyList())
 
+/**
+ * Reverses the pattern in absolute time across all cycles.
+ * @param pattern The pattern to reverse
+ */
+@StrudelDsl
+fun revv(pattern: PatternLike) = _revv(listOf(pattern).asStrudelDslArgs())
+
 // -- palindrome() -----------------------------------------------------------------------------------------------------
 
 fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
@@ -367,6 +377,10 @@ fun StrudelPattern.palindrome(): StrudelPattern = this._palindrome(emptyList())
 /** Plays the pattern forward then backward, creating a two-cycle palindrome. */
 @StrudelDsl
 fun String.palindrome(): StrudelPattern = this._palindrome(emptyList())
+
+/** Plays the pattern forward then backward, creating a two-cycle palindrome. */
+@StrudelDsl
+fun palindrome(pattern: PatternLike): StrudelPattern = _palindrome(listOf(pattern).asStrudelDslArgs())
 
 // -- early() ----------------------------------------------------------------------------------------------------------
 
@@ -1352,3 +1366,10 @@ fun StrudelPattern.brak(): StrudelPattern = this._brak(emptyList())
 /** Makes every other cycle syncopated — a classic breakbeat effect. */
 @StrudelDsl
 fun String.brak(): StrudelPattern = this._brak(emptyList())
+
+/**
+ * Makes every other cycle syncopated — a classic breakbeat effect.
+ * @param pattern The pattern to apply breakbeat syncopation to
+ */
+@StrudelDsl
+fun brak(pattern: PatternLike): StrudelPattern = _brak(listOf(pattern).asStrudelDslArgs())
