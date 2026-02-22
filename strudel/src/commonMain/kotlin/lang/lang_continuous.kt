@@ -335,7 +335,7 @@ val nothing by dslObject { EmptyPattern }
 
 // -- signal -----------------------------------------------------------------------------------------------------------
 
-internal val _signal by dslFunction { args, /* callInfo */ _ ->
+internal val _signal by dslPatternFunction { args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val value = args.getOrNull(0)?.value as? Function1<Double, Any?> ?: { 0.0 }
 
@@ -370,7 +370,7 @@ fun signal(f: (Double) -> Double): StrudelPattern = _signal { t -> f(t) }
 
 // -- steady -----------------------------------------------------------------------------------------------------------
 
-internal val _steady by dslFunction { args, /* callInfo */ _ ->
+internal val _steady by dslPatternFunction { args, /* callInfo */ _ ->
     val value = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
     signal { _ -> value }
 }

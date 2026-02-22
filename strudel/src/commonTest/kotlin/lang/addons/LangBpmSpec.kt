@@ -2,10 +2,22 @@ package io.peekandpoke.klang.strudel.lang.addons
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.math.Rational
 
 class LangBpmSpec : StringSpec({
+
+    "bpm dsl interface" {
+        dslInterfaceTests(
+            "bpm" to bpm,
+            "script bpm" to StrudelPattern.compile("bpm"),
+        ) { _, events ->
+            events.size shouldBe 1
+            events[0].data.value?.asDouble shouldBe 0.5 * 240.0
+        }
+    }
 
     "bpm should return default value (120.0) from empty context" {
         val p = bpm

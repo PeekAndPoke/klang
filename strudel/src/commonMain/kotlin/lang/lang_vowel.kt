@@ -27,7 +27,7 @@ fun applyVowel(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
 
 internal val StrudelPattern._vowel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVowel(p, args) }
 
-internal val _vowel by dslFunction { args, /* callInfo */ _ -> args.toPattern(vowelMutation) }
+internal val _vowel by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(vowelMutation) }
 
 internal val String._vowel by dslStringExtension { p, args, callInfo -> p._vowel(args, callInfo) }
 

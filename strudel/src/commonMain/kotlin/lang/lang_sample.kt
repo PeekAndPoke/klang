@@ -27,7 +27,7 @@ fun applyBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftData(control)
 }
 
-internal val _begin by dslFunction { args, /* callInfo */ _ -> args.toPattern(beginMutation) }
+internal val _begin by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(beginMutation) }
 internal val StrudelPattern._begin by dslPatternExtension { p, args, /* callInfo */ _ -> applyBegin(p, args) }
 internal val String._begin by dslStringExtension { p, args, callInfo -> p._begin(args, callInfo) }
 
@@ -70,7 +70,7 @@ fun applyEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     return source._liftData(control)
 }
 
-internal val _end by dslFunction { args, /* callInfo */ _ -> args.toPattern(endMutation) }
+internal val _end by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(endMutation) }
 internal val StrudelPattern._end by dslPatternExtension { p, args, /* callInfo */ _ -> applyEnd(p, args) }
 internal val String._end by dslStringExtension { p, args, callInfo -> p._end(args, callInfo) }
 
@@ -112,7 +112,7 @@ fun applySpeed(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftData(control)
 }
 
-internal val _speed by dslFunction { args, /* callInfo */ _ -> args.toPattern(speedMutation) }
+internal val _speed by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(speedMutation) }
 internal val StrudelPattern._speed by dslPatternExtension { p, args, /* callInfo */ _ -> applySpeed(p, args) }
 internal val String._speed by dslStringExtension { p, args, callInfo -> p._speed(args, callInfo) }
 
@@ -154,7 +154,7 @@ fun applyUnit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return source._liftData(control)
 }
 
-internal val _unit by dslFunction { args, /* callInfo */ _ -> args.toPattern(unitMutation) }
+internal val _unit by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(unitMutation) }
 internal val StrudelPattern._unit by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnit(p, args) }
 internal val String._unit by dslStringExtension { p, args, callInfo -> p._unit(args, callInfo) }
 
@@ -197,7 +197,7 @@ fun applyLoop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return source._liftData(control)
 }
 
-internal val _loop by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopMutation) }
+internal val _loop by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(loopMutation) }
 internal val StrudelPattern._loop by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoop(p, args) }
 internal val String._loop by dslStringExtension { p, args, callInfo -> p._loop(args, callInfo) }
 
@@ -239,11 +239,11 @@ fun applyLoopBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftData(control)
 }
 
-internal val _loopBegin by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopBeginMutation) }
+internal val _loopBegin by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(loopBeginMutation) }
 internal val StrudelPattern._loopBegin by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopBegin(p, args) }
 internal val String._loopBegin by dslStringExtension { p, args, _ -> applyLoopBegin(p, args) }
 
-internal val _loopb by dslFunction { args, callInfo -> _loopBegin(args, callInfo) }
+internal val _loopb by dslPatternFunction { args, callInfo -> _loopBegin(args, callInfo) }
 internal val StrudelPattern._loopb by dslPatternExtension { p, args, callInfo -> p._loopBegin(args, callInfo) }
 internal val String._loopb by dslStringExtension { p, args, callInfo -> p._loopb(args, callInfo) }
 
@@ -304,11 +304,11 @@ fun applyLoopEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftData(control)
 }
 
-internal val _loopEnd by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopEndMutation) }
+internal val _loopEnd by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(loopEndMutation) }
 internal val StrudelPattern._loopEnd by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopEnd(p, args) }
 internal val String._loopEnd by dslStringExtension { p, args, _ -> applyLoopEnd(p, args) }
 
-internal val _loope by dslFunction { args, callInfo -> _loopEnd(args, callInfo) }
+internal val _loope by dslPatternFunction { args, callInfo -> _loopEnd(args, callInfo) }
 internal val StrudelPattern._loope by dslPatternExtension { p, args, callInfo -> p._loopEnd(args, callInfo) }
 internal val String._loope by dslStringExtension { p, args, callInfo -> p._loope(args, callInfo) }
 
@@ -384,7 +384,7 @@ fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return slowed._liftData(speedControl)
 }
 
-internal val _loopAt by dslFunction { args, /* callInfo */ _ -> args.toPattern(loopAtSpeedMutation) }
+internal val _loopAt by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(loopAtSpeedMutation) }
 internal val StrudelPattern._loopAt by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAt(p, args) }
 internal val String._loopAt by dslStringExtension { p, args, callInfo -> p._loopAt(args, callInfo) }
 
@@ -432,9 +432,9 @@ fun applyLoopAtCps(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
-internal val _loopAtCps by dslFunction { args, /* callInfo */ _ ->
+internal val _loopAtCps by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.isEmpty()) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
 
     // In JavaScript: function (factor, cps, pat)
@@ -446,7 +446,7 @@ internal val _loopAtCps by dslFunction { args, /* callInfo */ _ ->
 internal val StrudelPattern._loopAtCps by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAtCps(p, args) }
 internal val String._loopAtCps by dslStringExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
 
-internal val _loopatcps by dslFunction { args, callInfo -> _loopAtCps(args, callInfo) }
+internal val _loopatcps by dslPatternFunction { args, callInfo -> _loopAtCps(args, callInfo) }
 internal val StrudelPattern._loopatcps by dslPatternExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
 internal val String._loopatcps by dslStringExtension { p, args, callInfo -> p._loopatcps(args, callInfo) }
 
@@ -532,7 +532,7 @@ fun applyCut(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     return source._liftData(control)
 }
 
-internal val _cut by dslFunction { args, /* callInfo */ _ -> args.toPattern(cutMutation) }
+internal val _cut by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(cutMutation) }
 internal val StrudelPattern._cut by dslPatternExtension { p, args, /* callInfo */ _ -> applyCut(p, args) }
 internal val String._cut by dslStringExtension { p, args, callInfo -> p._cut(args, callInfo) }
 

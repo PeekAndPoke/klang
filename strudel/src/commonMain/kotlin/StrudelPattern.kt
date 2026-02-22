@@ -1137,6 +1137,8 @@ fun StrudelPattern._applyControl(
         val controlEvent = control.sampleAt(sampleTime, ctx)
 
         val combined = combiner(event, controlEvent)
+            ?.prependLocations(controlEvent?.sourceLocations)
+
         if (combined != null) {
             result.add(combined)
         }

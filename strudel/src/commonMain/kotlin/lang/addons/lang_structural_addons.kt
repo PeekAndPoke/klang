@@ -155,7 +155,7 @@ private fun applyMorse(textArg: StrudelDslArg<Any?>?): StrudelPattern {
     return seq.slow(totalWeight / 16.0) // using 1/16th cycle per unit for a tighter rhythm
 }
 
-internal val _morse by dslFunction { args, /* callInfo */ _ ->
+internal val _morse by dslPatternFunction { args, /* callInfo */ _ ->
     applyMorse(args.firstOrNull())
 }
 
@@ -271,14 +271,14 @@ fun applyRepeat(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return applyCat(patterns)
 }
 
-internal val _repeat by dslFunction { args, /* callInfo */ _ ->
-    if (args.isEmpty()) return@dslFunction silence
+internal val _repeat by dslPatternFunction { args, /* callInfo */ _ ->
+    if (args.isEmpty()) return@dslPatternFunction silence
 
     // If called as function: repeat(3, note("a"))
     val timesArg = args[0]
     val patterns = args.drop(1).toListOfPatterns()
 
-    if (patterns.isEmpty()) return@dslFunction silence
+    if (patterns.isEmpty()) return@dslPatternFunction silence
 
     // Apply repeat to the first pattern (or stack of patterns if multiple provided?)
     // Standard convention: repeat(n, pattern)
@@ -349,7 +349,7 @@ fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-internal val _solo by dslFunction { args, /* callInfo */ _ ->
+internal val _solo by dslPatternFunction { args, /* callInfo */ _ ->
     applySolo(AtomicPattern.value(null), args)
 }
 

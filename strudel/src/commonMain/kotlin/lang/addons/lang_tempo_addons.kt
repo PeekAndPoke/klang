@@ -61,7 +61,7 @@ internal val StrudelPattern._lateInCycle by dslPatternExtension { p, args, _ ->
 
 internal val String._lateInCycle by dslStringExtension { p, args, callInfo -> p._lateInCycle(args, callInfo) }
 
-internal val _lateInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+internal val _lateInCycle by dslPatternMapper { args, callInfo -> { p -> p._lateInCycle(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -76,8 +76,10 @@ internal val _lateInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> sil
  * ```
  *
  * ```KlangScript
- * s("bd sd").lateInCycle("<0 0.05 0.1>")       // cycle through nudge amounts
+ * s("bd hh sd oh").lateInCycle("<0 0.1 0.3 0.5>")      // cycle through nudge amounts
  * ```
+ *
+ * @param amount The control value to use for nudging.
  *
  * @category tempo
  * @tags lateInCycle, timing, swing, nudge, offset, addon
@@ -86,9 +88,31 @@ internal val _lateInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> sil
 fun StrudelPattern.lateInCycle(amount: PatternLike): StrudelPattern =
     this._lateInCycle(listOf(amount).asStrudelDslArgs())
 
-/** Nudges events later within their cycle in a string pattern. */
+/**
+ * Nudges events later within their cycle in a string pattern.
+ *
+ * ```KlangScript
+ * "bd hh sd oh".lateInCycle("<0 0.1 0.3 0.5>").s()      // cycle through nudge amounts
+ * ```
+ *
+ * @param amount The control value to use for nudging.
+ */
 @StrudelDsl
-fun String.lateInCycle(amount: PatternLike): StrudelPattern = this._lateInCycle(listOf(amount).asStrudelDslArgs())
+fun String.lateInCycle(amount: PatternLike): StrudelPattern =
+    this._lateInCycle(listOf(amount).asStrudelDslArgs())
+
+/**
+ * Nudges events later within their cycle in a pattern, using a control value.
+ *
+ * ```KlangScript
+ * lateInCycle("bd hh sd oh", "<0 0.1 0.3 0.5>").s()      // cycle through nudge amounts
+ * ```
+ *
+ * @param amount The control value to use for nudging.
+ */
+@StrudelDsl
+fun lateInCycle(amount: PatternLike): PatternMapper =
+    _lateInCycle(listOf(amount).asStrudelDslArgs())
 
 // -- earlyInCycle() ---------------------------------------------------------------------------------------------------
 
@@ -98,7 +122,7 @@ internal val StrudelPattern._earlyInCycle by dslPatternExtension { p, args, _ ->
 
 internal val String._earlyInCycle by dslStringExtension { p, args, callInfo -> p._earlyInCycle(args, callInfo) }
 
-internal val _earlyInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+internal val _earlyInCycle by dslPatternMapper { args, callInfo -> { p -> p._earlyInCycle(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -113,8 +137,10 @@ internal val _earlyInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> si
  * ```
  *
  * ```KlangScript
- * s("bd sd").earlyInCycle("<0 0.05 0.1>")      // cycle through nudge amounts
+ * s("bd hh sd oh").earlyInCycle("<0 0.1 0.3 0.5>")      // cycle through nudge amounts
  * ```
+ *
+ * @param amount The control value to use for nudging.
  *
  * @category tempo
  * @tags earlyInCycle, timing, nudge, offset, addon
@@ -123,10 +149,31 @@ internal val _earlyInCycle by dslFunction { /* args */ _, /* callInfo */ _ -> si
 fun StrudelPattern.earlyInCycle(amount: PatternLike): StrudelPattern =
     this._earlyInCycle(listOf(amount).asStrudelDslArgs())
 
-/** Nudges events earlier within their cycle in a string pattern. */
+/**
+ * Nudges events earlier within their cycle in a string pattern.
+ *
+ * ```KlangScript
+ * "bd hh sd oh".earlyInCycle("<0 0.1 0.3 0.5>").s()      // cycle through nudge amounts
+ * ```
+ *
+ * @param amount The control value to use for nudging.
+ * */
 @StrudelDsl
 fun String.earlyInCycle(amount: PatternLike): StrudelPattern =
     this._earlyInCycle(listOf(amount).asStrudelDslArgs())
+
+/**
+ * Creates a [PatternMapper] that nudges events earlier within their cycle in a string pattern.
+ *
+ * ```KlangScript
+ * seq("bd hh sd oh").apply(earlyInCycle("<0 0.1 0.3 0.5>")).s()      // cycle through nudge amounts
+ * ```
+ *
+ * @param amount The control value to use for nudging.
+ */
+@StrudelDsl
+fun earlyInCycle(amount: PatternLike): PatternMapper =
+    _earlyInCycle(listOf(amount).asStrudelDslArgs())
 
 // -- stretchBy() ------------------------------------------------------------------------------------------------------
 
@@ -149,8 +196,8 @@ private fun applyStretchBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any
     }
 }
 
-internal val _stretchBy by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _stretchBy by dslPatternFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val pattern = args.drop(1).toPattern(voiceValueModifier)
     applyStretchBy(pattern, args.take(1))
 }

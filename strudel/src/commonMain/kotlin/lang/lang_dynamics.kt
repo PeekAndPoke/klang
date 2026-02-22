@@ -21,9 +21,11 @@ fun applyGain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return source._liftNumericField(args, gainMutation)
 }
 
-internal val _gain by dslFunction { args, /* callInfo */ _ -> args.toPattern(gainMutation) }
 internal val StrudelPattern._gain by dslPatternExtension { p, args, /* callInfo */ _ -> applyGain(p, args) }
+
 internal val String._gain by dslStringExtension { p, args, callInfo -> p._gain(args, callInfo) }
+
+internal val _gain by dslPatternMapper { args, callInfo -> { p -> p._gain(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -40,19 +42,38 @@ internal val String._gain by dslStringExtension { p, args, callInfo -> p._gain(a
  * s("bd*4").gain("<0.2 0.5 0.8 1.0>")    // different gain each beat
  * ```
  *
+ * @param amount The control value to use for gain.
+ *
  * @category dynamics
  * @tags gain, volume, amplitude, dynamics
  */
 @StrudelDsl
-fun gain(amount: PatternLike): StrudelPattern = _gain(listOf(amount).asStrudelDslArgs())
-
-/** Sets the gain for each event in this pattern. */
-@StrudelDsl
 fun StrudelPattern.gain(amount: PatternLike): StrudelPattern = this._gain(listOf(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the gain for each event. */
+/**
+ * Parses this string as a pattern and sets the gain for each event.
+ *
+ * ```KlangScript
+ * "bd*4".gain("<0.2 0.5 0.8 1.0>").s()    // different gain each beat
+ * ```
+ *
+ * @param amount The control value to use for gain.
+ */
 @StrudelDsl
 fun String.gain(amount: PatternLike): StrudelPattern = this._gain(listOf(amount).asStrudelDslArgs())
+
+/**
+ * Creates a [PatternMapper] that sets the gain for each event in a pattern.
+ *
+ * ```KlangScript
+ * s("hh hh hh hh").apply(gain("1.0 0.75 0.5 0.25"))
+ * ```
+ *
+ * @param amount The control value to use for gain.
+ */
+@StrudelDsl
+fun gain(amount: PatternLike): PatternMapper = _gain(listOf(amount).asStrudelDslArgs())
+
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
@@ -62,7 +83,7 @@ fun applyPan(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     return source._liftNumericField(args, panMutation)
 }
 
-internal val _pan by dslFunction { args, /* callInfo */ _ -> args.toPattern(panMutation) }
+internal val _pan by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(panMutation) }
 internal val StrudelPattern._pan by dslPatternExtension { p, args, /* callInfo */ _ -> applyPan(p, args) }
 internal val String._pan by dslStringExtension { p, args, callInfo -> p._pan(args, callInfo) }
 
@@ -103,11 +124,11 @@ fun applyVelocity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, velocityMutation)
 }
 
-internal val _velocity by dslFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
+internal val _velocity by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
 internal val StrudelPattern._velocity by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
 internal val String._velocity by dslStringExtension { p, args, callInfo -> p._velocity(args, callInfo) }
 
-internal val _vel by dslFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
+internal val _vel by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(velocityMutation) }
 internal val StrudelPattern._vel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
 internal val String._vel by dslStringExtension { p, args, callInfo -> p._vel(args, callInfo) }
 
@@ -175,7 +196,7 @@ fun applyPostgain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, postgainMutation)
 }
 
-internal val _postgain by dslFunction { args, /* callInfo */ _ -> args.toPattern(postgainMutation) }
+internal val _postgain by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(postgainMutation) }
 internal val StrudelPattern._postgain by dslPatternExtension { p, args, /* callInfo */ _ -> applyPostgain(p, args) }
 internal val String._postgain by dslStringExtension { p, args, callInfo -> p._postgain(args, callInfo) }
 
@@ -218,11 +239,11 @@ fun applyCompressor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): St
     }
 }
 
-internal val _compressor by dslFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
+internal val _compressor by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
 internal val StrudelPattern._compressor by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
 internal val String._compressor by dslStringExtension { p, args, callInfo -> p._compressor(args, callInfo) }
 
-internal val _comp by dslFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
+internal val _comp by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
 internal val StrudelPattern._comp by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
 internal val String._comp by dslStringExtension { p, args, callInfo -> p._comp(args, callInfo) }
 
@@ -291,11 +312,11 @@ private fun applyUnison(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, unisonMutation)
 }
 
-internal val _unison by dslFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
+internal val _unison by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
 internal val StrudelPattern._unison by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
 internal val String._unison by dslStringExtension { p, args, callInfo -> p._unison(args, callInfo) }
 
-internal val _uni by dslFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
+internal val _uni by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
 internal val StrudelPattern._uni by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
 internal val String._uni by dslStringExtension { p, args, callInfo -> p._uni(args, callInfo) }
 
@@ -364,7 +385,7 @@ private fun applyDetune(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, detuneMutation)
 }
 
-internal val _detune by dslFunction { args, /* callInfo */ _ -> args.toPattern(detuneMutation) }
+internal val _detune by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(detuneMutation) }
 internal val StrudelPattern._detune by dslPatternExtension { p, args, /* callInfo */ _ -> applyDetune(p, args) }
 internal val String._detune by dslStringExtension { p, args, callInfo -> p._detune(args, callInfo) }
 
@@ -406,7 +427,7 @@ private fun applySpread(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, spreadMutation)
 }
 
-internal val _spread by dslFunction { args, /* callInfo */ _ -> args.toPattern(spreadMutation) }
+internal val _spread by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(spreadMutation) }
 internal val StrudelPattern._spread by dslPatternExtension { p, args, /* callInfo */ _ -> applySpread(p, args) }
 internal val String._spread by dslStringExtension { p, args, callInfo -> p._spread(args, callInfo) }
 
@@ -448,11 +469,11 @@ private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     return source._liftNumericField(args, densityMutation)
 }
 
-internal val _density by dslFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
+internal val _density by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
 internal val StrudelPattern._density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
 internal val String._density by dslStringExtension { p, args, callInfo -> p._density(args, callInfo) }
 
-internal val _d by dslFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
+internal val _d by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
 internal val StrudelPattern._d by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
 internal val String._d by dslStringExtension { p, args, callInfo -> p._d(args, callInfo) }
 
@@ -521,7 +542,7 @@ private fun applyAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     return source._liftNumericField(args, attackMutation)
 }
 
-internal val _attack by dslFunction { args, /* callInfo */ _ -> args.toPattern(attackMutation) }
+internal val _attack by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(attackMutation) }
 internal val StrudelPattern._attack by dslPatternExtension { p, args, /* callInfo */ _ -> applyAttack(p, args) }
 internal val String._attack by dslStringExtension { p, args, callInfo -> p._attack(args, callInfo) }
 
@@ -563,7 +584,7 @@ private fun applyDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     return source._liftNumericField(args, decayMutation)
 }
 
-internal val _decay by dslFunction { args, /* callInfo */ _ -> args.toPattern(decayMutation) }
+internal val _decay by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(decayMutation) }
 internal val StrudelPattern._decay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDecay(p, args) }
 internal val String._decay by dslStringExtension { p, args, callInfo -> p._decay(args, callInfo) }
 
@@ -604,7 +625,7 @@ private fun applySustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     return source._liftNumericField(args, sustainMutation)
 }
 
-internal val _sustain by dslFunction { args, /* callInfo */ _ -> args.toPattern(sustainMutation) }
+internal val _sustain by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(sustainMutation) }
 internal val StrudelPattern._sustain by dslPatternExtension { p, args, /* callInfo */ _ -> applySustain(p, args) }
 internal val String._sustain by dslStringExtension { p, args, callInfo -> p._sustain(args, callInfo) }
 
@@ -646,7 +667,7 @@ private fun applyRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
     return source._liftNumericField(args, releaseMutation)
 }
 
-internal val _release by dslFunction { args, /* callInfo */ _ -> args.toPattern(releaseMutation) }
+internal val _release by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(releaseMutation) }
 internal val StrudelPattern._release by dslPatternExtension { p, args, /* callInfo */ _ -> applyRelease(p, args) }
 internal val String._release by dslStringExtension { p, args, callInfo -> p._release(args, callInfo) }
 
@@ -705,7 +726,7 @@ private fun applyAdsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     }
 }
 
-internal val _adsr by dslFunction { args, /* callInfo */ _ -> args.toPattern(adsrMutation) }
+internal val _adsr by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(adsrMutation) }
 internal val StrudelPattern._adsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyAdsr(p, args) }
 internal val String._adsr by dslStringExtension { p, args, callInfo -> p._adsr(args, callInfo) }
 
@@ -754,11 +775,11 @@ private fun applyOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>):
     return source._liftNumericField(args, orbitMutation)
 }
 
-internal val _orbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
+internal val _orbit by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
 internal val StrudelPattern._orbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
 internal val String._orbit by dslStringExtension { p, args, callInfo -> p._orbit(args, callInfo) }
 
-internal val _o by dslFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
+internal val _o by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
 internal val StrudelPattern._o by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
 internal val String._o by dslStringExtension { p, args, callInfo -> p._o(args, callInfo) }
 
@@ -833,11 +854,11 @@ private fun applyDuckOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?
     return source._liftNumericField(args, duckOrbitMutation)
 }
 
-internal val _duckorbit by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
+internal val _duckorbit by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
 internal val StrudelPattern._duckorbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
 internal val String._duckorbit by dslStringExtension { p, args, callInfo -> p._duckorbit(args, callInfo) }
 
-internal val _duck by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
+internal val _duck by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
 internal val StrudelPattern._duck by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
 internal val String._duck by dslStringExtension { p, args, callInfo -> p._duck(args, callInfo) }
 
@@ -907,13 +928,13 @@ private fun applyDuckAttack(source: StrudelPattern, args: List<StrudelDslArg<Any
     return source._liftNumericField(args, duckAttackMutation)
 }
 
-internal val _duckattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
+internal val _duckattack by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
 internal val StrudelPattern._duckattack by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyDuckAttack(p, args)
 }
 internal val String._duckattack by dslStringExtension { p, args, callInfo -> p._duckattack(args, callInfo) }
 
-internal val _duckatt by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
+internal val _duckatt by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
 internal val StrudelPattern._duckatt by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
 internal val String._duckatt by dslStringExtension { p, args, callInfo -> p._duckatt(args, callInfo) }
 
@@ -982,7 +1003,7 @@ private fun applyDuckDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?
     return source._liftNumericField(args, duckDepthMutation)
 }
 
-internal val _duckdepth by dslFunction { args, /* callInfo */ _ -> args.toPattern(duckDepthMutation) }
+internal val _duckdepth by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckDepthMutation) }
 internal val StrudelPattern._duckdepth by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckDepth(p, args) }
 internal val String._duckdepth by dslStringExtension { p, args, callInfo -> p._duckdepth(args, callInfo) }
 

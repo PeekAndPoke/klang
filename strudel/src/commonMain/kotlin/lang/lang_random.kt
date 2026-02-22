@@ -154,7 +154,7 @@ val randCycle: StrudelPattern get() = _randCycle
 
 // -- brand() / brandBy() ----------------------------------------------------------------------------------------------
 
-internal val _brandBy by dslFunction { args, /* callInfo */ _ ->
+internal val _brandBy by dslPatternFunction { args, /* callInfo */ _ ->
     val probArg = args.getOrNull(0)
     val probVal = probArg?.value
 
@@ -227,7 +227,7 @@ val brand: StrudelPattern get() = _brand
 
 // -- irand() ----------------------------------------------------------------------------------------------------------
 
-internal val _irand by dslFunction { args, /* callInfo */ _ ->
+internal val _irand by dslPatternFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
@@ -850,7 +850,7 @@ fun String.someCycles(mapper: PatternMapper): StrudelPattern = this._someCycles(
 
 // -- randL() ----------------------------------------------------------------------------------------------------------
 
-internal val _randL by dslFunction { args, /* callInfo */ _ ->
+internal val _randL by dslPatternFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
@@ -879,7 +879,7 @@ fun randL(n: PatternLike): StrudelPattern = _randL(listOf(n).asStrudelDslArgs())
 
 // -- randrun() --------------------------------------------------------------------------------------------------------
 
-internal val _randrun by dslFunction { args, /* callInfo */ _ ->
+internal val _randrun by dslPatternFunction { args, /* callInfo */ _ ->
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
@@ -1010,7 +1010,7 @@ fun String.scramble(n: PatternLike): StrudelPattern = this._scramble(listOf(n).a
 
 // -- chooseWith() -----------------------------------------------------------------------------------------------------
 
-internal val _chooseWith by dslFunction { args, /* callInfo */ _ ->
+internal val _chooseWith by dslPatternFunction { args, /* callInfo */ _ ->
     val firstArg = args.getOrNull(0)
 
     when (val firstVal = firstArg?.value) {
@@ -1059,7 +1059,7 @@ fun String.chooseWith(vararg args: PatternLike): StrudelPattern = this._chooseWi
 
 // -- chooseInWith() ---------------------------------------------------------------------------------------------------
 
-internal val _chooseInWith by dslFunction { args, /* callInfo */ _ ->
+internal val _chooseInWith by dslPatternFunction { args, /* callInfo */ _ ->
     val firstArg = args.getOrNull(0)
 
     when (val firstVal = firstArg?.value) {
@@ -1104,7 +1104,7 @@ fun String.chooseInWith(vararg args: PatternLike): StrudelPattern =
 
 // -- choose() ---------------------------------------------------------------------------------------------------------
 
-internal val _choose by dslFunction { args, /* callInfo */ _ ->
+internal val _choose by dslPatternFunction { args, /* callInfo */ _ ->
     val firstArg = args.getOrNull(0)
 
     when (val firstVal = firstArg?.value) {
@@ -1165,7 +1165,7 @@ fun String.choose(vararg args: PatternLike): StrudelPattern = this._choose(args.
 
 // -- chooseOut() ------------------------------------------------------------------------------------------------------
 
-internal val _chooseOut by dslFunction { args, /* callInfo */ _ -> _choose(args) }
+internal val _chooseOut by dslPatternFunction { args, /* callInfo */ _ -> _choose(args) }
 internal val StrudelPattern._chooseOut by dslPatternExtension { p, args, callInfo -> p._choose(args, callInfo) }
 internal val String._chooseOut by dslStringExtension { p, args, callInfo -> p._chooseOut(args, callInfo) }
 
@@ -1190,7 +1190,7 @@ fun String.chooseOut(vararg args: PatternLike): StrudelPattern = this._chooseOut
 
 // -- chooseIn() -------------------------------------------------------------------------------------------------------
 
-internal val _chooseIn by dslFunction { args, /* callInfo */ _ ->
+internal val _chooseIn by dslPatternFunction { args, /* callInfo */ _ ->
     val firstArg = args.getOrNull(0)
 
     when (val firstVal = firstArg?.value) {
@@ -1264,7 +1264,7 @@ fun String.choose2(vararg args: PatternLike): StrudelPattern = this._choose2(arg
 
 // -- chooseCycles() ---------------------------------------------------------------------------------------------------
 
-internal val _chooseCycles by dslFunction { args, /* callInfo */ _ ->
+internal val _chooseCycles by dslPatternFunction { args, /* callInfo */ _ ->
     val firstArg = args.getOrNull(0)
 
     when (val firstVal = firstArg?.value) {
@@ -1316,7 +1316,7 @@ fun String.chooseCycles(vararg args: PatternLike): StrudelPattern =
 
 // -- randcat() --------------------------------------------------------------------------------------------------------
 
-internal val _randcat by dslFunction { args, /* callInfo */ _ -> _chooseCycles(args) }
+internal val _randcat by dslPatternFunction { args, /* callInfo */ _ -> _chooseCycles(args) }
 internal val StrudelPattern._randcat by dslPatternExtension { p, args, callInfo -> p._chooseCycles(args, callInfo) }
 internal val String._randcat by dslStringExtension { p, args, callInfo -> p._randcat(args, callInfo) }
 
@@ -1340,7 +1340,7 @@ fun String.randcat(vararg args: PatternLike): StrudelPattern = this._randcat(arg
 
 // -- wchoose() --------------------------------------------------------------------------------------------------------
 
-internal val _wchoose by dslFunction { args, /* callInfo */ _ ->
+internal val _wchoose by dslPatternFunction { args, /* callInfo */ _ ->
     val firstArg = args.getOrNull(0)
 
     when (val firstVal = firstArg?.value) {
@@ -1392,7 +1392,7 @@ fun String.wchoose(vararg args: PatternLike): StrudelPattern = this._wchoose(arg
 
 // -- wchooseCycles() --------------------------------------------------------------------------------------------------
 
-internal val _wchooseCycles by dslFunction { args, /* callInfo */ _ ->
+internal val _wchooseCycles by dslPatternFunction { args, /* callInfo */ _ ->
     val firstArg = args.getOrNull(0)
 
     when (val firstVal = firstArg?.value) {
@@ -1445,7 +1445,7 @@ fun String.wchooseCycles(vararg args: PatternLike): StrudelPattern =
 
 // -- wrandcat() -------------------------------------------------------------------------------------------------------
 
-internal val _wrandcat by dslFunction { args, /* callInfo */ _ -> _wchooseCycles(args) }
+internal val _wrandcat by dslPatternFunction { args, /* callInfo */ _ -> _wchooseCycles(args) }
 internal val StrudelPattern._wrandcat by dslPatternExtension { p, args, callInfo -> p._wchooseCycles(args, callInfo) }
 internal val String._wrandcat by dslStringExtension { p, args, callInfo -> p._wrandcat(args, callInfo) }
 

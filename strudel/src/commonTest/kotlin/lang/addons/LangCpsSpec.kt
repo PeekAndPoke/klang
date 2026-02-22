@@ -2,10 +2,22 @@ package io.peekandpoke.klang.strudel.lang.addons
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.math.Rational
 
 class LangCpsSpec : StringSpec({
+
+    "cps dsl interface" {
+        dslInterfaceTests(
+            "cps" to cps,
+            "script cps" to StrudelPattern.compile("cps"),
+        ) { _, events ->
+            events.size shouldBe 1
+            events[0].data.value?.asDouble shouldBe 0.5
+        }
+    }
 
     "cps should return default value (0.5) from empty context" {
         val p = cps

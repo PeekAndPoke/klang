@@ -56,7 +56,7 @@ fun applyUnaryOp(
 
 // -- add() ------------------------------------------------------------------------------------------------------------
 
-internal val _add by dslFunction { _, _ -> silence }
+internal val _add by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._add by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a + b } }
 internal val String._add by dslStringExtension { p, args, callInfo -> p._add(args, callInfo) }
 
@@ -97,7 +97,7 @@ fun add(amount: PatternLike): StrudelPattern = _add(listOf(amount).asStrudelDslA
 
 // -- sub() ------------------------------------------------------------------------------------------------------------
 
-internal val _sub by dslFunction { _, _ -> silence }
+internal val _sub by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._sub by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a - b } }
 internal val String._sub by dslStringExtension { p, args, callInfo -> p._sub(args, callInfo) }
 
@@ -135,7 +135,7 @@ fun sub(amount: PatternLike): StrudelPattern = _sub(listOf(amount).asStrudelDslA
 
 // -- mul() ------------------------------------------------------------------------------------------------------------
 
-internal val _mul by dslFunction { _, _ -> silence }
+internal val _mul by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._mul by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a * b } }
 internal val String._mul by dslStringExtension { p, args, callInfo -> p._mul(args, callInfo) }
 
@@ -173,7 +173,7 @@ fun mul(factor: PatternLike): StrudelPattern = _mul(listOf(factor).asStrudelDslA
 
 // -- div() ------------------------------------------------------------------------------------------------------------
 
-internal val _div by dslFunction { _, _ -> silence }
+internal val _div by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._div by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a / b } }
 internal val String._div by dslStringExtension { p, args, callInfo -> p._div(args, callInfo) }
 
@@ -211,7 +211,7 @@ fun div(divisor: PatternLike): StrudelPattern = _div(listOf(divisor).asStrudelDs
 
 // -- mod() ------------------------------------------------------------------------------------------------------------
 
-internal val _mod by dslFunction { _, _ -> silence }
+internal val _mod by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._mod by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a % b } }
 internal val String._mod by dslStringExtension { p, args, callInfo -> p._mod(args, callInfo) }
 
@@ -249,7 +249,7 @@ fun mod(divisor: PatternLike): StrudelPattern = _mod(listOf(divisor).asStrudelDs
 
 // -- pow() ------------------------------------------------------------------------------------------------------------
 
-internal val _pow by dslFunction { _, _ -> silence }
+internal val _pow by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._pow by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a pow b }
 }
@@ -288,7 +288,7 @@ fun pow(exponent: PatternLike): StrudelPattern = _pow(listOf(exponent).asStrudel
 
 // -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
 
-internal val _band by dslFunction { _, _ -> silence }
+internal val _band by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._band by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a band b }
 }
@@ -327,7 +327,7 @@ fun band(mask: PatternLike): StrudelPattern = _band(listOf(mask).asStrudelDslArg
 
 // -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
 
-internal val _bor by dslFunction { _, _ -> silence }
+internal val _bor by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._bor by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a bor b }
 }
@@ -366,7 +366,7 @@ fun bor(mask: PatternLike): StrudelPattern = _bor(listOf(mask).asStrudelDslArgs(
 
 // -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
 
-internal val _bxor by dslFunction { _, _ -> silence }
+internal val _bxor by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._bxor by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a bxor b }
 }
@@ -405,7 +405,7 @@ fun bxor(mask: PatternLike): StrudelPattern = _bxor(listOf(mask).asStrudelDslArg
 
 // -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
 
-internal val _blshift by dslFunction { _, _ -> silence }
+internal val _blshift by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._blshift by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a shl b }
 }
@@ -445,7 +445,7 @@ fun blshift(bits: PatternLike): StrudelPattern = _blshift(listOf(bits).asStrudel
 
 // -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
 
-internal val _brshift by dslFunction { _, _ -> silence }
+internal val _brshift by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._brshift by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a shr b }
 }
@@ -485,7 +485,7 @@ fun brshift(bits: PatternLike): StrudelPattern = _brshift(listOf(bits).asStrudel
 
 // -- log2() -----------------------------------------------------------------------------------------------------------
 
-internal val _log2 by dslFunction { _, _ -> silence }
+internal val _log2 by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._log2 by dslPatternExtension { p, _, _ -> applyUnaryOp(p) { it.log2() } }
 internal val String._log2 by dslStringExtension { p, args, callInfo -> p._log2(args, callInfo) }
 
@@ -521,7 +521,7 @@ fun log2(): StrudelPattern = _log2(emptyList())
 
 // -- lt() (Less Than) -------------------------------------------------------------------------------------------------
 
-internal val _lt by dslFunction { _, _ -> silence }
+internal val _lt by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._lt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a lt b }
 }
@@ -560,7 +560,7 @@ fun lt(threshold: PatternLike): StrudelPattern = _lt(listOf(threshold).asStrudel
 
 // -- gt() (Greater Than) ----------------------------------------------------------------------------------------------
 
-internal val _gt by dslFunction { _, _ -> silence }
+internal val _gt by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._gt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a gt b }
 }
@@ -599,7 +599,7 @@ fun gt(threshold: PatternLike): StrudelPattern = _gt(listOf(threshold).asStrudel
 
 // -- lte() (Less Than or Equal) ---------------------------------------------------------------------------------------
 
-internal val _lte by dslFunction { _, _ -> silence }
+internal val _lte by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._lte by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a lte b }
 }
@@ -638,7 +638,7 @@ fun lte(threshold: PatternLike): StrudelPattern = _lte(listOf(threshold).asStrud
 
 // -- gte() (Greater Than or Equal) ------------------------------------------------------------------------------------
 
-internal val _gte by dslFunction { _, _ -> silence }
+internal val _gte by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._gte by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a gte b }
 }
@@ -677,7 +677,7 @@ fun gte(threshold: PatternLike): StrudelPattern = _gte(listOf(threshold).asStrud
 
 // -- eq() (Equal) -----------------------------------------------------------------------------------------------------
 
-internal val _eq by dslFunction { _, _ -> silence }
+internal val _eq by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._eq by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a eq b }
 }
@@ -716,7 +716,7 @@ fun eq(other: PatternLike): StrudelPattern = _eq(listOf(other).asStrudelDslArgs(
 
 // -- eqt() (Truthiness Equal) -----------------------------------------------------------------------------------------
 
-internal val _eqt by dslFunction { _, _ -> silence }
+internal val _eqt by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._eqt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a eqt b }
 }
@@ -757,7 +757,7 @@ fun eqt(other: PatternLike): StrudelPattern = _eqt(listOf(other).asStrudelDslArg
 
 // -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
 
-internal val _ne by dslFunction { _, _ -> silence }
+internal val _ne by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._ne by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a ne b }
 }
@@ -796,7 +796,7 @@ fun ne(other: PatternLike): StrudelPattern = _ne(listOf(other).asStrudelDslArgs(
 
 // -- net() (Truthiness Not Equal) -------------------------------------------------------------------------------------
 
-internal val _net by dslFunction { _, _ -> silence }
+internal val _net by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._net by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a net b }
 }
@@ -837,7 +837,7 @@ fun net(other: PatternLike): StrudelPattern = _net(listOf(other).asStrudelDslArg
 
 // -- and() (Logical AND) ----------------------------------------------------------------------------------------------
 
-internal val _and by dslFunction { _, _ -> silence }
+internal val _and by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._and by dslPatternExtension { source, args, _ ->
     applyArithmetic(source, args) { a, b -> a and b }
 }
@@ -877,7 +877,7 @@ fun and(other: PatternLike): StrudelPattern = _and(listOf(other).asStrudelDslArg
 
 // -- or() (Logical OR) ------------------------------------------------------------------------------------------------
 
-internal val _or by dslFunction { _, _ -> silence }
+internal val _or by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._or by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a or b }
 }

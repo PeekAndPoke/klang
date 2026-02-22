@@ -85,7 +85,7 @@ fun applyFmh(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPa
     return source._liftNumericField(args, fmhMutation)
 }
 
-internal val _fmh by dslFunction { args, _ -> args.toPattern(fmhMutation) }
+internal val _fmh by dslPatternFunction { args, _ -> args.toPattern(fmhMutation) }
 internal val StrudelPattern._fmh by dslPatternExtension { p, args, _ -> applyFmh(p, args) }
 internal val String._fmh by dslStringExtension { p, args, callInfo -> p._fmh(args, callInfo) }
 
@@ -126,11 +126,11 @@ fun applyFmattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, fmattackMutation)
 }
 
-internal val _fmattack by dslFunction { args, _ -> args.toPattern(fmattackMutation) }
+internal val _fmattack by dslPatternFunction { args, _ -> args.toPattern(fmattackMutation) }
 internal val StrudelPattern._fmattack by dslPatternExtension { p, args, _ -> applyFmattack(p, args) }
 internal val String._fmattack by dslStringExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
 
-internal val _fmatt by dslFunction { args, callInfo -> _fmattack(args, callInfo) }
+internal val _fmatt by dslPatternFunction { args, callInfo -> _fmattack(args, callInfo) }
 internal val StrudelPattern._fmatt by dslPatternExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
 internal val String._fmatt by dslStringExtension { p, args, callInfo -> p._fmatt(args, callInfo) }
 
@@ -190,11 +190,11 @@ fun applyFmdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, fmdecayMutation)
 }
 
-internal val _fmdecay by dslFunction { args, _ -> args.toPattern(fmdecayMutation) }
+internal val _fmdecay by dslPatternFunction { args, _ -> args.toPattern(fmdecayMutation) }
 internal val StrudelPattern._fmdecay by dslPatternExtension { p, args, _ -> applyFmdecay(p, args) }
 internal val String._fmdecay by dslStringExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
 
-internal val _fmdec by dslFunction { args, callInfo -> _fmdecay(args, callInfo) }
+internal val _fmdec by dslPatternFunction { args, callInfo -> _fmdecay(args, callInfo) }
 internal val StrudelPattern._fmdec by dslPatternExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
 internal val String._fmdec by dslStringExtension { p, args, callInfo -> p._fmdec(args, callInfo) }
 
@@ -254,11 +254,11 @@ fun applyFmsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     return source._liftNumericField(args, fmsustainMutation)
 }
 
-internal val _fmsustain by dslFunction { args, _ -> args.toPattern(fmsustainMutation) }
+internal val _fmsustain by dslPatternFunction { args, _ -> args.toPattern(fmsustainMutation) }
 internal val StrudelPattern._fmsustain by dslPatternExtension { p, args, _ -> applyFmsustain(p, args) }
 internal val String._fmsustain by dslStringExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
 
-internal val _fmsus by dslFunction { args, callInfo -> _fmsustain(args, callInfo) }
+internal val _fmsus by dslPatternFunction { args, callInfo -> _fmsustain(args, callInfo) }
 internal val StrudelPattern._fmsus by dslPatternExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
 internal val String._fmsus by dslStringExtension { p, args, callInfo -> p._fmsus(args, callInfo) }
 
@@ -318,11 +318,11 @@ fun applyFmenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return source._liftNumericField(args, fmenvMutation)
 }
 
-internal val _fmenv by dslFunction { args, _ -> args.toPattern(fmenvMutation) }
+internal val _fmenv by dslPatternFunction { args, _ -> args.toPattern(fmenvMutation) }
 internal val StrudelPattern._fmenv by dslPatternExtension { p, args, _ -> applyFmenv(p, args) }
 internal val String._fmenv by dslStringExtension { p, args, callInfo -> p._fmenv(args, callInfo) }
 
-internal val _fmmod by dslFunction { args, callInfo -> _fmenv(args, callInfo) }
+internal val _fmmod by dslPatternFunction { args, callInfo -> _fmenv(args, callInfo) }
 internal val StrudelPattern._fmmod by dslPatternExtension { p, args, callInfo -> p._fmenv(args, callInfo) }
 internal val String._fmmod by dslStringExtension { p, args, callInfo -> p._fmmod(args, callInfo) }
 

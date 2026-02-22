@@ -237,7 +237,9 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             ui.label {
                 +when (variant.type) {
                     DslType.TOP_LEVEL -> "Top Level Function"
-                    DslType.EXTENSION_METHOD -> "Extension Function"
+                    DslType.EXTENSION_METHOD -> {
+                        "${variant.signatureModel.receiver} Extension Function"
+                    }
                     DslType.PROPERTY -> "Property"
                     DslType.OBJECT -> "Object"
                 }

@@ -50,7 +50,8 @@ internal fun generateSourceId(sourceLocation: SourceLocation? = null): String {
 
 object StrudelRegistry {
     val symbols = mutableMapOf<String, Any>()
-    val functions = mutableMapOf<String, StrudelDslFn>()
+    val patternCreationFunctions = mutableMapOf<String, StrudelDslTopLevelFn<StrudelPattern>>()
+    val patternMapperFunctions = mutableMapOf<String, StrudelDslTopLevelFn<PatternMapper>>()
     val patternExtensionMethods = mutableMapOf<String, StrudelDslExtFn<StrudelPattern>>()
     val stringExtensionMethods = mutableMapOf<String, StrudelDslExtFn<String>>()
 }
@@ -165,9 +166,14 @@ fun patternMapper(mapper: Any?): PatternMapper? {
 }
 
 /**
- * Creates a DSL function that returns a StrudelPattern.
+ * Creates a top level DSL function that returns a StrudelPattern.
  */
-fun dslFunction(handler: StrudelDslFn) = DslFunctionProvider(handler)
+fun dslPatternFunction(handler: StrudelDslTopLevelFn<StrudelPattern>) = DslPatternCreatorFunctionProvider(handler)
+
+/**
+ * Create a top level DSL function that returns a PatternMapper.
+ */
+fun dslPatternMapper(handler: StrudelDslTopLevelFn<PatternMapper>) = DslPatternMapperFunctionProvider(handler)
 
 /**
  * Creates a DSL extension method on StrudelPattern that returns a StrudelPattern.
@@ -365,7 +371,7 @@ fun StrudelPattern.applyControl(
 
 // --- Generic Function Delegate (stack, arrange, etc.) ---
 
-class DslFunction(val handler: StrudelDslFn) {
+class DslTopLevelPatternCreatorFunction(val handler: StrudelDslTopLevelFn<StrudelPattern>) {
     operator fun invoke() = invoke(args = emptyList())
 
     @JvmName("invokeFunction")
@@ -384,6 +390,27 @@ class DslFunction(val handler: StrudelDslFn) {
         return handler(args, callInfo)
     }
 }
+
+class DslTopLevelPatternMapperFunction(val handler: StrudelDslTopLevelFn<PatternMapper>) {
+    operator fun invoke() = invoke(args = emptyList())
+
+    @JvmName("invokeFunction")
+    operator fun invoke(block: (Double) -> Double) = invoke(args = listOf(block).asStrudelDslArgs())
+
+    @JvmName("invokeVararg")
+    operator fun invoke(vararg args: Any?): PatternMapper = invoke(args = args.toList().asStrudelDslArgs())
+
+    @JvmName("invokeArray")
+    operator fun invoke(args: Array<Any?>): PatternMapper = invoke(args = args.toList().asStrudelDslArgs())
+
+    @JvmName("invokeList")
+    operator fun invoke(args: List<Any?>): PatternMapper = invoke(args = args.asStrudelDslArgs())
+
+    operator fun invoke(args: List<StrudelDslArg<Any?>>, callInfo: CallInfo? = null): PatternMapper {
+        return handler(args, callInfo)
+    }
+}
+
 
 // --- Generic Method Delegate (fast, slow, etc.) ---
 
@@ -428,21 +455,47 @@ class DslPatternMethod(
 /**
  * Provider that registers the function name and creates bound delegates.
  */
-class DslFunctionProvider(
-    private val handler: StrudelDslFn,
+class DslPatternCreatorFunctionProvider(
+    private val handler: StrudelDslTopLevelFn<StrudelPattern>,
 ) {
-    operator fun provideDelegate(thisRef: Any?, prop: KProperty<*>): ReadOnlyProperty<Any?, DslFunction> {
+    operator fun provideDelegate(
+        thisRef: Any?,
+        prop: KProperty<*>,
+    ): ReadOnlyProperty<Any?, DslTopLevelPatternCreatorFunction> {
         val name = prop.name.trimStart('_')
-        val func = DslFunction(handler)
+        val func = DslTopLevelPatternCreatorFunction(handler)
 
         // Register in the evaluator registry - convert RuntimeValue to Any? for the handler
-        StrudelRegistry.functions[name] = { args, callInfo ->
+        StrudelRegistry.patternCreationFunctions[name] = { args, callInfo ->
             func.invoke(args = args, callInfo = callInfo)
         }
 
         return ReadOnlyProperty { _, _ -> func }
     }
 }
+
+/**
+ * Provider that registers the function name and creates bound delegates.
+ */
+class DslPatternMapperFunctionProvider(
+    private val handler: StrudelDslTopLevelFn<PatternMapper>,
+) {
+    operator fun provideDelegate(
+        thisRef: Any?,
+        prop: KProperty<*>,
+    ): ReadOnlyProperty<Any?, DslTopLevelPatternMapperFunction> {
+        val name = prop.name.trimStart('_')
+        val func = DslTopLevelPatternMapperFunction(handler)
+
+        // Register in the evaluator registry - convert RuntimeValue to Any? for the handler
+        StrudelRegistry.patternMapperFunctions[name] = { args, callInfo ->
+            func.invoke(args = args, callInfo = callInfo)
+        }
+
+        return ReadOnlyProperty { _, _ -> func }
+    }
+}
+
 
 /**
  * Provider that registers the method name and creates bound delegates.

@@ -11,7 +11,7 @@ class LangGainSpec : StringSpec({
 
     "top-level gain() sets VoiceData.gain correctly" {
         // Given a simple sequence of gain values within one cycle
-        val p = gain("0.5 1.0")
+        val p = sound("hh hh").apply(gain("0.5 1.0"))
 
         // When querying one cycle
         val events = p.queryArc(0.0, 1.0)

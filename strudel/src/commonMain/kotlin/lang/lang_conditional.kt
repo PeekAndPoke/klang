@@ -35,7 +35,7 @@ fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     }
 }
 
-internal val _firstOf by dslFunction { args, _ ->
+internal val _firstOf by dslPatternFunction { args, _ ->
     val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
     val pat = args.getOrNull(2)?.toPattern() ?: silence
@@ -94,7 +94,7 @@ fun firstOf(n: PatternLike, transform: PatternMapper, pattern: PatternLike = sil
 
 // -- every() ----------------------------------------------------------------------------------------------------------
 
-internal val _every by dslFunction { args, callInfo -> _firstOf(args, callInfo) }
+internal val _every by dslPatternFunction { args, callInfo -> _firstOf(args, callInfo) }
 internal val StrudelPattern._every by dslPatternExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 internal val String._every by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 
@@ -158,7 +158,7 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     }
 }
 
-internal val _lastOf by dslFunction { args, _ ->
+internal val _lastOf by dslPatternFunction { args, _ ->
     val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
     val pat = args.getOrNull(2)?.toPattern() ?: silence

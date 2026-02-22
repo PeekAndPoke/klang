@@ -171,8 +171,8 @@ private fun dispatchPick(
     }
 }
 
-internal val _pick by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _pick by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
 
     val first = args[0].value
     val lookup: Any
@@ -261,8 +261,8 @@ fun pick(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
 
 // -- pickmod() --------------------------------------------------------------------------------------------------------
 
-internal val _pickmod by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _pickmod by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
 
     val first = args[0].value
     val lookup: Any
@@ -407,8 +407,8 @@ private fun dispatchPickOuter(
     }
 }
 
-internal val _pickOut by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _pickOut by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val first = args[0].value
 
     val lookup: Any
@@ -490,8 +490,8 @@ fun String.pickOut(vararg args: PatternLike): StrudelPattern = this._pickOut(arg
 
 // -- pickmodOut() -----------------------------------------------------------------------------------------------------
 
-internal val _pickmodOut by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _pickmodOut by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val first = args[0].value
 
     val lookup: Any
@@ -621,8 +621,8 @@ private fun dispatchInhabit(
     }
 }
 
-internal val _inhabit by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _inhabit by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
 
     val first = args[0].value
     val lookup: Any
@@ -702,7 +702,7 @@ fun StrudelPattern.inhabit(vararg args: PatternLike): StrudelPattern = this._inh
 @StrudelDsl
 fun String.inhabit(vararg args: PatternLike): StrudelPattern = this._inhabit(args.toList().asStrudelDslArgs())
 
-internal val _pickSqueeze by dslFunction { args, callInfo -> _inhabit(args, callInfo) }
+internal val _pickSqueeze by dslPatternFunction { args, callInfo -> _inhabit(args, callInfo) }
 internal val StrudelPattern._pickSqueeze by dslPatternExtension { p, args, callInfo -> p._inhabit(args, callInfo) }
 internal val String._pickSqueeze by dslStringExtension { p, args, callInfo -> p._pickSqueeze(args, callInfo) }
 
@@ -721,8 +721,8 @@ fun String.pickSqueeze(vararg args: PatternLike): StrudelPattern = this._pickSqu
 
 // -- inhabitmod() -----------------------------------------------------------------------------------------------------
 
-internal val _inhabitmod by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _inhabitmod by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
 
     val first = args[0].value
     val lookup: Any
@@ -798,7 +798,7 @@ fun StrudelPattern.inhabitmod(vararg args: PatternLike): StrudelPattern =
 @StrudelDsl
 fun String.inhabitmod(vararg args: PatternLike): StrudelPattern = this._inhabitmod(args.toList().asStrudelDslArgs())
 
-internal val _pickmodSqueeze by dslFunction { args, callInfo -> _inhabitmod(args, callInfo) }
+internal val _pickmodSqueeze by dslPatternFunction { args, callInfo -> _inhabitmod(args, callInfo) }
 internal val StrudelPattern._pickmodSqueeze by dslPatternExtension { p, args, callInfo ->
     p._inhabitmod(
         args,
@@ -823,9 +823,9 @@ fun String.pickmodSqueeze(vararg args: PatternLike): StrudelPattern =
 
 // -- squeeze() --------------------------------------------------------------------------------------------------------
 
-internal val _squeeze by dslFunction { args, _ ->
+internal val _squeeze by dslPatternFunction { args, _ ->
     // squeeze(selector, lookup...)
-    if (args.size < 2) return@dslFunction silence
+    if (args.size < 2) return@dslPatternFunction silence
 
     val selectorArg = args[0]
     val selector = listOf(selectorArg).toPattern(voiceValueModifier)
@@ -955,8 +955,8 @@ private fun dispatchPickRestart(
     }
 }
 
-internal val _pickRestart by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _pickRestart by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val first = args[0].value
 
     val lookup: Any
@@ -1034,8 +1034,8 @@ fun String.pickRestart(vararg args: PatternLike): StrudelPattern = this._pickRes
 
 // -- pickmodRestart() -------------------------------------------------------------------------------------------------
 
-internal val _pickmodRestart by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _pickmodRestart by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val first = args[0].value
 
     val lookup: Any
@@ -1159,8 +1159,8 @@ private fun dispatchPickReset(
     }
 }
 
-internal val _pickReset by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _pickReset by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val first = args[0].value
 
     val lookup: Any
@@ -1237,8 +1237,8 @@ fun String.pickReset(vararg args: PatternLike): StrudelPattern = this._pickReset
 
 // -- pickmodReset() ---------------------------------------------------------------------------------------------------
 
-internal val _pickmodReset by dslFunction { args, _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _pickmodReset by dslPatternFunction { args, _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val first = args[0].value
 
     val lookup: Any
@@ -1341,8 +1341,8 @@ fun applyPickF(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
 
 internal val StrudelPattern._pickF by dslPatternExtension { p, args, _ -> applyPickF(p, args) }
 
-internal val _pickF by dslFunction { args, _ ->
-    if (args.size < 3) return@dslFunction silence
+internal val _pickF by dslPatternFunction { args, _ ->
+    if (args.size < 3) return@dslPatternFunction silence
     val lookupArg = args[0]
     val funcsArg = args[1]
     val patArg = args[2]
@@ -1425,8 +1425,8 @@ fun applyPickmodF(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
 
 internal val StrudelPattern._pickmodF by dslPatternExtension { p, args, _ -> applyPickmodF(p, args) }
 
-internal val _pickmodF by dslFunction { args, _ ->
-    if (args.size < 3) return@dslFunction silence
+internal val _pickmodF by dslPatternFunction { args, _ ->
+    if (args.size < 3) return@dslPatternFunction silence
     val lookupArg = args[0]
     val funcsArg = args[1]
     val patArg = args[2]

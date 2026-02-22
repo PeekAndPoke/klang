@@ -31,7 +31,7 @@ internal val StrudelPattern._warmth by dslPatternExtension { p, args, /* callInf
     applyWarmth(p, args)
 }
 
-internal val _warmth by dslFunction { args, /* callInfo */ _ -> args.toPattern(warmthMutation) }
+internal val _warmth by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(warmthMutation) }
 
 internal val String._warmth by dslStringExtension { p, args, callInfo ->
     p._warmth(args, callInfo)

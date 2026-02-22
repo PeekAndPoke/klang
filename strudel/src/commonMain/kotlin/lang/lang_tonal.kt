@@ -98,7 +98,7 @@ fun applyScale(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     }
 }
 
-internal val _scale by dslFunction { args, /* callInfo */ _ -> args.toPattern(scaleMutation) }
+internal val _scale by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(scaleMutation) }
 
 internal val StrudelPattern._scale by dslPatternExtension { p, args, /* callInfo */ _ -> applyScale(p, args) }
 
@@ -161,7 +161,7 @@ fun applyNote(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-internal val _note by dslFunction { args, /* callInfo */ _ -> args.toPattern(noteMutation).note() }
+internal val _note by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(noteMutation).note() }
 
 internal val StrudelPattern._note by dslPatternExtension { p, args, /* callInfo */ _ -> applyNote(p, args) }
 
@@ -228,7 +228,7 @@ fun applyN(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPatt
     }
 }
 
-internal val _n by dslFunction { args, /* callInfo */ _ -> args.toPattern(nMutation).n() }
+internal val _n by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(nMutation).n() }
 
 internal val StrudelPattern._n by dslPatternExtension { p, args, /* callInfo */ _ -> applyN(p, args) }
 
@@ -303,13 +303,13 @@ fun applySound(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
 
 internal val StrudelPattern._sound by dslPatternExtension { p, args, /* callInfo */ _ -> applySound(p, args) }
 
-internal val _sound by dslFunction { args, /* callInfo */ _ -> args.toPattern(soundMutation) }
+internal val _sound by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(soundMutation) }
 
 internal val String._sound by dslStringExtension { p, args, callInfo -> p._sound(args, callInfo) }
 
 internal val StrudelPattern._s by dslPatternExtension { p, args, callInfo -> p._sound(args, callInfo) }
 
-internal val _s by dslFunction { args, callInfo -> _sound(args, callInfo) }
+internal val _s by dslPatternFunction { args, callInfo -> _sound(args, callInfo) }
 
 internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(args, callInfo) }
 
@@ -401,7 +401,7 @@ fun applyBank(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
 
 internal val StrudelPattern._bank by dslPatternExtension { p, args, /* callInfo */ _ -> applyBank(p, args) }
 
-internal val _bank by dslFunction { args, /* callInfo */ _ -> args.toPattern(bankMutation) }
+internal val _bank by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(bankMutation) }
 
 internal val String._bank by dslStringExtension { p, args, callInfo -> p._bank(args, callInfo) }
 
@@ -444,13 +444,13 @@ fun applyLegato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return source._liftNumericField(args, legatoMutation)
 }
 
-internal val _legato by dslFunction { args, /* callInfo */ _ -> args.toPattern(legatoMutation) }
+internal val _legato by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(legatoMutation) }
 
 internal val StrudelPattern._legato by dslPatternExtension { p, args, /* callInfo */ _ -> applyLegato(p, args) }
 
 internal val String._legato by dslStringExtension { p, args, callInfo -> p._legato(args, callInfo) }
 
-internal val _clip by dslFunction { args, callInfo -> _legato(args, callInfo) }
+internal val _clip by dslPatternFunction { args, callInfo -> _legato(args, callInfo) }
 
 internal val StrudelPattern._clip by dslPatternExtension { p, args, callInfo -> p._legato(args, callInfo) }
 
@@ -507,13 +507,13 @@ fun applyVibrato(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, vibratoMutation)
 }
 
-internal val _vibrato by dslFunction { args, /* callInfo */ _ -> args.toPattern(vibratoMutation) }
+internal val _vibrato by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(vibratoMutation) }
 
 internal val StrudelPattern._vibrato by dslPatternExtension { p, args, /* callInfo */ _ -> applyVibrato(p, args) }
 
 internal val String._vibrato by dslStringExtension { p, args, callInfo -> p._vibrato(args, callInfo) }
 
-internal val _vib by dslFunction { args, /* callInfo */ _ -> args.toPattern(vibratoMutation) }
+internal val _vib by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(vibratoMutation) }
 
 internal val StrudelPattern._vib by dslPatternExtension { p, args, callInfo -> p._vibrato(args, callInfo) }
 
@@ -570,13 +570,13 @@ fun applyVibratoMod(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): St
     return source._liftNumericField(args, vibratoModMutation)
 }
 
-internal val _vibratoMod by dslFunction { args, /* callInfo */ _ -> args.toPattern(vibratoModMutation) }
+internal val _vibratoMod by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(vibratoModMutation) }
 
 internal val StrudelPattern._vibratoMod by dslPatternExtension { p, args, /* callInfo */ _ -> applyVibratoMod(p, args) }
 
 internal val String._vibratoMod by dslStringExtension { p, args, callInfo -> p._vibratoMod(args, callInfo) }
 
-internal val _vibmod by dslFunction { args, callInfo -> _vibratoMod(args, callInfo) }
+internal val _vibmod by dslPatternFunction { args, callInfo -> _vibratoMod(args, callInfo) }
 
 internal val StrudelPattern._vibmod by dslPatternExtension { p, args, callInfo -> p._vibratoMod(args, callInfo) }
 
@@ -633,7 +633,7 @@ fun applyPAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, pAttackMutation)
 }
 
-internal val _pattack by dslFunction { args, /* callInfo */ _ -> args.toPattern(pAttackMutation) }
+internal val _pattack by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(pAttackMutation) }
 
 internal val StrudelPattern._pattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyPAttack(p, args) }
 
@@ -641,7 +641,7 @@ internal val String._pattack by dslStringExtension { p, args, _ -> applyPAttack(
 
 internal val StrudelPattern._patt by dslPatternExtension { p, args, callInfo -> p._pattack(args, callInfo) }
 
-internal val _patt by dslFunction { args, callInfo -> _pattack(args, callInfo) }
+internal val _patt by dslPatternFunction { args, callInfo -> _pattack(args, callInfo) }
 
 internal val String._patt by dslStringExtension { p, args, callInfo -> p._pattack(args, callInfo) }
 
@@ -697,7 +697,7 @@ fun applyPDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return source._liftNumericField(args, pDecayMutation)
 }
 
-internal val _pdecay by dslFunction { args, /* callInfo */ _ -> args.toPattern(pDecayMutation) }
+internal val _pdecay by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(pDecayMutation) }
 
 internal val StrudelPattern._pdecay by dslPatternExtension { p, args, /* callInfo */ _ -> applyPDecay(p, args) }
 
@@ -705,7 +705,7 @@ internal val String._pdecay by dslStringExtension { p, args, _ -> applyPDecay(p,
 
 internal val StrudelPattern._pdec by dslPatternExtension { p, args, callInfo -> p._pdecay(args, callInfo) }
 
-internal val _pdec by dslFunction { args, callInfo -> _pdecay(args, callInfo) }
+internal val _pdec by dslPatternFunction { args, callInfo -> _pdecay(args, callInfo) }
 
 internal val String._pdec by dslStringExtension { p, args, callInfo -> p._pdecay(args, callInfo) }
 
@@ -761,7 +761,7 @@ fun applyPRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return source._liftNumericField(args, pReleaseMutation)
 }
 
-internal val _prelease by dslFunction { args, /* callInfo */ _ -> args.toPattern(pReleaseMutation) }
+internal val _prelease by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(pReleaseMutation) }
 
 internal val StrudelPattern._prelease by dslPatternExtension { p, args, /* callInfo */ _ -> applyPRelease(p, args) }
 
@@ -769,7 +769,7 @@ internal val String._prelease by dslStringExtension { p, args, _ -> applyPReleas
 
 internal val StrudelPattern._prel by dslPatternExtension { p, args, callInfo -> p._prelease(args, callInfo) }
 
-internal val _prel by dslFunction { args, callInfo -> _prelease(args, callInfo) }
+internal val _prel by dslPatternFunction { args, callInfo -> _prelease(args, callInfo) }
 
 internal val String._prel by dslStringExtension { p, args, callInfo -> p._prelease(args, callInfo) }
 
@@ -824,7 +824,7 @@ fun applyPEnv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return source._liftNumericField(args, pEnvMutation)
 }
 
-internal val _penv by dslFunction { args, /* callInfo */ _ -> args.toPattern(pEnvMutation) }
+internal val _penv by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(pEnvMutation) }
 
 internal val StrudelPattern._penv by dslPatternExtension { p, args, /* callInfo */ _ -> applyPEnv(p, args) }
 
@@ -832,7 +832,7 @@ internal val String._penv by dslStringExtension { p, args, _ -> applyPEnv(p, arg
 
 internal val StrudelPattern._pamt by dslPatternExtension { p, args, callInfo -> p._penv(args, callInfo) }
 
-internal val _pamt by dslFunction { args, callInfo -> _penv(args, callInfo) }
+internal val _pamt by dslPatternFunction { args, callInfo -> _penv(args, callInfo) }
 
 internal val String._pamt by dslStringExtension { p, args, callInfo -> p._penv(args, callInfo) }
 
@@ -888,7 +888,7 @@ fun applyPCurve(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     return source._liftNumericField(args, pCurveMutation)
 }
 
-internal val _pcurve by dslFunction { args, /* callInfo */ _ -> args.toPattern(pCurveMutation) }
+internal val _pcurve by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(pCurveMutation) }
 
 internal val StrudelPattern._pcurve by dslPatternExtension { p, args, /* callInfo */ _ -> applyPCurve(p, args) }
 
@@ -896,7 +896,7 @@ internal val String._pcurve by dslStringExtension { p, args, _ -> applyPCurve(p,
 
 internal val StrudelPattern._pcrv by dslPatternExtension { p, args, callInfo -> p._pcurve(args, callInfo) }
 
-internal val _pcrv by dslFunction { args, callInfo -> _pcurve(args, callInfo) }
+internal val _pcrv by dslPatternFunction { args, callInfo -> _pcurve(args, callInfo) }
 
 internal val String._pcrv by dslStringExtension { p, args, callInfo -> p._pcurve(args, callInfo) }
 
@@ -951,7 +951,7 @@ fun applyPAnchor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     return source._liftNumericField(args, pAnchorMutation)
 }
 
-internal val _panchor by dslFunction { args, /* callInfo */ _ -> args.toPattern(pAnchorMutation) }
+internal val _panchor by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(pAnchorMutation) }
 
 internal val StrudelPattern._panchor by dslPatternExtension { p, args, /* callInfo */ _ -> applyPAnchor(p, args) }
 
@@ -959,7 +959,7 @@ internal val String._panchor by dslStringExtension { p, args, _ -> applyPAnchor(
 
 internal val StrudelPattern._panc by dslPatternExtension { p, args, callInfo -> p._panchor(args, callInfo) }
 
-internal val _panc by dslFunction { args, callInfo -> _panchor(args, callInfo) }
+internal val _panc by dslPatternFunction { args, callInfo -> _panchor(args, callInfo) }
 
 internal val String._panc by dslStringExtension { p, args, callInfo -> p._panchor(args, callInfo) }
 
@@ -1014,7 +1014,7 @@ fun applyAccelerate(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): St
     return source._liftNumericField(args, accelerateMutation)
 }
 
-internal val _accelerate by dslFunction { args, /* callInfo */ _ -> args.toPattern(accelerateMutation) }
+internal val _accelerate by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(accelerateMutation) }
 
 internal val StrudelPattern._accelerate by dslPatternExtension { p, args, /* callInfo */ _ -> applyAccelerate(p, args) }
 
@@ -1157,7 +1157,7 @@ fun applyTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     )
 }
 
-internal val _transpose by dslFunction { args, /* callInfo */ _ ->
+internal val _transpose by dslPatternFunction { args, /* callInfo */ _ ->
     val source = args.lastOrNull()?.value as? StrudelPattern
 
     if (args.size >= 2 && source != null) {
@@ -1231,7 +1231,7 @@ fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-internal val _freq by dslFunction { args, /* callInfo */ _ -> args.toPattern(freqMutation) }
+internal val _freq by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(freqMutation) }
 
 internal val StrudelPattern._freq by dslPatternExtension { p, args, /* callInfo */ _ -> applyFreq(p, args) }
 
@@ -1352,7 +1352,7 @@ fun applyScaleTranspose(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
     )
 }
 
-internal val _scaleTranspose by dslFunction { args, _ ->
+internal val _scaleTranspose by dslPatternFunction { args, _ ->
     val source = args.lastOrNull()?.value as? StrudelPattern
 
     if (args.size >= 2 && source != null) {
@@ -1429,7 +1429,7 @@ private val chordMutation = voiceModifier { chordName ->
 // REMOVED expandChordToVoiceData and applyChord with BindPattern
 // Instead, chord() is now a simple property setter pattern
 
-internal val _chord by dslFunction { args, _ ->
+internal val _chord by dslPatternFunction { args, _ ->
     args.toPattern(chordMutation)
 }
 
@@ -1523,7 +1523,7 @@ fun applyRootNotes(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
-internal val _rootNotes by dslFunction { args, _ ->
+internal val _rootNotes by dslPatternFunction { args, _ ->
     // When used standalone, just returns a pattern that will extract roots when applied
     args.toPattern(voiceValueModifier)
 }
@@ -1681,7 +1681,7 @@ fun applyVoicing(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     }
 }
 
-internal val _voicing by dslFunction { args, _ ->
+internal val _voicing by dslPatternFunction { args, _ ->
     // When used standalone, creates a modifier pattern
     args.toPattern(voiceValueModifier)
 }

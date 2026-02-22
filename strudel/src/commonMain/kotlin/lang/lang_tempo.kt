@@ -66,7 +66,7 @@ fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return result
 }
 
-internal val _slow by dslFunction { args, /* callInfo */ _ ->
+internal val _slow by dslPatternFunction { args, /* callInfo */ _ ->
     val factorArg: StrudelDslArg<Any?>
     val sourceParts: List<StrudelDslArg<Any?>>
 
@@ -149,7 +149,7 @@ fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return result
 }
 
-internal val _fast by dslFunction { args, /* callInfo */ _ ->
+internal val _fast by dslPatternFunction { args, /* callInfo */ _ ->
     val factorArg: StrudelDslArg<Any?>
     val sourceParts: List<StrudelDslArg<Any?>>
 
@@ -213,9 +213,9 @@ fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return ReversePattern(inner = pattern, nProvider = nProvider)
 }
 
-internal val _rev by dslFunction { args, /* callInfo */ _ ->
+internal val _rev by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
-        ?: return@dslFunction silence
+        ?: return@dslPatternFunction silence
 
     applyRev(pattern, args.take(1))
 }
@@ -288,9 +288,9 @@ fun applyRevv(pattern: StrudelPattern): StrudelPattern {
     return pattern._withQuerySpan(negateSpan)._withHapSpan(negateSpan)
 }
 
-internal val _revv by dslFunction { args, /* callInfo */ _ ->
+internal val _revv by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
-        ?: return@dslFunction silence
+        ?: return@dslPatternFunction silence
 
     applyRevv(pattern)
 }
@@ -338,9 +338,9 @@ fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
     return applySlowcatPrime(listOf(pattern, applyRev(pattern, listOf(StrudelDslArg(1, null)))))
 }
 
-internal val _palindrome by dslFunction { args, /* callInfo */ _ ->
+internal val _palindrome by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.map { it.value }.filterIsInstance<StrudelPattern>().firstOrNull()
-        ?: return@dslFunction silence
+        ?: return@dslPatternFunction silence
 
     applyPalindrome(pattern)
 }
@@ -384,7 +384,7 @@ fun palindrome(pattern: PatternLike): StrudelPattern = _palindrome(listOf(patter
 
 // -- early() ----------------------------------------------------------------------------------------------------------
 
-internal val _early by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+internal val _early by dslPatternFunction { /* args */ _, /* callInfo */ _ -> silence }
 
 internal val StrudelPattern._early by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyTimeShift(pattern = p, args = args, factor = Rational.MINUS_ONE)
@@ -427,7 +427,7 @@ internal val StrudelPattern._late by dslPatternExtension { p, args, _ ->
 
 internal val String._late by dslStringExtension { p, args, callInfo -> p._late(args, callInfo) }
 
-internal val _late by dslFunction { /* args */ _, /* callInfo */ _ -> silence }
+internal val _late by dslPatternFunction { /* args */ _, /* callInfo */ _ -> silence }
 
 /**
  * Nudges the pattern to start later by the given number of cycles.
@@ -495,9 +495,9 @@ fun applyCompress(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
-internal val _compress by dslFunction { args, /* callInfo */ _ ->
+internal val _compress by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.size < 3) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
 
     val pattern = args.drop(2).toPattern(voiceValueModifier)
@@ -576,9 +576,9 @@ fun applyFocus(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     }
 }
 
-internal val _focus by dslFunction { args, /* callInfo */ _ ->
+internal val _focus by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.size < 3) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
 
     val pattern = args.drop(2).toPattern(voiceValueModifier)
@@ -666,9 +666,9 @@ fun applyPly(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
 
-internal val _ply by dslFunction { args, /* callInfo */ _ ->
+internal val _ply by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.size < 2) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
 
     val pattern = args.drop(1).toPattern(voiceValueModifier)
@@ -767,9 +767,9 @@ fun applyPlyWith(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
 
-internal val _plyWith by dslFunction { args, /* callInfo */ _ ->
+internal val _plyWith by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.size < 3) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
 
     val pattern = args.drop(2).toPattern(voiceValueModifier)
@@ -782,7 +782,7 @@ internal val StrudelPattern._plyWith by dslPatternExtension { p, args, /* callIn
 
 internal val String._plyWith by dslStringExtension { p, args, callInfo -> p._plyWith(args, callInfo) }
 
-internal val _plywith by dslFunction { args, callInfo -> _plyWith(args, callInfo) }
+internal val _plywith by dslPatternFunction { args, callInfo -> _plyWith(args, callInfo) }
 internal val StrudelPattern._plywith by dslPatternExtension { p, args, callInfo -> p._plyWith(args, callInfo) }
 internal val String._plywith by dslStringExtension { p, args, callInfo -> p._plywith(args, callInfo) }
 
@@ -893,9 +893,9 @@ fun applyPlyForEach(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): S
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
 
-internal val _plyForEach by dslFunction { args, /* callInfo */ _ ->
+internal val _plyForEach by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.size < 3) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
 
     val pattern = args.drop(2).toPattern(voiceValueModifier)
@@ -908,7 +908,7 @@ internal val StrudelPattern._plyForEach by dslPatternExtension { p, args, /* cal
 
 internal val String._plyForEach by dslStringExtension { p, args, callInfo -> p._plyForEach(args, callInfo) }
 
-internal val _plyforeach by dslFunction { args, callInfo -> _plyForEach(args, callInfo) }
+internal val _plyforeach by dslPatternFunction { args, callInfo -> _plyForEach(args, callInfo) }
 internal val StrudelPattern._plyforeach by dslPatternExtension { p, args, callInfo -> p._plyForEach(args, callInfo) }
 internal val String._plyforeach by dslStringExtension { p, args, callInfo -> p._plyforeach(args, callInfo) }
 
@@ -986,9 +986,9 @@ fun applyHurry(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     }
 }
 
-internal val _hurry by dslFunction { args, /* callInfo */ _ ->
+internal val _hurry by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.size < 2) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
 
     val pattern = args.drop(1).toPattern(voiceValueModifier)
@@ -1043,9 +1043,9 @@ fun applyFastGap(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return FastGapPattern(source = pattern, factorProvider = factorProvider)
 }
 
-internal val _fastGap by dslFunction { args, /* callInfo */ _ ->
+internal val _fastGap by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.size < 2) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
 
     val factor = args[0].value?.asRationalOrNull() ?: Rational.ONE
@@ -1062,7 +1062,7 @@ internal val _fastGap by dslFunction { args, /* callInfo */ _ ->
 internal val StrudelPattern._fastGap by dslPatternExtension { p, args, /* callInfo */ _ -> applyFastGap(p, args) }
 internal val String._fastGap by dslStringExtension { p, args, callInfo -> p._fastGap(args, callInfo) }
 
-internal val _densityGap by dslFunction { args, callInfo -> _fastGap(args, callInfo) }
+internal val _densityGap by dslPatternFunction { args, callInfo -> _fastGap(args, callInfo) }
 internal val StrudelPattern._densityGap by dslPatternExtension { p, args, callInfo -> p._fastGap(args, callInfo) }
 internal val String._densityGap by dslStringExtension { p, args, callInfo -> p._densityGap(args, callInfo) }
 
@@ -1334,7 +1334,7 @@ fun applyBrak(pattern: StrudelPattern): StrudelPattern {
     }
 }
 
-internal val _brak by dslFunction { args, /* callInfo */ _ ->
+internal val _brak by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.toPattern(voiceValueModifier)
     applyBrak(pattern)
 }

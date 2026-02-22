@@ -4,10 +4,7 @@ package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel.lang.StrudelDsl
-import io.peekandpoke.klang.strudel.lang.dslPatternExtension
-import io.peekandpoke.klang.strudel.lang.dslStringExtension
-import io.peekandpoke.klang.strudel.lang.mul
+import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
 
 /**
@@ -30,6 +27,8 @@ internal val StrudelPattern._flipSign by dslPatternExtension { pattern, _, _ -> 
 
 internal val String._flipSign by dslStringExtension { pattern, _, _ -> applyFlipSign(pattern) }
 
+internal val _flipSign: PatternMapper by dslObject { { p -> p._flipSign() } }
+
 // ===== USER-FACING OVERLOADS =====
 
 /**
@@ -39,11 +38,11 @@ internal val String._flipSign by dslStringExtension { pattern, _, _ -> applyFlip
  * Useful for inverting modulation signals or creating mirror effects.
  *
  * ```KlangScript
- * rand.flipSign()                    // random values in range [-1, 0]
+ * seq("<[1 2 3 4] [-1 -2 -3 -4]>").flipSign().scale("c4:major").n()
  * ```
  *
  * ```KlangScript
- * sine.range(0, 1).flipSign()        // invert a unipolar sine to [-1, 0]
+ * sine.range(0, 1).flipSign()   // invert a unipolar sine to [-1, 0]
  * ```
  *
  * @category arithmetic
@@ -52,9 +51,25 @@ internal val String._flipSign by dslStringExtension { pattern, _, _ -> applyFlip
 @StrudelDsl
 fun StrudelPattern.flipSign(): StrudelPattern = this._flipSign(emptyList())
 
-/** Flips the sign of numerical values in a string pattern. */
+/**
+ * Flips the sign of numerical values in a string pattern.
+ *
+ * ```KlangScript
+ * "<[1 2 3 4] [-1 -2 -3 -4]>".flipSign().scale("C4:major").n()
+ * ```
+ */
 @StrudelDsl
 fun String.flipSign(): StrudelPattern = this._flipSign(emptyList())
+
+/**
+ * Flips the sign of numerical values in a string pattern.
+ *
+ * ```KlangScript
+ * flipSign("<[1 2 3 4] [-1 -2 -3 -4]>").scale("C4:major").n()
+ * ```
+ */
+@StrudelDsl
+val flipSign: PatternMapper get() = _flipSign
 
 // -- oneMinus ---------------------------------------------------------------------------------------------------------
 
@@ -70,6 +85,8 @@ private fun applyOneMinusValue(pattern: StrudelPattern): StrudelPattern {
 internal val StrudelPattern._oneMinusValue by dslPatternExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
 
 internal val String._oneMinusValue by dslStringExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
+
+internal val _oneMinusValue: PatternMapper by dslObject { { p -> p._oneMinusValue() } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -96,6 +113,10 @@ fun StrudelPattern.oneMinusValue(): StrudelPattern = this._oneMinusValue(emptyLi
 /** Calculates `1.0 - value` for a string pattern. */
 @StrudelDsl
 fun String.oneMinusValue(): StrudelPattern = this._oneMinusValue(emptyList())
+
+/** Calculates `1.0 - value` for a string pattern. */
+@StrudelDsl
+val oneMinusValue: PatternMapper get() = _oneMinusValue
 
 // -- not --------------------------------------------------------------------------------------------------------------
 

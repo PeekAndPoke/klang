@@ -52,7 +52,7 @@ fun applyHush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
 }
 
 // delegates - still register with KlangScript
-internal val _hush by dslFunction { _, _ -> silence }
+internal val _hush by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._hush by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
 internal val String._hush by dslStringExtension { p, args, callInfo -> p._hush(args, callInfo) }
 
@@ -109,7 +109,7 @@ fun StrudelPattern.hush(vararg args: PatternLike): StrudelPattern = this._hush(a
 fun String.hush(vararg args: PatternLike): StrudelPattern = this._hush(args.toList())
 
 // delegates - still register with KlangScript
-internal val _bypass by dslFunction { _, _ -> silence }
+internal val _bypass by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._bypass by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
 internal val String._bypass by dslStringExtension { p, args, callInfo -> p._bypass(args, callInfo) }
 
@@ -166,7 +166,7 @@ fun StrudelPattern.bypass(vararg args: PatternLike): StrudelPattern = this._bypa
 fun String.bypass(vararg args: PatternLike): StrudelPattern = this._bypass(args.toList())
 
 // delegates - still register with KlangScript
-internal val _mute by dslFunction { _, _ -> silence }
+internal val _mute by dslPatternFunction { _, _ -> silence }
 internal val StrudelPattern._mute by dslPatternExtension { p, args, /* callInfo */ _ -> applyHush(p, args) }
 internal val String._mute by dslStringExtension { p, args, callInfo -> p._mute(args, callInfo) }
 
@@ -244,7 +244,7 @@ fun applyGap(args: List<StrudelDslArg<Any?>>): StrudelPattern {
 }
 
 // delegates - still register with KlangScript
-internal val _gap by dslFunction { args, /* callInfo */ _ -> applyGap(args) }
+internal val _gap by dslPatternFunction { args, /* callInfo */ _ -> applyGap(args) }
 internal val StrudelPattern._gap by dslPatternExtension { _, args, /* callInfo */ _ -> applyGap(args) }
 internal val String._gap by dslStringExtension { p, args, callInfo -> p._gap(args, callInfo) }
 
@@ -313,7 +313,7 @@ fun applySeq(patterns: List<StrudelPattern>): StrudelPattern {
 }
 
 // delegates - still register with KlangScript
-internal val _seq by dslFunction { args, /* callInfo */ _ -> applySeq(args.toListOfPatterns()) }
+internal val _seq by dslPatternFunction { args, /* callInfo */ _ -> applySeq(args.toListOfPatterns()) }
 
 internal val StrudelPattern._seq by dslPatternExtension { p, args, /* callInfo */ _ ->
     applySeq(patterns = listOf(p) + args.toListOfPatterns())
@@ -393,7 +393,7 @@ fun String.seq(vararg patterns: PatternLike): StrudelPattern {
 // -- mini() -----------------------------------------------------------------------------------------------------------
 
 // delegates - still register with KlangScript
-internal val _mini by dslFunction { args, /* callInfo */ _ -> args.toPattern() }
+internal val _mini by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern() }
 internal val String._mini by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p }
 
 // ===== USER-FACING OVERLOADS =====
@@ -441,7 +441,7 @@ fun applyStack(patterns: List<StrudelPattern>): StrudelPattern {
 }
 
 // delegates - still register with KlangScript
-internal val _stack by dslFunction { args, /* callInfo */ _ ->
+internal val _stack by dslPatternFunction { args, /* callInfo */ _ ->
     applyStack(patterns = args.toListOfPatterns())
 }
 
@@ -521,7 +521,7 @@ fun applyArrange(args: List<StrudelDslArg<Any?>>): StrudelPattern {
 }
 
 // delegates - still register with KlangScript
-internal val _arrange by dslFunction { args, /* callInfo */ _ -> applyArrange(args) }
+internal val _arrange by dslPatternFunction { args, /* callInfo */ _ -> applyArrange(args) }
 
 internal val StrudelPattern._arrange by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyArrange(listOf(StrudelDslArg.of(p)) + args)
@@ -598,7 +598,7 @@ fun applyStepcat(args: List<StrudelDslArg<Any?>>): StrudelPattern {
 }
 
 // delegates - still register with KlangScript
-internal val _stepcat by dslFunction { args, /* callInfo */ _ -> applyStepcat(args) }
+internal val _stepcat by dslPatternFunction { args, /* callInfo */ _ -> applyStepcat(args) }
 
 internal val StrudelPattern._stepcat by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyStepcat(listOf(StrudelDslArg.of(p)) + args)
@@ -606,7 +606,7 @@ internal val StrudelPattern._stepcat by dslPatternExtension { p, args, /* callIn
 
 internal val String._stepcat by dslStringExtension { p, args, callInfo -> p._stepcat(args, callInfo) }
 
-internal val _timeCat by dslFunction { args, /* callInfo */ _ -> applyStepcat(args) }
+internal val _timeCat by dslPatternFunction { args, /* callInfo */ _ -> applyStepcat(args) }
 
 internal val StrudelPattern._timeCat by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyStepcat(listOf(StrudelDslArg.of(p)) + args)
@@ -614,7 +614,7 @@ internal val StrudelPattern._timeCat by dslPatternExtension { p, args, /* callIn
 
 internal val String._timeCat by dslStringExtension { p, args, callInfo -> p._timeCat(args, callInfo) }
 
-internal val _timecat by dslFunction { args, /* callInfo */ _ -> applyStepcat(args) }
+internal val _timecat by dslPatternFunction { args, /* callInfo */ _ -> applyStepcat(args) }
 
 internal val StrudelPattern._timecat by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyStepcat(listOf(StrudelDslArg.of(p)) + args)
@@ -622,7 +622,7 @@ internal val StrudelPattern._timecat by dslPatternExtension { p, args, /* callIn
 
 internal val String._timecat by dslStringExtension { p, args, callInfo -> p._timecat(args, callInfo) }
 
-internal val _s_cat by dslFunction { args, /* callInfo */ _ -> applyStepcat(args) }
+internal val _s_cat by dslPatternFunction { args, /* callInfo */ _ -> applyStepcat(args) }
 
 internal val StrudelPattern._s_cat by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyStepcat(listOf(StrudelDslArg.of(p)) + args)
@@ -830,26 +830,26 @@ fun applyStackBy(patterns: List<StrudelPattern>, alignment: Double): StrudelPatt
 }
 
 // delegates - still register with KlangScript
-internal val _stackBy by dslFunction { args, /* callInfo */ _ ->
+internal val _stackBy by dslPatternFunction { args, /* callInfo */ _ ->
     // TODO: support control patterns
     val alignment = args.firstOrNull()?.value?.asDoubleOrNull() ?: 0.0
     val patterns = args.drop(1).toListOfPatterns()
     applyStackBy(patterns = patterns, alignment = alignment)
 }
 
-internal val _stackLeft by dslFunction { args, /* callInfo */ _ ->
+internal val _stackLeft by dslPatternFunction { args, /* callInfo */ _ ->
     applyStackBy(patterns = args.toListOfPatterns(), alignment = 0.0)
 }
 
-internal val _stackRight by dslFunction { args, /* callInfo */ _ ->
+internal val _stackRight by dslPatternFunction { args, /* callInfo */ _ ->
     applyStackBy(patterns = args.toListOfPatterns(), alignment = 1.0)
 }
 
-internal val _stackCentre by dslFunction { args, /* callInfo */ _ ->
+internal val _stackCentre by dslPatternFunction { args, /* callInfo */ _ ->
     applyStackBy(patterns = args.toListOfPatterns(), alignment = 0.5)
 }
 
-internal val _polyrhythm by dslFunction { args, /* callInfo */ _ ->
+internal val _polyrhythm by dslPatternFunction { args, /* callInfo */ _ ->
     applyStack(patterns = args.toListOfPatterns())
 }
 
@@ -859,7 +859,7 @@ internal val StrudelPattern._polyrhythm by dslPatternExtension { p, args, /* cal
 
 internal val String._polyrhythm by dslStringExtension { p, args, callInfo -> p._polyrhythm(args, callInfo) }
 
-internal val _sequenceP by dslFunction { args, /* callInfo */ _ -> applySeq(args.toListOfPatterns()) }
+internal val _sequenceP by dslPatternFunction { args, /* callInfo */ _ -> applySeq(args.toListOfPatterns()) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1060,7 +1060,7 @@ fun applyCat(patterns: List<StrudelPattern>): StrudelPattern {
 }
 
 // delegates - still register with KlangScript
-internal val _cat by dslFunction { args, /* callInfo */ _ -> applyCat(patterns = args.toListOfPatterns()) }
+internal val _cat by dslPatternFunction { args, /* callInfo */ _ -> applyCat(patterns = args.toListOfPatterns()) }
 
 internal val StrudelPattern._cat by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyCat(patterns = listOf(p) + args.toListOfPatterns())
@@ -1068,7 +1068,7 @@ internal val StrudelPattern._cat by dslPatternExtension { p, args, /* callInfo *
 
 internal val String._cat by dslStringExtension { p, args, callInfo -> p._cat(args, callInfo) }
 
-internal val _fastcat by dslFunction { args, /* callInfo */ _ -> applySeq(patterns = args.toListOfPatterns()) }
+internal val _fastcat by dslPatternFunction { args, /* callInfo */ _ -> applySeq(patterns = args.toListOfPatterns()) }
 
 internal val StrudelPattern._fastcat by dslPatternExtension { p, args, /* callInfo */ _ ->
     applySeq(patterns = listOf(p) + args.toListOfPatterns())
@@ -1076,7 +1076,7 @@ internal val StrudelPattern._fastcat by dslPatternExtension { p, args, /* callIn
 
 internal val String._fastcat by dslStringExtension { p, args, callInfo -> p._fastcat(args, callInfo) }
 
-internal val _slowcat by dslFunction { args, /* callInfo */ _ -> applyCat(patterns = args.toListOfPatterns()) }
+internal val _slowcat by dslPatternFunction { args, /* callInfo */ _ -> applyCat(patterns = args.toListOfPatterns()) }
 
 internal val StrudelPattern._slowcat by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyCat(patterns = listOf(p) + args.toListOfPatterns())
@@ -1252,7 +1252,7 @@ fun applySlowcatPrime(patterns: List<StrudelPattern>): StrudelPattern {
 }
 
 // delegates - still register with KlangScript
-internal val _slowcatPrime by dslFunction { args, /* callInfo */ _ ->
+internal val _slowcatPrime by dslPatternFunction { args, /* callInfo */ _ ->
     applySlowcatPrime(patterns = args.toListOfPatterns())
 }
 
@@ -1330,7 +1330,7 @@ fun applyPolymeter(patterns: List<StrudelPattern>, baseSteps: Int? = null): Stru
 }
 
 // delegates - still register with KlangScript
-internal val _polymeter by dslFunction { args, /* callInfo */ _ ->
+internal val _polymeter by dslPatternFunction { args, /* callInfo */ _ ->
     applyPolymeter(patterns = args.toListOfPatterns())
 }
 
@@ -1340,13 +1340,13 @@ internal val StrudelPattern._polymeter by dslPatternExtension { p, args, /* call
 
 internal val String._polymeter by dslStringExtension { p, args, callInfo -> p._polymeter(args, callInfo) }
 
-internal val _polymeterSteps by dslFunction { args, /* callInfo */ _ ->
+internal val _polymeterSteps by dslPatternFunction { args, /* callInfo */ _ ->
     val steps = args.getOrNull(0)?.value?.asIntOrNull() ?: 4
     val patterns = args.drop(1).toListOfPatterns()
     applyPolymeter(patterns = patterns, baseSteps = steps)
 }
 
-internal val _pure by dslFunction { args, /* callInfo */ _ ->
+internal val _pure by dslPatternFunction { args, /* callInfo */ _ ->
     val value = args.getOrNull(0)?.value
     AtomicPattern(StrudelVoiceData.empty.copy(value = value?.asVoiceValue()))
 }
@@ -1450,8 +1450,8 @@ fun applyStruct(source: StrudelPattern, structArg: StrudelDslArg<Any?>?): Strude
 }
 
 // delegates - still register with KlangScript
-internal val _struct by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _struct by dslPatternFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val pattern = listOf(args[1]).toPattern()
     applyStruct(source = pattern, structArg = args.getOrNull(0))
 }
@@ -1521,8 +1521,8 @@ fun applyStructAll(source: StrudelPattern, structArg: StrudelDslArg<Any?>?): Str
 }
 
 // delegates - still register with KlangScript
-internal val _structAll by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _structAll by dslPatternFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val pattern = listOf(args[1]).toPattern()
     applyStructAll(source = pattern, structArg = args.getOrNull(0))
 }
@@ -1587,8 +1587,8 @@ fun applyMask(source: StrudelPattern, maskArg: StrudelDslArg<Any?>?): StrudelPat
 }
 
 // delegates - still register with KlangScript
-internal val _mask by dslFunction { args, /* callInfo */ _ ->
-    if (args.size < 2) return@dslFunction silence
+internal val _mask by dslPatternFunction { args, /* callInfo */ _ ->
+    if (args.size < 2) return@dslPatternFunction silence
     val pattern = listOf(args[1]).toPattern()
     applyMask(source = pattern, maskArg = args.getOrNull(0))
 }
@@ -1657,11 +1657,11 @@ fun applyMaskAll(source: StrudelPattern, maskArg: StrudelDslArg<Any?>?): Strudel
 }
 
 // delegates - still register with KlangScript
-internal val _maskAll by dslFunction { args, /* callInfo */ _ ->
+internal val _maskAll by dslPatternFunction { args, /* callInfo */ _ ->
     val maskArg = args.getOrNull(0)
     val source = args.map { it.value }.filterIsInstance<StrudelPattern>().let {
         if (it.size >= 2 && maskArg?.value is StrudelPattern) it[1] else it.firstOrNull()
-    } ?: return@dslFunction silence
+    } ?: return@dslPatternFunction silence
     applyMaskAll(source, maskArg)
 }
 
@@ -1884,7 +1884,7 @@ fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent) -> Bool
 }
 
 // delegates - still register with KlangScript
-internal val _filter by dslFunction { args, /* callInfo */ _ ->
+internal val _filter by dslPatternFunction { args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val predicate: ((StrudelPatternEvent) -> Boolean)? =
         args.getOrNull(0)?.value as? (StrudelPatternEvent) -> Boolean
@@ -1945,7 +1945,7 @@ fun filter(predicate: (StrudelPatternEvent) -> Boolean) = _filter(predicate)
 // -- filterWhen() -----------------------------------------------------------------------------------------------------
 
 // delegates - still register with KlangScript
-internal val _filterWhen by dslFunction { args, /* callInfo */ _ ->
+internal val _filterWhen by dslPatternFunction { args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val predicate: ((Double) -> Boolean)? = args.getOrNull(0)?.value as? (Double) -> Boolean
 
@@ -2059,7 +2059,7 @@ internal val StrudelPattern._layer by dslPatternExtension { p, args, /* callInfo
     val transforms: List<PatternMapper> = args.mapNotNull { it.toPatternMapper() }
 
     if (transforms.isEmpty()) {
-        silence
+        p // we keep the pattern as is
     } else {
         val patterns = transforms.mapNotNull { transform ->
             try {
@@ -2108,7 +2108,7 @@ internal val String._apply by dslStringExtension { p, args, callInfo -> p._apply
  */
 @StrudelDsl
 fun StrudelPattern.layer(vararg transforms: PatternMapper): StrudelPattern =
-    this._layer(transforms.map { it }.asStrudelDslArgs())
+    this._layer(transforms.toList().asStrudelDslArgs())
 
 /**
  * Applies multiple transformation functions to this string-parsed pattern and stacks the results.
@@ -2120,7 +2120,7 @@ fun StrudelPattern.layer(vararg transforms: PatternMapper): StrudelPattern =
  */
 @StrudelDsl
 fun String.layer(vararg transforms: PatternMapper): StrudelPattern =
-    this._layer(transforms.map { it }.asStrudelDslArgs())
+    this._layer(transforms.toList().asStrudelDslArgs())
 
 /**
  * Alias for [layer] — applies multiple transformation functions and stacks the results.
@@ -2141,7 +2141,7 @@ fun String.layer(vararg transforms: PatternMapper): StrudelPattern =
  */
 @StrudelDsl
 fun StrudelPattern.apply(vararg transforms: PatternMapper): StrudelPattern =
-    this._apply(transforms.map { it }.asStrudelDslArgs())
+    this._apply(transforms.toList().asStrudelDslArgs())
 
 /**
  * Alias for [layer] on a string-parsed pattern.
@@ -2153,7 +2153,7 @@ fun StrudelPattern.apply(vararg transforms: PatternMapper): StrudelPattern =
  */
 @StrudelDsl
 fun String.apply(vararg transforms: PatternMapper): StrudelPattern =
-    this._apply(transforms.map { it }.asStrudelDslArgs())
+    this._apply(transforms.toList().asStrudelDslArgs())
 
 // -- zoom() -----------------------------------------------------------------------------------------------------------
 
@@ -3290,7 +3290,7 @@ fun applyEuclid(source: StrudelPattern, pulses: Int, steps: Int, rotation: Int):
     )
 }
 
-internal val _euclid by dslFunction { args, callInfo ->
+internal val _euclid by dslPatternFunction { args, callInfo ->
     val pattern = args.drop(2).toPattern()
     pattern._euclid(args, callInfo)
 }
@@ -3367,7 +3367,7 @@ fun String.euclid(pulses: Int, steps: Int): StrudelPattern =
 
 // -- euclidRot() ------------------------------------------------------------------------------------------------------
 
-internal val _euclidRot by dslFunction { args, callInfo ->
+internal val _euclidRot by dslPatternFunction { args, callInfo ->
     val pattern = args.drop(3).toPattern()
     pattern._euclidRot(args, callInfo)
 }
@@ -3417,7 +3417,7 @@ internal val StrudelPattern._euclidRot by dslPatternExtension { p, args, /* call
 
 internal val String._euclidRot by dslStringExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
 
-internal val _euclidrot by dslFunction { args, callInfo -> _euclidRot(args, callInfo) }
+internal val _euclidrot by dslPatternFunction { args, callInfo -> _euclidRot(args, callInfo) }
 internal val StrudelPattern._euclidrot by dslPatternExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
 internal val String._euclidrot by dslStringExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
 
@@ -3493,10 +3493,10 @@ fun String.euclidrot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
 
 // TODO: check this, this seems to be wrong. First param is the pattern, rest are params.
 // We also need a top level function bjork(pattern, ...args)
-internal val _bjork by dslFunction { args, callInfo ->
-    val params = args.getOrNull(0)?.value as? List<*> ?: return@dslFunction silence
+internal val _bjork by dslPatternFunction { args, callInfo ->
+    val params = args.getOrNull(0)?.value as? List<*> ?: return@dslPatternFunction silence
 
-    val pattern = args.getOrNull(1)?.toPattern() ?: return@dslFunction silence
+    val pattern = args.getOrNull(1)?.toPattern() ?: return@dslPatternFunction silence
 
     pattern._bjork(params, callInfo)
 }
@@ -3591,7 +3591,7 @@ fun bjork(pulses: Int, steps: Int, rotation: Int = 0, pattern: PatternLike): Str
 
 // -- euclidLegato() ---------------------------------------------------------------------------------------------------
 
-internal val _euclidLegato by dslFunction { args, callInfo ->
+internal val _euclidLegato by dslPatternFunction { args, callInfo ->
     val pattern = args.drop(2).toPattern()
     pattern._euclidLegato(args, callInfo)
 }
@@ -3667,7 +3667,7 @@ fun String.euclidLegato(pulses: Int, steps: Int): StrudelPattern =
 
 // -- euclidLegatoRot() ------------------------------------------------------------------------------------------------
 
-internal val _euclidLegatoRot by dslFunction { args, callInfo ->
+internal val _euclidLegatoRot by dslPatternFunction { args, callInfo ->
     val pattern = args.drop(3).toPattern()
     pattern._euclidLegatoRot(args, callInfo)
 }
@@ -3820,7 +3820,7 @@ fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
-internal val _euclidish by dslFunction { args, /* callInfo */ _ ->
+internal val _euclidish by dslPatternFunction { args, /* callInfo */ _ ->
     // euclidish(pulses, steps, groove, pat)
     val pattern = args.drop(3).toPattern()
     applyEuclidish(pattern, args.take(3))
@@ -3832,7 +3832,7 @@ internal val StrudelPattern._euclidish by dslPatternExtension { p, args, /* call
 
 internal val String._euclidish by dslStringExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
 
-internal val _eish by dslFunction { args, callInfo -> _euclidish(args, callInfo) }
+internal val _eish by dslPatternFunction { args, callInfo -> _euclidish(args, callInfo) }
 internal val StrudelPattern._eish by dslPatternExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
 internal val String._eish by dslStringExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
 
@@ -3920,7 +3920,7 @@ fun applyRun(n: Int): StrudelPattern {
     return SequencePattern(items)
 }
 
-internal val _run by dslFunction { args, /* callInfo */ _ ->
+internal val _run by dslPatternFunction { args, /* callInfo */ _ ->
     val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
     applyRun(n)
 }
@@ -3968,7 +3968,7 @@ fun applyBinaryN(n: Int, bits: Int): StrudelPattern {
     return SequencePattern(items)
 }
 
-internal val _binaryN by dslFunction { args, /* callInfo */ _ ->
+internal val _binaryN by dslPatternFunction { args, /* callInfo */ _ ->
     val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
     val bits = args.getOrNull(1)?.value?.asIntOrNull() ?: 16
     applyBinaryN(n, bits)
@@ -3998,7 +3998,7 @@ fun binaryN(n: Int, bits: Int = 16): StrudelPattern = _binaryN(listOf(n, bits).a
 
 // -- binary() ---------------------------------------------------------------------------------------------------------
 
-internal val _binary by dslFunction { args, /* callInfo */ _ ->
+internal val _binary by dslPatternFunction { args, /* callInfo */ _ ->
     val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
     if (n == 0) {
         applyBinaryN(0, 1)
@@ -4048,7 +4048,7 @@ fun applyBinaryNL(n: Int, bits: Int): StrudelPattern {
     )
 }
 
-internal val _binaryNL by dslFunction { args, /* callInfo */ _ ->
+internal val _binaryNL by dslPatternFunction { args, /* callInfo */ _ ->
     val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
     val bits = args.getOrNull(1)?.value?.asIntOrNull() ?: 16
     applyBinaryNL(n, bits)
@@ -4081,7 +4081,7 @@ fun binaryNL(n: Int, bits: Int = 16): StrudelPattern = _binaryNL(listOf(n, bits)
 
 // -- binaryL() --------------------------------------------------------------------------------------------------------
 
-internal val _binaryL by dslFunction { args, /* callInfo */ _ ->
+internal val _binaryL by dslPatternFunction { args, /* callInfo */ _ ->
     val n = args.getOrNull(0)?.value?.asIntOrNull() ?: 0
     if (n == 0) {
         applyBinaryNL(0, 1)
@@ -4138,7 +4138,7 @@ private val ratioMutation = voiceModifier { inputValue ->
     copy(value = ratioValue?.asVoiceValue())
 }
 
-internal val _ratio by dslFunction { args, /* callInfo */ _ -> args.toPattern(ratioMutation) }
+internal val _ratio by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(ratioMutation) }
 
 internal val StrudelPattern._ratio by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     p.reinterpretVoice { it.ratioMutation(it.value?.asString) }
@@ -4193,7 +4193,7 @@ fun applyPace(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return source.fast(speedFactor)
 }
 
-internal val _pace by dslFunction { args, /* callInfo */ _ ->
+internal val _pace by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(1).toPattern()
     applyPace(pattern, args.take(1))
 }
@@ -4204,7 +4204,7 @@ internal val StrudelPattern._pace by dslPatternExtension { p, args, /* callInfo 
 
 internal val String._pace by dslStringExtension { p, args, callInfo -> p._pace(args, callInfo) }
 
-internal val _steps by dslFunction { args, callInfo -> _pace(args, callInfo) }
+internal val _steps by dslPatternFunction { args, callInfo -> _pace(args, callInfo) }
 internal val StrudelPattern._steps by dslPatternExtension { p, args, callInfo -> p._pace(args, callInfo) }
 internal val String._steps by dslStringExtension { p, args, callInfo -> p._pace(args, callInfo) }
 
@@ -4303,7 +4303,7 @@ fun applyTake(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-internal val _take by dslFunction { args, /* callInfo */ _ ->
+internal val _take by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(1).toPattern()
     applyTake(pattern, args.take(1))
 }
@@ -4391,7 +4391,7 @@ fun applyDrop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-internal val _drop by dslFunction { args, /* callInfo */ _ ->
+internal val _drop by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(1).toPattern()
     applyDrop(pattern, args.take(1))
 }
@@ -4456,7 +4456,7 @@ fun applyRepeatCycles(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     }
 }
 
-internal val _repeatCycles by dslFunction { args, /* callInfo */ _ ->
+internal val _repeatCycles by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(1).toPattern()
     applyRepeatCycles(pattern, args.take(1))
 }
@@ -4505,7 +4505,7 @@ fun String.repeatCycles(n: PatternLike): StrudelPattern =
 
 // -- extend() ---------------------------------------------------------------------------------------------------------
 
-internal val _extend by dslFunction { args, callInfo -> _fast(args, callInfo) }
+internal val _extend by dslPatternFunction { args, callInfo -> _fast(args, callInfo) }
 
 internal val StrudelPattern._extend by dslPatternExtension { p, args, callInfo -> p._fast(args, callInfo) }
 
@@ -4571,7 +4571,7 @@ fun applyIter(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     return applySlowcatPrime(patterns)
 }
 
-internal val _iter by dslFunction { args, /* callInfo */ _ ->
+internal val _iter by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(1).toPattern()
     applyIter(pattern, args.take(1))
 }
@@ -4635,7 +4635,7 @@ fun applyIterBack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     return applySlowcatPrime(patterns)
 }
 
-internal val _iterBack by dslFunction { args, /* callInfo */ _ ->
+internal val _iterBack by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.drop(1).toPattern()
     applyIterBack(pattern, args.take(1))
 }
@@ -4696,12 +4696,12 @@ fun applyInvert(pattern: StrudelPattern): StrudelPattern {
     }
 }
 
-internal val _invert by dslFunction { args, /* callInfo */ _ ->
+internal val _invert by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.toPattern()
     applyInvert(pattern)
 }
 
-internal val _inv by dslFunction { args, callInfo -> _invert(args, callInfo) }
+internal val _inv by dslPatternFunction { args, callInfo -> _invert(args, callInfo) }
 
 internal val StrudelPattern._invert by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     applyInvert(p)
@@ -4797,10 +4797,10 @@ fun applyApplyN(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     }
 }
 
-internal val _applyN by dslFunction { args, /* callInfo */ _ ->
-    val n = args.getOrNull(0) ?: return@dslFunction silence
-    val func = args.getOrNull(1).toPatternMapper() ?: return@dslFunction silence
-    val pattern = args.getOrNull(2)?.toPattern() ?: return@dslFunction silence
+internal val _applyN by dslPatternFunction { args, /* callInfo */ _ ->
+    val n = args.getOrNull(0) ?: return@dslPatternFunction silence
+    val func = args.getOrNull(1).toPatternMapper() ?: return@dslPatternFunction silence
+    val pattern = args.getOrNull(2)?.toPattern() ?: return@dslPatternFunction silence
 
     applyApplyN(pattern, listOf(n, StrudelDslArg.of(func)))
 }
@@ -4876,9 +4876,9 @@ fun applyPressBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
     }
 }
 
-internal val _pressBy by dslFunction { args, /* callInfo */ _ ->
+internal val _pressBy by dslPatternFunction { args, /* callInfo */ _ ->
     if (args.size < 2) {
-        return@dslFunction silence
+        return@dslPatternFunction silence
     }
     val pattern = args.drop(1).toPattern()
     applyPressBy(pattern, args.take(1))
@@ -4941,7 +4941,7 @@ fun applyPress(pattern: StrudelPattern): StrudelPattern {
     return applyPressBy(pattern, listOf(StrudelDslArg.of(0.5)))
 }
 
-internal val _press by dslFunction { args, /* callInfo */ _ ->
+internal val _press by dslPatternFunction { args, /* callInfo */ _ ->
     val pattern = args.toPattern()
     applyPress(pattern)
 }

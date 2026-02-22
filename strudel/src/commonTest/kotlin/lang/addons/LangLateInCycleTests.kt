@@ -2,12 +2,39 @@ package io.peekandpoke.klang.strudel.lang.addons
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.strudel.lang.apply
 import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.strudel.lang.seq
 
 class LangLateInCycleSpec : StringSpec({
+
+    "lateInCycle dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0 0.55"
+
+        dslInterfaceTests(
+            "pattern.lateInCycle" to
+                    seq(pat).lateInCycle(ctrl),
+            "string.lateInCycle" to
+                    pat.lateInCycle(ctrl),
+            "lateInCycle" to
+                    seq(pat).apply(lateInCycle(ctrl)),
+            "script pattern.lateInCycle" to
+                    StrudelPattern.compile("""seq("$pat").lateInCycle("$ctrl")"""),
+            "script string.lateInCycle" to
+                    StrudelPattern.compile(""""$pat".lateInCycle("$ctrl")"""),
+            "script lateInCycle" to
+                    StrudelPattern.compile("""seq("$pat").apply(lateInCycle("$ctrl")"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "lateInCycle(0.25) shifts events within the cycle without pulling from previous cycle" {
         // pattern: "c d" (c: 0-0.5, d: 0.5-1.0)

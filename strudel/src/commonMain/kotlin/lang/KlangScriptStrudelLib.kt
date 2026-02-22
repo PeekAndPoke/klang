@@ -35,14 +35,22 @@ internal fun KlangScriptExtensionBuilder.registerStrudelDsl() {
     }
 
     // 3. Register Global Functions (e.g., note(), silence, s(), etc.)
-    StrudelRegistry.functions.forEach { (name, handler) ->
+    StrudelRegistry.patternCreationFunctions.forEach { (name, handler) ->
         registerVarargFunctionWithCallInfo<Any, StrudelPattern>(name) { args, callInfo ->
             // println("Function '$name' called with CallInfo: $callInfo")
             handler(args.asStrudelDslArgs(callInfo), callInfo)
         }
     }
 
-    // 4. Register Pattern Extension Methods (e.g., pattern.slow(), pattern.note(), etc.)
+    // 4. Register Global Functions (e.g., note(), silence, s(), etc.)
+    StrudelRegistry.patternMapperFunctions.forEach { (name, handler) ->
+        registerVarargFunctionWithCallInfo<Any, PatternMapper>(name) { args, callInfo ->
+            // println("Function '$name' called with CallInfo: $callInfo")
+            handler(args.asStrudelDslArgs(callInfo), callInfo)
+        }
+    }
+
+    // 5. Register Pattern Extension Methods (e.g., pattern.slow(), pattern.note(), etc.)
     // These are registered specifically for the StrudelPattern type.
     registerType<StrudelPattern> {
         StrudelRegistry.patternExtensionMethods.forEach { (name, handler) ->

@@ -36,16 +36,15 @@ typealias VoiceModifier = StrudelVoiceData.(Any?) -> StrudelVoiceData
 typealias VoiceMerger = (source: StrudelVoiceData, control: StrudelVoiceData) -> StrudelVoiceData
 
 /**
- * Type alias for DSL function definitions.
+ * Type alias for a top level DSL function definitions.
  */
-typealias StrudelDslFn = (args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
+typealias StrudelDslTopLevelFn<T> = (args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> T
 
 /**
  * Type alias for DSL extension function definitions.
  * Takes a receiver type R, a list of StrudelDslArg arguments, and a CallInfo, and returns a StrudelPattern.
  */
 typealias StrudelDslExtFn<R> = (recv: R, args: List<StrudelDslArg<Any?>>, callInfo: CallInfo?) -> StrudelPattern
-
 
 /**
  * Registers all Strudel DSL functions by accessing the init properties of all lang_*.kt files.

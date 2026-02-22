@@ -28,11 +28,7 @@ internal val _cps by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() }
  * Returns the cycles per second at which playback is currently running as a continuous pattern.
  *
  * ```KlangScript
- * gain(cps)             // modulate gain by playback speed
- * ```
- *
- * ```KlangScript
- * note("c4").lpf(cps.range(200, 2000))  // LPF tracks tempo
+ * sound("sd").delay(0.25).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)  // Dalay time based in CPS
  * ```
  *
  * @category continuous
@@ -49,11 +45,7 @@ internal val _bpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() *
  * Returns the current beats per minute as a continuous pattern (assuming 4/4 time, 4 beats per cycle).
  *
  * ```KlangScript
- * gain(bpm.range(0, 1))   // scale gain by BPM
- * ```
- *
- * ```KlangScript
- * note("c4").vibrato(bpm.range(2, 8))  // vibrato speed follows BPM
+ * sound("sd").delay(0.15).delaytime(pure(60).div(bpm)).delayfeedback(0.33)  // Dalay time based in BPM
  * ```
  *
  * @category continuous

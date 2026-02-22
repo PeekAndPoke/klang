@@ -1,8 +1,35 @@
 package io.peekandpoke.klang.strudel
 
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
+import io.kotest.matchers.nulls.shouldNotBeNull
 import kotlin.math.max
 
 const val EPSILON = 1e-5
+
+fun dslInterfaceTests(
+    vararg cases: Pair<String, StrudelPattern?>,
+    assertions: (cycle: Double, events: List<StrudelPatternEvent>) -> Unit,
+) {
+    assertSoftly {
+        cases.forEach { (name, pattern) ->
+            pattern.shouldNotBeNull()
+
+            (0..16).forEach { cycle ->
+
+                withClue("$name | cycle: $cycle - ${cycle + 1}") {
+                    val cycleDbl = cycle.toDouble()
+                    val events = pattern.queryArc(cycleDbl, cycleDbl + 1)
+
+                    assertSoftly {
+                        assertions(cycleDbl, events)
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 fun List<List<Any?>>.formatAsTable(lineBreak: String = "\n"): String {
 
