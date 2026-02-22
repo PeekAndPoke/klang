@@ -273,12 +273,16 @@ fun vel(amount: PatternLike? = null): PatternMapper =
 private val postgainMutation = voiceModifier { copy(postGain = it?.asDoubleOrNull()) }
 
 fun applyPostgain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, postgainMutation)
+    return source._liftOrReinterpretNumericalField(args, postgainMutation)
 }
 
-internal val _postgain by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(postgainMutation) }
-internal val StrudelPattern._postgain by dslPatternExtension { p, args, /* callInfo */ _ -> applyPostgain(p, args) }
+internal val StrudelPattern._postgain by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyPostgain(p, args)
+}
+
 internal val String._postgain by dslStringExtension { p, args, callInfo -> p._postgain(args, callInfo) }
+
+internal val _postgain by dslPatternMapper { args, callInfo -> { p -> p._postgain(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -292,22 +296,43 @@ internal val String._postgain by dslStringExtension { p, args, callInfo -> p._po
  * ```
  *
  * ```KlangScript
- * s("hh*8").postgain(rand.range(0.5, 1.0))   // random post-gain per hit
+ * s("hh*8").postgain(rand.range(0.1, 1.0))   // random post-gain per hit
  * ```
+ *
+ * @param amount The post-gain value or pattern to apply to the events.
  *
  * @category dynamics
  * @tags postgain, gain, volume, post-processing
  */
 @StrudelDsl
-fun postgain(amount: PatternLike): StrudelPattern = _postgain(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.postgain(amount: PatternLike? = null): StrudelPattern =
+    this._postgain(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Sets the post-gain for each event in this pattern. */
+/**
+ * Parses this string as a pattern and sets the post-gain for each event.
+ *
+ * ```KlangScript
+ * "hh*8".postgain(perlin.range(0.1, 1.0).slow(4)).s()   // perlin noised post-gain
+ * ```
+ *
+ * @param amount The post-gain value or pattern to apply to the events.
+ */
 @StrudelDsl
-fun StrudelPattern.postgain(amount: PatternLike): StrudelPattern = this._postgain(listOf(amount).asStrudelDslArgs())
+fun String.postgain(amount: PatternLike? = null): StrudelPattern =
+    this._postgain(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the post-gain for each event. */
+/**
+ * Create a [PatternMapper] that sets the post-gain for each event in a pattern.
+ *
+ * ```KlangScript
+ * "hh*8".apply(postgain(sine.range(0.1, 1.0).slow(2))).s()   // sine post-gain over two cycles
+ * ```
+ *
+ * @param amount The post-gain value or pattern to apply to the events.
+ */
 @StrudelDsl
-fun String.postgain(amount: PatternLike): StrudelPattern = this._postgain(listOf(amount).asStrudelDslArgs())
+fun postgain(amount: PatternLike? = null): PatternMapper =
+    _postgain(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- compressor() / comp() --------------------------------------------------------------------------------------------
 
