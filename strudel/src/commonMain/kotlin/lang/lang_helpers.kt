@@ -149,11 +149,19 @@ fun voiceModifier(modify: VoiceModifier): VoiceModifier = modify
 /** Creates a pattern mapper */
 fun patternMapper(mapper: Any?): PatternMapper? {
     return when (mapper) {
+        // Is it a provider function? ... for example when we receive a function reference back from KlangScript
+        is Function0<*> -> {
+            patternMapper(mapper())
+        }
+
+        // Is it already a mapper function?
         is Function1<*, *> -> {
             { input ->
                 try {
                     @Suppress("UNCHECKED_CAST")
-                    (mapper as? PatternMapper)?.invoke(input) ?: input
+                    val result: Any? = (mapper as? PatternMapper)?.invoke(input)
+
+                    (result as? StrudelPattern) ?: input
                 } catch (e: Exception) {
                     println("Error while invoking pattern mapper: $mapper: \n${e.stackTraceToString()}")
                     input
@@ -392,10 +400,16 @@ class DslTopLevelPatternCreatorFunction(val handler: StrudelDslTopLevelFn<Strude
 }
 
 class DslTopLevelPatternMapperFunction(val handler: StrudelDslTopLevelFn<PatternMapper>) {
-    operator fun invoke() = invoke(args = emptyList())
+    /** Returns the actual functional mapper */
+    val asMapper: PatternMapper
+        get() = { p1: StrudelPattern ->
+            p1.apply(handler(emptyList(), null))
+        }
+
+    operator fun invoke(): PatternMapper = invoke(args = emptyList())
 
     @JvmName("invokeFunction")
-    operator fun invoke(block: (Double) -> Double) = invoke(args = listOf(block).asStrudelDslArgs())
+    operator fun invoke(block: (Double) -> Double): PatternMapper = invoke(args = listOf(block).asStrudelDslArgs())
 
     @JvmName("invokeVararg")
     operator fun invoke(vararg args: Any?): PatternMapper = invoke(args = args.toList().asStrudelDslArgs())
@@ -418,7 +432,7 @@ class DslTopLevelPatternMapperFunction(val handler: StrudelDslTopLevelFn<Pattern
  * A method bound to a specific [pattern] instance.
  * When invoked, it applies the handler to the bound pattern and arguments.
  */
-class DslPatternMethod(
+class DslPatternExtensionMethod(
     val pattern: StrudelPattern,
     val handler: StrudelDslExtFn<StrudelPattern>,
 ) {
@@ -506,7 +520,7 @@ class DslPatternExtensionProvider(
     operator fun provideDelegate(
         thisRef: Any?,
         prop: KProperty<*>,
-    ): ReadOnlyProperty<StrudelPattern, DslPatternMethod> {
+    ): ReadOnlyProperty<StrudelPattern, DslPatternExtensionMethod> {
         val name = prop.name.trimStart('_')
 
         // Register in the evaluator registry
@@ -516,7 +530,7 @@ class DslPatternExtensionProvider(
 
         // Return a delegate that creates a BOUND method when accessed
         return ReadOnlyProperty { pattern, _ ->
-            DslPatternMethod(pattern, handler)
+            DslPatternExtensionMethod(pattern, handler)
         }
     }
 }
@@ -530,7 +544,7 @@ class DslStringExtensionProvider(
     operator fun provideDelegate(
         thisRef: Any?,
         prop: KProperty<*>,
-    ): ReadOnlyProperty<String, DslPatternMethod> {
+    ): ReadOnlyProperty<String, DslPatternExtensionMethod> {
         val name = prop.name.trimStart('_')
 
         // Register in the evaluator registry
@@ -542,7 +556,7 @@ class DslStringExtensionProvider(
         // Return a delegate that creates a BOUND method when accessed
         return ReadOnlyProperty { string, _ ->
             val pattern = parse(str = string, baseLocation = null)
-            DslPatternMethod(pattern, handler)
+            DslPatternExtensionMethod(pattern, handler)
         }
     }
 

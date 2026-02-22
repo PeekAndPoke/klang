@@ -11,6 +11,7 @@ import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
+import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import kotlin.jvm.JvmName
 import kotlin.random.Random
 
@@ -1048,6 +1049,22 @@ fun StrudelPattern._liftNumericField(
         sourceEvent.copy(data = sourceEvent.data.update(value))
             .prependLocations(controlEvent?.sourceLocations)
     }
+}
+
+/**
+ * Lifts a numeric field modifier to work with control patterns (OUTER JOIN semantics).
+ *
+ * If no control pattern is provided, the current voice data is interpreted as a static value.
+ */
+fun StrudelPattern._liftOrReinterpretNumericalField(
+    args: List<StrudelDslArg<Any?>>,
+    update: StrudelVoiceData.(Double?) -> StrudelVoiceData,
+): StrudelPattern {
+    if (args.isEmpty()) return this.reinterpretVoice {
+        it.update(it.value?.asDouble)
+    }
+
+    return this._liftNumericField(args, update)
 }
 
 /**

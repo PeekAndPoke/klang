@@ -5,6 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel._applyControlFromParams
 import io.peekandpoke.klang.strudel._liftNumericField
+import io.peekandpoke.klang.strudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
@@ -18,7 +19,7 @@ var strudelLangDynamicsInit = false
 private val gainMutation = voiceModifier { copy(gain = it?.asDoubleOrNull()) }
 
 fun applyGain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, gainMutation)
+    return source._liftOrReinterpretNumericalField(args, gainMutation)
 }
 
 internal val StrudelPattern._gain by dslPatternExtension { p, args, /* callInfo */ _ -> applyGain(p, args) }
@@ -48,7 +49,8 @@ internal val _gain by dslPatternMapper { args, callInfo -> { p -> p._gain(args, 
  * @tags gain, volume, amplitude, dynamics
  */
 @StrudelDsl
-fun StrudelPattern.gain(amount: PatternLike): StrudelPattern = this._gain(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.gain(amount: PatternLike? = null): StrudelPattern =
+    this._gain(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the gain for each event.
@@ -60,7 +62,8 @@ fun StrudelPattern.gain(amount: PatternLike): StrudelPattern = this._gain(listOf
  * @param amount The control value to use for gain.
  */
 @StrudelDsl
-fun String.gain(amount: PatternLike): StrudelPattern = this._gain(listOf(amount).asStrudelDslArgs())
+fun String.gain(amount: PatternLike? = null): StrudelPattern =
+    this._gain(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
  * Creates a [PatternMapper] that sets the gain for each event in a pattern.
@@ -72,8 +75,10 @@ fun String.gain(amount: PatternLike): StrudelPattern = this._gain(listOf(amount)
  * @param amount The control value to use for gain.
  */
 @StrudelDsl
-fun gain(amount: PatternLike): PatternMapper = _gain(listOf(amount).asStrudelDslArgs())
+fun gain(amount: PatternLike? = null): PatternMapper = _gain(listOfNotNull(amount).asStrudelDslArgs())
 
+@StrudelDsl
+val gain: PatternMapper get() = _gain.asMapper
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 

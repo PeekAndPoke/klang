@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.ast.SourceLocation
 import kotlin.reflect.KClass
 
 /**
@@ -24,7 +25,7 @@ data class NativeTypeInfo(
 data class NativeExtensionMethod(
     val methodName: String,
     val receiverClass: KClass<*>,
-    val invoker: (receiver: Any, args: List<RuntimeValue>, location: io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+    val invoker: (receiver: Any, args: List<RuntimeValue>, location: SourceLocation?) -> RuntimeValue,
 )
 
 /** Check if the number of arguments matches the expected count */
@@ -62,6 +63,14 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
         }
 
         is FunctionValue -> this.convertFunctionToKotlin()
+
+        is NativeFunctionValue -> {
+            @Suppress("RedundantLambdaArrow")
+            { ->
+                val result = function(emptyList(), null)
+                result.value
+            }
+        }
 
         is ArrayValue -> when (cls) {
             DoubleArray::class -> elements.map { it.convertToKotlin(Double::class) }.toDoubleArray()

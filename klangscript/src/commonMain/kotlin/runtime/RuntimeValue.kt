@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.getUniqueClassName
 import kotlin.reflect.KClass
 
@@ -109,7 +110,7 @@ fun RuntimeValue.isFunction() = this is FunctionValue || this is NativeFunctionV
  */
 data class NumberValue(
     override val value: Double,
-    val location: io.peekandpoke.klang.script.ast.SourceLocation? = null,
+    val location: SourceLocation? = null,
 ) : RuntimeValue {
     override fun toDisplayString(): String = value.toString()
 
@@ -135,7 +136,7 @@ data class NumberValue(
  */
 data class StringValue(
     override val value: String,
-    val location: io.peekandpoke.klang.script.ast.SourceLocation? = null,
+    val location: SourceLocation? = null,
 ) : RuntimeValue {
     override fun toDisplayString(): String = value
 
@@ -193,7 +194,7 @@ data object NullValue : RuntimeValue {
  */
 data class NativeFunctionValue(
     val name: String,
-    val function: (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+    val function: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
 ) : RuntimeValue {
     override val value = null
 
@@ -427,7 +428,7 @@ data class ArrayValue(
 data class BoundNativeMethod(
     val methodName: String,
     val receiver: NativeObjectValue<*>,
-    val invoker: (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+    val invoker: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
 ) : RuntimeValue {
     override val value = null
 

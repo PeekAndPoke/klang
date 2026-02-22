@@ -4,6 +4,7 @@ package io.peekandpoke.klang.script.builder
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.ast.CallInfo
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.getUniqueClassName
 import io.peekandpoke.klang.script.runtime.*
 import kotlin.jvm.JvmName
@@ -16,7 +17,7 @@ class KlangScriptExtension(
     /** Registered libraries */
     val libraries: Map<String, KlangScriptLibrary>,
     /** Registered native functions */
-    val functions: List<Pair<String, (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue>>,
+    val functions: List<Pair<String, (List<RuntimeValue>, SourceLocation?) -> RuntimeValue>>,
     /** Registered native types */
     val types: Map<KClass<*>, NativeTypeInfo>,
     /** Registered native objects */
@@ -45,7 +46,7 @@ interface KlangScriptExtensionBuilder {
     /** Registers a native function as a top-level function with source location */
     fun registerFunctionRaw(
         name: String,
-        fn: (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+        fn: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
     )
 
     /** Register a native Kotlin type */
@@ -58,7 +59,7 @@ interface KlangScriptExtensionBuilder {
     fun <T : Any> registerExtensionMethod(
         receiver: KClass<T>,
         name: String,
-        fn: (T, List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+        fn: (T, List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
     )
 }
 
@@ -71,7 +72,7 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
 
     /** Registered native functions */
     private val nativeFunctions =
-        mutableListOf<Pair<String, (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue>>()
+        mutableListOf<Pair<String, (List<RuntimeValue>, SourceLocation?) -> RuntimeValue>>()
 
     /** Registered native types */
     private val nativeTypes = mutableMapOf<KClass<*>, NativeTypeInfo>()
@@ -99,7 +100,7 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
     /** Register a native function */
     override fun registerFunctionRaw(
         name: String,
-        fn: (List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+        fn: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
     ) {
         nativeFunctions.add(name to fn)
     }
@@ -132,7 +133,7 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
     override fun <T : Any> registerExtensionMethod(
         receiver: KClass<T>,
         name: String,
-        fn: (T, List<RuntimeValue>, io.peekandpoke.klang.script.ast.SourceLocation?) -> RuntimeValue,
+        fn: (T, List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
     ) {
         val extensionMethod = NativeExtensionMethod(
             methodName = name,
@@ -440,6 +441,7 @@ inline fun <reified P : Any, reified R> KlangScriptExtensionBuilder.registerVara
         }
 
         val result = fn(params, callInfo)
+
         wrapAsRuntimeValue(result)
     }
 }
