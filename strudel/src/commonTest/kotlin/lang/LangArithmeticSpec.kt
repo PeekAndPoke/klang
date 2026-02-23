@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -202,9 +201,37 @@ class LangArithmeticSpec : StringSpec({
         value1.value.toInt() shouldBe 12
     }
 
-    "mul() works as top-level function" {
-        val p = mul("4")
-        p.queryArc(0.0, 1.0).shouldBeEmpty()
+    "mul() works as top-level PatternMapper" {
+        val p = seq("2 3").apply(mul("4"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 8
+        events[1].data.value?.asInt shouldBe 12
+    }
+
+    "mul dsl interface" {
+        val pat = "2 3"
+        val ctrl = "4 5"
+
+        dslInterfaceTests(
+            "pattern.mul(ctrl)" to
+                    seq(pat).mul(ctrl),
+            "script pattern.mul(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").mul("$ctrl")"""),
+            "string.mul(ctrl)" to
+                    pat.mul(ctrl),
+            "script string.mul(ctrl)" to
+                    StrudelPattern.compile(""""$pat".mul("$ctrl")"""),
+            "mul(ctrl)" to
+                    seq(pat).apply(mul(ctrl)),
+            "script mul(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(mul("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 8   // 2 * 4 = 8
+            events[1].data.value?.asInt shouldBe 15  // 3 * 5 = 15
+        }
     }
 
     "mul() works as string extension" {
@@ -241,9 +268,37 @@ class LangArithmeticSpec : StringSpec({
         value1.value.toInt() shouldBe 10
     }
 
-    "div() works as top-level function" {
-        val p = div("2")
-        p.queryArc(0.0, 1.0).shouldBeEmpty()
+    "div() works as top-level PatternMapper" {
+        val p = seq("10 20").apply(div("2"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 5
+        events[1].data.value?.asInt shouldBe 10
+    }
+
+    "div dsl interface" {
+        val pat = "10 20"
+        val ctrl = "2 4"
+
+        dslInterfaceTests(
+            "pattern.div(ctrl)" to
+                    seq(pat).div(ctrl),
+            "script pattern.div(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").div("$ctrl")"""),
+            "string.div(ctrl)" to
+                    pat.div(ctrl),
+            "script string.div(ctrl)" to
+                    StrudelPattern.compile(""""$pat".div("$ctrl")"""),
+            "div(ctrl)" to
+                    seq(pat).apply(div(ctrl)),
+            "script div(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(div("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 5   // 10 / 2 = 5
+            events[1].data.value?.asInt shouldBe 5   // 20 / 4 = 5
+        }
     }
 
     "div() works as string extension" {
@@ -280,9 +335,46 @@ class LangArithmeticSpec : StringSpec({
         value1.value.toInt() shouldBe 2
     }
 
-    "mod() works as top-level function" {
-        val p = mod("3")
-        p.queryArc(0.0, 1.0).shouldBeEmpty()
+    "mod() works as top-level PatternMapper" {
+        val p = seq("10 11").apply(mod("3"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 1
+        events[1].data.value?.asInt shouldBe 2
+    }
+
+    "mod() by zero silences the event" {
+        val p = seq("10 11").mod("0")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value shouldBe null
+        events[1].data.value shouldBe null
+    }
+
+    "mod dsl interface" {
+        val pat = "10 11"
+        val ctrl = "3 4"
+
+        dslInterfaceTests(
+            "pattern.mod(ctrl)" to
+                    seq(pat).mod(ctrl),
+            "script pattern.mod(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").mod("$ctrl")"""),
+            "string.mod(ctrl)" to
+                    pat.mod(ctrl),
+            "script string.mod(ctrl)" to
+                    StrudelPattern.compile(""""$pat".mod("$ctrl")"""),
+            "mod(ctrl)" to
+                    seq(pat).apply(mod(ctrl)),
+            "script mod(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(mod("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 1  // 10 % 3 = 1
+            events[1].data.value?.asInt shouldBe 3  // 11 % 4 = 3
+        }
     }
 
     "mod() works as string extension" {

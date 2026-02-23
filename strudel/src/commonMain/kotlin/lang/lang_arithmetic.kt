@@ -178,7 +178,7 @@ fun sub(amount: PatternLike): PatternMapper = _sub(listOf(amount).asStrudelDslAr
 
 // -- mul() ------------------------------------------------------------------------------------------------------------
 
-internal val _mul by dslPatternFunction { _, _ -> silence }
+internal val _mul by dslPatternMapper { args, callInfo -> { p -> p._mul(args, callInfo) } }
 internal val StrudelPattern._mul by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a * b } }
 internal val String._mul by dslStringExtension { p, args, callInfo -> p._mul(args, callInfo) }
 
@@ -187,11 +187,9 @@ internal val String._mul by dslStringExtension { p, args, callInfo -> p._mul(arg
 /**
  * Multiplies every numeric value in the pattern by [factor].
  *
- * Supports control patterns: pass a mini-notation string or another [StrudelPattern] as [factor]
- * to modulate the scale per cycle or event.
- *
- * @param factor The multiplier. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern with each numeric value multiplied by [factor].
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [factor] to modulate the scale per cycle or event.
  *
  * ```KlangScript
  * seq("2 3").mul(4).scale("c3:major").n()  // values become 8 and 12
@@ -200,23 +198,48 @@ internal val String._mul by dslStringExtension { p, args, callInfo -> p._mul(arg
  * ```KlangScript
  * seq("1 2").mul("<1 2>").scale("c3:major").n()  // double every other cycle
  * ```
+ *
+ * @param factor The multiplier. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern with each numeric value multiplied by [factor].
  * @category arithmetic
  * @tags mul, multiply, arithmetic, math, scale
  */
 @StrudelDsl
 fun StrudelPattern.mul(factor: PatternLike): StrudelPattern = this._mul(listOf(factor).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then multiplies every numeric value by [factor]. */
+/**
+ * Parses this string as a pattern, then multiplies every numeric value by [factor].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "2 3".mul(4).scale("c3:major").n()  // values become 8 and 12
+ * ```
+ *
+ * @param factor The multiplier. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.mul(factor: PatternLike): StrudelPattern = this._mul(listOf(factor).asStrudelDslArgs())
 
-/** Top-level [mul] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that multiplies every numeric value in a pattern by [factor].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the multiplication to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("2 3").apply(mul(4)).scale("c3:major").n()  // values become 8 and 12
+ * ```
+ *
+ * @param factor The multiplier. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun mul(factor: PatternLike): StrudelPattern = _mul(listOf(factor).asStrudelDslArgs())
+fun mul(factor: PatternLike): PatternMapper = _mul(listOf(factor).asStrudelDslArgs())
 
 // -- div() ------------------------------------------------------------------------------------------------------------
 
-internal val _div by dslPatternFunction { _, _ -> silence }
+internal val _div by dslPatternMapper { args, callInfo -> { p -> p._div(args, callInfo) } }
 internal val StrudelPattern._div by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a / b } }
 internal val String._div by dslStringExtension { p, args, callInfo -> p._div(args, callInfo) }
 
@@ -225,11 +248,9 @@ internal val String._div by dslStringExtension { p, args, callInfo -> p._div(arg
 /**
  * Divides every numeric value in the pattern by [divisor].
  *
- * Supports control patterns: pass a mini-notation string or another [StrudelPattern] as [divisor]
- * to modulate the division per cycle or event.
- *
- * @param divisor The divisor. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern with each numeric value divided by [divisor].
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [divisor] to modulate the division per cycle or event.
  *
  * ```KlangScript
  * seq("10 20").div(2).scale("c3:major").n()  // values become 5 and 10
@@ -238,23 +259,48 @@ internal val String._div by dslStringExtension { p, args, callInfo -> p._div(arg
  * ```KlangScript
  * seq("10 20").div("<1 2>").scale("c3:major").n()  // halve every other cycle
  * ```
+ *
+ * @param divisor The divisor. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern with each numeric value divided by [divisor].
  * @category arithmetic
  * @tags div, divide, arithmetic, math, scale
  */
 @StrudelDsl
 fun StrudelPattern.div(divisor: PatternLike): StrudelPattern = this._div(listOf(divisor).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then divides every numeric value by [divisor]. */
+/**
+ * Parses this string as a pattern, then divides every numeric value by [divisor].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "10 20".div(2).scale("c3:major").n()  // values become 5 and 10
+ * ```
+ *
+ * @param divisor The divisor. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.div(divisor: PatternLike): StrudelPattern = this._div(listOf(divisor).asStrudelDslArgs())
 
-/** Top-level [div] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that divides every numeric value in a pattern by [divisor].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the division to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("10 20").apply(div(2)).scale("c3:major").n()  // values become 5 and 10
+ * ```
+ *
+ * @param divisor The divisor. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun div(divisor: PatternLike): StrudelPattern = _div(listOf(divisor).asStrudelDslArgs())
+fun div(divisor: PatternLike): PatternMapper = _div(listOf(divisor).asStrudelDslArgs())
 
 // -- mod() ------------------------------------------------------------------------------------------------------------
 
-internal val _mod by dslPatternFunction { _, _ -> silence }
+internal val _mod by dslPatternMapper { args, callInfo -> { p -> p._mod(args, callInfo) } }
 internal val StrudelPattern._mod by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a % b } }
 internal val String._mod by dslStringExtension { p, args, callInfo -> p._mod(args, callInfo) }
 
@@ -263,11 +309,10 @@ internal val String._mod by dslStringExtension { p, args, callInfo -> p._mod(arg
 /**
  * Applies modulo [divisor] to every numeric value in the pattern.
  *
- * Useful for wrapping note indices, step counters, or any cyclic numeric range.
- * Supports control patterns: pass a mini-notation string or another [StrudelPattern] as [divisor].
- *
- * @param divisor The modulus. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern where each value is replaced by `value % divisor`.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Useful for wrapping note indices, step counters, or any cyclic numeric range.
+ * Division by zero is safe — events with a zero divisor are silenced. Supports control patterns:
+ * pass a mini-notation string or another [StrudelPattern] as [divisor].
  *
  * ```KlangScript
  * seq("10 11").mod(3).scale("c3:major").n()  // values become 1 and 2
@@ -276,19 +321,45 @@ internal val String._mod by dslStringExtension { p, args, callInfo -> p._mod(arg
  * ```KlangScript
  * seq("0 1 2 3 4 5 6 7").mod(4).scale("c3:major").n()  // wraps at 4: 0 1 2 3 0 1 2 3
  * ```
+ *
+ * @param divisor The modulus. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern where each value is replaced by `value % divisor`.
  * @category arithmetic
  * @tags mod, modulo, arithmetic, math, wrap
  */
 @StrudelDsl
 fun StrudelPattern.mod(divisor: PatternLike): StrudelPattern = this._mod(listOf(divisor).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then applies modulo [divisor] to every numeric value. */
+/**
+ * Parses this string as a pattern, then applies modulo [divisor] to every numeric value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Division by zero is safe — events with a zero divisor are silenced.
+ *
+ * ```KlangScript
+ * "10 11".mod(3).scale("c3:major").n()  // values become 1 and 2
+ * ```
+ *
+ * @param divisor The modulus. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.mod(divisor: PatternLike): StrudelPattern = this._mod(listOf(divisor).asStrudelDslArgs())
 
-/** Top-level [mod] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that applies modulo [divisor] to every numeric value in a pattern.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Division by zero is safe — events with a zero divisor are silenced.
+ * Use with [StrudelPattern.apply] to apply the modulo to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("0 1 2 3 4 5 6 7").apply(mod(4)).scale("c3:major").n()  // wraps at 4: 0 1 2 3 0 1 2 3
+ * ```
+ *
+ * @param divisor The modulus. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun mod(divisor: PatternLike): StrudelPattern = _mod(listOf(divisor).asStrudelDslArgs())
+fun mod(divisor: PatternLike): PatternMapper = _mod(listOf(divisor).asStrudelDslArgs())
 
 // -- pow() ------------------------------------------------------------------------------------------------------------
 
