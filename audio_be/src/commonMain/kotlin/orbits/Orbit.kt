@@ -6,10 +6,6 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**
  * Mixing channel / Effect bus ... called Orbit in strudel
- *
- * TODO: keep track of when the orbit was last used.
- * - when the orbit was inactive from say blockFrames * 2, deactivate it
- *
  */
 class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
     // dry mix buffer
@@ -81,16 +77,27 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
             )
         }
 
-        // Compressor
-        voice.compressor?.let { compressorSettings ->
-            compressor = Compressor(
-                sampleRate = reverb.sampleRate,
-                thresholdDb = compressorSettings.thresholdDb,
-                ratio = compressorSettings.ratio,
-                kneeDb = compressorSettings.kneeDb,
-                attackSeconds = compressorSettings.attackSeconds,
-                releaseSeconds = compressorSettings.releaseSeconds
-            )
+        // Compressor — initialize once so the envelope follower state is preserved across notes.
+        // On subsequent calls only update the parameters (e.g. when alternating via `<...>`).
+        val compSettings = voice.compressor
+        if (compSettings != null) {
+            val existing = compressor
+            if (existing == null) {
+                compressor = Compressor(
+                    sampleRate = reverb.sampleRate,
+                    thresholdDb = compSettings.thresholdDb,
+                    ratio = compSettings.ratio,
+                    kneeDb = compSettings.kneeDb,
+                    attackSeconds = compSettings.attackSeconds,
+                    releaseSeconds = compSettings.releaseSeconds
+                )
+            } else {
+                existing.thresholdDb = compSettings.thresholdDb
+                existing.ratio = compSettings.ratio
+                existing.kneeDb = compSettings.kneeDb
+                existing.attackSeconds = compSettings.attackSeconds
+                existing.releaseSeconds = compSettings.releaseSeconds
+            }
         }
     }
 

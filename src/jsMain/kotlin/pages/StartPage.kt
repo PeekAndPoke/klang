@@ -445,8 +445,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     fontSize = 1.4.em
                     color = Color.grey
                     opacity = currentOpacity
+                    paddingTop = 8.px
                 }
-                +"pre-alpha"
+                +"pre-alpha | is glitchd glei"
             }
         }
     }

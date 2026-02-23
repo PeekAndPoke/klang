@@ -720,21 +720,7 @@ class VoiceScheduler(
         val postGain = data.postGain ?: 1.0
 
         // Compressor
-        val compressorParam = data.compressor
-        val compressor = if (compressorParam != null) {
-            val settings = io.peekandpoke.klang.audio_be.effects.Compressor.parseSettings(compressorParam)
-            settings?.let {
-                Voice.Compressor(
-                    thresholdDb = it.thresholdDb,
-                    ratio = it.ratio,
-                    kneeDb = it.kneeDb,
-                    attackSeconds = it.attackSeconds,
-                    releaseSeconds = it.releaseSeconds
-                )
-            }
-        } else {
-            null
-        }
+        val compressor = Voice.Compressor.fromStringConfig(data.compressor)
 
         // Effects
         val distort = Voice.Distort(amount = data.distort ?: 0.0)

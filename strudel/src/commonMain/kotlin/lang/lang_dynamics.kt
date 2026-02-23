@@ -358,17 +358,21 @@ internal val _comp by dslPatternMapper { args, callInfo -> { p -> p._comp(args, 
  * - Range: Usually -60.0 to 0.0.
  *
  * **Ratio:** How much the signal is reduced once it exceeds the threshold.
- * - Logic: A ratio of 4.0 (4:1) means that for every 4dB the input goes over the threshold, the output only increases by 1dB.
+ * - Logic: A ratio of 4.0 (4:1) means that for every 4dB the input goes over the threshold,
+ *   the output only increases by 1dB.
  * - Range: 1.0 (no compression) and up. 20.0 or higher acts as a limiter.
  *
  * **Knee:** The "smoothness" of the transition into compression.
- * - Logic: A value of 0 is a "hard knee" (instant compression at threshold). Higher values (e.g., 6.0) create a "soft knee" where compression is applied gradually as the signal approaches the threshold.
+ * - Logic: A value of 0 is a "hard knee" (instant compression at threshold). Higher values (e.g., 6.0) create a
+ *   "soft knee" where compression is applied gradually as the signal approaches the threshold.
  *
  * **Attack:** How quickly the compressor reacts to signals exceeding the threshold.
- * - Logic: Measured in seconds. Fast attacks (e.g., 0.003) catch peaks immediately; slow attacks let the initial "click" or transient through.
+ * - Logic: Measured in seconds. Fast attacks (e.g., 0.003) catch peaks immediately; slow attacks let the
+ *   initial "click" or transient through.
  *
  * **Release:** How quickly the compressor stops attenuating after the signal falls back below the threshold.
- * - Logic: Measured in seconds. Short release times (e.g., 0.1) return to normal quickly; long release times create a smoother, more "levelled" sound.
+ * - Logic: Measured in seconds. Short release times (e.g., 0.1) return to normal quickly; long release times
+ *   create a smoother, more "levelled" sound.
  *
  * **Common Configurations:**
  *

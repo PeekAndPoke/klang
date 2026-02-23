@@ -140,7 +140,33 @@ sealed interface Voice {
         val attackSeconds: Double,
         /** Release time in seconds (how fast compression releases) */
         val releaseSeconds: Double,
-    )
+    ) {
+        companion object {
+            /**
+             * Parses a compressor config string into a [Compressor], or returns null if the
+             * string is null or invalid.
+             *
+             * Delegates to [io.peekandpoke.klang.audio_be.effects.Compressor.parseSettings]
+             * for the actual parsing logic.
+             *
+             * Supported formats:
+             * - Full:  "threshold:ratio:knee:attack:release"  e.g. "-20:4:6:0.003:0.1"
+             * - Short: "threshold:ratio"                      e.g. "-15:3"  (uses defaults for the rest)
+             */
+            fun fromStringConfig(config: String?): Compressor? {
+                val settings = config?.let {
+                    io.peekandpoke.klang.audio_be.effects.Compressor.parseSettings(it)
+                } ?: return null
+                return Compressor(
+                    thresholdDb = settings.thresholdDb,
+                    ratio = settings.ratio,
+                    kneeDb = settings.kneeDb,
+                    attackSeconds = settings.attackSeconds,
+                    releaseSeconds = settings.releaseSeconds,
+                )
+            }
+        }
+    }
 
     /**
      * Sidechain ducking for automatic volume reduction.

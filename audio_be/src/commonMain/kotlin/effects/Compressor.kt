@@ -63,7 +63,7 @@ class Compressor(
     var makeupGainDb: Double = 0.0
 
     // Envelope follower state
-    private var envelopeDb: Double = -Double.MAX_VALUE
+    private var envelopeDb: Double = -100.0
 
     // Computed coefficients
     private var attackCoeff: Double = 0.0
@@ -114,10 +114,10 @@ class Compressor(
     /**
      * Process a mono buffer in-place.
      */
-    fun process(buffer: DoubleArray, blockSize: Int) {
+    fun process(buffer: DoubleArray, offset: Int, length: Int) {
         val makeupLinear = if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * ln(10.0) / 20.0) else 1.0
 
-        for (i in 0 until blockSize) {
+        for (i in 0 until length) {
             val inputLevel = abs(buffer[i])
 
             // Convert to dB
@@ -143,7 +143,7 @@ class Compressor(
             }
 
             // Apply gain reduction and makeup gain
-            buffer[i] *= (gainReduction * makeupLinear)
+            buffer[offset + i] *= (gainReduction * makeupLinear)
         }
     }
 
@@ -185,7 +185,7 @@ class Compressor(
      * Reset the compressor state.
      */
     fun reset() {
-        envelopeDb = -Double.MAX_VALUE
+        envelopeDb = -100.0
     }
 
     companion object {
