@@ -485,16 +485,16 @@ fun comp(params: PatternLike? = null): PatternMapper =
 private val unisonMutation = voiceModifier { copy(voices = it?.asDoubleOrNull()) }
 
 private fun applyUnison(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, unisonMutation)
+    return source._liftOrReinterpretStringField(args, unisonMutation)
 }
 
-internal val _unison by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
 internal val StrudelPattern._unison by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
 internal val String._unison by dslStringExtension { p, args, callInfo -> p._unison(args, callInfo) }
+internal val _unison by dslPatternMapper { args, callInfo -> { p -> p._unison(args, callInfo) } }
 
-internal val _uni by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(unisonMutation) }
 internal val StrudelPattern._uni by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
 internal val String._uni by dslStringExtension { p, args, callInfo -> p._uni(args, callInfo) }
+internal val _uni by dslPatternMapper { args, callInfo -> { p -> p._uni(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -509,23 +509,45 @@ internal val String._uni by dslStringExtension { p, args, callInfo -> p._uni(arg
  * ```
  *
  * ```KlangScript
- * note("c3 e3 g3").s("sine").unison(3).detune(10)  // triple unison with spread
+ * note("c3 e3 g3").s("supersaw").unison("<1 5 10 16>").detune(10)  // unison pattern
  * ```
+ *
+ * @param voices The number of unison voices.
  *
  * @alias uni
  * @category dynamics
  * @tags unison, uni, voices, stacking, supersaw
  */
 @StrudelDsl
-fun unison(voices: PatternLike): StrudelPattern = _unison(listOf(voices).asStrudelDslArgs())
+fun StrudelPattern.unison(voices: PatternLike? = null): StrudelPattern =
+    this._unison(listOfNotNull(voices).asStrudelDslArgs())
 
-/** Sets the number of unison voices for this pattern. */
+/**
+ * Parses this string as a pattern and sets the number of unison voices.
+ *
+ * ```KlangScript
+ * "c3 e3 g3".s("supersaw").unison("<1 5 10 16>").detune(10).note()  // unison pattern
+ * ```
+ *
+ * @param voices The number of unison voices.
+ */
 @StrudelDsl
-fun StrudelPattern.unison(voices: PatternLike): StrudelPattern = this._unison(listOf(voices).asStrudelDslArgs())
+fun String.unison(voices: PatternLike? = null): StrudelPattern =
+    this._unison(listOfNotNull(voices).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the number of unison voices. */
+/**
+ * Create a [PatternMapper] that sets the number of unison voices for a pattern.
+ *
+ * ```KlangScript
+ * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(10).note()  // unison pattern
+ * ```
+ *
+ * @param voices The number of unison voices.
+ */
 @StrudelDsl
-fun String.unison(voices: PatternLike): StrudelPattern = this._unison(listOf(voices).asStrudelDslArgs())
+fun unison(voices: PatternLike? = null): PatternMapper =
+    _unison(listOfNotNull(voices).asStrudelDslArgs())
+
 
 /**
  * Alias for [unison]. Sets the number of unison voices for oscillator stacking effects.
@@ -535,23 +557,44 @@ fun String.unison(voices: PatternLike): StrudelPattern = this._unison(listOf(voi
  * ```
  *
  * ```KlangScript
- * note("c3 e3 g3").s("sine").uni(3).detune(10)  // triple unison with spread
+ * note("c3 e3 g3").s("supersaw").uni("<1 5 10 16>").detune(10)  // unison pattern
  * ```
+ *
+ * @param voices The number of unison voices.
  *
  * @alias unison
  * @category dynamics
  * @tags uni, unison, voices, stacking, supersaw
  */
 @StrudelDsl
-fun uni(voices: PatternLike): StrudelPattern = _uni(listOf(voices).asStrudelDslArgs())
+fun StrudelPattern.uni(voices: PatternLike? = null): StrudelPattern =
+    this._uni(listOfNotNull(voices).asStrudelDslArgs())
 
-/** Alias for [unison]. Sets the number of unison voices for this pattern. */
+/**
+ * Alias for [unison]. Parses this string as a pattern and sets the number of unison voices.
+ *
+ * ```KlangScript
+ * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").detune(10).note()  // unison pattern
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.uni(voices: PatternLike): StrudelPattern = this._uni(listOf(voices).asStrudelDslArgs())
+fun String.uni(voices: PatternLike? = null): StrudelPattern =
+    this._uni(listOfNotNull(voices).asStrudelDslArgs())
 
-/** Alias for [unison]. Parses this string as a pattern and sets the number of unison voices. */
+
+/**
+ * Alias for [unison]. Creates a [PatternMapper] that sets the number of unison voices for a pattern.
+ *
+ * ```KlangScript
+ * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(10).note()  // unison pattern
+ * ```
+ *
+ * @param voices The number of unison voices.
+ */
 @StrudelDsl
-fun String.uni(voices: PatternLike): StrudelPattern = this._uni(listOf(voices).asStrudelDslArgs())
+fun uni(voices: PatternLike? = null): PatternMapper =
+    _uni(listOfNotNull(voices).asStrudelDslArgs())
+
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 

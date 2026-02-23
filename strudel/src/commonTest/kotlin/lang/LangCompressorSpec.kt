@@ -46,39 +46,39 @@ class LangCompressorSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as velocity | seq(\"0 1\").velocity()" {
-        val p = seq("0 1").velocity()
+    "reinterpret voice data as compressor | seq(\"0 1\").compressor()" {
+        val p = seq("0:0 1:1").compressor()
 
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.velocity shouldBe 0.0
-            events[1].data.velocity shouldBe 1.0
+            events[0].data.compressor shouldBe "0:0"
+            events[1].data.compressor shouldBe "1:1"
         }
     }
 
-    "reinterpret voice data as velocity | \"0 1\".velocity()" {
-        val p = "0 1".velocity()
+    "reinterpret voice data as compressor | \"0 1\".compressor()" {
+        val p = "0:0 1:1".compressor()
 
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.velocity shouldBe 0.0
-            events[1].data.velocity shouldBe 1.0
+            events[0].data.compressor shouldBe "0:0"
+            events[1].data.compressor shouldBe "1:1"
         }
     }
 
-    "reinterpret voice data as velocity | seq(\"0 1\").apply(velocity())" {
-        val p = seq("0 1").apply(velocity())
+    "reinterpret voice data as compressor | seq(\"0 1\").apply(compressor())" {
+        val p = seq("0:0 1:1").apply(compressor())
 
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.velocity shouldBe 0.0
-            events[1].data.velocity shouldBe 1.0
+            events[0].data.compressor shouldBe "0:0"
+            events[1].data.compressor shouldBe "1:1"
         }
     }
 
