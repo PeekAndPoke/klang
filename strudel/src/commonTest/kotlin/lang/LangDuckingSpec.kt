@@ -1,11 +1,59 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangDuckingSpec : StringSpec({
 
-    "duck() sets duckOrbit" {
+    "duckorbit dsl interface" {
+        val pat = "0 1"
+        val ctrl = "1 2"
+
+        dslInterfaceTests(
+            "pattern.duckorbit(ctrl)" to
+                    seq(pat).duckorbit(ctrl),
+            "script pattern.duckorbit(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").duckorbit("$ctrl")"""),
+            "string.duckorbit(ctrl)" to
+                    pat.duckorbit(ctrl),
+            "script string.duckorbit(ctrl)" to
+                    StrudelPattern.compile(""""$pat".duckorbit("$ctrl")"""),
+            "duckorbit(ctrl)" to
+                    seq(pat).apply(duckorbit(ctrl)),
+            "script duckorbit(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(duckorbit("$ctrl"))"""),
+            // duck alias
+            "pattern.duck(ctrl)" to
+                    seq(pat).duck(ctrl),
+            "script pattern.duck(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").duck("$ctrl")"""),
+            "string.duck(ctrl)" to
+                    pat.duck(ctrl),
+            "script string.duck(ctrl)" to
+                    StrudelPattern.compile(""""$pat".duck("$ctrl")"""),
+            "duck(ctrl)" to
+                    seq(pat).apply(duck(ctrl)),
+            "script duck(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(duck("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.duckOrbit shouldBe 1
+            events[1].data.duckOrbit shouldBe 2
+        }
+    }
+
+    "duckorbit() sets duckOrbit" {
+        val p = note("c3").duckorbit(1)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.duckOrbit shouldBe 1
+    }
+
+    "duck() alias sets duckOrbit" {
         val p = note("c3").duck(0)
         val events = p.queryArc(0.0, 1.0)
 
@@ -13,8 +61,8 @@ class LangDuckingSpec : StringSpec({
         events[0].data.duckOrbit shouldBe 0
     }
 
-    "duckorbit() sets duckOrbit" {
-        val p = note("c3").duckorbit(1)
+    "duck() can be used as PatternMapper" {
+        val p = note("c3").apply(duck(1))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -71,14 +119,6 @@ class LangDuckingSpec : StringSpec({
         voiceData.duckOrbit shouldBe 0
         voiceData.duckAttack shouldBe 0.15
         voiceData.duckDepth shouldBe 0.6
-    }
-
-    "duck() can be used as standalone function" {
-        val p = duck(1)
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 1
-        events[0].data.duckOrbit shouldBe 1
     }
 
     "duckattack() can be used as standalone function" {

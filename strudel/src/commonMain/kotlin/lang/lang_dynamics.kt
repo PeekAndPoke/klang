@@ -1307,13 +1307,13 @@ private fun applyDuckOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?
     return source._liftNumericField(args, duckOrbitMutation)
 }
 
-internal val _duckorbit by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
 internal val StrudelPattern._duckorbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
 internal val String._duckorbit by dslStringExtension { p, args, callInfo -> p._duckorbit(args, callInfo) }
+internal val _duckorbit by dslPatternMapper { args, callInfo -> { p -> p._duckorbit(args, callInfo) } }
 
-internal val _duck by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckOrbitMutation) }
 internal val StrudelPattern._duck by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
 internal val String._duck by dslStringExtension { p, args, callInfo -> p._duck(args, callInfo) }
+internal val _duck by dslPatternMapper { args, callInfo -> { p -> p._duck(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1331,22 +1331,42 @@ internal val String._duck by dslStringExtension { p, args, callInfo -> p._duck(a
  * note("c3 e3 g3").duckorbit(1).duckdepth(0.8)   // duck when kick plays on orbit 1
  * ```
  *
+ * @param orbitIndex The orbit index to listen to for the sidechain trigger.
+ *
  * @alias duck
  * @category dynamics
  * @tags duckorbit, duck, sidechain, ducking, dynamics
  */
 @StrudelDsl
-fun duckorbit(orbitIndex: PatternLike): StrudelPattern = _duckorbit(listOf(orbitIndex).asStrudelDslArgs())
+fun StrudelPattern.duckorbit(orbitIndex: PatternLike? = null): StrudelPattern =
+    this._duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
-/** Sets the sidechain source orbit for ducking this pattern. */
+/**
+ * Parses this string as a pattern and sets the sidechain source orbit for ducking.
+ *
+ * ```KlangScript
+ * "c3 e3".duckorbit(1).duckdepth(0.8).note()   // duck when orbit 1 plays
+ * ```
+ *
+ * @param orbitIndex The orbit index to listen to for the sidechain trigger.
+ */
 @StrudelDsl
-fun StrudelPattern.duckorbit(orbitIndex: PatternLike): StrudelPattern =
-    this._duckorbit(listOf(orbitIndex).asStrudelDslArgs())
+fun String.duckorbit(orbitIndex: PatternLike? = null): StrudelPattern =
+    this._duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the sidechain source orbit for ducking. */
+/**
+ * Creates a [PatternMapper] that sets the sidechain source orbit for ducking.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").apply(duckorbit(1)).duckdepth(0.8)   // duck when orbit 1 plays
+ * ```
+ *
+ * @param orbitIndex The orbit index to listen to for the sidechain trigger.
+ */
 @StrudelDsl
-fun String.duckorbit(orbitIndex: PatternLike): StrudelPattern =
-    this._duckorbit(listOf(orbitIndex).asStrudelDslArgs())
+fun duckorbit(orbitIndex: PatternLike? = null): PatternMapper =
+    _duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
+
 
 /**
  * Alias for [duckorbit]. Sets the target orbit to listen to for sidechain ducking.
@@ -1354,24 +1374,45 @@ fun String.duckorbit(orbitIndex: PatternLike): StrudelPattern =
  * ```KlangScript
  * stack(
  *   s("bd*4").orbit(0),                               // kick drum on orbit 0
- *   note("c3 e3").orbit(1).duck(0).duckdepth(1.0),    // duck when kick plays on orbit 1
+ *   note("c3 e3").orbit(1).duck(0).duckdepth(1.0),    // duck when kick plays on orbit 0
  * )
  * ```
+ *
+ * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  *
  * @alias duckorbit
  * @category dynamics
  * @tags duck, duckorbit, sidechain, ducking, dynamics
  */
 @StrudelDsl
-fun duck(orbitIndex: PatternLike): StrudelPattern = _duck(listOf(orbitIndex).asStrudelDslArgs())
+fun StrudelPattern.duck(orbitIndex: PatternLike? = null): StrudelPattern =
+    this._duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
-/** Alias for [duckorbit]. Sets the sidechain source orbit for ducking this pattern. */
+/**
+ * Alias for [duckorbit]. Parses this string as a pattern and sets the sidechain source orbit.
+ *
+ * ```KlangScript
+ * "c3 e3".duck(0).duckdepth(0.8).note()   // duck when orbit 0 plays
+ * ```
+ *
+ * @param orbitIndex The orbit index to listen to for the sidechain trigger.
+ */
 @StrudelDsl
-fun StrudelPattern.duck(orbitIndex: PatternLike): StrudelPattern = this._duck(listOf(orbitIndex).asStrudelDslArgs())
+fun String.duck(orbitIndex: PatternLike? = null): StrudelPattern =
+    this._duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
-/** Alias for [duckorbit]. Parses this string as a pattern and sets the sidechain source orbit. */
+/**
+ * Alias for [duckorbit]. Creates a [PatternMapper] that sets the sidechain source orbit for ducking.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(duck(0)).duckdepth(0.8)   // duck when orbit 0 plays
+ * ```
+ *
+ * @param orbitIndex The orbit index to listen to for the sidechain trigger.
+ */
 @StrudelDsl
-fun String.duck(orbitIndex: PatternLike): StrudelPattern = this._duck(listOf(orbitIndex).asStrudelDslArgs())
+fun duck(orbitIndex: PatternLike? = null): PatternMapper =
+    _duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
 // -- duckattack() / duckatt() -----------------------------------------------------------------------------------------
 
