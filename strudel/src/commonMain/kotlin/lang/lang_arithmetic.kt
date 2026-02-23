@@ -56,7 +56,7 @@ fun applyUnaryOp(
 
 // -- add() ------------------------------------------------------------------------------------------------------------
 
-internal val _add by dslPatternFunction { _, _ -> silence }
+internal val _add by dslPatternMapper { args, callInfo -> { p -> p._add(args, callInfo) } }
 internal val StrudelPattern._add by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a + b } }
 internal val String._add by dslStringExtension { p, args, callInfo -> p._add(args, callInfo) }
 
@@ -65,13 +65,9 @@ internal val String._add by dslStringExtension { p, args, callInfo -> p._add(arg
 /**
  * Adds [amount] to every numeric value in the pattern.
  *
- * Supports control patterns: pass a mini-notation string or another [StrudelPattern] as [amount]
- * to modulate the offset per cycle or event.
- *
- * @param amount The value to add. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern with each numeric value increased by [amount].
- *
- * Examples:
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [amount] to modulate the offset per cycle or event.
  *
  * ```KlangScript
  * seq("0 2").add(5).scale("c3:major").n()  // n values become 5 and 7
@@ -81,23 +77,47 @@ internal val String._add by dslStringExtension { p, args, callInfo -> p._add(arg
  * seq("0 2").add("<0 12>").scale("c3:major").n()  // add 0 or 12 alternately each cycle
  * ```
  *
+ * @param amount The value to add. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern with each numeric value increased by [amount].
  * @category arithmetic
  * @tags add, arithmetic, math, offset
  */
 @StrudelDsl
 fun StrudelPattern.add(amount: PatternLike): StrudelPattern = this._add(listOf(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then adds [amount] to every numeric value. */
+/**
+ * Parses this string as a pattern, then adds [amount] to every numeric value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "0 2".add(5).scale("c3:major").n()  // n values become 5 and 7
+ * ```
+ *
+ * @param amount The value to add. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.add(amount: PatternLike): StrudelPattern = this._add(listOf(amount).asStrudelDslArgs())
 
-/** Top-level [add] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that adds [amount] to every numeric value in a pattern.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the addition to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("0 2").apply(add(5)).scale("c3:major").n()  // n values become 5 and 7
+ * ```
+ *
+ * @param amount The value to add. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun add(amount: PatternLike): StrudelPattern = _add(listOf(amount).asStrudelDslArgs())
+fun add(amount: PatternLike): PatternMapper = _add(listOf(amount).asStrudelDslArgs())
 
 // -- sub() ------------------------------------------------------------------------------------------------------------
 
-internal val _sub by dslPatternFunction { _, _ -> silence }
+internal val _sub by dslPatternMapper { args, callInfo -> { p -> p._sub(args, callInfo) } }
 internal val StrudelPattern._sub by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a - b } }
 internal val String._sub by dslStringExtension { p, args, callInfo -> p._sub(args, callInfo) }
 
@@ -106,11 +126,9 @@ internal val String._sub by dslStringExtension { p, args, callInfo -> p._sub(arg
 /**
  * Subtracts [amount] from every numeric value in the pattern.
  *
- * Supports control patterns: pass a mini-notation string or another [StrudelPattern] as [amount]
- * to modulate the offset per cycle or event.
- *
- * @param amount The value to subtract. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern with each numeric value decreased by [amount].
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [amount] to modulate the offset per cycle or event.
  *
  * ```KlangScript
  * seq("10 20").sub(5).scale("c3:major").n()  // n values become 5 and 15
@@ -119,19 +137,44 @@ internal val String._sub by dslStringExtension { p, args, callInfo -> p._sub(arg
  * ```KlangScript
  * seq("10").sub("<0 5>").scale("c3:major").n()  // subtract 0 or 5 alternately each cycle
  * ```
+ *
+ * @param amount The value to subtract. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern with each numeric value decreased by [amount].
  * @category arithmetic
  * @tags sub, subtract, arithmetic, math, offset
  */
 @StrudelDsl
 fun StrudelPattern.sub(amount: PatternLike): StrudelPattern = this._sub(listOf(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then subtracts [amount] from every numeric value. */
+/**
+ * Parses this string as a pattern, then subtracts [amount] from every numeric value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "10 20".sub(5).scale("c3:major").n()  // n values become 5 and 15
+ * ```
+ *
+ * @param amount The value to subtract. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.sub(amount: PatternLike): StrudelPattern = this._sub(listOf(amount).asStrudelDslArgs())
 
-/** Top-level [sub] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that subtracts [amount] from every numeric value in a pattern.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the subtraction to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("10 20").apply(sub(5)).scale("c3:major").n()  // n values become 5 and 15
+ * ```
+ *
+ * @param amount The value to subtract. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun sub(amount: PatternLike): StrudelPattern = _sub(listOf(amount).asStrudelDslArgs())
+fun sub(amount: PatternLike): PatternMapper = _sub(listOf(amount).asStrudelDslArgs())
 
 // -- mul() ------------------------------------------------------------------------------------------------------------
 

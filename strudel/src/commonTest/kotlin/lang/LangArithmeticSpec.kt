@@ -2,11 +2,13 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 /**
  * Combined tests for arithmetic operations: add, sub, mul, div, mod
@@ -52,9 +54,37 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 3
     }
 
-    "add() works as top-level function " {
-        val p = add("2")
-        p.queryArc(0.0, 1.0).shouldBeEmpty()
+    "add() works as top-level PatternMapper" {
+        val p = seq("0 1").apply(add("2"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 2
+        events[1].data.value?.asInt shouldBe 3
+    }
+
+    "add dsl interface" {
+        val pat = "0 1"
+        val ctrl = "2 3"
+
+        dslInterfaceTests(
+            "pattern.add(ctrl)" to
+                    seq(pat).add(ctrl),
+            "script pattern.add(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").add("$ctrl")"""),
+            "string.add(ctrl)" to
+                    pat.add(ctrl),
+            "script string.add(ctrl)" to
+                    StrudelPattern.compile(""""$pat".add("$ctrl")"""),
+            "add(ctrl)" to
+                    seq(pat).apply(add(ctrl)),
+            "script add(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(add("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 2  // 0 + 2 = 2
+            events[1].data.value?.asInt shouldBe 4  // 1 + 3 = 4
+        }
     }
 
     "add() works with scale logic when placed before scale" {
@@ -105,9 +135,37 @@ class LangArithmeticSpec : StringSpec({
         value1.value.toInt() shouldBe 15
     }
 
-    "sub() works as top-level function" {
-        val p = sub("5")
-        p.queryArc(0.0, 1.0).shouldBeEmpty()
+    "sub() works as top-level PatternMapper" {
+        val p = seq("10 20").apply(sub("5"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 5
+        events[1].data.value?.asInt shouldBe 15
+    }
+
+    "sub dsl interface" {
+        val pat = "10 20"
+        val ctrl = "3 7"
+
+        dslInterfaceTests(
+            "pattern.sub(ctrl)" to
+                    seq(pat).sub(ctrl),
+            "script pattern.sub(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").sub("$ctrl")"""),
+            "string.sub(ctrl)" to
+                    pat.sub(ctrl),
+            "script string.sub(ctrl)" to
+                    StrudelPattern.compile(""""$pat".sub("$ctrl")"""),
+            "sub(ctrl)" to
+                    seq(pat).apply(sub(ctrl)),
+            "script sub(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(sub("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 7   // 10 - 3 = 7
+            events[1].data.value?.asInt shouldBe 13  // 20 - 7 = 13
+        }
     }
 
     "sub() works as string extension" {
