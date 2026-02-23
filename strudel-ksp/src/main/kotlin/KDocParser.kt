@@ -89,9 +89,9 @@ object KDocParser {
         }
 
         val description = descriptionLines
-            .joinToString(" ")
-            .trim()
-            .replace(Regex("\\s+"), " ")
+            .dropWhile { it.isEmpty() }
+            .dropLastWhile { it.isEmpty() }
+            .joinToString("\n")
 
         val params = mutableMapOf<String, String>()
         var returnDoc = ""

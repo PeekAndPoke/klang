@@ -186,7 +186,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).adsr("0.01:0.5:0.5:1.0").gain(0.70).hpf(60).filterWhen(t => t % 64 >= 4) // .solo()
+  ).adsr("0.01:0.3:0.2:1.0").gain(0.70).hpf(60).filterWhen(t => t % 64 >= 4) // .solo()
   , // Drums 1 -----------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>").adsr("0.01:0.3:1.0:1.0").gain("0.95".add(berlin2.range(-0.05, 0.0).segment(8)).slow(4)) // .solo()
 ).room(0.02).rsize(3.0) /*

@@ -199,7 +199,7 @@ class StrudelDocsProcessor(
         val isExtension = function.extensionReceiver != null
         val variantType = if (isExtension) "DslType.EXTENSION_METHOD" else "DslType.TOP_LEVEL"
 
-        val description = kdoc.description.replace("\n", " ")
+        val description = kdoc.description
         val returnDoc = kdoc.returnDoc.replace("\n", " ")
 
         val samplesString = if (kdoc.samples.isNotEmpty()) {
@@ -307,7 +307,7 @@ class StrudelDocsProcessor(
             receiverType = if (isExtension) property.extensionReceiver!!.resolve() else null,
         )
 
-        val description = kdoc.description.replace("\n", " ")
+        val description = kdoc.description
 
         val samplesString = if (kdoc.samples.isNotEmpty()) {
             kdoc.samples.joinToString(",\n") { sample ->

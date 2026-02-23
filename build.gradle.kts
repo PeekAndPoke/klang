@@ -92,6 +92,7 @@ kotlin {
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)
                 api(Deps.KotlinLibs.Kraft.addons_browserdetect)
+                api(Deps.KotlinLibs.Kraft.addons_marked)
 
                 // CodeMirror 6
                 api(Deps.Npm { codemirrorState() })

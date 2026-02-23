@@ -966,50 +966,6 @@ fun StrudelPattern._liftData(
 }
 
 /**
- * Lifts a function that accepts a [StrudelVoiceValue] (INNER JOIN semantics).
- *
- * Used for operations that transform the pattern's main value field, such as arithmetic
- * operations (add, subtract, multiply, divide) or other value-based transformations.
- *
- * Unlike [_lift] which extracts a Double, this passes the raw [StrudelVoiceValue] which
- * can be a Number, String, or Boolean, allowing more flexible value handling.
- *
- * **Metadata Preservation:**
- * Preserves metadata (weight, numSteps) from the SOURCE pattern, not the control pattern.
- *
- * **Examples:**
- * ```
- * note("c3 e3").add(pure(7))      // Transpose up 7 semitones
- * note("c3 e3").mul(pure(2))      // Multiply note values
- * ```
- *
- * @param control The control pattern providing values to apply
- * @param transform Function to apply the control value to the source pattern
- * @return Pattern with inner join applied, preserving source metadata
- */
-fun StrudelPattern._liftValue(
-    control: StrudelPattern,
-    transform: (StrudelVoiceValue, StrudelPattern) -> StrudelPattern,
-): StrudelPattern = object : StrudelPattern {
-    override val weight: Double get() = this@_liftValue.weight
-    override val numSteps: Rational? get() = this@_liftValue.numSteps
-    override fun estimateCycleDuration(): Rational = this@_liftValue.estimateCycleDuration()
-
-    // LAZY initialization to avoid circular dependencies during construction
-    private val joined = control._bind { controlEvent ->
-        // Extract the raw value from the control pattern
-        val value = controlEvent.data.value ?: return@_bind null
-
-        // Pass it to the transform function (which will usually map the source pattern)
-        transform(value, this@_liftValue)
-    }
-
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-        return joined.queryArcContextual(from, to, ctx)
-    }
-}
-
-/**
  * Lifts a numeric field modifier to work with control patterns (OUTER JOIN semantics).
  *
  * This is specifically designed for numeric parameters that need to sample continuous patterns
@@ -1065,6 +1021,49 @@ fun StrudelPattern._liftOrReinterpretNumericalField(
     }
 
     return this._liftNumericField(args, update)
+}
+
+/**
+ * Lifts a string field modifier to work with control patterns (OUTER JOIN semantics).
+ *
+ * **Example:**
+ * ```
+ * note("a b c d").compressor("1:1:1 2:2:2")
+ * ```
+ *
+ * @param args DSL arguments to convert to control pattern
+ * @param update Function to update voice data with the numeric value (may be null)
+ * @return Pattern with outer join applied, preserving source structure and metadata
+ */
+fun StrudelPattern._liftStringField(
+    args: List<StrudelDslArg<Any?>>,
+    update: StrudelVoiceData.(String?) -> StrudelVoiceData,
+): StrudelPattern {
+    if (args.isEmpty()) return this
+    val control = args.toPattern()
+
+    // Use outer join to sample control at each source event's time
+    return _outerJoin(control) { sourceEvent, controlEvent ->
+        val value = controlEvent?.data?.value?.asString
+        sourceEvent.copy(data = sourceEvent.data.update(value))
+            .prependLocations(controlEvent?.sourceLocations)
+    }
+}
+
+/**
+ * Lifts a string field modifier to work with control patterns (OUTER JOIN semantics).
+ *
+ * If no control pattern is provided, the current voice data is interpreted as a static value.
+ */
+fun StrudelPattern._liftOrReinterpretStringField(
+    args: List<StrudelDslArg<Any?>>,
+    update: StrudelVoiceData.(String?) -> StrudelVoiceData,
+): StrudelPattern {
+    if (args.isEmpty()) return this.reinterpretVoice {
+        it.update(it.value?.asString)
+    }
+
+    return this._liftStringField(args, update)
 }
 
 /**

@@ -45,7 +45,7 @@ object BuiltInSongs {
 
              import * from  "stdlib"
               import * from "strudel"
-               let wind       = 0.045
+               let wind       = 0.025
                 let water      = 0.035
                  let waves      = 0.075
                   let windSpiel  = 1.500
@@ -55,7 +55,7 @@ object BuiltInSongs {
 
              note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
                .gain(wind).pan(sine.range(0.3, 0.7).slow(21))
-               .hpf(1000).bandf(perlin.range(110, 110 * 20).slow(64)).bandq(berlin.range(1.0, 4.0).slow(39))
+               .hpf(1000).bandf(perlin.range(110, 110 * 20).slow(64)).bandq(berlin.range(0.0, 2.0).slow(39))
                      
            , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             note("c").fast(5).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
@@ -64,13 +64,13 @@ object BuiltInSongs {
            , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             note("<c@4 ~!15>").fast(2).sound("pink").adsr("0.75:0.5:1.0:10.0").warmth(0.2) // . solo()
              .gain(waves).pan(sine.range(0.45, 0.55).slow(21))
-              .hpf(90).lpf(3500).bandf(perlin.range(100, 660).slow(22)).bandq(rand.range(1.0, 1.5))
+              .hpf(90).lpf(3500).bandf(perlin.range(100, 500).slow(22)).bandq(rand.range(0.5, 1.5))
                  .pan(0.39).superimpose(x => x.pan(0.61))
               , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 n(randrun(16)).fast(4).sound("glockenspiel").scale("c2:pentatonic").pan(0.3)
                   .gain(0.25).distort(0.2).postgain(windSpiel).adsr("0.1:1.0:1.0:5.0").hpf(400).degradeBy(0.995)
                       .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.5) // . solo()
-                           ).room(0.25).rsize(10.0)          
+                           ).room(0.25).rsize(10.0)              
       
 
 
@@ -96,7 +96,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0003",
             title = "A Synth Worth Lying For",
-            cps = 0.47,
+            cps = 0.48,
             code = TestTextPatterns.aTruthWorthLyingFor,
             icon = "guitar",
         )

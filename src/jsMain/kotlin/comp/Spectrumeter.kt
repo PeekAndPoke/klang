@@ -9,6 +9,7 @@ import de.peekandpoke.ultra.html.key
 import io.peekandpoke.klang.audio_bridge.createVisualizerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.externals.ResizeObserver
+import io.peekandpoke.klang.feel.KlangStudioColors
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -22,11 +23,11 @@ import org.w3c.dom.HTMLCanvasElement
 @Suppress("FunctionName")
 fun Tag.Spectrumeter(
     colors: List<Color> = listOf(
-        Color.lightSkyBlue,
-        Color.yellowGreen,
-        Color.yellow,
-        Color.orange,
-        Color.red,
+        KlangStudioColors.excellent,
+        KlangStudioColors.good,
+        KlangStudioColors.moderate,
+        KlangStudioColors.warning,
+        KlangStudioColors.critical,
     ),
 //    colors: List<Color> = listOf(Color.white),
     gap: Double = 1.0,
@@ -51,7 +52,7 @@ fun Tag.Spectrumeter(
      * - Midrange: Bins 11-170 (250-4000 Hz)
      * - Treble: Bins 171-853 (4000-20000 Hz)
      */
-    binRange: IntRange = 1..1023,  // Skip bin 0 (DC component) by default
+    binRange: IntRange = 4..1023,  // Skip bin 0 (DC component) by default
     player: () -> KlangPlayer?,
 ) = comp(
     Spectrumeter.Props(
@@ -195,7 +196,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
             // Normalize dB values to a 0.0 - 1.0 range for drawing.
             // Typical range is around -100dB (silence) to -30dB or 0dB (loud).
             // We map -100dB to 0.0 height and 0dB to 1.0 height.
-            val normalized = ((maxDb + 100) / 100.0).coerceIn(0.0, 1.0)
+            val normalized = ((maxDb + 100) / 90.0).coerceIn(0.0, 1.0)
 
             // Calculate how many boxes to light up for this bar
             val numBoxesToDraw = (normalized * maxBoxes).toInt()

@@ -1,14 +1,90 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangCompressorSpec : StringSpec({
 
+    "compressor dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0:0:0 1:1:1"
+
+        dslInterfaceTests(
+            "pattern.compressor(ctrl)" to
+                    seq(pat).compressor(ctrl),
+            "script pattern.compressor(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").compressor("$ctrl")"""),
+            "string.compressor(ctrl)" to
+                    pat.compressor(ctrl),
+            "script string.compressor(ctrl)" to
+                    StrudelPattern.compile(""""$pat".compressor("$ctrl")"""),
+            "compressor(ctrl)" to
+                    seq(pat).apply(compressor(ctrl)),
+            "script compressor(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(compressor("$ctrl"))"""),
+            // comp alias
+            "pattern.comp(ctrl)" to
+                    seq(pat).comp(ctrl),
+            "script pattern.comp(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").comp("$ctrl")"""),
+            "string.comp(ctrl)" to
+                    pat.comp(ctrl),
+            "script string.comp(ctrl)" to
+                    StrudelPattern.compile(""""$pat".comp("$ctrl")"""),
+            "comp(ctrl)" to
+                    seq(pat).apply(comp(ctrl)),
+            "script comp(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(comp("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.compressor shouldBe "0:0:0"
+            events[1].data.compressor shouldBe "1:1:1"
+        }
+    }
+
+    "reinterpret voice data as velocity | seq(\"0 1\").velocity()" {
+        val p = seq("0 1").velocity()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.velocity shouldBe 0.0
+            events[1].data.velocity shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as velocity | \"0 1\".velocity()" {
+        val p = "0 1".velocity()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.velocity shouldBe 0.0
+            events[1].data.velocity shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as velocity | seq(\"0 1\").apply(velocity())" {
+        val p = seq("0 1").apply(velocity())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.velocity shouldBe 0.0
+            events[1].data.velocity shouldBe 1.0
+        }
+    }
+
     "top-level compressor() sets VoiceData.compressor correctly" {
         // Given a simple sequence of compressor values within one cycle
-        val p = compressor("0.5:2 0.8:4")
+        val p = "0 1".apply(compressor("0.5:2 0.8:4"))
 
         // When querying one cycle
         val events = p.queryArc(0.0, 1.0)
@@ -42,7 +118,7 @@ class LangCompressorSpec : StringSpec({
     }
 
     "compressor() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""compressor("0.5:2 0.8:4")""")
+        val p = StrudelPattern.compile(""""0 1".apply(compressor("0.5:2 0.8:4"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -69,7 +145,7 @@ class LangCompressorSpec : StringSpec({
     }
 
     "comp() alias works as top-level function" {
-        val p = comp("0.7:3 0.9:5")
+        val p = "0 1".apply(comp("0.7:3 0.9:5"))
 
         val events = p.queryArc(0.0, 1.0)
 

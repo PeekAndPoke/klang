@@ -10,7 +10,7 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.semanticIcon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.externals.ResizeObserver
-import io.peekandpoke.klang.utils.mixColor
+import io.peekandpoke.klang.feel.ValueToColorMixer
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -29,7 +29,7 @@ fun Tag.RoundGauge(
     title: String?,
     range: ClosedRange<Double>,
     icon: SemanticIconFn?,
-    iconColors: List<Pair<ClosedRange<Double>, Color>>,
+    colors: ValueToColorMixer,
     disabled: Boolean,
     size: LinearDimension = 50.px,
     smoothing: Double = 0.933, // Default: 14/15 = heavy smoothing (0.0 = instant, 1.0 = maximum)
@@ -40,7 +40,7 @@ fun Tag.RoundGauge(
         title = title,
         range = range,
         icon = icon,
-        iconColors = iconColors,
+        colors = colors,
         disabled = disabled,
         size = size,
         smoothing = smoothing,
@@ -63,7 +63,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val title: String?,
         val range: ClosedRange<Double>,
         val icon: SemanticIconFn?,
-        val iconColors: List<Pair<ClosedRange<Double>, Color>>,
+        val colors: ValueToColorMixer,
         val disabled: Boolean,
         val size: LinearDimension,
         val smoothing: Double, // 0.0 = instant, higher = more smoothing (e.g., 0.933 = heavy smoothing)
@@ -142,7 +142,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val iconColor = if (isDisabled) {
             Color.grey
         } else {
-            mixColor(smoothedValue, props.iconColors)
+            props.colors.getColor(smoothedValue)
         }
 
         div {

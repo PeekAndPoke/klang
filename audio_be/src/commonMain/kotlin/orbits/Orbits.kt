@@ -11,7 +11,7 @@ class Orbits(
     private val blockFrames: Int,
     private val sampleRate: Int,
 ) {
-    private val maxOrbits = maxOrbits.coerceIn(1, 32)
+    private val maxOrbits = maxOrbits.coerceIn(1, 255)
     private val orbits = mutableMapOf<Int, Orbit>()
     private var cleanupIndex = 0
 

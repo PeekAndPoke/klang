@@ -23,6 +23,7 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.comp.*
+import io.peekandpoke.klang.feel.KlangStudioColors
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.playStrudelOnce
@@ -33,7 +34,9 @@ import kotlinx.css.properties.transform
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlin.math.PI
 import kotlin.math.ceil
+import kotlin.math.sin
 import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("FunctionName")
@@ -199,6 +202,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
+    @Suppress("RedundantInnerClassModifier") // false positive
     private inner class StateBenchmarkComplete(val result: KlangBenchmark.Result) : State {
         override fun update() {
             // noop
@@ -241,9 +245,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val currentOpacity get() = state.getOpacity()
 
-    private val ticker by subscribingTo(ticker(16.milliseconds)) { state.update() }
-
     private val browserDetact = BrowserDetect.forCurrentBrowser()
+
+    /** Needed for ui updates */
+    @Suppress("unused")
+    private val ticker by subscribingTo(ticker(16.milliseconds)) { state.update() }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -449,7 +455,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             RoundButton(
                 icon = { power_off },
-                color = GaugeColors.excellent,
+                color = KlangStudioColors.excellent,
                 onClick = {
                     state.gotoNext()
                 },
@@ -562,9 +568,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "Round",
                     range = 0.0..totalRounds,
                     icon = { redo },
-                    iconColors = listOf(
-                        (0.0..totalRounds) to GaugeColors.excellent
-                    ),
+                    colors = KlangStudioColors.rangedMixer(0, totalRounds),
                     disabled = false,
                     size = 70.px
                 )
@@ -590,13 +594,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "CPU",
                     range = 0.0..100.0,
                     icon = { microchip },
-                    iconColors = listOf(
-                        (0.0..30.0) to GaugeColors.excellent,
-                        (30.0..50.0) to GaugeColors.good,
-                        (50.0..70.0) to GaugeColors.moderate,
-                        (70.0..85.0) to GaugeColors.warning,
-                        (85.0..100.0) to GaugeColors.critical
-                    ),
+                    colors = KlangStudioColors.rangedMixer(0.0, 100.0),
                     disabled = false,
                     size = 90.px
                 )
@@ -616,13 +614,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "Active Voices",
                     range = 0.0..200.0,
                     icon = { music },
-                    iconColors = listOf(
-                        (0.0..50.0) to GaugeColors.excellent,
-                        (50.0..100.0) to GaugeColors.good,
-                        (100.0..150.0) to GaugeColors.moderate,
-                        (150.0..180.0) to GaugeColors.warning,
-                        (180.0..200.0) to GaugeColors.critical
-                    ),
+                    colors = KlangStudioColors.rangedMixer(0.0, 200.0),
                     disabled = false,
                     size = 70.px
                 )
@@ -694,13 +686,12 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     paddingBottom = 20.px
                     paddingLeft = 20.px
                     paddingRight = 20.px
-                    backgroundColor = if (rating.showWarning) Color("#3d2a1f") else Color("#1a3d2a")
                     borderRadius = 8.px
-                    if (rating.showWarning) {
-                        borderWidth = 2.px
-                        borderStyle = BorderStyle.solid
-                        borderColor = rating.color
-                    }
+                    border = Border(
+                        width = 1.px,
+                        style = BorderStyle.dashed,
+                        color = if (rating.showWarning) KlangStudioColors.critical else Color.white
+                    )
                 }
 
                 // Tier badge
@@ -752,8 +743,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     paddingBottom = 20.px
                     paddingLeft = 20.px
                     paddingRight = 20.px
-                    backgroundColor = Color("#2a2a2a")
                     borderRadius = 8.px
+                    border = Border(1.px, BorderStyle.dashed, Color.white)
                 }
 
                 // Main stat
@@ -797,12 +788,23 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
+            ui.hidden.divider()
+
             // Start Coding button
-            ui.button.white.large {
+            ui.massive.button.white.large {
                 css {
                     marginTop = 24.px
                 }
-                icon.music()
+
+                icon.music {
+                    css {
+                        val glow = 0.6 + 0.4 * sin(Kronos.systemUtc.millisNow() * PI / 610.0)
+
+                        color = KlangStudioColors.critical.darken((100 - glow * 100).toInt())
+                        put("text-shadow", "0 0 ${glow * 3}px")
+                    }
+                }
+
                 +"Make Music Now"
 
                 onClick { completeState.gotoNext() }

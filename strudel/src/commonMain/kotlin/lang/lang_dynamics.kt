@@ -2,10 +2,7 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel._applyControlFromParams
-import io.peekandpoke.klang.strudel._liftNumericField
-import io.peekandpoke.klang.strudel._liftOrReinterpretNumericalField
+import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
@@ -336,21 +333,19 @@ fun postgain(amount: PatternLike? = null): PatternMapper =
 
 // -- compressor() / comp() --------------------------------------------------------------------------------------------
 
-private val compressorMutation = voiceModifier { shape -> copy(compressor = shape?.toString()) }
+private val compressorMutation = voiceModifier { copy(compressor = it?.toString()) }
 
 fun applyCompressor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._applyControlFromParams(args, compressorMutation) { src, ctrl ->
-        src.copy(compressor = ctrl.compressor)
-    }
+    return source._liftOrReinterpretStringField(args, compressorMutation)
 }
 
-internal val _compressor by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
 internal val StrudelPattern._compressor by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
 internal val String._compressor by dslStringExtension { p, args, callInfo -> p._compressor(args, callInfo) }
+internal val _compressor by dslPatternMapper { args, callInfo -> { p -> p._compressor(args, callInfo) } }
 
-internal val _comp by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(compressorMutation) }
 internal val StrudelPattern._comp by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
 internal val String._comp by dslStringExtension { p, args, callInfo -> p._comp(args, callInfo) }
+internal val _comp by dslPatternMapper { args, callInfo -> { p -> p._comp(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -358,29 +353,79 @@ internal val String._comp by dslStringExtension { p, args, callInfo -> p._comp(a
  * Sets dynamic range compression parameters as a colon-separated string
  * `"threshold:ratio:knee:attack:release"`.
  *
+ * **Threshold:** The volume level (in decibels) at which compression starts.
+ * - Logic: Signals above this level are attenuated.
+ * - Range: Usually -60.0 to 0.0.
+ *
+ * **Ratio:** How much the signal is reduced once it exceeds the threshold.
+ * - Logic: A ratio of 4.0 (4:1) means that for every 4dB the input goes over the threshold, the output only increases by 1dB.
+ * - Range: 1.0 (no compression) and up. 20.0 or higher acts as a limiter.
+ *
+ * **Knee:** The "smoothness" of the transition into compression.
+ * - Logic: A value of 0 is a "hard knee" (instant compression at threshold). Higher values (e.g., 6.0) create a "soft knee" where compression is applied gradually as the signal approaches the threshold.
+ *
+ * **Attack:** How quickly the compressor reacts to signals exceeding the threshold.
+ * - Logic: Measured in seconds. Fast attacks (e.g., 0.003) catch peaks immediately; slow attacks let the initial "click" or transient through.
+ *
+ * **Release:** How quickly the compressor stops attenuating after the signal falls back below the threshold.
+ * - Logic: Measured in seconds. Short release times (e.g., 0.1) return to normal quickly; long release times create a smoother, more "levelled" sound.
+ *
+ * **Common Configurations:**
+ *
+ * | Use Case          | Configuration        | Description                                                                              |
+ * | ----------------- | -------------------- | ---------------------------------------------------------------------------------------- |
+ * | Gentle Leveling   | `-15:2:6:0.01:0.2`   | Low ratio and soft knee to subtly even out a melody or pad.                              |
+ * | Punchy Drums      | `-20:4:3:0.03:0.1`   | Slightly slower attack to let the drum "hit" (transient) pass before squeezing the tail. |
+ * | Brickwall Limiter | `-2:40:0:0.001:0.05` | High ratio and instant attack to prevent any signal from clipping above -2dB.            |
+ * | Heavy Squeeze     | `-30:8:2:0.005:0.1`  | Low threshold and high ratio for that "pumping" aggressive sound.                        |
+ *
  * ```KlangScript
- * s("bd sd").compressor("-20:4:3:0.01:0.3")                        // standard compression
+ * s("bd sd").compressor("-20:4:3:0.03:0.1")  // standard compression
  * ```
  *
  * ```KlangScript
  * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
  * ```
  *
+ * ```KlangScript
+ * // Shorthand: only threshold and ratio (defaults: knee=6.0, attack=0.003, release=0.1)
+ * s("hh*8").compressor("-15:4")
+ * ```
+ *
+ * @param params The compression parameters as a colon-separated string.
+ *
  * @alias comp
  * @category dynamics
  * @tags compressor, comp, compression, threshold, ratio, dynamics
  */
 @StrudelDsl
-fun compressor(params: PatternLike): StrudelPattern = _compressor(listOf(params).asStrudelDslArgs())
+fun StrudelPattern.compressor(params: PatternLike? = null): StrudelPattern =
+    this._compressor(listOfNotNull(params).asStrudelDslArgs())
 
-/** Sets dynamic range compression parameters for this pattern. */
+/**
+ * Parses this string as a pattern and sets dynamic range compression parameters.
+ *
+ * ```KlangScript
+ * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * ```
+ *
+ * @param params The compression parameters as a colon-separated string.
+ */
 @StrudelDsl
-fun StrudelPattern.compressor(params: PatternLike): StrudelPattern =
-    this._compressor(listOf(params).asStrudelDslArgs())
+fun String.compressor(params: PatternLike? = null): StrudelPattern =
+    this._compressor(listOfNotNull(params).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets dynamic range compression parameters. */
+/**
+ * Create a [PatternMapper] that sets dynamic range compression parameters for a pattern.
+ *
+ * ```KlangScript
+ * s("bd*4").apply(compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
+ * ```
+
+ */
 @StrudelDsl
-fun String.compressor(params: PatternLike): StrudelPattern = this._compressor(listOf(params).asStrudelDslArgs())
+fun compressor(params: PatternLike? = null): PatternMapper =
+    _compressor(listOfNotNull(params).asStrudelDslArgs())
 
 /**
  * Alias for [compressor]. Sets dynamic range compression parameters as a colon-separated string
@@ -394,20 +439,42 @@ fun String.compressor(params: PatternLike): StrudelPattern = this._compressor(li
  * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
  * ```
  *
+ * @param params The compression parameters as a colon-separated string.
+ *
  * @alias compressor
  * @category dynamics
  * @tags comp, compressor, compression, threshold, ratio, dynamics
  */
 @StrudelDsl
-fun comp(params: PatternLike): StrudelPattern = _comp(listOf(params).asStrudelDslArgs())
+fun StrudelPattern.comp(params: PatternLike? = null): StrudelPattern =
+    this._comp(listOfNotNull(params).asStrudelDslArgs())
 
-/** Alias for [compressor]. Sets dynamic range compression parameters for this pattern. */
+/**
+ * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
+ *
+ * ```KlangScript
+ * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
+ * ```
+ *
+ * @param params The compression parameters as a colon-separated string.
+ */
 @StrudelDsl
-fun StrudelPattern.comp(params: PatternLike): StrudelPattern = this._comp(listOf(params).asStrudelDslArgs())
+fun String.comp(params: PatternLike? = null): StrudelPattern =
+    this._comp(listOfNotNull(params).asStrudelDslArgs())
 
-/** Alias for [compressor]. Parses this string as a pattern and sets compression parameters. */
+/**
+ * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
+ *
+ * ```KlangScript
+ * s("bd*4").apply(comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
+ * ```
+ *
+ * @param params The compression parameters as a colon-separated string.
+ */
 @StrudelDsl
-fun String.comp(params: PatternLike): StrudelPattern = this._comp(listOf(params).asStrudelDslArgs())
+fun comp(params: PatternLike? = null): PatternMapper =
+    _comp(listOfNotNull(params).asStrudelDslArgs())
+
 
 // -- unison() / uni() -------------------------------------------------------------------------------------------------
 

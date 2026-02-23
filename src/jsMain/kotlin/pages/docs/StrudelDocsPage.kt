@@ -13,6 +13,7 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.comp.InViewport
+import io.peekandpoke.klang.comp.MarkdownDisplay
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.docs.DslDocsRegistry
 import io.peekandpoke.klang.script.docs.DslType
@@ -330,6 +331,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                     DslType.EXTENSION_METHOD -> {
                         "${variant.signatureModel.receiver} Extension Function"
                     }
+
                     DslType.PROPERTY -> "Property"
                     DslType.OBJECT -> "Object"
                 }
@@ -351,12 +353,13 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             // Description
-            p {
+            div {
                 css {
                     marginTop = 0.5.rem
                     marginBottom = 0.5.rem
                 }
-                +variant.description
+
+                MarkdownDisplay(variant.description)
             }
 
             // Parameters

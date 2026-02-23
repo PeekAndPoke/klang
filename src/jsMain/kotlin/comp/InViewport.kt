@@ -8,11 +8,12 @@ import de.peekandpoke.ultra.html.css
 import io.peekandpoke.klang.externals.IntersectionObserver
 import kotlinx.css.minHeight
 import kotlinx.css.px
+import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
 
 @Suppress("FunctionName")
-fun Tag.InViewport(content: Tag.() -> Unit) = comp(
+fun Tag.InViewport(content: DIV.() -> Unit) = comp(
     InViewport.Props(content = content)
 ) {
     InViewport(it)
@@ -33,7 +34,7 @@ class InViewport(ctx: Ctx<Props>) : Component<InViewport.Props>(ctx) {
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    data class Props(val content: Tag.() -> Unit)
+    data class Props(val content: DIV.() -> Unit)
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
