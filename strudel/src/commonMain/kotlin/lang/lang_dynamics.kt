@@ -727,16 +727,16 @@ fun spread(amount: PatternLike? = null): PatternMapper =
 private val densityMutation = voiceModifier { copy(density = it?.asDoubleOrNull()) }
 
 private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, densityMutation)
+    return source._liftOrReinterpretStringField(args, densityMutation)
 }
 
-internal val _density by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
 internal val StrudelPattern._density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
 internal val String._density by dslStringExtension { p, args, callInfo -> p._density(args, callInfo) }
+internal val _density by dslPatternMapper { args, callInfo -> { p -> p._density(args, callInfo) } }
 
-internal val _d by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(densityMutation) }
 internal val StrudelPattern._d by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
 internal val String._d by dslStringExtension { p, args, callInfo -> p._d(args, callInfo) }
+internal val _d by dslPatternMapper { args, callInfo -> { p -> p._d(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -747,37 +747,57 @@ internal val String._d by dslStringExtension { p, args, callInfo -> p._d(args, c
  * For noise generators (e.g. `dust`): controls the number of events per second.
  *
  * ```KlangScript
- * s("dust").density(40)                            // 40 noise events per second
+ * note("a").s("dust").density(40)   // 40 noise events per second
  * ```
  *
  * ```KlangScript
- * note("c3").s("sawtooth").unison(7).density(0.5)  // tight supersaw
+ * note("c3").s("supersaw").unison(7).density("<0 0.5 1 2>")  // tight supersaw
  * ```
+ *
+ * @param amount The oscillator density.
  *
  * @alias d
  * @category dynamics
  * @tags density, d, supersaw, dust, noise
  */
 @StrudelDsl
-fun density(amount: PatternLike): StrudelPattern = _density(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.density(amount: PatternLike? = null): StrudelPattern =
+    this._density(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Sets the oscillator or noise density for this pattern. */
+/**
+ * Parses this string as a pattern and sets the oscillator or noise density.
+ *
+ * ```KlangScript
+ * "a".density(40).s("dust").note()   // 40 noise events per second
+ * ```
+ *
+ * @param amount The oscillator density.
+ */
 @StrudelDsl
-fun StrudelPattern.density(amount: PatternLike): StrudelPattern = this._density(listOf(amount).asStrudelDslArgs())
+fun String.density(amount: PatternLike? = null): StrudelPattern =
+    this._density(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the oscillator or noise density. */
+/**
+ * Parses this string as a pattern and sets the oscillator or noise density.
+ *
+ * ```KlangScript
+ * "a".apply(density(40)).s("dust").note()   // 40 noise events per second
+ * ```
+ * @param amount The oscillator density.
+ */
 @StrudelDsl
-fun String.density(amount: PatternLike): StrudelPattern = this._density(listOf(amount).asStrudelDslArgs())
+fun density(amount: PatternLike? = null): PatternMapper =
+    _density(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
  * Alias for [density]. Sets the oscillator density for supersaw or noise density for dust/crackle.
  *
  * ```KlangScript
- * s("dust").d(40)                            // 40 noise events per second
+ * note("a").s("dust").d(40)   // 40 noise events per second
  * ```
  *
  * ```KlangScript
- * note("c3").s("sawtooth").unison(7).d(0.5)  // tight supersaw
+ * note("c3").s("supersaw").unison(7).d(0.5)   // tight supersaw
  * ```
  *
  * @alias density
@@ -785,15 +805,34 @@ fun String.density(amount: PatternLike): StrudelPattern = this._density(listOf(a
  * @tags d, density, supersaw, dust, noise
  */
 @StrudelDsl
-fun d(amount: PatternLike): StrudelPattern = _d(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.d(amount: PatternLike? = null): StrudelPattern =
+    this._d(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Alias for [density]. Sets the oscillator or noise density for this pattern. */
+/**
+ * Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density.
+ *
+ * ```KlangScript
+ * "a".d(40).s("dust").note()   // 40 noise events per second
+ * ```
+ *
+ * @param amount The oscillator density.
+ */
 @StrudelDsl
-fun StrudelPattern.d(amount: PatternLike): StrudelPattern = this._d(listOf(amount).asStrudelDslArgs())
+fun String.d(amount: PatternLike? = null): StrudelPattern =
+    this._d(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density. */
+/**
+ * Alias for [density]. Creates a [PatternMapper] that sets the oscillator or noise density.
+ *
+ * ```KlangScript
+ * note("a").apply(d(40)).s("dust")   // 40 noise events per second
+ * ```
+ *
+ * @param amount The oscillator density.
+ */
 @StrudelDsl
-fun String.d(amount: PatternLike): StrudelPattern = this._d(listOf(amount).asStrudelDslArgs())
+fun d(amount: PatternLike? = null): PatternMapper =
+    _d(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
 

@@ -1,15 +1,91 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangDensitySpec : StringSpec({
 
+    "density dsl interface" {
+        val pat = "0 1"
+        val ctrl = "10 20"
+
+        dslInterfaceTests(
+            "pattern.density(ctrl)" to
+                    seq(pat).density(ctrl),
+            "script pattern.density(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").density("$ctrl")"""),
+            "string.density(ctrl)" to
+                    pat.density(ctrl),
+            "script string.density(ctrl)" to
+                    StrudelPattern.compile(""""$pat".density("$ctrl")"""),
+            "density(ctrl)" to
+                    seq(pat).apply(density(ctrl)),
+            "script density(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(density("$ctrl"))"""),
+            // comp alias
+            "pattern.d(ctrl)" to
+                    seq(pat).d(ctrl),
+            "script pattern.d(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").d("$ctrl")"""),
+            "string.d(ctrl)" to
+                    pat.d(ctrl),
+            "script string.d(ctrl)" to
+                    StrudelPattern.compile(""""$pat".d("$ctrl")"""),
+            "d(ctrl)" to
+                    seq(pat).apply(d(ctrl)),
+            "script d(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(d("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.density shouldBe 10.0
+            events[1].data.density shouldBe 20.0
+        }
+    }
+
+    "reinterpret voice data as density | seq(\"0 1\").density()" {
+        val p = seq("10 20").density()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.density shouldBe 10.0
+            events[1].data.density shouldBe 20.0
+        }
+    }
+
+    "reinterpret voice data as density | \"0 1\".density()" {
+        val p = "10 20".density()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.density shouldBe 10.0
+            events[1].data.density shouldBe 20.0
+        }
+    }
+
+    "reinterpret voice data as density | seq(\"0 1\").apply(density())" {
+        val p = seq("10 20").apply(density())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.density shouldBe 10.0
+            events[1].data.density shouldBe 20.0
+        }
+    }
+
     "density() sets VoiceData.density" {
-        val p = density("0.2 0.8")
+        val p = "0 1".apply(density("0.2 0.8"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -17,7 +93,7 @@ class LangDensitySpec : StringSpec({
     }
 
     "d() alias sets VoiceData.density" {
-        val p = d("0.2 0.8")
+        val p = "0 1".apply(d("0.2 0.8"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
