@@ -903,12 +903,14 @@ fun attack(time: PatternLike? = null): PatternMapper = _attack(listOfNotNull(tim
 private val decayMutation = voiceModifier { copy(decay = it?.asDoubleOrNull()) }
 
 private fun applyDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, decayMutation)
+    return source._liftOrReinterpretStringField(args, decayMutation)
 }
 
-internal val _decay by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(decayMutation) }
 internal val StrudelPattern._decay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDecay(p, args) }
+
 internal val String._decay by dslStringExtension { p, args, callInfo -> p._decay(args, callInfo) }
+
+internal val _decay by dslPatternMapper { args, callInfo -> { p -> p._decay(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -925,19 +927,39 @@ internal val String._decay by dslStringExtension { p, args, callInfo -> p._decay
  * note("c3*4").decay("<0.05 0.2 0.5 1.0>")    // varying decays
  * ```
  *
+ * @param time The decay time in seconds.
+ *
  * @category dynamics
  * @tags decay, adsr, envelope
  */
 @StrudelDsl
-fun decay(time: PatternLike): StrudelPattern = _decay(listOf(time).asStrudelDslArgs())
+fun StrudelPattern.decay(time: PatternLike? = null): StrudelPattern =
+    this._decay(listOfNotNull(time).asStrudelDslArgs())
 
-/** Sets the ADSR envelope decay time for this pattern. */
+/**
+ * Parses this string as a pattern and sets the ADSR envelope decay time.
+ *
+ * ```KlangScript
+ * "c3*4".decay("<0.05 0.2 0.5 1.0>").note()   // varying decays
+ * ```
+ *
+ * @param time The decay time in seconds.
+ */
 @StrudelDsl
-fun StrudelPattern.decay(time: PatternLike): StrudelPattern = this._decay(listOf(time).asStrudelDslArgs())
+fun String.decay(time: PatternLike? = null): StrudelPattern =
+    this._decay(listOfNotNull(time).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the ADSR envelope decay time. */
+/**
+ * Creates a [PatternMapper] that sets the ADSR envelope decay time for each event.
+ *
+ * ```KlangScript
+ * note("c3*4").s("sawtooth").apply(decay("<0.05 0.2 0.5 1.0>"))  // varying decays
+ * ```
+ *
+ * @param time The decay time in seconds.
+ */
 @StrudelDsl
-fun String.decay(time: PatternLike): StrudelPattern = this._decay(listOf(time).asStrudelDslArgs())
+fun decay(time: PatternLike? = null): PatternMapper = _decay(listOfNotNull(time).asStrudelDslArgs())
 
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
