@@ -3,8 +3,11 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.lang.addons.solo
 import io.peekandpoke.klang.strudel.lang.addons.strudelLangStructuralAddonsInit
 
@@ -12,6 +15,32 @@ class LangSoloSpec : StringSpec({
 
     // Force initialization of addons
     strudelLangStructuralAddonsInit = true
+
+    "solo() dsl interface" {
+        dslInterfaceTests(
+            "pattern.solo()" to s("bd").solo(),
+            "string.solo()" to "bd".solo(),
+            "script pattern.solo()" to StrudelPattern.compile("""s("bd").solo()"""),
+            "script string.solo()" to StrudelPattern.compile(""""bd".solo()"""),
+        ) { _, events ->
+            val onsets = events.filter { it.isOnset }
+            onsets shouldHaveSize 1
+            onsets[0].data.solo shouldBe true
+        }
+    }
+
+    "solo(enabled) dsl interface" {
+        dslInterfaceTests(
+            "pattern.solo(1)" to s("bd").solo(1),
+            "string.solo(1)" to "bd".solo(1),
+            "script pattern.solo(1)" to StrudelPattern.compile("""s("bd").solo(1)"""),
+            "script string.solo(1)" to StrudelPattern.compile(""""bd".solo(1)"""),
+        ) { _, events ->
+            val onsets = events.filter { it.isOnset }
+            onsets shouldHaveSize 1
+            onsets[0].data.solo shouldBe true
+        }
+    }
 
     "s(\"bd\").solo() sets solo flag to true" {
         val subject = s("bd").solo()

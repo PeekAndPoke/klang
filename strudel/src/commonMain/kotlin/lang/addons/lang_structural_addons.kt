@@ -390,18 +390,21 @@ internal val String._repeat by dslStringExtension { p, args, callInfo -> p._repe
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Repeats the pattern `n` times sequentially.
+ * Creates a pattern by repeating `pattern` `n` times sequentially.
  *
- * The total duration will be `n × original_duration`. Unlike [fast], which compresses the
- * pattern, `repeat` stretches it out so each repetition occupies a full cycle.
+ * The total duration is `n × original_duration`. Unlike [fast], which compresses events into
+ * fewer cycles, each repetition occupies its own full cycle.
  *
  * ```KlangScript
- * note("a b").repeat(2)          // plays "a b a b" over 2 cycles
+ * repeat(3, s("bd sd"))              // repeat a drum bar 3 times
  * ```
  *
  * ```KlangScript
- * repeat(3, s("bd sd"))          // repeat a drum pattern 3 times
+ * repeat(4, note("c3 e3 g3"))        // repeat a chord arpeggio 4 times
  * ```
+ *
+ * @param times   The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
+ * @param pattern The pattern to repeat.
  *
  * @category structural
  * @tags repeat, loop, duplicate, sequence, addon
@@ -410,43 +413,130 @@ internal val String._repeat by dslStringExtension { p, args, callInfo -> p._repe
 fun repeat(times: PatternLike, pattern: PatternLike): StrudelPattern =
     _repeat(listOf(times, pattern).asStrudelDslArgs())
 
-/** Repeats this pattern `n` times sequentially. */
+/**
+ * Repeats this pattern `n` times sequentially.
+ *
+ * ```KlangScript
+ * note("a b").repeat(2)              // plays "a b a b" over 2 cycles
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd hh cp").repeat(4)         // loop a 4-beat bar four times
+ * ```
+ *
+ * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
+ */
 @StrudelDsl
 fun StrudelPattern.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(times).asStrudelDslArgs())
 
-/** Repeats a string pattern `n` times sequentially. */
+/**
+ * Parses this string as a pattern and repeats it `n` times sequentially.
+ *
+ * ```KlangScript
+ * "a b".repeat(3).note()             // plays "a b a b a b" over 3 cycles
+ * ```
+ *
+ * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
+ */
 @StrudelDsl
 fun String.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(times).asStrudelDslArgs())
 
 // -- solo() -----------------------------------------------------------------------------------------------------------
 
 /**
- * Applies solo to a pattern using control pattern support.
- * When any pattern is soloed, all non-soloed patterns are muted.
+ * Pattern that applies solo to each event and fills silent gaps so the backend
+ * knows the pattern is still alive in solo mode.
+ *
+ * For every query window `[from, to]`:
+ * 1. Source events are decorated with the solo value sampled at `event.whole.begin`.
+ * 2. Every gap between events (and at the leading / trailing edges of the window) is
+ *    filled with a silent "sine" event at gain 0 carrying the same solo flag and the
+ *    same `patternId` as the real events.  This prevents the backend from dropping the
+ *    pattern from solo tracking between notes.
  */
-fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    // Default to true if called without arguments: .solo()
-    val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(1.0)) }
+private class SoloPattern(
+    private val source: StrudelPattern,
+    private val soloControl: StrudelPattern,
+) : StrudelPattern {
 
-    // Get the control pattern
-    val soloArg = effectiveArgs.getOrNull(0) ?: return source
+    companion object {
+        private var counter = 0
+        private fun nextId() = "solo-${++counter}"
+    }
 
-    // Use _innerJoin to support control patterns
-    return source._innerJoin(soloArg) { src, soloVal ->
-        // Convert to boolean based on truthiness
-        val isSolo = soloVal?.asBoolean
+    /** Stable fallback id used when source events carry no patternId of their own. */
+    private val fallbackPatternId = nextId()
 
-        // Apply solo flag to the pattern by mapping over events
-        src.mapEvents { event ->
-            event.copy(
-                data = event.data.copy(solo = isSolo)
+    override val weight get() = source.weight
+    override val numSteps get() = source.numSteps
+    override fun estimateCycleDuration() = source.estimateCycleDuration()
+
+    private var patternId: String? = null
+
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+        // 1. Query and sort source events by visible start time
+        val sourceEvents = source.queryArcContextual(from, to, ctx)
+            .sortedBy { it.part.begin }
+
+        // 2. Derive a stable patternId: prefer the one already on source events
+        patternId = sourceEvents.firstOrNull()?.data?.patternId ?: patternId ?: fallbackPatternId
+
+        val result = mutableListOf<StrudelPatternEvent>()
+        var cursor = from
+
+        // Sample the solo control pattern at the given time
+        fun soloAt(time: Rational): Boolean? =
+            soloControl.sampleAt(time, ctx)?.data?.value?.asBoolean
+
+        // Silent filler event: keeps the backend's solo-tracker alive during rests
+        fun filler(start: Rational, end: Rational, soloVal: Boolean?): StrudelPatternEvent {
+            val span = TimeSpan(start, end)
+            return StrudelPatternEvent(
+                part = span,
+                whole = span, // whole == part → isOnset = true, so the backend picks it up
+                data = StrudelVoiceData.empty.copy(
+                    note = "a",
+                    freqHz = 440.0,
+                    sound = "sine",
+                    gain = 0.000001,
+                    solo = soloVal,
+                    patternId = patternId,
+                ),
             )
         }
+
+        for (event in sourceEvents) {
+            val evStart = event.part.begin
+
+            // Fill any gap before this event
+            if (evStart > cursor) {
+                result.add(filler(cursor, evStart, soloAt(cursor)))
+            }
+
+            // Decorate the event with the solo value sampled at its onset time
+            val soloVal = soloAt(event.whole.begin)
+            result.add(
+                event.copy(
+                    data = event.data.copy(solo = soloVal, patternId = patternId)
+                )
+            )
+
+            cursor = maxOf(cursor, event.part.end)
+        }
+
+        // Fill any trailing gap after the last event
+        if (cursor < to) {
+            result.add(filler(cursor, to, soloAt(cursor)))
+        }
+
+        return result
     }
 }
 
-internal val _solo by dslPatternFunction { args, /* callInfo */ _ ->
-    applySolo(AtomicPattern.value(null), args)
+fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(1.0)) }
+    val soloControl = effectiveArgs.first().toPattern()
+    return SoloPattern(source = source, soloControl = soloControl)
 }
 
 internal val StrudelPattern._solo by dslPatternExtension { p, args, /* callInfo */ _ -> applySolo(p, args) }
@@ -458,15 +548,15 @@ internal val String._solo by dslStringExtension { p, args, callInfo -> p._solo(a
 /**
  * Solos this pattern so all non-soloed patterns are muted during playback.
  *
- * When any pattern in the active set is soloed, all others are silenced. Pass `0` or `false`
- * to disable. Supports control patterns for dynamic toggling.
+ * When any pattern in the active set is soloed, all others are silenced.
+ * Use the `enabled` overload to pass `0`/`false` to disable, or a control pattern for
+ * dynamic toggling.
  *
  * ```KlangScript
- * s("bd sd").solo()               // solo this drum pattern
- * ```
- *
- * ```KlangScript
- * s("hh").solo("<1 0 1 0>")       // toggle solo every other cycle
+ * stack(
+ *   s("bd*4").solo(),              // only the kick is heard
+ *   note("c3 e3") // . solo()
+ * )
  * ```
  *
  * @category structural
@@ -475,14 +565,43 @@ internal val String._solo by dslStringExtension { p, args, callInfo -> p._solo(a
 @StrudelDsl
 fun StrudelPattern.solo(): StrudelPattern = this._solo(emptyList())
 
-/** Solos this pattern with an explicit enabled flag (or control pattern). */
+/**
+ * Solos this pattern with an explicit enabled flag or control pattern.
+ *
+ * Pass `1`/`true` to enable soloing, `0`/`false` to disable. Accepts control patterns
+ * for per-cycle dynamic toggling.
+ *
+ * ```KlangScript
+ * s("bd sd").solo(1)              // same as .solo()
+ * ```
+ *
+ * ```KlangScript
+ * s("hh*8").solo("<1 0>")         // toggle solo on/off every other cycle
+ * ```
+ *
+ * @param enabled `1`/`true` to enable solo, `0`/`false` to disable. Accepts control patterns.
+ */
 @StrudelDsl
 fun StrudelPattern.solo(enabled: PatternLike): StrudelPattern = this._solo(listOf(enabled).asStrudelDslArgs())
 
-/** Solos a string pattern so all non-soloed patterns are muted. */
+/**
+ * Parses this string as a pattern and solos it so all non-soloed patterns are muted.
+ *
+ * ```KlangScript
+ * "bd sd".solo().s()              // solo this string pattern; everything else is muted
+ * ```
+ */
 @StrudelDsl
 fun String.solo(): StrudelPattern = this._solo(emptyList())
 
-/** Solos a string pattern with an explicit enabled flag (or control pattern). */
+/**
+ * Parses this string as a pattern and solos it with an explicit enabled flag or control pattern.
+ *
+ * ```KlangScript
+ * "bd sd".solo("<1 0>").s()       // toggle solo on/off every other cycle
+ * ```
+ *
+ * @param enabled `1`/`true` to enable solo, `0`/`false` to disable. Accepts control patterns.
+ */
 @StrudelDsl
 fun String.solo(enabled: PatternLike): StrudelPattern = this._solo(listOf(enabled).asStrudelDslArgs())

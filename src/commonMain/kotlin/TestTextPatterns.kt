@@ -59,7 +59,7 @@ stack(                                                              ////////    
     .superimpose(x => x.transpose("<0 12 0 -12>/8"))                                           ////////          //////// ////////
     .orbit(0).gain(0.22).pan(cosine2.range(0.3, 0.7).oneMinusValue().slow(64))                 ////////          //////// ////////
     .delay(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)      
-    .filterWhen(x => x >= 16)                                                                  ////////          ////////
+    .filterWhen(x => x >= 16) // .solo()                                                       ////////          ////////
   ,                                                                                            ////////          ////////
   note(`<                                                                                      ////////          ////////
     [[e2 e3]*4]                   [[a2 a3]*4]                                                  ////////          ////////
@@ -72,7 +72,7 @@ stack(                                                              ////////    
     .orbit(1).gain(1.0).pan(cosine2.slow(64).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")                                  ////////
     .superimpose(x => x.transpose("<0 12 0 -12>/8").bandf(sine.range(2000, 6000).slow(24)).bandq(1.2).gain(0.75))         ////////
     .detune(sine.range(0.05, 0.3).early(1.5).slow(12))                                                                    ////////
-    .filterWhen(x => x >= 31.4)                                                                                           ////////
+    .filterWhen(x => x >= 31.4) // .solo()                                                                                ////////
   ,                                                                                                                       
   sound(`<
     [[bd:2,cr,cr]  hh  sd       hh]       [bd  hh  sd    oh]  [bd       hh  sd  hh]       [bd  hh       sd             hh        ]
@@ -86,10 +86,11 @@ stack(                                                              ////////    
     [[bd,cr]       hh  [sd,hh]  cr]       [cr  hh  cr    hh]  [[sd,oh]  bd  sd  [bd,hh]]  [sd  [bd,hh]  [bd bd]        [bd bd,hh]]
   >`)
     .orbit(2).gain("0.8".add(berlin.range(-0.1, 0.0).fast(16))).adsr("0.01:0.2:0.8:0.5")
-    .fast(2)
+    .fast(2) // .solo()
   ,
 
-).room(0.1).rsize(2.0).compressor("-24:1.2:8:0.03:0.2")
+).room(0.1).rsize(2.0).compressor("-6:1.2:8:0.03:0.2")
+    
     
     """.trimIndent()
 
