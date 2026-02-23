@@ -613,7 +613,7 @@ fun bxor(mask: PatternLike): PatternMapper = _bxor(listOf(mask).asStrudelDslArgs
 
 // -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
 
-internal val _blshift by dslPatternFunction { _, _ -> silence }
+internal val _blshift by dslPatternMapper { args, callInfo -> { p -> p._blshift(args, callInfo) } }
 internal val StrudelPattern._blshift by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a shl b }
 }
@@ -624,11 +624,8 @@ internal val String._blshift by dslStringExtension { p, args, callInfo -> p._bls
 /**
  * Shifts every integer value in the pattern left by [bits] bits (equivalent to multiplying by 2ⁿ).
  *
- * Truncates values to integers before the operation.
- *
- * @param bits The number of bit positions to shift. May be a number, string mini-notation,
- *   or a [StrudelPattern].
- * @return A new pattern where each value is replaced by `value << bits`.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Values are truncated to integers before the operation.
  *
  * ```KlangScript
  * "1 2".blshift(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
@@ -637,23 +634,51 @@ internal val String._blshift by dslStringExtension { p, args, callInfo -> p._bls
  * ```KlangScript
  * "1".blshift("<0 1 2 3>").scale("c3:major").n()  // 1, 2, 4, 8 over four cycles
  * ```
+ *
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ * @return A new pattern where each value is replaced by `value << bits`.
  * @category arithmetic
  * @tags blshift, bitwise, shift, left shift, arithmetic, binary
  */
 @StrudelDsl
 fun StrudelPattern.blshift(bits: PatternLike): StrudelPattern = this._blshift(listOf(bits).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then shifts every integer value left by [bits] bits. */
+/**
+ * Parses this string as a pattern, then shifts every integer value left by [bits] bits.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "1 2".blshift(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
+ * ```
+ *
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.blshift(bits: PatternLike): StrudelPattern = this._blshift(listOf(bits).asStrudelDslArgs())
 
-/** Top-level [blshift] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that shifts every integer value in a pattern left by [bits] bits.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the shift to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("1 2").apply(blshift(2)).scale("c3:major").n()  // 1<<2=4, 2<<2=8
+ * ```
+ *
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
-fun blshift(bits: PatternLike): StrudelPattern = _blshift(listOf(bits).asStrudelDslArgs())
+fun blshift(bits: PatternLike): PatternMapper = _blshift(listOf(bits).asStrudelDslArgs())
 
 // -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
 
-internal val _brshift by dslPatternFunction { _, _ -> silence }
+internal val _brshift by dslPatternMapper { args, callInfo -> { p -> p._brshift(args, callInfo) } }
 internal val StrudelPattern._brshift by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a shr b }
 }
@@ -664,11 +689,8 @@ internal val String._brshift by dslStringExtension { p, args, callInfo -> p._brs
 /**
  * Shifts every integer value in the pattern right by [bits] bits (equivalent to integer-dividing by 2ⁿ).
  *
- * Truncates values to integers before the operation.
- *
- * @param bits The number of bit positions to shift. May be a number, string mini-notation,
- *   or a [StrudelPattern].
- * @return A new pattern where each value is replaced by `value >> bits`.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Values are truncated to integers before the operation.
  *
  * ```KlangScript
  * "8 12".brshift(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
@@ -677,19 +699,47 @@ internal val String._brshift by dslStringExtension { p, args, callInfo -> p._brs
  * ```KlangScript
  * "16".brshift("<0 1 2 3>").scale("c3:major").n()  // 16, 8, 4, 2 over four cycles
  * ```
+ *
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ * @return A new pattern where each value is replaced by `value >> bits`.
  * @category arithmetic
  * @tags brshift, bitwise, shift, right shift, arithmetic, binary
  */
 @StrudelDsl
 fun StrudelPattern.brshift(bits: PatternLike): StrudelPattern = this._brshift(listOf(bits).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then shifts every integer value right by [bits] bits. */
+/**
+ * Parses this string as a pattern, then shifts every integer value right by [bits] bits.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "8 12".brshift(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
+ * ```
+ *
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.brshift(bits: PatternLike): StrudelPattern = this._brshift(listOf(bits).asStrudelDslArgs())
 
-/** Top-level [brshift] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that shifts every integer value in a pattern right by [bits] bits.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the shift to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("8 12").apply(brshift(2)).scale("c3:major").n()  // 8>>2=2, 12>>2=3
+ * ```
+ *
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
-fun brshift(bits: PatternLike): StrudelPattern = _brshift(listOf(bits).asStrudelDslArgs())
+fun brshift(bits: PatternLike): PatternMapper = _brshift(listOf(bits).asStrudelDslArgs())
 
 // -- log2() -----------------------------------------------------------------------------------------------------------
 
