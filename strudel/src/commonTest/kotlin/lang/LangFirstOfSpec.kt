@@ -2,12 +2,51 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangFirstOfSpec : StringSpec({
+
+    "firstOf dsl interface" {
+        dslInterfaceTests(
+            "pattern.firstOf(n, transform)" to
+                    note("a").firstOf(2) { it.note("b") },
+            "script pattern.firstOf(n, transform)" to
+                    StrudelPattern.compile("""note("a").firstOf(2, x => x.note("b"))"""),
+            "string.firstOf(n, transform)" to
+                    "a".firstOf(2) { it.note("b") },
+            "script string.firstOf(n, transform)" to
+                    StrudelPattern.compile(""""a".firstOf(2, x => x.note("b"))"""),
+            "firstOf(n, transform)" to
+                    note("a").apply(firstOf(2) { it.note("b") }),
+            "script firstOf(n, transform)" to
+                    StrudelPattern.compile("""note("a").apply(firstOf(2, x => x.note("b")))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
+
+    "every dsl interface" {
+        dslInterfaceTests(
+            "pattern.every(n, transform)" to
+                    note("a").every(2) { it.note("b") },
+            "script pattern.every(n, transform)" to
+                    StrudelPattern.compile("""note("a").every(2, x => x.note("b"))"""),
+            "string.every(n, transform)" to
+                    "a".every(2) { it.note("b") },
+            "script string.every(n, transform)" to
+                    StrudelPattern.compile(""""a".every(2, x => x.note("b"))"""),
+            "every(n, transform)" to
+                    note("a").apply(every(2) { it.note("b") }),
+            "script every(n, transform)" to
+                    StrudelPattern.compile("""note("a").apply(every(2, x => x.note("b")))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "firstOf(n) applies transform on the first cycle" {
         // cycle 0: "b" (transformed)
@@ -49,11 +88,11 @@ class LangFirstOfSpec : StringSpec({
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "A" // "a" parses to note "A" by default
     }
 
-    "firstOf() works as top-level function" {
-        // firstOf(n, transform, pattern)
-        val p = firstOf(2, { it: StrudelPattern -> it.note("b") })
+    "firstOf() works as top-level PatternMapper" {
+        val p = note("a").apply(firstOf(2) { it.note("b") })
 
-        p.queryArc(0.0, 1.0).shouldBeEmpty()
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
     }
 
     "firstOf(1) always applies transform" {

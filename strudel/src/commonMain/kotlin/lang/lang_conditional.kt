@@ -35,13 +35,7 @@ fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
     }
 }
 
-internal val _firstOf by dslPatternFunction { args, _ ->
-    val nArg = args.getOrNull(0) ?: StrudelDslArg.of(1)
-    val transform = args.getOrNull(1).toPatternMapper() ?: { it }
-    val pat = args.getOrNull(2)?.toPattern() ?: silence
-    applyFirstOf(pat, listOf(nArg, transform).asStrudelDslArgs())
-}
-
+internal val _firstOf by dslPatternMapper { args, callInfo -> { p -> p._firstOf(args, callInfo) } }
 internal val StrudelPattern._firstOf by dslPatternExtension { source, args, _ -> applyFirstOf(source, args) }
 internal val String._firstOf by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 
@@ -57,7 +51,6 @@ internal val String._firstOf by dslStringExtension { source, args, callInfo -> s
  * vary the period each cycle.
  *
  * @param n How many cycles make one period. The transform fires on the first of these.
- *   Supports control patterns.
  * @param transform The function to apply on the first cycle of each period.
  * @return A new pattern that applies [transform] periodically.
  *
@@ -76,25 +69,48 @@ internal val String._firstOf by dslStringExtension { source, args, callInfo -> s
 fun StrudelPattern.firstOf(n: PatternLike, transform: PatternMapper): StrudelPattern =
     this._firstOf(listOf(n, transform).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then applies [transform] on the first of every [n] cycles. */
+/**
+ * Parses this string as a pattern, then applies [transform] on the first of every [n] cycles.
+ *
+ * @param n How many cycles make one period. The transform fires on the first of these.
+ * @param transform The function to apply on the first cycle of each period.
+ * @return A new pattern that applies [transform] periodically.
+ *
+ * ```KlangScript
+ * "c3 d3 e3 g3".firstOf(4, x => x.rev())  // reverse every 4th cycle
+ * ```
+ */
 @StrudelDsl
 fun String.firstOf(n: PatternLike, transform: PatternMapper): StrudelPattern =
     this._firstOf(listOf(n, transform).asStrudelDslArgs())
 
 /**
- * Top-level form of [firstOf]: applies [transform] to [pattern] on the first of every [n] cycles.
+ * Returns a [PatternMapper] that applies [transform] on the **first** cycle of every [n] cycles.
  *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.let(...)`.
+ *
+ * @param n How many cycles make one period. The transform fires on the first of these.
+ * @param transform The function to apply on the first cycle of each period.
+ * @return A [PatternMapper] that applies [transform] periodically.
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 g3").apply(firstOf(4, x => x.rev()))  // reverse every 4th cycle
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").every(3, firstOf(2, x => x.fast(2)))  // nested periodic transforms
+ * ```
  * @alias every
  * @category conditional
  * @tags firstOf, every, conditional, cycle, periodic, transform
  */
 @StrudelDsl
-fun firstOf(n: PatternLike, transform: PatternMapper, pattern: PatternLike = silence): StrudelPattern =
-    _firstOf(listOf(n, transform, pattern).asStrudelDslArgs())
+fun firstOf(n: PatternLike, transform: PatternMapper): PatternMapper =
+    _firstOf(listOf(n, transform).asStrudelDslArgs())
 
 // -- every() ----------------------------------------------------------------------------------------------------------
 
-internal val _every by dslPatternFunction { args, callInfo -> _firstOf(args, callInfo) }
+internal val _every by dslPatternMapper { args, callInfo -> _firstOf(args, callInfo) }
 internal val StrudelPattern._every by dslPatternExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 internal val String._every by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 
@@ -104,7 +120,6 @@ internal val String._every by dslStringExtension { source, args, callInfo -> sou
  * Alias for [firstOf]. Applies [transform] on the **first** cycle of every [n] cycles.
  *
  * @param n How many cycles make one period. The transform fires on the first of these.
- *   Supports control patterns.
  * @param transform The function to apply on the first cycle of each period.
  * @return A new pattern that applies [transform] periodically.
  *
@@ -129,15 +144,29 @@ fun String.every(n: PatternLike, transform: PatternMapper): StrudelPattern =
     this._every(listOf(n, transform).asStrudelDslArgs())
 
 /**
- * Top-level form of [every]: applies [transform] to [pattern] on the first of every [n] cycles.
+ * Returns a [PatternMapper] that applies [transform] on the **first** cycle of every [n] cycles.
  *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.let(...)`.
+ *
+ * @param n How many cycles make one period. The transform fires on the first of these.
+ *   Supports control patterns.
+ * @param transform The function to apply on the first cycle of each period.
+ * @return A [PatternMapper] that applies [transform] periodically.
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 g3").let(every(4, x => x.rev()))  // reverse every 4th cycle
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").firstOf(3, every(2, x => x.fast(2)))  // nested periodic transforms
+ * ```
  * @alias firstOf
  * @category conditional
  * @tags every, firstOf, conditional, cycle, periodic, transform
  */
 @StrudelDsl
-fun every(n: PatternLike, transform: PatternMapper, pattern: PatternLike = silence): StrudelPattern =
-    _every(listOf(n, transform, pattern).asStrudelDslArgs())
+fun every(n: PatternLike, transform: PatternMapper): PatternMapper =
+    _every(listOf(n, transform).asStrudelDslArgs())
 
 // -- lastOf() ---------------------------------------------------------------------------------------------------------
 
