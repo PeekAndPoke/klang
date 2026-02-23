@@ -647,6 +647,41 @@ class LangArithmeticSpec : StringSpec({
         events[2].data.value?.asInt shouldBe 3 // 2.6 rounds to 3
     }
 
+    "round() works as top-level PatternMapper" {
+        val p = seq("2.4 2.6").apply(round())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 2  // round(2.4) = 2
+        events[1].data.value?.asInt shouldBe 3  // round(2.6) = 3
+    }
+
+    "round() works as string extension" {
+        val p = "2.4 2.6".round()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 2
+        events[1].data.value?.asInt shouldBe 3
+    }
+
+    "round dsl interface" {
+        val pat = "2.4 2.6"
+
+        dslInterfaceTests(
+            "pattern.round()" to seq(pat).round(),
+            "script pattern.round()" to StrudelPattern.compile("""seq("$pat").round()"""),
+            "string.round()" to pat.round(),
+            "script string.round()" to StrudelPattern.compile(""""$pat".round()"""),
+            "round()" to seq(pat).apply(round()),
+            "script round()" to StrudelPattern.compile("""seq("$pat").apply(round())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 2  // round(2.4) = 2
+            events[1].data.value?.asInt shouldBe 3  // round(2.6) = 3
+        }
+    }
+
     "floor() rounds down to integer" {
         val p = seq("2.1 2.9 -2.1").floor()
         val events = p.queryArc(0.0, 1.0)
@@ -657,6 +692,41 @@ class LangArithmeticSpec : StringSpec({
         events[2].data.value?.asInt shouldBe -3 // floor(-2.1) = -3
     }
 
+    "floor() works as top-level PatternMapper" {
+        val p = seq("2.1 2.9").apply(floor())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 2  // floor(2.1) = 2
+        events[1].data.value?.asInt shouldBe 2  // floor(2.9) = 2
+    }
+
+    "floor() works as string extension" {
+        val p = "2.1 2.9".floor()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 2
+        events[1].data.value?.asInt shouldBe 2
+    }
+
+    "floor dsl interface" {
+        val pat = "2.1 2.9"
+
+        dslInterfaceTests(
+            "pattern.floor()" to seq(pat).floor(),
+            "script pattern.floor()" to StrudelPattern.compile("""seq("$pat").floor()"""),
+            "string.floor()" to pat.floor(),
+            "script string.floor()" to StrudelPattern.compile(""""$pat".floor()"""),
+            "floor()" to seq(pat).apply(floor()),
+            "script floor()" to StrudelPattern.compile("""seq("$pat").apply(floor())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 2  // floor(2.1) = 2
+            events[1].data.value?.asInt shouldBe 2  // floor(2.9) = 2
+        }
+    }
+
     "ceil() rounds up to integer" {
         val p = seq("2.1 2.9 -2.9").ceil()
         val events = p.queryArc(0.0, 1.0)
@@ -665,6 +735,41 @@ class LangArithmeticSpec : StringSpec({
         events[0].data.value?.asInt shouldBe 3  // ceil(2.1) = 3
         events[1].data.value?.asInt shouldBe 3  // ceil(2.9) = 3
         events[2].data.value?.asInt shouldBe -2 // ceil(-2.9) = -2
+    }
+
+    "ceil() works as top-level PatternMapper" {
+        val p = seq("2.1 2.9").apply(ceil())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 3  // ceil(2.1) = 3
+        events[1].data.value?.asInt shouldBe 3  // ceil(2.9) = 3
+    }
+
+    "ceil() works as string extension" {
+        val p = "2.1 2.9".ceil()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 3
+        events[1].data.value?.asInt shouldBe 3
+    }
+
+    "ceil dsl interface" {
+        val pat = "2.1 2.9"
+
+        dslInterfaceTests(
+            "pattern.ceil()" to seq(pat).ceil(),
+            "script pattern.ceil()" to StrudelPattern.compile("""seq("$pat").ceil()"""),
+            "string.ceil()" to pat.ceil(),
+            "script string.ceil()" to StrudelPattern.compile(""""$pat".ceil()"""),
+            "ceil()" to seq(pat).apply(ceil()),
+            "script ceil()" to StrudelPattern.compile("""seq("$pat").apply(ceil())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 3  // ceil(2.1) = 3
+            events[1].data.value?.asInt shouldBe 3  // ceil(2.9) = 3
+        }
     }
 
     "Rounding operations preserve Rational type" {

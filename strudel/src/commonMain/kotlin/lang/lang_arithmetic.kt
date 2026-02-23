@@ -635,8 +635,7 @@ internal val String._blshift by dslStringExtension { p, args, callInfo -> p._bls
  * "1".blshift("<0 1 2 3>").scale("c3:major").n()  // 1, 2, 4, 8 over four cycles
  * ```
  *
- * @param bits The number of bit positions to shift. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value << bits`.
  * @category arithmetic
  * @tags blshift, bitwise, shift, left shift, arithmetic, binary
@@ -654,8 +653,7 @@ fun StrudelPattern.blshift(bits: PatternLike): StrudelPattern = this._blshift(li
  * "1 2".blshift(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
  * ```
  *
- * @param bits The number of bit positions to shift. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun String.blshift(bits: PatternLike): StrudelPattern = this._blshift(listOf(bits).asStrudelDslArgs())
@@ -700,8 +698,7 @@ internal val String._brshift by dslStringExtension { p, args, callInfo -> p._brs
  * "16".brshift("<0 1 2 3>").scale("c3:major").n()  // 16, 8, 4, 2 over four cycles
  * ```
  *
- * @param bits The number of bit positions to shift. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is replaced by `value >> bits`.
  * @category arithmetic
  * @tags brshift, bitwise, shift, right shift, arithmetic, binary
@@ -719,8 +716,7 @@ fun StrudelPattern.brshift(bits: PatternLike): StrudelPattern = this._brshift(li
  * "8 12".brshift(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
- * @param bits The number of bit positions to shift. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun String.brshift(bits: PatternLike): StrudelPattern = this._brshift(listOf(bits).asStrudelDslArgs())
@@ -735,8 +731,7 @@ fun String.brshift(bits: PatternLike): StrudelPattern = this._brshift(listOf(bit
  * seq("8 12").apply(brshift(2)).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
- * @param bits The number of bit positions to shift. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun brshift(bits: PatternLike): PatternMapper = _brshift(listOf(bits).asStrudelDslArgs())
@@ -823,8 +818,7 @@ internal val String._lt by dslStringExtension { p, args, callInfo -> p._lt(args,
  * seq("5 10").lt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
  * @category arithmetic
  * @tags lt, less than, comparison, arithmetic
@@ -842,8 +836,7 @@ fun StrudelPattern.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(
  * "5 10".lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun String.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(threshold).asStrudelDslArgs())
@@ -859,8 +852,7 @@ fun String.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(threshol
  * seq("5 10").apply(lt(8)).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun lt(threshold: PatternLike): PatternMapper = _lt(listOf(threshold).asStrudelDslArgs())
@@ -891,8 +883,7 @@ internal val String._gt by dslStringExtension { p, args, callInfo -> p._gt(args,
  * seq("5 10").gt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
  * @category arithmetic
  * @tags gt, greater than, comparison, arithmetic
@@ -910,8 +901,7 @@ fun StrudelPattern.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(
  * "5 10".gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun String.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(threshold).asStrudelDslArgs())
@@ -927,8 +917,7 @@ fun String.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(threshol
  * seq("5 10").apply(gt(8)).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun gt(threshold: PatternLike): PatternMapper = _gt(listOf(threshold).asStrudelDslArgs())
@@ -959,8 +948,7 @@ internal val String._lte by dslStringExtension { p, args, callInfo -> p._lte(arg
  * seq("5 8 10").lte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
  * @category arithmetic
  * @tags lte, less than or equal, comparison, arithmetic
@@ -979,8 +967,7 @@ fun StrudelPattern.lte(threshold: PatternLike): StrudelPattern = this._lte(listO
  * "5 8 10".lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun String.lte(threshold: PatternLike): StrudelPattern = this._lte(listOf(threshold).asStrudelDslArgs())
@@ -996,8 +983,7 @@ fun String.lte(threshold: PatternLike): StrudelPattern = this._lte(listOf(thresh
  * seq("5 8 10").apply(lte(8)).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun lte(threshold: PatternLike): PatternMapper = _lte(listOf(threshold).asStrudelDslArgs())
@@ -1028,8 +1014,7 @@ internal val String._gte by dslStringExtension { p, args, callInfo -> p._gte(arg
  * seq("5 8 10").gte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
  * @category arithmetic
  * @tags gte, greater than or equal, comparison, arithmetic
@@ -1048,8 +1033,7 @@ fun StrudelPattern.gte(threshold: PatternLike): StrudelPattern = this._gte(listO
  * "5 8 10".gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun String.gte(threshold: PatternLike): StrudelPattern = this._gte(listOf(threshold).asStrudelDslArgs())
@@ -1065,8 +1049,7 @@ fun String.gte(threshold: PatternLike): StrudelPattern = this._gte(listOf(thresh
  * seq("5 8 10").apply(gte(8)).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
  * ```
  *
- * @param threshold The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun gte(threshold: PatternLike): PatternMapper = _gte(listOf(threshold).asStrudelDslArgs())
@@ -1097,8 +1080,7 @@ internal val String._eq by dslStringExtension { p, args, callInfo -> p._eq(args,
  * seq("0 1 2 3").eq("<0 1>").scale("c3:major").n()  // equality target alternates each cycle
  * ```
  *
- * @param other The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
  * @category arithmetic
  * @tags eq, equal, equality, comparison, arithmetic
@@ -1116,8 +1098,7 @@ fun StrudelPattern.eq(other: PatternLike): StrudelPattern = this._eq(listOf(othe
  * "5 8".eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
  * ```
  *
- * @param other The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun String.eq(other: PatternLike): StrudelPattern = this._eq(listOf(other).asStrudelDslArgs())
@@ -1133,8 +1114,7 @@ fun String.eq(other: PatternLike): StrudelPattern = this._eq(listOf(other).asStr
  * seq("5 8").apply(eq(8)).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
  * ```
  *
- * @param other The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun eq(other: PatternLike): PatternMapper = _eq(listOf(other).asStrudelDslArgs())
@@ -1164,8 +1144,7 @@ internal val String._eqt by dslStringExtension { p, args, callInfo -> p._eqt(arg
  * seq("0 5").eqt(3).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
  * ```
  *
- * @param other The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
  * @category arithmetic
  * @tags eqt, truthiness, equal, comparison, arithmetic
@@ -1183,8 +1162,7 @@ fun StrudelPattern.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(ot
  * "0 5".eqt(0).scale("c3:major").n()  // 0~=0 → 1 (both falsy), 5~=0 → 0
  * ```
  *
- * @param other The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun String.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(other).asStrudelDslArgs())
@@ -1200,15 +1178,14 @@ fun String.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(other).asS
  * seq("0 5").apply(eqt(3)).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
  * ```
  *
- * @param other The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun eqt(other: PatternLike): PatternMapper = _eqt(listOf(other).asStrudelDslArgs())
 
 // -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
 
-internal val _ne by dslPatternFunction { _, _ -> silence }
+internal val _ne by dslPatternMapper { args, callInfo -> { p -> p._ne(args, callInfo) } }
 internal val StrudelPattern._ne by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a ne b }
 }
@@ -1220,34 +1197,60 @@ internal val String._ne by dslStringExtension { p, args, callInfo -> p._ne(args,
  * Compares every value in the pattern to [other] for strict inequality, replacing each with
  * `1` (true) if not equal or `0` (false) otherwise.
  *
- * @param other The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [other] to vary the comparison target per cycle or event.
+ *
+ * ```KlangScript
+ * seq("5 8").ne(8).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 1 2 3").ne("<0 1>").scale("c3:major").n()  // target alternates each cycle
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- *
- * ```KlangScript
- * "5 8".ne(8).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
- * ```
- *
- * ```KlangScript
- * "0 1 2 3".ne("<0 1>").scale("c3:major").n()  // inequality alternates between 0 and 1 each cycle
- * ```
  * @category arithmetic
  * @tags ne, not equal, inequality, comparison, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.ne(other: PatternLike): StrudelPattern = this._ne(listOf(other).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then tests every value for strict inequality with [other]. */
+/**
+ * Parses this string as a pattern, then tests every value for strict inequality with [other].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "5 8".ne(8).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.ne(other: PatternLike): StrudelPattern = this._ne(listOf(other).asStrudelDslArgs())
 
-/** Top-level [ne] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that tests every value in a pattern for strict inequality with [other],
+ * replacing each with `1` (true) if not equal or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the comparison to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("5 8").apply(ne(8)).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun ne(other: PatternLike): StrudelPattern = _ne(listOf(other).asStrudelDslArgs())
+fun ne(other: PatternLike): PatternMapper = _ne(listOf(other).asStrudelDslArgs())
 
 // -- net() (Truthiness Not Equal) -------------------------------------------------------------------------------------
 
-internal val _net by dslPatternFunction { _, _ -> silence }
+internal val _net by dslPatternMapper { args, callInfo -> { p -> p._net(args, callInfo) } }
 internal val StrudelPattern._net by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a net b }
 }
@@ -1259,36 +1262,59 @@ internal val String._net by dslStringExtension { p, args, callInfo -> p._net(arg
  * Compares the truthiness of every value in the pattern to the truthiness of [other], replacing
  * each with `1` (true) if their truthiness differs, or `0` (false) otherwise.
  *
- * A value is falsy if it is zero; otherwise it is truthy.
+ * A value is falsy if it is zero; otherwise it is truthy. Only the raw event `value` is
+ * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
- * @param other The value to compare against. May be a number, string mini-notation,
- *   or a [StrudelPattern].
+ * ```KlangScript
+ * seq("0 5").net(0).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 5").net(3).scale("c3:major").n()  // 0~!=3 → 1, 5~!=3 → 0 (both truthy)
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- *
- * ```KlangScript
- * "0 5".net(0).scale("c3:major").n()  // 0~!=0 → 0, 5~!=0 → 1
- * ```
- *
- * ```KlangScript
- * "0 5".net(3).scale("c3:major").n()  // 0~!=3 → 1, 5~!=3 → 0 (both truthy)
- * ```
  * @category arithmetic
  * @tags net, truthiness, not equal, inequality, comparison, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.net(other: PatternLike): StrudelPattern = this._net(listOf(other).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then tests every value for truthiness inequality with [other]. */
+/**
+ * Parses this string as a pattern, then tests every value for truthiness inequality with [other].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. A value is falsy if it is zero; otherwise it is truthy.
+ *
+ * ```KlangScript
+ * "0 5".net(0).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.net(other: PatternLike): StrudelPattern = this._net(listOf(other).asStrudelDslArgs())
 
-/** Top-level [net] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that compares the truthiness of every value in a pattern to [other],
+ * replacing each with `1` (true) if their truthiness differs, or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the comparison to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("0 5").apply(net(0)).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun net(other: PatternLike): StrudelPattern = _net(listOf(other).asStrudelDslArgs())
+fun net(other: PatternLike): PatternMapper = _net(listOf(other).asStrudelDslArgs())
 
 // -- and() (Logical AND) ----------------------------------------------------------------------------------------------
 
-internal val _and by dslPatternFunction { _, _ -> silence }
+internal val _and by dslPatternMapper { args, callInfo -> { p -> p._and(args, callInfo) } }
 internal val StrudelPattern._and by dslPatternExtension { source, args, _ ->
     applyArithmetic(source, args) { a, b -> a and b }
 }
@@ -1300,35 +1326,59 @@ internal val String._and by dslStringExtension { p, args, callInfo -> p._and(arg
  * Applies logical AND between every value in the pattern and [other].
  *
  * Returns [other] when the source value is truthy (non-zero), or `0` when it is falsy (zero).
- * This mirrors JavaScript's `&&` short-circuit behaviour.
+ * This mirrors JavaScript's `&&` short-circuit behaviour. Only the raw event `value` is
+ * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
+ *
+ * ```KlangScript
+ * seq("0 5").and(10).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
+ * ```
+ *
+ * ```KlangScript
+ * seq("5").and("<0 10>").scale("c3:major").n()  // gate on/off each cycle
+ * ```
  *
  * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is `value && other`.
- *
- * ```KlangScript
- * "0 5".and(10).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
- * ```
- *
- * ```KlangScript
- * "5".and("<0 10>").scale("c3:major").n()  // gate on/off each cycle
- * ```
  * @category arithmetic
  * @tags and, logical, boolean, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.and(other: PatternLike): StrudelPattern = this._and(listOf(other).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then applies logical AND with [other] to every value. */
+/**
+ * Parses this string as a pattern, then applies logical AND with [other] to every value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "0 5".and(10).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
+ * ```
+ *
+ * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.and(other: PatternLike): StrudelPattern = this._and(listOf(other).asStrudelDslArgs())
 
-/** Top-level [and] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that applies logical AND between every value in a pattern and [other].
+ *
+ * Returns [other] when the source value is truthy (non-zero), or `0` when it is falsy (zero).
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the gate to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("0 5").apply(and(10)).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
+ * ```
+ *
+ * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun and(other: PatternLike): StrudelPattern = _and(listOf(other).asStrudelDslArgs())
+fun and(other: PatternLike): PatternMapper = _and(listOf(other).asStrudelDslArgs())
 
 // -- or() (Logical OR) ------------------------------------------------------------------------------------------------
 
-internal val _or by dslPatternFunction { _, _ -> silence }
+internal val _or by dslPatternMapper { args, callInfo -> { p -> p._or(args, callInfo) } }
 internal val StrudelPattern._or by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a or b }
 }
@@ -1340,34 +1390,59 @@ internal val String._or by dslStringExtension { p, args, callInfo -> p._or(args,
  * Applies logical OR between every value in the pattern and [other].
  *
  * Returns the source value when it is truthy (non-zero), or [other] when it is falsy (zero).
- * This mirrors JavaScript's `||` short-circuit behaviour.
+ * This mirrors JavaScript's `||` short-circuit behaviour. Only the raw event `value` is
+ * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
+ *
+ * ```KlangScript
+ * seq("0 5").or(10).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 5").or("<1 2>").scale("c3:major").n()  // fallback alternates each cycle
+ * ```
  *
  * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
  * @return A new pattern where each value is `value || other`.
- *
- * ```KlangScript
- * "0 5".or(10).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
- * ```
- *
- * ```KlangScript
- * "0 5".or("<1 2>").scale("c3:major").n()  // fallback alternates each cycle
- * ```
  * @category arithmetic
  * @tags or, logical, boolean, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.or(other: PatternLike): StrudelPattern = this._or(listOf(other).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then applies logical OR with [other] to every value. */
+/**
+ * Parses this string as a pattern, then applies logical OR with [other] to every value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "0 5".or(10).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
+ * ```
+ *
+ * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.or(other: PatternLike): StrudelPattern = this._or(listOf(other).asStrudelDslArgs())
 
-/** Top-level [or] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that applies logical OR between every value in a pattern and [other].
+ *
+ * Returns the source value when it is truthy (non-zero), or [other] when it is falsy (zero).
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the fallback to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("0 5").apply(or(10)).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
+ * ```
+ *
+ * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun or(other: PatternLike): StrudelPattern = _or(listOf(other).asStrudelDslArgs())
+fun or(other: PatternLike): PatternMapper = _or(listOf(other).asStrudelDslArgs())
 
 // -- round() ----------------------------------------------------------------------------------------------------------
 
+internal val _round by dslPatternMapper { _, callInfo -> { p -> p._round(emptyList(), callInfo) } }
 internal val StrudelPattern._round by dslPatternExtension { p, _, _ ->
     applyUnaryOp(p) { v -> v.asRational?.round()?.asVoiceValue() ?: v }
 }
@@ -1379,8 +1454,8 @@ internal val String._round by dslStringExtension { p, _, _ -> p._round() }
  * Rounds every numeric value in the pattern to the nearest integer.
  *
  * Halfway values (e.g. 2.5) round up. Non-numeric values are passed through unchanged.
- *
- * @return A new pattern with each value rounded to the nearest integer.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged.
  *
  * ```KlangScript
  * "2.4 2.5 2.6".round().scale("c3:major").n()  // 2, 3, 3
@@ -1389,18 +1464,43 @@ internal val String._round by dslStringExtension { p, _, _ -> p._round() }
  * ```KlangScript
  * "0.1 0.9".round().scale("c3:major").n()  // 0, 1
  * ```
+ *
+ * @return A new pattern with each value rounded to the nearest integer.
  * @category arithmetic
  * @tags round, rounding, arithmetic, math
  */
 @StrudelDsl
 fun StrudelPattern.round(): StrudelPattern = this._round()
 
-/** Parses this string as a pattern, then rounds every numeric value to the nearest integer. */
+/**
+ * Parses this string as a pattern, then rounds every numeric value to the nearest integer.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "2.4 2.5 2.6".round().scale("c3:major").n()  // 2, 3, 3
+ * ```
+ */
 @StrudelDsl
 fun String.round(): StrudelPattern = this._round()
 
+/**
+ * Creates a [PatternMapper] that rounds every numeric value in a pattern to the nearest integer.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply rounding to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("2.4 2.5 2.6").apply(round()).scale("c3:major").n()  // 2, 3, 3
+ * ```
+ */
+@StrudelDsl
+fun round(): PatternMapper = _round(emptyList())
+
 // -- floor() ----------------------------------------------------------------------------------------------------------
 
+internal val _floor by dslPatternMapper { _, callInfo -> { p -> p._floor(emptyList(), callInfo) } }
 internal val StrudelPattern._floor by dslPatternExtension { p, _, _ ->
     applyUnaryOp(p) { v -> v.asRational?.floor()?.asVoiceValue() ?: v }
 }
@@ -1412,9 +1512,8 @@ internal val String._floor by dslStringExtension { p, _, _ -> p._floor() }
  * Floors every numeric value in the pattern to the largest integer less than or equal to the value.
  *
  * For negative numbers this rounds away from zero: `floor(-2.1) = -3`.
- * Non-numeric values are passed through unchanged.
- *
- * @return A new pattern with each value floored to an integer.
+ * Non-numeric values are passed through unchanged. Only the raw event `value` is affected —
+ * `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
  * ```KlangScript
  * "2.1 2.9".floor().scale("c3:major").n()  // 2, 2
@@ -1423,18 +1522,43 @@ internal val String._floor by dslStringExtension { p, _, _ -> p._floor() }
  * ```KlangScript
  * "-2.1 -2.9".floor().scale("c3:major").n()  // -3, -3
  * ```
+ *
+ * @return A new pattern with each value floored to an integer.
  * @category arithmetic
  * @tags floor, rounding, arithmetic, math
  */
 @StrudelDsl
 fun StrudelPattern.floor(): StrudelPattern = this._floor()
 
-/** Parses this string as a pattern, then floors every numeric value to an integer. */
+/**
+ * Parses this string as a pattern, then floors every numeric value to an integer.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "2.1 2.9".floor().scale("c3:major").n()  // 2, 2
+ * ```
+ */
 @StrudelDsl
 fun String.floor(): StrudelPattern = this._floor()
 
+/**
+ * Creates a [PatternMapper] that floors every numeric value in a pattern to an integer.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply flooring to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("2.1 2.9").apply(floor()).scale("c3:major").n()  // 2, 2
+ * ```
+ */
+@StrudelDsl
+fun floor(): PatternMapper = _floor(emptyList())
+
 // -- ceil() -----------------------------------------------------------------------------------------------------------
 
+internal val _ceil by dslPatternMapper { _, callInfo -> { p -> p._ceil(emptyList(), callInfo) } }
 internal val StrudelPattern._ceil by dslPatternExtension { p, _, _ ->
     applyUnaryOp(p) { v -> v.asRational?.ceil()?.asVoiceValue() ?: v }
 }
@@ -1446,9 +1570,8 @@ internal val String._ceil by dslStringExtension { p, _, _ -> p._ceil() }
  * Ceils every numeric value in the pattern to the smallest integer greater than or equal to the value.
  *
  * For negative numbers this rounds toward zero: `ceil(-2.9) = -2`.
- * Non-numeric values are passed through unchanged.
- *
- * @return A new pattern with each value ceiled to an integer.
+ * Non-numeric values are passed through unchanged. Only the raw event `value` is affected —
+ * `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
  * ```KlangScript
  * "2.1 2.9".ceil().scale("c3:major").n()  // 3, 3
@@ -1457,12 +1580,36 @@ internal val String._ceil by dslStringExtension { p, _, _ -> p._ceil() }
  * ```KlangScript
  * "-2.9 -2.1".ceil().scale("c3:major").n()  // -2, -2
  * ```
+ *
+ * @return A new pattern with each value ceiled to an integer.
  * @category arithmetic
  * @tags ceil, ceiling, rounding, arithmetic, math
  */
 @StrudelDsl
 fun StrudelPattern.ceil(): StrudelPattern = this._ceil()
 
-/** Parses this string as a pattern, then ceils every numeric value to an integer. */
+/**
+ * Parses this string as a pattern, then ceils every numeric value to an integer.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "2.1 2.9".ceil().scale("c3:major").n()  // 3, 3
+ * ```
+ */
 @StrudelDsl
 fun String.ceil(): StrudelPattern = this._ceil()
+
+/**
+ * Creates a [PatternMapper] that ceils every numeric value in a pattern to an integer.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply ceiling to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("2.1 2.9").apply(ceil()).scale("c3:major").n()  // 3, 3
+ * ```
+ */
+@StrudelDsl
+fun ceil(): PatternMapper = _ceil(emptyList())
