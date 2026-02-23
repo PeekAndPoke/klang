@@ -3,7 +3,7 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel._liftNumericField
+import io.peekandpoke.klang.strudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
@@ -24,18 +24,14 @@ private val warmthMutation = voiceModifier {
 }
 
 private fun applyWarmth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, warmthMutation)
+    return source._liftOrReinterpretStringField(args, warmthMutation)
 }
 
-internal val StrudelPattern._warmth by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyWarmth(p, args)
-}
+internal val StrudelPattern._warmth by dslPatternExtension { p, args, /* callInfo */ _ -> applyWarmth(p, args) }
 
-internal val _warmth by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(warmthMutation) }
+internal val String._warmth by dslStringExtension { p, args, callInfo -> p._warmth(args, callInfo) }
 
-internal val String._warmth by dslStringExtension { p, args, callInfo ->
-    p._warmth(args, callInfo)
-}
+internal val _warmth by dslPatternMapper { args, callInfo -> { p -> p._warmth(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -45,23 +41,44 @@ internal val String._warmth by dslStringExtension { p, args, callInfo ->
  * A value of `0.0` gives a bright, unfiltered sound; `1.0` gives a muffled, warm sound.
  *
  * ```KlangScript
- * s("sawtooth").warmth(0.8)          // warm, muffled sawtooth
+ * note("c d e f").warmth(0.8)          // warm, muffled sawtooth
  * ```
  *
  * ```KlangScript
- * s("sawtooth").warmth("<0 0.5 1>")  // cycle through warmth values
+ * note("c d e f").warmth("<0 0.5 1>")  // cycle through warmth values
  * ```
+ *
+ * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  *
  * @category tonal
  * @tags warmth, oscillator, filter, low-pass, addon
  */
 @StrudelDsl
-fun warmth(amount: PatternLike): StrudelPattern = _warmth(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.warmth(amount: PatternLike? = null): StrudelPattern =
+    this._warmth(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Controls the oscillator warmth on this pattern. */
+/**
+ * Parses this string as a pattern and sets the oscillator warmth.
+ *
+ * ```KlangScript
+ * note("c d e f").s("square").warmth("<0 0.5 1>")  // cycle through warmth values
+ * ```
+ *
+ * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ */
 @StrudelDsl
-fun StrudelPattern.warmth(amount: PatternLike): StrudelPattern = this._warmth(listOf(amount).asStrudelDslArgs())
+fun String.warmth(amount: PatternLike? = null): StrudelPattern =
+    this._warmth(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Controls the oscillator warmth on a string pattern. */
+/**
+ * Creates a [PatternMapper] that sets the oscillator warmth.
+ *
+ * ```KlangScript
+ * note("c d e f").apply(warmth("<0 0.5 1>"))  // cycle through warmth values
+ * ```
+ *
+ * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ */
 @StrudelDsl
-fun String.warmth(amount: PatternLike): StrudelPattern = this._warmth(listOf(amount).asStrudelDslArgs())
+fun warmth(amount: PatternLike? = null): PatternMapper =
+    _warmth(listOfNotNull(amount).asStrudelDslArgs())

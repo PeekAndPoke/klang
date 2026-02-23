@@ -1,18 +1,79 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.s
-import io.peekandpoke.klang.strudel.lang.sine
+import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.strudel.lang.*
 
 class LangWarmthSpec : StringSpec({
 
+    "warmth dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0.1 0.5"
+
+        dslInterfaceTests(
+            "pattern.warmth(ctrl)" to
+                    seq(pat).warmth(ctrl),
+            "script pattern.warmth(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").warmth("$ctrl")"""),
+            "string.warmth(ctrl)" to
+                    pat.warmth(ctrl),
+            "script string.warmth(ctrl)" to
+                    StrudelPattern.compile(""""$pat".warmth("$ctrl")"""),
+            "warmth(ctrl)" to
+                    seq(pat).apply(warmth(ctrl)),
+            "script warmth(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(warmth("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.warmth shouldBe 0.1
+            events[1].data.warmth shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as warmth | seq(\"0 1\").warmth()" {
+        val p = seq("0.1 0.5").warmth()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.warmth shouldBe 0.1
+            events[1].data.warmth shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as warmth | \"0 1\".warmth()" {
+        val p = "0.1 0.5".warmth()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.warmth shouldBe 0.1
+            events[1].data.warmth shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as warmth | seq(\"0 1\").apply(warmth())" {
+        val p = seq("0.1 0.5").apply(warmth())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.warmth shouldBe 0.1
+            events[1].data.warmth shouldBe 0.5
+        }
+    }
+
     "warmth() sets VoiceData.warmth" {
-        val p = warmth("0.25 0.5")
+        val p = "0 1".apply(warmth("0.25 0.5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

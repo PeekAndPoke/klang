@@ -133,6 +133,8 @@ internal val StrudelPattern._not by dslPatternExtension { pattern, _, _ -> apply
 
 internal val String._not by dslStringExtension { pattern, _, _ -> applyNot(pattern) }
 
+internal val _not: PatternMapper by dslObject { { p -> p._not() } }
+
 // ===== USER-FACING OVERLOADS =====
 
 /**
@@ -142,11 +144,7 @@ internal val String._not by dslStringExtension { pattern, _, _ -> applyNot(patte
  * gate or trigger patterns.
  *
  * ```KlangScript
- * "1 0 0 1".not()   // becomes: false true true false
- * ```
- *
- * ```KlangScript
- * degradeBy(0.5).not()   // invert a degrade pattern into a gate
+ * "1 0 0 1".not().scale("c4:minor").n()   // becomes: false true true false
  * ```
  *
  * @category arithmetic
@@ -155,6 +153,22 @@ internal val String._not by dslStringExtension { pattern, _, _ -> applyNot(patte
 @StrudelDsl
 fun StrudelPattern.not(): StrudelPattern = this._not(emptyList())
 
-/** Applies logical NOT to a string pattern's boolean values. */
+/**
+ * Applies logical NOT to a string pattern's boolean values.
+ *
+ * ```KlangScript
+ * "1 0 0 1".not().scale("c4:minor").n()   // becomes: false true true false
+ * ```
+ */
 @StrudelDsl
 fun String.not(): StrudelPattern = this._not(emptyList())
+
+/**
+ * Applies logical NOT as a [PatternMapper], inverting each event's boolean value.
+ *
+ * ```KlangScript
+ * note("c d e f").degradeBy("1 0 1 0".apply(not))   // invert a degrade pattern into a gate
+ * ```
+ */
+@StrudelDsl
+val not: PatternMapper get() = _not
