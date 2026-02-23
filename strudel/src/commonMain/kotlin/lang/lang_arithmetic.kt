@@ -743,7 +743,7 @@ fun brshift(bits: PatternLike): PatternMapper = _brshift(listOf(bits).asStrudelD
 
 // -- log2() -----------------------------------------------------------------------------------------------------------
 
-internal val _log2 by dslPatternFunction { _, _ -> silence }
+internal val _log2 by dslPatternMapper { args, callInfo -> { p -> p._log2(args, callInfo) } }
 internal val StrudelPattern._log2 by dslPatternExtension { p, _, _ -> applyUnaryOp(p) { it.log2() } }
 internal val String._log2 by dslStringExtension { p, args, callInfo -> p._log2(args, callInfo) }
 
@@ -752,9 +752,9 @@ internal val String._log2 by dslStringExtension { p, args, callInfo -> p._log2(a
 /**
  * Applies log base 2 to every numeric value in the pattern.
  *
- * Useful for converting exponential frequency ratios to linear semitone or octave values.
- *
- * @return A new pattern where each value is replaced by `log₂(value)`.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Useful for converting exponential frequency ratios to linear semitone or
+ * octave values.
  *
  * ```KlangScript
  * "8 16".log2().scale("c3:major").n()  // log₂(8)=3, log₂(16)=4
@@ -763,19 +763,39 @@ internal val String._log2 by dslStringExtension { p, args, callInfo -> p._log2(a
  * ```KlangScript
  * "1 2 4 8".log2().scale("c3:major").n()  // 0, 1, 2, 3
  * ```
+ *
+ * @return A new pattern where each value is replaced by `log₂(value)`.
  * @category arithmetic
  * @tags log2, logarithm, arithmetic, math
  */
 @StrudelDsl
 fun StrudelPattern.log2(): StrudelPattern = this._log2()
 
-/** Parses this string as a pattern, then applies log base 2 to every numeric value. */
+/**
+ * Parses this string as a pattern, then applies log base 2 to every numeric value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "1 2 4 8".log2().scale("c3:major").n()  // 0, 1, 2, 3
+ * ```
+ */
 @StrudelDsl
 fun String.log2(): StrudelPattern = this._log2()
 
-/** Top-level [log2] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that applies log base 2 to every numeric value in a pattern.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the transform to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("1 2 4 8").apply(log2()).scale("c3:major").n()  // 0, 1, 2, 3
+ * ```
+ */
 @StrudelDsl
-fun log2(): StrudelPattern = _log2(emptyList())
+fun log2(): PatternMapper = _log2(emptyList())
 
 // -- lt() (Less Than) -------------------------------------------------------------------------------------------------
 
