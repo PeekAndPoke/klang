@@ -1422,15 +1422,13 @@ private fun applyDuckAttack(source: StrudelPattern, args: List<StrudelDslArg<Any
     return source._liftNumericField(args, duckAttackMutation)
 }
 
-internal val _duckattack by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
-internal val StrudelPattern._duckattack by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDuckAttack(p, args)
-}
+internal val StrudelPattern._duckattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
 internal val String._duckattack by dslStringExtension { p, args, callInfo -> p._duckattack(args, callInfo) }
+internal val _duckattack by dslPatternMapper { args, callInfo -> { p -> p._duckattack(args, callInfo) } }
 
-internal val _duckatt by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckAttackMutation) }
 internal val StrudelPattern._duckatt by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
 internal val String._duckatt by dslStringExtension { p, args, callInfo -> p._duckatt(args, callInfo) }
+internal val _duckatt by dslPatternMapper { args, callInfo -> { p -> p._duckatt(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1448,20 +1446,42 @@ internal val String._duckatt by dslStringExtension { p, args, callInfo -> p._duc
  * note("c3*4").duckattack("<0.05 0.1 0.3 0.5>")          // varying recovery times
  * ```
  *
+ * @param time The recovery time in seconds.
+ *
  * @alias duckatt
  * @category dynamics
  * @tags duckattack, duckatt, sidechain, ducking, release, dynamics
  */
 @StrudelDsl
-fun duckattack(time: PatternLike): StrudelPattern = _duckattack(listOf(time).asStrudelDslArgs())
+fun StrudelPattern.duckattack(time: PatternLike? = null): StrudelPattern =
+    this._duckattack(listOfNotNull(time).asStrudelDslArgs())
 
-/** Sets the duck release time for this pattern. */
+/**
+ * Parses this string as a pattern and sets the duck release time.
+ *
+ * ```KlangScript
+ * "c3*4".duckattack("<0.05 0.1 0.3 0.5>").note()   // varying recovery times
+ * ```
+ *
+ * @param time The recovery time in seconds.
+ */
 @StrudelDsl
-fun StrudelPattern.duckattack(time: PatternLike): StrudelPattern = this._duckattack(listOf(time).asStrudelDslArgs())
+fun String.duckattack(time: PatternLike? = null): StrudelPattern =
+    this._duckattack(listOfNotNull(time).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the duck release time. */
+/**
+ * Creates a [PatternMapper] that sets the duck release time.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(duckattack(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
+ * ```
+ *
+ * @param time The recovery time in seconds.
+ */
 @StrudelDsl
-fun String.duckattack(time: PatternLike): StrudelPattern = this._duckattack(listOf(time).asStrudelDslArgs())
+fun duckattack(time: PatternLike? = null): PatternMapper =
+    _duckattack(listOfNotNull(time).asStrudelDslArgs())
+
 
 /**
  * Alias for [duckattack]. Sets the duck release (return-to-normal) time in seconds.
@@ -1474,20 +1494,41 @@ fun String.duckattack(time: PatternLike): StrudelPattern = this._duckattack(list
  * note("c3*4").duckatt("<0.05 0.1 0.3 0.5>")          // varying recovery times
  * ```
  *
+ * @param time The recovery time in seconds.
+ *
  * @alias duckattack
  * @category dynamics
  * @tags duckatt, duckattack, sidechain, ducking, release, dynamics
  */
 @StrudelDsl
-fun duckatt(time: PatternLike): StrudelPattern = _duckatt(listOf(time).asStrudelDslArgs())
+fun StrudelPattern.duckatt(time: PatternLike? = null): StrudelPattern =
+    this._duckatt(listOfNotNull(time).asStrudelDslArgs())
 
-/** Alias for [duckattack]. Sets the duck release time for this pattern. */
+/**
+ * Alias for [duckattack]. Parses this string as a pattern and sets the duck release time.
+ *
+ * ```KlangScript
+ * "c3*4".duckatt("<0.05 0.1 0.3 0.5>").note()   // varying recovery times
+ * ```
+ *
+ * @param time The recovery time in seconds.
+ */
 @StrudelDsl
-fun StrudelPattern.duckatt(time: PatternLike): StrudelPattern = this._duckatt(listOf(time).asStrudelDslArgs())
+fun String.duckatt(time: PatternLike? = null): StrudelPattern =
+    this._duckatt(listOfNotNull(time).asStrudelDslArgs())
 
-/** Alias for [duckattack]. Parses this string as a pattern and sets the duck release time. */
+/**
+ * Alias for [duckattack]. Creates a [PatternMapper] that sets the duck release time.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(duckatt(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
+ * ```
+ *
+ * @param time The recovery time in seconds.
+ */
 @StrudelDsl
-fun String.duckatt(time: PatternLike): StrudelPattern = this._duckatt(listOf(time).asStrudelDslArgs())
+fun duckatt(time: PatternLike? = null): PatternMapper =
+    _duckatt(listOfNotNull(time).asStrudelDslArgs())
 
 // -- duckdepth() ------------------------------------------------------------------------------------------------------
 
@@ -1497,9 +1538,9 @@ private fun applyDuckDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?
     return source._liftNumericField(args, duckDepthMutation)
 }
 
-internal val _duckdepth by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(duckDepthMutation) }
 internal val StrudelPattern._duckdepth by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckDepth(p, args) }
 internal val String._duckdepth by dslStringExtension { p, args, callInfo -> p._duckdepth(args, callInfo) }
+internal val _duckdepth by dslPatternMapper { args, callInfo -> { p -> p._duckdepth(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1517,16 +1558,37 @@ internal val String._duckdepth by dslStringExtension { p, args, callInfo -> p._d
  * note("c3*4").duckdepth("<0.3 0.6 0.9 1.0>")   // escalating ducking depth
  * ```
  *
+ * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
+ *
  * @category dynamics
  * @tags duckdepth, sidechain, ducking, attenuation, dynamics
  */
 @StrudelDsl
-fun duckdepth(amount: PatternLike): StrudelPattern = _duckdepth(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.duckdepth(amount: PatternLike? = null): StrudelPattern =
+    this._duckdepth(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Sets the ducking depth for this pattern. */
+/**
+ * Parses this string as a pattern and sets the ducking depth.
+ *
+ * ```KlangScript
+ * "c3*4".duckdepth("<0.3 0.6 0.9 1.0>").note()   // escalating ducking depth
+ * ```
+ *
+ * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
+ */
 @StrudelDsl
-fun StrudelPattern.duckdepth(amount: PatternLike): StrudelPattern = this._duckdepth(listOf(amount).asStrudelDslArgs())
+fun String.duckdepth(amount: PatternLike? = null): StrudelPattern =
+    this._duckdepth(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the ducking depth. */
+/**
+ * Creates a [PatternMapper] that sets the ducking depth.
+ *
+ * ```KlangScript
+ * note("c3*4").apply(duckdepth("<0.3 0.6 0.9 1.0>"))   // escalating ducking depth
+ * ```
+ *
+ * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
+ */
 @StrudelDsl
-fun String.duckdepth(amount: PatternLike): StrudelPattern = this._duckdepth(listOf(amount).asStrudelDslArgs())
+fun duckdepth(amount: PatternLike? = null): PatternMapper =
+    _duckdepth(listOfNotNull(amount).asStrudelDslArgs())
