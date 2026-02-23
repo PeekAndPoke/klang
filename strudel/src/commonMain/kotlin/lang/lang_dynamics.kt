@@ -1030,12 +1030,14 @@ fun sustain(level: PatternLike? = null): PatternMapper = _sustain(listOfNotNull(
 private val releaseMutation = voiceModifier { copy(release = it?.asDoubleOrNull()) }
 
 private fun applyRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, releaseMutation)
+    return source._liftOrReinterpretStringField(args, releaseMutation)
 }
 
-internal val _release by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(releaseMutation) }
 internal val StrudelPattern._release by dslPatternExtension { p, args, /* callInfo */ _ -> applyRelease(p, args) }
+
 internal val String._release by dslStringExtension { p, args, callInfo -> p._release(args, callInfo) }
+
+internal val _release by dslPatternMapper { args, callInfo -> { p -> p._release(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1053,19 +1055,39 @@ internal val String._release by dslStringExtension { p, args, callInfo -> p._rel
  * note("c3*4").release("<0.1 0.3 0.8 2.0>")  // varying releases
  * ```
  *
+ * @param time The release time in seconds.
+ *
  * @category dynamics
  * @tags release, adsr, envelope, fade-out
  */
 @StrudelDsl
-fun release(time: PatternLike): StrudelPattern = _release(listOf(time).asStrudelDslArgs())
+fun StrudelPattern.release(time: PatternLike? = null): StrudelPattern =
+    this._release(listOfNotNull(time).asStrudelDslArgs())
 
-/** Sets the ADSR envelope release time for this pattern. */
+/**
+ * Parses this string as a pattern and sets the ADSR envelope release time.
+ *
+ * ```KlangScript
+ * "c3*4".release("<0.1 0.3 0.8 2.0>").note()  // varying releases
+ * ```
+ *
+ * @param time The release time in seconds.
+ */
 @StrudelDsl
-fun StrudelPattern.release(time: PatternLike): StrudelPattern = this._release(listOf(time).asStrudelDslArgs())
+fun String.release(time: PatternLike? = null): StrudelPattern =
+    this._release(listOfNotNull(time).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the ADSR envelope release time. */
+/**
+ * Creates a [PatternMapper] that sets the ADSR envelope release time for each event.
+ *
+ * ```KlangScript
+ * note("c3*4").s("sine").apply(release("<0.1 0.3 0.8 2.0>"))  // varying releases
+ * ```
+ *
+ * @param time The release time in seconds.
+ */
 @StrudelDsl
-fun String.release(time: PatternLike): StrudelPattern = this._release(listOf(time).asStrudelDslArgs())
+fun release(time: PatternLike? = null): PatternMapper = _release(listOfNotNull(time).asStrudelDslArgs())
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
