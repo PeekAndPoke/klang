@@ -1114,9 +1114,11 @@ private fun applyAdsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     }
 }
 
-internal val _adsr by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(adsrMutation) }
 internal val StrudelPattern._adsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyAdsr(p, args) }
+
 internal val String._adsr by dslStringExtension { p, args, callInfo -> p._adsr(args, callInfo) }
+
+internal val _adsr by dslPatternMapper { args, callInfo -> { p -> p._adsr(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1135,19 +1137,39 @@ internal val String._adsr by dslStringExtension { p, args, callInfo -> p._adsr(a
  * note("c3*4").adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>")     // alternate envelopes
  * ```
  *
+ * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ *
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope
  */
 @StrudelDsl
-fun adsr(params: PatternLike): StrudelPattern = _adsr(listOf(params).asStrudelDslArgs())
+fun StrudelPattern.adsr(params: PatternLike? = null): StrudelPattern =
+    this._adsr(listOfNotNull(params).asStrudelDslArgs())
 
-/** Sets all four ADSR envelope parameters for this pattern via a colon-separated string. */
+/**
+ * Parses this string as a pattern and sets all ADSR envelope parameters.
+ *
+ * ```KlangScript
+ * "c3*4".adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>").note()    // alternate envelopes
+ * ```
+ *
+ * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ */
 @StrudelDsl
-fun StrudelPattern.adsr(params: PatternLike): StrudelPattern = this._adsr(listOf(params).asStrudelDslArgs())
+fun String.adsr(params: PatternLike? = null): StrudelPattern =
+    this._adsr(listOfNotNull(params).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets all ADSR envelope parameters. */
+/**
+ * Creates a [PatternMapper] that sets all ADSR envelope parameters for each event.
+ *
+ * ```KlangScript
+ * note("c3*4").s("sine").apply(adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>"))  // alternate envelopes
+ * ```
+ *
+ * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ */
 @StrudelDsl
-fun String.adsr(params: PatternLike): StrudelPattern = this._adsr(listOf(params).asStrudelDslArgs())
+fun adsr(params: PatternLike? = null): PatternMapper = _adsr(listOfNotNull(params).asStrudelDslArgs())
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
