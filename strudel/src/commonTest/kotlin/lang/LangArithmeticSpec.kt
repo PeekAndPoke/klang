@@ -446,6 +446,39 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
     }
 
+    "pow() works as top-level PatternMapper" {
+        val p = seq("2 3").apply(pow("3"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.value?.asInt shouldBe 8   // 2^3
+        events[1].data.value?.asInt shouldBe 27  // 3^3
+    }
+
+    "pow dsl interface" {
+        val pat = "2 3"
+        val ctrl = "3 2"
+
+        dslInterfaceTests(
+            "pattern.pow(ctrl)" to
+                    seq(pat).pow(ctrl),
+            "script pattern.pow(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").pow("$ctrl")"""),
+            "string.pow(ctrl)" to
+                    pat.pow(ctrl),
+            "script string.pow(ctrl)" to
+                    StrudelPattern.compile(""""$pat".pow("$ctrl")"""),
+            "pow(ctrl)" to
+                    seq(pat).apply(pow(ctrl)),
+            "script pow(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(pow("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asInt shouldBe 8  // 2^3 = 8
+            events[1].data.value?.asInt shouldBe 9  // 3^2 = 9
+        }
+    }
+
     // ========== Bitwise operations tests ==========
 
     "band() performs bitwise AND" {

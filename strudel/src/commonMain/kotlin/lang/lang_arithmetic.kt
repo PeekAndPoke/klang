@@ -363,7 +363,7 @@ fun mod(divisor: PatternLike): PatternMapper = _mod(listOf(divisor).asStrudelDsl
 
 // -- pow() ------------------------------------------------------------------------------------------------------------
 
-internal val _pow by dslPatternFunction { _, _ -> silence }
+internal val _pow by dslPatternMapper { args, callInfo -> { p -> p._pow(args, callInfo) } }
 internal val StrudelPattern._pow by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a pow b }
 }
@@ -374,10 +374,9 @@ internal val String._pow by dslStringExtension { p, args, callInfo -> p._pow(arg
 /**
  * Raises every numeric value in the pattern to the power of [exponent].
  *
- * Supports control patterns: pass a mini-notation string or another [StrudelPattern] as [exponent].
- *
- * @param exponent The exponent. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern where each value is replaced by `value ^ exponent`.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [exponent] to modulate the exponent per cycle or event.
  *
  * ```KlangScript
  * seq("2 3").pow(3).scale("c3:major").n()  // values become 8 (2³) and 27 (3³)
@@ -386,19 +385,44 @@ internal val String._pow by dslStringExtension { p, args, callInfo -> p._pow(arg
  * ```KlangScript
  * seq("2").pow("<1 2 3>").scale("c3:major").n()  // 2, 4, 8 over three cycles
  * ```
+ *
+ * @param exponent The exponent. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern where each value is replaced by `value ^ exponent`.
  * @category arithmetic
  * @tags pow, power, exponent, arithmetic, math
  */
 @StrudelDsl
 fun StrudelPattern.pow(exponent: PatternLike): StrudelPattern = this._pow(listOf(exponent).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then raises every numeric value to the power of [exponent]. */
+/**
+ * Parses this string as a pattern, then raises every numeric value to the power of [exponent].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "2 3".pow(3).scale("c3:major").n()  // values become 8 (2³) and 27 (3³)
+ * ```
+ *
+ * @param exponent The exponent. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.pow(exponent: PatternLike): StrudelPattern = this._pow(listOf(exponent).asStrudelDslArgs())
 
-/** Top-level [pow] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that raises every numeric value in a pattern to the power of [exponent].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the exponentiation to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("2 3").apply(pow(3)).scale("c3:major").n()  // values become 8 (2³) and 27 (3³)
+ * ```
+ *
+ * @param exponent The exponent. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun pow(exponent: PatternLike): StrudelPattern = _pow(listOf(exponent).asStrudelDslArgs())
+fun pow(exponent: PatternLike): PatternMapper = _pow(listOf(exponent).asStrudelDslArgs())
 
 // -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
 
@@ -423,7 +447,7 @@ internal val String._band by dslStringExtension { p, args, callInfo -> p._band(a
  * ```
  *
  * ```KlangScript
- * "255".band("<15 240>").scale("c3:major").n()  // mask low or high nibble alternately
+ * "127".band("<15 63>").scale("c3:major").n()  // mask low or high nibble alternately
  * ```
  * @category arithmetic
  * @tags band, bitwise, and, arithmetic, binary
