@@ -664,12 +664,12 @@ fun detune(amount: PatternLike? = null): PatternMapper =
 private val spreadMutation = voiceModifier { copy(panSpread = it?.asDoubleOrNull()) }
 
 private fun applySpread(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, spreadMutation)
+    return source._liftOrReinterpretStringField(args, spreadMutation)
 }
 
-internal val _spread by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(spreadMutation) }
 internal val StrudelPattern._spread by dslPatternExtension { p, args, /* callInfo */ _ -> applySpread(p, args) }
 internal val String._spread by dslStringExtension { p, args, callInfo -> p._spread(args, callInfo) }
+internal val _spread by dslPatternMapper { args, callInfo -> { p -> p._spread(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -680,26 +680,47 @@ internal val String._spread by dslStringExtension { p, args, callInfo -> p._spre
  * `unison` to set the number of voices.
  *
  * ```KlangScript
- * note("c3").s("sawtooth").unison(5).spread(0.8)   // wide stereo spread
+ * note("c3").s("supersaw").unison(5).spread(0.8)   // wide stereo spread
  * ```
  *
  * ```KlangScript
- * note("c3*4").spread("<0.2 0.5 0.8 1.0>")         // gradually widen each beat
+ * note("c3*4").s("supersaw").spread("<0.2 0.5 0.8 1.0>")         // gradually widen each beat
  * ```
+ *
+ * @param amount The stereo pan spread, between 0 and 1.
  *
  * @category dynamics
  * @tags spread, pan, stereo, unison, supersaw
  */
 @StrudelDsl
-fun spread(amount: PatternLike): StrudelPattern = _spread(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.spread(amount: PatternLike? = null): StrudelPattern =
+    this._spread(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Sets the stereo pan spread for unison voices in this pattern. */
+/**
+ * Parses this string as a pattern and sets the stereo pan spread for unison voices.
+ *
+ * ```KlangScript
+ * "c3*4".spread("<0.2 0.5 0.8 1.0>").s("supersaw").note()         // gradually widen each beat
+ * ```
+ *
+ * @param amount The stereo pan spread, between 0 and 1.
+ */
 @StrudelDsl
-fun StrudelPattern.spread(amount: PatternLike): StrudelPattern = this._spread(listOf(amount).asStrudelDslArgs())
+fun String.spread(amount: PatternLike? = null): StrudelPattern =
+    this._spread(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the stereo pan spread for unison voices. */
+/**
+ * Creates a [PatternMapper] that sets the stereo pan spread for unison voices.
+ *
+ * ```KlangScript
+ * "c3*4".apply(spread("<0.2 0.5 0.8 1.0>")).s("supersaw").note()         // gradually widen each beat
+ * ```
+ *
+ * @param amount The stereo pan spread, between 0 and 1.
+ */
 @StrudelDsl
-fun String.spread(amount: PatternLike): StrudelPattern = this._spread(listOf(amount).asStrudelDslArgs())
+fun spread(amount: PatternLike? = null): PatternMapper =
+    _spread(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 

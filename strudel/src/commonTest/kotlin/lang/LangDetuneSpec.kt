@@ -35,39 +35,39 @@ class LangDetuneSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as gain | seq(\"0 1\").gain()" {
-        val p = seq("0 1").gain()
+    "reinterpret voice data as detune | seq(\"0 1\").detune()" {
+        val p = seq("0 1").detune()
 
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.gain shouldBe 0.0
-            events[1].data.gain shouldBe 1.0
+            events[0].data.freqSpread shouldBe 0.0
+            events[1].data.freqSpread shouldBe 1.0
         }
     }
 
-    "reinterpret voice data as gain | \"0 1\".gain()" {
-        val p = "0 1".gain()
+    "reinterpret voice data as detune | \"0 1\".detune()" {
+        val p = "0 1".detune()
 
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.gain shouldBe 0.0
-            events[1].data.gain shouldBe 1.0
+            events[0].data.freqSpread shouldBe 0.0
+            events[1].data.freqSpread shouldBe 1.0
         }
     }
 
-    "reinterpret voice data as gain | seq(\"0 1\").apply(gain())" {
-        val p = seq("0 1").apply(gain())
+    "reinterpret voice data as detune | seq(\"0 1\").apply(detune())" {
+        val p = seq("0 1").apply(detune())
 
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.gain shouldBe 0.0
-            events[1].data.gain shouldBe 1.0
+            events[0].data.freqSpread shouldBe 0.0
+            events[1].data.freqSpread shouldBe 1.0
         }
     }
 

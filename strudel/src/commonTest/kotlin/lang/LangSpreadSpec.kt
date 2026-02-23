@@ -1,15 +1,78 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangSpreadSpec : StringSpec({
 
+    "spread dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0 0.25"
+
+        dslInterfaceTests(
+            "pattern.spread(ctrl)" to
+                    seq(pat).spread(ctrl),
+            "script pattern.spread(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").spread("$ctrl")"""),
+            "string.spread(ctrl)" to
+                    pat.spread(ctrl),
+            "script string.spread(ctrl)" to
+                    StrudelPattern.compile(""""$pat".spread("$ctrl")"""),
+            "spread(ctrl)" to
+                    seq(pat).apply(spread(ctrl)),
+            "script spread(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(spread("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.panSpread shouldBe 0.0
+            events[1].data.panSpread shouldBe 0.25
+        }
+    }
+
+    "reinterpret voice data as spread | seq(\"0 1\").spread()" {
+        val p = seq("0 1").spread()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.panSpread shouldBe 0.0
+            events[1].data.panSpread shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as spread | \"0 1\".spread()" {
+        val p = "0 1".spread()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.panSpread shouldBe 0.0
+            events[1].data.panSpread shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as spread | seq(\"0 1\").apply(spread())" {
+        val p = seq("0 1").apply(spread())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.panSpread shouldBe 0.0
+            events[1].data.panSpread shouldBe 1.0
+        }
+    }
+
     "spread() sets VoiceData.panSpread" {
-        val p = spread("0.5 1.0")
+        val p = "0 1".apply(spread("0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
