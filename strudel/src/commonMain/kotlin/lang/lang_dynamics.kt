@@ -505,11 +505,11 @@ internal val _uni by dslPatternMapper { args, callInfo -> { p -> p._uni(args, ca
  * to control the detuning and panning spread of the voices.
  *
  * ```KlangScript
- * note("c3").s("sawtooth").unison(5)               // 5 stacked sawtooth oscillators
+ * note("c3").s("supersaw").unison(5)               // 5 stacked sawtooth oscillators
  * ```
  *
  * ```KlangScript
- * note("c3 e3 g3").s("supersaw").unison("<1 5 10 16>").detune(10)  // unison pattern
+ * note("c3 e3 g3").s("supersaw").unison("<3 6 10 16>").detune(0.3)  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -526,7 +526,7 @@ fun StrudelPattern.unison(voices: PatternLike? = null): StrudelPattern =
  * Parses this string as a pattern and sets the number of unison voices.
  *
  * ```KlangScript
- * "c3 e3 g3".s("supersaw").unison("<1 5 10 16>").detune(10).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").unison("<1 5 10 16>").detune(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -539,7 +539,7 @@ fun String.unison(voices: PatternLike? = null): StrudelPattern =
  * Create a [PatternMapper] that sets the number of unison voices for a pattern.
  *
  * ```KlangScript
- * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(10).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -553,11 +553,11 @@ fun unison(voices: PatternLike? = null): PatternMapper =
  * Alias for [unison]. Sets the number of unison voices for oscillator stacking effects.
  *
  * ```KlangScript
- * note("c3").s("sawtooth").uni(5)               // 5 stacked sawtooth oscillators
+ * note("c3").s("supersaw").uni(5)               // 5 stacked sawtooth oscillators
  * ```
  *
  * ```KlangScript
- * note("c3 e3 g3").s("supersaw").uni("<1 5 10 16>").detune(10)  // unison pattern
+ * note("c3 e3 g3").s("supersaw").uni("<1 5 10 16>").detune(0.3)  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -574,7 +574,7 @@ fun StrudelPattern.uni(voices: PatternLike? = null): StrudelPattern =
  * Alias for [unison]. Parses this string as a pattern and sets the number of unison voices.
  *
  * ```KlangScript
- * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").detune(10).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").detune(0.3).note()  // unison pattern
  * ```
  */
 @StrudelDsl
@@ -586,7 +586,7 @@ fun String.uni(voices: PatternLike? = null): StrudelPattern =
  * Alias for [unison]. Creates a [PatternMapper] that sets the number of unison voices for a pattern.
  *
  * ```KlangScript
- * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(10).note()  // unison pattern
+ * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
  * ```
  *
  * @param voices The number of unison voices.
@@ -601,12 +601,12 @@ fun uni(voices: PatternLike? = null): PatternMapper =
 private val detuneMutation = voiceModifier { copy(freqSpread = it?.asDoubleOrNull()) }
 
 private fun applyDetune(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, detuneMutation)
+    return source._liftOrReinterpretStringField(args, detuneMutation)
 }
 
-internal val _detune by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(detuneMutation) }
 internal val StrudelPattern._detune by dslPatternExtension { p, args, /* callInfo */ _ -> applyDetune(p, args) }
 internal val String._detune by dslStringExtension { p, args, callInfo -> p._detune(args, callInfo) }
+internal val _detune by dslPatternMapper { args, callInfo -> { p -> p._detune(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -617,26 +617,47 @@ internal val String._detune by dslStringExtension { p, args, callInfo -> p._detu
  * to set the number of voices. Higher values produce a wider, more detuned sound.
  *
  * ```KlangScript
- * note("c3").s("sawtooth").unison(5).detune(20)   // 5 voices spread ±20 cents
+ * note("c3").s("supersaw").unison(5).detune(0.5)   // 5 voices spread 0.5 half tones
  * ```
  *
  * ```KlangScript
- * note("c3*4").detune("<5 10 20 40>")             // escalating detune each beat
+ * note("c3*4").s("supersaw").detune("<0.05 0.10 0.20 0.40>")  // escalating detune each beat
  * ```
+ *
+ * @param amount The detuning in cents.
  *
  * @category dynamics
  * @tags detune, spread, unison, cents, supersaw
  */
 @StrudelDsl
-fun detune(amount: PatternLike): StrudelPattern = _detune(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.detune(amount: PatternLike? = null): StrudelPattern =
+    this._detune(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Sets the oscillator frequency spread for this pattern. */
+/**
+ * Parses this string as a pattern and sets the oscillator frequency spread.
+ *
+ * ```KlangScript
+ * "c3*4".detune("<0.05 0.10 0.20 0.40>").s("supersaw").note() // escalating detune each beat
+ * ```
+ *
+ * @param amount The detuning in cents.
+ */
 @StrudelDsl
-fun StrudelPattern.detune(amount: PatternLike): StrudelPattern = this._detune(listOf(amount).asStrudelDslArgs())
+fun String.detune(amount: PatternLike? = null): StrudelPattern =
+    this._detune(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the oscillator frequency spread. */
+/**
+ * Creates a [PatternMapper] that sets the oscillator frequency spread for a pattern.
+ *
+ * ```KlangScript
+ * note("c3*4").s("supersaw").apply(detune("<0.05 0.10 0.20 0.40>"))  // escalating detune each beat
+ * ```
+ * @param amount The detuning in cents.
+ */
 @StrudelDsl
-fun String.detune(amount: PatternLike): StrudelPattern = this._detune(listOf(amount).asStrudelDslArgs())
+fun detune(amount: PatternLike? = null): PatternMapper =
+    _detune(listOfNotNull(amount).asStrudelDslArgs())
+
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 

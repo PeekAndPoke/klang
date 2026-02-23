@@ -1,15 +1,78 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangDetuneSpec : StringSpec({
 
+    "detune dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0 0.25"
+
+        dslInterfaceTests(
+            "pattern.detune(ctrl)" to
+                    seq(pat).detune(ctrl),
+            "script pattern.detune(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").detune("$ctrl")"""),
+            "string.detune(ctrl)" to
+                    pat.detune(ctrl),
+            "script string.detune(ctrl)" to
+                    StrudelPattern.compile(""""$pat".detune("$ctrl")"""),
+            "detune(ctrl)" to
+                    seq(pat).apply(detune(ctrl)),
+            "script detune(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(detune("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.freqSpread shouldBe 0.0
+            events[1].data.freqSpread shouldBe 0.25
+        }
+    }
+
+    "reinterpret voice data as gain | seq(\"0 1\").gain()" {
+        val p = seq("0 1").gain()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.gain shouldBe 0.0
+            events[1].data.gain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as gain | \"0 1\".gain()" {
+        val p = "0 1".gain()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.gain shouldBe 0.0
+            events[1].data.gain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as gain | seq(\"0 1\").apply(gain())" {
+        val p = seq("0 1").apply(gain())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.gain shouldBe 0.0
+            events[1].data.gain shouldBe 1.0
+        }
+    }
+
     "detune() sets VoiceData.freqSpread" {
-        val p = detune("0.1 0.2")
+        val p = "0 1".apply(detune("0.1 0.2"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

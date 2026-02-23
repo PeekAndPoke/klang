@@ -226,7 +226,7 @@ class Oscillators private constructor(
             rng: Random,
             gain: Double = 0.6,
         ): OscFn {
-            val v = voices.coerceIn(1, 16)
+            val v = voices.coerceIn(1, 32)
             val sr = sampleRate.toDouble()
             val blepMinDt = 1.0e-5
 
