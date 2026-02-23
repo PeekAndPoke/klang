@@ -263,6 +263,7 @@ fun lastOf(n: PatternLike, transform: PatternMapper): PatternMapper =
 
 // -- when() -----------------------------------------------------------------------------------------------------------
 
+internal val _when by dslPatternMapper { args, callInfo -> { p -> p._when(args, callInfo) } }
 internal val StrudelPattern._when by dslPatternExtension { p, args, _ ->
     val condition = args.getOrNull(0)?.toPattern() ?: return@dslPatternExtension p
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
@@ -307,7 +308,6 @@ internal val String._when by dslStringExtension { p, args, callInfo -> p._when(a
  * created with [struct] or a slow alternation like `pure(1).slowcat(pure(0))`.
  *
  * @param condition A pattern whose values determine when to apply [transform].
- *   Zero is falsy; any other value is truthy.
  * @param transform The function to apply when [condition] is truthy.
  * @return A new pattern that conditionally applies [transform].
  *
@@ -322,14 +322,45 @@ internal val String._when by dslStringExtension { p, args, callInfo -> p._when(a
  * @tags when, conditional, binary, gate, transform
  */
 @StrudelDsl
-fun StrudelPattern.`when`(
-    condition: PatternLike,
-    transform: PatternMapper,
-): StrudelPattern = this._when(listOf(condition, transform).asStrudelDslArgs())
+fun StrudelPattern.`when`(condition: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._when(listOf(condition, transform).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then applies [transform] whenever [condition] is truthy. */
+/**
+ * Parses this string as a pattern, then applies [transform] whenever [condition] is truthy.
+ *
+ * @param condition A pattern whose values determine when to apply [transform].
+ *   Zero is falsy; any other value is truthy.
+ * @param transform The function to apply when [condition] is truthy.
+ * @return A new pattern that conditionally applies [transform].
+ *
+ * ```KlangScript
+ * "c d e f".when("1 0 1 0", x => x.add(12)).note()
+ * ```
+ */
 @StrudelDsl
-fun String.`when`(
-    condition: PatternLike,
-    transform: PatternMapper,
-): StrudelPattern = this._when(listOf(condition, transform).asStrudelDslArgs())
+fun String.`when`(condition: PatternLike, transform: PatternMapper): StrudelPattern =
+    this._when(listOf(condition, transform).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapper] that conditionally applies [transform] to events where [condition] is truthy.
+ *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+ *
+ * @param condition A pattern whose values determine when to apply [transform].
+ *   Zero is falsy; any other value is truthy.
+ * @param transform The function to apply when [condition] is truthy.
+ * @return A [PatternMapper] that conditionally applies [transform].
+ *
+ * ```KlangScript
+ * note("c d e f").apply(when("1 0 1 0", x => x.add(12)))
+ * ```
+ *
+ * ```KlangScript
+ * note("c d e f").firstOf(4, when("1 0 1 0", x => x.add(12)))
+ * ```
+ * @category conditional
+ * @tags when, conditional, binary, gate, transform
+ */
+@StrudelDsl
+fun `when`(condition: PatternLike, transform: PatternMapper): PatternMapper =
+    _when(listOf(condition, transform).asStrudelDslArgs())

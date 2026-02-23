@@ -2,11 +2,32 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.strudel.StrudelPattern.Companion.compile
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangWhenSpec : FunSpec({
+
+    test("when dsl interface") {
+        dslInterfaceTests(
+            "pattern.when(condition, transform)" to
+                    note("a").`when`("1") { it.note("b") },
+            "script pattern.when(condition, transform)" to
+                    StrudelPattern.compile("""note("a").when("1", x => x.note("b"))"""),
+            "string.when(condition, transform)" to
+                    "a".`when`("1") { it.note("b") },
+            "script string.when(condition, transform)" to
+                    StrudelPattern.compile(""""a".when("1", x => x.note("b"))"""),
+            "when(condition, transform)" to
+                    note("a").apply(`when`("1") { it.note("b") }),
+            "script when(condition, transform)" to
+                    StrudelPattern.compile("""note("a").apply(when("1", x => x.note("b")))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     test("when() works with direct function calls") {
         val pat = note("c3 d3 e3 f3")
@@ -74,7 +95,7 @@ class LangWhenSpec : FunSpec({
     }
 
     test("when() should work with alternating condition") {
-        val pat = compile(
+        val pat = StrudelPattern.compile(
             """
                 note("c3 d3 e3 f3").when(pure(1).slowcat(pure(0)), x => x.transpose(12))
             """.trimIndent()
