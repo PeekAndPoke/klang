@@ -799,7 +799,7 @@ fun log2(): PatternMapper = _log2(emptyList())
 
 // -- lt() (Less Than) -------------------------------------------------------------------------------------------------
 
-internal val _lt by dslPatternFunction { _, _ -> silence }
+internal val _lt by dslPatternMapper { args, callInfo -> { p -> p._lt(args, callInfo) } }
 internal val StrudelPattern._lt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a lt b }
 }
@@ -808,37 +808,66 @@ internal val String._lt by dslStringExtension { p, args, callInfo -> p._lt(args,
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Compares every value in the pattern to [threshold], replacing each with `1` (true) if less than
- * [threshold] or `0` (false) otherwise.
+ * Compares every value in the pattern to [threshold], replacing each with `1` (true) if less
+ * than [threshold] or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [threshold] to modulate the threshold per cycle or event.
+ *
+ * ```KlangScript
+ * seq("5 10").lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
+ * ```
+ *
+ * ```KlangScript
+ * seq("5 10").lt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
+ * ```
  *
  * @param threshold The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- *
- * ```KlangScript
- * "5 10".lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
- * ```
- *
- * ```KlangScript
- * "5 10".lt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
- * ```
  * @category arithmetic
  * @tags lt, less than, comparison, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(threshold).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then compares every value to [threshold] using less-than. */
+/**
+ * Parses this string as a pattern, then compares every value to [threshold] using less-than.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "5 10".lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(threshold).asStrudelDslArgs())
 
-/** Top-level [lt] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that compares every value in a pattern to [threshold], replacing
+ * each with `1` (true) if less than [threshold] or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the comparison to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("5 10").apply(lt(8)).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
-fun lt(threshold: PatternLike): StrudelPattern = _lt(listOf(threshold).asStrudelDslArgs())
+fun lt(threshold: PatternLike): PatternMapper = _lt(listOf(threshold).asStrudelDslArgs())
 
 // -- gt() (Greater Than) ----------------------------------------------------------------------------------------------
 
-internal val _gt by dslPatternFunction { _, _ -> silence }
+internal val _gt by dslPatternMapper { args, callInfo -> { p -> p._gt(args, callInfo) } }
 internal val StrudelPattern._gt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a gt b }
 }
@@ -850,34 +879,63 @@ internal val String._gt by dslStringExtension { p, args, callInfo -> p._gt(args,
  * Compares every value in the pattern to [threshold], replacing each with `1` (true) if greater
  * than [threshold] or `0` (false) otherwise.
  *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [threshold] to modulate the threshold per cycle or event.
+ *
+ * ```KlangScript
+ * seq("5 10").gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
+ * ```
+ *
+ * ```KlangScript
+ * seq("5 10").gt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
+ * ```
+ *
  * @param threshold The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- *
- * ```KlangScript
- * "5 10".gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
- * ```
- *
- * ```KlangScript
- * "5 10".gt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
- * ```
  * @category arithmetic
  * @tags gt, greater than, comparison, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(threshold).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then compares every value to [threshold] using greater-than. */
+/**
+ * Parses this string as a pattern, then compares every value to [threshold] using greater-than.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "5 10".gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(threshold).asStrudelDslArgs())
 
-/** Top-level [gt] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that compares every value in a pattern to [threshold], replacing
+ * each with `1` (true) if greater than [threshold] or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the comparison to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("5 10").apply(gt(8)).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
-fun gt(threshold: PatternLike): StrudelPattern = _gt(listOf(threshold).asStrudelDslArgs())
+fun gt(threshold: PatternLike): PatternMapper = _gt(listOf(threshold).asStrudelDslArgs())
 
 // -- lte() (Less Than or Equal) ---------------------------------------------------------------------------------------
 
-internal val _lte by dslPatternFunction { _, _ -> silence }
+internal val _lte by dslPatternMapper { args, callInfo -> { p -> p._lte(args, callInfo) } }
 internal val StrudelPattern._lte by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a lte b }
 }
@@ -886,37 +944,67 @@ internal val String._lte by dslStringExtension { p, args, callInfo -> p._lte(arg
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Compares every value in the pattern to [threshold], replacing each with `1` (true) if less than
- * or equal to [threshold] or `0` (false) otherwise.
+ * Compares every value in the pattern to [threshold], replacing each with `1` (true) if less
+ * than or equal to [threshold] or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [threshold] to modulate the threshold per cycle or event.
+ *
+ * ```KlangScript
+ * seq("5 8 10").lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
+ * ```
+ *
+ * ```KlangScript
+ * seq("5 8 10").lte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
+ * ```
  *
  * @param threshold The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- *
- * ```KlangScript
- * "5 8 10".lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
- * ```
- *
- * ```KlangScript
- * "5 8 10".lte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
- * ```
  * @category arithmetic
  * @tags lte, less than or equal, comparison, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.lte(threshold: PatternLike): StrudelPattern = this._lte(listOf(threshold).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then compares every value to [threshold] using less-than-or-equal. */
+/**
+ * Parses this string as a pattern, then compares every value to [threshold]
+ * using less-than-or-equal.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "5 8 10".lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.lte(threshold: PatternLike): StrudelPattern = this._lte(listOf(threshold).asStrudelDslArgs())
 
-/** Top-level [lte] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that compares every value in a pattern to [threshold], replacing
+ * each with `1` (true) if less than or equal to [threshold] or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the comparison to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("5 8 10").apply(lte(8)).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
-fun lte(threshold: PatternLike): StrudelPattern = _lte(listOf(threshold).asStrudelDslArgs())
+fun lte(threshold: PatternLike): PatternMapper = _lte(listOf(threshold).asStrudelDslArgs())
 
 // -- gte() (Greater Than or Equal) ------------------------------------------------------------------------------------
 
-internal val _gte by dslPatternFunction { _, _ -> silence }
+internal val _gte by dslPatternMapper { args, callInfo -> { p -> p._gte(args, callInfo) } }
 internal val StrudelPattern._gte by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a gte b }
 }
@@ -928,34 +1016,64 @@ internal val String._gte by dslStringExtension { p, args, callInfo -> p._gte(arg
  * Compares every value in the pattern to [threshold], replacing each with `1` (true) if greater
  * than or equal to [threshold] or `0` (false) otherwise.
  *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [threshold] to modulate the threshold per cycle or event.
+ *
+ * ```KlangScript
+ * seq("5 8 10").gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
+ * ```
+ *
+ * ```KlangScript
+ * seq("5 8 10").gte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
+ * ```
+ *
  * @param threshold The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- *
- * ```KlangScript
- * "5 8 10".gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
- * ```
- *
- * ```KlangScript
- * "5 8 10".gte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
- * ```
  * @category arithmetic
  * @tags gte, greater than or equal, comparison, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.gte(threshold: PatternLike): StrudelPattern = this._gte(listOf(threshold).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then compares every value to [threshold] using greater-than-or-equal. */
+/**
+ * Parses this string as a pattern, then compares every value to [threshold]
+ * using greater-than-or-equal.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "5 8 10".gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.gte(threshold: PatternLike): StrudelPattern = this._gte(listOf(threshold).asStrudelDslArgs())
 
-/** Top-level [gte] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that compares every value in a pattern to [threshold], replacing
+ * each with `1` (true) if greater than or equal to [threshold] or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the comparison to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("5 8 10").apply(gte(8)).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
-fun gte(threshold: PatternLike): StrudelPattern = _gte(listOf(threshold).asStrudelDslArgs())
+fun gte(threshold: PatternLike): PatternMapper = _gte(listOf(threshold).asStrudelDslArgs())
 
 // -- eq() (Equal) -----------------------------------------------------------------------------------------------------
 
-internal val _eq by dslPatternFunction { _, _ -> silence }
+internal val _eq by dslPatternMapper { args, callInfo -> { p -> p._eq(args, callInfo) } }
 internal val StrudelPattern._eq by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a eq b }
 }
@@ -967,34 +1085,63 @@ internal val String._eq by dslStringExtension { p, args, callInfo -> p._eq(args,
  * Compares every value in the pattern to [other] for strict equality, replacing each with
  * `1` (true) if equal or `0` (false) otherwise.
  *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Supports control patterns: pass a mini-notation string or another
+ * [StrudelPattern] as [other] to vary the comparison target per cycle or event.
+ *
+ * ```KlangScript
+ * seq("5 8").eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 1 2 3").eq("<0 1>").scale("c3:major").n()  // equality target alternates each cycle
+ * ```
+ *
  * @param other The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- *
- * ```KlangScript
- * "5 8".eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
- * ```
- *
- * ```KlangScript
- * "0 1 2 3".eq("<0 1>").scale("c3:major").n()  // equality alternates between 0 and 1 each cycle
- * ```
  * @category arithmetic
  * @tags eq, equal, equality, comparison, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.eq(other: PatternLike): StrudelPattern = this._eq(listOf(other).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then tests every value for strict equality with [other]. */
+/**
+ * Parses this string as a pattern, then tests every value for strict equality with [other].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "5 8".eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.eq(other: PatternLike): StrudelPattern = this._eq(listOf(other).asStrudelDslArgs())
 
-/** Top-level [eq] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that tests every value in a pattern for strict equality with [other],
+ * replacing each with `1` (true) if equal or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the comparison to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("5 8").apply(eq(8)).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
-fun eq(other: PatternLike): StrudelPattern = _eq(listOf(other).asStrudelDslArgs())
+fun eq(other: PatternLike): PatternMapper = _eq(listOf(other).asStrudelDslArgs())
 
 // -- eqt() (Truthiness Equal) -----------------------------------------------------------------------------------------
 
-internal val _eqt by dslPatternFunction { _, _ -> silence }
+internal val _eqt by dslPatternMapper { args, callInfo -> { p -> p._eqt(args, callInfo) } }
 internal val StrudelPattern._eqt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a eqt b }
 }
@@ -1004,34 +1151,60 @@ internal val String._eqt by dslStringExtension { p, args, callInfo -> p._eqt(arg
 
 /**
  * Compares the truthiness of every value in the pattern to the truthiness of [other], replacing
- * each with `1` (true) if both are truthy or both are falsy, or `0` (false) otherwise.
+ * each with `1` (true) if both share the same truthiness, or `0` (false) otherwise.
  *
- * A value is falsy if it is zero; otherwise it is truthy.
+ * A value is falsy if it is zero; otherwise it is truthy. Only the raw event `value` is
+ * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
+ *
+ * ```KlangScript
+ * seq("0 5").eqt(0).scale("c3:major").n()  // 0~=0 → 1 (both falsy), 5~=0 → 0
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 5").eqt(3).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
+ * ```
  *
  * @param other The value to compare against. May be a number, string mini-notation,
  *   or a [StrudelPattern].
  * @return A new pattern of `0`/`1` values.
- *
- * ```KlangScript
- * "0 5".eqt(0).scale("c3:major").n()  // 0~=0 → 1, 5~=0 → 0
- * ```
- *
- * ```KlangScript
- * "0 5".eqt(3).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
- * ```
  * @category arithmetic
  * @tags eqt, truthiness, equal, comparison, arithmetic
  */
 @StrudelDsl
 fun StrudelPattern.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(other).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then tests every value for truthiness equality with [other]. */
+/**
+ * Parses this string as a pattern, then tests every value for truthiness equality with [other].
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. A value is falsy if it is zero; otherwise it is truthy.
+ *
+ * ```KlangScript
+ * "0 5".eqt(0).scale("c3:major").n()  // 0~=0 → 1 (both falsy), 5~=0 → 0
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(other).asStrudelDslArgs())
 
-/** Top-level [eqt] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that compares the truthiness of every value in a pattern to [other],
+ * replacing each with `1` (true) if both share the same truthiness, or `0` (false) otherwise.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the comparison to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("0 5").apply(eqt(3)).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation,
+ *   or a [StrudelPattern].
+ */
 @StrudelDsl
-fun eqt(other: PatternLike): StrudelPattern = _eqt(listOf(other).asStrudelDslArgs())
+fun eqt(other: PatternLike): PatternMapper = _eqt(listOf(other).asStrudelDslArgs())
 
 // -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
 
