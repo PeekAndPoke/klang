@@ -52,7 +52,7 @@ private const val ACCENT_CHARS =
     "ÀÁÂÃÄÅĀĂĄÇĆĈĊČĎĐÈÉÊËĒĔĖĘĚĜĞĠĢĤĦÌÍÎÏĨĪĬĮİĴĶĹĻĽĿŁÑŃŅŇÒÓÔÕÖØŌŎŐŔŖŘŚŜŞŠŢŤŦÙÚÛÜŨŪŬŮŰŲŴÝŶŸŹŻŽ"
 
 private const val BASE_CHARS =
-    "AAAAAAAAACCCCCDDEEEEEEEEEGGGGHHIIIIIIIIIIJKLLLLLNNNNOOOOOOOOORRRSSSSSTTTUUUUUUUUUWYYYZZZ"
+    "AAAAAAAAACCCCCDDEEEEEEEEEGGGGHHIIIIIIIIIJKLLLLLNNNNOOOOOOOOORRRSSSSTTTUUUUUUUUUUWYYYZZZ"
 
 private fun Char.stripAccents(): Char {
     val index = ACCENT_CHARS.indexOf(this)
@@ -155,56 +155,76 @@ private fun applyMorse(textArg: StrudelDslArg<Any?>?): StrudelPattern {
     return seq.slow(totalWeight / 16.0) // using 1/16th cycle per unit for a tighter rhythm
 }
 
-internal val _morse by dslPatternFunction { args, /* callInfo */ _ ->
-    applyMorse(args.firstOrNull())
-}
-
 internal val StrudelPattern._morse by dslPatternExtension { p, args, /* callInfo */ _ ->
     p.struct(applyMorse(args.firstOrNull()))
 }
 
 internal val String._morse by dslStringExtension { p, args, callInfo -> p._morse(args, callInfo) }
 
+internal val _morse by dslPatternFunction { args, /* callInfo */ _ ->
+    applyMorse(args.firstOrNull())
+}
+
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Creates a rhythmic pattern from a string using Morse code timing.
+ * Structures this pattern using a Morse code rhythm derived from the given text.
  *
  * Dots are 1 unit; dashes are 3 units. Gaps are inserted automatically:
- * 1 unit between symbols, 3 units between letters, 7 units between words.
- * When called as an extension, it structures the source pattern with the Morse rhythm.
+ * 1 unit between symbols within a character, 3 units between characters, 7 units between words.
  *
  * ```KlangScript
- * morse("sos").note("c4")            // SOS rhythm as notes
+ * note("c3 d3 e3").morse("sos")         // structure notes with SOS rhythm
  * ```
  *
  * ```KlangScript
- * s("bd").morse("hi")               // structure a kick with "hi" Morse code
+ * s("hh").morse("hello world!")                   // structure a kick with "hi" Morse code
  * ```
+ *
+ * @param text The text to encode as Morse code. Case-insensitive; unknown characters are skipped.
  *
  * @category structural
  * @tags morse, code, rhythm, structure, pattern, addon
  */
 @StrudelDsl
-fun morse(text: PatternLike): StrudelPattern = _morse(listOf(text).asStrudelDslArgs())
-
-/** Structures this pattern using a Morse code rhythm derived from the given text. */
-@StrudelDsl
 fun StrudelPattern.morse(text: PatternLike): StrudelPattern = this._morse(listOf(text).asStrudelDslArgs())
 
-/** Structures a string pattern using a Morse code rhythm derived from the given text. */
+/**
+ * Parses this string as a pattern and structures it using a Morse code rhythm.
+ *
+ * ```KlangScript
+ * "hh".morse("hi").s()            // structure a sawtooth sound with "hi" Morse code
+ * ```
+ *
+ * @param text The text to encode as Morse code. Case-insensitive; unknown characters are skipped.
+ */
 @StrudelDsl
 fun String.morse(text: PatternLike): StrudelPattern = this._morse(listOf(text).asStrudelDslArgs())
 
+/**
+ * Creates a rhythmic pattern from a string using Morse code timing.
+ *
+ * The resulting pattern contains events with value `1.0` for dots and dashes, separated by silences.
+ * Use this to drive a `struct` or as a standalone rhythm, then layer notes or sounds on top.
+ *
+ * ```KlangScript
+ * morse("sos").note("c4")               // SOS rhythm as notes on c4
+ * ```
+ *
+ * ```KlangScript
+ * morse("hello world").s("hh")          // encode a message as a kick drum pattern
+ * ```
+ *
+ * @param text The text to encode as Morse code. Case-insensitive; unknown characters are skipped.
+ */
+@StrudelDsl
+fun morse(text: PatternLike): StrudelPattern = _morse(listOf(text).asStrudelDslArgs())
+
 // -- timeLoop() -------------------------------------------------------------------------------------------------------
 
-// TODO: make timeLoop() available as dsl function
-
 /**
- * Loops the pattern within the given duration.
- *
- * Equivalent to `timeLoop(duration)` in JS Strudel.
- * Effectively repeats the pattern segment [0, duration] every duration.
+ * Core implementation: loops this pattern within the given duration in cycles.
+ * Effectively repeats the pattern segment `[0, duration]` every `duration` cycles.
  */
 fun StrudelPattern.timeLoop(duration: Rational): StrudelPattern {
     if (duration <= Rational.ZERO) return silence
@@ -256,6 +276,82 @@ fun StrudelPattern.timeLoop(duration: Rational): StrudelPattern {
         }
     }
 }
+
+private fun applyTimeLoop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val duration = args.firstOrNull()?.value?.asRationalOrNull() ?: return source
+    return source.timeLoop(duration)
+}
+
+internal val StrudelPattern._timeLoop by dslPatternExtension { p, args, _ -> applyTimeLoop(p, args) }
+
+internal val String._timeLoop by dslStringExtension { p, args, callInfo -> p._timeLoop(args, callInfo) }
+
+internal val _timeLoop by dslPatternFunction { args, _ ->
+    val duration = args.getOrNull(0)?.value?.asRationalOrNull() ?: return@dslPatternFunction silence
+    val patterns = args.drop(1).toListOfPatterns()
+    val pattern = if (patterns.isEmpty()) silence else patterns.first()
+    pattern.timeLoop(duration)
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Loops this pattern within a fixed window of `duration` cycles, tiling it indefinitely.
+ *
+ * Unlike [fast] or [slow], `timeLoop` does not stretch or compress events — it freezes the
+ * segment `[0, duration]` of this pattern and tiles it. Events outside the window are never
+ * played. Useful for creating ostinato figures or locking a long sequence to a shorter loop.
+ *
+ * ```KlangScript
+ * note("c3 d3 e3 f3 g3 a3 b3 c4").timeLoop(2)   // loop first 2 cycles of an 8-note run
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd hh oh").timeLoop(0.5)                 // stutter a 4-beat pattern into 2-beat loops
+ * ```
+ *
+ * @param duration The loop window length in cycles. Must be greater than zero.
+ *
+ * @category structural
+ * @tags timeLoop, loop, repeat, cycle, ostinato, window, addon
+ */
+@StrudelDsl
+fun StrudelPattern.timeLoop(duration: PatternLike): StrudelPattern =
+    this._timeLoop(listOf(duration).asStrudelDslArgs())
+
+/**
+ * Parses this string as a pattern and loops it within a fixed window of `duration` cycles.
+ *
+ * ```KlangScript
+ * "c3 d3 e3 f3".timeLoop(0.5)   // loop the first half-cycle of a 4-note sequence
+ * ```
+ *
+ * @param duration The loop window length in cycles. Must be greater than zero.
+ */
+@StrudelDsl
+fun String.timeLoop(duration: PatternLike): StrudelPattern =
+    this._timeLoop(listOf(duration).asStrudelDslArgs())
+
+/**
+ * Creates a pattern by looping `pattern` within a fixed window of `duration` cycles.
+ *
+ * ```KlangScript
+ * timeLoop(2, note("c3 d3 e3 f3 g3 a3 b3 c4"))   // loop the first 2 cycles of an 8-note run
+ * ```
+ *
+ * ```KlangScript
+ * timeLoop(0.5, s("bd sd hh oh"))                 // stutter a 4-beat pattern into 2-beat loops
+ * ```
+ *
+ * @param duration The loop window length in cycles. Must be greater than zero.
+ * @param pattern  The pattern to loop.
+ *
+ * @category structural
+ * @tags timeLoop, loop, repeat, cycle, ostinato, window, addon
+ */
+@StrudelDsl
+fun timeLoop(duration: PatternLike, pattern: PatternLike): StrudelPattern =
+    _timeLoop(listOf(duration, pattern).asStrudelDslArgs())
 
 // -- repeat() ---------------------------------------------------------------------------------------------------------
 
