@@ -67,8 +67,8 @@ class OrbitCleanupTest : StringSpec({
 
         // Fill with values just below threshold
         for (i in 0 until blockFrames) {
-            orbit.mixBuffer.left[i] = 0.00005
-            orbit.mixBuffer.right[i] = 0.00005
+            orbit.mixBuffer.left[i] = 0.000005
+            orbit.mixBuffer.right[i] = 0.000005
         }
 
         orbit.tryDeactivate()

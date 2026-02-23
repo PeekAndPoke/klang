@@ -30,7 +30,7 @@ class LangLateInCycleSpec : StringSpec({
             "script string.lateInCycle" to
                     StrudelPattern.compile(""""$pat".lateInCycle("$ctrl")"""),
             "script lateInCycle" to
-                    StrudelPattern.compile("""seq("$pat").apply(lateInCycle("$ctrl")"""),
+                    StrudelPattern.compile("""seq("$pat").apply(lateInCycle("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }

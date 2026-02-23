@@ -631,7 +631,6 @@ data class StrudelVoiceData(
             hcutoff = hcutoff,
             bandf = bandf,
             resonance = resonance, // For backward compatibility, use LPF resonance as default
-
             orbit = orbit,
             pan = pan,
             delay = delay,

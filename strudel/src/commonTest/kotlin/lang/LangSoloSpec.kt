@@ -9,12 +9,8 @@ import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.lang.addons.solo
-import io.peekandpoke.klang.strudel.lang.addons.strudelLangStructuralAddonsInit
 
 class LangSoloSpec : StringSpec({
-
-    // Force initialization of addons
-    strudelLangStructuralAddonsInit = true
 
     "solo() dsl interface" {
         dslInterfaceTests(

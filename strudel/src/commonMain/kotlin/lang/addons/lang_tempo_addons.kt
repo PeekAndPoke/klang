@@ -224,6 +224,9 @@ internal val String._stretchBy by dslStringExtension { p, args, callInfo -> p._s
  * s("bd sd").stretchBy("<1 2 0.5>")   // cycle through duration multipliers
  * ```
  *
+ * @param factor The duration multiplier. Values > 1 extend events; values < 1 shorten them.
+ * @param pattern The source pattern whose event durations are to be scaled.
+ *
  * @category tempo
  * @tags stretchBy, duration, stretch, event length, addon
  */
@@ -231,11 +234,27 @@ internal val String._stretchBy by dslStringExtension { p, args, callInfo -> p._s
 fun stretchBy(factor: PatternLike, pattern: PatternLike): StrudelPattern =
     _stretchBy(listOf(factor, pattern).asStrudelDslArgs())
 
-/** Multiplies the duration of each event in this pattern by the given factor. */
+/**
+ * Multiplies the duration of each event in this pattern by the given factor.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").stretchBy(1.5)     // each note lasts 1.5× its original duration
+ * ```
+ *
+ * @param factor The duration multiplier. Values > 1 extend events; values < 1 shorten them.
+ */
 @StrudelDsl
 fun StrudelPattern.stretchBy(factor: PatternLike): StrudelPattern =
     this._stretchBy(listOf(factor).asStrudelDslArgs())
 
-/** Multiplies the duration of each event in a string pattern by the given factor. */
+/**
+ * Parses this string as a pattern and multiplies the duration of each event by the given factor.
+ *
+ * ```KlangScript
+ * "c3 e3 g3".stretchBy(0.5)           // each note lasts half its original duration
+ * ```
+ *
+ * @param factor The duration multiplier. Values > 1 extend events; values < 1 shorten them.
+ */
 @StrudelDsl
 fun String.stretchBy(factor: PatternLike): StrudelPattern = this._stretchBy(listOf(factor).asStrudelDslArgs())

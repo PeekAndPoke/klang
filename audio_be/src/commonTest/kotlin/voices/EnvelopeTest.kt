@@ -99,6 +99,9 @@ class EnvelopeTest : StringSpec({
             )
         )
 
+        // Render sustain phase first to establish envelope state
+        voice.render(createContext(blockStart = 0, blockFrames = 100))
+
         // Render at release phase (frame 100-200)
         val ctx = createContext(blockStart = 100, blockFrames = 100)
         voice.render(ctx)
@@ -165,6 +168,9 @@ class EnvelopeTest : StringSpec({
                 releaseFrames = 0.0
             )
         )
+
+        // Render sustain phase first to establish envelope state
+        voice.render(createContext(blockStart = 0, blockFrames = 100))
 
         // Render at release phase
         val ctx = createContext(blockStart = 100, blockFrames = 100)
