@@ -1,67 +1,83 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangOrbitSpec : StringSpec({
 
-    "top-level orbit() sets VoiceData.orbit correctly" {
-        // Given an orbit pattern with space-delimited values
-        val p = orbit("0 1 2")
+    "orbit dsl interface" {
+        val pat = "0 1"
+        val ctrl = "1 2"
 
-        // When querying one cycle
+        dslInterfaceTests(
+            "pattern.orbit(ctrl)" to
+                    seq(pat).orbit(ctrl),
+            "script pattern.orbit(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").orbit("$ctrl")"""),
+            "string.orbit(ctrl)" to
+                    pat.orbit(ctrl),
+            "script string.orbit(ctrl)" to
+                    StrudelPattern.compile(""""$pat".orbit("$ctrl")"""),
+            "orbit(ctrl)" to
+                    seq(pat).apply(orbit(ctrl)),
+            "script orbit(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(orbit("$ctrl"))"""),
+            // o alias
+            "pattern.o(ctrl)" to
+                    seq(pat).o(ctrl),
+            "script pattern.o(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").o("$ctrl")"""),
+            "string.o(ctrl)" to
+                    pat.o(ctrl),
+            "script string.o(ctrl)" to
+                    StrudelPattern.compile(""""$pat".o("$ctrl")"""),
+            "o(ctrl)" to
+                    seq(pat).apply(o(ctrl)),
+            "script o(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(o("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.orbit shouldBe 1
+            events[1].data.orbit shouldBe 2
+        }
+    }
+
+    "orbit() sets VoiceData.orbit" {
+        val p = note("a b c").apply(orbit("0 1 2"))
         val events = p.queryArc(0.0, 1.0)
 
-        // Then orbit values are set
         events.size shouldBe 3
         events[0].data.orbit shouldBe 0
         events[1].data.orbit shouldBe 1
         events[2].data.orbit shouldBe 2
     }
 
-    "control pattern orbit() sets orbit on existing pattern" {
-        // Given a base sound pattern
-        val base = sound("bd hh sn")
+    "o() alias sets VoiceData.orbit" {
+        val p = note("a b c").apply(o("0 1 2"))
+        val events = p.queryArc(0.0, 1.0)
 
-        // When applying orbit as control pattern with space-delimited values
+        events.size shouldBe 3
+        events[0].data.orbit shouldBe 0
+        events[1].data.orbit shouldBe 1
+        events[2].data.orbit shouldBe 2
+    }
+
+    "orbit() sets orbit on existing pattern" {
+        val base = sound("bd hh sn")
         val p = base.orbit("0 1 2")
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 3
 
-        // Then both sound and orbit values are set
         events[0].data.sound shouldBe "bd"
         events[0].data.orbit shouldBe 0
         events[1].data.sound shouldBe "hh"
         events[1].data.orbit shouldBe 1
         events[2].data.sound shouldBe "sn"
         events[2].data.orbit shouldBe 2
-    }
-
-    "orbit() with default value 0" {
-        // Given orbit with 0 (default orbit)
-        val p = sound("bd").orbit("0")
-
-        // When querying one cycle
-        val events = p.queryArc(0.0, 1.0)
-
-        // Then orbit is 0
-        events.size shouldBe 1
-        events[0].data.orbit shouldBe 0
-    }
-
-    "orbit() with multiple output buses" {
-        // Given orbit with different bus numbers
-        val p = sound("bd hh").orbit("0 3")
-
-        // When querying one cycle
-        val events = p.queryArc(0.0, 1.0)
-
-        // Then different orbits are assigned
-        events.size shouldBe 2
-        events[0].data.orbit shouldBe 0
-        events[1].data.orbit shouldBe 3
     }
 
     "orbit() works as string extension" {
@@ -73,9 +89,8 @@ class LangOrbitSpec : StringSpec({
         events[0].data.orbit shouldBe 1
     }
 
-    "orbit() works within compiled code" {
-        val p = StrudelPattern.compile("""orbit("0 1 2 3")""")
-
+    "orbit() works in compiled code" {
+        val p = StrudelPattern.compile("""note("a b c d").orbit("0 1 2 3")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4
@@ -85,9 +100,8 @@ class LangOrbitSpec : StringSpec({
         events[3].data.orbit shouldBe 3
     }
 
-    "orbit() as modifier works within compiled code" {
+    "orbit() as modifier works in compiled code" {
         val p = StrudelPattern.compile("""sound("bd hh").orbit("0 2")""")
-
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

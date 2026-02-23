@@ -141,7 +141,7 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // orbit
     "top-level orbit() sets VoiceData.orbit correctly" {
-        val p = orbit("0 2")
+        val p = note("a b").apply(orbit("0 2"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.orbit } shouldBe listOf(0, 2)
@@ -300,7 +300,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "orbit() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""orbit("0 2")""")
+        val p = StrudelPattern.compile("""note("a b").apply(orbit("0 2"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

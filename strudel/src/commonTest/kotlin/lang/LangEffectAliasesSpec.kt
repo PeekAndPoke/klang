@@ -94,7 +94,7 @@ class LangEffectAliasesSpec : StringSpec({
     }
 
     "orbit() alias 'o' works as top-level function" {
-        val p = o("2")
+        val p = note("c3").apply(o("2"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

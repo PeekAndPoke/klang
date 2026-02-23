@@ -1182,16 +1182,16 @@ private val orbitMutation = voiceModifier {
 }
 
 private fun applyOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, orbitMutation)
+    return source._liftOrReinterpretStringField(args, orbitMutation)
 }
 
-internal val _orbit by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
 internal val StrudelPattern._orbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
 internal val String._orbit by dslStringExtension { p, args, callInfo -> p._orbit(args, callInfo) }
+internal val _orbit by dslPatternMapper { args, callInfo -> { p -> p._orbit(args, callInfo) } }
 
-internal val _o by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(orbitMutation) }
 internal val StrudelPattern._o by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
 internal val String._o by dslStringExtension { p, args, callInfo -> p._o(args, callInfo) }
+internal val _o by dslPatternMapper { args, callInfo -> { p -> p._o(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1209,20 +1209,42 @@ internal val String._o by dslStringExtension { p, args, callInfo -> p._o(args, c
  * note("c3 e3").orbit(2).room(0.8).roomsize(4)  // melodic line on orbit 2 with reverb
  * ```
  *
+ * @param index The orbit index to route events to.
+ *
  * @alias o
  * @category dynamics
  * @tags orbit, o, routing, effects, bus, channel
  */
 @StrudelDsl
-fun orbit(index: PatternLike): StrudelPattern = _orbit(listOf(index).asStrudelDslArgs())
+fun StrudelPattern.orbit(index: PatternLike? = null): StrudelPattern =
+    this._orbit(listOfNotNull(index).asStrudelDslArgs())
 
-/** Routes this pattern to the given audio output orbit. */
+/**
+ * Parses this string as a pattern and routes it to the given audio output orbit.
+ *
+ * ```KlangScript
+ * "bd sd".orbit(1).s()   // send drums to orbit 1
+ * ```
+ *
+ * @param index The orbit index to route events to.
+ */
 @StrudelDsl
-fun StrudelPattern.orbit(index: PatternLike): StrudelPattern = this._orbit(listOf(index).asStrudelDslArgs())
+fun String.orbit(index: PatternLike? = null): StrudelPattern =
+    this._orbit(listOfNotNull(index).asStrudelDslArgs())
 
-/** Parses this string as a pattern and routes it to the given audio output orbit. */
+/**
+ * Creates a [PatternMapper] that routes events to the given audio output orbit.
+ *
+ * ```KlangScript
+ * s("bd sd").apply(orbit(1))   // send drums to orbit 1
+ * ```
+ *
+ * @param index The orbit index to route events to.
+ */
 @StrudelDsl
-fun String.orbit(index: PatternLike): StrudelPattern = this._orbit(listOf(index).asStrudelDslArgs())
+fun orbit(index: PatternLike? = null): PatternMapper =
+    _orbit(listOfNotNull(index).asStrudelDslArgs())
+
 
 /**
  * Alias for [orbit]. Routes the pattern to an audio output orbit for independent effect processing.
@@ -1235,20 +1257,41 @@ fun String.orbit(index: PatternLike): StrudelPattern = this._orbit(listOf(index)
  * note("c3 e3").o(2).room(0.8)          // melodic line on orbit 2 with reverb
  * ```
  *
+ * @param index The orbit index to route events to.
+ *
  * @alias orbit
  * @category dynamics
  * @tags o, orbit, routing, effects, bus, channel
  */
 @StrudelDsl
-fun o(index: PatternLike): StrudelPattern = _o(listOf(index).asStrudelDslArgs())
+fun StrudelPattern.o(index: PatternLike? = null): StrudelPattern =
+    this._o(listOfNotNull(index).asStrudelDslArgs())
 
-/** Alias for [orbit]. Routes this pattern to the given audio output orbit. */
+/**
+ * Alias for [orbit]. Parses this string as a pattern and routes it to the given orbit.
+ *
+ * ```KlangScript
+ * "bd sd".o(1).s()   // send drums to orbit 1
+ * ```
+ *
+ * @param index The orbit index to route events to.
+ */
 @StrudelDsl
-fun StrudelPattern.o(index: PatternLike): StrudelPattern = this._o(listOf(index).asStrudelDslArgs())
+fun String.o(index: PatternLike? = null): StrudelPattern =
+    this._o(listOfNotNull(index).asStrudelDslArgs())
 
-/** Alias for [orbit]. Parses this string as a pattern and routes it to the given orbit. */
+/**
+ * Alias for [orbit]. Creates a [PatternMapper] that routes events to the given audio output orbit.
+ *
+ * ```KlangScript
+ * s("bd sd").apply(o(1))   // send drums to orbit 1
+ * ```
+ *
+ * @param index The orbit index to route events to.
+ */
 @StrudelDsl
-fun String.o(index: PatternLike): StrudelPattern = this._o(listOf(index).asStrudelDslArgs())
+fun o(index: PatternLike? = null): PatternMapper =
+    _o(listOfNotNull(index).asStrudelDslArgs())
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Ducking / Sidechain
