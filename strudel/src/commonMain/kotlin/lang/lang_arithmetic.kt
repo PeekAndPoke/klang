@@ -426,7 +426,7 @@ fun pow(exponent: PatternLike): PatternMapper = _pow(listOf(exponent).asStrudelD
 
 // -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
 
-internal val _band by dslPatternFunction { _, _ -> silence }
+internal val _band by dslPatternMapper { args, callInfo -> { p -> p._band(args, callInfo) } }
 internal val StrudelPattern._band by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a band b }
 }
@@ -437,10 +437,8 @@ internal val String._band by dslStringExtension { p, args, callInfo -> p._band(a
 /**
  * Applies bitwise AND of [mask] to every integer value in the pattern.
  *
- * Truncates values to integers before the operation.
- *
- * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern where each value is replaced by `value & mask`.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Values are truncated to integers before the operation.
  *
  * ```KlangScript
  * "12 15".band(10).scale("c3:major").n()  // 12&10=8, 15&10=10
@@ -449,23 +447,48 @@ internal val String._band by dslStringExtension { p, args, callInfo -> p._band(a
  * ```KlangScript
  * "127".band("<15 63>").scale("c3:major").n()  // mask low or high nibble alternately
  * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern where each value is replaced by `value & mask`.
  * @category arithmetic
  * @tags band, bitwise, and, arithmetic, binary
  */
 @StrudelDsl
 fun StrudelPattern.band(mask: PatternLike): StrudelPattern = this._band(listOf(mask).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then applies bitwise AND with [mask] to every integer value. */
+/**
+ * Parses this string as a pattern, then applies bitwise AND with [mask] to every integer value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "12 15".band(10).scale("c3:major").n()  // 12&10=8, 15&10=10
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.band(mask: PatternLike): StrudelPattern = this._band(listOf(mask).asStrudelDslArgs())
 
-/** Top-level [band] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that applies bitwise AND of [mask] to every integer value in a pattern.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the mask to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("12 15").apply(band(10)).scale("c3:major").n()  // 12&10=8, 15&10=10
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun band(mask: PatternLike): StrudelPattern = _band(listOf(mask).asStrudelDslArgs())
+fun band(mask: PatternLike): PatternMapper = _band(listOf(mask).asStrudelDslArgs())
 
 // -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
 
-internal val _bor by dslPatternFunction { _, _ -> silence }
+internal val _bor by dslPatternMapper { args, callInfo -> { p -> p._bor(args, callInfo) } }
 internal val StrudelPattern._bor by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a bor b }
 }
@@ -476,10 +499,8 @@ internal val String._bor by dslStringExtension { p, args, callInfo -> p._bor(arg
 /**
  * Applies bitwise OR of [mask] to every integer value in the pattern.
  *
- * Truncates values to integers before the operation.
- *
- * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern where each value is replaced by `value | mask`.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Values are truncated to integers before the operation.
  *
  * ```KlangScript
  * "8 4".bor(2).scale("c3:major").n()  // 8|2=10, 4|2=6
@@ -488,23 +509,48 @@ internal val String._bor by dslStringExtension { p, args, callInfo -> p._bor(arg
  * ```KlangScript
  * "0".bor("<1 2 4 8>").scale("c3:major").n()  // set individual bits each cycle
  * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern where each value is replaced by `value | mask`.
  * @category arithmetic
  * @tags bor, bitwise, or, arithmetic, binary
  */
 @StrudelDsl
 fun StrudelPattern.bor(mask: PatternLike): StrudelPattern = this._bor(listOf(mask).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then applies bitwise OR with [mask] to every integer value. */
+/**
+ * Parses this string as a pattern, then applies bitwise OR with [mask] to every integer value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "8 4".bor(2).scale("c3:major").n()  // 8|2=10, 4|2=6
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.bor(mask: PatternLike): StrudelPattern = this._bor(listOf(mask).asStrudelDslArgs())
 
-/** Top-level [bor] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that applies bitwise OR of [mask] to every integer value in a pattern.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the mask to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("8 4").apply(bor(2)).scale("c3:major").n()  // 8|2=10, 4|2=6
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun bor(mask: PatternLike): StrudelPattern = _bor(listOf(mask).asStrudelDslArgs())
+fun bor(mask: PatternLike): PatternMapper = _bor(listOf(mask).asStrudelDslArgs())
 
 // -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
 
-internal val _bxor by dslPatternFunction { _, _ -> silence }
+internal val _bxor by dslPatternMapper { args, callInfo -> { p -> p._bxor(args, callInfo) } }
 internal val StrudelPattern._bxor by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a bxor b }
 }
@@ -515,10 +561,9 @@ internal val String._bxor by dslStringExtension { p, args, callInfo -> p._bxor(a
 /**
  * Applies bitwise XOR of [mask] to every integer value in the pattern.
  *
- * Truncates values to integers before the operation. XOR is useful for toggling specific bits.
- *
- * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
- * @return A new pattern where each value is replaced by `value ^ mask`.
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
+ * remain unchanged. Values are truncated to integers before the operation. XOR is useful for
+ * toggling specific bits.
  *
  * ```KlangScript
  * "12 10".bxor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
@@ -527,19 +572,44 @@ internal val String._bxor by dslStringExtension { p, args, callInfo -> p._bxor(a
  * ```KlangScript
  * "5".bxor("<3 5>").scale("c3:major").n()  // toggle bits each cycle
  * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ * @return A new pattern where each value is replaced by `value ^ mask`.
  * @category arithmetic
  * @tags bxor, bitwise, xor, arithmetic, binary
  */
 @StrudelDsl
 fun StrudelPattern.bxor(mask: PatternLike): StrudelPattern = this._bxor(listOf(mask).asStrudelDslArgs())
 
-/** Parses this string as a pattern, then applies bitwise XOR with [mask] to every integer value. */
+/**
+ * Parses this string as a pattern, then applies bitwise XOR with [mask] to every integer value.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged.
+ *
+ * ```KlangScript
+ * "12 10".bxor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
 fun String.bxor(mask: PatternLike): StrudelPattern = this._bxor(listOf(mask).asStrudelDslArgs())
 
-/** Top-level [bxor] — always returns silence (use the extension form instead). */
+/**
+ * Creates a [PatternMapper] that applies bitwise XOR of [mask] to every integer value in a pattern.
+ *
+ * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
+ * remain unchanged. Use with [StrudelPattern.apply] to apply the mask to an existing pattern.
+ *
+ * ```KlangScript
+ * seq("12 10").apply(bxor(6)).scale("c3:major").n()  // 12^6=10, 10^6=12
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
 @StrudelDsl
-fun bxor(mask: PatternLike): StrudelPattern = _bxor(listOf(mask).asStrudelDslArgs())
+fun bxor(mask: PatternLike): PatternMapper = _bxor(listOf(mask).asStrudelDslArgs())
 
 // -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
 
