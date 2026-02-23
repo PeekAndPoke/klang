@@ -966,12 +966,14 @@ fun decay(time: PatternLike? = null): PatternMapper = _decay(listOfNotNull(time)
 private val sustainMutation = voiceModifier { copy(sustain = it?.asDoubleOrNull()) }
 
 private fun applySustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, sustainMutation)
+    return source._liftOrReinterpretStringField(args, sustainMutation)
 }
 
-internal val _sustain by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(sustainMutation) }
 internal val StrudelPattern._sustain by dslPatternExtension { p, args, /* callInfo */ _ -> applySustain(p, args) }
+
 internal val String._sustain by dslStringExtension { p, args, callInfo -> p._sustain(args, callInfo) }
+
+internal val _sustain by dslPatternMapper { args, callInfo -> { p -> p._sustain(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -989,19 +991,39 @@ internal val String._sustain by dslStringExtension { p, args, callInfo -> p._sus
  * note("c3*4").sustain("<0 0.3 0.7 1.0>")    // varying sustain
  * ```
  *
+ * @param level The sustain level between 0 and 1.
+ *
  * @category dynamics
  * @tags sustain, adsr, envelope, hold
  */
 @StrudelDsl
-fun sustain(level: PatternLike): StrudelPattern = _sustain(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.sustain(level: PatternLike? = null): StrudelPattern =
+    this._sustain(listOfNotNull(level).asStrudelDslArgs())
 
-/** Sets the ADSR envelope sustain level for this pattern. */
+/**
+ * Parses this string as a pattern and sets the ADSR envelope sustain level.
+ *
+ * ```KlangScript
+ * "c3*4".sustain("<0 0.3 0.7 1.0>").note()   // varying sustain
+ * ```
+ *
+ * @param level The sustain level between 0 and 1.
+ */
 @StrudelDsl
-fun StrudelPattern.sustain(level: PatternLike): StrudelPattern = this._sustain(listOf(level).asStrudelDslArgs())
+fun String.sustain(level: PatternLike? = null): StrudelPattern =
+    this._sustain(listOfNotNull(level).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the ADSR envelope sustain level. */
+/**
+ * Creates a [PatternMapper] that sets the ADSR envelope sustain level for each event.
+ *
+ * ```KlangScript
+ * note("c3*4").s("sine").apply(sustain("<0 0.3 0.7 1.0>"))  // varying sustain
+ * ```
+ *
+ * @param level The sustain level between 0 and 1.
+ */
 @StrudelDsl
-fun String.sustain(level: PatternLike): StrudelPattern = this._sustain(listOf(level).asStrudelDslArgs())
+fun sustain(level: PatternLike? = null): PatternMapper = _sustain(listOfNotNull(level).asStrudelDslArgs())
 
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 

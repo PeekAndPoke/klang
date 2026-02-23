@@ -1,15 +1,78 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangSustainSpec : StringSpec({
 
-    "sustain() sets VoiceData.adsr.sustain" {
-        val p = sustain("0.1 0.5")
+    "sustain dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0.1 0.5"
+
+        dslInterfaceTests(
+            "pattern.sustain(ctrl)" to
+                    seq(pat).sustain(ctrl),
+            "script pattern.sustain(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").sustain("$ctrl")"""),
+            "string.sustain(ctrl)" to
+                    pat.sustain(ctrl),
+            "script string.sustain(ctrl)" to
+                    StrudelPattern.compile(""""$pat".sustain("$ctrl")"""),
+            "sustain(ctrl)" to
+                    seq(pat).apply(sustain(ctrl)),
+            "script sustain(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(sustain("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.sustain shouldBe 0.1
+            events[1].data.sustain shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as sustain | seq(\"0 1\").sustain()" {
+        val p = seq("0.1 0.5").sustain()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.sustain shouldBe 0.1
+            events[1].data.sustain shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as sustain | \"0 1\".sustain()" {
+        val p = "0.1 0.5".sustain()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.sustain shouldBe 0.1
+            events[1].data.sustain shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as sustain | seq(\"0 1\").apply(sustain())" {
+        val p = seq("0.1 0.5").apply(sustain())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.sustain shouldBe 0.1
+            events[1].data.sustain shouldBe 0.5
+        }
+    }
+
+    "sustain() sets VoiceData.sustain" {
+        val p = "0 1".apply(sustain("0.1 0.5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
