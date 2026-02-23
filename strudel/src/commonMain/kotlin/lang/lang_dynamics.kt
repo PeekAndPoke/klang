@@ -839,12 +839,14 @@ fun d(amount: PatternLike? = null): PatternMapper =
 private val attackMutation = voiceModifier { copy(attack = it?.asDoubleOrNull()) }
 
 private fun applyAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, attackMutation)
+    return source._liftOrReinterpretStringField(args, attackMutation)
 }
 
-internal val _attack by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(attackMutation) }
 internal val StrudelPattern._attack by dslPatternExtension { p, args, /* callInfo */ _ -> applyAttack(p, args) }
+
 internal val String._attack by dslStringExtension { p, args, callInfo -> p._attack(args, callInfo) }
+
+internal val _attack by dslPatternMapper { args, callInfo -> { p -> p._attack(args, callInfo) } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -862,19 +864,39 @@ internal val String._attack by dslStringExtension { p, args, callInfo -> p._atta
  * note("c3*4").attack("<0.01 0.1 0.5 1.0>")   // varying attacks
  * ```
  *
+ * @param time The attack time in seconds.
+ *
  * @category dynamics
  * @tags attack, adsr, envelope, fade-in
  */
 @StrudelDsl
-fun attack(time: PatternLike): StrudelPattern = _attack(listOf(time).asStrudelDslArgs())
+fun StrudelPattern.attack(time: PatternLike? = null): StrudelPattern =
+    this._attack(listOfNotNull(time).asStrudelDslArgs())
 
-/** Sets the ADSR envelope attack time for this pattern. */
+/**
+ * Parses this string as a pattern and sets the ADSR envelope attack time.
+ *
+ * ```KlangScript
+ * "c3*4".attack("<0.01 0.1 0.5 1.0>").note()  // varying attacks
+ * ```
+ *
+ * @param time The attack time in seconds.
+ */
 @StrudelDsl
-fun StrudelPattern.attack(time: PatternLike): StrudelPattern = this._attack(listOf(time).asStrudelDslArgs())
+fun String.attack(time: PatternLike? = null): StrudelPattern =
+    this._attack(listOfNotNull(time).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the ADSR envelope attack time. */
+/**
+ * Creates a [PatternMapper] that sets the ADSR envelope attack time for each event.
+ *
+ * ```KlangScript
+ * note("c3*4").s("sine").apply(attack("<0.01 0.1 0.5 1.0>"))  // varying attacks
+ * ```
+ *
+ * @param time The attack time in seconds.
+ */
 @StrudelDsl
-fun String.attack(time: PatternLike): StrudelPattern = this._attack(listOf(time).asStrudelDslArgs())
+fun attack(time: PatternLike? = null): PatternMapper = _attack(listOfNotNull(time).asStrudelDslArgs())
 
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 

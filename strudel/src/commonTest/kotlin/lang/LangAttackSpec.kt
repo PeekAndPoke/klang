@@ -1,15 +1,78 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangAttackSpec : StringSpec({
 
-    "attack() sets VoiceData.adsr.attack" {
-        val p = attack("0.1 0.5")
+    "attack dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0.1 0.5"
+
+        dslInterfaceTests(
+            "pattern.attack(ctrl)" to
+                    seq(pat).attack(ctrl),
+            "script pattern.attack(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").attack("$ctrl")"""),
+            "string.attack(ctrl)" to
+                    pat.attack(ctrl),
+            "script string.attack(ctrl)" to
+                    StrudelPattern.compile(""""$pat".attack("$ctrl")"""),
+            "attack(ctrl)" to
+                    seq(pat).apply(attack(ctrl)),
+            "script attack(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(attack("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.attack shouldBe 0.1
+            events[1].data.attack shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as attack | seq(\"0 1\").attack()" {
+        val p = seq("0.1 0.5").attack()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.attack shouldBe 0.1
+            events[1].data.attack shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as attack | \"0 1\".attack()" {
+        val p = "0.1 0.5".attack()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.attack shouldBe 0.1
+            events[1].data.attack shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as attack | seq(\"0 1\").apply(attack())" {
+        val p = seq("0.1 0.5").apply(attack())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.attack shouldBe 0.1
+            events[1].data.attack shouldBe 0.5
+        }
+    }
+
+    "attack() sets VoiceData.attack" {
+        val p = "0 1".apply(attack("0.1 0.5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
