@@ -81,14 +81,14 @@ fun String.distort(amount: PatternLike? = null): StrudelPattern =
     this._distort(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Returns a [PatternMapper] that applies waveshaper distortion.
+ * Returns a [PatternMapperFn] that applies waveshaper distortion.
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
  * @param amount The distortion amount. Higher values produce more saturation and clipping.
  *   Omit to reinterpret the pattern's values as distortion.
- * @return A [PatternMapper] that applies waveshaper distortion.
+ * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript
  * note("c2 eb2 g2").s("sawtooth").apply(distort(0.5))  // moderate distortion
@@ -102,7 +102,7 @@ fun String.distort(amount: PatternLike? = null): StrudelPattern =
  * @tags distort, dist, distortion, waveshaper, overdrive
  */
 @StrudelDsl
-fun distort(amount: PatternLike? = null): PatternMapper = _distort(listOfNotNull(amount).asStrudelDslArgs())
+fun distort(amount: PatternLike? = null): PatternMapperFn = _distort(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
  * Alias for [distort]. Applies waveshaper distortion to this pattern.
@@ -150,14 +150,14 @@ fun String.dist(amount: PatternLike? = null): StrudelPattern =
     this._dist(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Returns a [PatternMapper] that applies waveshaper distortion. Alias for [distort].
+ * Returns a [PatternMapperFn] that applies waveshaper distortion. Alias for [distort].
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
  * @param amount The distortion amount. Higher values produce more saturation and clipping.
  *   Omit to reinterpret the pattern's values as distortion.
- * @return A [PatternMapper] that applies waveshaper distortion.
+ * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript
  * note("c2 eb2 g2").s("sawtooth").apply(dist(0.5))  // moderate distortion
@@ -171,7 +171,7 @@ fun String.dist(amount: PatternLike? = null): StrudelPattern =
  * @tags dist, distort, distortion, waveshaper, overdrive
  */
 @StrudelDsl
-fun dist(amount: PatternLike? = null): PatternMapper = _dist(listOfNotNull(amount).asStrudelDslArgs())
+fun dist(amount: PatternLike? = null): PatternMapperFn = _dist(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- crush() ----------------------------------------------------------------------------------------------------------
 
@@ -235,14 +235,14 @@ fun String.crush(amount: PatternLike? = null): StrudelPattern =
     this._crush(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Returns a [PatternMapper] that applies bit-crushing.
+ * Returns a [PatternMapperFn] that applies bit-crushing.
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as crush amounts.
  *
  * @param amount The bit-depth reduction amount. Lower values produce more lo-fi character.
  *   Omit to reinterpret the pattern's values as crush.
- * @return A [PatternMapper] that applies bit-crushing.
+ * @return A [PatternMapperFn] that applies bit-crushing.
  *
  * ```KlangScript
  * s("bd sd hh").apply(crush(4))              // 4-bit crunch via mapper
@@ -256,7 +256,7 @@ fun String.crush(amount: PatternLike? = null): StrudelPattern =
  * @tags crush, bitcrush, lofi, bitdepth, distortion
  */
 @StrudelDsl
-fun crush(amount: PatternLike? = null): PatternMapper = _crush(listOfNotNull(amount).asStrudelDslArgs())
+fun crush(amount: PatternLike? = null): PatternMapperFn = _crush(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- coarse() ---------------------------------------------------------------------------------------------------------
 
@@ -320,14 +320,14 @@ fun String.coarse(amount: PatternLike? = null): StrudelPattern =
     this._coarse(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Returns a [PatternMapper] that applies sample-rate reduction.
+ * Returns a [PatternMapperFn] that applies sample-rate reduction.
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as coarse amounts.
  *
  * @param amount The downsampling amount. Higher values produce more aliasing and lo-fi character.
  *   Omit to reinterpret the pattern's values as coarse.
- * @return A [PatternMapper] that applies sample-rate reduction.
+ * @return A [PatternMapperFn] that applies sample-rate reduction.
  *
  * ```KlangScript
  * s("bd sd").apply(coarse(4))        // lo-fi via mapper
@@ -341,88 +341,137 @@ fun String.coarse(amount: PatternLike? = null): StrudelPattern =
  * @tags coarse, samplerate, lofi, aliasing, downsample
  */
 @StrudelDsl
-fun coarse(amount: PatternLike? = null): PatternMapper = _coarse(listOfNotNull(amount).asStrudelDslArgs())
+fun coarse(amount: PatternLike? = null): PatternMapperFn = _coarse(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- room() -----------------------------------------------------------------------------------------------------------
 
 private val roomMutation = voiceModifier { copy(room = it?.asDoubleOrNull()) }
 
 fun applyRoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, roomMutation)
+    return source._liftOrReinterpretNumericalField(args, roomMutation)
 }
 
-internal val _room by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(roomMutation) }
+internal val _room by dslPatternMapper { args, callInfo -> { p -> p._room(args, callInfo) } }
 internal val StrudelPattern._room by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoom(p, args) }
 internal val String._room by dslStringExtension { p, args, callInfo -> p._room(args, callInfo) }
 
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Sets the reverb wet/dry mix for the pattern (0 = dry, 1 = full wet).
+ * Sets the reverb wet/dry mix for this pattern (0 = dry, 1 = full wet).
  *
  * Use with `roomsize` to control the reverb tail length, and `orbit` to send
  * multiple patterns to separate reverb buses.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room mix.
+ *
+ * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
+ * @return A new pattern with reverb wet/dry mix applied.
  *
  * ```KlangScript
- * note("c3 e3 g3").s("sine").room(0.5)              // 50% reverb
+ * note("c3 e3 g3").clip(0.5).s("sine").room(0.5)              // 50% reverb
  * ```
  *
  * ```KlangScript
- * note("c3*4").room("<0 0.3 0.6 0.9>").roomsize(4)  // increasing wet mix
+ * note("c3*4").clip(0.5).room("<0 0.3 0.6 0.9>").roomsize(4)  // increasing wet mix
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 0.5 1.0").room()                           // reinterpret values as room mix
  * ```
  *
  * @category effects
  * @tags room, reverb, wet, mix, space
  */
 @StrudelDsl
-fun room(amount: PatternLike): StrudelPattern = _room(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.room(amount: PatternLike? = null): StrudelPattern =
+    this._room(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Sets the reverb wet/dry mix for this pattern. */
+/**
+ * Parses this string as a pattern and sets the reverb wet/dry mix.
+ *
+ * When [amount] is omitted, the string's numeric values are reinterpreted as room mix.
+ *
+ * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
+ * @return A new pattern with reverb wet/dry mix applied.
+ *
+ * ```KlangScript
+ * "c3 e3 g3".room(0.5).note().clip(0.5)    // 50% reverb on bass notes
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.room(amount: PatternLike): StrudelPattern = this._room(listOf(amount).asStrudelDslArgs())
+fun String.room(amount: PatternLike? = null): StrudelPattern =
+    this._room(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and sets the reverb wet/dry mix. */
+/**
+ * Returns a [PatternMapperFn] that sets the reverb wet/dry mix.
+ *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room mix.
+ *
+ * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
+ * @return A [PatternMapperFn] that sets the reverb wet/dry mix.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").apply(room(0.5)).clip(0.5)     // 50% reverb via mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").every(4, room(0.9)).clip(0.5)      // heavy reverb every 4th cycle
+ * ```
+ *
+ * @category effects
+ * @tags room, reverb, wet, mix, space
+ */
 @StrudelDsl
-fun String.room(amount: PatternLike): StrudelPattern = this._room(listOf(amount).asStrudelDslArgs())
+fun room(amount: PatternLike? = null): PatternMapperFn = _room(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- roomsize() / rsize() / sz() / size() -----------------------------------------------------------------------------
 
 private val roomSizeMutation = voiceModifier { copy(roomSize = it?.asDoubleOrNull()) }
 
 fun applyRoomSize(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, roomSizeMutation)
+    return source._liftOrReinterpretNumericalField(args, roomSizeMutation)
 }
 
-internal val _roomsize by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(roomSizeMutation) }
+internal val _roomsize by dslPatternMapper { args, callInfo -> { p -> p._roomsize(args, callInfo) } }
 internal val StrudelPattern._roomsize by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 internal val String._roomsize by dslStringExtension { p, args, callInfo -> p._roomsize(args, callInfo) }
 
-internal val _rsize by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(roomSizeMutation) }
+internal val _rsize by dslPatternMapper { args, callInfo -> { p -> p._rsize(args, callInfo) } }
 internal val StrudelPattern._rsize by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 internal val String._rsize by dslStringExtension { p, args, callInfo -> p._rsize(args, callInfo) }
 
-internal val _sz by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(roomSizeMutation) }
+internal val _sz by dslPatternMapper { args, callInfo -> { p -> p._sz(args, callInfo) } }
 internal val StrudelPattern._sz by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 internal val String._sz by dslStringExtension { p, args, callInfo -> p._sz(args, callInfo) }
 
-internal val _size by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(roomSizeMutation) }
+internal val _size by dslPatternMapper { args, callInfo -> { p -> p._size(args, callInfo) } }
 internal val StrudelPattern._size by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
 internal val String._size by dslStringExtension { p, args, callInfo -> p._size(args, callInfo) }
 
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Sets the reverb room size (tail length) for the pattern.
+ * Sets the reverb room size (tail length) for this pattern.
  *
  * Larger values produce a longer, more spacious reverb tail. Use with `room` to control
  * the wet/dry mix.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room size.
+ *
+ * @param amount The room size. Larger values produce longer reverb tails.
+ *   Omit to reinterpret the pattern's values as room size.
+ * @return A new pattern with room size applied.
  *
  * ```KlangScript
- * note("c3 e3").s("sine").room(0.5).roomsize(4)   // long reverb tail
+ * note("c3 e3").clip(0.5).room(0.5).roomsize(4)   // long reverb tail
  * ```
  *
  * ```KlangScript
- * note("c3*4").roomsize("<1 2 4 8>")              // growing room size
+ * note("c3*4").clip(0.5).roomsize("<1 2 4 8>")              // growing room size
+ * ```
+ *
+ * ```KlangScript
+ * seq("1 2 4 8").roomsize()                       // reinterpret values as room size
  * ```
  *
  * @alias rsize, sz, size
@@ -430,25 +479,59 @@ internal val String._size by dslStringExtension { p, args, callInfo -> p._size(a
  * @tags roomsize, rsize, sz, size, reverb, room, tail
  */
 @StrudelDsl
-fun roomsize(amount: PatternLike): StrudelPattern = _roomsize(listOf(amount).asStrudelDslArgs())
-
-/** Sets the reverb room size for this pattern. */
-@StrudelDsl
-fun StrudelPattern.roomsize(amount: PatternLike): StrudelPattern = this._roomsize(listOf(amount).asStrudelDslArgs())
-
-/** Parses this string as a pattern and sets the reverb room size. */
-@StrudelDsl
-fun String.roomsize(amount: PatternLike): StrudelPattern = this._roomsize(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.roomsize(amount: PatternLike? = null): StrudelPattern =
+    this._roomsize(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Alias for [roomsize]. Sets the reverb room size (tail length) for the pattern.
+ * Parses this string as a pattern and sets the reverb room size.
+ *
+ * When [amount] is omitted, the string's numeric values are reinterpreted as room size.
+ *
+ * @param amount The room size. Larger values produce longer reverb tails.
+ *   Omit to reinterpret the pattern's values as room size.
+ * @return A new pattern with room size applied.
  *
  * ```KlangScript
- * note("c3 e3").s("sine").room(0.5).rsize(4)   // long reverb tail
+ * "c3 e3".roomsize(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
+ * ```
+ */
+@StrudelDsl
+fun String.roomsize(amount: PatternLike? = null): StrudelPattern =
+    this._roomsize(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the reverb room size.
+ *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room size.
+ *
+ * @param amount The room size. Larger values produce longer reverb tails.
+ *   Omit to reinterpret the pattern's values as room size.
+ * @return A [PatternMapperFn] that sets the reverb room size.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(roomsize(4)).clip(0.5)        // long reverb tail via mapper
  * ```
  *
  * ```KlangScript
- * note("c3*4").rsize("<1 2 4 8>")              // growing room size
+ * note("c3*4").every(4, roomsize(8)).clip(0.5)      // huge room every 4th cycle
+ * ```
+ *
+ * @alias rsize, sz, size
+ * @category effects
+ * @tags roomsize, rsize, sz, size, reverb, room, tail
+ */
+@StrudelDsl
+fun roomsize(amount: PatternLike? = null): PatternMapperFn = _roomsize(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Alias for [roomsize]. Sets the reverb room size for this pattern.
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
+ * @return A new pattern with room size applied.
+ *
+ * ```KlangScript
+ * note("c3 e3").clip(0.5).room(0.5).rsize(4)   // long reverb tail
  * ```
  *
  * @alias roomsize, sz, size
@@ -456,25 +539,47 @@ fun String.roomsize(amount: PatternLike): StrudelPattern = this._roomsize(listOf
  * @tags rsize, roomsize, sz, size, reverb, room, tail
  */
 @StrudelDsl
-fun rsize(amount: PatternLike): StrudelPattern = _rsize(listOf(amount).asStrudelDslArgs())
-
-/** Alias for [roomsize]. Sets the reverb room size for this pattern. */
-@StrudelDsl
-fun StrudelPattern.rsize(amount: PatternLike): StrudelPattern = this._rsize(listOf(amount).asStrudelDslArgs())
-
-/** Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size. */
-@StrudelDsl
-fun String.rsize(amount: PatternLike): StrudelPattern = this._rsize(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.rsize(amount: PatternLike? = null): StrudelPattern =
+    this._rsize(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Alias for [roomsize]. Sets the reverb room size (tail length) for the pattern.
+ * Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size.
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  *
  * ```KlangScript
- * note("c3 e3").s("sine").room(0.5).sz(4)   // long reverb tail
+ * "c3 e3".rsize(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
+ * ```
+ */
+@StrudelDsl
+fun String.rsize(amount: PatternLike? = null): StrudelPattern =
+    this._rsize(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
+ * @return A [PatternMapperFn] that sets the reverb room size.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(rsize(4)).clip(0.5)   // long reverb tail via mapper
  * ```
  *
+ * @alias roomsize, sz, size
+ * @category effects
+ * @tags rsize, roomsize, sz, size, reverb, room, tail
+ */
+@StrudelDsl
+fun rsize(amount: PatternLike? = null): PatternMapperFn = _rsize(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Alias for [roomsize]. Sets the reverb room size for this pattern.
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
+ * @return A new pattern with room size applied.
+ *
  * ```KlangScript
- * note("c3*4").sz("<1 2 4 8>")              // growing room size
+ * note("c3 e3").clip(0.5).room(0.5).sz(4)   // long reverb tail
  * ```
  *
  * @alias roomsize, rsize, size
@@ -482,25 +587,47 @@ fun String.rsize(amount: PatternLike): StrudelPattern = this._rsize(listOf(amoun
  * @tags sz, roomsize, rsize, size, reverb, room, tail
  */
 @StrudelDsl
-fun sz(amount: PatternLike): StrudelPattern = _sz(listOf(amount).asStrudelDslArgs())
-
-/** Alias for [roomsize]. Sets the reverb room size for this pattern. */
-@StrudelDsl
-fun StrudelPattern.sz(amount: PatternLike): StrudelPattern = this._sz(listOf(amount).asStrudelDslArgs())
-
-/** Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size. */
-@StrudelDsl
-fun String.sz(amount: PatternLike): StrudelPattern = this._sz(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.sz(amount: PatternLike? = null): StrudelPattern =
+    this._sz(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Alias for [roomsize]. Sets the reverb room size (tail length) for the pattern.
+ * Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size.
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  *
  * ```KlangScript
- * note("c3 e3").s("sine").room(0.5).size(4)   // long reverb tail
+ * "c3 e3".sz(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
+ * ```
+ */
+@StrudelDsl
+fun String.sz(amount: PatternLike? = null): StrudelPattern =
+    this._sz(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
+ * @return A [PatternMapperFn] that sets the reverb room size.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(sz(4)).clip(0.5)   // long reverb tail via mapper
  * ```
  *
+ * @alias roomsize, rsize, size
+ * @category effects
+ * @tags sz, roomsize, rsize, size, reverb, room, tail
+ */
+@StrudelDsl
+fun sz(amount: PatternLike? = null): PatternMapperFn = _sz(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Alias for [roomsize]. Sets the reverb room size for this pattern.
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
+ * @return A new pattern with room size applied.
+ *
  * ```KlangScript
- * note("c3*4").size("<1 2 4 8>")              // growing room size
+ * note("c3 e3").clip(0.5).room(0.5).size(4)   // long reverb tail
  * ```
  *
  * @alias roomsize, rsize, sz
@@ -508,15 +635,38 @@ fun String.sz(amount: PatternLike): StrudelPattern = this._sz(listOf(amount).asS
  * @tags size, roomsize, rsize, sz, reverb, room, tail
  */
 @StrudelDsl
-fun size(amount: PatternLike): StrudelPattern = _size(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.size(amount: PatternLike? = null): StrudelPattern =
+    this._size(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Alias for [roomsize]. Sets the reverb room size for this pattern. */
+/**
+ * Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size.
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
+ *
+ * ```KlangScript
+ * "c3 e3".size(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.size(amount: PatternLike): StrudelPattern = this._size(listOf(amount).asStrudelDslArgs())
+fun String.size(amount: PatternLike? = null): StrudelPattern =
+    this._size(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size. */
+/**
+ * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
+ *
+ * @param amount The room size. Omit to reinterpret the pattern's values as room size.
+ * @return A [PatternMapperFn] that sets the reverb room size.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(size(4)).clip(0.5)   // long reverb tail via mapper
+ * ```
+ *
+ * @alias roomsize, rsize, sz
+ * @category effects
+ * @tags size, roomsize, rsize, sz, reverb, room, tail
+ */
 @StrudelDsl
-fun String.size(amount: PatternLike): StrudelPattern = this._size(listOf(amount).asStrudelDslArgs())
+fun size(amount: PatternLike? = null): PatternMapperFn = _size(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- roomfade() / rfade() ---------------------------------------------------------------------------------------------
 

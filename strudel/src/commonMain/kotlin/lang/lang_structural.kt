@@ -1710,7 +1710,7 @@ fun String.maskAll(vararg args: PatternLike): StrudelPattern = this._maskAll(arg
 
 // -- jux() ------------------------------------------------------------------------------------------------------------
 
-fun applyJux(source: StrudelPattern, transform: PatternMapper): StrudelPattern {
+fun applyJux(source: StrudelPattern, transform: PatternMapperFn): StrudelPattern {
     // Pan is unipolar (0.0 to 1.0).
     // jux pans original hard left (0.0) and transformed hard right (1.0).
     val left = source.pan(0.0)
@@ -1748,7 +1748,7 @@ internal val String._jux by dslStringExtension { p, args, callInfo -> p._jux(arg
  * @tags jux, pan, stereo, spatial, transform
  */
 @StrudelDsl
-fun StrudelPattern.jux(transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.jux(transform: PatternMapperFn): StrudelPattern =
     this._jux(listOf(transform).asStrudelDslArgs())
 
 /**
@@ -1759,12 +1759,12 @@ fun StrudelPattern.jux(transform: PatternMapper): StrudelPattern =
  * ```
  */
 @StrudelDsl
-fun String.jux(transform: PatternMapper): StrudelPattern =
+fun String.jux(transform: PatternMapperFn): StrudelPattern =
     this._jux(listOf(transform).asStrudelDslArgs())
 
 // -- juxBy() ----------------------------------------------------------------------------------------------------------
 
-fun applyJuxBy(source: StrudelPattern, amount: Double, transform: PatternMapper): StrudelPattern {
+fun applyJuxBy(source: StrudelPattern, amount: Double, transform: PatternMapperFn): StrudelPattern {
     // Unipolar pan: 0.0 is left, 1.0 is right, 0.5 is center.
     // amount=1.0 -> 0.0 (L) & 1.0 (R) - full stereo
     // amount=0.5 -> 0.25 (L) & 0.75 (R) - half stereo width
@@ -1811,7 +1811,7 @@ internal val String._juxBy by dslStringExtension { p, args, callInfo -> p._juxBy
  * @tags jux, pan, stereo, spatial, width
  */
 @StrudelDsl
-fun StrudelPattern.juxBy(amount: Double, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.juxBy(amount: Double, transform: PatternMapperFn): StrudelPattern =
     this._juxBy(listOf(amount, transform).asStrudelDslArgs())
 
 /**
@@ -1822,7 +1822,7 @@ fun StrudelPattern.juxBy(amount: Double, transform: PatternMapper): StrudelPatte
  * ```
  */
 @StrudelDsl
-fun String.juxBy(amount: Double, transform: PatternMapper): StrudelPattern =
+fun String.juxBy(amount: Double, transform: PatternMapperFn): StrudelPattern =
     this._juxBy(listOf(amount, transform).asStrudelDslArgs())
 
 // -- off() ------------------------------------------------------------------------------------------------------------
@@ -1863,7 +1863,7 @@ internal val String._off by dslStringExtension { p, args, callInfo -> p._off(arg
  * @tags off, delay, echo, layer, stack, time
  */
 @StrudelDsl
-fun StrudelPattern.off(time: Double, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.off(time: Double, transform: PatternMapperFn): StrudelPattern =
     this._off(listOf(time, transform).asStrudelDslArgs())
 
 /**
@@ -1874,7 +1874,7 @@ fun StrudelPattern.off(time: Double, transform: PatternMapper): StrudelPattern =
  * ```
  */
 @StrudelDsl
-fun String.off(time: Double, transform: PatternMapper): StrudelPattern =
+fun String.off(time: Double, transform: PatternMapperFn): StrudelPattern =
     this._off(listOf(time, transform).asStrudelDslArgs())
 
 // -- filter() ---------------------------------------------------------------------------------------------------------
@@ -2038,7 +2038,7 @@ internal val String._superimpose by dslStringExtension { p, args, callInfo -> p.
  * @tags superimpose, layer, stack, transform
  */
 @StrudelDsl
-fun StrudelPattern.superimpose(transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.superimpose(transform: PatternMapperFn): StrudelPattern =
     this._superimpose(listOf(transform).asStrudelDslArgs())
 
 /**
@@ -2049,24 +2049,24 @@ fun StrudelPattern.superimpose(transform: PatternMapper): StrudelPattern =
  * ```
  */
 @StrudelDsl
-fun String.superimpose(transform: PatternMapper): StrudelPattern =
+fun String.superimpose(transform: PatternMapperFn): StrudelPattern =
     this._superimpose(listOf(transform).asStrudelDslArgs())
 
 // -- layer() ----------------------------------------------------------------------------------------------------------
 
 // delegates - still register with KlangScript
 internal val StrudelPattern._layer by dslPatternExtension { p, args, /* callInfo */ _ ->
-    val transforms: List<PatternMapper> = args.mapNotNull { it.toPatternMapper() }
+    val transforms: List<PatternMapperFn> = args.mapNotNull { it.toPatternMapper() }
 
     if (transforms.isEmpty()) {
         p // we keep the pattern as is
     } else {
-        val patterns = transforms.mapNotNull { transform ->
+        val patterns = transforms.map { transform ->
             try {
                 transform(p)
             } catch (e: Exception) {
                 println("Error applying layer transform: ${e.stackTraceToString()}")
-                null
+                p
             }
         }
 
@@ -2107,7 +2107,7 @@ internal val String._apply by dslStringExtension { p, args, callInfo -> p._apply
  * @tags layer, stack, transform, superimpose
  */
 @StrudelDsl
-fun StrudelPattern.layer(vararg transforms: PatternMapper): StrudelPattern =
+fun StrudelPattern.layer(vararg transforms: PatternMapperFn): StrudelPattern =
     this._layer(transforms.toList().asStrudelDslArgs())
 
 /**
@@ -2119,7 +2119,7 @@ fun StrudelPattern.layer(vararg transforms: PatternMapper): StrudelPattern =
  * @alias apply
  */
 @StrudelDsl
-fun String.layer(vararg transforms: PatternMapper): StrudelPattern =
+fun String.layer(vararg transforms: PatternMapperFn): StrudelPattern =
     this._layer(transforms.toList().asStrudelDslArgs())
 
 /**
@@ -2140,7 +2140,7 @@ fun String.layer(vararg transforms: PatternMapper): StrudelPattern =
  * @tags layer, stack, transform, apply
  */
 @StrudelDsl
-fun StrudelPattern.apply(vararg transforms: PatternMapper): StrudelPattern =
+fun StrudelPattern.apply(vararg transforms: PatternMapperFn): StrudelPattern =
     this._apply(transforms.toList().asStrudelDslArgs())
 
 /**
@@ -2152,7 +2152,7 @@ fun StrudelPattern.apply(vararg transforms: PatternMapper): StrudelPattern =
  * @alias layer
  */
 @StrudelDsl
-fun String.apply(vararg transforms: PatternMapper): StrudelPattern =
+fun String.apply(vararg transforms: PatternMapperFn): StrudelPattern =
     this._apply(transforms.toList().asStrudelDslArgs())
 
 // -- zoom() -----------------------------------------------------------------------------------------------------------
@@ -2296,7 +2296,7 @@ internal val String._within by dslStringExtension { p, args, callInfo -> p._with
  * @tags within, window, time, conditional, transform
  */
 @StrudelDsl
-fun StrudelPattern.within(start: Double, end: Double, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.within(start: Double, end: Double, transform: PatternMapperFn): StrudelPattern =
     this._within(listOf(start, end, transform).asStrudelDslArgs())
 
 /**
@@ -2307,7 +2307,7 @@ fun StrudelPattern.within(start: Double, end: Double, transform: PatternMapper):
  * ```
  */
 @StrudelDsl
-fun String.within(start: Double, end: Double, transform: PatternMapper): StrudelPattern =
+fun String.within(start: Double, end: Double, transform: PatternMapperFn): StrudelPattern =
     this._within(listOf(start, end, transform).asStrudelDslArgs())
 
 // -- chunk() ----------------------------------------------------------------------------------------------------------
@@ -2396,7 +2396,7 @@ fun StrudelPattern.chunk(
     n: Int,
     back: Boolean = false,
     fast: Boolean = false,
-    transform: PatternMapper,
+    transform: PatternMapperFn,
 ): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /** Like [chunk] applied to a mini-notation string. */
@@ -2405,7 +2405,7 @@ fun String.chunk(
     n: Int,
     back: Boolean = false,
     fast: Boolean = false,
-    transform: PatternMapper,
+    transform: PatternMapperFn,
 ): StrudelPattern = this._chunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /**
@@ -2433,7 +2433,7 @@ fun StrudelPattern.slowchunk(
     n: Int,
     back: Boolean = false,
     fast: Boolean = false,
-    transform: PatternMapper,
+    transform: PatternMapperFn,
 ): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /** Alias for [chunk]. */
@@ -2442,7 +2442,7 @@ fun String.slowchunk(
     n: Int,
     back: Boolean = false,
     fast: Boolean = false,
-    transform: PatternMapper,
+    transform: PatternMapperFn,
 ): StrudelPattern = this._slowchunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /**
@@ -2470,7 +2470,7 @@ fun StrudelPattern.slowChunk(
     n: Int,
     back: Boolean = false,
     fast: Boolean = false,
-    transform: PatternMapper,
+    transform: PatternMapperFn,
 ): StrudelPattern = applyChunk(this, listOf(n, transform, back, fast).asStrudelDslArgs())
 
 /** Alias for [chunk]. */
@@ -2479,7 +2479,7 @@ fun String.slowChunk(
     n: Int,
     back: Boolean = false,
     fast: Boolean = false,
-    transform: PatternMapper,
+    transform: PatternMapperFn,
 ): StrudelPattern = this._slowChunk(listOf(n, transform, back, fast).asStrudelDslArgs())
 
 // -- chunkBack() / chunkback() ----------------------------------------------------------------------------------------
@@ -2523,7 +2523,7 @@ internal val String._chunkback by dslStringExtension { p, args, callInfo -> p._c
  * @tags chunk, cycle, transform, reverse, rotate
  */
 @StrudelDsl
-fun StrudelPattern.chunkBack(n: Int, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.chunkBack(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._chunkBack(listOf(n, transform).asStrudelDslArgs())
 
 /**
@@ -2535,7 +2535,7 @@ fun StrudelPattern.chunkBack(n: Int, transform: PatternMapper): StrudelPattern =
  * @alias chunkback
  */
 @StrudelDsl
-fun String.chunkBack(n: Int, transform: PatternMapper): StrudelPattern =
+fun String.chunkBack(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._chunkBack(listOf(n, transform).asStrudelDslArgs())
 
 /**
@@ -2557,7 +2557,7 @@ fun String.chunkBack(n: Int, transform: PatternMapper): StrudelPattern =
  * @tags chunk, cycle, transform, reverse, rotate
  */
 @StrudelDsl
-fun StrudelPattern.chunkback(n: Int, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.chunkback(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._chunkback(listOf(n, transform).asStrudelDslArgs())
 
 /**
@@ -2569,7 +2569,7 @@ fun StrudelPattern.chunkback(n: Int, transform: PatternMapper): StrudelPattern =
  * @alias chunkBack
  */
 @StrudelDsl
-fun String.chunkback(n: Int, transform: PatternMapper): StrudelPattern =
+fun String.chunkback(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._chunkback(listOf(n, transform).asStrudelDslArgs())
 
 // -- fastChunk() / fastchunk() ----------------------------------------------------------------------------------------
@@ -2613,7 +2613,7 @@ internal val String._fastchunk by dslStringExtension { p, args, callInfo -> p._f
  * @tags chunk, cycle, transform, fast, rotate
  */
 @StrudelDsl
-fun StrudelPattern.fastChunk(n: Int, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.fastChunk(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._fastChunk(listOf(n, transform).asStrudelDslArgs())
 
 /**
@@ -2625,7 +2625,7 @@ fun StrudelPattern.fastChunk(n: Int, transform: PatternMapper): StrudelPattern =
  * @alias fastchunk
  */
 @StrudelDsl
-fun String.fastChunk(n: Int, transform: PatternMapper): StrudelPattern =
+fun String.fastChunk(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._fastChunk(listOf(n, transform).asStrudelDslArgs())
 
 /**
@@ -2647,7 +2647,7 @@ fun String.fastChunk(n: Int, transform: PatternMapper): StrudelPattern =
  * @tags chunk, cycle, transform, fast, rotate
  */
 @StrudelDsl
-fun StrudelPattern.fastchunk(n: Int, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.fastchunk(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._fastchunk(listOf(n, transform).asStrudelDslArgs())
 
 /**
@@ -2659,7 +2659,7 @@ fun StrudelPattern.fastchunk(n: Int, transform: PatternMapper): StrudelPattern =
  * @alias fastChunk
  */
 @StrudelDsl
-fun String.fastchunk(n: Int, transform: PatternMapper): StrudelPattern =
+fun String.fastchunk(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._fastchunk(listOf(n, transform).asStrudelDslArgs())
 
 // -- chunkInto() ------------------------------------------------------------------------------------------------------
@@ -2699,17 +2699,13 @@ internal val String._chunkinto by dslStringExtension { p, args, callInfo -> p._c
  * @tags chunkInto, chunk, cycle, transform, fast, slice
  */
 @StrudelDsl
-fun StrudelPattern.chunkInto(
-    n: Int,
-    transform: PatternMapper,
-): StrudelPattern = applyChunk(this, listOf(n, transform, false, true).asStrudelDslArgs())
+fun StrudelPattern.chunkInto(n: Int, transform: PatternMapperFn): StrudelPattern =
+    applyChunk(this, listOf(n, transform, false, true).asStrudelDslArgs())
 
 /** Like [chunkInto] applied to a mini-notation string. */
 @StrudelDsl
-fun String.chunkInto(
-    n: Int,
-    transform: PatternMapper,
-): StrudelPattern = this._chunkInto(listOf(n, transform).asStrudelDslArgs())
+fun String.chunkInto(n: Int, transform: PatternMapperFn): StrudelPattern =
+    this._chunkInto(listOf(n, transform).asStrudelDslArgs())
 
 /**
  * Alias for [chunkInto] — applies [transform] to a fast-looped subcycle.
@@ -2730,17 +2726,13 @@ fun String.chunkInto(
  * @tags chunkinto, chunkInto, chunk, cycle, transform, fast, slice
  */
 @StrudelDsl
-fun StrudelPattern.chunkinto(
-    n: Int,
-    transform: PatternMapper,
-): StrudelPattern = chunkInto(n, transform)
+fun StrudelPattern.chunkinto(n: Int, transform: PatternMapperFn): StrudelPattern =
+    chunkInto(n, transform)
 
 /** Alias for [chunkInto]. */
 @StrudelDsl
-fun String.chunkinto(
-    n: Int,
-    transform: PatternMapper,
-): StrudelPattern = this.chunkInto(n, transform)
+fun String.chunkinto(n: Int, transform: PatternMapperFn): StrudelPattern =
+    this.chunkInto(n, transform)
 
 // -- chunkBackInto() --------------------------------------------------------------------------------------------------
 
@@ -2787,12 +2779,12 @@ internal val String._chunkbackinto by dslStringExtension { p, args, callInfo ->
  * @tags chunk, slice, backward, transform, cycle
  */
 @StrudelDsl
-fun StrudelPattern.chunkBackInto(n: Int, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.chunkBackInto(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._chunkBackInto(listOf(n, transform).asStrudelDslArgs())
 
 /** Like [chunkBackInto] applied to a mini-notation string. */
 @StrudelDsl
-fun String.chunkBackInto(n: Int, transform: PatternMapper): StrudelPattern =
+fun String.chunkBackInto(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._chunkBackInto(listOf(n, transform).asStrudelDslArgs())
 
 /**
@@ -2814,12 +2806,12 @@ fun String.chunkBackInto(n: Int, transform: PatternMapper): StrudelPattern =
  * @tags chunk, slice, backward, transform, cycle
  */
 @StrudelDsl
-fun StrudelPattern.chunkbackinto(n: Int, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.chunkbackinto(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._chunkbackinto(listOf(n, transform).asStrudelDslArgs())
 
 /** Alias for [chunkBackInto]. */
 @StrudelDsl
-fun String.chunkbackinto(n: Int, transform: PatternMapper): StrudelPattern =
+fun String.chunkbackinto(n: Int, transform: PatternMapperFn): StrudelPattern =
     this._chunkbackinto(listOf(n, transform).asStrudelDslArgs())
 
 // -- linger() ---------------------------------------------------------------------------------------------------------
@@ -3038,12 +3030,12 @@ internal val String._echowith by dslStringExtension { p, args, callInfo -> p._ec
  * @tags echoWith, stutWith, delay, transform, layers, effect
  */
 @StrudelDsl
-fun StrudelPattern.echoWith(times: Int, delay: Double, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.echoWith(times: Int, delay: Double, transform: PatternMapperFn): StrudelPattern =
     this._echoWith(listOf(times, delay, transform).asStrudelDslArgs())
 
 /** Like [echoWith] applied to a mini-notation string. */
 @StrudelDsl
-fun String.echoWith(times: Int, delay: Double, transform: PatternMapper): StrudelPattern =
+fun String.echoWith(times: Int, delay: Double, transform: PatternMapperFn): StrudelPattern =
     this._echoWith(listOf(times, delay, transform).asStrudelDslArgs())
 
 /**
@@ -3066,12 +3058,12 @@ fun String.echoWith(times: Int, delay: Double, transform: PatternMapper): Strude
  * @tags stutWith, echoWith, delay, transform, layers, effect
  */
 @StrudelDsl
-fun StrudelPattern.stutWith(times: Int, delay: Double, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.stutWith(times: Int, delay: Double, transform: PatternMapperFn): StrudelPattern =
     this._stutWith(listOf(times, delay, transform).asStrudelDslArgs())
 
 /** Alias for [echoWith]. */
 @StrudelDsl
-fun String.stutWith(times: Int, delay: Double, transform: PatternMapper): StrudelPattern =
+fun String.stutWith(times: Int, delay: Double, transform: PatternMapperFn): StrudelPattern =
     this._stutWith(listOf(times, delay, transform).asStrudelDslArgs())
 
 /**
@@ -3094,12 +3086,12 @@ fun String.stutWith(times: Int, delay: Double, transform: PatternMapper): Strude
  * @tags stutwith, echoWith, stutWith, delay, transform, layers
  */
 @StrudelDsl
-fun StrudelPattern.stutwith(times: Int, delay: Double, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.stutwith(times: Int, delay: Double, transform: PatternMapperFn): StrudelPattern =
     this._stutwith(listOf(times, delay, transform).asStrudelDslArgs())
 
 /** Alias for [echoWith]. */
 @StrudelDsl
-fun String.stutwith(times: Int, delay: Double, transform: PatternMapper): StrudelPattern =
+fun String.stutwith(times: Int, delay: Double, transform: PatternMapperFn): StrudelPattern =
     this._stutwith(listOf(times, delay, transform).asStrudelDslArgs())
 
 /**
@@ -3122,12 +3114,12 @@ fun String.stutwith(times: Int, delay: Double, transform: PatternMapper): Strude
  * @tags echowith, echoWith, stutWith, delay, transform, layers
  */
 @StrudelDsl
-fun StrudelPattern.echowith(times: Int, delay: Double, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.echowith(times: Int, delay: Double, transform: PatternMapperFn): StrudelPattern =
     this._echowith(listOf(times, delay, transform).asStrudelDslArgs())
 
 /** Alias for [echoWith]. */
 @StrudelDsl
-fun String.echowith(times: Int, delay: Double, transform: PatternMapper): StrudelPattern =
+fun String.echowith(times: Int, delay: Double, transform: PatternMapperFn): StrudelPattern =
     this._echowith(listOf(times, delay, transform).asStrudelDslArgs())
 
 // -- bite() -----------------------------------------------------------------------------------------------------------
@@ -4834,17 +4826,17 @@ internal val String._applyN by dslStringExtension { p, args, callInfo -> p._appl
  * @tags applyN, apply, repeat, transform, function, iterate
  */
 @StrudelDsl
-fun applyN(n: PatternLike, transform: PatternMapper, pattern: PatternLike): StrudelPattern =
+fun applyN(n: PatternLike, transform: PatternMapperFn, pattern: PatternLike): StrudelPattern =
     _applyN(listOf(n, transform, pattern).asStrudelDslArgs())
 
 /** Applies `transform` to the pattern `n` times. */
 @StrudelDsl
-fun StrudelPattern.applyN(n: PatternLike, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.applyN(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
     this._applyN(listOf(n, transform).asStrudelDslArgs())
 
 /** Applies `transform` to the mini-notation string pattern `n` times. */
 @StrudelDsl
-fun String.applyN(n: PatternLike, transform: PatternMapper): StrudelPattern =
+fun String.applyN(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
     this._applyN(listOf(n, transform).asStrudelDslArgs())
 
 // -- pressBy() --------------------------------------------------------------------------------------------------------

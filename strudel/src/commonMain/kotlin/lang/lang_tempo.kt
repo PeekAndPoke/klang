@@ -719,7 +719,7 @@ fun String.ply(n: PatternLike): StrudelPattern = this._ply(listOf(n).asStrudelDs
  * Helper function to apply a function n times to a value.
  * Equivalent to JS applyN(n, func, p).
  */
-fun applyFunctionNTimes(n: Int, func: PatternMapper, pattern: StrudelPattern): StrudelPattern {
+fun applyFunctionNTimes(n: Int, func: PatternMapperFn, pattern: StrudelPattern): StrudelPattern {
     var result = pattern
     repeat(n) {
         result = func(result)
@@ -809,17 +809,17 @@ internal val String._plywith by dslStringExtension { p, args, callInfo -> p._ply
  * @tags plyWith, repeat, transform, cumulative, subdivide
  */
 @StrudelDsl
-fun plyWith(factor: Int, transform: PatternMapper, pattern: PatternLike): StrudelPattern =
+fun plyWith(factor: Int, transform: PatternMapperFn, pattern: PatternLike): StrudelPattern =
     _plyWith(listOf(factor, transform, pattern).asStrudelDslArgs())
 
 /** Repeats each event `n` times, applying `transform` cumulatively (0, 1, 2 … times). */
 @StrudelDsl
-fun StrudelPattern.plyWith(factor: Int, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.plyWith(factor: Int, transform: PatternMapperFn): StrudelPattern =
     this._plyWith(listOf(factor, transform).asStrudelDslArgs())
 
 /** Repeats each event `n` times, applying `transform` cumulatively (0, 1, 2 … times). */
 @StrudelDsl
-fun String.plyWith(factor: Int, transform: PatternMapper): StrudelPattern =
+fun String.plyWith(factor: Int, transform: PatternMapperFn): StrudelPattern =
     this._plyWith(listOf(factor, transform).asStrudelDslArgs())
 
 /**
@@ -830,17 +830,17 @@ fun String.plyWith(factor: Int, transform: PatternMapper): StrudelPattern =
  * @tags plywith, plyWith, repeat, transform, cumulative
  */
 @StrudelDsl
-fun plywith(factor: Int, transform: PatternMapper, pattern: PatternLike): StrudelPattern =
+fun plywith(factor: Int, transform: PatternMapperFn, pattern: PatternLike): StrudelPattern =
     _plywith(listOf(factor, transform, pattern).asStrudelDslArgs())
 
 /** Alias for [plyWith] on this pattern. */
 @StrudelDsl
-fun StrudelPattern.plywith(factor: Int, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.plywith(factor: Int, transform: PatternMapperFn): StrudelPattern =
     this._plywith(listOf(factor, transform).asStrudelDslArgs())
 
 /** Alias for [plyWith] on a string pattern. */
 @StrudelDsl
-fun String.plywith(factor: Int, transform: PatternMapper): StrudelPattern =
+fun String.plywith(factor: Int, transform: PatternMapperFn): StrudelPattern =
     this._plywith(listOf(factor, transform).asStrudelDslArgs())
 
 // -- plyForEach() -----------------------------------------------------------------------------------------------------
@@ -1156,7 +1156,7 @@ internal val StrudelPattern._inside by dslPatternExtension { p, args, /* callInf
  * @tags inside, transform, zoom, slow, fast
  */
 @StrudelDsl
-fun StrudelPattern.inside(factor: PatternLike, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.inside(factor: PatternLike, transform: PatternMapperFn): StrudelPattern =
     this._inside(listOf(factor, transform).asStrudelDslArgs())
 
 // -- outside() --------------------------------------------------------------------------------------------------------
@@ -1200,7 +1200,7 @@ internal val StrudelPattern._outside by dslPatternExtension { p, args, /* callIn
  * @tags outside, transform, zoom, fast, slow
  */
 @StrudelDsl
-fun StrudelPattern.outside(factor: PatternLike, transform: PatternMapper): StrudelPattern =
+fun StrudelPattern.outside(factor: PatternLike, transform: PatternMapperFn): StrudelPattern =
     this._outside(listOf(factor, transform).asStrudelDslArgs())
 
 // -- swingBy() --------------------------------------------------------------------------------------------------------
@@ -1213,7 +1213,7 @@ fun applySwingBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
         val timing = seq(Rational.ZERO, swingValue / 2)
         val stretch = seq(Rational.ONE + swingValue, Rational.ONE - swingValue)
 
-        val transform: PatternMapper = { innerPat ->
+        val transform: PatternMapperFn = { innerPat ->
             if (swingValue >= Rational.ZERO) {
                 innerPat.lateInCycle(timing).stretchBy(stretch)
             } else {

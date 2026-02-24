@@ -71,7 +71,7 @@ fun String.warmth(amount: PatternLike? = null): StrudelPattern =
     this._warmth(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the oscillator warmth.
+ * Creates a [PatternMapperFn] that sets the oscillator warmth.
  *
  * ```KlangScript
  * note("c d e f").apply(warmth("<0 0.5 1>"))  // cycle through warmth values
@@ -80,5 +80,5 @@ fun String.warmth(amount: PatternLike? = null): StrudelPattern =
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
 @StrudelDsl
-fun warmth(amount: PatternLike? = null): PatternMapper =
+fun warmth(amount: PatternLike? = null): PatternMapperFn =
     _warmth(listOfNotNull(amount).asStrudelDslArgs())

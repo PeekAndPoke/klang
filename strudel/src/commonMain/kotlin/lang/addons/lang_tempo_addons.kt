@@ -111,7 +111,7 @@ fun String.lateInCycle(amount: PatternLike): StrudelPattern =
  * @param amount The control value to use for nudging.
  */
 @StrudelDsl
-fun lateInCycle(amount: PatternLike): PatternMapper =
+fun lateInCycle(amount: PatternLike): PatternMapperFn =
     _lateInCycle(listOf(amount).asStrudelDslArgs())
 
 // -- earlyInCycle() ---------------------------------------------------------------------------------------------------
@@ -163,7 +163,7 @@ fun String.earlyInCycle(amount: PatternLike): StrudelPattern =
     this._earlyInCycle(listOf(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that nudges events earlier within their cycle in a string pattern.
+ * Creates a [PatternMapperFn] that nudges events earlier within their cycle in a string pattern.
  *
  * ```KlangScript
  * seq("bd hh sd oh").apply(earlyInCycle("<0 0.1 0.3 0.5>")).s()      // cycle through nudge amounts
@@ -172,7 +172,7 @@ fun String.earlyInCycle(amount: PatternLike): StrudelPattern =
  * @param amount The control value to use for nudging.
  */
 @StrudelDsl
-fun earlyInCycle(amount: PatternLike): PatternMapper =
+fun earlyInCycle(amount: PatternLike): PatternMapperFn =
     _earlyInCycle(listOf(amount).asStrudelDslArgs())
 
 // -- stretchBy() ------------------------------------------------------------------------------------------------------

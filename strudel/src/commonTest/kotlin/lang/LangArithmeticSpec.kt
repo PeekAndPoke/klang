@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -13,6 +15,30 @@ import io.peekandpoke.klang.strudel.dslInterfaceTests
  * Combined tests for arithmetic operations: add, sub, mul, div, mod
  */
 class LangArithmeticSpec : StringSpec({
+
+    // Combining multiple arithmatic operations
+
+    "apply(mul().add())" {
+        val p = seq("1 2").apply(mul("3").add("4"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 7  // 1 * 3 + 4
+            events[1].data.value?.asInt shouldBe 10 // 2 * 3 + 4
+        }
+    }
+
+    "script apply(mul().add())" {
+        val p = StrudelPattern.compile("""seq("1 2").apply(mul("3").add("4"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 7  // 1 * 3 + 4
+            events[1].data.value?.asInt shouldBe 10 // 2 * 3 + 4
+        }
+    }
 
     // ========== add() tests ==========
 

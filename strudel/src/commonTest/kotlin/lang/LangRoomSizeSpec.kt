@@ -1,15 +1,98 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangRoomSizeSpec : StringSpec({
 
+    "roomsize dsl interface" {
+        dslInterfaceTests(
+            "pattern.roomsize(amount)" to note("c").roomsize(4.0),
+            "script pattern.roomsize(amount)" to StrudelPattern.compile("""note("c").roomsize(4)"""),
+            "string.roomsize(amount)" to "c".roomsize(4.0),
+            "script string.roomsize(amount)" to StrudelPattern.compile(""""c".roomsize(4)"""),
+            "roomsize(amount)" to note("c").apply(roomsize(4.0)),
+            "script roomsize(amount)" to StrudelPattern.compile("""note("c").apply(roomsize(4))"""),
+        ) { _, events -> events.shouldNotBeEmpty() }
+    }
+
+    "rsize dsl interface" {
+        dslInterfaceTests(
+            "pattern.rsize(amount)" to note("c").rsize(4.0),
+            "script pattern.rsize(amount)" to StrudelPattern.compile("""note("c").rsize(4)"""),
+            "string.rsize(amount)" to "c".rsize(4.0),
+            "script string.rsize(amount)" to StrudelPattern.compile(""""c".rsize(4)"""),
+            "rsize(amount)" to note("c").apply(rsize(4.0)),
+            "script rsize(amount)" to StrudelPattern.compile("""note("c").apply(rsize(4))"""),
+        ) { _, events -> events.shouldNotBeEmpty() }
+    }
+
+    "sz dsl interface" {
+        dslInterfaceTests(
+            "pattern.sz(amount)" to note("c").sz(4.0),
+            "script pattern.sz(amount)" to StrudelPattern.compile("""note("c").sz(4)"""),
+            "string.sz(amount)" to "c".sz(4.0),
+            "script string.sz(amount)" to StrudelPattern.compile(""""c".sz(4)"""),
+            "sz(amount)" to note("c").apply(sz(4.0)),
+            "script sz(amount)" to StrudelPattern.compile("""note("c").apply(sz(4))"""),
+        ) { _, events -> events.shouldNotBeEmpty() }
+    }
+
+    "size dsl interface" {
+        dslInterfaceTests(
+            "pattern.size(amount)" to note("c").size(4.0),
+            "script pattern.size(amount)" to StrudelPattern.compile("""note("c").size(4)"""),
+            "string.size(amount)" to "c".size(4.0),
+            "script string.size(amount)" to StrudelPattern.compile(""""c".size(4)"""),
+            "size(amount)" to note("c").apply(size(4.0)),
+            "script size(amount)" to StrudelPattern.compile("""note("c").apply(size(4))"""),
+        ) { _, events -> events.shouldNotBeEmpty() }
+    }
+
+    "reinterpret voice data as roomSize | seq(\"2.0 4.0\").roomsize()" {
+        val p = seq("2.0 4.0").roomsize()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.roomSize shouldBe 2.0
+            events[1].data.roomSize shouldBe 4.0
+        }
+    }
+
+    "reinterpret voice data as roomSize | \"2.0 4.0\".roomsize()" {
+        val p = "2.0 4.0".roomsize()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.roomSize shouldBe 2.0
+            events[1].data.roomSize shouldBe 4.0
+        }
+    }
+
+    "reinterpret voice data as roomSize | seq(\"2.0 4.0\").apply(roomsize())" {
+        val p = seq("2.0 4.0").apply(roomsize())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.roomSize shouldBe 2.0
+            events[1].data.roomSize shouldBe 4.0
+        }
+    }
+
     "roomsize() sets VoiceData.roomSize" {
-        val p = roomsize("2.0 4.0")
+        val p = note("a b").roomsize("2.0 4.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -17,7 +100,7 @@ class LangRoomSizeSpec : StringSpec({
     }
 
     "rsize() alias works" {
-        val p = rsize("2.0")
+        val p = note("c").apply(rsize("2.0"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
         events[0].data.roomSize shouldBe 2.0

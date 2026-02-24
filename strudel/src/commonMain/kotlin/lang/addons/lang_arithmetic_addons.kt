@@ -27,7 +27,7 @@ internal val StrudelPattern._flipSign by dslPatternExtension { pattern, _, _ -> 
 
 internal val String._flipSign by dslStringExtension { pattern, _, _ -> applyFlipSign(pattern) }
 
-internal val _flipSign: PatternMapper by dslObject { { p -> p._flipSign() } }
+internal val _flipSign: PatternMapperFn by dslObject { { p -> p._flipSign() } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -69,7 +69,7 @@ fun String.flipSign(): StrudelPattern = this._flipSign(emptyList())
  * ```
  */
 @StrudelDsl
-val flipSign: PatternMapper get() = _flipSign
+val flipSign: PatternMapperFn get() = _flipSign
 
 // -- oneMinus ---------------------------------------------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ internal val StrudelPattern._oneMinusValue by dslPatternExtension { pattern, _, 
 
 internal val String._oneMinusValue by dslStringExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
 
-internal val _oneMinusValue: PatternMapper by dslObject { { p -> p._oneMinusValue() } }
+internal val _oneMinusValue: PatternMapperFn by dslObject { { p -> p._oneMinusValue() } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -116,7 +116,7 @@ fun String.oneMinusValue(): StrudelPattern = this._oneMinusValue(emptyList())
 
 /** Calculates `1.0 - value` for a string pattern. */
 @StrudelDsl
-val oneMinusValue: PatternMapper get() = _oneMinusValue
+val oneMinusValue: PatternMapperFn get() = _oneMinusValue
 
 // -- not --------------------------------------------------------------------------------------------------------------
 
@@ -133,7 +133,7 @@ internal val StrudelPattern._not by dslPatternExtension { pattern, _, _ -> apply
 
 internal val String._not by dslStringExtension { pattern, _, _ -> applyNot(pattern) }
 
-internal val _not: PatternMapper by dslObject { { p -> p._not() } }
+internal val _not: PatternMapperFn by dslObject { { p -> p._not() } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -164,11 +164,11 @@ fun StrudelPattern.not(): StrudelPattern = this._not(emptyList())
 fun String.not(): StrudelPattern = this._not(emptyList())
 
 /**
- * Applies logical NOT as a [PatternMapper], inverting each event's boolean value.
+ * Applies logical NOT as a [PatternMapperFn], inverting each event's boolean value.
  *
  * ```KlangScript
  * note("c d e f").degradeBy("1 0 1 0".apply(not))   // invert a degrade pattern into a gate
  * ```
  */
 @StrudelDsl
-val not: PatternMapper get() = _not
+val not: PatternMapperFn get() = _not

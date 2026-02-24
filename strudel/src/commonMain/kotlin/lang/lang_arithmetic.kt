@@ -56,9 +56,10 @@ fun applyUnaryOp(
 
 // -- add() ------------------------------------------------------------------------------------------------------------
 
-internal val _add by dslPatternMapper { args, callInfo -> { p -> p._add(args, callInfo) } }
 internal val StrudelPattern._add by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a + b } }
 internal val String._add by dslStringExtension { p, args, callInfo -> p._add(args, callInfo) }
+internal val _add by dslPatternMapper { args, callInfo -> { p -> p._add(args, callInfo) } }
+internal val PatternMapperFn._add by dslPatternMapperExtension { m, args, callInfo -> m.chain(_add(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -101,7 +102,7 @@ fun StrudelPattern.add(amount: PatternLike): StrudelPattern = this._add(listOf(a
 fun String.add(amount: PatternLike): StrudelPattern = this._add(listOf(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that adds [amount] to every numeric value in a pattern.
+ * Creates a [PatternMapperFn] that adds [amount] to every numeric value in a pattern.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the addition to an existing pattern.
@@ -113,7 +114,13 @@ fun String.add(amount: PatternLike): StrudelPattern = this._add(listOf(amount).a
  * @param amount The value to add. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun add(amount: PatternLike): PatternMapper = _add(listOf(amount).asStrudelDslArgs())
+fun add(amount: PatternLike): PatternMapperFn = _add(listOf(amount).asStrudelDslArgs())
+
+/**
+ * Chains a PatternMapperFn to this pattern, adding [amount] to every numeric value in the result.
+ */
+@StrudelDsl
+fun PatternMapperFn.add(amount: PatternLike): PatternMapperFn = _add(listOf(amount).asStrudelDslArgs())
 
 // -- sub() ------------------------------------------------------------------------------------------------------------
 
@@ -162,7 +169,7 @@ fun StrudelPattern.sub(amount: PatternLike): StrudelPattern = this._sub(listOf(a
 fun String.sub(amount: PatternLike): StrudelPattern = this._sub(listOf(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that subtracts [amount] from every numeric value in a pattern.
+ * Creates a [PatternMapperFn] that subtracts [amount] from every numeric value in a pattern.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the subtraction to an existing pattern.
@@ -174,7 +181,7 @@ fun String.sub(amount: PatternLike): StrudelPattern = this._sub(listOf(amount).a
  * @param amount The value to subtract. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun sub(amount: PatternLike): PatternMapper = _sub(listOf(amount).asStrudelDslArgs())
+fun sub(amount: PatternLike): PatternMapperFn = _sub(listOf(amount).asStrudelDslArgs())
 
 // -- mul() ------------------------------------------------------------------------------------------------------------
 
@@ -223,7 +230,7 @@ fun StrudelPattern.mul(factor: PatternLike): StrudelPattern = this._mul(listOf(f
 fun String.mul(factor: PatternLike): StrudelPattern = this._mul(listOf(factor).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that multiplies every numeric value in a pattern by [factor].
+ * Creates a [PatternMapperFn] that multiplies every numeric value in a pattern by [factor].
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the multiplication to an existing pattern.
@@ -235,7 +242,7 @@ fun String.mul(factor: PatternLike): StrudelPattern = this._mul(listOf(factor).a
  * @param factor The multiplier. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun mul(factor: PatternLike): PatternMapper = _mul(listOf(factor).asStrudelDslArgs())
+fun mul(factor: PatternLike): PatternMapperFn = _mul(listOf(factor).asStrudelDslArgs())
 
 // -- div() ------------------------------------------------------------------------------------------------------------
 
@@ -284,7 +291,7 @@ fun StrudelPattern.div(divisor: PatternLike): StrudelPattern = this._div(listOf(
 fun String.div(divisor: PatternLike): StrudelPattern = this._div(listOf(divisor).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that divides every numeric value in a pattern by [divisor].
+ * Creates a [PatternMapperFn] that divides every numeric value in a pattern by [divisor].
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the division to an existing pattern.
@@ -296,7 +303,7 @@ fun String.div(divisor: PatternLike): StrudelPattern = this._div(listOf(divisor)
  * @param divisor The divisor. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun div(divisor: PatternLike): PatternMapper = _div(listOf(divisor).asStrudelDslArgs())
+fun div(divisor: PatternLike): PatternMapperFn = _div(listOf(divisor).asStrudelDslArgs())
 
 // -- mod() ------------------------------------------------------------------------------------------------------------
 
@@ -346,7 +353,7 @@ fun StrudelPattern.mod(divisor: PatternLike): StrudelPattern = this._mod(listOf(
 fun String.mod(divisor: PatternLike): StrudelPattern = this._mod(listOf(divisor).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that applies modulo [divisor] to every numeric value in a pattern.
+ * Creates a [PatternMapperFn] that applies modulo [divisor] to every numeric value in a pattern.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Division by zero is safe — events with a zero divisor are silenced.
@@ -359,7 +366,7 @@ fun String.mod(divisor: PatternLike): StrudelPattern = this._mod(listOf(divisor)
  * @param divisor The modulus. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun mod(divisor: PatternLike): PatternMapper = _mod(listOf(divisor).asStrudelDslArgs())
+fun mod(divisor: PatternLike): PatternMapperFn = _mod(listOf(divisor).asStrudelDslArgs())
 
 // -- pow() ------------------------------------------------------------------------------------------------------------
 
@@ -410,7 +417,7 @@ fun StrudelPattern.pow(exponent: PatternLike): StrudelPattern = this._pow(listOf
 fun String.pow(exponent: PatternLike): StrudelPattern = this._pow(listOf(exponent).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that raises every numeric value in a pattern to the power of [exponent].
+ * Creates a [PatternMapperFn] that raises every numeric value in a pattern to the power of [exponent].
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the exponentiation to an existing pattern.
@@ -422,7 +429,7 @@ fun String.pow(exponent: PatternLike): StrudelPattern = this._pow(listOf(exponen
  * @param exponent The exponent. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun pow(exponent: PatternLike): PatternMapper = _pow(listOf(exponent).asStrudelDslArgs())
+fun pow(exponent: PatternLike): PatternMapperFn = _pow(listOf(exponent).asStrudelDslArgs())
 
 // -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
 
@@ -472,7 +479,7 @@ fun StrudelPattern.band(mask: PatternLike): StrudelPattern = this._band(listOf(m
 fun String.band(mask: PatternLike): StrudelPattern = this._band(listOf(mask).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that applies bitwise AND of [mask] to every integer value in a pattern.
+ * Creates a [PatternMapperFn] that applies bitwise AND of [mask] to every integer value in a pattern.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the mask to an existing pattern.
@@ -484,7 +491,7 @@ fun String.band(mask: PatternLike): StrudelPattern = this._band(listOf(mask).asS
  * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun band(mask: PatternLike): PatternMapper = _band(listOf(mask).asStrudelDslArgs())
+fun band(mask: PatternLike): PatternMapperFn = _band(listOf(mask).asStrudelDslArgs())
 
 // -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
 
@@ -534,7 +541,7 @@ fun StrudelPattern.bor(mask: PatternLike): StrudelPattern = this._bor(listOf(mas
 fun String.bor(mask: PatternLike): StrudelPattern = this._bor(listOf(mask).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that applies bitwise OR of [mask] to every integer value in a pattern.
+ * Creates a [PatternMapperFn] that applies bitwise OR of [mask] to every integer value in a pattern.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the mask to an existing pattern.
@@ -546,7 +553,7 @@ fun String.bor(mask: PatternLike): StrudelPattern = this._bor(listOf(mask).asStr
  * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun bor(mask: PatternLike): PatternMapper = _bor(listOf(mask).asStrudelDslArgs())
+fun bor(mask: PatternLike): PatternMapperFn = _bor(listOf(mask).asStrudelDslArgs())
 
 // -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
 
@@ -597,7 +604,7 @@ fun StrudelPattern.bxor(mask: PatternLike): StrudelPattern = this._bxor(listOf(m
 fun String.bxor(mask: PatternLike): StrudelPattern = this._bxor(listOf(mask).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that applies bitwise XOR of [mask] to every integer value in a pattern.
+ * Creates a [PatternMapperFn] that applies bitwise XOR of [mask] to every integer value in a pattern.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the mask to an existing pattern.
@@ -609,7 +616,7 @@ fun String.bxor(mask: PatternLike): StrudelPattern = this._bxor(listOf(mask).asS
  * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun bxor(mask: PatternLike): PatternMapper = _bxor(listOf(mask).asStrudelDslArgs())
+fun bxor(mask: PatternLike): PatternMapperFn = _bxor(listOf(mask).asStrudelDslArgs())
 
 // -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
 
@@ -659,7 +666,7 @@ fun StrudelPattern.blshift(bits: PatternLike): StrudelPattern = this._blshift(li
 fun String.blshift(bits: PatternLike): StrudelPattern = this._blshift(listOf(bits).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that shifts every integer value in a pattern left by [bits] bits.
+ * Creates a [PatternMapperFn] that shifts every integer value in a pattern left by [bits] bits.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the shift to an existing pattern.
@@ -672,7 +679,7 @@ fun String.blshift(bits: PatternLike): StrudelPattern = this._blshift(listOf(bit
  *   or a [StrudelPattern].
  */
 @StrudelDsl
-fun blshift(bits: PatternLike): PatternMapper = _blshift(listOf(bits).asStrudelDslArgs())
+fun blshift(bits: PatternLike): PatternMapperFn = _blshift(listOf(bits).asStrudelDslArgs())
 
 // -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
 
@@ -722,7 +729,7 @@ fun StrudelPattern.brshift(bits: PatternLike): StrudelPattern = this._brshift(li
 fun String.brshift(bits: PatternLike): StrudelPattern = this._brshift(listOf(bits).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that shifts every integer value in a pattern right by [bits] bits.
+ * Creates a [PatternMapperFn] that shifts every integer value in a pattern right by [bits] bits.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the shift to an existing pattern.
@@ -734,7 +741,7 @@ fun String.brshift(bits: PatternLike): StrudelPattern = this._brshift(listOf(bit
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun brshift(bits: PatternLike): PatternMapper = _brshift(listOf(bits).asStrudelDslArgs())
+fun brshift(bits: PatternLike): PatternMapperFn = _brshift(listOf(bits).asStrudelDslArgs())
 
 // -- log2() -----------------------------------------------------------------------------------------------------------
 
@@ -780,7 +787,7 @@ fun StrudelPattern.log2(): StrudelPattern = this._log2()
 fun String.log2(): StrudelPattern = this._log2()
 
 /**
- * Creates a [PatternMapper] that applies log base 2 to every numeric value in a pattern.
+ * Creates a [PatternMapperFn] that applies log base 2 to every numeric value in a pattern.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply the transform to an existing pattern.
@@ -790,7 +797,7 @@ fun String.log2(): StrudelPattern = this._log2()
  * ```
  */
 @StrudelDsl
-fun log2(): PatternMapper = _log2(emptyList())
+fun log2(): PatternMapperFn = _log2(emptyList())
 
 // -- lt() (Less Than) -------------------------------------------------------------------------------------------------
 
@@ -842,7 +849,7 @@ fun StrudelPattern.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(
 fun String.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(threshold).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that compares every value in a pattern to [threshold], replacing
+ * Creates a [PatternMapperFn] that compares every value in a pattern to [threshold], replacing
  * each with `1` (true) if less than [threshold] or `0` (false) otherwise.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -855,7 +862,7 @@ fun String.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(threshol
  * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun lt(threshold: PatternLike): PatternMapper = _lt(listOf(threshold).asStrudelDslArgs())
+fun lt(threshold: PatternLike): PatternMapperFn = _lt(listOf(threshold).asStrudelDslArgs())
 
 // -- gt() (Greater Than) ----------------------------------------------------------------------------------------------
 
@@ -907,7 +914,7 @@ fun StrudelPattern.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(
 fun String.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(threshold).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that compares every value in a pattern to [threshold], replacing
+ * Creates a [PatternMapperFn] that compares every value in a pattern to [threshold], replacing
  * each with `1` (true) if greater than [threshold] or `0` (false) otherwise.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -920,7 +927,7 @@ fun String.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(threshol
  * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun gt(threshold: PatternLike): PatternMapper = _gt(listOf(threshold).asStrudelDslArgs())
+fun gt(threshold: PatternLike): PatternMapperFn = _gt(listOf(threshold).asStrudelDslArgs())
 
 // -- lte() (Less Than or Equal) ---------------------------------------------------------------------------------------
 
@@ -973,7 +980,7 @@ fun StrudelPattern.lte(threshold: PatternLike): StrudelPattern = this._lte(listO
 fun String.lte(threshold: PatternLike): StrudelPattern = this._lte(listOf(threshold).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that compares every value in a pattern to [threshold], replacing
+ * Creates a [PatternMapperFn] that compares every value in a pattern to [threshold], replacing
  * each with `1` (true) if less than or equal to [threshold] or `0` (false) otherwise.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -986,7 +993,7 @@ fun String.lte(threshold: PatternLike): StrudelPattern = this._lte(listOf(thresh
  * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun lte(threshold: PatternLike): PatternMapper = _lte(listOf(threshold).asStrudelDslArgs())
+fun lte(threshold: PatternLike): PatternMapperFn = _lte(listOf(threshold).asStrudelDslArgs())
 
 // -- gte() (Greater Than or Equal) ------------------------------------------------------------------------------------
 
@@ -1039,7 +1046,7 @@ fun StrudelPattern.gte(threshold: PatternLike): StrudelPattern = this._gte(listO
 fun String.gte(threshold: PatternLike): StrudelPattern = this._gte(listOf(threshold).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that compares every value in a pattern to [threshold], replacing
+ * Creates a [PatternMapperFn] that compares every value in a pattern to [threshold], replacing
  * each with `1` (true) if greater than or equal to [threshold] or `0` (false) otherwise.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -1052,7 +1059,7 @@ fun String.gte(threshold: PatternLike): StrudelPattern = this._gte(listOf(thresh
  * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun gte(threshold: PatternLike): PatternMapper = _gte(listOf(threshold).asStrudelDslArgs())
+fun gte(threshold: PatternLike): PatternMapperFn = _gte(listOf(threshold).asStrudelDslArgs())
 
 // -- eq() (Equal) -----------------------------------------------------------------------------------------------------
 
@@ -1104,7 +1111,7 @@ fun StrudelPattern.eq(other: PatternLike): StrudelPattern = this._eq(listOf(othe
 fun String.eq(other: PatternLike): StrudelPattern = this._eq(listOf(other).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that tests every value in a pattern for strict equality with [other],
+ * Creates a [PatternMapperFn] that tests every value in a pattern for strict equality with [other],
  * replacing each with `1` (true) if equal or `0` (false) otherwise.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -1117,7 +1124,7 @@ fun String.eq(other: PatternLike): StrudelPattern = this._eq(listOf(other).asStr
  * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun eq(other: PatternLike): PatternMapper = _eq(listOf(other).asStrudelDslArgs())
+fun eq(other: PatternLike): PatternMapperFn = _eq(listOf(other).asStrudelDslArgs())
 
 // -- eqt() (Truthiness Equal) -----------------------------------------------------------------------------------------
 
@@ -1168,7 +1175,7 @@ fun StrudelPattern.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(ot
 fun String.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(other).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that compares the truthiness of every value in a pattern to [other],
+ * Creates a [PatternMapperFn] that compares the truthiness of every value in a pattern to [other],
  * replacing each with `1` (true) if both share the same truthiness, or `0` (false) otherwise.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -1181,7 +1188,7 @@ fun String.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(other).asS
  * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun eqt(other: PatternLike): PatternMapper = _eqt(listOf(other).asStrudelDslArgs())
+fun eqt(other: PatternLike): PatternMapperFn = _eqt(listOf(other).asStrudelDslArgs())
 
 // -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
 
@@ -1233,7 +1240,7 @@ fun StrudelPattern.ne(other: PatternLike): StrudelPattern = this._ne(listOf(othe
 fun String.ne(other: PatternLike): StrudelPattern = this._ne(listOf(other).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that tests every value in a pattern for strict inequality with [other],
+ * Creates a [PatternMapperFn] that tests every value in a pattern for strict inequality with [other],
  * replacing each with `1` (true) if not equal or `0` (false) otherwise.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -1246,7 +1253,7 @@ fun String.ne(other: PatternLike): StrudelPattern = this._ne(listOf(other).asStr
  * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun ne(other: PatternLike): PatternMapper = _ne(listOf(other).asStrudelDslArgs())
+fun ne(other: PatternLike): PatternMapperFn = _ne(listOf(other).asStrudelDslArgs())
 
 // -- net() (Truthiness Not Equal) -------------------------------------------------------------------------------------
 
@@ -1297,7 +1304,7 @@ fun StrudelPattern.net(other: PatternLike): StrudelPattern = this._net(listOf(ot
 fun String.net(other: PatternLike): StrudelPattern = this._net(listOf(other).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that compares the truthiness of every value in a pattern to [other],
+ * Creates a [PatternMapperFn] that compares the truthiness of every value in a pattern to [other],
  * replacing each with `1` (true) if their truthiness differs, or `0` (false) otherwise.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -1310,7 +1317,7 @@ fun String.net(other: PatternLike): StrudelPattern = this._net(listOf(other).asS
  * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun net(other: PatternLike): PatternMapper = _net(listOf(other).asStrudelDslArgs())
+fun net(other: PatternLike): PatternMapperFn = _net(listOf(other).asStrudelDslArgs())
 
 // -- and() (Logical AND) ----------------------------------------------------------------------------------------------
 
@@ -1361,7 +1368,7 @@ fun StrudelPattern.and(other: PatternLike): StrudelPattern = this._and(listOf(ot
 fun String.and(other: PatternLike): StrudelPattern = this._and(listOf(other).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that applies logical AND between every value in a pattern and [other].
+ * Creates a [PatternMapperFn] that applies logical AND between every value in a pattern and [other].
  *
  * Returns [other] when the source value is truthy (non-zero), or `0` when it is falsy (zero).
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -1374,7 +1381,7 @@ fun String.and(other: PatternLike): StrudelPattern = this._and(listOf(other).asS
  * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun and(other: PatternLike): PatternMapper = _and(listOf(other).asStrudelDslArgs())
+fun and(other: PatternLike): PatternMapperFn = _and(listOf(other).asStrudelDslArgs())
 
 // -- or() (Logical OR) ------------------------------------------------------------------------------------------------
 
@@ -1425,7 +1432,7 @@ fun StrudelPattern.or(other: PatternLike): StrudelPattern = this._or(listOf(othe
 fun String.or(other: PatternLike): StrudelPattern = this._or(listOf(other).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that applies logical OR between every value in a pattern and [other].
+ * Creates a [PatternMapperFn] that applies logical OR between every value in a pattern and [other].
  *
  * Returns the source value when it is truthy (non-zero), or [other] when it is falsy (zero).
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
@@ -1438,7 +1445,7 @@ fun String.or(other: PatternLike): StrudelPattern = this._or(listOf(other).asStr
  * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
-fun or(other: PatternLike): PatternMapper = _or(listOf(other).asStrudelDslArgs())
+fun or(other: PatternLike): PatternMapperFn = _or(listOf(other).asStrudelDslArgs())
 
 // -- round() ----------------------------------------------------------------------------------------------------------
 
@@ -1486,7 +1493,7 @@ fun StrudelPattern.round(): StrudelPattern = this._round()
 fun String.round(): StrudelPattern = this._round()
 
 /**
- * Creates a [PatternMapper] that rounds every numeric value in a pattern to the nearest integer.
+ * Creates a [PatternMapperFn] that rounds every numeric value in a pattern to the nearest integer.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply rounding to an existing pattern.
@@ -1496,7 +1503,7 @@ fun String.round(): StrudelPattern = this._round()
  * ```
  */
 @StrudelDsl
-fun round(): PatternMapper = _round(emptyList())
+fun round(): PatternMapperFn = _round(emptyList())
 
 // -- floor() ----------------------------------------------------------------------------------------------------------
 
@@ -1544,7 +1551,7 @@ fun StrudelPattern.floor(): StrudelPattern = this._floor()
 fun String.floor(): StrudelPattern = this._floor()
 
 /**
- * Creates a [PatternMapper] that floors every numeric value in a pattern to an integer.
+ * Creates a [PatternMapperFn] that floors every numeric value in a pattern to an integer.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply flooring to an existing pattern.
@@ -1554,7 +1561,7 @@ fun String.floor(): StrudelPattern = this._floor()
  * ```
  */
 @StrudelDsl
-fun floor(): PatternMapper = _floor(emptyList())
+fun floor(): PatternMapperFn = _floor(emptyList())
 
 // -- ceil() -----------------------------------------------------------------------------------------------------------
 
@@ -1602,7 +1609,7 @@ fun StrudelPattern.ceil(): StrudelPattern = this._ceil()
 fun String.ceil(): StrudelPattern = this._ceil()
 
 /**
- * Creates a [PatternMapper] that ceils every numeric value in a pattern to an integer.
+ * Creates a [PatternMapperFn] that ceils every numeric value in a pattern to an integer.
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [StrudelPattern.apply] to apply ceiling to an existing pattern.
@@ -1612,4 +1619,4 @@ fun String.ceil(): StrudelPattern = this._ceil()
  * ```
  */
 @StrudelDsl
-fun ceil(): PatternMapper = _ceil(emptyList())
+fun ceil(): PatternMapperFn = _ceil(emptyList())

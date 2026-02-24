@@ -56,7 +56,7 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // room
     "top-level room() sets VoiceData.room correctly" {
-        val p = room("0.1 0.9")
+        val p = note("a b").apply(room("0.1 0.9"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.room } shouldBe listOf(0.1, 0.9)
@@ -72,12 +72,12 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // roomsize / rsize alias
     "top-level roomsize() sets VoiceData.roomSize correctly (and rsize alias)" {
-        val p1 = roomsize("0.2 0.8")
+        val p1 = note("a b").apply(roomsize("0.2 0.8"))
         val e1 = p1.queryArc(0.0, 1.0)
         e1.size shouldBe 2
         e1.map { it.data.roomSize } shouldBe listOf(0.2, 0.8)
 
-        val p2 = rsize("0.4 0.6")
+        val p2 = note("a b").apply(rsize("0.4 0.6"))
         val e2 = p2.queryArc(0.0, 1.0)
         e2.size shouldBe 2
         e2.map { it.data.roomSize } shouldBe listOf(0.4, 0.6)
@@ -209,8 +209,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.coarse } shouldBe listOf(1.0, 2.0)
     }
 
-    "room() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""room("0.1 0.9")""")
+    "room() works within compiled code as top-level PatternMapper" {
+        val p = StrudelPattern.compile("""note("a b").apply(room("0.1 0.9"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -227,8 +227,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.room } shouldBe listOf(0.1, 0.9)
     }
 
-    "roomsize() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""roomsize("0.2 0.8")""")
+    "roomsize() works within compiled code as top-level PatternMapper" {
+        val p = StrudelPattern.compile("""note("a b").apply(roomsize("0.2 0.8"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

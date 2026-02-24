@@ -44,7 +44,7 @@ internal fun KlangScriptExtensionBuilder.registerStrudelDsl() {
 
     // 4. Register Global Functions (e.g., note(), silence, s(), etc.)
     StrudelRegistry.patternMapperFunctions.forEach { (name, handler) ->
-        registerVarargFunctionWithCallInfo<Any, PatternMapper>(name) { args, callInfo ->
+        registerVarargFunctionWithCallInfo<Any, PatternMapperFn>(name) { args, callInfo ->
             // println("Function '$name' called with CallInfo: $callInfo")
             handler(args.asStrudelDslArgs(callInfo), callInfo)
         }
@@ -68,6 +68,15 @@ internal fun KlangScriptExtensionBuilder.registerStrudelDsl() {
             registerVarargMethodWithCallInfo<Any, StrudelPattern>(name) { args, callInfo ->
                 // println("String method '$name' called with CallInfo: $callInfo")
                 handler(value, args.asStrudelDslArgs(callInfo), callInfo)
+            }
+        }
+    }
+
+    // 6. Register PatternMapperFn Methods
+    registerType<PatternMapperFn> {
+        StrudelRegistry.patternMapperExtensionMethods.forEach { (name, handler) ->
+            registerVarargMethodWithCallInfo<Any, PatternMapperFn>(name) { args, callInfo ->
+                handler(this, args.asStrudelDslArgs(callInfo), callInfo)
             }
         }
     }

@@ -177,14 +177,14 @@ fun String.range(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0
     this._range(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
 /**
- * Returns a [PatternMapper] that linearly scales pattern values to `[min, max]`.
+ * Returns a [PatternMapperFn] that linearly scales pattern values to `[min, max]`.
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  *
  * @param min The target minimum value (default `0.0`).
  * @param max The target maximum value (default `1.0`).
  * @param granularity Quantisation step size; `1.0` (default) means fully continuous.
- * @return A [PatternMapper] that linearly scales values to `[min, max]`.
+ * @return A [PatternMapperFn] that linearly scales values to `[min, max]`.
  *
  * ```KlangScript
  * sine.apply(range(200, 2000)).freq().segment(128)  // sine frequency sweep 200–2000 Hz
@@ -197,7 +197,7 @@ fun String.range(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0
  * @tags range, scale, min, max, oscillator, lfo, continuous
  */
 @StrudelDsl
-fun range(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapper =
+fun range(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
     _range(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
 // -- rangex -----------------------------------------------------------------------------------------------------------
@@ -276,14 +276,14 @@ fun String.rangex(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.
     this._rangex(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
 /**
- * Returns a [PatternMapper] that exponentially scales pattern values to `[min, max]`.
+ * Returns a [PatternMapperFn] that exponentially scales pattern values to `[min, max]`.
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  *
  * @param min The target minimum value (default `0.0`; use a small positive number for frequencies).
  * @param max The target maximum value (default `1.0`).
  * @param granularity Quantisation step size; `1.0` (default) means fully continuous.
- * @return A [PatternMapper] that exponentially scales values to `[min, max]`.
+ * @return A [PatternMapperFn] that exponentially scales values to `[min, max]`.
  *
  * ```KlangScript
  * sine.apply(rangex(100, 1000)).freq().segment(128)  // exponential frequency sweep
@@ -296,7 +296,7 @@ fun String.rangex(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.
  * @tags rangex, range, exponential, logarithmic, scale, frequency, oscillator, lfo, continuous
  */
 @StrudelDsl
-fun rangex(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapper =
+fun rangex(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
     _rangex(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
 // -- range2 -----------------------------------------------------------------------------------------------------------
@@ -355,14 +355,14 @@ fun String.range2(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.
     this._range2(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
 /**
- * Returns a [PatternMapper] that scales bipolar values (`-1..1`) to `[min, max]`.
+ * Returns a [PatternMapperFn] that scales bipolar values (`-1..1`) to `[min, max]`.
  *
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  *
  * @param min The target minimum value (default `0.0`).
  * @param max The target maximum value (default `1.0`).
  * @param granularity Quantisation step size; `1.0` (default) means fully continuous.
- * @return A [PatternMapper] that scales bipolar values to `[min, max]`.
+ * @return A [PatternMapperFn] that scales bipolar values to `[min, max]`.
  *
  * ```KlangScript
  * sine2.apply(range2(0, 100)).freq().segment(128)  // bipolar sine to frequency range
@@ -375,7 +375,7 @@ fun String.range2(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.
  * @tags range2, bipolar, range, scale, lfo, oscillator, continuous
  */
 @StrudelDsl
-fun range2(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapper =
+fun range2(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
     _range2(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
 // -- silence / rest / nothing -----------------------------------------------------------------------------------------

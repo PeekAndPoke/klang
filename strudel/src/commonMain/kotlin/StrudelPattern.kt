@@ -1101,8 +1101,8 @@ fun StrudelPattern._outerJoin(
  */
 fun StrudelPattern._applyControlFromParams(
     args: List<StrudelDslArg<Any?>>,
-    modify: VoiceModifier,
-    combine: VoiceMerger,
+    modify: VoiceModifierFn,
+    combine: VoiceMergerFn,
 ): StrudelPattern {
     if (args.isEmpty()) return this
 

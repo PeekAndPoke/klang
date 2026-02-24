@@ -63,7 +63,7 @@ fun String.gain(amount: PatternLike? = null): StrudelPattern =
     this._gain(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the gain for each event in a pattern.
+ * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
  *
  * ```KlangScript
  * s("hh hh hh hh").apply(gain("1.0 0.75 0.5 0.25"))
@@ -72,7 +72,7 @@ fun String.gain(amount: PatternLike? = null): StrudelPattern =
  * @param amount The control value to use for gain.
  */
 @StrudelDsl
-fun gain(amount: PatternLike? = null): PatternMapper =
+fun gain(amount: PatternLike? = null): PatternMapperFn =
     _gain(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
@@ -131,14 +131,14 @@ fun String.pan(amount: PatternLike? = null): StrudelPattern =
     this._pan(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the pan for each event in a pattern.
+ * Creates a [PatternMapperFn] that sets the pan for each event in a pattern.
  *
  * ```KlangScript
  * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
  * ```
  */
 @StrudelDsl
-fun pan(amount: PatternLike? = null): PatternMapper =
+fun pan(amount: PatternLike? = null): PatternMapperFn =
     _pan(listOfNotNull(amount).asStrudelDslArgs())
 
 
@@ -205,7 +205,7 @@ fun String.velocity(amount: PatternLike? = null): StrudelPattern =
     this._velocity(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Create a [PatternMapper] that sets the velocity (gain multiplier) for each event in a pattern.
+ * Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
  *
  * ```KlangScript
  * note("c*4").apply(velocity("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
@@ -214,7 +214,7 @@ fun String.velocity(amount: PatternLike? = null): StrudelPattern =
  * @param amount The velocity value or pattern to apply to the events.
  */
 @StrudelDsl
-fun velocity(amount: PatternLike? = null): PatternMapper =
+fun velocity(amount: PatternLike? = null): PatternMapperFn =
     _velocity(listOfNotNull(amount).asStrudelDslArgs())
 
 
@@ -253,7 +253,7 @@ fun String.vel(amount: PatternLike? = null): StrudelPattern =
     this._vel(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Alias for [velocity]. Create a [PatternMapper] that sets the velocity (gain multiplier) for each event in a pattern.
+ * Alias for [velocity]. Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
  *
  * ```KlangScript
  * note("c*4").apply(vel("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
@@ -262,7 +262,7 @@ fun String.vel(amount: PatternLike? = null): StrudelPattern =
  * @param amount The velocity value or pattern to apply to the events.
  */
 @StrudelDsl
-fun vel(amount: PatternLike? = null): PatternMapper =
+fun vel(amount: PatternLike? = null): PatternMapperFn =
     _vel(listOfNotNull(amount).asStrudelDslArgs())
 
 
@@ -320,7 +320,7 @@ fun String.postgain(amount: PatternLike? = null): StrudelPattern =
     this._postgain(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Create a [PatternMapper] that sets the post-gain for each event in a pattern.
+ * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
  *
  * ```KlangScript
  * "hh*8".apply(postgain(sine.range(0.1, 1.0).slow(2))).s()   // sine post-gain over two cycles
@@ -329,7 +329,7 @@ fun String.postgain(amount: PatternLike? = null): StrudelPattern =
  * @param amount The post-gain value or pattern to apply to the events.
  */
 @StrudelDsl
-fun postgain(amount: PatternLike? = null): PatternMapper =
+fun postgain(amount: PatternLike? = null): PatternMapperFn =
     _postgain(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- compressor() / comp() --------------------------------------------------------------------------------------------
@@ -421,7 +421,7 @@ fun String.compressor(params: PatternLike? = null): StrudelPattern =
     this._compressor(listOfNotNull(params).asStrudelDslArgs())
 
 /**
- * Create a [PatternMapper] that sets dynamic range compression parameters for a pattern.
+ * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
  *
  * ```KlangScript
  * s("bd*4").apply(compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
@@ -429,7 +429,7 @@ fun String.compressor(params: PatternLike? = null): StrudelPattern =
 
  */
 @StrudelDsl
-fun compressor(params: PatternLike? = null): PatternMapper =
+fun compressor(params: PatternLike? = null): PatternMapperFn =
     _compressor(listOfNotNull(params).asStrudelDslArgs())
 
 /**
@@ -477,7 +477,7 @@ fun String.comp(params: PatternLike? = null): StrudelPattern =
  * @param params The compression parameters as a colon-separated string.
  */
 @StrudelDsl
-fun comp(params: PatternLike? = null): PatternMapper =
+fun comp(params: PatternLike? = null): PatternMapperFn =
     _comp(listOfNotNull(params).asStrudelDslArgs())
 
 
@@ -537,7 +537,7 @@ fun String.unison(voices: PatternLike? = null): StrudelPattern =
     this._unison(listOfNotNull(voices).asStrudelDslArgs())
 
 /**
- * Create a [PatternMapper] that sets the number of unison voices for a pattern.
+ * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
  * ```KlangScript
  * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
@@ -546,7 +546,7 @@ fun String.unison(voices: PatternLike? = null): StrudelPattern =
  * @param voices The number of unison voices.
  */
 @StrudelDsl
-fun unison(voices: PatternLike? = null): PatternMapper =
+fun unison(voices: PatternLike? = null): PatternMapperFn =
     _unison(listOfNotNull(voices).asStrudelDslArgs())
 
 
@@ -584,7 +584,7 @@ fun String.uni(voices: PatternLike? = null): StrudelPattern =
 
 
 /**
- * Alias for [unison]. Creates a [PatternMapper] that sets the number of unison voices for a pattern.
+ * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
  * ```KlangScript
  * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
@@ -593,7 +593,7 @@ fun String.uni(voices: PatternLike? = null): StrudelPattern =
  * @param voices The number of unison voices.
  */
 @StrudelDsl
-fun uni(voices: PatternLike? = null): PatternMapper =
+fun uni(voices: PatternLike? = null): PatternMapperFn =
     _uni(listOfNotNull(voices).asStrudelDslArgs())
 
 
@@ -648,7 +648,7 @@ fun String.detune(amount: PatternLike? = null): StrudelPattern =
     this._detune(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the oscillator frequency spread for a pattern.
+ * Creates a [PatternMapperFn] that sets the oscillator frequency spread for a pattern.
  *
  * ```KlangScript
  * note("c3*4").s("supersaw").apply(detune("<0.05 0.10 0.20 0.40>"))  // escalating detune each beat
@@ -656,7 +656,7 @@ fun String.detune(amount: PatternLike? = null): StrudelPattern =
  * @param amount The detuning in cents.
  */
 @StrudelDsl
-fun detune(amount: PatternLike? = null): PatternMapper =
+fun detune(amount: PatternLike? = null): PatternMapperFn =
     _detune(listOfNotNull(amount).asStrudelDslArgs())
 
 
@@ -711,7 +711,7 @@ fun String.spread(amount: PatternLike? = null): StrudelPattern =
     this._spread(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the stereo pan spread for unison voices.
+ * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
  *
  * ```KlangScript
  * "c3*4".apply(spread("<0.2 0.5 0.8 1.0>")).s("supersaw").note()         // gradually widen each beat
@@ -720,7 +720,7 @@ fun String.spread(amount: PatternLike? = null): StrudelPattern =
  * @param amount The stereo pan spread, between 0 and 1.
  */
 @StrudelDsl
-fun spread(amount: PatternLike? = null): PatternMapper =
+fun spread(amount: PatternLike? = null): PatternMapperFn =
     _spread(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
@@ -787,7 +787,7 @@ fun String.density(amount: PatternLike? = null): StrudelPattern =
  * @param amount The oscillator density.
  */
 @StrudelDsl
-fun density(amount: PatternLike? = null): PatternMapper =
+fun density(amount: PatternLike? = null): PatternMapperFn =
     _density(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
@@ -823,7 +823,7 @@ fun String.d(amount: PatternLike? = null): StrudelPattern =
     this._d(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Alias for [density]. Creates a [PatternMapper] that sets the oscillator or noise density.
+ * Alias for [density]. Creates a [PatternMapperFn] that sets the oscillator or noise density.
  *
  * ```KlangScript
  * note("a").apply(d(40)).s("dust")   // 40 noise events per second
@@ -832,7 +832,7 @@ fun String.d(amount: PatternLike? = null): StrudelPattern =
  * @param amount The oscillator density.
  */
 @StrudelDsl
-fun d(amount: PatternLike? = null): PatternMapper =
+fun d(amount: PatternLike? = null): PatternMapperFn =
     _d(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
@@ -888,7 +888,7 @@ fun String.attack(time: PatternLike? = null): StrudelPattern =
     this._attack(listOfNotNull(time).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the ADSR envelope attack time for each event.
+ * Creates a [PatternMapperFn] that sets the ADSR envelope attack time for each event.
  *
  * ```KlangScript
  * note("c3*4").s("sine").apply(attack("<0.01 0.1 0.5 1.0>"))  // varying attacks
@@ -897,7 +897,7 @@ fun String.attack(time: PatternLike? = null): StrudelPattern =
  * @param time The attack time in seconds.
  */
 @StrudelDsl
-fun attack(time: PatternLike? = null): PatternMapper = _attack(listOfNotNull(time).asStrudelDslArgs())
+fun attack(time: PatternLike? = null): PatternMapperFn = _attack(listOfNotNull(time).asStrudelDslArgs())
 
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
@@ -951,7 +951,7 @@ fun String.decay(time: PatternLike? = null): StrudelPattern =
     this._decay(listOfNotNull(time).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the ADSR envelope decay time for each event.
+ * Creates a [PatternMapperFn] that sets the ADSR envelope decay time for each event.
  *
  * ```KlangScript
  * note("c3*4").s("sawtooth").apply(decay("<0.05 0.2 0.5 1.0>"))  // varying decays
@@ -960,7 +960,7 @@ fun String.decay(time: PatternLike? = null): StrudelPattern =
  * @param time The decay time in seconds.
  */
 @StrudelDsl
-fun decay(time: PatternLike? = null): PatternMapper = _decay(listOfNotNull(time).asStrudelDslArgs())
+fun decay(time: PatternLike? = null): PatternMapperFn = _decay(listOfNotNull(time).asStrudelDslArgs())
 
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
@@ -1015,7 +1015,7 @@ fun String.sustain(level: PatternLike? = null): StrudelPattern =
     this._sustain(listOfNotNull(level).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the ADSR envelope sustain level for each event.
+ * Creates a [PatternMapperFn] that sets the ADSR envelope sustain level for each event.
  *
  * ```KlangScript
  * note("c3*4").s("sine").apply(sustain("<0 0.3 0.7 1.0>"))  // varying sustain
@@ -1024,7 +1024,7 @@ fun String.sustain(level: PatternLike? = null): StrudelPattern =
  * @param level The sustain level between 0 and 1.
  */
 @StrudelDsl
-fun sustain(level: PatternLike? = null): PatternMapper = _sustain(listOfNotNull(level).asStrudelDslArgs())
+fun sustain(level: PatternLike? = null): PatternMapperFn = _sustain(listOfNotNull(level).asStrudelDslArgs())
 
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 
@@ -1079,7 +1079,7 @@ fun String.release(time: PatternLike? = null): StrudelPattern =
     this._release(listOfNotNull(time).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the ADSR envelope release time for each event.
+ * Creates a [PatternMapperFn] that sets the ADSR envelope release time for each event.
  *
  * ```KlangScript
  * note("c3*4").s("sine").apply(release("<0.1 0.3 0.8 2.0>"))  // varying releases
@@ -1088,7 +1088,7 @@ fun String.release(time: PatternLike? = null): StrudelPattern =
  * @param time The release time in seconds.
  */
 @StrudelDsl
-fun release(time: PatternLike? = null): PatternMapper = _release(listOfNotNull(time).asStrudelDslArgs())
+fun release(time: PatternLike? = null): PatternMapperFn = _release(listOfNotNull(time).asStrudelDslArgs())
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
@@ -1161,7 +1161,7 @@ fun String.adsr(params: PatternLike? = null): StrudelPattern =
     this._adsr(listOfNotNull(params).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets all ADSR envelope parameters for each event.
+ * Creates a [PatternMapperFn] that sets all ADSR envelope parameters for each event.
  *
  * ```KlangScript
  * note("c3*4").s("sine").apply(adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>"))  // alternate envelopes
@@ -1170,7 +1170,7 @@ fun String.adsr(params: PatternLike? = null): StrudelPattern =
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
  */
 @StrudelDsl
-fun adsr(params: PatternLike? = null): PatternMapper = _adsr(listOfNotNull(params).asStrudelDslArgs())
+fun adsr(params: PatternLike? = null): PatternMapperFn = _adsr(listOfNotNull(params).asStrudelDslArgs())
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
@@ -1234,7 +1234,7 @@ fun String.orbit(index: PatternLike? = null): StrudelPattern =
     this._orbit(listOfNotNull(index).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that routes events to the given audio output orbit.
+ * Creates a [PatternMapperFn] that routes events to the given audio output orbit.
  *
  * ```KlangScript
  * s("bd sd").apply(orbit(1))   // send drums to orbit 1
@@ -1243,7 +1243,7 @@ fun String.orbit(index: PatternLike? = null): StrudelPattern =
  * @param index The orbit index to route events to.
  */
 @StrudelDsl
-fun orbit(index: PatternLike? = null): PatternMapper =
+fun orbit(index: PatternLike? = null): PatternMapperFn =
     _orbit(listOfNotNull(index).asStrudelDslArgs())
 
 
@@ -1282,7 +1282,7 @@ fun String.o(index: PatternLike? = null): StrudelPattern =
     this._o(listOfNotNull(index).asStrudelDslArgs())
 
 /**
- * Alias for [orbit]. Creates a [PatternMapper] that routes events to the given audio output orbit.
+ * Alias for [orbit]. Creates a [PatternMapperFn] that routes events to the given audio output orbit.
  *
  * ```KlangScript
  * s("bd sd").apply(o(1))   // send drums to orbit 1
@@ -1291,7 +1291,7 @@ fun String.o(index: PatternLike? = null): StrudelPattern =
  * @param index The orbit index to route events to.
  */
 @StrudelDsl
-fun o(index: PatternLike? = null): PatternMapper =
+fun o(index: PatternLike? = null): PatternMapperFn =
     _o(listOfNotNull(index).asStrudelDslArgs())
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1356,7 +1356,7 @@ fun String.duckorbit(orbitIndex: PatternLike? = null): StrudelPattern =
     this._duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the sidechain source orbit for ducking.
+ * Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
  *
  * ```KlangScript
  * note("c3 e3 g3").apply(duckorbit(1)).duckdepth(0.8)   // duck when orbit 1 plays
@@ -1365,7 +1365,7 @@ fun String.duckorbit(orbitIndex: PatternLike? = null): StrudelPattern =
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
 @StrudelDsl
-fun duckorbit(orbitIndex: PatternLike? = null): PatternMapper =
+fun duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
     _duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
 
@@ -1403,7 +1403,7 @@ fun String.duck(orbitIndex: PatternLike? = null): StrudelPattern =
     this._duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
 /**
- * Alias for [duckorbit]. Creates a [PatternMapper] that sets the sidechain source orbit for ducking.
+ * Alias for [duckorbit]. Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
  *
  * ```KlangScript
  * note("c3 e3").apply(duck(0)).duckdepth(0.8)   // duck when orbit 0 plays
@@ -1412,7 +1412,7 @@ fun String.duck(orbitIndex: PatternLike? = null): StrudelPattern =
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
 @StrudelDsl
-fun duck(orbitIndex: PatternLike? = null): PatternMapper =
+fun duck(orbitIndex: PatternLike? = null): PatternMapperFn =
     _duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
 
 // -- duckattack() / duckatt() -----------------------------------------------------------------------------------------
@@ -1471,7 +1471,7 @@ fun String.duckattack(time: PatternLike? = null): StrudelPattern =
     this._duckattack(listOfNotNull(time).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the duck release time.
+ * Creates a [PatternMapperFn] that sets the duck release time.
  *
  * ```KlangScript
  * note("c3 e3").apply(duckattack(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
@@ -1480,7 +1480,7 @@ fun String.duckattack(time: PatternLike? = null): StrudelPattern =
  * @param time The recovery time in seconds.
  */
 @StrudelDsl
-fun duckattack(time: PatternLike? = null): PatternMapper =
+fun duckattack(time: PatternLike? = null): PatternMapperFn =
     _duckattack(listOfNotNull(time).asStrudelDslArgs())
 
 
@@ -1519,7 +1519,7 @@ fun String.duckatt(time: PatternLike? = null): StrudelPattern =
     this._duckatt(listOfNotNull(time).asStrudelDslArgs())
 
 /**
- * Alias for [duckattack]. Creates a [PatternMapper] that sets the duck release time.
+ * Alias for [duckattack]. Creates a [PatternMapperFn] that sets the duck release time.
  *
  * ```KlangScript
  * note("c3 e3").apply(duckatt(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
@@ -1528,7 +1528,7 @@ fun String.duckatt(time: PatternLike? = null): StrudelPattern =
  * @param time The recovery time in seconds.
  */
 @StrudelDsl
-fun duckatt(time: PatternLike? = null): PatternMapper =
+fun duckatt(time: PatternLike? = null): PatternMapperFn =
     _duckatt(listOfNotNull(time).asStrudelDslArgs())
 
 // -- duckdepth() ------------------------------------------------------------------------------------------------------
@@ -1582,7 +1582,7 @@ fun String.duckdepth(amount: PatternLike? = null): StrudelPattern =
     this._duckdepth(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapper] that sets the ducking depth.
+ * Creates a [PatternMapperFn] that sets the ducking depth.
  *
  * ```KlangScript
  * note("c3*4").apply(duckdepth("<0.3 0.6 0.9 1.0>"))   // escalating ducking depth
@@ -1591,5 +1591,5 @@ fun String.duckdepth(amount: PatternLike? = null): StrudelPattern =
  * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
  */
 @StrudelDsl
-fun duckdepth(amount: PatternLike? = null): PatternMapper =
+fun duckdepth(amount: PatternLike? = null): PatternMapperFn =
     _duckdepth(listOfNotNull(amount).asStrudelDslArgs())

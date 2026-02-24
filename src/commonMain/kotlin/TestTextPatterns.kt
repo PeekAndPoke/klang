@@ -88,8 +88,10 @@ stack(                                                              ////////    
     .orbit(2).gain("0.8".add(berlin.range(-0.1, 0.0).fast(16))).adsr("0.01:0.2:0.8:0.5")
     .fast(2) // .solo()
   ,
-
 ).room(0.1).rsize(2.0).compressor("-6:1.2:8:0.03:0.2")
+    
+    
+    
     
     
     """.trimIndent()

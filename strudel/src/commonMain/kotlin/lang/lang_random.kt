@@ -568,12 +568,12 @@ internal val String._sometimesBy by dslStringExtension { pattern, args, callInfo
  * @tags sometimesBy, random, probability, conditional, transform
  */
 @StrudelDsl
-fun StrudelPattern.sometimesBy(prob: PatternLike, mapper: PatternMapper): StrudelPattern =
+fun StrudelPattern.sometimesBy(prob: PatternLike, mapper: PatternMapperFn): StrudelPattern =
     this._sometimesBy(listOf(prob, mapper).asStrudelDslArgs())
 
 /** Applies `transform` to each event independently with the given probability. */
 @StrudelDsl
-fun String.sometimesBy(prob: PatternLike, mapper: PatternMapper): StrudelPattern =
+fun String.sometimesBy(prob: PatternLike, mapper: PatternMapperFn): StrudelPattern =
     this._sometimesBy(listOf(prob, mapper).asStrudelDslArgs())
 
 // -- sometimes() ------------------------------------------------------------------------------------------------------
@@ -602,11 +602,12 @@ internal val String._sometimes by dslStringExtension { pattern, args, callInfo -
  * @tags sometimes, random, probability, conditional, transform
  */
 @StrudelDsl
-fun StrudelPattern.sometimes(mapper: PatternMapper): StrudelPattern = this._sometimes(listOf(mapper).asStrudelDslArgs())
+fun StrudelPattern.sometimes(mapper: PatternMapperFn): StrudelPattern =
+    this._sometimes(listOf(mapper).asStrudelDslArgs())
 
 /** Applies `transform` with a 50% chance per event. Shorthand for `sometimesBy(0.5, fn)`. */
 @StrudelDsl
-fun String.sometimes(mapper: PatternMapper): StrudelPattern = this._sometimes(listOf(mapper).asStrudelDslArgs())
+fun String.sometimes(mapper: PatternMapperFn): StrudelPattern = this._sometimes(listOf(mapper).asStrudelDslArgs())
 
 // -- often() ----------------------------------------------------------------------------------------------------------
 
@@ -630,11 +631,11 @@ internal val String._often by dslStringExtension { pattern, args, callInfo -> pa
  * @tags often, random, probability, conditional, transform
  */
 @StrudelDsl
-fun StrudelPattern.often(mapper: PatternMapper): StrudelPattern = this._often(listOf(mapper).asStrudelDslArgs())
+fun StrudelPattern.often(mapper: PatternMapperFn): StrudelPattern = this._often(listOf(mapper).asStrudelDslArgs())
 
 /** Applies `transform` with 75% probability per event. Shorthand for `sometimesBy(0.75, fn)`. */
 @StrudelDsl
-fun String.often(mapper: PatternMapper): StrudelPattern = this._often(listOf(mapper).asStrudelDslArgs())
+fun String.often(mapper: PatternMapperFn): StrudelPattern = this._often(listOf(mapper).asStrudelDslArgs())
 
 // -- rarely() ---------------------------------------------------------------------------------------------------------
 
@@ -658,11 +659,11 @@ internal val String._rarely by dslStringExtension { pattern, args, callInfo -> p
  * @tags rarely, random, probability, conditional, transform
  */
 @StrudelDsl
-fun StrudelPattern.rarely(mapper: PatternMapper): StrudelPattern = this._rarely(listOf(mapper).asStrudelDslArgs())
+fun StrudelPattern.rarely(mapper: PatternMapperFn): StrudelPattern = this._rarely(listOf(mapper).asStrudelDslArgs())
 
 /** Applies `transform` with 25% probability per event. Shorthand for `sometimesBy(0.25, fn)`. */
 @StrudelDsl
-fun String.rarely(mapper: PatternMapper): StrudelPattern = this._rarely(listOf(mapper).asStrudelDslArgs())
+fun String.rarely(mapper: PatternMapperFn): StrudelPattern = this._rarely(listOf(mapper).asStrudelDslArgs())
 
 // -- almostNever() ----------------------------------------------------------------------------------------------------
 
@@ -690,12 +691,12 @@ internal val String._almostNever by dslStringExtension { pattern, args, callInfo
  * @tags almostNever, random, probability, conditional, rare
  */
 @StrudelDsl
-fun StrudelPattern.almostNever(mapper: PatternMapper): StrudelPattern =
+fun StrudelPattern.almostNever(mapper: PatternMapperFn): StrudelPattern =
     this._almostNever(listOf(mapper).asStrudelDslArgs())
 
 /** Applies `transform` with 10% probability per event. Shorthand for `sometimesBy(0.1, fn)`. */
 @StrudelDsl
-fun String.almostNever(mapper: PatternMapper): StrudelPattern = this._almostNever(listOf(mapper).asStrudelDslArgs())
+fun String.almostNever(mapper: PatternMapperFn): StrudelPattern = this._almostNever(listOf(mapper).asStrudelDslArgs())
 
 // -- almostAlways() ---------------------------------------------------------------------------------------------------
 
@@ -723,12 +724,12 @@ internal val String._almostAlways by dslStringExtension { pattern, args, callInf
  * @tags almostAlways, random, probability, conditional, frequent
  */
 @StrudelDsl
-fun StrudelPattern.almostAlways(mapper: PatternMapper): StrudelPattern =
+fun StrudelPattern.almostAlways(mapper: PatternMapperFn): StrudelPattern =
     this._almostAlways(listOf(mapper).asStrudelDslArgs())
 
 /** Applies `transform` with 90% probability per event. Shorthand for `sometimesBy(0.9, fn)`. */
 @StrudelDsl
-fun String.almostAlways(mapper: PatternMapper): StrudelPattern = this._almostAlways(listOf(mapper).asStrudelDslArgs())
+fun String.almostAlways(mapper: PatternMapperFn): StrudelPattern = this._almostAlways(listOf(mapper).asStrudelDslArgs())
 
 // -- never() ----------------------------------------------------------------------------------------------------------
 
@@ -747,11 +748,11 @@ internal val String._never by dslStringExtension { pattern, args, callInfo -> pa
  * @tags never, noop, placeholder, conditional
  */
 @StrudelDsl
-fun StrudelPattern.never(mapper: PatternMapper): StrudelPattern = this._never(listOf(mapper).asStrudelDslArgs())
+fun StrudelPattern.never(mapper: PatternMapperFn): StrudelPattern = this._never(listOf(mapper).asStrudelDslArgs())
 
 /** Never applies `transform` — the pattern passes through unchanged. */
 @StrudelDsl
-fun String.never(mapper: PatternMapper): StrudelPattern = this._never(listOf(mapper).asStrudelDslArgs())
+fun String.never(mapper: PatternMapperFn): StrudelPattern = this._never(listOf(mapper).asStrudelDslArgs())
 
 // -- always() ---------------------------------------------------------------------------------------------------------
 
@@ -775,11 +776,11 @@ internal val String._always by dslStringExtension { pattern, args, callInfo -> p
  * @tags always, unconditional, transform, conditional
  */
 @StrudelDsl
-fun StrudelPattern.always(mapper: PatternMapper): StrudelPattern = this._always(listOf(mapper).asStrudelDslArgs())
+fun StrudelPattern.always(mapper: PatternMapperFn): StrudelPattern = this._always(listOf(mapper).asStrudelDslArgs())
 
 /** Always applies `transform`. Shorthand for `sometimesBy(1, fn)`. */
 @StrudelDsl
-fun String.always(mapper: PatternMapper): StrudelPattern = this._always(listOf(mapper).asStrudelDslArgs())
+fun String.always(mapper: PatternMapperFn): StrudelPattern = this._always(listOf(mapper).asStrudelDslArgs())
 
 // -- someCyclesBy() ---------------------------------------------------------------------------------------------------
 
@@ -813,12 +814,12 @@ internal val String._someCyclesBy by dslStringExtension { pattern, args, callInf
  * @tags someCyclesBy, random, cycle, probability, conditional
  */
 @StrudelDsl
-fun StrudelPattern.someCyclesBy(prob: PatternLike, mapper: PatternMapper): StrudelPattern =
+fun StrudelPattern.someCyclesBy(prob: PatternLike, mapper: PatternMapperFn): StrudelPattern =
     this._someCyclesBy(listOf(prob, mapper).asStrudelDslArgs())
 
 /** Applies `transform` with the given probability, decided once per cycle (not per event). */
 @StrudelDsl
-fun String.someCyclesBy(prob: PatternLike, mapper: PatternMapper): StrudelPattern =
+fun String.someCyclesBy(prob: PatternLike, mapper: PatternMapperFn): StrudelPattern =
     this._someCyclesBy(listOf(prob, mapper).asStrudelDslArgs())
 
 // -- someCycles() -----------------------------------------------------------------------------------------------------
@@ -841,12 +842,12 @@ internal val String._someCycles by dslStringExtension { pattern, args, callInfo 
  * @tags someCycles, someCyclesBy, random, cycle, probability
  */
 @StrudelDsl
-fun StrudelPattern.someCycles(mapper: PatternMapper): StrudelPattern =
+fun StrudelPattern.someCycles(mapper: PatternMapperFn): StrudelPattern =
     this._someCycles(listOf(mapper).asStrudelDslArgs())
 
 /** Applies `transform` with 50% probability per cycle. Shorthand for `someCyclesBy(0.5, fn)`. */
 @StrudelDsl
-fun String.someCycles(mapper: PatternMapper): StrudelPattern = this._someCycles(listOf(mapper).asStrudelDslArgs())
+fun String.someCycles(mapper: PatternMapperFn): StrudelPattern = this._someCycles(listOf(mapper).asStrudelDslArgs())
 
 // -- randL() ----------------------------------------------------------------------------------------------------------
 

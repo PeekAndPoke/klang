@@ -17,7 +17,7 @@ class LangEffectAliasesSpec : StringSpec({
     }
 
     "roomsize() alias 'sz' works as top-level function" {
-        val p = sz("0.8")
+        val p = note("c3").apply(sz("0.8"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -41,7 +41,7 @@ class LangEffectAliasesSpec : StringSpec({
     }
 
     "roomsize() alias 'size' works as top-level function" {
-        val p = size("0.85")
+        val p = note("c3").apply(size("0.85"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
