@@ -16,6 +16,44 @@ import io.peekandpoke.klang.strudel.sampleAt
 
 class LangContinuousPatternsSpec : StringSpec({
 
+    "toBipolar dsl interface" {
+        dslInterfaceTests(
+            "pattern.toBipolar()" to
+                    sine.toBipolar(),
+            "script pattern.toBipolar()" to
+                    StrudelPattern.compile("sine.toBipolar()"),
+            "string.toBipolar()" to
+                    "0.5".toBipolar(),
+            "script string.toBipolar()" to
+                    StrudelPattern.compile(""""0.5".toBipolar()"""),
+            "toBipolar()" to
+                    sine.apply(toBipolar()),
+            "script toBipolar()" to
+                    StrudelPattern.compile("sine.apply(toBipolar())"),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
+
+    "fromBipolar dsl interface" {
+        dslInterfaceTests(
+            "pattern.fromBipolar()" to
+                    sine2.fromBipolar(),
+            "script pattern.fromBipolar()" to
+                    StrudelPattern.compile("sine2.fromBipolar()"),
+            "string.fromBipolar()" to
+                    "-0.5".fromBipolar(),
+            "script string.fromBipolar()" to
+                    StrudelPattern.compile(""""-0.5".fromBipolar()"""),
+            "fromBipolar()" to
+                    sine2.apply(fromBipolar()),
+            "script fromBipolar()" to
+                    StrudelPattern.compile("sine2.apply(fromBipolar())"),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
+
     "range dsl interface" {
         dslInterfaceTests(
             "pattern.range(min, max)" to
@@ -1068,6 +1106,63 @@ class LangContinuousPatternsSpec : StringSpec({
                 panValue.shouldBeBetween(-1.0, 1.0, tolerance = 0.01)
             }
         }
+    }
+
+    "apply(toBipolar().range2(-10, 10)) chains toBipolar and range2" {
+        // sine at t=0: 0.5 -> toBipolar -> 0.0 -> range2(-10, 10) -> 0.0 (midpoint)
+        // sine at t=0.25: 1.0 -> toBipolar -> 1.0 -> range2(-10, 10) -> 10.0
+        val p = sine.apply(toBipolar().range2(-10.0, 10.0))
+
+        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus 0.1)
+        p.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus 0.1)
+    }
+
+    "script apply(toBipolar()) works in compiled code" {
+        // sine at t=0: 0.5 -> toBipolar -> 0.0
+        val p = StrudelPattern.compile("sine.apply(toBipolar())")!!
+
+        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus 0.01)
+    }
+
+    "apply(fromBipolar().range(0, 100)) chains fromBipolar and range" {
+        // sine2 at t=0: 0.0 -> fromBipolar -> 0.5 -> range(0, 100) -> 50.0
+        // sine2 at t=0.25: 1.0 -> fromBipolar -> 1.0 -> range(0, 100) -> 100.0
+        val p = sine2.apply(fromBipolar().range(0.0, 100.0))
+
+        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus 0.1)
+        p.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus 0.1)
+    }
+
+    "script apply(fromBipolar()) works in compiled code" {
+        // sine2 at t=0: 0.0 -> fromBipolar -> 0.5
+        val p = StrudelPattern.compile("sine2.apply(fromBipolar())")!!
+
+        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus 0.01)
+    }
+
+    "PatternMapperFn.range() chains as mapper" {
+        // ContextModifierPattern chains inner-first: range(0,10) is inner, range(0,20) is outer.
+        // At query time inner context (min=0, max=10) overrides outer (min=0, max=20).
+        // saw at 0.5 = 0.5, context [0, 10] -> 5.0
+        val p = saw.apply(range(0.0, 10.0).range(0.0, 20.0))
+
+        p.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (5.0 plusOrMinus EPSILON)
+    }
+
+    "PatternMapperFn.rangex() chains as mapper" {
+        // Verify PatternMapperFn.rangex() works
+        // saw at 0.5 = 0.5; rangex(100, 1000): geometric mean of 100*1000 = ~316
+        val p = saw.apply(rangex(100.0, 1000.0))
+        val expected = kotlin.math.sqrt(100.0 * 1000.0)
+
+        p.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (expected plusOrMinus 1.0)
+    }
+
+    "PatternMapperFn.range2() chains as mapper" {
+        // sine2 at t=0: 0.0 -> range2(0, 100) -> fromBipolar: (0+1)/2=0.5 -> range(0,100): 50.0
+        val p = sine2.apply(range2(0.0, 100.0))
+
+        p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus 0.1)
     }
 
     "note(\"a\").cutoff(sine.range(200, 2000)) - apply continuous pattern to filter cutoff" {

@@ -38,6 +38,8 @@ internal val StrudelPattern._toBipolar by dslPatternExtension { p, /* args */ _,
 }
 
 internal val String._toBipolar by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p._toBipolar(emptyList()) }
+internal val _toBipolar by dslPatternMapper { args, callInfo -> { p -> p._toBipolar(args, callInfo) } }
+internal val PatternMapperFn._toBipolar by dslPatternMapperExtension { m, args, callInfo -> m.chain(_toBipolar(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -70,6 +72,36 @@ fun StrudelPattern.toBipolar(): StrudelPattern = this._toBipolar(emptyList())
 @StrudelDsl
 fun String.toBipolar(): StrudelPattern = this._toBipolar(emptyList())
 
+/**
+ * Returns a [PatternMapperFn] that maps values from the unipolar range `0..1` to the bipolar range `-1..1`.
+ *
+ * ```KlangScript
+ * sine.apply(toBipolar()).range2(-10, 10).note().segment(128)  // bipolar sine pitch vibrato
+ * ```
+ *
+ * ```KlangScript
+ * saw.apply(toBipolar().range2(-1, 1)).pan().segment(128)  // chain toBipolar then range2
+ * ```
+ *
+ * @return A [PatternMapperFn] that maps values from `0..1` to `-1..1`.
+ * @category continuous
+ * @tags toBipolar, bipolar, unipolar, range, lfo, mapper
+ */
+@StrudelDsl
+fun toBipolar(): PatternMapperFn = _toBipolar(emptyList())
+
+/**
+ * Chains a unipolar-to-bipolar mapping onto this [PatternMapperFn].
+ *
+ * ```KlangScript
+ * sine.apply(range(0, 1).toBipolar())  // chain range then bipolar conversion
+ * ```
+ *
+ * @return A [PatternMapperFn] that maps values from `0..1` to `-1..1`.
+ */
+@StrudelDsl
+fun PatternMapperFn.toBipolar(): PatternMapperFn = _toBipolar(emptyList())
+
 // -- fromBipolar ------------------------------------------------------------------------------------------------------
 
 internal val StrudelPattern._fromBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
@@ -84,6 +116,8 @@ internal val StrudelPattern._fromBipolar by dslPatternExtension { p, /* args */ 
 }
 
 internal val String._fromBipolar by dslStringExtension { p, /* args */ _, /* callInfo */ _ -> p._fromBipolar(emptyList()) }
+internal val _fromBipolar by dslPatternMapper { args, callInfo -> { p -> p._fromBipolar(args, callInfo) } }
+internal val PatternMapperFn._fromBipolar by dslPatternMapperExtension { m, args, callInfo -> m.chain(_fromBipolar(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -115,6 +149,36 @@ fun StrudelPattern.fromBipolar(): StrudelPattern = this._fromBipolar(emptyList()
 @StrudelDsl
 fun String.fromBipolar(): StrudelPattern = this._fromBipolar(emptyList())
 
+/**
+ * Returns a [PatternMapperFn] that maps values from the bipolar range `-1..1` to the unipolar range `0..1`.
+ *
+ * ```KlangScript
+ * sine2.apply(fromBipolar()).range(0, 100).freq().segment(128)  // bipolar to unipolar then frequency range
+ * ```
+ *
+ * ```KlangScript
+ * sine2.apply(fromBipolar().range(0.2, 0.8)).gain().segment(128)  // chain fromBipolar then range
+ * ```
+ *
+ * @return A [PatternMapperFn] that maps values from `-1..1` to `0..1`.
+ * @category continuous
+ * @tags fromBipolar, bipolar, unipolar, range, lfo, mapper
+ */
+@StrudelDsl
+fun fromBipolar(): PatternMapperFn = _fromBipolar(emptyList())
+
+/**
+ * Chains a bipolar-to-unipolar mapping onto this [PatternMapperFn].
+ *
+ * ```KlangScript
+ * sine2.apply(range2(0, 1).fromBipolar())  // chain range2 then fromBipolar
+ * ```
+ *
+ * @return A [PatternMapperFn] that maps values from `-1..1` to `0..1`.
+ */
+@StrudelDsl
+fun PatternMapperFn.fromBipolar(): PatternMapperFn = _fromBipolar(emptyList())
+
 // -- range ------------------------------------------------------------------------------------------------------------
 
 private fun applyRange(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): ContextModifierPattern {
@@ -132,6 +196,7 @@ private fun applyRange(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 internal val _range by dslPatternMapper { args, callInfo -> { p -> p._range(args, callInfo) } }
 internal val StrudelPattern._range by dslPatternExtension { p, args, /* callInfo */ _ -> applyRange(p, args) }
 internal val String._range by dslStringExtension { p, args, /* callInfo */ _ -> applyRange(p, args) }
+internal val PatternMapperFn._range by dslPatternMapperExtension { m, args, callInfo -> m.chain(_range(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -200,6 +265,21 @@ fun String.range(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0
 fun range(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
     _range(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
+/**
+ * Chains a linear range-scaling onto this [PatternMapperFn], mapping values to `[min, max]`.
+ *
+ * ```KlangScript
+ * sine.apply(toBipolar().range(-1, 1))  // chain bipolar conversion then scale
+ * ```
+ *
+ * @param min The target minimum value (default `0.0`).
+ * @param max The target maximum value (default `1.0`).
+ * @param granularity Quantisation step size; `1.0` (default) means fully continuous.
+ */
+@StrudelDsl
+fun PatternMapperFn.range(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
+    _range(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
+
 // -- rangex -----------------------------------------------------------------------------------------------------------
 
 private fun applyRangex(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
@@ -226,6 +306,7 @@ private fun applyRangex(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>
 internal val _rangex by dslPatternMapper { args, callInfo -> { p -> p._rangex(args, callInfo) } }
 internal val StrudelPattern._rangex by dslPatternExtension { p, args, /* callInfo */ _ -> applyRangex(p, args) }
 internal val String._rangex by dslStringExtension { p, args, /* callInfo */ _ -> applyRangex(p, args) }
+internal val PatternMapperFn._rangex by dslPatternMapperExtension { m, args, callInfo -> m.chain(_rangex(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -299,6 +380,21 @@ fun String.rangex(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.
 fun rangex(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
     _rangex(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
+/**
+ * Chains an exponential range-scaling onto this [PatternMapperFn], mapping values to `[min, max]`.
+ *
+ * ```KlangScript
+ * sine.apply(fromBipolar().rangex(100, 2000))  // chain fromBipolar then exponential frequency range
+ * ```
+ *
+ * @param min The target minimum value (default `0.0`; use a small positive number for frequencies).
+ * @param max The target maximum value (default `1.0`).
+ * @param granularity Quantisation step size; `1.0` (default) means fully continuous.
+ */
+@StrudelDsl
+fun PatternMapperFn.rangex(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
+    _rangex(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
+
 // -- range2 -----------------------------------------------------------------------------------------------------------
 
 private fun applyRange2(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
@@ -309,6 +405,7 @@ private fun applyRange2(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>
 internal val _range2 by dslPatternMapper { args, callInfo -> { p -> p._range2(args, callInfo) } }
 internal val StrudelPattern._range2 by dslPatternExtension { p, args, /* callInfo */ _ -> applyRange2(p, args) }
 internal val String._range2 by dslStringExtension { p, args, /* callInfo */ _ -> applyRange2(p, args) }
+internal val PatternMapperFn._range2 by dslPatternMapperExtension { m, args, callInfo -> m.chain(_range2(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -376,6 +473,21 @@ fun String.range2(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.
  */
 @StrudelDsl
 fun range2(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
+    _range2(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
+
+/**
+ * Chains a bipolar range-scaling onto this [PatternMapperFn], converting bipolar values (`-1..1`) to `[min, max]`.
+ *
+ * ```KlangScript
+ * sine2.apply(toBipolar().range2(-10, 10))  // deliberately redundant, illustrates chaining
+ * ```
+ *
+ * @param min The target minimum value (default `0.0`).
+ * @param max The target maximum value (default `1.0`).
+ * @param granularity Quantisation step size; `1.0` (default) means fully continuous.
+ */
+@StrudelDsl
+fun PatternMapperFn.range2(min: Number = 0.0, max: Number = 1.0, granularity: Number = 1.0): PatternMapperFn =
     _range2(listOf(min.toDouble(), max.toDouble(), granularity.toDouble()).asStrudelDslArgs())
 
 // -- silence / rest / nothing -----------------------------------------------------------------------------------------
