@@ -9,6 +9,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.strudel.lang.apply
 import io.peekandpoke.klang.strudel.lang.note
 
 class LangStretchBySpec : StringSpec({
@@ -23,10 +24,10 @@ class LangStretchBySpec : StringSpec({
                     "c3".stretchBy(2.0),
             "script string.stretchBy(factor)" to
                     StrudelPattern.compile(""""c3".stretchBy(2.0)"""),
-            "stretchBy(factor, pattern)" to
-                    stretchBy(2.0, note("c3")),
-            "script stretchBy(factor, pattern)" to
-                    StrudelPattern.compile("""stretchBy(2.0, note("c3"))"""),
+            "stretchBy(factor)" to
+                    note("c3").apply(stretchBy(2.0)),
+            "script stretchBy(factor)" to
+                    StrudelPattern.compile("""note("c3").apply(stretchBy(2.0))"""),
         ) { _, events ->
             val onsets = events.filter { it.isOnset }
             onsets shouldHaveSize 1
@@ -118,8 +119,8 @@ class LangStretchBySpec : StringSpec({
         }
     }
 
-    "stretchBy as top-level function" {
-        val p = stretchBy(2.0, note("c3 d3"))
+    "apply(stretchBy()) works as PatternMapperFn" {
+        val p = note("c3 d3").apply(stretchBy(2.0))
         val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
 
         assertSoftly {
@@ -128,6 +129,28 @@ class LangStretchBySpec : StringSpec({
             events[0].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
             events[1].data.note shouldBe "d3"
             events[1].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        }
+    }
+
+    "apply(stretchBy().stretchBy()) chains two stretchBy mappers" {
+        // stretchBy(2) doubles duration; stretchBy(2) again doubles it again -> 4x total
+        val p = note("c3").apply(stretchBy(2.0).stretchBy(2.0))
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        assertSoftly {
+            events shouldHaveSize 1
+            events[0].part.duration.toDouble() shouldBe (4.0 plusOrMinus EPSILON)
+        }
+    }
+
+    "script apply(stretchBy()) works in compiled code" {
+        val p = StrudelPattern.compile("""note("c3 d3").apply(stretchBy(2.0))""")
+        val events = p?.queryArc(0.0, 1.0)?.filter { it.isOnset } ?: emptyList()
+
+        assertSoftly {
+            events shouldHaveSize 2
+            events[0].data.note shouldBe "c3"
+            events[0].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
 

@@ -75,4 +75,28 @@ class LangEarlyInCycleSpec : StringSpec({
             events[0].whole.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         }
     }
+
+    "apply(earlyInCycle().earlyInCycle()) chains two nudge mappers" {
+        // earlyInCycle(0.1): c=[-0.1, 0.4] clipped to [0, 0.4], d=[0.4, 0.9]
+        // earlyInCycle(0.1) again: c out of cycle, d=[0.3, 0.8]
+        val p = note("c d").apply(earlyInCycle(0.1).earlyInCycle(0.1))
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        assertSoftly {
+            events.size shouldBe 1
+            events[0].data.note shouldBe "d"
+            events[0].part.begin.toDouble() shouldBe (0.3 plusOrMinus EPSILON)
+        }
+    }
+
+    "script apply(earlyInCycle()) works in compiled code" {
+        val p = StrudelPattern.compile("""note("c d").apply(earlyInCycle(0.25))""")!!
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        assertSoftly {
+            events.size shouldBe 1
+            events[0].data.note shouldBe "d"
+            events[0].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+        }
+    }
 })

@@ -104,4 +104,32 @@ class LangLateInCycleSpec : StringSpec({
             events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         }
     }
+
+    "apply(lateInCycle().lateInCycle()) chains two nudge mappers" {
+        // first lateInCycle(0.1) shifts c by 0.1: c=[0.1, 0.6], d=[0.6, 1.1] clipped to [0.6, 1.0]
+        // second lateInCycle(0.1) shifts again: c=[0.2, 0.7], d=[0.7, 1.0]
+        val p = note("c d").apply(lateInCycle(0.1).lateInCycle(0.1))
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.note shouldBe "c"
+            events[0].part.begin.toDouble() shouldBe (0.2 plusOrMinus EPSILON)
+            events[1].data.note shouldBe "d"
+            events[1].part.begin.toDouble() shouldBe (0.7 plusOrMinus EPSILON)
+        }
+    }
+
+    "script apply(lateInCycle()) works in compiled code" {
+        val p = StrudelPattern.compile("""note("c d").apply(lateInCycle(0.25))""")!!
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.note shouldBe "c"
+            events[0].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
+            events[1].data.note shouldBe "d"
+            events[1].part.begin.toDouble() shouldBe (0.75 plusOrMinus EPSILON)
+        }
+    }
 })
