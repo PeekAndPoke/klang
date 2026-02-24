@@ -25,7 +25,7 @@ class LangPhaserSpec : StringSpec({
     }
 
     "phaser() works as top-level function" {
-        val p = phaser("1.5")
+        val p = note("a").apply(phaser("1.5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

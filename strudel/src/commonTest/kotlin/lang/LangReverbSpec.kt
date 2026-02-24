@@ -25,7 +25,7 @@ class LangReverbSpec : StringSpec({
     }
 
     "roomfade() works as top-level function" {
-        val p = roomfade("0.3")
+        val p = note("a").apply(roomfade("0.3"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -68,7 +68,7 @@ class LangReverbSpec : StringSpec({
     }
 
     "roomlp() works as top-level function" {
-        val p = roomlp("500")
+        val p = note("a").apply(roomlp("500"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -111,7 +111,7 @@ class LangReverbSpec : StringSpec({
     }
 
     "roomdim() works as top-level function" {
-        val p = roomdim("3000")
+        val p = note("a").apply(roomdim("3000"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -154,7 +154,7 @@ class LangReverbSpec : StringSpec({
     }
 
     "iresponse() works as top-level function" {
-        val p = iresponse("chamber")
+        val p = note("a").apply(iresponse("chamber"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

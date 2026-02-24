@@ -25,7 +25,7 @@ class LangTremoloSpec : StringSpec({
     }
 
     "tremolosync() works as top-level function" {
-        val p = tremolosync("2.0")
+        val p = note("a").apply(tremolosync("2.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -141,7 +141,7 @@ class LangTremoloSpec : StringSpec({
     }
 
     "tremoloshape() works as top-level function" {
-        val p = tremoloshape("tri")
+        val p = note("a").apply(tremoloshape("tri"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

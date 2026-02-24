@@ -9,7 +9,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 class LangDelayTimeSpec : StringSpec({
 
     "delaytime() sets VoiceData.delayTime" {
-        val p = delaytime("0.25 0.5")
+        val p = note("a b").apply(delaytime("0.25 0.5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

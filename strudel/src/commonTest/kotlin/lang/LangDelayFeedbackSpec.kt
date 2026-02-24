@@ -9,7 +9,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 class LangDelayFeedbackSpec : StringSpec({
 
     "delayfeedback() sets VoiceData.delayFeedback" {
-        val p = delayfeedback("0.5 0.7")
+        val p = note("a b").apply(delayfeedback("0.5 0.7"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -58,7 +58,7 @@ class LangDelayFeedbackSpec : StringSpec({
     // Alias tests
 
     "delayfb() is an alias for delayfeedback()" {
-        val p = delayfb("0.6")
+        val p = note("a").apply(delayfb("0.6"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -81,7 +81,7 @@ class LangDelayFeedbackSpec : StringSpec({
     }
 
     "dfb() is an alias for delayfeedback()" {
-        val p = dfb("0.8")
+        val p = note("a").apply(dfb("0.8"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

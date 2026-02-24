@@ -93,7 +93,7 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // delay
     "top-level delay() sets VoiceData.delay correctly" {
-        val p = delay("0.0 1.0")
+        val p = note("a b").apply(delay("0.0 1.0"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.delay } shouldBe listOf(0.0, 1.0)
@@ -109,7 +109,7 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // delaytime
     "top-level delaytime() sets VoiceData.delayTime correctly" {
-        val p = delaytime("0.125 0.25")
+        val p = note("a b").apply(delaytime("0.125 0.25"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.delayTime } shouldBe listOf(0.125, 0.25)
@@ -125,7 +125,7 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // delayfeedback
     "top-level delayfeedback() sets VoiceData.delayFeedback correctly" {
-        val p = delayfeedback("0.25 0.75")
+        val p = note("a b").apply(delayfeedback("0.25 0.75"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.delayFeedback } shouldBe listOf(0.25, 0.75)
@@ -246,7 +246,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delay() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""delay("0.0 1.0")""")
+        val p = StrudelPattern.compile("""note("a b").apply(delay("0.0 1.0"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -264,7 +264,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delaytime() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""delaytime("0.125 0.25")""")
+        val p = StrudelPattern.compile("""note("a b").apply(delaytime("0.125 0.25"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -282,7 +282,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delayfeedback() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""delayfeedback("0.25 0.75")""")
+        val p = StrudelPattern.compile("""note("a b").apply(delayfeedback("0.25 0.75"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -315,5 +315,39 @@ class LangEffectsRoutingSpec : StringSpec({
 
         events.size shouldBe 2
         events.map { it.data.orbit } shouldBe listOf(0, 2)
+    }
+
+    // PatternMapperFn chaining
+    "delay().delaytime().delayfeedback() can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(delay(0.5).delaytime(0.25).delayfeedback(0.6))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events[0].data.delay shouldBe 0.5
+        events[0].data.delayTime shouldBe 0.25
+        events[0].data.delayFeedback shouldBe 0.6
+    }
+
+    "room().roomsize() can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(room(0.5).roomsize(4.0))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events[0].data.room shouldBe 0.5
+        events[0].data.roomSize shouldBe 4.0
+    }
+
+    "phaser().phaserdepth() can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(phaser(0.5).phaserdepth(0.8))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events[0].data.phaserRate shouldBe 0.5
+        events[0].data.phaserDepth shouldBe 0.8
+    }
+
+    "tremolosync().tremolodepth() can be chained as PatternMapperFn" {
+        val p = note("c3 e3").apply(tremolosync(4.0).tremolodepth(0.8))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events[0].data.tremoloSync shouldBe 4.0
+        events[0].data.tremoloDepth shouldBe 0.8
     }
 })
