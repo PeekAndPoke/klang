@@ -347,7 +347,7 @@ internal val String._seq by dslStringExtension { p, args, callInfo -> p._seq(arg
  * seq("bd", ["sd", "oh"], "hh").s()  // Nested list as sub-sequence within its slot
  * ```
  * @category structural
- * @tags sequence, timing, control, order
+ * @tags sequence, timing, control, order, pattern-creator
  */
 @StrudelDsl
 fun seq(vararg patterns: PatternLike): StrudelPattern {

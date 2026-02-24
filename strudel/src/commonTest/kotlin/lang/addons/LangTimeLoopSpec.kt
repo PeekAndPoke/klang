@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.strudel.lang.apply
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.seq
 
@@ -28,10 +29,10 @@ class LangTimeLoopSpec : StringSpec({
                     pat.timeLoop(duration),
             "script string.timeLoop(duration)" to
                     StrudelPattern.compile(""""$pat".timeLoop($duration)"""),
-            "timeLoop(duration, pattern)" to
-                    timeLoop(duration, seq(pat)),
-            "script timeLoop(duration, pattern)" to
-                    StrudelPattern.compile("""timeLoop($duration, seq("$pat"))"""),
+            "timeLoop(duration)" to
+                    seq(pat).apply(timeLoop(duration)),
+            "script timeLoop(duration)" to
+                    StrudelPattern.compile("""seq("$pat").apply(timeLoop($duration))"""),
         ) { _, events ->
             events.shouldHaveSize(2)
             events[0].data.value?.asDouble shouldBe 1.0
@@ -94,8 +95,8 @@ class LangTimeLoopSpec : StringSpec({
         }
     }
 
-    "timeLoop() as top-level function" {
-        val p = timeLoop(0.5, note("c3 d3 e3 f3"))
+    "timeLoop() as top-level PatternMapperFn" {
+        val p = note("c3 d3 e3 f3").apply(timeLoop(0.5))
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         assertSoftly {
@@ -140,9 +141,53 @@ class LangTimeLoopSpec : StringSpec({
         }
     }
 
-    "timeLoop() top-level in compiled code" {
-        val p = StrudelPattern.compile("""timeLoop(0.5, note("c3 d3 e3 f3"))""")
+    "timeLoop() top-level PatternMapperFn in compiled code" {
+        val p = StrudelPattern.compile("""note("c3 d3 e3 f3").apply(timeLoop(0.5))""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
+
+        assertSoftly {
+            events shouldHaveSize 4
+            events[0].data.note shouldBe "c3"
+            events[1].data.note shouldBe "d3"
+            events[2].data.note shouldBe "c3"
+            events[3].data.note shouldBe "d3"
+        }
+    }
+
+    "apply(timeLoop()) chains correctly" {
+        // seq("c3 d3 e3 f3"): [0,0.25]=c3, [0.25,0.5]=d3, [0.5,0.75]=e3, [0.75,1]=f3
+        // timeLoop(0.5): window [0,0.5] -> loops c3 and d3
+        // querying [0,1]: c3, d3, c3, d3
+        val p = note("c3 d3 e3 f3").apply(timeLoop(0.5))
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        assertSoftly {
+            events shouldHaveSize 4
+            events[0].data.note shouldBe "c3"
+            events[1].data.note shouldBe "d3"
+            events[2].data.note shouldBe "c3"
+            events[3].data.note shouldBe "d3"
+        }
+    }
+
+    "apply(timeLoop().timeLoop()) chains two timeLoop mappers" {
+        // timeLoop(1.0) on a 1-cycle pattern is a no-op; then timeLoop(0.5) loops within 0.5 cycles
+        // result is identical to plain timeLoop(0.5)
+        val p = note("c3 d3 e3 f3").apply(timeLoop(1.0).timeLoop(0.5))
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        assertSoftly {
+            events shouldHaveSize 4
+            events[0].data.note shouldBe "c3"
+            events[1].data.note shouldBe "d3"
+            events[2].data.note shouldBe "c3"
+            events[3].data.note shouldBe "d3"
+        }
+    }
+
+    "script apply(PatternMapperFn.timeLoop()) chains" {
+        val p = StrudelPattern.compile("""note("c3 d3 e3 f3").apply(timeLoop(0.5))""")!!
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         assertSoftly {
             events shouldHaveSize 4

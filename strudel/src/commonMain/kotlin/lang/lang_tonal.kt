@@ -184,7 +184,7 @@ internal val String._note by dslStringExtension { p, args, callInfo -> p._note(a
  * ```
  *
  * @category tonal
- * @tags note, pitch, frequency, MIDI, note name
+ * @tags note, pitch, frequency, MIDI, note name, pattern-creator
  */
 @StrudelDsl
 fun note(vararg note: PatternLike): StrudelPattern = _note(note.toList().asStrudelDslArgs())
@@ -252,7 +252,7 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
  * @param n The sound index to set, or null to reparse sequence values as sound index.
  *
  * @category tonal
- * @tags n, note number, sample index, pitch index
+ * @tags n, note number, sample index, pitch index, pattern-creator
  */
 @StrudelDsl
 fun StrudelPattern.n(index: PatternLike? = null): StrudelPattern =
@@ -332,7 +332,7 @@ internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(arg
  *
  * @alias s
  * @category tonal
- * @tags sound, sample, instrument, s
+ * @tags sound, sample, instrument, s, pattern-creator
  */
 @StrudelDsl
 fun StrudelPattern.sound(name: PatternLike): StrudelPattern = this._sound(listOf(name).asStrudelDslArgs())

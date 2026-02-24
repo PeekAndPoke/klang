@@ -378,11 +378,14 @@ internal val StrudelPattern._timeLoop by dslPatternExtension { p, args, _ -> app
 
 internal val String._timeLoop by dslStringExtension { p, args, callInfo -> p._timeLoop(args, callInfo) }
 
-internal val _timeLoop by dslPatternFunction { args, _ ->
-    val duration = args.getOrNull(0)?.value?.asRationalOrNull() ?: return@dslPatternFunction silence
-    val patterns = args.drop(1).toListOfPatterns()
-    val pattern = if (patterns.isEmpty()) silence else patterns.first()
-    pattern.timeLoop(duration)
+internal val _timeLoop by dslPatternMapper { args, callInfo -> { p -> p._timeLoop(args, callInfo) } }
+internal val PatternMapperFn._timeLoop by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(
+        _timeLoop(
+            args,
+            callInfo
+        )
+    )
 }
 
 // ===== USER-FACING OVERLOADS =====
@@ -425,25 +428,37 @@ fun String.timeLoop(duration: PatternLike): StrudelPattern =
     this._timeLoop(listOf(duration).asStrudelDslArgs())
 
 /**
- * Creates a pattern by looping `pattern` within a fixed window of `duration` cycles.
+ * Creates a [PatternMapperFn] that loops its input within a fixed window of `duration` cycles.
  *
  * ```KlangScript
- * timeLoop(2, note("c3 d3 e3 f3 g3 a3 b3 c4"))   // loop the first 2 cycles of an 8-note run
+ * note("c3 d3 e3 f3 g3 a3 b3 c4").apply(timeLoop(2))   // loop the first 2 cycles of an 8-note run
  * ```
  *
  * ```KlangScript
- * timeLoop(0.5, s("bd sd hh oh"))                 // stutter a 4-beat pattern into 2-beat loops
+ * s("bd sd hh oh").apply(timeLoop(0.5))                 // stutter a 4-beat pattern into 2-beat loops
  * ```
  *
  * @param duration The loop window length in cycles. Must be greater than zero.
- * @param pattern  The pattern to loop.
  *
  * @category structural
  * @tags timeLoop, loop, repeat, cycle, ostinato, window, addon
  */
 @StrudelDsl
-fun timeLoop(duration: PatternLike, pattern: PatternLike): StrudelPattern =
-    _timeLoop(listOf(duration, pattern).asStrudelDslArgs())
+fun timeLoop(duration: PatternLike): PatternMapperFn =
+    _timeLoop(listOf(duration).asStrudelDslArgs())
+
+/**
+ * Chains a timeLoop operation onto this [PatternMapperFn], looping the result within `duration` cycles.
+ *
+ * ```KlangScript
+ * seq("0.2 0.4").apply(mul(2).timeLoop(0.5))   // mul doubles, then loop within 0.5 cycles
+ * ```
+ *
+ * @param duration The loop window length in cycles. Must be greater than zero.
+ */
+@StrudelDsl
+fun PatternMapperFn.timeLoop(duration: PatternLike): PatternMapperFn =
+    _timeLoop(listOf(duration).asStrudelDslArgs())
 
 // -- repeat() ---------------------------------------------------------------------------------------------------------
 
