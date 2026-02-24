@@ -118,6 +118,12 @@ fun add(amount: PatternLike): PatternMapperFn = _add(listOf(amount).asStrudelDsl
 
 /**
  * Chains a PatternMapperFn to this pattern, adding [amount] to every numeric value in the result.
+ *
+ * ```KlangScript
+ * seq("10 20").apply(mul(2).add(3)).scale("c1:major").n()  // (10*2)+3=23, (20*2)+3=43
+ * ```
+ *
+ * @param amount The value to subtract. May be a number, string mini-notation, or a [StrudelPattern].
  */
 @StrudelDsl
 fun PatternMapperFn.add(amount: PatternLike): PatternMapperFn = _add(listOf(amount).asStrudelDslArgs())
@@ -127,6 +133,7 @@ fun PatternMapperFn.add(amount: PatternLike): PatternMapperFn = _add(listOf(amou
 internal val _sub by dslPatternMapper { args, callInfo -> { p -> p._sub(args, callInfo) } }
 internal val StrudelPattern._sub by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a - b } }
 internal val String._sub by dslStringExtension { p, args, callInfo -> p._sub(args, callInfo) }
+internal val PatternMapperFn._sub by dslPatternMapperExtension { m, args, callInfo -> m.chain(_sub(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -183,11 +190,24 @@ fun String.sub(amount: PatternLike): StrudelPattern = this._sub(listOf(amount).a
 @StrudelDsl
 fun sub(amount: PatternLike): PatternMapperFn = _sub(listOf(amount).asStrudelDslArgs())
 
+/**
+ * Chains a subtraction onto this [PatternMapperFn], subtracting [amount] from every numeric value in the result.
+ *
+ * ```KlangScript
+ * seq("10 20").apply(mul(2).sub(3)).scale("c1:major").n()  // (10*2)-3=17, (20*2)-3=37
+ * ```
+ *
+ * @param amount The value to subtract. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.sub(amount: PatternLike): PatternMapperFn = _sub(listOf(amount).asStrudelDslArgs())
+
 // -- mul() ------------------------------------------------------------------------------------------------------------
 
 internal val _mul by dslPatternMapper { args, callInfo -> { p -> p._mul(args, callInfo) } }
 internal val StrudelPattern._mul by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a * b } }
 internal val String._mul by dslStringExtension { p, args, callInfo -> p._mul(args, callInfo) }
+internal val PatternMapperFn._mul by dslPatternMapperExtension { m, args, callInfo -> m.chain(_mul(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -244,11 +264,24 @@ fun String.mul(factor: PatternLike): StrudelPattern = this._mul(listOf(factor).a
 @StrudelDsl
 fun mul(factor: PatternLike): PatternMapperFn = _mul(listOf(factor).asStrudelDslArgs())
 
+/**
+ * Chains a multiplication onto this [PatternMapperFn], multiplying every numeric value by [factor].
+ *
+ * ```KlangScript
+ * seq("1 2").apply(add(1).mul(3)).scale("c2:major").n()  // (1+1)*3=6, (2+1)*3=9
+ * ```
+ *
+ * @param factor The multiplier. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.mul(factor: PatternLike): PatternMapperFn = _mul(listOf(factor).asStrudelDslArgs())
+
 // -- div() ------------------------------------------------------------------------------------------------------------
 
 internal val _div by dslPatternMapper { args, callInfo -> { p -> p._div(args, callInfo) } }
 internal val StrudelPattern._div by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a / b } }
 internal val String._div by dslStringExtension { p, args, callInfo -> p._div(args, callInfo) }
+internal val PatternMapperFn._div by dslPatternMapperExtension { m, args, callInfo -> m.chain(_div(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -305,11 +338,24 @@ fun String.div(divisor: PatternLike): StrudelPattern = this._div(listOf(divisor)
 @StrudelDsl
 fun div(divisor: PatternLike): PatternMapperFn = _div(listOf(divisor).asStrudelDslArgs())
 
+/**
+ * Chains a division onto this [PatternMapperFn], dividing every numeric value by [divisor].
+ *
+ * ```KlangScript
+ * seq("10 20").apply(mul(2).div(4)).scale("c2:major").n()  // (10*2)/4=5, (20*2)/4=10
+ * ```
+ *
+ * @param divisor The divisor. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.div(divisor: PatternLike): PatternMapperFn = _div(listOf(divisor).asStrudelDslArgs())
+
 // -- mod() ------------------------------------------------------------------------------------------------------------
 
 internal val _mod by dslPatternMapper { args, callInfo -> { p -> p._mod(args, callInfo) } }
 internal val StrudelPattern._mod by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a % b } }
 internal val String._mod by dslStringExtension { p, args, callInfo -> p._mod(args, callInfo) }
+internal val PatternMapperFn._mod by dslPatternMapperExtension { m, args, callInfo -> m.chain(_mod(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -368,6 +414,18 @@ fun String.mod(divisor: PatternLike): StrudelPattern = this._mod(listOf(divisor)
 @StrudelDsl
 fun mod(divisor: PatternLike): PatternMapperFn = _mod(listOf(divisor).asStrudelDslArgs())
 
+/**
+ * Chains a modulo operation onto this [PatternMapperFn], applying modulo [divisor] to every numeric value.
+ *
+ * ```KlangScript
+ * seq("10 11").apply(add(1).mod(4)).scale("c3:major").n()  // (10+1)%4=3, (11+1)%4=0
+ * ```
+ *
+ * @param divisor The modulus. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.mod(divisor: PatternLike): PatternMapperFn = _mod(listOf(divisor).asStrudelDslArgs())
+
 // -- pow() ------------------------------------------------------------------------------------------------------------
 
 internal val _pow by dslPatternMapper { args, callInfo -> { p -> p._pow(args, callInfo) } }
@@ -375,6 +433,7 @@ internal val StrudelPattern._pow by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a pow b }
 }
 internal val String._pow by dslStringExtension { p, args, callInfo -> p._pow(args, callInfo) }
+internal val PatternMapperFn._pow by dslPatternMapperExtension { m, args, callInfo -> m.chain(_pow(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -431,6 +490,18 @@ fun String.pow(exponent: PatternLike): StrudelPattern = this._pow(listOf(exponen
 @StrudelDsl
 fun pow(exponent: PatternLike): PatternMapperFn = _pow(listOf(exponent).asStrudelDslArgs())
 
+/**
+ * Chains an exponentiation onto this [PatternMapperFn], raising every numeric value to [exponent].
+ *
+ * ```KlangScript
+ * seq("2 3").apply(add(1).pow(2)).scale("c2:major").n()  // (2+1)^2=9, (3+1)^2=16
+ * ```
+ *
+ * @param exponent The exponent. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.pow(exponent: PatternLike): PatternMapperFn = _pow(listOf(exponent).asStrudelDslArgs())
+
 // -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
 
 internal val _band by dslPatternMapper { args, callInfo -> { p -> p._band(args, callInfo) } }
@@ -438,6 +509,7 @@ internal val StrudelPattern._band by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a band b }
 }
 internal val String._band by dslStringExtension { p, args, callInfo -> p._band(args, callInfo) }
+internal val PatternMapperFn._band by dslPatternMapperExtension { m, args, callInfo -> m.chain(_band(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -493,6 +565,18 @@ fun String.band(mask: PatternLike): StrudelPattern = this._band(listOf(mask).asS
 @StrudelDsl
 fun band(mask: PatternLike): PatternMapperFn = _band(listOf(mask).asStrudelDslArgs())
 
+/**
+ * Chains a bitwise AND onto this [PatternMapperFn], applying [mask] to every integer value.
+ *
+ * ```KlangScript
+ * seq("12 15").apply(add(3).band(10)).scale("c2:major").n()  // (12+3)&10=10, (15+3)&10=2
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.band(mask: PatternLike): PatternMapperFn = _band(listOf(mask).asStrudelDslArgs())
+
 // -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
 
 internal val _bor by dslPatternMapper { args, callInfo -> { p -> p._bor(args, callInfo) } }
@@ -500,6 +584,7 @@ internal val StrudelPattern._bor by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a bor b }
 }
 internal val String._bor by dslStringExtension { p, args, callInfo -> p._bor(args, callInfo) }
+internal val PatternMapperFn._bor by dslPatternMapperExtension { m, args, callInfo -> m.chain(_bor(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -555,6 +640,18 @@ fun String.bor(mask: PatternLike): StrudelPattern = this._bor(listOf(mask).asStr
 @StrudelDsl
 fun bor(mask: PatternLike): PatternMapperFn = _bor(listOf(mask).asStrudelDslArgs())
 
+/**
+ * Chains a bitwise OR onto this [PatternMapperFn], applying [mask] to every integer value.
+ *
+ * ```KlangScript
+ * seq("8 4").apply(add(1).bor(2)).scale("c2:major").n()  // (8+1)|2=11, (4+1)|2=7
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.bor(mask: PatternLike): PatternMapperFn = _bor(listOf(mask).asStrudelDslArgs())
+
 // -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
 
 internal val _bxor by dslPatternMapper { args, callInfo -> { p -> p._bxor(args, callInfo) } }
@@ -562,6 +659,7 @@ internal val StrudelPattern._bxor by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a bxor b }
 }
 internal val String._bxor by dslStringExtension { p, args, callInfo -> p._bxor(args, callInfo) }
+internal val PatternMapperFn._bxor by dslPatternMapperExtension { m, args, callInfo -> m.chain(_bxor(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -618,6 +716,18 @@ fun String.bxor(mask: PatternLike): StrudelPattern = this._bxor(listOf(mask).asS
 @StrudelDsl
 fun bxor(mask: PatternLike): PatternMapperFn = _bxor(listOf(mask).asStrudelDslArgs())
 
+/**
+ * Chains a bitwise XOR onto this [PatternMapperFn], applying [mask] to every integer value.
+ *
+ * ```KlangScript
+ * seq("12 10").apply(add(2).bxor(6)).scale("c2:major").n()  // (12+2)^6=8, (10+2)^6=10
+ * ```
+ *
+ * @param mask The bitmask. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.bxor(mask: PatternLike): PatternMapperFn = _bxor(listOf(mask).asStrudelDslArgs())
+
 // -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
 
 internal val _blshift by dslPatternMapper { args, callInfo -> { p -> p._blshift(args, callInfo) } }
@@ -625,6 +735,14 @@ internal val StrudelPattern._blshift by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a shl b }
 }
 internal val String._blshift by dslStringExtension { p, args, callInfo -> p._blshift(args, callInfo) }
+internal val PatternMapperFn._blshift by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(
+        _blshift(
+            args,
+            callInfo
+        )
+    )
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -681,6 +799,18 @@ fun String.blshift(bits: PatternLike): StrudelPattern = this._blshift(listOf(bit
 @StrudelDsl
 fun blshift(bits: PatternLike): PatternMapperFn = _blshift(listOf(bits).asStrudelDslArgs())
 
+/**
+ * Chains a bitwise left-shift onto this [PatternMapperFn], shifting every integer value left by [bits] bits.
+ *
+ * ```KlangScript
+ * seq("1 2").apply(add(1).blshift(2)).scale("c2:major").n()  // (1+1)<<2=8, (2+1)<<2=12
+ * ```
+ *
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.blshift(bits: PatternLike): PatternMapperFn = _blshift(listOf(bits).asStrudelDslArgs())
+
 // -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
 
 internal val _brshift by dslPatternMapper { args, callInfo -> { p -> p._brshift(args, callInfo) } }
@@ -688,6 +818,14 @@ internal val StrudelPattern._brshift by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a shr b }
 }
 internal val String._brshift by dslStringExtension { p, args, callInfo -> p._brshift(args, callInfo) }
+internal val PatternMapperFn._brshift by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(
+        _brshift(
+            args,
+            callInfo
+        )
+    )
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -743,11 +881,24 @@ fun String.brshift(bits: PatternLike): StrudelPattern = this._brshift(listOf(bit
 @StrudelDsl
 fun brshift(bits: PatternLike): PatternMapperFn = _brshift(listOf(bits).asStrudelDslArgs())
 
+/**
+ * Chains a bitwise right-shift onto this [PatternMapperFn], shifting every integer value right by [bits] bits.
+ *
+ * ```KlangScript
+ * seq("8 16").apply(mul(2).brshift(3)).scale("c3:major").n()  // (8*2)>>3=2, (16*2)>>3=4
+ * ```
+ *
+ * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.brshift(bits: PatternLike): PatternMapperFn = _brshift(listOf(bits).asStrudelDslArgs())
+
 // -- log2() -----------------------------------------------------------------------------------------------------------
 
 internal val _log2 by dslPatternMapper { args, callInfo -> { p -> p._log2(args, callInfo) } }
 internal val StrudelPattern._log2 by dslPatternExtension { p, _, _ -> applyUnaryOp(p) { it.log2() } }
 internal val String._log2 by dslStringExtension { p, args, callInfo -> p._log2(args, callInfo) }
+internal val PatternMapperFn._log2 by dslPatternMapperExtension { m, _, _ -> m.chain(_log2(emptyList())) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -799,6 +950,16 @@ fun String.log2(): StrudelPattern = this._log2()
 @StrudelDsl
 fun log2(): PatternMapperFn = _log2(emptyList())
 
+/**
+ * Chains a log₂ operation onto this [PatternMapperFn], applying log base 2 to every numeric value.
+ *
+ * ```KlangScript
+ * seq("2 4").apply(mul(4).log2()).scale("c3:major").n()  // log2(2*4)=log2(8)=3, log2(4*4)=log2(16)=4
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.log2(): PatternMapperFn = _log2(emptyList())
+
 // -- lt() (Less Than) -------------------------------------------------------------------------------------------------
 
 internal val _lt by dslPatternMapper { args, callInfo -> { p -> p._lt(args, callInfo) } }
@@ -806,6 +967,7 @@ internal val StrudelPattern._lt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a lt b }
 }
 internal val String._lt by dslStringExtension { p, args, callInfo -> p._lt(args, callInfo) }
+internal val PatternMapperFn._lt by dslPatternMapperExtension { m, args, callInfo -> m.chain(_lt(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -864,6 +1026,19 @@ fun String.lt(threshold: PatternLike): StrudelPattern = this._lt(listOf(threshol
 @StrudelDsl
 fun lt(threshold: PatternLike): PatternMapperFn = _lt(listOf(threshold).asStrudelDslArgs())
 
+/**
+ * Chains a less-than comparison onto this [PatternMapperFn], replacing each value with `1` if less
+ * than [threshold] or `0` otherwise.
+ *
+ * ```KlangScript
+ * seq("5 10").apply(add(3).lt(9)).scale("c3:major").n()  // (5+3)<9=1, (10+3)<9=0
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.lt(threshold: PatternLike): PatternMapperFn = _lt(listOf(threshold).asStrudelDslArgs())
+
 // -- gt() (Greater Than) ----------------------------------------------------------------------------------------------
 
 internal val _gt by dslPatternMapper { args, callInfo -> { p -> p._gt(args, callInfo) } }
@@ -871,6 +1046,7 @@ internal val StrudelPattern._gt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a gt b }
 }
 internal val String._gt by dslStringExtension { p, args, callInfo -> p._gt(args, callInfo) }
+internal val PatternMapperFn._gt by dslPatternMapperExtension { m, args, callInfo -> m.chain(_gt(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -929,6 +1105,19 @@ fun String.gt(threshold: PatternLike): StrudelPattern = this._gt(listOf(threshol
 @StrudelDsl
 fun gt(threshold: PatternLike): PatternMapperFn = _gt(listOf(threshold).asStrudelDslArgs())
 
+/**
+ * Chains a greater-than comparison onto this [PatternMapperFn], replacing each value with `1` if greater
+ * than [threshold] or `0` otherwise.
+ *
+ * ```KlangScript
+ * seq("5 10").apply(add(3).gt(9)).scale("c3:major").n()  // (5+3)>9=0, (10+3)>9=1
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.gt(threshold: PatternLike): PatternMapperFn = _gt(listOf(threshold).asStrudelDslArgs())
+
 // -- lte() (Less Than or Equal) ---------------------------------------------------------------------------------------
 
 internal val _lte by dslPatternMapper { args, callInfo -> { p -> p._lte(args, callInfo) } }
@@ -936,6 +1125,7 @@ internal val StrudelPattern._lte by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a lte b }
 }
 internal val String._lte by dslStringExtension { p, args, callInfo -> p._lte(args, callInfo) }
+internal val PatternMapperFn._lte by dslPatternMapperExtension { m, args, callInfo -> m.chain(_lte(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -995,6 +1185,19 @@ fun String.lte(threshold: PatternLike): StrudelPattern = this._lte(listOf(thresh
 @StrudelDsl
 fun lte(threshold: PatternLike): PatternMapperFn = _lte(listOf(threshold).asStrudelDslArgs())
 
+/**
+ * Chains a less-than-or-equal comparison onto this [PatternMapperFn], replacing each value with `1` if
+ * less than or equal to [threshold] or `0` otherwise.
+ *
+ * ```KlangScript
+ * seq("5 10").apply(add(3).lte(11)).scale("c3:major").n()  // (5+3)<=11=1, (10+3)<=11=0
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.lte(threshold: PatternLike): PatternMapperFn = _lte(listOf(threshold).asStrudelDslArgs())
+
 // -- gte() (Greater Than or Equal) ------------------------------------------------------------------------------------
 
 internal val _gte by dslPatternMapper { args, callInfo -> { p -> p._gte(args, callInfo) } }
@@ -1002,6 +1205,7 @@ internal val StrudelPattern._gte by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a gte b }
 }
 internal val String._gte by dslStringExtension { p, args, callInfo -> p._gte(args, callInfo) }
+internal val PatternMapperFn._gte by dslPatternMapperExtension { m, args, callInfo -> m.chain(_gte(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1061,6 +1265,19 @@ fun String.gte(threshold: PatternLike): StrudelPattern = this._gte(listOf(thresh
 @StrudelDsl
 fun gte(threshold: PatternLike): PatternMapperFn = _gte(listOf(threshold).asStrudelDslArgs())
 
+/**
+ * Chains a greater-than-or-equal comparison onto this [PatternMapperFn], replacing each value with `1` if
+ * greater than or equal to [threshold] or `0` otherwise.
+ *
+ * ```KlangScript
+ * seq("5 10").apply(add(3).gte(11)).scale("c3:major").n()  // (5+3)>=11=0, (10+3)>=11=1
+ * ```
+ *
+ * @param threshold The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.gte(threshold: PatternLike): PatternMapperFn = _gte(listOf(threshold).asStrudelDslArgs())
+
 // -- eq() (Equal) -----------------------------------------------------------------------------------------------------
 
 internal val _eq by dslPatternMapper { args, callInfo -> { p -> p._eq(args, callInfo) } }
@@ -1068,6 +1285,7 @@ internal val StrudelPattern._eq by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a eq b }
 }
 internal val String._eq by dslStringExtension { p, args, callInfo -> p._eq(args, callInfo) }
+internal val PatternMapperFn._eq by dslPatternMapperExtension { m, args, callInfo -> m.chain(_eq(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1126,6 +1344,19 @@ fun String.eq(other: PatternLike): StrudelPattern = this._eq(listOf(other).asStr
 @StrudelDsl
 fun eq(other: PatternLike): PatternMapperFn = _eq(listOf(other).asStrudelDslArgs())
 
+/**
+ * Chains a strict-equality test onto this [PatternMapperFn], replacing each value with `1` if equal
+ * to [other] or `0` otherwise.
+ *
+ * ```KlangScript
+ * seq("5 8").apply(add(3).eq(11)).scale("c3:major").n()  // (5+3)=8==11=0, (8+3)=11==11=1
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.eq(other: PatternLike): PatternMapperFn = _eq(listOf(other).asStrudelDslArgs())
+
 // -- eqt() (Truthiness Equal) -----------------------------------------------------------------------------------------
 
 internal val _eqt by dslPatternMapper { args, callInfo -> { p -> p._eqt(args, callInfo) } }
@@ -1133,6 +1364,7 @@ internal val StrudelPattern._eqt by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a eqt b }
 }
 internal val String._eqt by dslStringExtension { p, args, callInfo -> p._eqt(args, callInfo) }
+internal val PatternMapperFn._eqt by dslPatternMapperExtension { m, args, callInfo -> m.chain(_eqt(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1190,6 +1422,19 @@ fun String.eqt(other: PatternLike): StrudelPattern = this._eqt(listOf(other).asS
 @StrudelDsl
 fun eqt(other: PatternLike): PatternMapperFn = _eqt(listOf(other).asStrudelDslArgs())
 
+/**
+ * Chains a truthiness-equality test onto this [PatternMapperFn], replacing each value with `1` if it shares
+ * the same truthiness as [other] or `0` otherwise.
+ *
+ * ```KlangScript
+ * seq("0 5").apply(mul(3).eqt(0)).scale("c3:major").n()  // (0*3)=0~=0=1 (both falsy), (5*3)=15~=0=0
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.eqt(other: PatternLike): PatternMapperFn = _eqt(listOf(other).asStrudelDslArgs())
+
 // -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
 
 internal val _ne by dslPatternMapper { args, callInfo -> { p -> p._ne(args, callInfo) } }
@@ -1197,6 +1442,7 @@ internal val StrudelPattern._ne by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a ne b }
 }
 internal val String._ne by dslStringExtension { p, args, callInfo -> p._ne(args, callInfo) }
+internal val PatternMapperFn._ne by dslPatternMapperExtension { m, args, callInfo -> m.chain(_ne(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1255,6 +1501,19 @@ fun String.ne(other: PatternLike): StrudelPattern = this._ne(listOf(other).asStr
 @StrudelDsl
 fun ne(other: PatternLike): PatternMapperFn = _ne(listOf(other).asStrudelDslArgs())
 
+/**
+ * Chains a strict-inequality test onto this [PatternMapperFn], replacing each value with `1` if not equal
+ * to [other] or `0` otherwise.
+ *
+ * ```KlangScript
+ * seq("5 8").apply(add(3).ne(11)).scale("c3:major").n()  // (5+3)=8!=11=1, (8+3)=11!=11=0
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.ne(other: PatternLike): PatternMapperFn = _ne(listOf(other).asStrudelDslArgs())
+
 // -- net() (Truthiness Not Equal) -------------------------------------------------------------------------------------
 
 internal val _net by dslPatternMapper { args, callInfo -> { p -> p._net(args, callInfo) } }
@@ -1262,6 +1521,7 @@ internal val StrudelPattern._net by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a net b }
 }
 internal val String._net by dslStringExtension { p, args, callInfo -> p._net(args, callInfo) }
+internal val PatternMapperFn._net by dslPatternMapperExtension { m, args, callInfo -> m.chain(_net(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1319,6 +1579,19 @@ fun String.net(other: PatternLike): StrudelPattern = this._net(listOf(other).asS
 @StrudelDsl
 fun net(other: PatternLike): PatternMapperFn = _net(listOf(other).asStrudelDslArgs())
 
+/**
+ * Chains a truthiness-inequality test onto this [PatternMapperFn], replacing each value with `1` if it has
+ * different truthiness than [other] or `0` otherwise.
+ *
+ * ```KlangScript
+ * seq("0 5").apply(mul(3).net(0)).scale("c3:major").n()  // (0*3)=0~!=0=0 (both falsy), (5*3)=15~!=0=1
+ * ```
+ *
+ * @param other The value to compare against. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.net(other: PatternLike): PatternMapperFn = _net(listOf(other).asStrudelDslArgs())
+
 // -- and() (Logical AND) ----------------------------------------------------------------------------------------------
 
 internal val _and by dslPatternMapper { args, callInfo -> { p -> p._and(args, callInfo) } }
@@ -1326,6 +1599,7 @@ internal val StrudelPattern._and by dslPatternExtension { source, args, _ ->
     applyArithmetic(source, args) { a, b -> a and b }
 }
 internal val String._and by dslStringExtension { p, args, callInfo -> p._and(args, callInfo) }
+internal val PatternMapperFn._and by dslPatternMapperExtension { m, args, callInfo -> m.chain(_and(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1383,6 +1657,18 @@ fun String.and(other: PatternLike): StrudelPattern = this._and(listOf(other).asS
 @StrudelDsl
 fun and(other: PatternLike): PatternMapperFn = _and(listOf(other).asStrudelDslArgs())
 
+/**
+ * Chains a logical AND onto this [PatternMapperFn]. Returns [other] when the value is truthy, or `0` when falsy.
+ *
+ * ```KlangScript
+ * seq("1 5").apply(sub(1).and(7)).scale("c3:major").n()  // (1-1)=0&&7=0, (5-1)=4&&7=7
+ * ```
+ *
+ * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.and(other: PatternLike): PatternMapperFn = _and(listOf(other).asStrudelDslArgs())
+
 // -- or() (Logical OR) ------------------------------------------------------------------------------------------------
 
 internal val _or by dslPatternMapper { args, callInfo -> { p -> p._or(args, callInfo) } }
@@ -1390,6 +1676,7 @@ internal val StrudelPattern._or by dslPatternExtension { p, args, _ ->
     applyArithmetic(p, args) { a, b -> a or b }
 }
 internal val String._or by dslStringExtension { p, args, callInfo -> p._or(args, callInfo) }
+internal val PatternMapperFn._or by dslPatternMapperExtension { m, args, callInfo -> m.chain(_or(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1447,6 +1734,18 @@ fun String.or(other: PatternLike): StrudelPattern = this._or(listOf(other).asStr
 @StrudelDsl
 fun or(other: PatternLike): PatternMapperFn = _or(listOf(other).asStrudelDslArgs())
 
+/**
+ * Chains a logical OR onto this [PatternMapperFn]. Returns the source value when truthy, or [other] when falsy.
+ *
+ * ```KlangScript
+ * seq("0 5").apply(mul(1).or(7)).scale("c3:major").n()  // (0*1)=0||7=7, (5*1)=5||7=5
+ * ```
+ *
+ * @param other The right-hand operand. May be a number, string mini-notation, or a [StrudelPattern].
+ */
+@StrudelDsl
+fun PatternMapperFn.or(other: PatternLike): PatternMapperFn = _or(listOf(other).asStrudelDslArgs())
+
 // -- round() ----------------------------------------------------------------------------------------------------------
 
 internal val _round by dslPatternMapper { _, callInfo -> { p -> p._round(emptyList(), callInfo) } }
@@ -1454,6 +1753,7 @@ internal val StrudelPattern._round by dslPatternExtension { p, _, _ ->
     applyUnaryOp(p) { v -> v.asRational?.round()?.asVoiceValue() ?: v }
 }
 internal val String._round by dslStringExtension { p, _, _ -> p._round() }
+internal val PatternMapperFn._round by dslPatternMapperExtension { m, _, _ -> m.chain(_round(emptyList())) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1505,6 +1805,16 @@ fun String.round(): StrudelPattern = this._round()
 @StrudelDsl
 fun round(): PatternMapperFn = _round(emptyList())
 
+/**
+ * Chains a rounding operation onto this [PatternMapperFn], rounding every numeric value to the nearest integer.
+ *
+ * ```KlangScript
+ * seq("2.1 3.7").apply(mul(2).round()).scale("c3:major").n()  // round(2.1*2)=round(4.2)=4, round(3.7*2)=round(7.4)=7
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.round(): PatternMapperFn = _round(emptyList())
+
 // -- floor() ----------------------------------------------------------------------------------------------------------
 
 internal val _floor by dslPatternMapper { _, callInfo -> { p -> p._floor(emptyList(), callInfo) } }
@@ -1512,6 +1822,7 @@ internal val StrudelPattern._floor by dslPatternExtension { p, _, _ ->
     applyUnaryOp(p) { v -> v.asRational?.floor()?.asVoiceValue() ?: v }
 }
 internal val String._floor by dslStringExtension { p, _, _ -> p._floor() }
+internal val PatternMapperFn._floor by dslPatternMapperExtension { m, _, _ -> m.chain(_floor(emptyList())) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1563,6 +1874,16 @@ fun String.floor(): StrudelPattern = this._floor()
 @StrudelDsl
 fun floor(): PatternMapperFn = _floor(emptyList())
 
+/**
+ * Chains a floor operation onto this [PatternMapperFn], flooring every numeric value to an integer.
+ *
+ * ```KlangScript
+ * seq("2.1 3.9").apply(mul(2).floor()).scale("c3:major").n()  // floor(2.1*2)=floor(4.2)=4, floor(3.9*2)=floor(7.8)=7
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.floor(): PatternMapperFn = _floor(emptyList())
+
 // -- ceil() -----------------------------------------------------------------------------------------------------------
 
 internal val _ceil by dslPatternMapper { _, callInfo -> { p -> p._ceil(emptyList(), callInfo) } }
@@ -1570,6 +1891,7 @@ internal val StrudelPattern._ceil by dslPatternExtension { p, _, _ ->
     applyUnaryOp(p) { v -> v.asRational?.ceil()?.asVoiceValue() ?: v }
 }
 internal val String._ceil by dslStringExtension { p, _, _ -> p._ceil() }
+internal val PatternMapperFn._ceil by dslPatternMapperExtension { m, _, _ -> m.chain(_ceil(emptyList())) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -1620,3 +1942,13 @@ fun String.ceil(): StrudelPattern = this._ceil()
  */
 @StrudelDsl
 fun ceil(): PatternMapperFn = _ceil(emptyList())
+
+/**
+ * Chains a ceiling operation onto this [PatternMapperFn], ceiling every numeric value to an integer.
+ *
+ * ```KlangScript
+ * seq("2.1 3.9").apply(mul(2).ceil()).scale("c3:major").n()  // ceil(2.1*2)=ceil(4.2)=5, ceil(3.9*2)=ceil(7.8)=8
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.ceil(): PatternMapperFn = _ceil(emptyList())

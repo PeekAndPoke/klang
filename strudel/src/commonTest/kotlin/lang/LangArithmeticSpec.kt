@@ -18,6 +18,28 @@ class LangArithmeticSpec : StringSpec({
 
     // Combining multiple arithmatic operations
 
+    "apply(add().mul())" {
+        val p = seq("1 2").apply(add("1").mul("3"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 6  // (1+1)*3=6
+            events[1].data.value?.asInt shouldBe 9  // (2+1)*3=9
+        }
+    }
+
+    "script apply(add().mul())" {
+        val p = StrudelPattern.compile("""seq("1 2").apply(add("1").mul("3"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 6  // (1+1)*3=6
+            events[1].data.value?.asInt shouldBe 9  // (2+1)*3=9
+        }
+    }
+
     "apply(mul().add())" {
         val p = seq("1 2").apply(mul("3").add("4"))
         val events = p.queryArc(0.0, 1.0)
@@ -269,6 +291,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 12
     }
 
+    "apply(mul().div())" {
+        val p = seq("10 20").apply(mul("2").div("4"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 5   // (10*2)/4=5
+            events[1].data.value?.asInt shouldBe 10  // (20*2)/4=10
+        }
+    }
+
+    "script apply(mul().div())" {
+        val p = StrudelPattern.compile("""seq("10 20").apply(mul("2").div("4"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 5   // (10*2)/4=5
+            events[1].data.value?.asInt shouldBe 10  // (20*2)/4=10
+        }
+    }
+
     // ========== div() tests ==========
 
     "div() divides numeric values" {
@@ -334,6 +378,28 @@ class LangArithmeticSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 5
         events[1].data.value?.asInt shouldBe 10
+    }
+
+    "apply(add().mod())" {
+        val p = seq("10 11").apply(add("1").mod("4"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 3  // (10+1)%4=3
+            events[1].data.value?.asInt shouldBe 0  // (11+1)%4=0
+        }
+    }
+
+    "script apply(add().mod())" {
+        val p = StrudelPattern.compile("""seq("10 11").apply(add("1").mod("4"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 3  // (10+1)%4=3
+            events[1].data.value?.asInt shouldBe 0  // (11+1)%4=0
+        }
     }
 
     // ========== mod() tests ==========
@@ -452,6 +518,28 @@ class LangArithmeticSpec : StringSpec({
         doubleValue shouldBe (3.333333 plusOrMinus 1e-5)
     }
 
+    "apply(add().pow())" {
+        val p = seq("2 3").apply(add("1").pow("2"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 9   // (2+1)^2=9
+            events[1].data.value?.asInt shouldBe 16  // (3+1)^2=16
+        }
+    }
+
+    "script apply(add().pow())" {
+        val p = StrudelPattern.compile("""seq("2 3").apply(add("1").pow("2"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 9   // (2+1)^2=9
+            events[1].data.value?.asInt shouldBe 16  // (3+1)^2=16
+        }
+    }
+
     // ========== pow() tests ==========
 
     "pow() raises values to power" {
@@ -505,6 +593,28 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
+    "apply(add().band())" {
+        val p = seq("12 15").apply(add("3").band("10"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 10  // (12+3)=15 & 10=10
+            events[1].data.value?.asInt shouldBe 2   // (15+3)=18 & 10=2
+        }
+    }
+
+    "script apply(add().band())" {
+        val p = StrudelPattern.compile("""seq("12 15").apply(add("3").band("10"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 10  // (12+3)=15 & 10=10
+            events[1].data.value?.asInt shouldBe 2   // (15+3)=18 & 10=2
+        }
+    }
+
     // ========== Bitwise operations tests ==========
 
     "band() performs bitwise AND" {
@@ -516,6 +626,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 10 // 15 & 10 = 10
     }
 
+    "apply(add().bor())" {
+        val p = seq("8 4").apply(add("1").bor("2"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 11  // (8+1)=9 | 2=11
+            events[1].data.value?.asInt shouldBe 7   // (4+1)=5 | 2=7
+        }
+    }
+
+    "script apply(add().bor())" {
+        val p = StrudelPattern.compile("""seq("8 4").apply(add("1").bor("2"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 11  // (8+1)=9 | 2=11
+            events[1].data.value?.asInt shouldBe 7   // (4+1)=5 | 2=7
+        }
+    }
+
     "bor() performs bitwise OR" {
         val p = seq("8 4").bor("2")
         val events = p.queryArc(0.0, 1.0)
@@ -523,6 +655,28 @@ class LangArithmeticSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 10 // 8 | 2 = 10
         events[1].data.value?.asInt shouldBe 6  // 4 | 2 = 6
+    }
+
+    "apply(add().bxor())" {
+        val p = seq("12 10").apply(add("2").bxor("6"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 8   // (12+2)=14 ^ 6=8
+            events[1].data.value?.asInt shouldBe 10  // (10+2)=12 ^ 6=10
+        }
+    }
+
+    "script apply(add().bxor())" {
+        val p = StrudelPattern.compile("""seq("12 10").apply(add("2").bxor("6"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 8   // (12+2)=14 ^ 6=8
+            events[1].data.value?.asInt shouldBe 10  // (10+2)=12 ^ 6=10
+        }
     }
 
     "bxor() performs bitwise XOR" {
@@ -534,6 +688,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 12 // 10 ^ 6 = 12
     }
 
+    "apply(add().blshift())" {
+        val p = seq("1 2").apply(add("1").blshift("2"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 8   // (1+1)=2 << 2=8
+            events[1].data.value?.asInt shouldBe 12  // (2+1)=3 << 2=12
+        }
+    }
+
+    "script apply(add().blshift())" {
+        val p = StrudelPattern.compile("""seq("1 2").apply(add("1").blshift("2"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 8   // (1+1)=2 << 2=8
+            events[1].data.value?.asInt shouldBe 12  // (2+1)=3 << 2=12
+        }
+    }
+
     "blshift() performs bitwise left shift" {
         val p = seq("1 2").blshift("2")
         val events = p.queryArc(0.0, 1.0)
@@ -543,6 +719,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 8 // 2 << 2 = 8
     }
 
+    "apply(mul().brshift())" {
+        val p = seq("8 16").apply(mul("2").brshift("3"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 2  // (8*2)=16 >> 3=2
+            events[1].data.value?.asInt shouldBe 4  // (16*2)=32 >> 3=4
+        }
+    }
+
+    "script apply(mul().brshift())" {
+        val p = StrudelPattern.compile("""seq("8 16").apply(mul("2").brshift("3"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 2  // (8*2)=16 >> 3=2
+            events[1].data.value?.asInt shouldBe 4  // (16*2)=32 >> 3=4
+        }
+    }
+
     "brshift() performs bitwise right shift" {
         val p = seq("8 12").brshift("2")
         val events = p.queryArc(0.0, 1.0)
@@ -550,6 +748,28 @@ class LangArithmeticSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 2 // 8 >> 2 = 2
         events[1].data.value?.asInt shouldBe 3 // 12 >> 2 = 3
+    }
+
+    "apply(mul().log2())" {
+        val p = seq("2 4").apply(mul("4").log2())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asDouble shouldBe (3.0 plusOrMinus 1e-5)  // log2(2*4)=log2(8)=3
+            events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus 1e-5)  // log2(4*4)=log2(16)=4
+        }
+    }
+
+    "script apply(mul().log2())" {
+        val p = StrudelPattern.compile("""seq("2 4").apply(mul("4").log2())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asDouble shouldBe (3.0 plusOrMinus 1e-5)  // log2(2*4)=log2(8)=3
+            events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus 1e-5)  // log2(4*4)=log2(16)=4
+        }
     }
 
     // ========== log2() tests ==========
@@ -563,6 +783,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus 1e-5) // log2(16) = 4
     }
 
+    "apply(add().lt())" {
+        val p = seq("5 10").apply(add("3").lt("9"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 1  // (5+3)=8 < 9=true
+            events[1].data.value?.asInt shouldBe 0  // (10+3)=13 < 9=false
+        }
+    }
+
+    "script apply(add().lt())" {
+        val p = StrudelPattern.compile("""seq("5 10").apply(add("3").lt("9"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 1  // (5+3)=8 < 9=true
+            events[1].data.value?.asInt shouldBe 0  // (10+3)=13 < 9=false
+        }
+    }
+
     // ========== Comparison operations tests ==========
 
     "lt() performs less than comparison" {
@@ -574,6 +816,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 0 // 10 < 8 = false (0)
     }
 
+    "apply(add().gt())" {
+        val p = seq("5 10").apply(add("3").gt("9"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (5+3)=8 > 9=false
+            events[1].data.value?.asInt shouldBe 1  // (10+3)=13 > 9=true
+        }
+    }
+
+    "script apply(add().gt())" {
+        val p = StrudelPattern.compile("""seq("5 10").apply(add("3").gt("9"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (5+3)=8 > 9=false
+            events[1].data.value?.asInt shouldBe 1  // (10+3)=13 > 9=true
+        }
+    }
+
     "gt() performs greater than comparison" {
         val p = seq("5 10").gt("8")
         val events = p.queryArc(0.0, 1.0)
@@ -581,6 +845,28 @@ class LangArithmeticSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 0 // 5 > 8 = false (0)
         events[1].data.value?.asInt shouldBe 1 // 10 > 8 = true (1)
+    }
+
+    "apply(add().lte())" {
+        val p = seq("5 10").apply(add("3").lte("11"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 1  // (5+3)=8 <= 11=true
+            events[1].data.value?.asInt shouldBe 0  // (10+3)=13 <= 11=false
+        }
+    }
+
+    "script apply(add().lte())" {
+        val p = StrudelPattern.compile("""seq("5 10").apply(add("3").lte("11"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 1  // (5+3)=8 <= 11=true
+            events[1].data.value?.asInt shouldBe 0  // (10+3)=13 <= 11=false
+        }
     }
 
     "lte() performs less than or equal comparison" {
@@ -593,6 +879,28 @@ class LangArithmeticSpec : StringSpec({
         events[2].data.value?.asInt shouldBe 0 // 10 <= 8 = false
     }
 
+    "apply(add().gte())" {
+        val p = seq("5 10").apply(add("3").gte("11"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (5+3)=8 >= 11=false
+            events[1].data.value?.asInt shouldBe 1  // (10+3)=13 >= 11=true
+        }
+    }
+
+    "script apply(add().gte())" {
+        val p = StrudelPattern.compile("""seq("5 10").apply(add("3").gte("11"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (5+3)=8 >= 11=false
+            events[1].data.value?.asInt shouldBe 1  // (10+3)=13 >= 11=true
+        }
+    }
+
     "gte() performs greater than or equal comparison" {
         val p = seq("5 8 10").gte("8")
         val events = p.queryArc(0.0, 1.0)
@@ -601,6 +909,28 @@ class LangArithmeticSpec : StringSpec({
         events[0].data.value?.asInt shouldBe 0 // 5 >= 8 = false
         events[1].data.value?.asInt shouldBe 1 // 8 >= 8 = true
         events[2].data.value?.asInt shouldBe 1 // 10 >= 8 = true
+    }
+
+    "apply(add().eq())" {
+        val p = seq("5 8").apply(add("3").eq("11"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (5+3)=8 == 11=false
+            events[1].data.value?.asInt shouldBe 1  // (8+3)=11 == 11=true
+        }
+    }
+
+    "script apply(add().eq())" {
+        val p = StrudelPattern.compile("""seq("5 8").apply(add("3").eq("11"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (5+3)=8 == 11=false
+            events[1].data.value?.asInt shouldBe 1  // (8+3)=11 == 11=true
+        }
     }
 
     // ========== Equality operations tests ==========
@@ -614,6 +944,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 1 // 8 == 8 = true
     }
 
+    "apply(add().ne())" {
+        val p = seq("5 8").apply(add("3").ne("11"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 1  // (5+3)=8 != 11=true
+            events[1].data.value?.asInt shouldBe 0  // (8+3)=11 != 11=false
+        }
+    }
+
+    "script apply(add().ne())" {
+        val p = StrudelPattern.compile("""seq("5 8").apply(add("3").ne("11"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 1  // (5+3)=8 != 11=true
+            events[1].data.value?.asInt shouldBe 0  // (8+3)=11 != 11=false
+        }
+    }
+
     "ne() performs inequality comparison" {
         val p = seq("5 8").ne("8")
         val events = p.queryArc(0.0, 1.0)
@@ -621,6 +973,28 @@ class LangArithmeticSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 1 // 5 != 8 = true
         events[1].data.value?.asInt shouldBe 0 // 8 != 8 = false
+    }
+
+    "apply(mul().eqt())" {
+        val p = seq("0 5").apply(mul("3").eqt("0"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 1  // (0*3)=0 ~= 0 (both falsy)=true
+            events[1].data.value?.asInt shouldBe 0  // (5*3)=15 ~= 0 (truthy vs falsy)=false
+        }
+    }
+
+    "script apply(mul().eqt())" {
+        val p = StrudelPattern.compile("""seq("0 5").apply(mul("3").eqt("0"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 1  // (0*3)=0 ~= 0 (both falsy)=true
+            events[1].data.value?.asInt shouldBe 0  // (5*3)=15 ~= 0 (truthy vs falsy)=false
+        }
     }
 
     "eqt() performs truthiness equality" {
@@ -632,6 +1006,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 0 // 5 (truthy) == 0 (falsy) = false
     }
 
+    "apply(mul().net())" {
+        val p = seq("0 5").apply(mul("3").net("0"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (0*3)=0 ~!= 0 (both falsy)=false
+            events[1].data.value?.asInt shouldBe 1  // (5*3)=15 ~!= 0 (truthy vs falsy)=true
+        }
+    }
+
+    "script apply(mul().net())" {
+        val p = StrudelPattern.compile("""seq("0 5").apply(mul("3").net("0"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (0*3)=0 ~!= 0 (both falsy)=false
+            events[1].data.value?.asInt shouldBe 1  // (5*3)=15 ~!= 0 (truthy vs falsy)=true
+        }
+    }
+
     "net() performs truthiness inequality" {
         val p = seq("0 5").net("0")
         val events = p.queryArc(0.0, 1.0)
@@ -639,6 +1035,28 @@ class LangArithmeticSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 0 // 0 (falsy) != 0 (falsy) = false
         events[1].data.value?.asInt shouldBe 1 // 5 (truthy) != 0 (falsy) = true
+    }
+
+    "apply(sub().and())" {
+        val p = seq("1 5").apply(sub("1").and("7"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (1-1)=0 && 7=0 (falsy)
+            events[1].data.value?.asInt shouldBe 7  // (5-1)=4 && 7=7 (truthy)
+        }
+    }
+
+    "script apply(sub().and())" {
+        val p = StrudelPattern.compile("""seq("1 5").apply(sub("1").and("7"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 0  // (1-1)=0 && 7=0 (falsy)
+            events[1].data.value?.asInt shouldBe 7  // (5-1)=4 && 7=7 (truthy)
+        }
     }
 
     // ========== Logical operations tests ==========
@@ -652,6 +1070,28 @@ class LangArithmeticSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 10 // 5 && 10 = 10 (truthy)
     }
 
+    "apply(mul().or())" {
+        val p = seq("0 5").apply(mul("1").or("7"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 7  // (0*1)=0 || 7=7
+            events[1].data.value?.asInt shouldBe 5  // (5*1)=5 || 7=5 (truthy)
+        }
+    }
+
+    "script apply(mul().or())" {
+        val p = StrudelPattern.compile("""seq("0 5").apply(mul("1").or("7"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 7  // (0*1)=0 || 7=7
+            events[1].data.value?.asInt shouldBe 5  // (5*1)=5 || 7=5 (truthy)
+        }
+    }
+
     "or() performs logical OR" {
         val p = seq("0 5").or("10")
         val events = p.queryArc(0.0, 1.0)
@@ -659,6 +1099,28 @@ class LangArithmeticSpec : StringSpec({
         events.size shouldBe 2
         events[0].data.value?.asInt shouldBe 10 // 0 || 10 = 10
         events[1].data.value?.asInt shouldBe 5  // 5 || 10 = 5
+    }
+
+    "apply(mul().round())" {
+        val p = seq("2.1 3.7").apply(mul("2").round())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 4  // round(2.1*2)=round(4.2)=4
+            events[1].data.value?.asInt shouldBe 7  // round(3.7*2)=round(7.4)=7
+        }
+    }
+
+    "script apply(mul().round())" {
+        val p = StrudelPattern.compile("""seq("2.1 3.7").apply(mul("2").round())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 4  // round(2.1*2)=round(4.2)=4
+            events[1].data.value?.asInt shouldBe 7  // round(3.7*2)=round(7.4)=7
+        }
     }
 
     // ========== Rounding operations tests ==========
@@ -708,6 +1170,28 @@ class LangArithmeticSpec : StringSpec({
         }
     }
 
+    "apply(mul().floor())" {
+        val p = seq("2.1 3.9").apply(mul("2").floor())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 4  // floor(2.1*2)=floor(4.2)=4
+            events[1].data.value?.asInt shouldBe 7  // floor(3.9*2)=floor(7.8)=7
+        }
+    }
+
+    "script apply(mul().floor())" {
+        val p = StrudelPattern.compile("""seq("2.1 3.9").apply(mul("2").floor())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 4  // floor(2.1*2)=floor(4.2)=4
+            events[1].data.value?.asInt shouldBe 7  // floor(3.9*2)=floor(7.8)=7
+        }
+    }
+
     "floor() rounds down to integer" {
         val p = seq("2.1 2.9 -2.1").floor()
         val events = p.queryArc(0.0, 1.0)
@@ -750,6 +1234,28 @@ class LangArithmeticSpec : StringSpec({
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 2  // floor(2.1) = 2
             events[1].data.value?.asInt shouldBe 2  // floor(2.9) = 2
+        }
+    }
+
+    "apply(mul().ceil())" {
+        val p = seq("2.1 3.9").apply(mul("2").ceil())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 5  // ceil(2.1*2)=ceil(4.2)=5
+            events[1].data.value?.asInt shouldBe 8  // ceil(3.9*2)=ceil(7.8)=8
+        }
+    }
+
+    "script apply(mul().ceil())" {
+        val p = StrudelPattern.compile("""seq("2.1 3.9").apply(mul("2").ceil())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asInt shouldBe 5  // ceil(2.1*2)=ceil(4.2)=5
+            events[1].data.value?.asInt shouldBe 8  // ceil(3.9*2)=ceil(7.8)=8
         }
     }
 
