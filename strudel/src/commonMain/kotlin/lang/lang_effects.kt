@@ -5,6 +5,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel._applyControlFromParams
 import io.peekandpoke.klang.strudel._liftNumericField
+import io.peekandpoke.klang.strudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
@@ -18,73 +19,159 @@ var strudelLangEffectsInit = false
 private val distortMutation = voiceModifier { copy(distort = it?.asDoubleOrNull()) }
 
 fun applyDistort(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, distortMutation)
+    return source._liftOrReinterpretNumericalField(args, distortMutation)
 }
 
-internal val _distort by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(distortMutation) }
+internal val _distort by dslPatternMapper { args, callInfo -> { p -> p._distort(args, callInfo) } }
 internal val StrudelPattern._distort by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistort(p, args) }
 internal val String._distort by dslStringExtension { p, args, callInfo -> p._distort(args, callInfo) }
 
-internal val _dist by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(distortMutation) }
+internal val _dist by dslPatternMapper { args, callInfo -> { p -> p._dist(args, callInfo) } }
 internal val StrudelPattern._dist by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistort(p, args) }
 internal val String._dist by dslStringExtension { p, args, callInfo -> p._dist(args, callInfo) }
 
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Applies waveshaper distortion to the pattern.
+ * Applies waveshaper distortion to this pattern.
  *
  * Higher values produce more harmonic saturation and clipping. Works well on synth
  * bass lines and leads; combine with `lpf` to tame harsh high frequencies.
+ *
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
+ *
+ * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ *   Omit to reinterpret the pattern's values as distortion.
+ * @return A new pattern with distortion applied.
  *
  * ```KlangScript
  * note("c2 eb2 g2").s("sawtooth").distort(0.5)   // moderate distortion
  * ```
  *
  * ```KlangScript
- * note("c3*4").distort("<0 0.3 0.6 1.0>")        // escalating distortion
+ * note("c3*4").distort("<0 0.3 0.6 1.0>")        // escalating distortion each beat
  * ```
  *
+ * ```KlangScript
+ * seq("0 0.5 1.0").distort()                     // reinterpret values as distortion
+ * ```
  * @alias dist
  * @category effects
  * @tags distort, dist, distortion, waveshaper, overdrive
  */
 @StrudelDsl
-fun distort(amount: PatternLike): StrudelPattern = _distort(listOf(amount).asStrudelDslArgs())
-
-/** Applies waveshaper distortion to this pattern. */
-@StrudelDsl
-fun StrudelPattern.distort(amount: PatternLike): StrudelPattern = this._distort(listOf(amount).asStrudelDslArgs())
-
-/** Parses this string as a pattern and applies waveshaper distortion. */
-@StrudelDsl
-fun String.distort(amount: PatternLike): StrudelPattern = this._distort(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.distort(amount: PatternLike? = null): StrudelPattern =
+    this._distort(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Alias for [distort]. Applies waveshaper distortion to the pattern.
+ * Parses this string as a pattern, then applies waveshaper distortion.
+ *
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
+ *
+ * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ *   Omit to reinterpret the pattern's values as distortion.
+ * @return A new pattern with distortion applied.
+ *
+ * ```KlangScript
+ * "c2 eb2 g2".distort(0.5).note().s("sawtooth")  // moderate distortion on bass notes
+ * ```
+ */
+@StrudelDsl
+fun String.distort(amount: PatternLike? = null): StrudelPattern =
+    this._distort(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapper] that applies waveshaper distortion.
+ *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
+ *
+ * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ *   Omit to reinterpret the pattern's values as distortion.
+ * @return A [PatternMapper] that applies waveshaper distortion.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").apply(distort(0.5))  // moderate distortion
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, distort(0.8))  // heavy distortion on every 4th cycle
+ * ```
+ * @alias dist
+ * @category effects
+ * @tags distort, dist, distortion, waveshaper, overdrive
+ */
+@StrudelDsl
+fun distort(amount: PatternLike? = null): PatternMapper = _distort(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Alias for [distort]. Applies waveshaper distortion to this pattern.
+ *
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
+ *
+ * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ *   Omit to reinterpret the pattern's values as distortion.
+ * @return A new pattern with distortion applied.
  *
  * ```KlangScript
  * note("c2 eb2 g2").s("sawtooth").dist(0.5)   // moderate distortion
  * ```
  *
  * ```KlangScript
- * note("c3*4").dist("<0 0.3 0.6 1.0>")        // escalating distortion
+ * note("c3*4").dist("<0 0.3 0.6 1.0>")        // escalating distortion each beat
  * ```
  *
+ * ```KlangScript
+ * seq("0 0.5 1.0").dist()                     // reinterpret values as distortion
+ * ```
  * @alias distort
  * @category effects
  * @tags dist, distort, distortion, waveshaper, overdrive
  */
 @StrudelDsl
-fun dist(amount: PatternLike): StrudelPattern = _dist(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.dist(amount: PatternLike? = null): StrudelPattern =
+    this._dist(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Alias for [distort]. Applies waveshaper distortion to this pattern. */
+/**
+ * Alias for [distort]. Parses this string as a pattern, then applies waveshaper distortion.
+ *
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
+ *
+ * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ *   Omit to reinterpret the pattern's values as distortion.
+ * @return A new pattern with distortion applied.
+ *
+ * ```KlangScript
+ * "c2 eb2 g2".dist(0.5).note().s("sawtooth")  // moderate distortion on bass notes
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.dist(amount: PatternLike): StrudelPattern = this._dist(listOf(amount).asStrudelDslArgs())
+fun String.dist(amount: PatternLike? = null): StrudelPattern =
+    this._dist(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Alias for [distort]. Parses this string as a pattern and applies waveshaper distortion. */
+/**
+ * Returns a [PatternMapper] that applies waveshaper distortion. Alias for [distort].
+ *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
+ *
+ * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ *   Omit to reinterpret the pattern's values as distortion.
+ * @return A [PatternMapper] that applies waveshaper distortion.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").apply(dist(0.5))  // moderate distortion
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, dist(0.8))  // heavy distortion on every 4th cycle
+ * ```
+ * @alias distort
+ * @category effects
+ * @tags dist, distort, distortion, waveshaper, overdrive
+ */
 @StrudelDsl
-fun String.dist(amount: PatternLike): StrudelPattern = this._dist(listOf(amount).asStrudelDslArgs())
+fun dist(amount: PatternLike? = null): PatternMapper = _dist(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- crush() ----------------------------------------------------------------------------------------------------------
 

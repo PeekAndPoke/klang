@@ -8,7 +8,7 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // distort
     "top-level distort() sets VoiceData.distort correctly" {
-        val p = distort("0.0 2.5")
+        val p = note("a b").apply(distort("0.0 2.5"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.distort } shouldBe listOf(0.0, 2.5)
@@ -155,8 +155,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.orbit } shouldBe listOf(1, 3, 1, 3)
     }
 
-    "distort() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""distort("0 1")""")
+    "distort() works within compiled code as top-level PatternMapper" {
+        val p = StrudelPattern.compile("""note("a b").apply(distort("0 1"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
