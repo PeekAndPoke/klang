@@ -462,85 +462,60 @@ fun PatternMapperFn.timeLoop(duration: PatternLike): PatternMapperFn =
 
 // -- repeat() ---------------------------------------------------------------------------------------------------------
 
-fun applyRepeat(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyRepeat(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val times = args.firstOrNull()?.value?.asIntOrNull() ?: 1
     if (times <= 0) return silence
     if (times == 1) return pattern
-
-    // Create a list with the pattern repeated n times
     val patterns = List(times) { pattern }
-
-    // Concatenate them sequentially
     return applyCat(patterns)
 }
 
-internal val _repeat by dslPatternFunction { args, /* callInfo */ _ ->
-    if (args.isEmpty()) return@dslPatternFunction silence
-
-    // If called as function: repeat(3, note("a"))
-    val timesArg = args[0]
-    val patterns = args.drop(1).toListOfPatterns()
-
-    if (patterns.isEmpty()) return@dslPatternFunction silence
-
-    // Apply repeat to the first pattern (or stack of patterns if multiple provided?)
-    // Standard convention: repeat(n, pattern)
-    applyRepeat(patterns.first(), listOf(timesArg))
-}
-
-internal val StrudelPattern._repeat by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyRepeat(p, args)
-}
-
+internal val StrudelPattern._repeat by dslPatternExtension { p, args, _ -> applyRepeat(p, args) }
 internal val String._repeat by dslStringExtension { p, args, callInfo -> p._repeat(args, callInfo) }
+internal val _repeat by dslPatternMapper { args, callInfo -> { p -> p._repeat(args, callInfo) } }
+internal val PatternMapperFn._repeat by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(
+        _repeat(
+            args,
+            callInfo
+        )
+    )
+}
 
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Creates a pattern by repeating `pattern` `n` times sequentially.
+ * Repeats this pattern `times` times sequentially.
  *
- * The total duration is `n × original_duration`. Unlike [fast], which compresses events into
- * fewer cycles, each repetition occupies its own full cycle.
+ * The total duration becomes `times × original_duration`. Unlike [fast], which compresses events
+ * into fewer cycles, each repetition occupies its own full cycle. Useful for extending a short
+ * pattern to fill multiple bars before it loops.
  *
  * ```KlangScript
- * repeat(3, s("bd sd"))              // repeat a drum bar 3 times
+ * note("a b").repeat(2)              // plays "a b a b" spread over 2 cycles
  * ```
  *
  * ```KlangScript
- * repeat(4, note("c3 e3 g3"))        // repeat a chord arpeggio 4 times
+ * s("bd sd hh cp").repeat(4)         // loop a 4-beat bar four times before cycling
  * ```
  *
- * @param times   The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
- * @param pattern The pattern to repeat.
+ * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
  *
  * @category structural
  * @tags repeat, loop, duplicate, sequence, addon
  */
 @StrudelDsl
-fun repeat(times: PatternLike, pattern: PatternLike): StrudelPattern =
-    _repeat(listOf(times, pattern).asStrudelDslArgs())
-
-/**
- * Repeats this pattern `n` times sequentially.
- *
- * ```KlangScript
- * note("a b").repeat(2)              // plays "a b a b" over 2 cycles
- * ```
- *
- * ```KlangScript
- * s("bd sd hh cp").repeat(4)         // loop a 4-beat bar four times
- * ```
- *
- * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
- */
-@StrudelDsl
 fun StrudelPattern.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(times).asStrudelDslArgs())
 
 /**
- * Parses this string as a pattern and repeats it `n` times sequentially.
+ * Parses this string as a pattern and repeats it `times` times sequentially.
  *
  * ```KlangScript
- * "a b".repeat(3).note()             // plays "a b a b a b" over 3 cycles
+ * "a b".repeat(3).note()             // plays "a b a b a b" spread over 3 cycles
+ * ```
+ *
+ * ```KlangScript
+ * "bd sd".repeat(2).s()              // double-length drum bar
  * ```
  *
  * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
@@ -548,17 +523,49 @@ fun StrudelPattern.repeat(times: PatternLike): StrudelPattern = this._repeat(lis
 @StrudelDsl
 fun String.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(times).asStrudelDslArgs())
 
+/**
+ * Creates a [PatternMapperFn] that repeats the input pattern `times` times sequentially.
+ *
+ * ```KlangScript
+ * note("a b").apply(repeat(2))       // plays "a b a b" spread over 2 cycles
+ * ```
+ *
+ * ```KlangScript
+ * s("bd sd").apply(repeat(3))        // triple-length drum bar via mapper
+ * ```
+ *
+ * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
+ *
+ * @category structural
+ * @tags repeat, loop, duplicate, sequence, addon
+ */
+@StrudelDsl
+fun repeat(times: PatternLike): PatternMapperFn = _repeat(listOf(times).asStrudelDslArgs())
+
+/**
+ * Chains a repeat operation onto this [PatternMapperFn], repeating the result `times` times.
+ *
+ * ```KlangScript
+ * note("a b").apply(fast(2).repeat(2))   // fast doubles density, repeat duplicates over 2 cycles
+ * ```
+ *
+ * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
+ */
+@StrudelDsl
+fun PatternMapperFn.repeat(times: PatternLike): PatternMapperFn = _repeat(listOf(times).asStrudelDslArgs())
+
 // -- solo() -----------------------------------------------------------------------------------------------------------
 
-fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(1.0)) }
     val soloControl = effectiveArgs.first().toPattern()
     return SoloPattern(source = source, soloControl = soloControl)
 }
 
-internal val StrudelPattern._solo by dslPatternExtension { p, args, /* callInfo */ _ -> applySolo(p, args) }
-
+internal val StrudelPattern._solo by dslPatternExtension { p, args, _ -> applySolo(p, args) }
 internal val String._solo by dslStringExtension { p, args, callInfo -> p._solo(args, callInfo) }
+internal val _solo by dslPatternMapper { args, callInfo -> { p -> p._solo(args, callInfo) } }
+internal val PatternMapperFn._solo by dslPatternMapperExtension { m, args, callInfo -> m.chain(_solo(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -566,13 +573,12 @@ internal val String._solo by dslStringExtension { p, args, callInfo -> p._solo(a
  * Solos this pattern so all non-soloed patterns are muted during playback.
  *
  * When any pattern in the active set is soloed, all others are silenced.
- * Use the `enabled` overload to pass `0`/`false` to disable, or a control pattern for
- * dynamic toggling.
+ * Use the `enabled` overload to pass `0`/`false` to disable, or a control pattern for dynamic toggling.
  *
  * ```KlangScript
  * stack(
  *   s("bd*4").solo(),              // only the kick is heard
- *   note("c3 e3") // . solo()
+ *   note("c3 e3")                  // muted because another pattern is soloed
  * )
  * ```
  *
@@ -622,3 +628,54 @@ fun String.solo(): StrudelPattern = this._solo(emptyList())
  */
 @StrudelDsl
 fun String.solo(enabled: PatternLike): StrudelPattern = this._solo(listOf(enabled).asStrudelDslArgs())
+
+/**
+ * Creates a [PatternMapperFn] that solos the input pattern so all non-soloed patterns are muted.
+ *
+ * ```KlangScript
+ * s("bd*4").apply(solo())         // solo the kick via a mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").apply(timeLoop(2).solo())   // loop then solo
+ * ```
+ *
+ * @category structural
+ * @tags solo, mute, isolate, playback, addon
+ */
+@StrudelDsl
+fun solo(): PatternMapperFn = _solo(emptyList())
+
+/**
+ * Creates a [PatternMapperFn] that solos the input pattern with an explicit enabled flag.
+ *
+ * ```KlangScript
+ * s("hh*8").apply(solo("<1 0>"))  // toggle solo on/off every other cycle via a mapper
+ * ```
+ *
+ * @param enabled `1`/`true` to enable solo, `0`/`false` to disable. Accepts control patterns.
+ */
+@StrudelDsl
+fun solo(enabled: PatternLike): PatternMapperFn = _solo(listOf(enabled).asStrudelDslArgs())
+
+/**
+ * Chains a solo operation onto this [PatternMapperFn], soloing the result.
+ *
+ * ```KlangScript
+ * s("bd*4").apply(timeLoop(2).solo())   // loop first 2 cycles, then solo
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.solo(): PatternMapperFn = _solo(emptyList())
+
+/**
+ * Chains a solo operation onto this [PatternMapperFn], soloing the result with an explicit enabled flag.
+ *
+ * ```KlangScript
+ * s("hh*8").apply(timeLoop(1).solo("<1 0>"))   // loop then conditionally solo
+ * ```
+ *
+ * @param enabled `1`/`true` to enable solo, `0`/`false` to disable. Accepts control patterns.
+ */
+@StrudelDsl
+fun PatternMapperFn.solo(enabled: PatternLike): PatternMapperFn = _solo(listOf(enabled).asStrudelDslArgs())
