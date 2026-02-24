@@ -138,6 +138,28 @@ class LangWarmthSpec : StringSpec({
         events[0].data.warmth shouldBe null
     }
 
+    "apply(mul().warmth())" {
+        val p = seq("0.2 0.4").apply(mul("2").warmth())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.warmth shouldBe (0.4 plusOrMinus EPSILON)  // 0.2*2=0.4 -> warmth=0.4
+            events[1].data.warmth shouldBe (0.8 plusOrMinus EPSILON)  // 0.4*2=0.8 -> warmth=0.8
+        }
+    }
+
+    "script apply(mul().warmth())" {
+        val p = StrudelPattern.compile("""seq("0.2 0.4").apply(mul("2").warmth())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.warmth shouldBe (0.4 plusOrMinus EPSILON)  // 0.2*2=0.4 -> warmth=0.4
+            events[1].data.warmth shouldBe (0.8 plusOrMinus EPSILON)  // 0.4*2=0.8 -> warmth=0.8
+        }
+    }
+
     "warmth() can be applied to different oscillators" {
         val p = s("sine triangle square").warmth("0.3 0.5 0.7")
         val events = p.queryArc(0.0, 1.0)

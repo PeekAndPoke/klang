@@ -28,10 +28,16 @@ private fun applyWarmth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 internal val StrudelPattern._warmth by dslPatternExtension { p, args, /* callInfo */ _ -> applyWarmth(p, args) }
-
 internal val String._warmth by dslStringExtension { p, args, callInfo -> p._warmth(args, callInfo) }
-
 internal val _warmth by dslPatternMapper { args, callInfo -> { p -> p._warmth(args, callInfo) } }
+internal val PatternMapperFn._warmth by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(
+        _warmth(
+            args,
+            callInfo
+        )
+    )
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -81,4 +87,17 @@ fun String.warmth(amount: PatternLike? = null): StrudelPattern =
  */
 @StrudelDsl
 fun warmth(amount: PatternLike? = null): PatternMapperFn =
+    _warmth(listOfNotNull(amount).asStrudelDslArgs())
+
+/**
+ * Chains a warmth-set onto this [PatternMapperFn], applying oscillator warmth after the previous step.
+ *
+ * ```KlangScript
+ * seq("0.2 0.4").apply(mul(2).warmth())  // mul doubles values, warmth() reads them as warmth: 0.4, 0.8
+ * ```
+ *
+ * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
+ */
+@StrudelDsl
+fun PatternMapperFn.warmth(amount: PatternLike? = null): PatternMapperFn =
     _warmth(listOfNotNull(amount).asStrudelDslArgs())

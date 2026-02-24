@@ -1217,18 +1217,7 @@ fun transpose(amount: PatternLike, pattern: PatternLike): StrudelPattern =
 private val freqMutation = voiceModifier { copy(freqHz = it?.asDoubleOrNull()) }
 
 fun applyFreq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-
-    return if (args.isEmpty()) {
-        source.reinterpretVoice {
-            it.freqMutation(it.value)
-        }
-    } else {
-        source._applyControlFromParams(args, freqMutation) { src, ctrl ->
-            src.freqMutation(
-                ctrl.freqHz ?: ctrl.value
-            )
-        }
-    }
+    return source._liftOrReinterpretStringField(args, freqMutation)
 }
 
 internal val _freq by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(freqMutation) }

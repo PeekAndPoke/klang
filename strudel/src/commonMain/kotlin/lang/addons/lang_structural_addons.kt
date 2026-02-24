@@ -9,6 +9,7 @@ import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArg
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.pattern.MergePattern
 import io.peekandpoke.klang.strudel.lang.addons.pattern.SoloPattern
@@ -227,20 +228,89 @@ fun morse(text: PatternLike): StrudelPattern = _morse(listOf(text).asStrudelDslA
 
 // -- merge() ----------------------------------------------------------------------------------------------------------
 
-fun applyMerge(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyMerge(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val ctrl = args.toPattern()
     return MergePattern(source = pattern, control = ctrl)
 }
 
 internal val StrudelPattern._merge by dslPatternExtension { p, args, _ -> applyMerge(p, args) }
+internal val String._merge by dslStringExtension { p, args, callInfo -> p._merge(args, callInfo) }
+internal val _merge by dslPatternMapper { args, callInfo -> { p -> p._merge(args, callInfo) } }
+internal val PatternMapperFn._merge by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(
+        _merge(
+            args,
+            callInfo
+        )
+    )
+}
 
-internal val String._merge by dslStringExtension { p, args, callInfo -> p._timeLoop(args, callInfo) }
+// ===== USER-FACING OVERLOADS =====
 
-fun StrudelPattern.merge(vararg ctrl: PatternLike): StrudelPattern =
-    this._merge(ctrl.toList().asStrudelDslArgs())
+/**
+ * Overlays voice properties from a control pattern onto this pattern's events.
+ *
+ * For each source event the control is sampled at the event's onset time. Non-null fields
+ * from the control's [StrudelVoiceData] override the corresponding fields in the source event.
+ * Source fields that the control leaves `null` are kept unchanged.
+ *
+ * ```KlangScript
+ * s("hh hh hh hh").merge(note("c3 d3 e3 f3"))   // high-hat gains note values from the note pattern
+ * ```
+ *
+ * ```KlangScript
+ * s("hh!8").merge(freq("100 200 300 400"))   // high-hat gains frequencies
+ * ```
+ *
+ * ```KlangScript
+ * s("hh!8").merge("x!8".freq(sine.range(100, 1000)))   // high-hat gains frequencies
+ * ```
+ *
+ * ```KlangScript
+ * note("<[c3 d3] [e3 f3]>").merge(seq("<0.2 0.4 0.6 0.8>").warmth())   // notes gain warmth per event
+ * ```
+ *
+ * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
+ *
+ * @category structural
+ * @tags merge, overlay, combine, voice, data, addon
+ */
+@StrudelDsl
+fun StrudelPattern.merge(ctrl: PatternLike): StrudelPattern =
+    this._merge(ctrl.asStrudelDslArg())
 
-fun String.merge(vararg ctrl: PatternLike): StrudelPattern =
-    this._merge(ctrl.toList().asStrudelDslArgs())
+/**
+ * Parses this string as a pattern and overlays voice properties from the control pattern.
+ *
+ * ```KlangScript
+ * "1 2 3 4".merge("<0.2 0.4 0.6 0.8>".warmth()).scale("c3:major").n()   // value sequence gains warmth from control
+ * ```
+ *
+ * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
+ */
+@StrudelDsl
+fun String.merge(ctrl: PatternLike): StrudelPattern =
+    this._merge(ctrl.asStrudelDslArg())
+
+/**
+ * Creates a [PatternMapperFn] that overlays voice properties from the control pattern.
+ *
+ * ```KlangScript
+ * seq("1 2").apply(merge(seq("0.3 0.7").warmth())).scale("c3:major").n()   // apply warmth overlay as a mapper
+ * ```
+ *
+ * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
+ */
+@StrudelDsl
+fun merge(ctrl: PatternLike): PatternMapperFn = _merge(ctrl.asStrudelDslArg())
+
+/**
+ * Chains a voice-data overlay onto this [PatternMapperFn].
+ *
+ * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
+ */
+@StrudelDsl
+fun PatternMapperFn.merge(ctrl: PatternLike): PatternMapperFn = _merge(ctrl.asStrudelDslArg())
 
 // -- timeLoop() -------------------------------------------------------------------------------------------------------
 
