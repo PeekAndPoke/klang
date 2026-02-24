@@ -132,6 +132,29 @@ class LangWhenSpec : FunSpec({
         }
     }
 
+    test("apply(when().when()) chains two when mappers") {
+        // First when("1 0"): c3 (truthy at t=0) -> e3; d3 (falsy at t=0.5) unchanged
+        // Second when("1 0"): e3 (truthy at t=0) -> f3; d3 (falsy at t=0.5) unchanged
+        val p = note("c3 d3").apply(
+            `when`("1 0") { it.note("e3") }
+                .`when`("1 0") { it.note("f3") }
+        )
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        events.size shouldBe 2
+        events[0].data.note shouldBeEqualIgnoringCase "f3"
+        events[1].data.note shouldBeEqualIgnoringCase "d3"
+    }
+
+    test("script apply(when()) works in compiled code") {
+        val p = StrudelPattern.compile("""note("c3 d3").apply(when("1 0", x => x.note("e3")))""")!!
+        val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
+
+        events.size shouldBe 2
+        events[0].data.note shouldBeEqualIgnoringCase "e3"
+        events[1].data.note shouldBeEqualIgnoringCase "d3"
+    }
+
     test("when() with cycling binary control [1,0,0,0].iterBack(4) over 12 cycles") {
         val source = seq("0 1 2 3").repeatCycles(4)
         val binaryControl = seq("1 0 0 0").iterBack(4)

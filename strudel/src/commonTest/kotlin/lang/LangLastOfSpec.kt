@@ -83,4 +83,25 @@ class LangLastOfSpec : StringSpec({
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "b"
     }
+
+    "apply(lastOf().lastOf()) chains two lastOf mappers" {
+        // lastOf(2): cycle 0 -> "a" (original), cycle 1 -> "b" (transform)
+        // lastOf(2) chained: on cycle 1, where inner gives "b", outer lastOf fires -> "c"
+        val p = note("a").apply(
+            lastOf(2) { it.note("b") }
+                .lastOf(2) { it.note("c") }
+        )
+
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "c"
+        p.queryArc(2.0, 3.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(3.0, 4.0)[0].data.note shouldBeEqualIgnoringCase "c"
+    }
+
+    "script apply(lastOf()) works in compiled code" {
+        val p = StrudelPattern.compile("""note("a").apply(lastOf(2, x => x.note("b")))""")!!
+
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "b"
+    }
 })

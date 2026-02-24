@@ -115,4 +115,43 @@ class LangFirstOfSpec : StringSpec({
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "B"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "A"
     }
+
+    "apply(firstOf().firstOf()) chains two firstOf mappers" {
+        // firstOf(2): cycle 0 -> "b", cycle 1 -> "a"
+        // firstOf(2) chained: cycle 0 -> "c" (second transform fires on cycle 0), cycle 1 -> "a"
+        val p = note("a").apply(
+            firstOf(2) { it.note("b") }
+                .firstOf(2) { it.note("c") }
+        )
+
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "c"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
+        p.queryArc(2.0, 3.0)[0].data.note shouldBeEqualIgnoringCase "c"
+        p.queryArc(3.0, 4.0)[0].data.note shouldBeEqualIgnoringCase "a"
+    }
+
+    "script apply(firstOf()) works in compiled code" {
+        val p = StrudelPattern.compile("""note("a").apply(firstOf(2, x => x.note("b")))""")!!
+
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
+    }
+
+    "apply(every().every()) chains two every mappers" {
+        // every is an alias for firstOf: cycle 0 -> "c" (both fire), cycle 1 -> "a"
+        val p = note("a").apply(
+            every(2) { it.note("b") }
+                .every(2) { it.note("c") }
+        )
+
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "c"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
+    }
+
+    "script apply(every()) works in compiled code" {
+        val p = StrudelPattern.compile("""note("a").apply(every(2, x => x.note("b")))""")!!
+
+        p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
+        p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
+    }
 })

@@ -19,7 +19,7 @@ var strudelLangConditionalInit = false
 
 // -- firstOf() --------------------------------------------------------------------------------------------------------
 
-fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     val transform = args.getOrNull(1).toPatternMapper() ?: return source
 
     return source._innerJoin(args.take(1)) { src, nValue ->
@@ -38,6 +38,14 @@ fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
 internal val _firstOf by dslPatternMapper { args, callInfo -> { p -> p._firstOf(args, callInfo) } }
 internal val StrudelPattern._firstOf by dslPatternExtension { source, args, _ -> applyFirstOf(source, args) }
 internal val String._firstOf by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
+internal val PatternMapperFn._firstOf by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(
+        _firstOf(
+            args,
+            callInfo
+        )
+    )
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -105,11 +113,28 @@ fun String.firstOf(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
 fun firstOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
     _firstOf(listOf(n, transform).asStrudelDslArgs())
 
+/**
+ * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the first of every [n] cycles.
+ *
+ * ```KlangScript
+ * note("a").apply(lastOf(3, x => x.note("b")).firstOf(2, x => x.note("c")))
+ * ```
+ *
+ * @param n How many cycles make one period. The transform fires on the first of these.
+ * @param transform The function to apply on the first cycle of each period.
+ */
+@StrudelDsl
+fun PatternMapperFn.firstOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
+    _firstOf(listOf(n, transform).asStrudelDslArgs())
+
 // -- every() ----------------------------------------------------------------------------------------------------------
 
 internal val _every by dslPatternMapper { args, callInfo -> _firstOf(args, callInfo) }
 internal val StrudelPattern._every by dslPatternExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 internal val String._every by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
+internal val PatternMapperFn._every by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_every(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -174,6 +199,21 @@ fun String.every(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
 fun every(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
     _every(listOf(n, transform).asStrudelDslArgs())
 
+/**
+ * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the first of every [n] cycles.
+ *
+ * ```KlangScript
+ * note("c3 d3").apply(lastOf(4, x => x.rev()).every(2, x => x.fast(2)))  // alternate two transforms
+ * ```
+ *
+ * @param n How many cycles make one period. The transform fires on the first of these.
+ * @param transform The function to apply on the first cycle of each period.
+ * @alias firstOf
+ */
+@StrudelDsl
+fun PatternMapperFn.every(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
+    _every(listOf(n, transform).asStrudelDslArgs())
+
 // -- lastOf() ---------------------------------------------------------------------------------------------------------
 
 private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
@@ -196,6 +236,14 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 internal val _lastOf by dslPatternMapper { args, callInfo -> { p -> p._lastOf(args, callInfo) } }
 internal val StrudelPattern._lastOf by dslPatternExtension { source, args, _ -> applyLastOf(source, args) }
 internal val String._lastOf by dslStringExtension { source, args, callInfo -> source._lastOf(args, callInfo) }
+internal val PatternMapperFn._lastOf by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(
+        _lastOf(
+            args,
+            callInfo
+        )
+    )
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -261,6 +309,20 @@ fun String.lastOf(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
 fun lastOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
     _lastOf(listOf(n, transform).asStrudelDslArgs())
 
+/**
+ * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the last of every [n] cycles.
+ *
+ * ```KlangScript
+ * note("c3 d3").apply(firstOf(4, x => x.rev()).lastOf(2, x => x.fast(2)))  // alternate two transforms
+ * ```
+ *
+ * @param n How many cycles make one period. The transform fires on the last of these.
+ * @param transform The function to apply on the last cycle of each period.
+ */
+@StrudelDsl
+fun PatternMapperFn.lastOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
+    _lastOf(listOf(n, transform).asStrudelDslArgs())
+
 // -- when() -----------------------------------------------------------------------------------------------------------
 
 internal val _when by dslPatternMapper { args, callInfo -> { p -> p._when(args, callInfo) } }
@@ -294,6 +356,7 @@ internal val StrudelPattern._when by dslPatternExtension { p, args, _ ->
 }
 
 internal val String._when by dslStringExtension { p, args, callInfo -> p._when(args, callInfo) }
+internal val PatternMapperFn._when by dslPatternMapperExtension { m, args, callInfo -> m.chain(_when(args, callInfo)) }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -363,4 +426,18 @@ fun String.`when`(condition: PatternLike, transform: PatternMapperFn): StrudelPa
  */
 @StrudelDsl
 fun `when`(condition: PatternLike, transform: PatternMapperFn): PatternMapperFn =
+    _when(listOf(condition, transform).asStrudelDslArgs())
+
+/**
+ * Chains a conditional transform onto this [PatternMapperFn], applying [transform] whenever [condition] is truthy.
+ *
+ * ```KlangScript
+ * note("c3 d3").apply(firstOf(4, x => x.rev()).when("1 0", x => x.add(12)))
+ * ```
+ *
+ * @param condition A pattern whose values determine when to apply [transform].
+ * @param transform The function to apply when [condition] is truthy.
+ */
+@StrudelDsl
+fun PatternMapperFn.`when`(condition: PatternLike, transform: PatternMapperFn): PatternMapperFn =
     _when(listOf(condition, transform).asStrudelDslArgs())
