@@ -1,11 +1,13 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.lang.apply
+import io.peekandpoke.klang.strudel.lang.mul
 import io.peekandpoke.klang.strudel.lang.seq
 
 class LangNotSpec : StringSpec({
@@ -48,6 +50,28 @@ class LangNotSpec : StringSpec({
         events[5].data.isTruthy() shouldBe true
         events[6].data.isTruthy() shouldBe false
         events[7].data.isTruthy() shouldBe true
+    }
+
+    "apply(mul().not())" {
+        val p = seq("1 0").apply(mul("1").not())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.isTruthy() shouldBe false  // not(1*1)=not(1)=false
+            events[1].data.isTruthy() shouldBe true   // not(0*1)=not(0)=true
+        }
+    }
+
+    "script apply(mul().not())" {
+        val p = StrudelPattern.compile("""seq("1 0").apply(mul("1").not())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.isTruthy() shouldBe false  // not(1*1)=not(1)=false
+            events[1].data.isTruthy() shouldBe true   // not(0*1)=not(0)=true
+        }
     }
 
     "not() as string extension" {

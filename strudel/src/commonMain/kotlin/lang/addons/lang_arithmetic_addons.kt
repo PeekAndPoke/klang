@@ -28,6 +28,7 @@ internal val StrudelPattern._flipSign by dslPatternExtension { pattern, _, _ -> 
 internal val String._flipSign by dslStringExtension { pattern, _, _ -> applyFlipSign(pattern) }
 
 internal val _flipSign: PatternMapperFn by dslObject { { p -> p._flipSign() } }
+internal val PatternMapperFn._flipSign by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._flipSign() } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -71,6 +72,16 @@ fun String.flipSign(): StrudelPattern = this._flipSign(emptyList())
 @StrudelDsl
 val flipSign: PatternMapperFn get() = _flipSign
 
+/**
+ * Chains a sign-flip onto this [PatternMapperFn], negating every numeric value in the result.
+ *
+ * ```KlangScript
+ * seq("1 -2").apply(add(1).flipSign())  // flipSign(1+1)=-2, flipSign(-2+1)=1
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.flipSign(): PatternMapperFn = this._flipSign()
+
 // -- oneMinus ---------------------------------------------------------------------------------------------------------
 
 private fun applyOneMinusValue(pattern: StrudelPattern): StrudelPattern {
@@ -87,6 +98,7 @@ internal val StrudelPattern._oneMinusValue by dslPatternExtension { pattern, _, 
 internal val String._oneMinusValue by dslStringExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
 
 internal val _oneMinusValue: PatternMapperFn by dslObject { { p -> p._oneMinusValue() } }
+internal val PatternMapperFn._oneMinusValue by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._oneMinusValue() } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -118,6 +130,16 @@ fun String.oneMinusValue(): StrudelPattern = this._oneMinusValue(emptyList())
 @StrudelDsl
 val oneMinusValue: PatternMapperFn get() = _oneMinusValue
 
+/**
+ * Chains a `1 - value` operation onto this [PatternMapperFn], inverting every value within `[0, 1]`.
+ *
+ * ```KlangScript
+ * seq("0.2 0.8").apply(mul(2).oneMinusValue())  // 1-(0.2*2)=0.6, 1-(0.8*2)=-0.6
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.oneMinusValue(): PatternMapperFn = this._oneMinusValue()
+
 // -- not --------------------------------------------------------------------------------------------------------------
 
 private fun applyNot(pattern: StrudelPattern): StrudelPattern {
@@ -134,6 +156,7 @@ internal val StrudelPattern._not by dslPatternExtension { pattern, _, _ -> apply
 internal val String._not by dslStringExtension { pattern, _, _ -> applyNot(pattern) }
 
 internal val _not: PatternMapperFn by dslObject { { p -> p._not() } }
+internal val PatternMapperFn._not by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._not() } }
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -172,3 +195,76 @@ fun String.not(): StrudelPattern = this._not(emptyList())
  */
 @StrudelDsl
 val not: PatternMapperFn get() = _not
+
+/**
+ * Chains a logical NOT onto this [PatternMapperFn], inverting every boolean value in the result.
+ *
+ * ```KlangScript
+ * seq("1 0").apply(mul(1).not())  // not(1*1)=false, not(0*1)=true
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.not(): PatternMapperFn = this._not()
+
+// -- abs --------------------------------------------------------------------------------------------------------------
+
+private fun applyAbs(pattern: StrudelPattern): StrudelPattern {
+    return applyUnaryOp(pattern) { v -> v.asRational?.abs()?.asVoiceValue() ?: v }
+}
+
+internal val StrudelPattern._abs by dslPatternExtension { pattern, _, _ -> applyAbs(pattern) }
+internal val String._abs by dslStringExtension { pattern, _, _ -> applyAbs(pattern) }
+internal val _abs: PatternMapperFn by dslObject { { p -> p._abs() } }
+internal val PatternMapperFn._abs by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._abs() } }
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Returns the absolute value of each event's numeric data.
+ *
+ * Negative values become positive; positive values and zero are unchanged.
+ * Useful for ensuring non-negative modulation signals or working with bipolar sources.
+ *
+ * ```KlangScript
+ * seq("-3 -1 0 2").abs()   // becomes: 3 1 0 2
+ * ```
+ *
+ * ```KlangScript
+ * sine.range(-1, 1).abs()  // fold negative half of sine to positive
+ * ```
+ *
+ * @category arithmetic
+ * @tags abs, absolute, value, arithmetic, addon
+ */
+@StrudelDsl
+fun StrudelPattern.abs(): StrudelPattern = this._abs(emptyList())
+
+/**
+ * Returns the absolute value of each event's numeric data in a string pattern.
+ *
+ * ```KlangScript
+ * "-3 -1 0 2".abs()   // becomes: 3 1 0 2
+ * ```
+ */
+@StrudelDsl
+fun String.abs(): StrudelPattern = this._abs(emptyList())
+
+/**
+ * Applies absolute-value as a [PatternMapperFn], making every numeric value non-negative.
+ *
+ * ```KlangScript
+ * seq("-3 -1 0 2").apply(abs)   // becomes: 3 1 0 2
+ * ```
+ */
+@StrudelDsl
+val abs: PatternMapperFn get() = _abs
+
+/**
+ * Chains an absolute-value operation onto this [PatternMapperFn].
+ *
+ * ```KlangScript
+ * seq("1 -2").apply(add(-4).abs())  // abs(1-4)=abs(-3)=3, abs(-2-4)=abs(-6)=6
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.abs(): PatternMapperFn = this._abs()

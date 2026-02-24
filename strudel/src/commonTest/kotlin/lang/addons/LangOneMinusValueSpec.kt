@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
@@ -8,6 +9,7 @@ import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.lang.apply
+import io.peekandpoke.klang.strudel.lang.mul
 import io.peekandpoke.klang.strudel.lang.seq
 
 class LangOneMinusValueSpec : StringSpec({
@@ -56,6 +58,28 @@ class LangOneMinusValueSpec : StringSpec({
         events[5].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         events[6].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
         events[7].data.value?.asDouble shouldBe (1.5 plusOrMinus EPSILON)
+    }
+
+    "apply(mul().oneMinusValue())" {
+        val p = seq("0.2 0.8").apply(mul("2").oneMinusValue())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asDouble shouldBe (0.6 plusOrMinus EPSILON)   // 1-(0.2*2)=0.6
+            events[1].data.value?.asDouble shouldBe (-0.6 plusOrMinus EPSILON)  // 1-(0.8*2)=-0.6
+        }
+    }
+
+    "script apply(mul().oneMinusValue())" {
+        val p = StrudelPattern.compile("""seq("0.2 0.8").apply(mul("2").oneMinusValue())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asDouble shouldBe (0.6 plusOrMinus EPSILON)   // 1-(0.2*2)=0.6
+            events[1].data.value?.asDouble shouldBe (-0.6 plusOrMinus EPSILON)  // 1-(0.8*2)=-0.6
+        }
     }
 
     "oneMinusValue() as string extension" {

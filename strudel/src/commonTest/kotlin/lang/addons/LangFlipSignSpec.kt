@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel.lang.addons
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
@@ -7,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.strudel.lang.add
 import io.peekandpoke.klang.strudel.lang.apply
 import io.peekandpoke.klang.strudel.lang.seq
 
@@ -54,6 +56,28 @@ class LangFlipSignSpec : StringSpec({
         events[6].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
         events[7].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
         events[8].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON) // -0.0 is 0.0
+    }
+
+    "apply(add().flipSign())" {
+        val p = seq("1 -2").apply(add("1").flipSign())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asDouble shouldBe -2.0  // flipSign(1+1)=flipSign(2)=-2
+            events[1].data.value?.asDouble shouldBe 1.0   // flipSign(-2+1)=flipSign(-1)=1
+        }
+    }
+
+    "script apply(add().flipSign())" {
+        val p = StrudelPattern.compile("""seq("1 -2").apply(add("1").flipSign())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asDouble shouldBe -2.0  // flipSign(1+1)=flipSign(2)=-2
+            events[1].data.value?.asDouble shouldBe 1.0   // flipSign(-2+1)=flipSign(-1)=1
+        }
     }
 
     "flipSign() as string extension" {
