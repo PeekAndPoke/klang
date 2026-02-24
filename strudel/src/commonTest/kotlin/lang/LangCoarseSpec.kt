@@ -1,15 +1,65 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangCoarseSpec : StringSpec({
 
+    "coarse dsl interface" {
+        dslInterfaceTests(
+            "pattern.coarse(amount)" to note("c").coarse(4),
+            "script pattern.coarse(amount)" to StrudelPattern.compile("""note("c").coarse(4)"""),
+            "string.coarse(amount)" to "c".coarse(4),
+            "script string.coarse(amount)" to StrudelPattern.compile(""""c".coarse(4)"""),
+            "coarse(amount)" to note("c").apply(coarse(4)),
+            "script coarse(amount)" to StrudelPattern.compile("""note("c").apply(coarse(4))"""),
+        ) { _, events -> events.shouldNotBeEmpty() }
+    }
+
+    "reinterpret voice data as coarse | seq(\"2 4\").coarse()" {
+        val p = seq("2 4").coarse()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.coarse shouldBe 2.0
+            events[1].data.coarse shouldBe 4.0
+        }
+    }
+
+    "reinterpret voice data as coarse | \"2 4\".coarse()" {
+        val p = "2 4".coarse()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.coarse shouldBe 2.0
+            events[1].data.coarse shouldBe 4.0
+        }
+    }
+
+    "reinterpret voice data as coarse | seq(\"2 4\").apply(coarse())" {
+        val p = seq("2 4").apply(coarse())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.coarse shouldBe 2.0
+            events[1].data.coarse shouldBe 4.0
+        }
+    }
+
     "coarse() sets VoiceData.coarse" {
-        val p = coarse("2 4")
+        val p = note("a b").coarse("2 4")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

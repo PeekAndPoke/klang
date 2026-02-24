@@ -263,20 +263,25 @@ fun crush(amount: PatternLike? = null): PatternMapper = _crush(listOfNotNull(amo
 private val coarseMutation = voiceModifier { copy(coarse = it?.asDoubleOrNull()) }
 
 fun applyCoarse(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, coarseMutation)
+    return source._liftOrReinterpretNumericalField(args, coarseMutation)
 }
 
-internal val _coarse by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(coarseMutation) }
+internal val _coarse by dslPatternMapper { args, callInfo -> { p -> p._coarse(args, callInfo) } }
 internal val StrudelPattern._coarse by dslPatternExtension { p, args, /* callInfo */ _ -> applyCoarse(p, args) }
 internal val String._coarse by dslStringExtension { p, args, callInfo -> p._coarse(args, callInfo) }
 
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Applies sample-rate reduction (downsampling) to the pattern.
+ * Applies sample-rate reduction (downsampling) to this pattern.
  *
  * Reduces the effective sample rate of the audio, producing a gritty lo-fi effect.
  * Higher values cause more aliasing; combine with `crush` for classic lo-fi aesthetics.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as coarse amounts.
+ *
+ * @param amount The downsampling amount. Higher values produce more aliasing and lo-fi character.
+ *   Omit to reinterpret the pattern's values as coarse.
+ * @return A new pattern with sample-rate reduction applied.
  *
  * ```KlangScript
  * s("bd sd").coarse(4)               // moderate sample-rate reduction
@@ -286,19 +291,57 @@ internal val String._coarse by dslStringExtension { p, args, callInfo -> p._coar
  * note("c3*8").coarse("<1 2 4 8>")   // escalating downsampling
  * ```
  *
+ * ```KlangScript
+ * seq("1 2 4 8").coarse()            // reinterpret values as coarse
+ * ```
+ *
  * @category effects
  * @tags coarse, samplerate, lofi, aliasing, downsample
  */
 @StrudelDsl
-fun coarse(amount: PatternLike): StrudelPattern = _coarse(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.coarse(amount: PatternLike? = null): StrudelPattern =
+    this._coarse(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Applies sample-rate reduction to this pattern. */
+/**
+ * Parses this string as a pattern and applies sample-rate reduction.
+ *
+ * When [amount] is omitted, the string's numeric values are reinterpreted as coarse amounts.
+ *
+ * @param amount The downsampling amount. Higher values produce more aliasing and lo-fi character.
+ *   Omit to reinterpret the pattern's values as coarse.
+ * @return A new pattern with sample-rate reduction applied.
+ *
+ * ```KlangScript
+ * "bd sd".coarse(4).s()              // lo-fi samples
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.coarse(amount: PatternLike): StrudelPattern = this._coarse(listOf(amount).asStrudelDslArgs())
+fun String.coarse(amount: PatternLike? = null): StrudelPattern =
+    this._coarse(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and applies sample-rate reduction. */
+/**
+ * Returns a [PatternMapper] that applies sample-rate reduction.
+ *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as coarse amounts.
+ *
+ * @param amount The downsampling amount. Higher values produce more aliasing and lo-fi character.
+ *   Omit to reinterpret the pattern's values as coarse.
+ * @return A [PatternMapper] that applies sample-rate reduction.
+ *
+ * ```KlangScript
+ * s("bd sd").apply(coarse(4))        // lo-fi via mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").every(4, coarse(8))   // heavy downsampling every 4th cycle
+ * ```
+ *
+ * @category effects
+ * @tags coarse, samplerate, lofi, aliasing, downsample
+ */
 @StrudelDsl
-fun String.coarse(amount: PatternLike): StrudelPattern = this._coarse(listOf(amount).asStrudelDslArgs())
+fun coarse(amount: PatternLike? = null): PatternMapper = _coarse(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- room() -----------------------------------------------------------------------------------------------------------
 

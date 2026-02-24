@@ -40,7 +40,7 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // coarse
     "top-level coarse() sets VoiceData.coarse correctly" {
-        val p = coarse("1 2")
+        val p = note("a b").apply(coarse("1 2"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.coarse } shouldBe listOf(1.0, 2.0)
@@ -191,8 +191,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.crush } shouldBe listOf(8.0, 4.0)
     }
 
-    "coarse() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""coarse("1 2")""")
+    "coarse() works within compiled code as top-level PatternMapper" {
+        val p = StrudelPattern.compile("""note("a b").apply(coarse("1 2"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
