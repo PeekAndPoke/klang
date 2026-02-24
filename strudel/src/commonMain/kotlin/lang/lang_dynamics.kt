@@ -72,7 +72,8 @@ fun String.gain(amount: PatternLike? = null): StrudelPattern =
  * @param amount The control value to use for gain.
  */
 @StrudelDsl
-fun gain(amount: PatternLike? = null): PatternMapper = _gain(listOfNotNull(amount).asStrudelDslArgs())
+fun gain(amount: PatternLike? = null): PatternMapper =
+    _gain(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 

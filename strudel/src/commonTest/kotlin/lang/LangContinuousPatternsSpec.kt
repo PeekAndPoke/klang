@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -9,10 +10,68 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.sampleAt
 
 class LangContinuousPatternsSpec : StringSpec({
+
+    "range dsl interface" {
+        dslInterfaceTests(
+            "pattern.range(min, max)" to
+                    sine.range(0.0, 100.0),
+            "script pattern.range(min, max)" to
+                    StrudelPattern.compile("sine.range(0, 100)"),
+            "string.range(min, max)" to
+                    "0.5".range(0.0, 100.0),
+            "script string.range(min, max)" to
+                    StrudelPattern.compile(""""0.5".range(0, 100)"""),
+            "range(min, max)" to
+                    sine.apply(range(0.0, 100.0)),
+            "script range(min, max)" to
+                    StrudelPattern.compile("sine.apply(range(0, 100))"),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
+
+    "rangex dsl interface" {
+        dslInterfaceTests(
+            "pattern.rangex(min, max)" to
+                    sine.rangex(100.0, 1000.0),
+            "script pattern.rangex(min, max)" to
+                    StrudelPattern.compile("sine.rangex(100, 1000)"),
+            "string.rangex(min, max)" to
+                    "0.5".rangex(100.0, 1000.0),
+            "script string.rangex(min, max)" to
+                    StrudelPattern.compile(""""0.5".rangex(100, 1000)"""),
+            "rangex(min, max)" to
+                    sine.apply(rangex(100.0, 1000.0)),
+            "script rangex(min, max)" to
+                    StrudelPattern.compile("sine.apply(rangex(100, 1000))"),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
+
+    "range2 dsl interface" {
+        dslInterfaceTests(
+            "pattern.range2(min, max)" to
+                    sine2.range2(0.0, 100.0),
+            "script pattern.range2(min, max)" to
+                    StrudelPattern.compile("sine2.range2(0, 100)"),
+            "string.range2(min, max)" to
+                    "0.5".range2(0.0, 100.0),
+            "script string.range2(min, max)" to
+                    StrudelPattern.compile(""""0.5".range2(0, 100)"""),
+            "range2(min, max)" to
+                    sine2.apply(range2(0.0, 100.0)),
+            "script range2(min, max)" to
+                    StrudelPattern.compile("sine2.apply(range2(0, 100))"),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "steady pattern" {
         withClue("steady in kotlin") {
