@@ -178,20 +178,25 @@ fun dist(amount: PatternLike? = null): PatternMapper = _dist(listOfNotNull(amoun
 private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
 
 fun applyCrush(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, crushMutation)
+    return source._liftOrReinterpretNumericalField(args, crushMutation)
 }
 
-internal val _crush by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(crushMutation) }
+internal val _crush by dslPatternMapper { args, callInfo -> { p -> p._crush(args, callInfo) } }
 internal val StrudelPattern._crush by dslPatternExtension { p, args, /* callInfo */ _ -> applyCrush(p, args) }
 internal val String._crush by dslStringExtension { p, args, callInfo -> p._crush(args, callInfo) }
 
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Applies bit-crushing (bit-depth reduction) to the pattern.
+ * Applies bit-crushing (bit-depth reduction) to this pattern.
  *
  * Lower values reduce the bit depth, producing a lo-fi, crunchy digital sound.
  * A value of 1 is maximum crush; higher values approach the original sound.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as crush amounts.
+ *
+ * @param amount The bit-depth reduction amount. Lower values produce more lo-fi character.
+ *   Omit to reinterpret the pattern's values as crush.
+ * @return A new pattern with bit-crushing applied.
  *
  * ```KlangScript
  * s("bd sd hh").crush(4)              // 4-bit lo-fi crunch
@@ -201,19 +206,57 @@ internal val String._crush by dslStringExtension { p, args, callInfo -> p._crush
  * note("c3*4").crush("<16 8 4 2>")    // decreasing bit depth each beat
  * ```
  *
+ * ```KlangScript
+ * seq("16 8 4 2").crush()             // reinterpret values as crush
+ * ```
+ *
  * @category effects
  * @tags crush, bitcrush, lofi, bitdepth, distortion
  */
 @StrudelDsl
-fun crush(amount: PatternLike): StrudelPattern = _crush(listOf(amount).asStrudelDslArgs())
+fun StrudelPattern.crush(amount: PatternLike? = null): StrudelPattern =
+    this._crush(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Applies bit-crushing to this pattern. */
+/**
+ * Parses this string as a pattern and applies bit-crushing.
+ *
+ * When [amount] is omitted, the string's numeric values are reinterpreted as crush amounts.
+ *
+ * @param amount The bit-depth reduction amount. Lower values produce more lo-fi character.
+ *   Omit to reinterpret the pattern's values as crush.
+ * @return A new pattern with bit-crushing applied.
+ *
+ * ```KlangScript
+ * "bd sd hh".crush(4).s()            // 4-bit lo-fi crunch on samples
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.crush(amount: PatternLike): StrudelPattern = this._crush(listOf(amount).asStrudelDslArgs())
+fun String.crush(amount: PatternLike? = null): StrudelPattern =
+    this._crush(listOfNotNull(amount).asStrudelDslArgs())
 
-/** Parses this string as a pattern and applies bit-crushing. */
+/**
+ * Returns a [PatternMapper] that applies bit-crushing.
+ *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+ * When [amount] is omitted, the pattern's own numeric values are reinterpreted as crush amounts.
+ *
+ * @param amount The bit-depth reduction amount. Lower values produce more lo-fi character.
+ *   Omit to reinterpret the pattern's values as crush.
+ * @return A [PatternMapper] that applies bit-crushing.
+ *
+ * ```KlangScript
+ * s("bd sd hh").apply(crush(4))              // 4-bit crunch via mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").every(4, crush(2))            // maximum crush every 4th cycle
+ * ```
+ *
+ * @category effects
+ * @tags crush, bitcrush, lofi, bitdepth, distortion
+ */
 @StrudelDsl
-fun String.crush(amount: PatternLike): StrudelPattern = this._crush(listOf(amount).asStrudelDslArgs())
+fun crush(amount: PatternLike? = null): PatternMapper = _crush(listOfNotNull(amount).asStrudelDslArgs())
 
 // -- coarse() ---------------------------------------------------------------------------------------------------------
 

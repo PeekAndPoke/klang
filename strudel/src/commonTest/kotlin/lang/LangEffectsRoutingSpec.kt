@@ -24,7 +24,7 @@ class LangEffectsRoutingSpec : StringSpec({
 
     // crush
     "top-level crush() sets VoiceData.crush correctly" {
-        val p = crush("8 4")
+        val p = note("a b").apply(crush("8 4"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events.map { it.data.crush } shouldBe listOf(8.0, 4.0)
@@ -173,8 +173,8 @@ class LangEffectsRoutingSpec : StringSpec({
         events.map { it.data.distort } shouldBe listOf(0.0, 1.0)
     }
 
-    "crush() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""crush("8 4")""")
+    "crush() works within compiled code as top-level PatternMapper" {
+        val p = StrudelPattern.compile("""note("a b").apply(crush("8 4"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
