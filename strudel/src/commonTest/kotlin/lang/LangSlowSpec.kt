@@ -1,12 +1,31 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangSlowSpec : StringSpec({
+
+    "slow dsl interface" {
+        val pat = "bd hh"
+        val factor = 2
+
+        dslInterfaceTests(
+            "pattern.slow(factor)" to s(pat).slow(factor),
+            "script pattern.slow(factor)" to StrudelPattern.compile("""s("$pat").slow($factor)"""),
+            "string.slow(factor)" to pat.slow(factor),
+            "script string.slow(factor)" to StrudelPattern.compile(""""$pat".slow($factor)"""),
+            "slow(factor)" to s(pat).apply(slow(factor)),
+            "script slow(factor)" to StrudelPattern.compile("""s("$pat").apply(slow($factor))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 1
+        }
+    }
 
     "slow() stretches a pattern by the given factor" {
         // Given a pattern with two sounds in one cycle
@@ -124,7 +143,7 @@ class LangSlowSpec : StringSpec({
     }
 
     "slow() as function works in compiled code" {
-        val p = StrudelPattern.compile("""slow(2, sound("bd hh"))""")
+        val p = StrudelPattern.compile("""sound("bd hh").apply(slow(2))""")
 
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 

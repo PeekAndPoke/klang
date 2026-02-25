@@ -170,6 +170,9 @@ fun PatternMapperFn.chain(arg: StrudelDslArg<Any?>?): PatternMapperFn = chain(ar
 /** Creates a pattern mapper */
 fun patternMapper(mapper: Any?): PatternMapperFn? {
     return when (mapper) {
+        // If we have a pattern we simple return it
+        is StrudelPattern -> { _ -> mapper }
+
         // Is it already a mapper function?
         is Function1<*, *> -> {
             { input ->

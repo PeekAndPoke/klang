@@ -66,42 +66,24 @@ fun applySlow(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
     return result
 }
 
-internal val _slow by dslPatternFunction { args, /* callInfo */ _ ->
-    val factorArg: StrudelDslArg<Any?>
-    val sourceParts: List<StrudelDslArg<Any?>>
-
-    // Heuristic: If >1 args, the first one is the factor, the rest is the source.
-    // If only 1 arg, it is treated as the source (with factor 1.0).
-    if (args.size > 1) {
-        factorArg = args[0]
-        sourceParts = args.drop(1)
-    } else {
-        factorArg = StrudelDslArg(1.0, null)
-        sourceParts = args
-    }
-
-    val source = sourceParts.toPattern(voiceValueModifier)
-    applySlow(source, listOf(factorArg))
-}
-
 internal val StrudelPattern._slow by dslPatternExtension { p, args, /* callInfo */ _ -> applySlow(p, args) }
 internal val String._slow by dslStringExtension { p, args, callInfo -> p._slow(args, callInfo) }
+internal val _slow by dslPatternMapper { args, callInfo -> { p -> p._slow(args, callInfo) } }
+internal val PatternMapperFn._slow by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_slow(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Slows down a pattern by the given factor.
  *
- * `slow(2)` stretches the pattern so it takes 2 cycles to complete. As a top-level function,
- * the first argument is the factor and the second is the pattern. As a method, applies to the
- * receiver pattern. Accepts control patterns for the factor.
+ * `slow(2)` stretches the pattern so it takes 2 cycles to complete. Accepts control patterns for the factor.
  *
  * @return A pattern slowed by `factor`.
  *
  * ```KlangScript
  * s("bd sd hh cp").slow(2)              // half tempo — pattern spans 2 cycles
- * ```
- *
- * ```KlangScript
- * slow(2, s("bd sd hh cp"))             // top-level form with explicit source pattern
  * ```
  *
  * ```KlangScript
@@ -112,16 +94,33 @@ internal val String._slow by dslStringExtension { p, args, callInfo -> p._slow(a
  * @tags slow, tempo, stretch, speed
  */
 @StrudelDsl
-fun slow(factor: PatternLike, pattern: PatternLike): StrudelPattern =
-    _slow(listOf(factor, pattern).asStrudelDslArgs())
-
-/** Slows down this pattern by the given factor. */
-@StrudelDsl
 fun StrudelPattern.slow(factor: PatternLike): StrudelPattern = this._slow(listOf(factor).asStrudelDslArgs())
 
 /** Slows down this string pattern by the given factor. */
 @StrudelDsl
 fun String.slow(factor: PatternLike): StrudelPattern = this._slow(listOf(factor).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that slows down a pattern by the given factor.
+ *
+ * ```KlangScript
+ * s("bd sd hh cp").apply(slow(2))       // mapper form
+ * ```
+ *
+ * @category tempo
+ * @tags slow, tempo, stretch, speed
+ */
+@StrudelDsl
+fun slow(factor: PatternLike): PatternMapperFn = _slow(listOf(factor).asStrudelDslArgs())
+
+/** Chains a slow operation onto this [PatternMapperFn]. */
+@StrudelDsl
+fun PatternMapperFn.slow(factor: PatternLike): PatternMapperFn = this._slow(listOf(factor).asStrudelDslArgs())
+
+/** Slows down `pattern` by `factor`. */
+@StrudelDsl
+fun slow(factor: PatternLike, pattern: PatternLike): StrudelPattern =
+    slow(factor)(listOf(pattern).asStrudelDslArgs().toPattern())
 
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
