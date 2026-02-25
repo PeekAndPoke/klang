@@ -4,6 +4,7 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel._liftNumericField
+import io.peekandpoke.klang.strudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
@@ -82,12 +83,17 @@ note("c3*4")
 private val fmhMutation = voiceModifier { copy(fmh = it?.asDoubleOrNull()) }
 
 fun applyFmh(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, fmhMutation)
+    return source._liftOrReinterpretNumericalField(args, fmhMutation)
 }
 
-internal val _fmh by dslPatternFunction { args, _ -> args.toPattern(fmhMutation) }
 internal val StrudelPattern._fmh by dslPatternExtension { p, args, _ -> applyFmh(p, args) }
 internal val String._fmh by dslStringExtension { p, args, callInfo -> p._fmh(args, callInfo) }
+internal val _fmh by dslPatternMapper { args, callInfo -> { p -> p._fmh(args, callInfo) } }
+internal val PatternMapperFn._fmh by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmh(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the FM synthesis harmonicity ratio (carrier-to-modulator frequency ratio).
@@ -108,15 +114,32 @@ internal val String._fmh by dslStringExtension { p, args, callInfo -> p._fmh(arg
  * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
  */
 @StrudelDsl
-fun fmh(ratio: PatternLike): StrudelPattern = _fmh(listOf(ratio).asStrudelDslArgs())
-
-/** Sets the FM harmonicity ratio on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmh(ratio: PatternLike): StrudelPattern = this._fmh(listOf(ratio).asStrudelDslArgs())
+fun StrudelPattern.fmh(ratio: PatternLike? = null): StrudelPattern =
+    this._fmh(listOfNotNull(ratio).asStrudelDslArgs())
 
 /** Sets the FM harmonicity ratio on a string pattern. */
 @StrudelDsl
-fun String.fmh(ratio: PatternLike): StrudelPattern = this._fmh(listOf(ratio).asStrudelDslArgs())
+fun String.fmh(ratio: PatternLike? = null): StrudelPattern =
+    this._fmh(listOfNotNull(ratio).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the FM harmonicity ratio on the source pattern.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmh(2))  // via mapper
+ * ```
+ *
+ * @category synthesis
+ * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
+ */
+@StrudelDsl
+fun fmh(ratio: PatternLike? = null): PatternMapperFn =
+    _fmh(listOfNotNull(ratio).asStrudelDslArgs())
+
+/** Chains a fmh onto this [PatternMapperFn]; sets the FM harmonicity ratio on the result. */
+@StrudelDsl
+fun PatternMapperFn.fmh(ratio: PatternLike? = null): PatternMapperFn =
+    this._fmh(listOfNotNull(ratio).asStrudelDslArgs())
 
 // -- fmattack() / fmatt() ---------------------------------------------------------------------------------------------
 
