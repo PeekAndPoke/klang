@@ -1,10 +1,28 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangSuperimposeSpec : StringSpec({
+
+    "superimpose dsl interface" {
+        val pat = "c e"
+        val transform: PatternMapperFn = { it.note("e") }
+        dslInterfaceTests(
+            "pattern.superimpose(fn)" to note(pat).superimpose(transform),
+            "script pattern.superimpose(fn)" to StrudelPattern.compile("""note("$pat").superimpose(x => x.note("e"))"""),
+            "string.superimpose(fn)" to pat.superimpose(transform),
+            "script string.superimpose(fn)" to StrudelPattern.compile(""""$pat".superimpose(x => x.note("e"))"""),
+            "superimpose(fn)" to note(pat).apply(superimpose(transform)),
+            "script superimpose(fn)" to StrudelPattern.compile("""note("$pat").apply(superimpose(x => x.note("e")))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 4  // original 2 + transformed copy 2
+        }
+    }
 
     "superimpose() should layer a transformed pattern over the original" {
         // Given: a pattern "a" superposed with a version of itself that has note "b"

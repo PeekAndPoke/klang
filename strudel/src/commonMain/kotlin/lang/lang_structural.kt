@@ -2059,7 +2059,7 @@ fun PatternMapperFn.filterWhen(predicate: (Double) -> Boolean): PatternMapperFn 
 
 // -- superimpose() ----------------------------------------------------------------------------------------------------
 
-// delegates - still register with KlangScript
+internal val _superimpose by dslPatternMapper { args, callInfo -> { p -> p._superimpose(args, callInfo) } }
 internal val StrudelPattern._superimpose by dslPatternExtension { p, args, /* callInfo */ _ ->
     val transformed = args
         .map { arg -> arg.toPatternMapper() ?: { it } }
@@ -2067,27 +2067,28 @@ internal val StrudelPattern._superimpose by dslPatternExtension { p, args, /* ca
 
     p.stack(*transformed.toTypedArray())
 }
-
 internal val String._superimpose by dslStringExtension { p, args, callInfo -> p._superimpose(args, callInfo) }
-
-// ===== USER-FACING OVERLOADS =====
+internal val PatternMapperFn._superimpose by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_superimpose(args, callInfo))
+}
 
 /**
- * Layers a transformed copy of the pattern on top of itself.
+ * Layers one or more transformed copies of this pattern on top of itself.
  *
- * Stacks the original pattern together with the result of applying [transform] to it.
- * Unlike [off], the copy is not time-shifted — both layers start at the same position.
+ * Stacks the original pattern with the result of applying each [transform] to it.
+ * Unlike [off], the copies are not time-shifted — all layers start at the same position.
  *
- * @param transform Function applied to produce the second layer.
+ * @param transform Function applied to produce the additional layer.
  * @return The original pattern stacked with its transformed copy.
  *
  * ```KlangScript
- * s("bd sd").superimpose(x => x.fast(2))  // double-speed layer on top of original
+ * s("bd sd").superimpose(x => x.fast(2))                         // double-speed layer on top
  * ```
  *
  * ```KlangScript
- * note("c e g").superimpose(x => x.transpose(7), x => x.transpose(12))  // fifth and octave stacked on original
+ * note("c e g").superimpose(x => x.transpose(7), x => x.transpose(12))  // fifth and octave stacked
  * ```
+ *
  * @category structural
  * @tags superimpose, layer, stack, transform
  */
@@ -2095,15 +2096,31 @@ internal val String._superimpose by dslStringExtension { p, args, callInfo -> p.
 fun StrudelPattern.superimpose(transform: PatternMapperFn): StrudelPattern =
     this._superimpose(listOf(transform).asStrudelDslArgs())
 
-/**
- * Layers a transformed copy of this string-parsed pattern on top of itself.
- *
- * ```KlangScript
- * "bd sd".superimpose(x => x.fast(2)).s()  // double-speed layer on top
- * ```
- */
+/** Layers a transformed copy of this string pattern on top of itself. */
 @StrudelDsl
 fun String.superimpose(transform: PatternMapperFn): StrudelPattern =
+    this._superimpose(listOf(transform).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that layers a transformed copy of the source on top of itself.
+ *
+ * @param transform Function applied to produce the additional layer.
+ * @return A [PatternMapperFn] that stacks the source with its transformed copy.
+ *
+ * ```KlangScript
+ * s("bd sd").apply(superimpose(x => x.fast(2)))   // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags superimpose, layer, stack, transform
+ */
+@StrudelDsl
+fun superimpose(transform: PatternMapperFn): PatternMapperFn =
+    _superimpose(listOf(transform).asStrudelDslArgs())
+
+/** Chains a superimpose onto this [PatternMapperFn]; layers a transformed copy on top. */
+@StrudelDsl
+fun PatternMapperFn.superimpose(transform: PatternMapperFn): PatternMapperFn =
     this._superimpose(listOf(transform).asStrudelDslArgs())
 
 // -- layer() ----------------------------------------------------------------------------------------------------------
