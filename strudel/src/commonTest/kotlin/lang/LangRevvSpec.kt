@@ -1,14 +1,32 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class LangRevvSpec : StringSpec({
+
+    "revv dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.revv()" to s(pat).revv(),
+            "script pattern.revv()" to StrudelPattern.compile("""s("$pat").revv()"""),
+            "string.revv()" to pat.revv(),
+            "script string.revv()" to StrudelPattern.compile(""""$pat".revv()"""),
+            "revv()" to s(pat).apply(revv()),
+            "script revv()" to StrudelPattern.compile("""s("$pat").apply(revv())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "revv() reverses the order of cycles" {
         // JavaScript test: fastcat('a', 'b', 'c', 'd').slow(2).revv().fast(2).sortHapsByPart().firstCycle()
@@ -114,8 +132,8 @@ class LangRevvSpec : StringSpec({
         events[2].data.note shouldBeEqualIgnoringCase "a"
     }
 
-    "revv() works as standalone function" {
-        val pattern = revv(note("a b"))
+    "revv() works as mapper function" {
+        val pattern = note("a b").apply(revv())
         val events = pattern.queryArc(-1.0, 0.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2

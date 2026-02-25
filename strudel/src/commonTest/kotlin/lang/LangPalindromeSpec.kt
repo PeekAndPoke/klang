@@ -1,13 +1,31 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangPalindromeSpec : StringSpec({
+
+    "palindrome dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.palindrome()" to s(pat).palindrome(),
+            "script pattern.palindrome()" to StrudelPattern.compile("""s("$pat").palindrome()"""),
+            "string.palindrome()" to pat.palindrome(),
+            "script string.palindrome()" to StrudelPattern.compile(""""$pat".palindrome()"""),
+            "palindrome()" to s(pat).apply(palindrome()),
+            "script palindrome()" to StrudelPattern.compile("""s("$pat").apply(palindrome())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "palindrome() plays pattern forward then backward over two cycles" {
         val p = note("a b").palindrome()
@@ -40,8 +58,8 @@ class LangPalindromeSpec : StringSpec({
         events.map { it.data.note?.lowercase() } shouldBe listOf("a", "b", "d", "c")
     }
 
-    "palindrome() works as a standalone function" {
-        val p = palindrome(note("a b"))
+    "palindrome() works as mapper function" {
+        val p = note("a b").apply(palindrome())
         val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         events.size shouldBe 4

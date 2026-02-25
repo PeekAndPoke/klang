@@ -1,15 +1,33 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class LangHurrySpec : StringSpec({
+
+    "hurry dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.hurry(2)" to s(pat).hurry(2),
+            "script pattern.hurry(2)" to StrudelPattern.compile("""s("$pat").hurry(2)"""),
+            "string.hurry(2)" to pat.hurry(2),
+            "script string.hurry(2)" to StrudelPattern.compile(""""$pat".hurry(2)"""),
+            "hurry(2)" to s(pat).apply(hurry(2)),
+            "script hurry(2)" to StrudelPattern.compile("""s("$pat").apply(hurry(2))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 4
+        }
+    }
 
     "hurry() speeds up pattern like fast()" {
         val p = note("c d").hurry("2")
@@ -144,7 +162,7 @@ class LangHurrySpec : StringSpec({
     }
 
     "hurry() with standalone function syntax" {
-        val p = StrudelPattern.compile("""hurry("2", note("c d"))""")
+        val p = StrudelPattern.compile("""note("c d").apply(hurry("2"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4

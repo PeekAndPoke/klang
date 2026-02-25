@@ -1,16 +1,33 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangFastGapSpec : StringSpec({
 
-    "top-level fastGap() creates compressed pattern with gap" {
-        // fastGap requires at least 2 arguments: factor and pattern
-        val p = fastGap(2.0, "c d")
+    "fastGap dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.fastGap(2)" to s(pat).fastGap(2),
+            "script pattern.fastGap(2)" to StrudelPattern.compile("""s("$pat").fastGap(2)"""),
+            "string.fastGap(2)" to pat.fastGap(2),
+            "script string.fastGap(2)" to StrudelPattern.compile(""""$pat".fastGap(2)"""),
+            "fastGap(2)" to s(pat).apply(fastGap(2)),
+            "script fastGap(2)" to StrudelPattern.compile("""s("$pat").apply(fastGap(2))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
+
+    "fastGap() creates compressed pattern with gap" {
+        val p = "c d".fastGap(2.0)
         val events = p.queryArc(0.0, 1.0)
 
         // With factor 2, pattern is compressed to first half of cycle
@@ -55,8 +72,8 @@ class LangFastGapSpec : StringSpec({
         events[0].part.end.toDouble() shouldBe (1.0 / 6.0 plusOrMinus EPSILON)
     }
 
-    "densityGap() alias works as top-level function" {
-        val p = densityGap(2.0, "c d")
+    "densityGap() alias works as pattern extension" {
+        val p = "c d".densityGap(2.0)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

@@ -1,13 +1,32 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangPlyWithSpec : StringSpec({
+
+    "plyWith dsl interface" {
+        val pat = "hh"
+        val n = 2
+
+        dslInterfaceTests(
+            "pattern.plyWith(n)" to s(pat).plyWith(n) { it },
+            "script pattern.plyWith(n)" to StrudelPattern.compile("""s("$pat").plyWith($n, p => p)"""),
+            "string.plyWith(n)" to pat.plyWith(n) { it },
+            "script string.plyWith(n)" to StrudelPattern.compile(""""$pat".plyWith($n, p => p)"""),
+            "plyWith(n)" to s(pat).apply(plyWith(n) { it }),
+            "script plyWith(n)" to StrudelPattern.compile("""s("$pat").apply(plyWith($n, p => p))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "plyWith() with soundIndex (n pattern)" {
         // n() sets soundIndex, which works with add()

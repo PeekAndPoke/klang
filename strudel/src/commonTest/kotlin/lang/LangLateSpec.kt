@@ -2,13 +2,31 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangLateSpec : StringSpec({
+
+    "late dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.late(0.5)" to s(pat).late(0.5),
+            "script pattern.late(0.5)" to StrudelPattern.compile("""s("$pat").late(0.5)"""),
+            "string.late(0.5)" to pat.late(0.5),
+            "script string.late(0.5)" to StrudelPattern.compile(""""$pat".late(0.5)"""),
+            "late(0.5)" to s(pat).apply(late(0.5)),
+            "script late(0.5)" to StrudelPattern.compile("""s("$pat").apply(late(0.5))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "late() with 0 cycles does not shift the pattern" {
         val p1 = note("c d")

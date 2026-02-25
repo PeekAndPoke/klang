@@ -1,12 +1,30 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangRevSpec : StringSpec({
+
+    "rev dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.rev()" to s(pat).rev(),
+            "script pattern.rev()" to StrudelPattern.compile("""s("$pat").rev()"""),
+            "string.rev()" to pat.rev(),
+            "script string.rev()" to StrudelPattern.compile(""""$pat".rev()"""),
+            "rev()" to s(pat).apply(rev()),
+            "script rev()" to StrudelPattern.compile("""s("$pat").apply(rev())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "rev() reverses a pattern within one cycle" {
         // Given a pattern "a b" (a at 0.0, b at 0.5)
@@ -47,7 +65,7 @@ class LangRevSpec : StringSpec({
     }
 
     "rev() works as a standalone function" {
-        val p = rev(sound("bd hh"))
+        val p = sound("bd hh").apply(rev())
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2

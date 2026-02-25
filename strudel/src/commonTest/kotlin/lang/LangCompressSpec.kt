@@ -1,13 +1,31 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangCompressSpec : StringSpec({
+
+    "compress dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.compress(0,0.5)" to s(pat).compress("0", "0.5"),
+            "script pattern.compress(0,0.5)" to StrudelPattern.compile("""s("$pat").compress("0", "0.5")"""),
+            "string.compress(0,0.5)" to pat.compress("0", "0.5"),
+            "script string.compress(0,0.5)" to StrudelPattern.compile(""""$pat".compress("0", "0.5")"""),
+            "compress(0,0.5)" to s(pat).apply(compress("0", "0.5")),
+            "script compress(0,0.5)" to StrudelPattern.compile("""s("$pat").apply(compress("0", "0.5"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "compress() compresses pattern into first half of cycle" {
         val p = note("c d").compress("0", "0.5")
@@ -146,7 +164,7 @@ class LangCompressSpec : StringSpec({
     }
 
     "compress() with standalone function syntax" {
-        val p = StrudelPattern.compile("""compress("0.25", "0.75", note("c d"))""")
+        val p = StrudelPattern.compile("""note("c d").apply(compress("0.25", "0.75"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

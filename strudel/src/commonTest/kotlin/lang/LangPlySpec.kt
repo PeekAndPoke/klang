@@ -2,13 +2,32 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangPlySpec : StringSpec({
+
+    "ply dsl interface" {
+        val pat = "hh"
+        val n = 2
+
+        dslInterfaceTests(
+            "pattern.ply(n)" to s(pat).ply(n),
+            "script pattern.ply(n)" to StrudelPattern.compile("""s("$pat").ply($n)"""),
+            "string.ply(n)" to pat.ply(n),
+            "script string.ply(n)" to StrudelPattern.compile(""""$pat".ply($n)"""),
+            "ply(n)" to s(pat).apply(ply(n)),
+            "script ply(n)" to StrudelPattern.compile("""s("$pat").apply(ply($n))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "ply() repeats each event n times" {
         val p = note("c d").ply("3")
@@ -164,7 +183,7 @@ class LangPlySpec : StringSpec({
     }
 
     "ply() with standalone function syntax" {
-        val p = StrudelPattern.compile("""ply("2", note("c d"))""")
+        val p = StrudelPattern.compile("""note("c d").apply(ply("2"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4

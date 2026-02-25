@@ -2,13 +2,32 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangPlyForEachSpec : StringSpec({
+
+    "plyForEach dsl interface" {
+        val pat = "hh"
+        val n = 2
+
+        dslInterfaceTests(
+            "pattern.plyForEach(n)" to s(pat).plyForEach(n) { p, _ -> p },
+            "script pattern.plyForEach(n)" to StrudelPattern.compile("""s("$pat").plyForEach($n, (p, i) => p)"""),
+            "string.plyForEach(n)" to pat.plyForEach(n) { p, _ -> p },
+            "script string.plyForEach(n)" to StrudelPattern.compile(""""$pat".plyForEach($n, (p, i) => p)"""),
+            "plyForEach(n)" to s(pat).apply(plyForEach(n) { p, _ -> p }),
+            "script plyForEach(n)" to StrudelPattern.compile("""s("$pat").apply(plyForEach($n, (p, i) => p))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "plyForEach() with soundIndex (n pattern)" {
         // Test that plyForEach starts with the original value,

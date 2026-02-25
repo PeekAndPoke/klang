@@ -45,9 +45,8 @@ class LangSlowSpec : StringSpec({
         events[1].part.end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
-    "slow() works as a standalone function slow(factor, pattern)" {
-        // slow(2, sound("bd hh"))
-        val p = slow(2, sound("bd hh"))
+    "slow() works as a mapper function" {
+        val p = sound("bd hh").apply(slow(2))
 
         val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 

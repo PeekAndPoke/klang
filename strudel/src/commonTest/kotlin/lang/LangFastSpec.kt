@@ -1,12 +1,31 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangFastSpec : StringSpec({
+
+    "fast dsl interface" {
+        val pat = "bd hh"
+        val factor = 2
+
+        dslInterfaceTests(
+            "pattern.fast(factor)" to s(pat).fast(factor),
+            "script pattern.fast(factor)" to StrudelPattern.compile("""s("$pat").fast($factor)"""),
+            "string.fast(factor)" to pat.fast(factor),
+            "script string.fast(factor)" to StrudelPattern.compile(""""$pat".fast($factor)"""),
+            "fast(factor)" to s(pat).apply(fast(factor)),
+            "script fast(factor)" to StrudelPattern.compile("""s("$pat").apply(fast($factor))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 4
+        }
+    }
 
     "fast() compresses a pattern by the given factor" {
         // Given a pattern with two sounds in one cycle
@@ -33,8 +52,8 @@ class LangFastSpec : StringSpec({
         events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
-    "fast() works as a standalone function" {
-        val p = fast(2, sound("bd hh"))
+    "fast() works as mapper function" {
+        val p = sound("bd hh").apply(fast(2))
         val events = p.queryArc(0.0, 0.5).sortedBy { it.part.begin }
 
         events.size shouldBe 2
@@ -62,7 +81,7 @@ class LangFastSpec : StringSpec({
     }
 
     "fast() as function works in compiled code" {
-        val p = StrudelPattern.compile("""fast(2, sound("bd hh"))""")
+        val p = StrudelPattern.compile("""sound("bd hh").apply(fast(2))""")
         val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2

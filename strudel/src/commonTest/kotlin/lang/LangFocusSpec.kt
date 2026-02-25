@@ -1,13 +1,30 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangFocusSpec : StringSpec({
+
+    "focus dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.focus(0,0.5)" to s(pat).focus("0", "0.5"),
+            "script pattern.focus(0,0.5)" to StrudelPattern.compile("""s("$pat").focus("0", "0.5")"""),
+            "string.focus(0,0.5)" to pat.focus("0", "0.5"),
+            "script string.focus(0,0.5)" to StrudelPattern.compile(""""$pat".focus("0", "0.5")"""),
+            "focus(0,0.5)" to s(pat).apply(focus("0", "0.5")),
+            "script focus(0,0.5)" to StrudelPattern.compile("""s("$pat").apply(focus("0", "0.5"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "focus() compresses pattern into first half of cycle" {
         val p = note("c d e f").focus("0", "0.5")
@@ -133,7 +150,7 @@ class LangFocusSpec : StringSpec({
     }
 
     "focus() with standalone function syntax" {
-        val p = StrudelPattern.compile("""focus("0.25", "0.75", note("c d e f"))""")
+        val p = StrudelPattern.compile("""note("c d e f").apply(focus("0.25", "0.75"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 8

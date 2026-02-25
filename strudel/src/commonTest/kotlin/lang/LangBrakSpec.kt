@@ -1,12 +1,30 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangBrakSpec : StringSpec({
+
+    "brak dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.brak()" to s(pat).brak(),
+            "script pattern.brak()" to StrudelPattern.compile("""s("$pat").brak()"""),
+            "string.brak()" to pat.brak(),
+            "script string.brak()" to StrudelPattern.compile(""""$pat".brak()"""),
+            "brak()" to s(pat).apply(brak()),
+            "script brak()" to StrudelPattern.compile("""s("$pat").apply(brak())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "brak() alternates normal and syncopated cycles" {
         val pattern = seq("a", "b").brak()
@@ -57,8 +75,8 @@ class LangBrakSpec : StringSpec({
         events[2].part.begin.toDouble() shouldBe (2.0 + 2.0 / 3.0 plusOrMinus EPSILON)
     }
 
-    "brak() works as standalone function" {
-        val pattern = brak(note("a b"))
+    "brak() works as mapper function" {
+        val pattern = note("a b").apply(brak())
         val cycle0 = pattern.queryArc(0.0, 1.0)
 
         cycle0.size shouldBe 2

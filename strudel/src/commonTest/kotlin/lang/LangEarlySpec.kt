@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -10,8 +11,25 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangEarlySpec : StringSpec({
+
+    "early dsl interface" {
+        val pat = "hh hh"
+
+        dslInterfaceTests(
+            "pattern.early(0.5)" to s(pat).early(0.5),
+            "script pattern.early(0.5)" to StrudelPattern.compile("""s("$pat").early(0.5)"""),
+            "string.early(0.5)" to pat.early(0.5),
+            "script string.early(0.5)" to StrudelPattern.compile(""""$pat".early(0.5)"""),
+            "early(0.5)" to s(pat).apply(early(0.5)),
+            "script early(0.5)" to StrudelPattern.compile("""s("$pat").apply(early(0.5))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "early() with 0 cycles does not shift the pattern" {
         val p1 = note("c d")
