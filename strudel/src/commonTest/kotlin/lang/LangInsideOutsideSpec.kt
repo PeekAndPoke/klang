@@ -1,12 +1,32 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangInsideOutsideSpec : StringSpec({
+
+    "outside dsl interface" {
+        val pat = "hh hh"
+        val factor = 2
+
+        dslInterfaceTests(
+            "pattern.outside(factor)" to s(pat).outside(factor) { it },
+            "script pattern.outside(factor)" to StrudelPattern.compile("""s("$pat").outside($factor, p => p)"""),
+            "string.outside(factor)" to pat.outside(factor) { it },
+            "script string.outside(factor)" to StrudelPattern.compile(""""$pat".outside($factor, p => p)"""),
+            "outside(factor)" to s(pat).apply(outside(factor) { it }),
+            "script outside(factor)" to StrudelPattern.compile("""s("$pat").apply(outside($factor, p => p))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "inside() is equivalent to slow().transform().fast()" {
         val original = note("c d e f")

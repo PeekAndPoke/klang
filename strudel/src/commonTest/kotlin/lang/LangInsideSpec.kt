@@ -4,13 +4,32 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.lang.addons.lateInCycle
 
 class LangInsideSpec : StringSpec({
+
+    "inside dsl interface" {
+        val pat = "hh hh"
+        val factor = 2
+
+        dslInterfaceTests(
+            "pattern.inside(factor)" to s(pat).inside(factor) { it },
+            "script pattern.inside(factor)" to StrudelPattern.compile("""s("$pat").inside($factor, p => p)"""),
+            "string.inside(factor)" to pat.inside(factor) { it },
+            "script string.inside(factor)" to StrudelPattern.compile(""""$pat".inside($factor, p => p)"""),
+            "inside(factor)" to s(pat).apply(inside(factor) { it }),
+            "script inside(factor)" to StrudelPattern.compile("""s("$pat").apply(inside($factor, p => p))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "p.inside(1, x => x)" {
 

@@ -1222,6 +1222,11 @@ fun applyInside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
 }
 
 internal val StrudelPattern._inside by dslPatternExtension { p, args, /* callInfo */ _ -> applyInside(p, args) }
+internal val String._inside by dslStringExtension { p, args, callInfo -> p._inside(args, callInfo) }
+internal val _inside by dslPatternMapper { args, callInfo -> { p -> p._inside(args, callInfo) } }
+internal val PatternMapperFn._inside by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_inside(args, callInfo))
+}
 
 /**
  * Applies a transformation inside a zoomed-in view of the cycle.
@@ -1246,6 +1251,21 @@ internal val StrudelPattern._inside by dslPatternExtension { p, args, /* callInf
 fun StrudelPattern.inside(factor: PatternLike, transform: PatternMapperFn): StrudelPattern =
     this._inside(listOf(factor, transform).asStrudelDslArgs())
 
+/** Applies a transformation inside a zoomed-in view of the cycle. */
+@StrudelDsl
+fun String.inside(factor: PatternLike, transform: PatternMapperFn): StrudelPattern =
+    this._inside(listOf(factor, transform).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] that applies a transformation inside a zoomed-in view of the cycle. */
+@StrudelDsl
+fun inside(factor: PatternLike, transform: PatternMapperFn): PatternMapperFn =
+    _inside(listOf(factor, transform).asStrudelDslArgs())
+
+/** Chains an inside operation onto this [PatternMapperFn]. */
+@StrudelDsl
+fun PatternMapperFn.inside(factor: PatternLike, transform: PatternMapperFn): PatternMapperFn =
+    this._inside(listOf(factor, transform).asStrudelDslArgs())
+
 // -- outside() --------------------------------------------------------------------------------------------------------
 
 fun applyOutside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
@@ -1266,6 +1286,11 @@ fun applyOutside(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
 
 internal val StrudelPattern._outside by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyOutside(p, args)
+}
+internal val String._outside by dslStringExtension { p, args, callInfo -> p._outside(args, callInfo) }
+internal val _outside by dslPatternMapper { args, callInfo -> { p -> p._outside(args, callInfo) } }
+internal val PatternMapperFn._outside by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_outside(args, callInfo))
 }
 
 /**
@@ -1288,6 +1313,21 @@ internal val StrudelPattern._outside by dslPatternExtension { p, args, /* callIn
  */
 @StrudelDsl
 fun StrudelPattern.outside(factor: PatternLike, transform: PatternMapperFn): StrudelPattern =
+    this._outside(listOf(factor, transform).asStrudelDslArgs())
+
+/** Applies a transformation outside the current cycle on this string pattern. */
+@StrudelDsl
+fun String.outside(factor: PatternLike, transform: PatternMapperFn): StrudelPattern =
+    this._outside(listOf(factor, transform).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] that applies a transformation outside the current cycle. */
+@StrudelDsl
+fun outside(factor: PatternLike, transform: PatternMapperFn): PatternMapperFn =
+    _outside(listOf(factor, transform).asStrudelDslArgs())
+
+/** Chains an outside operation onto this [PatternMapperFn]. */
+@StrudelDsl
+fun PatternMapperFn.outside(factor: PatternLike, transform: PatternMapperFn): PatternMapperFn =
     this._outside(listOf(factor, transform).asStrudelDslArgs())
 
 // -- swingBy() --------------------------------------------------------------------------------------------------------
@@ -1315,8 +1355,11 @@ fun applySwingBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Stru
 internal val StrudelPattern._swingBy by dslPatternExtension { p, args, /* callInfo */ _ ->
     applySwingBy(p, args)
 }
-
 internal val String._swingBy by dslStringExtension { p, args, callInfo -> p._swingBy(args, callInfo) }
+internal val _swingBy by dslPatternMapper { args, callInfo -> { p -> p._swingBy(args, callInfo) } }
+internal val PatternMapperFn._swingBy by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_swingBy(args, callInfo))
+}
 
 /**
  * Creates a swing or shuffle rhythm by adjusting event timing and duration within subdivisions.
@@ -1352,6 +1395,16 @@ fun StrudelPattern.swingBy(swing: PatternLike, n: PatternLike): StrudelPattern =
 fun String.swingBy(swing: PatternLike, n: PatternLike): StrudelPattern =
     this._swingBy(listOf(swing, n).asStrudelDslArgs())
 
+/** Returns a [PatternMapperFn] that creates a swing or shuffle rhythm. */
+@StrudelDsl
+fun swingBy(swing: PatternLike, n: PatternLike): PatternMapperFn =
+    _swingBy(listOf(swing, n).asStrudelDslArgs())
+
+/** Chains a swingBy operation onto this [PatternMapperFn]. */
+@StrudelDsl
+fun PatternMapperFn.swingBy(swing: PatternLike, n: PatternLike): PatternMapperFn =
+    this._swingBy(listOf(swing, n).asStrudelDslArgs())
+
 // -- swing() ----------------------------------------------------------------------------------------------------------
 
 internal val StrudelPattern._swing by dslPatternExtension { p, args, /* callInfo */ _ ->
@@ -1364,8 +1417,11 @@ internal val StrudelPattern._swing by dslPatternExtension { p, args, /* callInfo
     // swing(n) = swingBy(1/3, n)
     applySwingBy(p, listOf(StrudelDslArg.of(1.0 / 3.0), nArg ?: StrudelDslArg.of(1.0)))
 }
-
 internal val String._swing by dslStringExtension { p, args, callInfo -> p._swing(args, callInfo) }
+internal val _swing by dslPatternMapper { args, callInfo -> { p -> p._swing(args, callInfo) } }
+internal val PatternMapperFn._swing by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_swing(args, callInfo))
+}
 
 /**
  * Shorthand for `swingBy(1/3, n)` — classic jazz swing feel.
@@ -1392,6 +1448,14 @@ fun StrudelPattern.swing(n: PatternLike): StrudelPattern = this._swing(listOf(n)
 /** Shorthand for `swingBy(1/3, n)` — classic jazz swing feel. */
 @StrudelDsl
 fun String.swing(n: PatternLike): StrudelPattern = this._swing(listOf(n).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] that applies classic jazz swing feel. */
+@StrudelDsl
+fun swing(n: PatternLike): PatternMapperFn = _swing(listOf(n).asStrudelDslArgs())
+
+/** Chains a swing operation onto this [PatternMapperFn]. */
+@StrudelDsl
+fun PatternMapperFn.swing(n: PatternLike): PatternMapperFn = this._swing(listOf(n).asStrudelDslArgs())
 
 // -- brak() -----------------------------------------------------------------------------------------------------------
 
