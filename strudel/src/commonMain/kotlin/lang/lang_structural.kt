@@ -2397,18 +2397,22 @@ internal val StrudelPattern._within by dslPatternExtension { p, args, /* callInf
 }
 
 internal val String._within by dslStringExtension { p, args, callInfo -> p._within(args, callInfo) }
+internal val _within by dslPatternMapper { args, callInfo -> { p -> p._within(args, callInfo) } }
+internal val PatternMapperFn._within by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_within(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies a transformation to the portion of the pattern that falls within a time window.
  *
- * Events inside `[start, end]` are extracted, transformed, then stacked back with the untouched events
- * outside the window. The window must be in `[0, 1]` and `start < end`.
+ * Events inside `[start, end)` are extracted, transformed, then stacked back with the untouched events
+ * outside the window. The window bounds must satisfy `0.0 <= start < end <= 1.0`.
  *
- * @param start Start of the window (0.0 to 1.0).
+ * @param start Start of the window (0.0 to 1.0, must be less than `end`).
  * @param end End of the window (0.0 to 1.0).
- * @param transform Function applied to the events inside the window.
+ * @param transform [PatternMapperFn] applied to the events inside the window.
  * @return The pattern with the windowed portion transformed, stacked with the unaffected portion.
  *
  * ```KlangScript
@@ -2418,6 +2422,7 @@ internal val String._within by dslStringExtension { p, args, callInfo -> p._with
  * ```KlangScript
  * note("c d e f").within(0.25, 0.75, x => x.transpose(12))  // octave up in the middle
  * ```
+ *
  * @category structural
  * @tags within, window, time, conditional, transform
  */
@@ -2428,12 +2433,45 @@ fun StrudelPattern.within(start: Double, end: Double, transform: PatternMapperFn
 /**
  * Applies a transformation to the portion of this string-parsed pattern that falls within a time window.
  *
+ * @param start Start of the window (0.0 to 1.0, must be less than `end`).
+ * @param end End of the window (0.0 to 1.0).
+ * @param transform [PatternMapperFn] applied to the events inside the window.
+ * @return The pattern with the windowed portion transformed, stacked with the unaffected portion.
+ *
  * ```KlangScript
  * "bd sd hh cp".within(0.0, 0.5, x => x.fast(2)).s()  // double-speed in first half
  * ```
+ *
+ * @category structural
+ * @tags within, window, time, conditional, transform
  */
 @StrudelDsl
 fun String.within(start: Double, end: Double, transform: PatternMapperFn): StrudelPattern =
+    this._within(listOf(start, end, transform).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that applies a transformation to the portion of the source pattern
+ * that falls within a time window.
+ *
+ * @param start Start of the window (0.0 to 1.0, must be less than `end`).
+ * @param end End of the window (0.0 to 1.0).
+ * @param transform [PatternMapperFn] applied to the events inside the window.
+ * @return A [PatternMapperFn] that applies `transform` to events in `[start, end)`.
+ *
+ * ```KlangScript
+ * s("bd sd hh cp").apply(within(0.0, 0.5, x => x.fast(2)))  // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags within, window, time, conditional, transform
+ */
+@StrudelDsl
+fun within(start: Double, end: Double, transform: PatternMapperFn): PatternMapperFn =
+    _within(listOf(start, end, transform).asStrudelDslArgs())
+
+/** Chains a within onto this [PatternMapperFn]; applies `transform` to events in the time window of the result. */
+@StrudelDsl
+fun PatternMapperFn.within(start: Double, end: Double, transform: PatternMapperFn): PatternMapperFn =
     this._within(listOf(start, end, transform).asStrudelDslArgs())
 
 // -- chunk() ----------------------------------------------------------------------------------------------------------
