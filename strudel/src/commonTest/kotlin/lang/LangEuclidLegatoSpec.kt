@@ -1,11 +1,29 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangEuclidLegatoSpec : StringSpec({
+
+    "euclidLegato dsl interface" {
+        val pat = "hh"
+        dslInterfaceTests(
+            "pattern.euclidLegato(3, 8)" to s(pat).euclidLegato(3, 8),
+            "script pattern.euclidLegato(3, 8)" to StrudelPattern.compile("""s("$pat").euclidLegato(3, 8)"""),
+            "string.euclidLegato(3, 8)" to pat.euclidLegato(3, 8),
+            "script string.euclidLegato(3, 8)" to StrudelPattern.compile(""""$pat".euclidLegato(3, 8)"""),
+            "euclidLegato(3, 8)" to s(pat).apply(euclidLegato(3, 8)),
+            "script euclidLegato(3, 8)" to StrudelPattern.compile("""s("$pat").apply(euclidLegato(3, 8))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 3
+        }
+    }
 
     "euclidLegato(3, 8) fills gaps" {
         // Standard 3,8: 10010010. Indices: 0, 3, 6.

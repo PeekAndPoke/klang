@@ -1,11 +1,29 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangEuclidLegatoRotSpec : StringSpec({
+
+    "euclidLegatoRot dsl interface" {
+        val pat = "hh"
+        dslInterfaceTests(
+            "pattern.euclidLegatoRot(3, 8, 1)" to s(pat).euclidLegatoRot(3, 8, 1),
+            "script pattern.euclidLegatoRot(3, 8, 1)" to StrudelPattern.compile("""s("$pat").euclidLegatoRot(3, 8, 1)"""),
+            "string.euclidLegatoRot(3, 8, 1)" to pat.euclidLegatoRot(3, 8, 1),
+            "script string.euclidLegatoRot(3, 8, 1)" to StrudelPattern.compile(""""$pat".euclidLegatoRot(3, 8, 1)"""),
+            "euclidLegatoRot(3, 8, 1)" to s(pat).apply(euclidLegatoRot(3, 8, 1)),
+            "script euclidLegatoRot(3, 8, 1)" to StrudelPattern.compile("""s("$pat").apply(euclidLegatoRot(3, 8, 1))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 4  // 3 onsets + 1 non-onset (wrapped tail from previous cycle)
+        }
+    }
 
     "euclidLegatoRot(3, 8, 1) rotates and fills gaps" {
         // Base (3,8): 10010010. Indices: 0, 3, 6.
