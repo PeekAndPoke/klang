@@ -20,7 +20,7 @@ class LangPickmodOutListPatternSpec : StringSpec({
 
     """pickmodOut(["bd hh", "sd oh"], "0 1 2") - comprehensive 12-cycle test""" {
         // This tests the exact failing JS compat example
-        val subject = pickmodOut(listOf("bd hh", "sd oh"), seq("0 1 2"))
+        val subject = seq("0 1 2").pickmodOut(listOf("bd hh", "sd oh"))
 
         assertSoftly {
             repeat(12) { cycle ->

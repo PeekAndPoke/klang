@@ -165,20 +165,20 @@ object JsCompatTestData {
 
         // Pattern Picking & Selection
         // pick() - we are diverging from the JS impl here for the top level fn
-        Example("pick() with list", """seq("bd hh").apply(x => x.pick([0, 1]))"""),
-        Example("pick() with list patterns", """seq("sd cp").apply(x => x.pick("0 1"))"""),
-        Example("pick() different sized list patterns", """seq(sound("bd hh"), sound("sd")).pick("0 1")"""),
+        Example("pick() with list", """seq("0 1").apply(x => x.pick(["bd", "hh"])).s()"""),
+        Example("pick() with list patterns", """seq("0 1").apply(x => x.pick(["bd", "hh"])).s()"""),
+        Example("pick() different sized list patterns", """seq("0 1").pick([sound("bd hh"), sound("sd")])"""),
         Example("pick() with map", """seq("a b").pick({a: "bd hh", b: "sd hh"})"""),
-        Example("pick() clamps indices", """seq("bd", "hh").pick("0 1 2 3")"""),
+        Example("pick() clamps indices", """seq("<0 1 2 3>").pick(["bd", "hh"])"""),
         // pickmod() - Pattern picking with modulo wrapping
-        Example("pickmod() wraps indices", """seq("bd", "hh").pickmod("0 1 2 3")"""),
-        Example("pickmod() with patterns", """seq("bd hh", "sn cp").apply(x => x.pickmod("0 1 2 3"))"""),
+        Example("pickmod() wraps indices", """seq("<0 1 2 3>").pickmod(["bd", "hh"])"""),
+        Example("pickmod() with patterns", """seq("<0 1 2 3>").apply(x => x.pickmod(["bd hh", "sn cp"]))"""),
         // pickOut() - Pattern picking with outerJoin (no clipping)
-        Example("pickOut() basic", """pickOut(["bd hh", "sd cp"], "0 1")"""),
-        Example("pickOut() with patterns", """pickOut([sound("bd hh"), sound("sn cp")], "0 1")"""),
+        Example("pickOut() basic", """seq("0 1").pickOut(["bd hh", "sd cp"])"""),
+        Example("pickOut() with patterns", """seq("0 1").pickOut([sound("bd hh"), sound("sn cp")])"""),
         // pickmodOut()
-        Example("pickmodOut() basic", """pickmodOut(["bd hh", "sd oh"], "0 1 2")"""),
-        Example("pickmodOut() no clipping", """pickmodOut([sound("bd hh"), sound("sd oh")], seq("0 2").fast(2))"""),
+        Example("pickmodOut() basic", """seq("<0 1 2>").pickmodOut(["bd hh", "sd oh"])"""),
+        Example("pickmodOut() no clipping", """seq("0 2").pickmodOut([sound("bd hh"), sound("sd oh")])"""),
         // pickRestart() - Pattern picking with restart
         Example("pickRestart() basic", """pickRestart(["bd", "hh"], "0 1")"""),
         Example("pickRestart() with patterns", """pickRestart([sound("bd hh"), sound("sn cp")], "0 1")"""),

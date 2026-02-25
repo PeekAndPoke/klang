@@ -21,7 +21,7 @@ class LangPickOutListPatternSpec : StringSpec({
 
     """pickOut(["bd hh", "sd cp"], "0 1") - comprehensive 12-cycle test""" {
         // This tests the exact failing JS compat example
-        val subject = pickOut(listOf("bd hh", "sd cp"), seq("0 1"))
+        val subject = seq("0 1").pickOut(listOf("bd hh", "sd cp"))
 
         assertSoftly {
             repeat(12) { cycle ->

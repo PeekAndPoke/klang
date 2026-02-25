@@ -590,75 +590,38 @@ private fun dispatchPickOuter(
     }
 }
 
-internal val _pickOut by dslPatternFunction { args, _ ->
-    if (args.size < 2) return@dslPatternFunction silence
-    val first = args[0].value
+internal val _pickOut by dslPatternMapper { args, callInfo -> { p -> p._pickOut(args, callInfo) } }
 
-    val lookup: Any
-    val patArg: StrudelDslArg<Any?>
-    val lookupLocation: SourceLocation?
-
-    if (first is List<*> || first is Map<*, *>) {
-        lookup = first
-        lookupLocation = args[0].location
-        patArg = args[1]
-    } else {
-        lookup = args.dropLast(1).map { it.value }
-        lookupLocation = args.firstOrNull()?.location
-        patArg = args.last()
-    }
-
-    val pat = listOf(patArg).toPattern(voiceValueModifier)
-    dispatchPickOuter(lookup, pat, modulo = false, lookupLocation)
-}
-
-internal val StrudelPattern._pickOut by dslPatternExtension { p, args, _ ->
+internal val StrudelPattern._pickOut by dslPatternExtension { p, args, callInfo ->
     if (args.isEmpty()) return@dslPatternExtension p
 
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-    val lookupLocation = args.firstOrNull()?.location
 
-    dispatchPickOuter(lookup, p, modulo = false, lookupLocation)
+    dispatchPickOuter(lookup, p, modulo = false, callInfo?.receiverLocation)
 }
 
 internal val String._pickOut by dslStringExtension { p, args, callInfo -> p._pickOut(args, callInfo) }
 
-/**
- * Like [pick] but uses outer-join semantics; clamped indices.
- *
- * Onsets are determined by the index pattern, not the selected pattern. When the first
- * argument is a list or map, the second is the index pattern; otherwise the last argument
- * is the index pattern and the rest form the lookup.
- *
- * ```KlangScript
- * pickOut("bd sd", "hh rim", n("0 1 0 1")).s()   // outer structure from index pattern
- * ```
- *
- * ```KlangScript
- * pickOut(["c3 e3", "g3 b3"], n("0 1")).note()   // list lookup, outer-join mode
- * ```
- *
- * @category structural
- * @tags pickOut, pick, select, index, outer, outerJoin
- */
-@StrudelDsl
-fun pickOut(vararg args: PatternLike): StrudelPattern = _pickOut(args.toList().asStrudelDslArgs())
+internal val PatternMapperFn._pickOut by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_pickOut(args, callInfo))
+}
 
 /**
- * Like [pick] but uses outer-join semantics: onset structure is determined by the selector.
+ * Like [pick] but uses outer-join semantics: all selected events fire at the selector's onset.
  *
- * Whereas [pick] uses inner-join (onset from the *selected* pattern), `pickOut` forces all
- * resulting events to share the onset of the selecting event. Useful when you want events
- * to fire exactly where the selector fires, regardless of the selected pattern's rhythm.
- * Indices are clamped.
+ * Whereas [pick] preserves the selected pattern's internal timing (inner-join), `pickOut`
+ * forces every resulting event to share the onset of the selecting event. Indices are clamped.
+ *
+ * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
+ * @return A pattern playing the selected items with onset timing driven by this pattern's values.
  *
  * ```KlangScript
- * "0 1 2".pickOut("bd sd", "rim hh", "cp").s()       // outer structure from selector
+ * seq("<0 1 2!2 3>").pickOut("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
  * ```KlangScript
- * n("0 1").pickOut(note("c3 e3"), note("g3 b3"))      // onset always follows selector
+ * seq("<0 1 [2,0]>").pickOut("bd sd", "cp cp", "hh hh").s()
  * ```
  *
  * @category structural
@@ -667,78 +630,170 @@ fun pickOut(vararg args: PatternLike): StrudelPattern = _pickOut(args.toList().a
 @StrudelDsl
 fun StrudelPattern.pickOut(vararg args: PatternLike): StrudelPattern = this._pickOut(args.toList().asStrudelDslArgs())
 
-/** Selects patterns by index (clamped) using this string as the selector; outer-join semantics. */
+/**
+ * Like [pick] but uses outer-join semantics — [List] lookup using this pattern's event values.
+ *
+ * @param lookup List of items; indices are clamped to valid bounds.
+ * @return A pattern playing the selected items with onset timing from this pattern.
+ *
+ * ```KlangScript
+ * seq("<0 1 2!2 3>").pickOut(["g a", "e f", "f g f g" , "g c d"]).note()
+ * ```
+ */
+@StrudelDsl
+fun StrudelPattern.pickOut(lookup: List<Any>): StrudelPattern = this._pickOut(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Like [pick] but uses outer-join semantics — [Map] lookup using this pattern's event values as keys.
+ *
+ * @param lookup Map of string keys to items; unmatched keys produce no output.
+ * @return A pattern playing the selected items with onset timing from this pattern.
+ *
+ * ```KlangScript
+ * seq("<a!2 [a,b] b>").pickOut({a: "bd(3,8)", b: "sd sd"}).s()
+ * ```
+ */
+@StrudelDsl
+fun StrudelPattern.pickOut(lookup: Map<String, Any>): StrudelPattern = applyPickOuter(lookup, this, modulo = false)
+
+/**
+ * Like [pick] but uses outer-join semantics — this string is parsed as a mini-notation index pattern.
+ *
+ * @param args Lookup items to pick from — strings, patterns, or a single map.
+ * @return A pattern with onset timing from this string's parsed values; selected items are outer-joined.
+ *
+ * ```KlangScript
+ * "<0 1 2 1>".pickOut("bd", "sd", "hh").s().fast(2)
+ * ```
+ *
+ * @category structural
+ * @tags pickOut, pick, select, index, outer, outerJoin
+ */
 @StrudelDsl
 fun String.pickOut(vararg args: PatternLike): StrudelPattern = this._pickOut(args.toList().asStrudelDslArgs())
 
+/**
+ * Like [pick] but uses outer-join semantics — [List] lookup, this string as index pattern.
+ *
+ * @param lookup List of items; integer indices, clamped.
+ * @return A pattern with onset timing from this string; selected items are outer-joined.
+ *
+ * ```KlangScript
+ * "<0 1 2 1>".pickOut(["bd", "sd", "hh"]).s().fast(2)
+ * ```
+ */
+@StrudelDsl
+fun String.pickOut(lookup: List<Any>): StrudelPattern = seq(this).pickOut(lookup)
+
+/**
+ * Like [pick] but uses outer-join semantics — [Map] lookup, this string as key pattern.
+ *
+ * @param lookup Map of string keys; unmatched keys produce no output.
+ * @return A pattern with onset timing from this string; selected items are outer-joined.
+ *
+ * ```KlangScript
+ * "<a!2 [a,b] b>".pickOut({a: "bd(3,8)", b: "sd sd"}).s()
+ * ```
+ */
+@StrudelDsl
+fun String.pickOut(lookup: Map<String, Any>): StrudelPattern = seq(this).pickOut(lookup)
+
+/**
+ * Returns a [PatternMapperFn] that selects from a lookup with outer-join semantics, clamped indices.
+ *
+ * Like [pick] but forces all selected events to fire at the selector's onset. Apply using `.apply()`.
+ *
+ * @param args Lookup items to pick from — strings, patterns, or a single map.
+ * @return A [PatternMapperFn] that maps a source pattern to an outer-join pick result.
+ *
+ * ```KlangScript
+ * "<0 1 2 1>".apply(pickOut("bd", "sd", "hh")).s().fast(2)
+ * ```
+ *
+ * @category structural
+ * @tags pickOut, pick, select, index, outer, outerJoin
+ */
+@StrudelDsl
+fun pickOut(vararg args: PatternLike): PatternMapperFn = _pickOut(args.toList().asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that selects from a [List] lookup with outer-join semantics.
+ *
+ * @param lookup List of items; source pattern values are used as zero-based indices (clamped).
+ * @return A [PatternMapperFn] that maps a source pattern to an outer-join pick result.
+ *
+ * ```KlangScript
+ * "<0 1 2 1>".apply(pickOut(["bd", "sd", "hh"])).s().fast(2)
+ * ```
+ */
+@StrudelDsl
+fun pickOut(lookup: List<Any>): PatternMapperFn = { pat -> applyPickOuter(lookup, pat, modulo = false) }
+
+/**
+ * Returns a [PatternMapperFn] that selects from a [Map] lookup with outer-join semantics.
+ *
+ * @param lookup Map of string keys; source pattern values are used as keys.
+ * @return A [PatternMapperFn] that maps a source pattern to an outer-join pick result.
+ *
+ * ```KlangScript
+ * "<a!2 [a,b] b>".apply(pickOut({a: "bd(3,8)", b: "sd sd"})).s()
+ * ```
+ */
+@StrudelDsl
+fun pickOut(lookup: Map<String, Any>): PatternMapperFn = { pat -> applyPickOuter(lookup, pat, modulo = false) }
+
+/**
+ * Chains a pickOut onto this [PatternMapperFn]; outer-join semantics, clamped indices.
+ */
+@StrudelDsl
+fun PatternMapperFn.pickOut(vararg args: PatternLike): PatternMapperFn = this._pickOut(args.toList().asStrudelDslArgs())
+
+/**
+ * Chains a pickOut from a [List] lookup onto this [PatternMapperFn]; outer-join, clamped indices.
+ */
+@StrudelDsl
+fun PatternMapperFn.pickOut(lookup: List<Any>): PatternMapperFn = this.chain(pickOut(lookup))
+
+/**
+ * Chains a pickOut from a [Map] lookup onto this [PatternMapperFn]; outer-join, string keys.
+ */
+@StrudelDsl
+fun PatternMapperFn.pickOut(lookup: Map<String, Any>): PatternMapperFn = this.chain(pickOut(lookup))
+
 // -- pickmodOut() -----------------------------------------------------------------------------------------------------
 
-internal val _pickmodOut by dslPatternFunction { args, _ ->
-    if (args.size < 2) return@dslPatternFunction silence
-    val first = args[0].value
+internal val _pickmodOut by dslPatternMapper { args, callInfo -> { p -> p._pickmodOut(args, callInfo) } }
 
-    val lookup: Any
-    val patArg: StrudelDslArg<Any?>
-    val lookupLocation: SourceLocation?
-
-    if (first is List<*> || first is Map<*, *>) {
-        lookup = first
-        lookupLocation = args[0].location
-        patArg = args[1]
-    } else {
-        lookup = args.dropLast(1).map { it.value }
-        lookupLocation = args.firstOrNull()?.location
-        patArg = args.last()
-    }
-
-    val pat = listOf(patArg).toPattern(voiceValueModifier)
-    dispatchPickOuter(lookup, pat, modulo = true, lookupLocation)
-}
-
-internal val StrudelPattern._pickmodOut by dslPatternExtension { p, args, _ ->
+internal val StrudelPattern._pickmodOut by dslPatternExtension { p, args, callInfo ->
     if (args.isEmpty()) return@dslPatternExtension p
 
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-    val lookupLocation = args.firstOrNull()?.location
 
-    dispatchPickOuter(lookup, p, modulo = true, lookupLocation)
+    dispatchPickOuter(lookup, p, modulo = true, callInfo?.receiverLocation)
 }
 
 internal val String._pickmodOut by dslStringExtension { p, args, callInfo -> p._pickmodOut(args, callInfo) }
 
-/**
- * Like [pickOut] but wraps indices with modulo; outer-join semantics.
- *
- * Onsets are driven by the index pattern; selected pattern indices wrap cyclically.
- * When the first argument is a list or map, the second is the index pattern.
- *
- * ```KlangScript
- * pickmodOut("bd", "sd", "hh", n("0 1 2 3 4")).s()  // 3→0, 4→1; outer onset
- * ```
- *
- * ```KlangScript
- * pickmodOut(["c3", "e3", "g3"], n("0 5")).note()    // 5→2 mod 3; outer onset
- * ```
- *
- * @category structural
- * @tags pickmodOut, pickOut, pickmod, modulo, select, index, outer
- */
-@StrudelDsl
-fun pickmodOut(vararg args: PatternLike): StrudelPattern = _pickmodOut(args.toList().asStrudelDslArgs())
+internal val PatternMapperFn._pickmodOut by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_pickmodOut(args, callInfo))
+}
 
 /**
  * Like [pickOut] but wraps out-of-bounds indices with modulo arithmetic.
  *
- * Combines modulo index wrapping with outer-join merging; see [pickOut] and [pickmod]
- * for details of each feature. Onsets are determined by the selector pattern.
+ * Outer-join semantics (onset from selector) combined with modulo index wrapping.
+ * Indices wrap cyclically; negative indices are handled correctly.
+ *
+ * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
+ * @return A pattern with onset timing from this pattern; indices wrap cyclically.
  *
  * ```KlangScript
- * "0 1 2 3".pickmodOut("bd sd", "hh", "cp").s()          // index 3 wraps; outer onset
+ * seq("<0 1 2!2 3>").pickmodOut("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
  * ```KlangScript
- * n("0 1 4").pickmodOut(note("c3"), note("e3"), note("g3"))  // 4→1 mod 3; outer onset
+ * seq("<0 1 [2,0]>").pickmodOut("bd sd", "cp cp", "hh hh").s()
  * ```
  *
  * @category structural
@@ -748,9 +803,137 @@ fun pickmodOut(vararg args: PatternLike): StrudelPattern = _pickmodOut(args.toLi
 fun StrudelPattern.pickmodOut(vararg args: PatternLike): StrudelPattern =
     this._pickmodOut(args.toList().asStrudelDslArgs())
 
-/** Selects patterns by index (modulo-wrapped) using this string as the selector; outer-join. */
+/**
+ * Like [pickOut] but wraps indices with modulo — [List] lookup using this pattern's event values.
+ *
+ * @param lookup List of items; indices wrap cyclically with modulo.
+ * @return A pattern with onset timing from this pattern; selected items are outer-joined.
+ *
+ * ```KlangScript
+ * seq("<0 1 2!2 3>").pickmodOut(["g a", "e f", "f g f g" , "g c d"]).note()
+ * ```
+ */
+@StrudelDsl
+fun StrudelPattern.pickmodOut(lookup: List<Any>): StrudelPattern =
+    this._pickmodOut(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Like [pickOut] but wraps indices with modulo — [Map] lookup using this pattern's event values as keys.
+ *
+ * @param lookup Map of string keys; unmatched keys produce no output.
+ * @return A pattern with onset timing from this pattern; selected items are outer-joined.
+ *
+ * ```KlangScript
+ * seq("<a!2 [a,b] b>").pickmodOut({a: "bd(3,8)", b: "sd sd"}).s()
+ * ```
+ */
+@StrudelDsl
+fun StrudelPattern.pickmodOut(lookup: Map<String, Any>): StrudelPattern = applyPickOuter(lookup, this, modulo = true)
+
+/**
+ * Like [pickOut] but wraps indices with modulo — this string is parsed as a mini-notation index pattern.
+ *
+ * @param args Lookup items to pick from — strings, patterns, or a single map.
+ * @return A pattern with onset timing from this string's parsed values; indices wrap cyclically.
+ *
+ * ```KlangScript
+ * "<0 1 2 1>".pickmodOut("bd", "sd", "hh").s().fast(2)
+ * ```
+ *
+ * @category structural
+ * @tags pickmodOut, pickOut, pickmod, modulo, select, index, outer
+ */
 @StrudelDsl
 fun String.pickmodOut(vararg args: PatternLike): StrudelPattern = this._pickmodOut(args.toList().asStrudelDslArgs())
+
+/**
+ * Like [pickOut] but wraps indices with modulo — [List] lookup, this string as index pattern.
+ *
+ * @param lookup List of items; indices wrap cyclically with modulo.
+ * @return A pattern with onset timing from this string; selected items are outer-joined.
+ *
+ * ```KlangScript
+ * "<0 1 2 1>".pickmodOut(["bd", "sd", "hh"]).s().fast(2)
+ * ```
+ */
+@StrudelDsl
+fun String.pickmodOut(lookup: List<Any>): StrudelPattern = seq(this).pickmodOut(lookup)
+
+/**
+ * Like [pickOut] but wraps indices with modulo — [Map] lookup, this string as key pattern.
+ *
+ * @param lookup Map of string keys; unmatched keys produce no output.
+ * @return A pattern with onset timing from this string; selected items are outer-joined.
+ *
+ * ```KlangScript
+ * "<a!2 [a,b] b>".pickmodOut({a: "bd(3,8)", b: "sd sd"}).s()
+ * ```
+ */
+@StrudelDsl
+fun String.pickmodOut(lookup: Map<String, Any>): StrudelPattern = seq(this).pickmodOut(lookup)
+
+/**
+ * Returns a [PatternMapperFn] that selects from a lookup with outer-join semantics and modulo indices.
+ *
+ * Like [pickOut] but wraps indices cyclically. Apply the returned mapper using `.apply()`.
+ *
+ * @param args Lookup items to pick from — strings, patterns, or a single map.
+ * @return A [PatternMapperFn] that maps a source pattern to an outer-join modulo-pick result.
+ *
+ * ```KlangScript
+ * "<0 1 2 1>".apply(pickmodOut("bd", "sd", "hh")).s().fast(2)
+ * ```
+ *
+ * @category structural
+ * @tags pickmodOut, pickOut, pickmod, modulo, select, index, outer
+ */
+@StrudelDsl
+fun pickmodOut(vararg args: PatternLike): PatternMapperFn = _pickmodOut(args.toList().asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that selects from a [List] lookup with outer-join and modulo indices.
+ *
+ * @param lookup List of items; source pattern values are used as integer indices (modulo-wrapped).
+ * @return A [PatternMapperFn] that maps a source pattern to an outer-join modulo-pick result.
+ *
+ * ```KlangScript
+ * "<0 1 2 1>".apply(pickmodOut(["bd", "sd", "hh"])).s().fast(2)
+ * ```
+ */
+@StrudelDsl
+fun pickmodOut(lookup: List<Any>): PatternMapperFn = { pat -> applyPickOuter(lookup, pat, modulo = true) }
+
+/**
+ * Returns a [PatternMapperFn] that selects from a [Map] lookup with outer-join semantics.
+ *
+ * @param lookup Map of string keys; source pattern values are used as keys.
+ * @return A [PatternMapperFn] that maps a source pattern to an outer-join map-pick result.
+ *
+ * ```KlangScript
+ * "<a!2 [a,b] b>".apply(pickmodOut({a: "bd(3,8)", b: "sd sd"})).s()
+ * ```
+ */
+@StrudelDsl
+fun pickmodOut(lookup: Map<String, Any>): PatternMapperFn = { pat -> applyPickOuter(lookup, pat, modulo = true) }
+
+/**
+ * Chains a pickmodOut onto this [PatternMapperFn]; outer-join semantics, modulo indices.
+ */
+@StrudelDsl
+fun PatternMapperFn.pickmodOut(vararg args: PatternLike): PatternMapperFn =
+    this._pickmodOut(args.toList().asStrudelDslArgs())
+
+/**
+ * Chains a pickmodOut from a [List] lookup onto this [PatternMapperFn]; outer-join, modulo indices.
+ */
+@StrudelDsl
+fun PatternMapperFn.pickmodOut(lookup: List<Any>): PatternMapperFn = this.chain(pickmodOut(lookup))
+
+/**
+ * Chains a pickmodOut from a [Map] lookup onto this [PatternMapperFn]; outer-join, string keys.
+ */
+@StrudelDsl
+fun PatternMapperFn.pickmodOut(lookup: Map<String, Any>): PatternMapperFn = this.chain(pickmodOut(lookup))
 
 // -- inhabit() --------------------------------------------------------------------------------------------------------
 
