@@ -146,16 +146,24 @@ fun PatternMapperFn.fmh(ratio: PatternLike? = null): PatternMapperFn =
 private val fmattackMutation = voiceModifier { copy(fmAttack = it?.asDoubleOrNull()) }
 
 fun applyFmattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, fmattackMutation)
+    return source._liftOrReinterpretNumericalField(args, fmattackMutation)
 }
 
-internal val _fmattack by dslPatternFunction { args, _ -> args.toPattern(fmattackMutation) }
 internal val StrudelPattern._fmattack by dslPatternExtension { p, args, _ -> applyFmattack(p, args) }
 internal val String._fmattack by dslStringExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
+internal val _fmattack by dslPatternMapper { args, callInfo -> { p -> p._fmattack(args, callInfo) } }
+internal val PatternMapperFn._fmattack by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmattack(args, callInfo))
+}
 
-internal val _fmatt by dslPatternFunction { args, callInfo -> _fmattack(args, callInfo) }
 internal val StrudelPattern._fmatt by dslPatternExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
-internal val String._fmatt by dslStringExtension { p, args, callInfo -> p._fmatt(args, callInfo) }
+internal val String._fmatt by dslStringExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
+internal val _fmatt by dslPatternMapper { args, callInfo -> { p -> p._fmattack(args, callInfo) } }
+internal val PatternMapperFn._fmatt by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmatt(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the attack time for the FM modulation envelope in seconds.
@@ -177,15 +185,33 @@ internal val String._fmatt by dslStringExtension { p, args, callInfo -> p._fmatt
  * @tags fmattack, fmatt, FM, attack, envelope, synthesis
  */
 @StrudelDsl
-fun fmattack(seconds: PatternLike): StrudelPattern = _fmattack(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the FM modulation envelope attack time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmattack(seconds: PatternLike): StrudelPattern = this._fmattack(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.fmattack(seconds: PatternLike? = null): StrudelPattern =
+    this._fmattack(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the FM modulation envelope attack time on a string pattern. */
 @StrudelDsl
-fun String.fmattack(seconds: PatternLike): StrudelPattern = this._fmattack(listOf(seconds).asStrudelDslArgs())
+fun String.fmattack(seconds: PatternLike? = null): StrudelPattern =
+    this._fmattack(listOfNotNull(seconds).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the FM modulation envelope attack time on the source pattern.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmattack(0.01))  // via mapper
+ * ```
+ *
+ * @alias fmatt
+ * @category synthesis
+ * @tags fmattack, fmatt, FM, attack, envelope, synthesis
+ */
+@StrudelDsl
+fun fmattack(seconds: PatternLike? = null): PatternMapperFn =
+    _fmattack(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Chains a fmattack onto this [PatternMapperFn]; sets the FM envelope attack time on the result. */
+@StrudelDsl
+fun PatternMapperFn.fmattack(seconds: PatternLike? = null): PatternMapperFn =
+    this._fmattack(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [fmattack]. Sets the FM modulation envelope attack time.
@@ -195,15 +221,33 @@ fun String.fmattack(seconds: PatternLike): StrudelPattern = this._fmattack(listO
  * @tags fmatt, fmattack, FM, attack, envelope, synthesis
  */
 @StrudelDsl
-fun fmatt(seconds: PatternLike): StrudelPattern = _fmatt(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [fmattack] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmatt(seconds: PatternLike): StrudelPattern = this._fmatt(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.fmatt(seconds: PatternLike? = null): StrudelPattern =
+    this._fmatt(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [fmattack] on a string pattern. */
 @StrudelDsl
-fun String.fmatt(seconds: PatternLike): StrudelPattern = this._fmatt(listOf(seconds).asStrudelDslArgs())
+fun String.fmatt(seconds: PatternLike? = null): StrudelPattern =
+    this._fmatt(listOfNotNull(seconds).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [fmattack].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmatt(0.01))  // via mapper
+ * ```
+ *
+ * @alias fmattack
+ * @category synthesis
+ * @tags fmatt, fmattack, FM, attack, envelope, synthesis
+ */
+@StrudelDsl
+fun fmatt(seconds: PatternLike? = null): PatternMapperFn =
+    _fmatt(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Chains a fmatt onto this [PatternMapperFn]; alias for [PatternMapperFn.fmattack]. */
+@StrudelDsl
+fun PatternMapperFn.fmatt(seconds: PatternLike? = null): PatternMapperFn =
+    this._fmatt(listOfNotNull(seconds).asStrudelDslArgs())
 
 // -- fmdecay() / fmdec() ----------------------------------------------------------------------------------------------
 
