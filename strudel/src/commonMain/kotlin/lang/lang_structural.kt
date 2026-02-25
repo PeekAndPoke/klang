@@ -3813,11 +3813,6 @@ fun PatternMapperFn.euclid(pulses: Int, steps: Int): PatternMapperFn =
 
 // -- euclidRot() ------------------------------------------------------------------------------------------------------
 
-internal val _euclidRot by dslPatternFunction { args, callInfo ->
-    val pattern = args.drop(3).toPattern()
-    pattern._euclidRot(args, callInfo)
-}
-
 internal val StrudelPattern._euclidRot by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
     val pulsesVal = pulsesArg?.value
@@ -3862,10 +3857,17 @@ internal val StrudelPattern._euclidRot by dslPatternExtension { p, args, /* call
 }
 
 internal val String._euclidRot by dslStringExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
+internal val _euclidRot by dslPatternMapper { args, callInfo -> { p -> p._euclidRot(args, callInfo) } }
+internal val PatternMapperFn._euclidRot by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_euclidRot(args, callInfo))
+}
 
-internal val _euclidrot by dslPatternFunction { args, callInfo -> _euclidRot(args, callInfo) }
 internal val StrudelPattern._euclidrot by dslPatternExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
 internal val String._euclidrot by dslStringExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
+internal val _euclidrot by dslPatternMapper { args, callInfo -> { p -> p._euclidRot(args, callInfo) } }
+internal val PatternMapperFn._euclidrot by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_euclidrot(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -3884,22 +3886,78 @@ internal val String._euclidrot by dslStringExtension { p, args, callInfo -> p._e
  * ```KlangScript
  * s("bd").euclidRot(5, 16, 1)  // 5-over-16 shifted by 1 step
  * ```
+ *
  * @alias euclidrot
  * @category structural
  * @tags euclidRot, euclid, rhythm, rotation, structure
  */
 @StrudelDsl
 fun euclidRot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): StrudelPattern =
-    _euclidRot(listOf(pulses, steps, rotation, pattern).asStrudelDslArgs())
+    euclidRot(pulses, steps, rotation)(listOf(pattern).asStrudelDslArgs().toPattern())
 
-/** Like [euclid] with rotation, applied to the pattern. */
+/**
+ * Applies a rotated Euclidean rhythm structure to the pattern.
+ *
+ * @param pulses   Number of onsets (beats) to place.
+ * @param steps    Total number of steps in the rhythm.
+ * @param rotation Number of steps to rotate the pattern by.
+ * @return A rotated Euclidean rhythm pattern.
+ *
+ * ```KlangScript
+ * s("hh").euclidRot(3, 8, 2)  // 3-over-8 rhythm, shifted by 2 steps
+ * ```
+ *
+ * @alias euclidrot
+ * @category structural
+ * @tags euclidRot, euclid, rhythm, rotation, structure
+ */
 @StrudelDsl
 fun StrudelPattern.euclidRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
     this._euclidRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
 
-/** Like [euclid] with rotation, applied to the mini-notation string. */
+/**
+ * Applies a rotated Euclidean rhythm structure to the mini-notation string.
+ *
+ * @param pulses   Number of onsets (beats) to place.
+ * @param steps    Total number of steps in the rhythm.
+ * @param rotation Number of steps to rotate the pattern by.
+ * @return A rotated Euclidean rhythm pattern.
+ *
+ * ```KlangScript
+ * "hh".euclidRot(3, 8, 2).s()  // 3-over-8 rhythm, shifted by 2 steps
+ * ```
+ *
+ * @alias euclidrot
+ * @category structural
+ * @tags euclidRot, euclid, rhythm, rotation, structure
+ */
 @StrudelDsl
 fun String.euclidRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
+    this._euclidRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that applies a rotated Euclidean rhythm to the source pattern.
+ *
+ * @param pulses   Number of onsets (beats) to place.
+ * @param steps    Total number of steps in the rhythm.
+ * @param rotation Number of steps to rotate the pattern by.
+ * @return A [PatternMapperFn] that restructures the source as a rotated Euclidean rhythm.
+ *
+ * ```KlangScript
+ * s("hh").apply(euclidRot(3, 8, 2))  // via mapper
+ * ```
+ *
+ * @alias euclidrot
+ * @category structural
+ * @tags euclidRot, euclid, rhythm, rotation, structure
+ */
+@StrudelDsl
+fun euclidRot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
+    _euclidRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+
+/** Chains a euclidRot onto this [PatternMapperFn]; applies rotated Euclidean rhythm to the result. */
+@StrudelDsl
+fun PatternMapperFn.euclidRot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
     this._euclidRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
 
 /**
@@ -3917,22 +3975,78 @@ fun String.euclidRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
  * ```KlangScript
  * s("sd").euclidrot(5, 16, 3)  // 5-over-16, rotated by 3
  * ```
+ *
  * @alias euclidRot
  * @category structural
  * @tags euclidrot, euclidRot, euclid, rhythm, rotation
  */
 @StrudelDsl
 fun euclidrot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): StrudelPattern =
-    _euclidrot(listOf(pulses, steps, rotation, pattern).asStrudelDslArgs())
+    euclidrot(pulses, steps, rotation)(listOf(pattern).asStrudelDslArgs().toPattern())
 
-/** Alias for [euclidRot]. */
+/**
+ * Alias for [euclidRot] applied to the pattern.
+ *
+ * @param pulses   Number of onsets (beats) to place.
+ * @param steps    Total number of steps in the rhythm.
+ * @param rotation Number of steps to rotate the pattern by.
+ * @return A rotated Euclidean rhythm pattern.
+ *
+ * ```KlangScript
+ * s("hh").euclidrot(3, 8, 2).s()  // lowercase alias
+ * ```
+ *
+ * @alias euclidRot
+ * @category structural
+ * @tags euclidrot, euclidRot, euclid, rhythm, rotation
+ */
 @StrudelDsl
 fun StrudelPattern.euclidrot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
     this._euclidrot(listOf(pulses, steps, rotation).asStrudelDslArgs())
 
-/** Alias for [euclidRot]. */
+/**
+ * Alias for [euclidRot] applied to the mini-notation string.
+ *
+ * @param pulses   Number of onsets (beats) to place.
+ * @param steps    Total number of steps in the rhythm.
+ * @param rotation Number of steps to rotate the pattern by.
+ * @return A rotated Euclidean rhythm pattern.
+ *
+ * ```KlangScript
+ * "hh".euclidrot(3, 8, 2).s()  // lowercase alias
+ * ```
+ *
+ * @alias euclidRot
+ * @category structural
+ * @tags euclidrot, euclidRot, euclid, rhythm, rotation
+ */
 @StrudelDsl
 fun String.euclidrot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
+    this._euclidrot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [euclidRot] — applies a rotated Euclidean rhythm.
+ *
+ * @param pulses   Number of onsets (beats) to place.
+ * @param steps    Total number of steps in the rhythm.
+ * @param rotation Number of steps to rotate the pattern by.
+ * @return A [PatternMapperFn] that restructures the source as a rotated Euclidean rhythm.
+ *
+ * ```KlangScript
+ * s("hh").apply(euclidrot(3, 8, 2))  // via mapper
+ * ```
+ *
+ * @alias euclidRot
+ * @category structural
+ * @tags euclidrot, euclidRot, euclid, rhythm, rotation
+ */
+@StrudelDsl
+fun euclidrot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
+    _euclidrot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+
+/** Chains a euclidrot onto this [PatternMapperFn]; alias for [PatternMapperFn.euclidRot]. */
+@StrudelDsl
+fun PatternMapperFn.euclidrot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
     this._euclidrot(listOf(pulses, steps, rotation).asStrudelDslArgs())
 
 // -- bjork() ----------------------------------------------------------------------------------------------------------
