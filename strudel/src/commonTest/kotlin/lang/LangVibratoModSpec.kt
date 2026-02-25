@@ -1,15 +1,75 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangVibratoModSpec : StringSpec({
 
+    "vibratoMod dsl interface" {
+        val pat = "c4 e4"
+        val amount = 0.5
+
+        dslInterfaceTests(
+            "pattern.vibratoMod(depth)" to note(pat).vibratoMod(amount),
+            "script pattern.vibratoMod(depth)" to StrudelPattern.compile("""note("$pat").vibratoMod($amount)"""),
+            "string.vibratoMod(depth)" to pat.vibratoMod(amount),
+            "script string.vibratoMod(depth)" to StrudelPattern.compile(""""$pat".vibratoMod($amount)"""),
+            "vibratoMod(depth)" to note(pat).apply(vibratoMod(amount)),
+            "script vibratoMod(depth)" to StrudelPattern.compile("""note("$pat").apply(vibratoMod($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.vibratoMod shouldBe amount
+        }
+    }
+
+    "vibmod dsl interface" {
+        val pat = "c4 e4"
+        val amount = 0.5
+
+        dslInterfaceTests(
+            "pattern.vibmod(depth)" to note(pat).vibmod(amount),
+            "script pattern.vibmod(depth)" to StrudelPattern.compile("""note("$pat").vibmod($amount)"""),
+            "string.vibmod(depth)" to pat.vibmod(amount),
+            "script string.vibmod(depth)" to StrudelPattern.compile(""""$pat".vibmod($amount)"""),
+            "vibmod(depth)" to note(pat).apply(vibmod(amount)),
+            "script vibmod(depth)" to StrudelPattern.compile("""note("$pat").apply(vibmod($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.vibratoMod shouldBe amount
+        }
+    }
+
+    "reinterpret voice data as vibratoMod | seq(\"0.1 0.5\").vibratoMod()" {
+        val p = seq("0.1 0.5").vibratoMod()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.vibratoMod } shouldBe listOf(0.1, 0.5)
+    }
+
+    "reinterpret voice data as vibratoMod | \"0.1 0.5\".vibratoMod()" {
+        val p = "0.1 0.5".vibratoMod()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.vibratoMod } shouldBe listOf(0.1, 0.5)
+    }
+
+    "reinterpret voice data as vibratoMod | seq(\"0.1 0.5\").apply(vibratoMod())" {
+        val p = seq("0.1 0.5").apply(vibratoMod())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.vibratoMod } shouldBe listOf(0.1, 0.5)
+    }
+
     "vibratoMod() sets VoiceData.vibratoMod depth" {
-        val p = vibratoMod("0.1 0.5")
+        val p = note("a b").vibratoMod("0.1 0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -17,7 +77,7 @@ class LangVibratoModSpec : StringSpec({
     }
 
     "vibmod() alias sets VoiceData.vibratoMod depth" {
-        val p = vibmod("0.1 0.5")
+        val p = note("a b").vibmod("0.1 0.5")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

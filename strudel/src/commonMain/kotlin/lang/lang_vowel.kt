@@ -3,7 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel._applyControlFromParams
+import io.peekandpoke.klang.strudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
@@ -14,22 +14,19 @@ var strudelLangVowelInit = false
 
 // -- vowel() ----------------------------------------------------------------------------------------------------------
 
-private val vowelMutation = voiceModifier { vowel ->
-    val newVowel = vowel?.toString()?.lowercase()
-    copy(vowel = newVowel)
-}
-
 fun applyVowel(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._applyControlFromParams(args, vowelMutation) { src, ctrl ->
-        src.copy(vowel = ctrl.vowel)
-    }
+    return source._liftOrReinterpretStringField(args) { v -> copy(vowel = v?.lowercase()) }
 }
 
 internal val StrudelPattern._vowel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVowel(p, args) }
 
-internal val _vowel by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(vowelMutation) }
-
 internal val String._vowel by dslStringExtension { p, args, callInfo -> p._vowel(args, callInfo) }
+
+internal val _vowel by dslPatternMapper { args, callInfo -> { p -> p._vowel(args, callInfo) } }
+
+internal val PatternMapperFn._vowel by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_vowel(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -38,6 +35,7 @@ internal val String._vowel by dslStringExtension { p, args, callInfo -> p._vowel
  *
  * Applies a formant filter tuned to specific vowel sounds to create "singing" or vocal effects.
  * This filter mimics the resonant characteristics of the human vocal tract.
+ * When called with no argument, reinterprets the current event value as a vowel name.
  *
  * **Syntax:** `vowel("vowel")` or `vowel("voice:vowel")`
  *
@@ -57,19 +55,26 @@ internal val String._vowel by dslStringExtension { p, args, callInfo -> p._vowel
  * ```
  *
  * ```KlangScript
- * vowel("a e i o u")                // Sequence different vowels
+ * note("c3").apply(vowel("a e i"))  // mapper form — sequence vowels
  * ```
  *
  * @category tonal
  * @tags vowel, formant, vocal, filter, singing
  */
 @StrudelDsl
-fun vowel(vowel: PatternLike): StrudelPattern = _vowel(listOf(vowel).asStrudelDslArgs())
-
-/** Sets the vowel formant filter on this pattern. */
-@StrudelDsl
-fun StrudelPattern.vowel(vowel: PatternLike): StrudelPattern = this._vowel(listOf(vowel).asStrudelDslArgs())
+fun StrudelPattern.vowel(vowel: PatternLike? = null): StrudelPattern =
+    this._vowel(listOfNotNull(vowel).asStrudelDslArgs())
 
 /** Sets the vowel formant filter on a string pattern. */
 @StrudelDsl
-fun String.vowel(vowel: PatternLike): StrudelPattern = this._vowel(listOf(vowel).asStrudelDslArgs())
+fun String.vowel(vowel: PatternLike? = null): StrudelPattern =
+    this._vowel(listOfNotNull(vowel).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] that sets the vowel formant filter. */
+@StrudelDsl
+fun vowel(vowel: PatternLike? = null): PatternMapperFn = _vowel(listOfNotNull(vowel).asStrudelDslArgs())
+
+/** Chains a vowel step onto this [PatternMapperFn]. */
+@StrudelDsl
+fun PatternMapperFn.vowel(vowel: PatternLike? = null): PatternMapperFn =
+    this._vowel(listOfNotNull(vowel).asStrudelDslArgs())

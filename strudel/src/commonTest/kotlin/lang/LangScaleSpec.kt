@@ -1,14 +1,60 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import kotlin.math.pow
 
 class LangScaleSpec : StringSpec({
 
+    "scale dsl interface" {
+        val pat = "0 2"
+
+        dslInterfaceTests(
+            "pattern.scale(name)" to n(pat).scale("C4:major"),
+            "script pattern.scale(name)" to StrudelPattern.compile("""n("$pat").scale("C4:major")"""),
+            "string.scale(name)" to pat.scale("C4:major"),
+            "script string.scale(name)" to StrudelPattern.compile(""""$pat".scale("C4:major")"""),
+            "scale(name)" to n(pat).apply(scale("C4:major")),
+            "script scale(name)" to StrudelPattern.compile("""n("$pat").apply(scale("C4:major"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.note shouldBe "C4"
+            events[1].data.note shouldBe "E4"
+        }
+    }
+
+    "reinterpret voice data as scale | seq(\"c4 major\").scale()" {
+        val p = seq("c4 major").scale()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.scale shouldBe "c4"
+        events[1].data.scale shouldBe "major"
+    }
+
+    "reinterpret voice data as scale | \"c4 major\".scale()" {
+        val p = "c4 major".scale()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.scale shouldBe "c4"
+        events[1].data.scale shouldBe "major"
+    }
+
+    "reinterpret voice data as scale | seq(\"c4 major\").apply(scale())" {
+        val p = seq("c4 major").apply(scale())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events[0].data.scale shouldBe "c4"
+        events[1].data.scale shouldBe "major"
+    }
+
     "scale() sets VoiceData.scale correctly" {
-        val p = scale("C4:major")
+        val p = n("0").scale("C4:major")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

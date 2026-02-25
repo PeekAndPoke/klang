@@ -1,9 +1,53 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangVowelSpec : StringSpec({
+
+    "vowel dsl interface" {
+        val pat = "c3"
+        val vowelVal = "a"
+
+        dslInterfaceTests(
+            "pattern.vowel(v)" to note(pat).vowel(vowelVal),
+            "script pattern.vowel(v)" to StrudelPattern.compile("""note("$pat").vowel("$vowelVal")"""),
+            "string.vowel(v)" to pat.vowel(vowelVal),
+            "script string.vowel(v)" to StrudelPattern.compile(""""$pat".vowel("$vowelVal")"""),
+            "vowel(v)" to note(pat).apply(vowel(vowelVal)),
+            "script vowel(v)" to StrudelPattern.compile("""note("$pat").apply(vowel("$vowelVal"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.vowel shouldBe "a"
+        }
+    }
+
+    "reinterpret voice data as vowel | seq(\"a e i\").vowel()" {
+        val p = seq("a e i").vowel()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 3
+        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
+    }
+
+    "reinterpret voice data as vowel | \"a e i\".vowel()" {
+        val p = "a e i".vowel()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 3
+        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
+    }
+
+    "reinterpret voice data as vowel | seq(\"a e i\").apply(vowel())" {
+        val p = seq("a e i").apply(vowel())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 3
+        events.map { it.data.vowel } shouldBe listOf("a", "e", "i")
+    }
 
     "vowel() sets the vowel property" {
         val p = note("c3").vowel("a")
@@ -12,17 +56,6 @@ class LangVowelSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.vowel shouldBe "a"
-    }
-
-    "vowel() works as standalone function" {
-        val p = vowel("a e i")
-
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 3
-        events[0].data.vowel shouldBe "a"
-        events[1].data.vowel shouldBe "e"
-        events[2].data.vowel shouldBe "i"
     }
 
     "vowel() works with string pattern sequences" {
@@ -59,11 +92,11 @@ class LangVowelSpec : StringSpec({
     "vowel() works with all vowels (a, e, i, o, u)" {
         val vowels = listOf("a", "e", "i", "o", "u")
 
-        vowels.forEach { vowel ->
-            val p = note("c3").vowel(vowel)
+        vowels.forEach { v ->
+            val p = note("c3").vowel(v)
 
             val events = p.queryArc(0.0, 1.0)
-            events[0].data.vowel shouldBe vowel
+            events[0].data.vowel shouldBe v
 
             // Verify vowel creates a formant filter
             val voiceData = events[0].data.toVoiceData()

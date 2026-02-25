@@ -116,4 +116,41 @@ class LangRootNotesSpec : StringSpec({
             events[2].data.note shouldBe "G"
         }
     }
+
+    "rootNotes() works via apply(rootNotes())" {
+        val p = chord("C F G").apply(rootNotes())
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 3
+        events[0].data.note shouldBe "C4"
+        events[1].data.note shouldBe "F4"
+        events[2].data.note shouldBe "G4"
+    }
+
+    "rootNotes() with octave works via apply(rootNotes(octave))" {
+        val p = chord("C F G").apply(rootNotes("3"))
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 3
+        events[0].data.note shouldBe "C3"
+        events[1].data.note shouldBe "F3"
+        events[2].data.note shouldBe "G3"
+    }
+
+    "rootNotes() works via apply(rootNotes()) in compiled code" {
+        val p = StrudelPattern.compile("""chord("Cm7").apply(rootNotes())""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe "C4"
+    }
+
+    "rootNotes() with octave works via apply(rootNotes(octave)) in compiled code" {
+        val p = StrudelPattern.compile("""chord("Dm7 G7").apply(rootNotes(3))""")
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.note shouldBe "D3"
+        events[1].data.note shouldBe "G3"
+    }
 })

@@ -6,8 +6,8 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangPanchorSpec : StringSpec({
 
-    "top-level panchor() sets VoiceData.pAnchor correctly" {
-        val p = panchor("0.5 1.0")
+    "panchor() sets VoiceData.pAnchor correctly" {
+        val p = note("a b").panchor("0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -40,20 +40,12 @@ class LangPanchorSpec : StringSpec({
         events.map { it.data.pAnchor } shouldBe listOf(0.5, 1.0)
     }
 
-    "panc() alias works as top-level function" {
-        val p = panc("0.3 0.7")
+    "panc() alias works as pattern extension" {
+        val p = note("a b").panc("0.3 0.7")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.pAnchor } shouldBe listOf(0.3, 0.7)
-    }
-
-    "panc() alias works as pattern extension" {
-        val p = note("c d").panc("0.4 0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.pAnchor } shouldBe listOf(0.4, 0.6)
     }
 
     "panc() alias works as string extension" {

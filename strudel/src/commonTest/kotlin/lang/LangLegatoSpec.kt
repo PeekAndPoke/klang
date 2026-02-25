@@ -1,21 +1,77 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangLegatoSpec : StringSpec({
 
-    "top-level legato() sets VoiceData.legato correctly" {
-        // Given a simple sequence of legato values within one cycle
-        val p = legato("0.25 0.75")
+    "legato dsl interface" {
+        val pat = "c3 e3"
+        val amount = 0.5
 
-        // When querying one cycle
+        dslInterfaceTests(
+            "pattern.legato(amount)" to note(pat).legato(amount),
+            "script pattern.legato(amount)" to StrudelPattern.compile("""note("$pat").legato($amount)"""),
+            "string.legato(amount)" to pat.legato(amount),
+            "script string.legato(amount)" to StrudelPattern.compile(""""$pat".legato($amount)"""),
+            "legato(amount)" to note(pat).apply(legato(amount)),
+            "script legato(amount)" to StrudelPattern.compile("""note("$pat").apply(legato($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.legato shouldBe amount
+        }
+    }
+
+    "clip dsl interface" {
+        val pat = "c3 e3"
+        val amount = 0.5
+
+        dslInterfaceTests(
+            "pattern.clip(amount)" to note(pat).clip(amount),
+            "script pattern.clip(amount)" to StrudelPattern.compile("""note("$pat").clip($amount)"""),
+            "string.clip(amount)" to pat.clip(amount),
+            "script string.clip(amount)" to StrudelPattern.compile(""""$pat".clip($amount)"""),
+            "clip(amount)" to note(pat).apply(clip(amount)),
+            "script clip(amount)" to StrudelPattern.compile("""note("$pat").apply(clip($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.legato shouldBe amount
+        }
+    }
+
+    "reinterpret voice data as legato | seq(\"0.25 0.75\").legato()" {
+        val p = seq("0.25 0.75").legato()
         val events = p.queryArc(0.0, 1.0)
 
-        // Then only assert the legato values in order
+        events.size shouldBe 2
+        events.map { it.data.legato } shouldBe listOf(0.25, 0.75)
+    }
+
+    "reinterpret voice data as legato | \"0.25 0.75\".legato()" {
+        val p = "0.25 0.75".legato()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.legato } shouldBe listOf(0.25, 0.75)
+    }
+
+    "reinterpret voice data as legato | seq(\"0.25 0.75\").apply(legato())" {
+        val p = seq("0.25 0.75").apply(legato())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.legato } shouldBe listOf(0.25, 0.75)
+    }
+
+    "legato() sets VoiceData.legato correctly" {
+        val p = note("c3 e3").legato("0.25 0.75")
+        val events = p.queryArc(0.0, 1.0)
+
         events.size shouldBe 2
         events.map { it.data.legato } shouldBe listOf(0.25, 0.75)
     }
@@ -44,12 +100,6 @@ class LangLegatoSpec : StringSpec({
     }
 
     "alias clip behaves like legato" {
-        // Given: use alias clip (both top-level creator and modifier exist)
-        val pTop = clip("0.3 0.6")
-        val eventsTop = pTop.queryArc(0.0, 1.0)
-        eventsTop.size shouldBe 2
-        eventsTop.map { it.data.legato } shouldBe listOf(0.3, 0.6)
-
         val base = note("c3 e3")
         val pCtrl = base.clip("0.8 0.4")
         val eventsCtrl = pCtrl.queryArc(0.0, 2.0)
@@ -66,16 +116,7 @@ class LangLegatoSpec : StringSpec({
         events[0].data.legato shouldBe 0.5
     }
 
-    "legato() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""legato("0.25 0.75")""")
-
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.legato } shouldBe listOf(0.25, 0.75)
-    }
-
-    "legato() works within compiled code as chained-level function" {
+    "legato() works within compiled code as chained function" {
         val p = StrudelPattern.compile("""note("a b").legato("0.25 0.75")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()

@@ -1,17 +1,44 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangAccelerateSpec : StringSpec({
 
-    "top-level accelerate() sets VoiceData.accelerate correctly" {
-        val p = accelerate("-0.5 0.75")
+    "accelerate dsl interface" {
+        val pat = "c4 e4"
+        val amount = 2.0
 
+        dslInterfaceTests(
+            "pattern.accelerate(v)" to note(pat).accelerate(amount),
+            "script pattern.accelerate(v)" to StrudelPattern.compile("""note("$pat").accelerate($amount)"""),
+            "string.accelerate(v)" to pat.accelerate(amount),
+            "script string.accelerate(v)" to StrudelPattern.compile(""""$pat".accelerate($amount)"""),
+            "accelerate(v)" to note(pat).apply(accelerate(amount)),
+            "script accelerate(v)" to StrudelPattern.compile("""note("$pat").apply(accelerate($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.accelerate shouldBe amount
+        }
+    }
+
+    "reinterpret voice data as accelerate | seq(\"-0.5 0.75\").accelerate()" {
+        val p = seq("-0.5 0.75").accelerate()
         val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.accelerate } shouldBe listOf(-0.5, 0.75)
+    }
+
+    "accelerate() sets VoiceData.accelerate correctly" {
+        val p = note("a b").accelerate("-0.5 0.75")
+        val events = p.queryArc(0.0, 1.0)
+
         events.size shouldBe 2
         events.map { it.data.accelerate } shouldBe listOf(-0.5, 0.75)
     }
@@ -34,16 +61,7 @@ class LangAccelerateSpec : StringSpec({
         events[0].data.accelerate shouldBe 0.5
     }
 
-    "accelerate() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""accelerate("0 1")""")
-
-        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
-
-        events.size shouldBe 2
-        events.map { it.data.accelerate } shouldBe listOf(0.0, 1.0)
-    }
-
-    "accelerate() works within compiled code as chained-level function" {
+    "accelerate() works within compiled code as chained function" {
         val p = StrudelPattern.compile("""note("a b").accelerate("0 1")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()

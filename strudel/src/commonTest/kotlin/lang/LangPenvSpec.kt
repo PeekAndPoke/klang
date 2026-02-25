@@ -6,8 +6,8 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangPenvSpec : StringSpec({
 
-    "top-level penv() sets VoiceData.pEnv correctly" {
-        val p = penv("0.5 1.0")
+    "penv() sets VoiceData.pEnv correctly" {
+        val p = note("a b").penv("0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -40,20 +40,12 @@ class LangPenvSpec : StringSpec({
         events.map { it.data.pEnv } shouldBe listOf(0.5, 1.0)
     }
 
-    "pamt() alias works as top-level function" {
-        val p = pamt("0.3 0.7")
+    "pamt() alias works as pattern extension" {
+        val p = note("a b").pamt("0.3 0.7")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.pEnv } shouldBe listOf(0.3, 0.7)
-    }
-
-    "pamt() alias works as pattern extension" {
-        val p = note("c d").pamt("0.4 0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.pEnv } shouldBe listOf(0.4, 0.6)
     }
 
     "pamt() alias works as string extension" {

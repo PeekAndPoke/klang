@@ -3,12 +3,56 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangFreqSpec : StringSpec({
 
+    "freq dsl interface" {
+        val pat = "saw"
+        val amount = 440
+
+        dslInterfaceTests(
+            "pattern.freq(v)" to s(pat).freq(amount),
+            "script pattern.freq(v)" to StrudelPattern.compile("""s("$pat").freq($amount)"""),
+            "string.freq(v)" to pat.freq(amount),
+            "script string.freq(v)" to StrudelPattern.compile(""""$pat".freq($amount)"""),
+            "freq(v)" to s(pat).apply(freq(amount)),
+            "script freq(v)" to StrudelPattern.compile("""s("$pat").apply(freq($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.freqHz shouldBe 440.0
+        }
+    }
+
+    "reinterpret voice data as freq | seq(\"440 880\").freq()" {
+        val p = seq("440 880").freq()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.freqHz } shouldBe listOf(440.0, 880.0)
+    }
+
+    "reinterpret voice data as freq | \"440 880\".freq()" {
+        val p = "440 880".freq()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.freqHz } shouldBe listOf(440.0, 880.0)
+    }
+
+    "reinterpret voice data as freq | seq(\"440 880\").apply(freq())" {
+        val p = seq("440 880").apply(freq())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.freqHz } shouldBe listOf(440.0, 880.0)
+    }
+
     "freq() sets the frequency in Hz" {
-        val p = freq(440)
+        val p = s("saw").freq(440)
         val events = p.queryArc(0.0, 1.0)
 
         events shouldHaveSize 1

@@ -6,8 +6,32 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangScaleTransposeSpec : StringSpec({
+
+    "scaleTranspose dsl interface" {
+        val pat = "C4"
+        val steps = 1
+
+        dslInterfaceTests(
+            "pattern.scaleTranspose(v)" to note(pat).scale("C:major").scaleTranspose(steps),
+            "script pattern.scaleTranspose(v)" to StrudelPattern.compile(
+                """note("$pat").scale("C:major").scaleTranspose($steps)"""
+            ),
+            "string.scaleTranspose(v)" to pat.scale("C:major").scaleTranspose(steps),
+            "script string.scaleTranspose(v)" to StrudelPattern.compile(
+                """"$pat".scale("C:major").scaleTranspose($steps)"""
+            ),
+            "scaleTranspose(v)" to note(pat).scale("C:major").apply(scaleTranspose(steps)),
+            "script scaleTranspose(v)" to StrudelPattern.compile(
+                """note("$pat").scale("C:major").apply(scaleTranspose($steps))"""
+            ),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.note shouldBe "D4"
+        }
+    }
 
     "scaleTranspose(0) must be the same as not transpose" {
         val without = note("C E").scale("C3:major")

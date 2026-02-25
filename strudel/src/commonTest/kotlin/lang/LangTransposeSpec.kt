@@ -2,22 +2,30 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangTransposeSpec : StringSpec({
 
-    "top-level transpose() sets semitones correctly" {
-        // c3 is 130.81Hz. Transposing by 12 should give c4 (261.63Hz)
-        val p = transpose(12, note("c3"))
+    "transpose dsl interface" {
+        val pat = "c3"
+        val amount = 12
 
-        val events = p.queryArc(0.0, 1.0)
-        events.size shouldBe 1
-        events[0].data.note shouldBe "C4"
-        events[0].data.freqHz!! shouldBe (261.63 plusOrMinus 0.1)
+        dslInterfaceTests(
+            "pattern.transpose(v)" to note(pat).transpose(amount),
+            "script pattern.transpose(v)" to StrudelPattern.compile("""note("$pat").transpose($amount)"""),
+            "string.transpose(v)" to pat.transpose(amount),
+            "script string.transpose(v)" to StrudelPattern.compile(""""$pat".transpose($amount)"""),
+            "transpose(v)" to note(pat).apply(transpose(amount)),
+            "script transpose(v)" to StrudelPattern.compile("""note("$pat").apply(transpose($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.note shouldBe "C4"
+        }
     }
 
     "control pattern transpose() shifts frequencies on existing pattern" {
@@ -39,16 +47,16 @@ class LangTransposeSpec : StringSpec({
         events[0].data.note shouldBe "G3"
     }
 
-    "transpose() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""transpose(12, note("c3"))""")
+    "transpose() works within compiled code as chained function" {
+        val p = StrudelPattern.compile("""note("c3").transpose(12)""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.note shouldBe "C4"
     }
 
-    "transpose() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("c3").transpose(12)""")
+    "transpose() works within compiled code via apply(transpose(v))" {
+        val p = StrudelPattern.compile("""note("c3").apply(transpose(12))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1

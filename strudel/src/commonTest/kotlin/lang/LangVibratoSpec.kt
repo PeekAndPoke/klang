@@ -1,15 +1,75 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangVibratoSpec : StringSpec({
 
+    "vibrato dsl interface" {
+        val pat = "c4 e4"
+        val amount = 5.0
+
+        dslInterfaceTests(
+            "pattern.vibrato(hz)" to note(pat).vibrato(amount),
+            "script pattern.vibrato(hz)" to StrudelPattern.compile("""note("$pat").vibrato($amount)"""),
+            "string.vibrato(hz)" to pat.vibrato(amount),
+            "script string.vibrato(hz)" to StrudelPattern.compile(""""$pat".vibrato($amount)"""),
+            "vibrato(hz)" to note(pat).apply(vibrato(amount)),
+            "script vibrato(hz)" to StrudelPattern.compile("""note("$pat").apply(vibrato($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.vibrato shouldBe amount
+        }
+    }
+
+    "vib dsl interface" {
+        val pat = "c4 e4"
+        val amount = 5.0
+
+        dslInterfaceTests(
+            "pattern.vib(hz)" to note(pat).vib(amount),
+            "script pattern.vib(hz)" to StrudelPattern.compile("""note("$pat").vib($amount)"""),
+            "string.vib(hz)" to pat.vib(amount),
+            "script string.vib(hz)" to StrudelPattern.compile(""""$pat".vib($amount)"""),
+            "vib(hz)" to note(pat).apply(vib(amount)),
+            "script vib(hz)" to StrudelPattern.compile("""note("$pat").apply(vib($amount))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.vibrato shouldBe amount
+        }
+    }
+
+    "reinterpret voice data as vibrato | seq(\"5.0 10.0\").vibrato()" {
+        val p = seq("5.0 10.0").vibrato()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.vibrato } shouldBe listOf(5.0, 10.0)
+    }
+
+    "reinterpret voice data as vibrato | \"5.0 10.0\".vibrato()" {
+        val p = "5.0 10.0".vibrato()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.vibrato } shouldBe listOf(5.0, 10.0)
+    }
+
+    "reinterpret voice data as vibrato | seq(\"5.0 10.0\").apply(vibrato())" {
+        val p = seq("5.0 10.0").apply(vibrato())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        events.map { it.data.vibrato } shouldBe listOf(5.0, 10.0)
+    }
+
     "vibrato() sets VoiceData.vibrato rate" {
-        val p = vibrato("5.0 10.0")
+        val p = note("a b").vibrato("5.0 10.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -17,7 +77,7 @@ class LangVibratoSpec : StringSpec({
     }
 
     "vib() alias sets VoiceData.vibrato rate" {
-        val p = vib("5.0 10.0")
+        val p = note("a b").vib("5.0 10.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

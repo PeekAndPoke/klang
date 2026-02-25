@@ -6,8 +6,8 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 
 class LangPcurveSpec : StringSpec({
 
-    "top-level pcurve() sets VoiceData.pCurve correctly" {
-        val p = pcurve("0.5 1.0")
+    "pcurve() sets VoiceData.pCurve correctly" {
+        val p = note("a b").pcurve("0.5 1.0")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -40,20 +40,12 @@ class LangPcurveSpec : StringSpec({
         events.map { it.data.pCurve } shouldBe listOf(0.5, 1.0)
     }
 
-    "pcrv() alias works as top-level function" {
-        val p = pcrv("0.3 0.7")
+    "pcrv() alias works as pattern extension" {
+        val p = note("a b").pcrv("0.3 0.7")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.pCurve } shouldBe listOf(0.3, 0.7)
-    }
-
-    "pcrv() alias works as pattern extension" {
-        val p = note("c d").pcrv("0.4 0.6")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.pCurve } shouldBe listOf(0.4, 0.6)
     }
 
     "pcrv() alias works as string extension" {

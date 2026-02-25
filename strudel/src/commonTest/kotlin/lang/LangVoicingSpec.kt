@@ -140,4 +140,39 @@ class LangVoicingSpec : StringSpec({
         val begin = events[0].part.begin
         events.all { it.part.begin == begin } shouldBe true
     }
+
+    "voicing() works via apply(voicing())" {
+        val p = chord("Cmaj7").apply(voicing())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 4
+        events.all { it.data.chord == null } shouldBe true
+        events.all { it.data.note != null } shouldBe true
+    }
+
+    "voicing() with range works via apply(voicing(low, high))" {
+        val p = chord("Cmaj7").apply(voicing("C3", "C5"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 4
+        events.all { it.data.chord == null } shouldBe true
+    }
+
+    "voicing() works via apply(voicing()) in compiled code" {
+        val p = StrudelPattern.compile("""chord("Cmaj7").apply(voicing())""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
+        events.size shouldBe 4
+        events.all { it.data.chord == null } shouldBe true
+        events.all { it.data.note != null } shouldBe true
+    }
+
+    "voicing() with range works in compiled code" {
+        val p = StrudelPattern.compile("""chord("Dm7 G7").apply(voicing("C3", "C5"))""")
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
+
+        // 2 chords × 4 notes
+        events.size shouldBe 8
+        events.all { it.data.chord == null } shouldBe true
+    }
 })
