@@ -17,7 +17,7 @@ class LangLoopControlSpec : StringSpec({
     }
 
     "loopBegin() works with multiple values" {
-        val p = loopBegin("0.0 0.25 0.5")
+        val p = seq("0.0 0.25 0.5").loopBegin()
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
@@ -64,7 +64,7 @@ class LangLoopControlSpec : StringSpec({
     }
 
     "loopEnd() works with multiple values" {
-        val p = loopEnd("0.5 0.75 1.0")
+        val p = seq("0.5 0.75 1.0").loopEnd()
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
