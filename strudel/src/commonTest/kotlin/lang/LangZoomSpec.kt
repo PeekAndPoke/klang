@@ -1,9 +1,27 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangZoomSpec : StringSpec({
+
+    "zoom dsl interface" {
+        val pat = "0 1 2 3"
+        dslInterfaceTests(
+            "pattern.zoom(0.5, 1.0)" to n(pat).zoom(0.5, 1.0),
+            "script pattern.zoom(0.5, 1.0)" to StrudelPattern.compile("""n("$pat").zoom(0.5, 1.0)"""),
+            "string.zoom(0.5, 1.0)" to pat.zoom(0.5, 1.0),
+            "script string.zoom(0.5, 1.0)" to StrudelPattern.compile(""""$pat".zoom(0.5, 1.0)"""),
+            "zoom(0.5, 1.0)" to n(pat).apply(zoom(0.5, 1.0)),
+            "script zoom(0.5, 1.0)" to StrudelPattern.compile("""n("$pat").apply(zoom(0.5, 1.0))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2  // second half "2 3" stretched to fill cycle
+        }
+    }
 
     "zoom() selects a portion of the pattern" {
         // "0 1 2 3" -> 0 at 0.0-0.25, 1 at 0.25-0.5, 2 at 0.5-0.75, 3 at 0.75-1.0

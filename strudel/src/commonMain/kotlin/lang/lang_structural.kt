@@ -2302,15 +2302,15 @@ fun applyZoom(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
     }
 }
 
-// delegates - still register with KlangScript
+internal val _zoom by dslPatternMapper { args, callInfo -> { p -> p._zoom(args, callInfo) } }
 internal val StrudelPattern._zoom by dslPatternExtension { p, args, /* callInfo */ _ -> applyZoom(p, args) }
-
 internal val String._zoom by dslStringExtension { p, args, callInfo -> p._zoom(args, callInfo) }
-
-// ===== USER-FACING OVERLOADS =====
+internal val PatternMapperFn._zoom by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_zoom(args, callInfo))
+}
 
 /**
- * Plays a portion of a pattern within a time window, stretching it to fill a full cycle.
+ * Plays a portion of this pattern within a time window, stretching it to fill a full cycle.
  *
  * The window `[start, end]` is zoomed in on — events within that portion are stretched to fill the cycle.
  * Both `start` and `end` can be pattern strings for dynamic zooming (e.g. `"<0 0.25>"`).
@@ -2320,12 +2320,13 @@ internal val String._zoom by dslStringExtension { p, args, callInfo -> p._zoom(a
  * @return The zoomed portion of the pattern stretched to one full cycle.
  *
  * ```KlangScript
- * s("bd hh sd hh").zoom(0.0, 0.5)  // plays only first half, stretched to full cycle
+ * s("bd hh sd hh").zoom(0.0, 0.5)   // plays only first half, stretched to full cycle
  * ```
  *
  * ```KlangScript
  * note("c d e f").zoom(0.25, 0.75)  // plays middle two notes, stretched to full cycle
  * ```
+ *
  * @category structural
  * @tags zoom, window, time, stretch, slice
  */
@@ -2333,15 +2334,32 @@ internal val String._zoom by dslStringExtension { p, args, callInfo -> p._zoom(a
 fun StrudelPattern.zoom(start: PatternLike, end: PatternLike): StrudelPattern =
     this._zoom(listOf(start, end).asStrudelDslArgs())
 
-/**
- * Plays a portion of this string-parsed pattern within a time window, stretched to fill a cycle.
- *
- * ```KlangScript
- * "bd hh sd hh".zoom(0.0, 0.5).s()  // first half stretched to full cycle
- * ```
- */
+/** Plays a portion of this string pattern within a time window, stretched to fill a cycle. */
 @StrudelDsl
 fun String.zoom(start: PatternLike, end: PatternLike): StrudelPattern =
+    this._zoom(listOf(start, end).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that plays a portion of the source, stretching it to fill a cycle.
+ *
+ * @param start Start of the zoom window (0.0 to 1.0).
+ * @param end End of the zoom window (0.0 to 1.0).
+ * @return A [PatternMapperFn] that zooms the source into the given window.
+ *
+ * ```KlangScript
+ * s("bd hh sd hh").apply(zoom(0.0, 0.5))   // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags zoom, window, time, stretch, slice
+ */
+@StrudelDsl
+fun zoom(start: PatternLike, end: PatternLike): PatternMapperFn =
+    _zoom(listOf(start, end).asStrudelDslArgs())
+
+/** Chains a zoom onto this [PatternMapperFn]; plays a window of the result stretched to one cycle. */
+@StrudelDsl
+fun PatternMapperFn.zoom(start: PatternLike, end: PatternLike): PatternMapperFn =
     this._zoom(listOf(start, end).asStrudelDslArgs())
 
 // -- within() ---------------------------------------------------------------------------------------------------------
