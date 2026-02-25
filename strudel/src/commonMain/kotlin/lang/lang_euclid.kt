@@ -787,21 +787,23 @@ fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
-internal val _euclidish by dslPatternFunction { args, /* callInfo */ _ ->
-    // euclidish(pulses, steps, groove, pat)
-    val pattern = args.drop(3).toPattern()
-    applyEuclidish(pattern, args.take(3))
-}
+internal val _euclidish by dslPatternMapper { args, callInfo -> { p -> p._euclidish(args, callInfo) } }
 
 internal val StrudelPattern._euclidish by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyEuclidish(p, args)
 }
 
 internal val String._euclidish by dslStringExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
+internal val PatternMapperFn._euclidish by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_euclidish(args, callInfo))
+}
 
-internal val _eish by dslPatternFunction { args, callInfo -> _euclidish(args, callInfo) }
+internal val _eish by dslPatternMapper { args, callInfo -> { p -> p._euclidish(args, callInfo) } }
 internal val StrudelPattern._eish by dslPatternExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
 internal val String._eish by dslStringExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
+internal val PatternMapperFn._eish by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_eish(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -820,15 +822,11 @@ internal val String._eish by dslStringExtension { p, args, callInfo -> p._euclid
  * ```KlangScript
  * s("bd").euclidish(5, 16, 0.0)  // same as euclid(5, 16)
  * ```
+ *
  * @alias eish
  * @category structural
  * @tags euclidish, euclid, groove, morph, rhythm
  */
-@StrudelDsl
-fun euclidish(pulses: Int, steps: Int, groove: PatternLike, pattern: PatternLike): StrudelPattern =
-    _euclidish(listOf(pulses, steps, groove, pattern).asStrudelDslArgs())
-
-/** Applies morphed Euclidean structure to the pattern. */
 @StrudelDsl
 fun StrudelPattern.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPattern =
     this._euclidish(listOf(pulses, steps, groove).asStrudelDslArgs())
@@ -836,6 +834,31 @@ fun StrudelPattern.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0)
 /** Applies morphed Euclidean structure to the mini-notation string. */
 @StrudelDsl
 fun String.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPattern =
+    this._euclidish(listOf(pulses, steps, groove).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that applies morphed Euclidean rhythm structure to the source pattern.
+ *
+ * @param pulses Number of onsets (beats) to place.
+ * @param steps  Total number of steps in the rhythm.
+ * @param groove Morph factor from 0 (strict Euclidean) to 1 (completely even spacing).
+ * @return A [PatternMapperFn] that restructures the source as a morphed Euclidean rhythm.
+ *
+ * ```KlangScript
+ * s("hh").apply(euclidish(3, 8, 0.5))  // via mapper
+ * ```
+ *
+ * @alias eish
+ * @category structural
+ * @tags euclidish, euclid, groove, morph, rhythm
+ */
+@StrudelDsl
+fun euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): PatternMapperFn =
+    _euclidish(listOf(pulses, steps, groove).asStrudelDslArgs())
+
+/** Chains a euclidish onto this [PatternMapperFn]; applies morphed Euclidean rhythm to the result. */
+@StrudelDsl
+fun PatternMapperFn.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): PatternMapperFn =
     this._euclidish(listOf(pulses, steps, groove).asStrudelDslArgs())
 
 /**
@@ -853,15 +876,11 @@ fun String.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): Strude
  * ```KlangScript
  * s("bd").eish(5, 16, 1.0)  // completely even spacing
  * ```
+ *
  * @alias euclidish
  * @category structural
  * @tags eish, euclidish, euclid, groove, morph, rhythm
  */
-@StrudelDsl
-fun eish(pulses: Int, steps: Int, groove: PatternLike, pattern: PatternLike): StrudelPattern =
-    _eish(listOf(pulses, steps, groove, pattern).asStrudelDslArgs())
-
-/** Alias for [euclidish]. */
 @StrudelDsl
 fun StrudelPattern.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPattern =
     this._eish(listOf(pulses, steps, groove).asStrudelDslArgs())
@@ -869,4 +888,29 @@ fun StrudelPattern.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): Str
 /** Alias for [euclidish]. */
 @StrudelDsl
 fun String.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPattern =
+    this._eish(listOf(pulses, steps, groove).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [euclidish] — applies morphed Euclidean rhythm.
+ *
+ * @param pulses Number of onsets (beats) to place.
+ * @param steps  Total number of steps in the rhythm.
+ * @param groove Morph factor from 0 (strict) to 1 (even).
+ * @return A [PatternMapperFn] that restructures the source as a morphed Euclidean rhythm.
+ *
+ * ```KlangScript
+ * s("hh").apply(eish(3, 8, 0.5))  // via mapper
+ * ```
+ *
+ * @alias euclidish
+ * @category structural
+ * @tags eish, euclidish, euclid, groove, morph, rhythm
+ */
+@StrudelDsl
+fun eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): PatternMapperFn =
+    _eish(listOf(pulses, steps, groove).asStrudelDslArgs())
+
+/** Chains an eish onto this [PatternMapperFn]; alias for [PatternMapperFn.euclidish]. */
+@StrudelDsl
+fun PatternMapperFn.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): PatternMapperFn =
     this._eish(listOf(pulses, steps, groove).asStrudelDslArgs())
