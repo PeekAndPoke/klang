@@ -271,7 +271,9 @@ fun n(index: PatternLike): StrudelPattern = _n(listOf(index).asStrudelDslArgs())
 // -- sound() / s() ----------------------------------------------------------------------------------------------------
 
 private val soundMutation = voiceModifier {
-    val split = it?.toString()?.split(":") ?: emptyList()
+    if (it == null) return@voiceModifier this
+
+    val split = it.toString().split(":")
 
     copy(
         sound = split.getOrNull(0),
@@ -295,7 +297,6 @@ fun applySound(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
             src.copy(
                 sound = ctrl.sound ?: src.sound,
                 soundIndex = ctrl.soundIndex ?: src.soundIndex,
-//                gain = ctrl.gain ?: src.gain,
             )
         }
     }
@@ -303,7 +304,7 @@ fun applySound(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
 
 internal val StrudelPattern._sound by dslPatternExtension { p, args, /* callInfo */ _ -> applySound(p, args) }
 
-internal val _sound by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(soundMutation) }
+internal val _sound by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(soundMutation).sound() }
 
 internal val String._sound by dslStringExtension { p, args, callInfo -> p._sound(args, callInfo) }
 

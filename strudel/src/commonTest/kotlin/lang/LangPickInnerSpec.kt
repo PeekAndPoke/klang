@@ -191,6 +191,16 @@ class LangPickInnerSpec : StringSpec({
         events[1].data.value?.asString shouldBe "hh"
     }
 
+    "pick() with patterns picks patterns" {
+        val result = seq("0 1")
+            .pick(sound("bd hh"), sound("sn cp"))
+
+        val events = result.queryArc(0.0, 1.0)
+        events shouldHaveSize 2
+        events[0].data.sound shouldBe "bd"
+        events[1].data.sound shouldBe "cp"
+    }
+
     "pick() with list of patterns picks patterns" {
         val lookup: List<Any> = listOf(
             sound("bd hh"),

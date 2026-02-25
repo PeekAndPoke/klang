@@ -237,12 +237,7 @@ internal val StrudelPattern._merge by dslPatternExtension { p, args, _ -> applyM
 internal val String._merge by dslStringExtension { p, args, callInfo -> p._merge(args, callInfo) }
 internal val _merge by dslPatternMapper { args, callInfo -> { p -> p._merge(args, callInfo) } }
 internal val PatternMapperFn._merge by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(
-        _merge(
-            args,
-            callInfo
-        )
-    )
+    m.chain(_merge(args, callInfo))
 }
 
 // ===== USER-FACING OVERLOADS =====

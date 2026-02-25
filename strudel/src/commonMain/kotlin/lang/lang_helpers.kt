@@ -4,6 +4,7 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
@@ -324,6 +325,8 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
 
         when (val arg = dslArg.value) {
             is StrudelPattern -> arg
+
+            is StrudelPatternEvent -> AtomicPattern(arg.data, locChain)
 
             // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
             is String -> parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
