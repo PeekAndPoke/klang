@@ -1747,11 +1747,11 @@ internal val PatternMapperFn._nresonance by dslPatternMapperExtension { m, args,
     m.chain(_nresonance(args, callInfo))
 }
 
-internal val _nres by dslPatternMapper { args, callInfo -> { p -> p._nres(args, callInfo) } }
-internal val StrudelPattern._nres by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
-internal val String._nres by dslStringExtension { p, args, callInfo -> p._nres(args, callInfo) }
-internal val PatternMapperFn._nres by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_nres(args, callInfo))
+internal val _notchq by dslPatternMapper { args, callInfo -> { p -> p._notchq(args, callInfo) } }
+internal val StrudelPattern._notchq by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
+internal val String._notchq by dslStringExtension { p, args, callInfo -> p._notchq(args, callInfo) }
+internal val PatternMapperFn._notchq by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_notchq(args, callInfo))
 }
 
 // ===== USER-FACING OVERLOADS =====
@@ -1863,8 +1863,8 @@ fun PatternMapperFn.nresonance(q: PatternLike? = null): PatternMapperFn =
  * @tags nres, nresonance, notch filter, Q
  */
 @StrudelDsl
-fun StrudelPattern.nres(q: PatternLike? = null): StrudelPattern =
-    this._nres(listOfNotNull(q).asStrudelDslArgs())
+fun StrudelPattern.notchq(q: PatternLike? = null): StrudelPattern =
+    this._notchq(listOfNotNull(q).asStrudelDslArgs())
 
 /**
  * Alias for [nresonance] on a string pattern.
@@ -1877,8 +1877,8 @@ fun StrudelPattern.nres(q: PatternLike? = null): StrudelPattern =
  * ```
  */
 @StrudelDsl
-fun String.nres(q: PatternLike? = null): StrudelPattern =
-    this._nres(listOfNotNull(q).asStrudelDslArgs())
+fun String.notchq(q: PatternLike? = null): StrudelPattern =
+    this._notchq(listOfNotNull(q).asStrudelDslArgs())
 
 /**
  * Alias for [nresonance]. Returns a [PatternMapperFn] that sets notch filter resonance.
@@ -1899,7 +1899,7 @@ fun String.nres(q: PatternLike? = null): StrudelPattern =
  * @tags nres, nresonance, notch filter, Q
  */
 @StrudelDsl
-fun nres(q: PatternLike? = null): PatternMapperFn = _nres(listOfNotNull(q).asStrudelDslArgs())
+fun notchq(q: PatternLike? = null): PatternMapperFn = _notchq(listOfNotNull(q).asStrudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets notch resonance (alias for [nresonance]) after the previous mapper.
@@ -1916,8 +1916,8 @@ fun nres(q: PatternLike? = null): PatternMapperFn = _nres(listOfNotNull(q).asStr
  * ```
  */
 @StrudelDsl
-fun PatternMapperFn.nres(q: PatternLike? = null): PatternMapperFn =
-    _nres(listOfNotNull(q).asStrudelDslArgs())
+fun PatternMapperFn.notchq(q: PatternLike? = null): PatternMapperFn =
+    _notchq(listOfNotNull(q).asStrudelDslArgs())
 
 // -- lpattack() / lpa() - Low Pass Filter Envelope Attack ---------------------------------------------------------------
 

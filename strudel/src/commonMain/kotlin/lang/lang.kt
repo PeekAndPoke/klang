@@ -40,9 +40,10 @@ fun initStrudelLang() {
     strudelLangTonalInit = true
     strudelLangVowelInit = true
 
-    // register non-strudel addon functions
+    // register strudel addon functions, that are not part of the original strudel impl
     strudelLangArithmeticAddonsInit = true
     strudelLangContinuousAddonsInit = true
+    strudelLangFiltersAddonsInit = true
     strudelLangOscAddonsInit = true
     strudelLangStructuralAddonsInit = true
     strudelLangTempoAddonsInit = true

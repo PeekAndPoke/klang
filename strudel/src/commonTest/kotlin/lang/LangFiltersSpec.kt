@@ -287,7 +287,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "nres() alias works like nresonance()" {
-        val p = note("c3 e3").notchf("500").nres("0.8")
+        val p = note("c3 e3").notchf("500").notchq("0.8")
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
         events[0].data.nresonance shouldBe 0.8

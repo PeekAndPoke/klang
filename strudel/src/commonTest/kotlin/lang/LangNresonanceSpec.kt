@@ -95,17 +95,17 @@ class LangNresonanceSpec : StringSpec({
 
     // ---- nres (alias) ----
 
-    "nres dsl interface" {
+    "notchq dsl interface" {
         val pat = "a b"
         val ctrl = "0.5 1.0"
 
         dslInterfaceTests(
-            "pattern.nres(ctrl)" to seq(pat).nres(ctrl),
-            "script pattern.nres(ctrl)" to StrudelPattern.compile("""seq("$pat").nres("$ctrl")"""),
-            "string.nres(ctrl)" to pat.nres(ctrl),
-            "script string.nres(ctrl)" to StrudelPattern.compile(""""$pat".nres("$ctrl")"""),
-            "nres(ctrl)" to seq(pat).apply(nres(ctrl)),
-            "script nres(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nres("$ctrl"))"""),
+            "pattern.notchq(ctrl)" to seq(pat).notchq(ctrl),
+            "script pattern.notchq(ctrl)" to StrudelPattern.compile("""seq("$pat").notchq("$ctrl")"""),
+            "string.notchq(ctrl)" to pat.notchq(ctrl),
+            "script string.notchq(ctrl)" to StrudelPattern.compile(""""$pat".notchq("$ctrl")"""),
+            "notchq(ctrl)" to seq(pat).apply(notchq(ctrl)),
+            "script notchq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(notchq("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nresonance shouldBe 0.5
@@ -113,8 +113,8 @@ class LangNresonanceSpec : StringSpec({
         }
     }
 
-    "reinterpret voice data as nresonance | seq(\"0.5 1.0\").nres()" {
-        val p = seq("0.5 1.0").nres()
+    "reinterpret voice data as nresonance | seq(\"0.5 1.0\").notchq()" {
+        val p = seq("0.5 1.0").notchq()
         val events = p.queryArc(0.0, 1.0)
         assertSoftly {
             events.size shouldBe 2
@@ -123,16 +123,16 @@ class LangNresonanceSpec : StringSpec({
         }
     }
 
-    "nres() alias works as pattern extension" {
-        val p = note("c d").nres("0.4 0.6")
+    "notchq() alias works as pattern extension" {
+        val p = note("c d").notchq("0.4 0.6")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
         events.map { it.data.nresonance } shouldBe listOf(0.4, 0.6)
     }
 
-    "nres() alias works as string extension" {
-        val p = "e3".nres("0.8")
+    "notchq() alias works as string extension" {
+        val p = "e3".notchq("0.8")
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -140,8 +140,8 @@ class LangNresonanceSpec : StringSpec({
         events[0].data.nresonance shouldBe 0.8
     }
 
-    "nres() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").nres("0.2 0.9")""")
+    "notchq() alias works within compiled code" {
+        val p = StrudelPattern.compile("""note("c d").notchq("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
