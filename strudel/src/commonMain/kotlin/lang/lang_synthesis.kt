@@ -254,16 +254,24 @@ fun PatternMapperFn.fmatt(seconds: PatternLike? = null): PatternMapperFn =
 private val fmdecayMutation = voiceModifier { copy(fmDecay = it?.asDoubleOrNull()) }
 
 fun applyFmdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, fmdecayMutation)
+    return source._liftOrReinterpretNumericalField(args, fmdecayMutation)
 }
 
-internal val _fmdecay by dslPatternFunction { args, _ -> args.toPattern(fmdecayMutation) }
 internal val StrudelPattern._fmdecay by dslPatternExtension { p, args, _ -> applyFmdecay(p, args) }
 internal val String._fmdecay by dslStringExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
+internal val _fmdecay by dslPatternMapper { args, callInfo -> { p -> p._fmdecay(args, callInfo) } }
+internal val PatternMapperFn._fmdecay by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmdecay(args, callInfo))
+}
 
-internal val _fmdec by dslPatternFunction { args, callInfo -> _fmdecay(args, callInfo) }
 internal val StrudelPattern._fmdec by dslPatternExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
-internal val String._fmdec by dslStringExtension { p, args, callInfo -> p._fmdec(args, callInfo) }
+internal val String._fmdec by dslStringExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
+internal val _fmdec by dslPatternMapper { args, callInfo -> { p -> p._fmdecay(args, callInfo) } }
+internal val PatternMapperFn._fmdec by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmdec(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the decay time for the FM modulation envelope in seconds.
@@ -285,15 +293,33 @@ internal val String._fmdec by dslStringExtension { p, args, callInfo -> p._fmdec
  * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
  */
 @StrudelDsl
-fun fmdecay(seconds: PatternLike): StrudelPattern = _fmdecay(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the FM modulation envelope decay time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmdecay(seconds: PatternLike): StrudelPattern = this._fmdecay(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.fmdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._fmdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the FM modulation envelope decay time on a string pattern. */
 @StrudelDsl
-fun String.fmdecay(seconds: PatternLike): StrudelPattern = this._fmdecay(listOf(seconds).asStrudelDslArgs())
+fun String.fmdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._fmdecay(listOfNotNull(seconds).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the FM modulation envelope decay time on the source pattern.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmdecay(0.1))  // via mapper
+ * ```
+ *
+ * @alias fmdec
+ * @category synthesis
+ * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
+ */
+@StrudelDsl
+fun fmdecay(seconds: PatternLike? = null): PatternMapperFn =
+    _fmdecay(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Chains a fmdecay onto this [PatternMapperFn]; sets the FM envelope decay time on the result. */
+@StrudelDsl
+fun PatternMapperFn.fmdecay(seconds: PatternLike? = null): PatternMapperFn =
+    this._fmdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [fmdecay]. Sets the FM modulation envelope decay time.
@@ -303,15 +329,33 @@ fun String.fmdecay(seconds: PatternLike): StrudelPattern = this._fmdecay(listOf(
  * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
  */
 @StrudelDsl
-fun fmdec(seconds: PatternLike): StrudelPattern = _fmdec(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [fmdecay] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmdec(seconds: PatternLike): StrudelPattern = this._fmdec(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.fmdec(seconds: PatternLike? = null): StrudelPattern =
+    this._fmdec(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [fmdecay] on a string pattern. */
 @StrudelDsl
-fun String.fmdec(seconds: PatternLike): StrudelPattern = this._fmdec(listOf(seconds).asStrudelDslArgs())
+fun String.fmdec(seconds: PatternLike? = null): StrudelPattern =
+    this._fmdec(listOfNotNull(seconds).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [fmdecay].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmdec(0.1))  // via mapper
+ * ```
+ *
+ * @alias fmdecay
+ * @category synthesis
+ * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
+ */
+@StrudelDsl
+fun fmdec(seconds: PatternLike? = null): PatternMapperFn =
+    _fmdec(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Chains a fmdec onto this [PatternMapperFn]; alias for [PatternMapperFn.fmdecay]. */
+@StrudelDsl
+fun PatternMapperFn.fmdec(seconds: PatternLike? = null): PatternMapperFn =
+    this._fmdec(listOfNotNull(seconds).asStrudelDslArgs())
 
 // -- fmsustain() / fmsus() --------------------------------------------------------------------------------------------
 

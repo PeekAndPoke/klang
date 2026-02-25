@@ -1,13 +1,88 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangFmdecaySpec : StringSpec({
 
+    "fmdecay dsl interface" {
+        val pat = "hh hh"
+        val ctrl = "0.1 0.5"
+
+        dslInterfaceTests(
+            "pattern.fmdecay(ctrl)" to s(pat).fmdecay(ctrl),
+            "script pattern.fmdecay(ctrl)" to StrudelPattern.compile("""s("$pat").fmdecay("$ctrl")"""),
+            "string.fmdecay(ctrl)" to pat.fmdecay(ctrl),
+            "script string.fmdecay(ctrl)" to StrudelPattern.compile(""""$pat".fmdecay("$ctrl")"""),
+            "fmdecay(ctrl)" to s(pat).apply(fmdecay(ctrl)),
+            "script fmdecay(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmdecay("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.fmDecay shouldBe 0.1
+            events[1].data.fmDecay shouldBe 0.5
+        }
+    }
+
+    "fmdec dsl interface" {
+        val pat = "hh hh"
+        val ctrl = "0.1 0.5"
+
+        dslInterfaceTests(
+            "pattern.fmdec(ctrl)" to s(pat).fmdec(ctrl),
+            "script pattern.fmdec(ctrl)" to StrudelPattern.compile("""s("$pat").fmdec("$ctrl")"""),
+            "string.fmdec(ctrl)" to pat.fmdec(ctrl),
+            "script string.fmdec(ctrl)" to StrudelPattern.compile(""""$pat".fmdec("$ctrl")"""),
+            "fmdec(ctrl)" to s(pat).apply(fmdec(ctrl)),
+            "script fmdec(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmdec("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.fmDecay shouldBe 0.1
+            events[1].data.fmDecay shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as fmDecay | seq(\"0.1 0.5\").fmdecay()" {
+        val p = seq("0.1 0.5").fmdecay()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.fmDecay shouldBe 0.1
+            events[1].data.fmDecay shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as fmDecay | \"0.1 0.5\".fmdecay()" {
+        val p = "0.1 0.5".fmdecay()
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.fmDecay shouldBe 0.1
+            events[1].data.fmDecay shouldBe 0.5
+        }
+    }
+
+    "reinterpret voice data as fmDecay | seq(\"0.1 0.5\").apply(fmdecay())" {
+        val p = seq("0.1 0.5").apply(fmdecay())
+
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.fmDecay shouldBe 0.1
+            events[1].data.fmDecay shouldBe 0.5
+        }
+    }
+
     "top-level fmdecay() sets VoiceData.fmDecay correctly" {
-        val p = fmdecay("0.5 1.0")
+        val p = s("hh hh").apply(fmdecay("0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -38,14 +113,6 @@ class LangFmdecaySpec : StringSpec({
 
         events.size shouldBe 2
         events.map { it.data.fmDecay } shouldBe listOf(0.5, 1.0)
-    }
-
-    "fmdec() alias works as top-level function" {
-        val p = fmdec("0.3 0.7")
-        val events = p.queryArc(0.0, 1.0)
-
-        events.size shouldBe 2
-        events.map { it.data.fmDecay } shouldBe listOf(0.3, 0.7)
     }
 
     "fmdec() alias works as pattern extension" {
