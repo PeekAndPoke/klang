@@ -3438,8 +3438,11 @@ fun applyBite(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelP
 }
 
 internal val StrudelPattern._bite by dslPatternExtension { p, args, /* callInfo */ _ -> applyBite(p, args) }
-
 internal val String._bite by dslStringExtension { p, args, callInfo -> p._bite(args, callInfo) }
+internal val _bite by dslPatternMapper { args, callInfo -> { p -> p._bite(args, callInfo) } }
+internal val PatternMapperFn._bite by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bite(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -3460,6 +3463,7 @@ internal val String._bite by dslStringExtension { p, args, callInfo -> p._bite(a
  * ```KlangScript
  * n("0 1 2 3").bite(4, "0!2 1").scale("c3:major")  // play slice 0 twice then slice 1
  * ```
+ *
  * @category structural
  * @tags bite, slice, rearrange, index, stutter
  */
@@ -3467,9 +3471,45 @@ internal val String._bite by dslStringExtension { p, args, callInfo -> p._bite(a
 fun StrudelPattern.bite(n: PatternLike, indices: PatternLike): StrudelPattern =
     this._bite(listOf(n, indices).asStrudelDslArgs())
 
-/** Like [bite] applied to a mini-notation string. */
+/**
+ * Like [bite] applied to a mini-notation string.
+ *
+ * @param n       Number of equal slices to cut each cycle into.
+ * @param indices Pattern of slice indices (0-based). Can be a mini-notation string or a pattern.
+ * @return A new pattern built by playing slices in the order specified by `indices`.
+ *
+ * ```KlangScript
+ * "0 1 2 3".bite(4, "3 2 1 0").n().scale("c3:major")  // reverse the pattern
+ * ```
+ *
+ * @category structural
+ * @tags bite, slice, rearrange, index, stutter
+ */
 @StrudelDsl
 fun String.bite(n: PatternLike, indices: PatternLike): StrudelPattern =
+    this._bite(listOf(n, indices).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that splits the source into `n` equal slices and plays them in `indices` order.
+ *
+ * @param n       Number of equal slices to cut each cycle into.
+ * @param indices Pattern of slice indices (0-based). Can be a mini-notation string or a pattern.
+ * @return A [PatternMapperFn] that rearranges slices of the source pattern.
+ *
+ * ```KlangScript
+ * n("0 1 2 3").apply(bite(4, "3 2 1 0")).scale("c3:major")  // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags bite, slice, rearrange, index, stutter
+ */
+@StrudelDsl
+fun bite(n: PatternLike, indices: PatternLike): PatternMapperFn =
+    _bite(listOf(n, indices).asStrudelDslArgs())
+
+/** Chains a bite onto this [PatternMapperFn]; rearranges slices of the result in `indices` order. */
+@StrudelDsl
+fun PatternMapperFn.bite(n: PatternLike, indices: PatternLike): PatternMapperFn =
     this._bite(listOf(n, indices).asStrudelDslArgs())
 
 // -- segment() --------------------------------------------------------------------------------------------------------
