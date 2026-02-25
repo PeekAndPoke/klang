@@ -139,7 +139,7 @@ class LangPickRestartSpec : StringSpec({
         val lookup = listOf(inner)
         val selector = seq("0 ~ 0 ~")
 
-        val result = pick(lookup, selector)
+        val result = selector.pick(lookup)
         val events = result.queryArc(0.0, 1.0)
 
         events shouldHaveSize 2

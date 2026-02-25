@@ -171,27 +171,7 @@ private fun dispatchPick(
     }
 }
 
-internal val _pick by dslPatternFunction { args, _ ->
-    if (args.size < 2) return@dslPatternFunction silence
-
-    val first = args[0].value
-    val lookup: Any
-    val patArg: StrudelDslArg<Any?>
-    val lookupLocation: SourceLocation?
-
-    if (first is List<*> || first is Map<*, *>) {
-        lookup = first
-        lookupLocation = args[0].location
-        patArg = args[1]
-    } else {
-        lookup = args.dropLast(1).map { it.value }
-        lookupLocation = args.firstOrNull()?.location
-        patArg = args.last()
-    }
-
-    val pat = listOf(patArg).toPattern(voiceValueModifier)
-    dispatchPick(lookup, pat, modulo = false, lookupLocation)
-}
+internal val _pick by dslPatternMapper { args, callInfo -> { p -> p._pick(args, callInfo) } }
 
 internal val StrudelPattern._pick by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -205,33 +185,15 @@ internal val StrudelPattern._pick by dslPatternExtension { p, args, _ ->
 
 internal val String._pick by dslStringExtension { p, args, callInfo -> p._pick(args, callInfo) }
 
-/**
- * Selects patterns from a list or map using an index pattern, clamping out-of-bounds indices.
- *
- * When the first argument is a list or map, the second argument is used as the index pattern.
- * Otherwise all arguments except the last are treated as the lookup list, and the last
- * argument is the index pattern. Out-of-bounds indices are clamped.
- *
- * ```KlangScript
- * pick("bd", "sd", "hh", n("0 1 2 1")).s()    // varargs: last arg is index pattern
- * ```
- *
- * ```KlangScript
- * pick(["c3", "e3", "g3"], n("0 1 2")).note()  // list lookup, index pattern as second arg
- * ```
- *
- * @category structural
- * @tags pick, select, index, lookup
- */
-@StrudelDsl
-fun pick(vararg args: PatternLike): StrudelPattern = _pick(args.toList().asStrudelDslArgs())
+internal val PatternMapperFn._pick by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_pick(args, callInfo))
+}
 
 /**
- * Selects patterns from a list or map using the values of this pattern as indices.
+ * Selects patterns from a list or map using the values of this pattern as indices, clamping out-of-bounds.
  *
- * Each event's numeric value is used as a zero-based index into the lookup. Out-of-bounds
- * indices are clamped to the nearest valid position. The lookup can be a list (integer
- * indices) or a map (string keys). The selected pattern's timing structure is preserved.
+ * Each event's numeric value is used as a zero-based index into the lookup. Indices are clamped
+ * to valid bounds. The lookup can be a list (integer indices) or a map (string keys).
  *
  * ```KlangScript
  * "0 1 2 1".pick("bd", "sd", "hh").s()              // index selects drum each event
@@ -247,41 +209,51 @@ fun pick(vararg args: PatternLike): StrudelPattern = _pick(args.toList().asStrud
 @StrudelDsl
 fun StrudelPattern.pick(vararg args: PatternLike): StrudelPattern = this._pick(args.toList().asStrudelDslArgs())
 
-/** Selects patterns from a list using this string as the index pattern, clamping out-of-bounds. */
+/** Selects patterns from a list or map using this string as the index pattern, clamping out-of-bounds. */
 @StrudelDsl
 fun String.pick(vararg args: PatternLike): StrudelPattern = this._pick(args.toList().asStrudelDslArgs())
 
-/** Basic pick with List lookup (clamp indices) */
-fun pick(lookup: List<Any>, pat: StrudelPattern): StrudelPattern =
-    applyPickInner(lookup, pat, modulo = false)
+/**
+ * Returns a pattern mapper that selects patterns from a lookup using index values, clamping out-of-bounds.
+ *
+ * The source pattern's numeric values serve as indices into the lookup. Apply using `.apply()`.
+ *
+ * ```KlangScript
+ * seq("0 1 2").apply(pick("bd", "sd", "hh")).s()    // pattern values are indices
+ * ```
+ *
+ * ```KlangScript
+ * n("0 1").apply(pick(["c3 e3", "g3 b3"])).note()   // list lookup
+ * ```
+ *
+ * @category structural
+ * @tags pick, select, index, lookup
+ */
+@StrudelDsl
+fun pick(vararg args: PatternLike): PatternMapperFn = _pick(args.toList().asStrudelDslArgs())
 
-/** Basic pick with Map lookup (clamp indices) */
-fun pick(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
-    applyPickInner(lookup, pat, modulo = false)
+/** Chains a pick mapper onto this mapper; the source pattern provides indices (clamped). */
+@StrudelDsl
+fun PatternMapperFn.pick(vararg args: PatternLike): PatternMapperFn = this._pick(args.toList().asStrudelDslArgs())
+
+/** Selects patterns from a List lookup using this pattern's values as indices (clamped). */
+fun StrudelPattern.pick(lookup: List<Any>): StrudelPattern = applyPickInner(lookup, this, modulo = false)
+
+/** Selects patterns from a List lookup using this string as the index pattern (clamped). */
+fun String.pick(lookup: List<Any>): StrudelPattern = seq(this).pick(lookup)
+
+/** Returns a mapper that selects patterns from a List lookup using clamped integer indices. */
+fun pick(lookup: List<Any>): PatternMapperFn = { pat -> applyPickInner(lookup, pat, modulo = false) }
+
+/** Selects patterns from a Map lookup using this pattern's values as string keys. */
+fun StrudelPattern.pick(lookup: Map<String, Any>): StrudelPattern = applyPickInner(lookup, this, modulo = false)
+
+/** Returns a mapper that selects patterns from a Map lookup using string keys. */
+fun pick(lookup: Map<String, Any>): PatternMapperFn = { pat -> applyPickInner(lookup, pat, modulo = false) }
 
 // -- pickmod() --------------------------------------------------------------------------------------------------------
 
-internal val _pickmod by dslPatternFunction { args, _ ->
-    if (args.size < 2) return@dslPatternFunction silence
-
-    val first = args[0].value
-    val lookup: Any
-    val patArg: StrudelDslArg<Any?>
-    val lookupLocation: SourceLocation?
-
-    if (first is List<*> || first is Map<*, *>) {
-        lookup = first
-        lookupLocation = args[0].location
-        patArg = args[1]
-    } else {
-        lookup = args.dropLast(1).map { it.value }
-        lookupLocation = args.firstOrNull()?.location
-        patArg = args.last()
-    }
-
-    val pat = listOf(patArg).toPattern(voiceValueModifier)
-    dispatchPick(lookup, pat, modulo = true, lookupLocation)
-}
+internal val _pickmod by dslPatternMapper { args, callInfo -> { p -> p._pickmod(args, callInfo) } }
 
 internal val StrudelPattern._pickmod by dslPatternExtension { p, args, _ ->
     if (args.isEmpty()) return@dslPatternExtension p
@@ -295,26 +267,9 @@ internal val StrudelPattern._pickmod by dslPatternExtension { p, args, _ ->
 
 internal val String._pickmod by dslStringExtension { p, args, callInfo -> p._pickmod(args, callInfo) }
 
-/**
- * Like [pick] but wraps out-of-bounds indices with modulo.
- *
- * When the first argument is a list or map, the second argument is used as the index pattern.
- * Otherwise all arguments except the last form the lookup list, and the last is the index
- * pattern. Indices wrap cyclically; see [pick] for clamped behaviour.
- *
- * ```KlangScript
- * pickmod("bd", "sd", "hh", n("0 1 2 3 4")).s()  // 3→0, 4→1 wrapping
- * ```
- *
- * ```KlangScript
- * pickmod(["c3", "e3", "g3"], n("0 4 8")).note()  // all indices wrap to valid range
- * ```
- *
- * @category structural
- * @tags pickmod, pick, modulo, wrap, index, lookup
- */
-@StrudelDsl
-fun pickmod(vararg args: PatternLike): StrudelPattern = _pickmod(args.toList().asStrudelDslArgs())
+internal val PatternMapperFn._pickmod by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_pickmod(args, callInfo))
+}
 
 /**
  * Like [pick] but wraps out-of-bounds indices with modulo arithmetic.
@@ -336,17 +291,47 @@ fun pickmod(vararg args: PatternLike): StrudelPattern = _pickmod(args.toList().a
 @StrudelDsl
 fun StrudelPattern.pickmod(vararg args: PatternLike): StrudelPattern = this._pickmod(args.toList().asStrudelDslArgs())
 
-/** Selects patterns from a list using this string as the index pattern, wrapping with modulo. */
+/** Selects patterns from a list or map using this string as the index pattern, wrapping with modulo. */
 @StrudelDsl
 fun String.pickmod(vararg args: PatternLike): StrudelPattern = this._pickmod(args.toList().asStrudelDslArgs())
 
-/** Pick with modulo wrapping - List lookup */
-fun pickmod(lookup: List<Any>, pat: StrudelPattern): StrudelPattern =
-    applyPickInner(lookup, pat, modulo = true)
+/**
+ * Returns a pattern mapper that selects from a lookup using modulo-wrapped index values.
+ *
+ * Like [pick] but wraps out-of-bounds indices cyclically. Apply using `.apply()`.
+ *
+ * ```KlangScript
+ * seq("0 1 2 3 4").apply(pickmod("bd", "sd", "hh")).s()  // 3→0, 4→1 wrapping
+ * ```
+ *
+ * ```KlangScript
+ * n("0 4 8").apply(pickmod(["c3", "e3", "g3"])).note()   // all indices wrap
+ * ```
+ *
+ * @category structural
+ * @tags pickmod, pick, modulo, wrap, index, lookup
+ */
+@StrudelDsl
+fun pickmod(vararg args: PatternLike): PatternMapperFn = _pickmod(args.toList().asStrudelDslArgs())
 
-/** Pick with modulo wrapping - Map lookup */
-fun pickmod(lookup: Map<String, Any>, pat: StrudelPattern): StrudelPattern =
-    applyPickInner(lookup, pat, modulo = true)
+/** Chains a pickmod mapper onto this mapper; the source pattern provides indices (modulo-wrapped). */
+@StrudelDsl
+fun PatternMapperFn.pickmod(vararg args: PatternLike): PatternMapperFn = this._pickmod(args.toList().asStrudelDslArgs())
+
+/** Like [pick] but wraps indices with modulo - List lookup using this pattern's values. */
+fun StrudelPattern.pickmod(lookup: List<Any>): StrudelPattern = applyPickInner(lookup, this, modulo = true)
+
+/** Like [pick] but wraps indices with modulo - List lookup using this string as index pattern. */
+fun String.pickmod(lookup: List<Any>): StrudelPattern = seq(this).pickmod(lookup)
+
+/** Returns a mapper that selects from a List lookup with modulo-wrapped indices. */
+fun pickmod(lookup: List<Any>): PatternMapperFn = { pat -> applyPickInner(lookup, pat, modulo = true) }
+
+/** Like [pick] but wraps indices with modulo - Map lookup using this pattern's values. */
+fun StrudelPattern.pickmod(lookup: Map<String, Any>): StrudelPattern = applyPickInner(lookup, this, modulo = true)
+
+/** Returns a mapper that selects from a Map lookup with string keys (modulo). */
+fun pickmod(lookup: Map<String, Any>): PatternMapperFn = { pat -> applyPickInner(lookup, pat, modulo = true) }
 
 private fun applyPickOuter(
     lookup: Any,

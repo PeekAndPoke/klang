@@ -3,8 +3,11 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 /**
  * Tests for pick() and pickmod() with innerJoin behavior.
@@ -13,38 +16,115 @@ import io.kotest.matchers.shouldBe
  */
 class LangPickInnerSpec : StringSpec({
 
-    "pick() with empty list returns silence" {
-        val lookup: List<Any> = emptyList()
-        val selector = seq("0 1")
+    // ---- pick() dsl interface ----
 
-        val result = pick(lookup, selector)
-
-        result shouldBe silence
+    "pick() dsl interface" {
+        val pat = "0 1 2"
+        dslInterfaceTests(
+            "pattern.pick()" to seq(pat).pick("bd", "hh", "sn"),
+            "script pattern.pick()" to StrudelPattern.compile("""seq("$pat").pick("bd", "hh", "sn")"""),
+            "string.pick()" to pat.pick("bd", "hh", "sn"),
+            "script string.pick()" to StrudelPattern.compile(""""$pat".pick("bd", "hh", "sn")"""),
+            "pattern.apply(pick())" to seq(pat).apply(pick("bd", "hh", "sn")),
+            "script pattern.apply(pick())" to StrudelPattern.compile("""seq("$pat").apply(pick("bd", "hh", "sn"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asString shouldBe "bd"
+            events[1].data.value?.asString shouldBe "hh"
+            events[2].data.value?.asString shouldBe "sn"
+        }
     }
 
-    "pick() with list of strings picks by numeric index" {
-        val lookup: List<Any> = listOf("bd", "hh", "sn")
-        val selector = seq("0 1 2")
-
-        val result = pick(lookup, selector)
+    "pick() as PatternMapperFn" {
+        val mapperFn = pick("bd", "hh", "sn")
+        val result = seq("0 1 2").apply(mapperFn)
         val events = result.queryArc(0.0, 1.0)
-
-        // Should have 3 events (one per selector event)
         events shouldHaveSize 3
-
-        // Check note values from picked patterns
         events[0].data.value?.asString shouldBe "bd"
         events[1].data.value?.asString shouldBe "hh"
         events[2].data.value?.asString shouldBe "sn"
     }
 
-    // New test for spread arguments
-    "pick() supports spread arguments (varargs style)" {
-        // pick("bd", "hh", "sn", "0 1 2")
-        // logic: last arg is selector, rest are lookup list
-        val result = pick("bd", "hh", "sn", "0 1 2")
+    "PatternMapperFn.pick() extension" {
+        val identity: PatternMapperFn = { it }
+        val mapperWithPick = identity.pick("bd", "hh", "sn")
+        val result = seq("0 1 2").apply(mapperWithPick)
         val events = result.queryArc(0.0, 1.0)
+        events shouldHaveSize 3
+        events[0].data.value?.asString shouldBe "bd"
+        events[1].data.value?.asString shouldBe "hh"
+        events[2].data.value?.asString shouldBe "sn"
+    }
 
+    // ---- pickmod() dsl interface ----
+
+    "pickmod() dsl interface" {
+        val pat = "0 1 2 3 4"
+        dslInterfaceTests(
+            "pattern.pickmod()" to seq(pat).pickmod("bd", "hh", "sn"),
+            "script pattern.pickmod()" to StrudelPattern.compile("""seq("$pat").pickmod("bd", "hh", "sn")"""),
+            "string.pickmod()" to pat.pickmod("bd", "hh", "sn"),
+            "script string.pickmod()" to StrudelPattern.compile(""""$pat".pickmod("bd", "hh", "sn")"""),
+            "pattern.apply(pickmod())" to seq(pat).apply(pickmod("bd", "hh", "sn")),
+            "script pattern.apply(pickmod())" to StrudelPattern.compile(
+                """seq("$pat").apply(pickmod("bd", "hh", "sn"))"""
+            ),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.value?.asString shouldBe "bd"  // 0 % 3 = 0
+            events[1].data.value?.asString shouldBe "hh"  // 1 % 3 = 1
+            events[2].data.value?.asString shouldBe "sn"  // 2 % 3 = 2
+            events[3].data.value?.asString shouldBe "bd"  // 3 % 3 = 0
+            events[4].data.value?.asString shouldBe "hh"  // 4 % 3 = 1
+        }
+    }
+
+    "pickmod() as PatternMapperFn" {
+        val mapperFn = pickmod("bd", "hh", "sn")
+        val result = seq("0 1 2 3 4").apply(mapperFn)
+        val events = result.queryArc(0.0, 1.0)
+        events shouldHaveSize 5
+        events[0].data.value?.asString shouldBe "bd"
+        events[1].data.value?.asString shouldBe "hh"
+        events[2].data.value?.asString shouldBe "sn"
+        events[3].data.value?.asString shouldBe "bd"
+        events[4].data.value?.asString shouldBe "hh"
+    }
+
+    "PatternMapperFn.pickmod() extension" {
+        val identity: PatternMapperFn = { it }
+        val mapperWithPickmod = identity.pickmod("bd", "hh", "sn")
+        val result = seq("0 1 2 3 4").apply(mapperWithPickmod)
+        val events = result.queryArc(0.0, 1.0)
+        events shouldHaveSize 5
+        events[0].data.value?.asString shouldBe "bd"
+        events[1].data.value?.asString shouldBe "hh"
+        events[2].data.value?.asString shouldBe "sn"
+        events[3].data.value?.asString shouldBe "bd"
+        events[4].data.value?.asString shouldBe "hh"
+    }
+
+    // ---- pick() behavioral tests ----
+
+    "pick() with empty list returns silence" {
+        val lookup: List<Any> = emptyList()
+        val result = seq("0 1").pick(lookup)
+        result shouldBe silence
+    }
+
+    "pick() with list of strings picks by numeric index" {
+        val lookup: List<Any> = listOf("bd", "hh", "sn")
+        val result = seq("0 1 2").pick(lookup)
+        val events = result.queryArc(0.0, 1.0)
+        events shouldHaveSize 3
+        events[0].data.value?.asString shouldBe "bd"
+        events[1].data.value?.asString shouldBe "hh"
+        events[2].data.value?.asString shouldBe "sn"
+    }
+
+    "pick() supports varargs style" {
+        val result = seq("0 1 2").pick("bd", "hh", "sn")
+        val events = result.queryArc(0.0, 1.0)
         events shouldHaveSize 3
         events[0].data.value?.asString shouldBe "bd"
         events[1].data.value?.asString shouldBe "hh"
@@ -53,13 +133,9 @@ class LangPickInnerSpec : StringSpec({
 
     "pick() clamps out-of-bounds indices" {
         val lookup: List<Any> = listOf("bd", "hh")
-        val selector = seq("0 1 2 3 99")
-
-        val result = pick(lookup, selector)
+        val result = seq("0 1 2 3 99").pick(lookup)
         val events = result.queryArc(0.0, 1.0)
-
         events shouldHaveSize 5
-
         events[0].data.value?.asString shouldBe "bd"  // index 0
         events[1].data.value?.asString shouldBe "hh"  // index 1
         events[2].data.value?.asString shouldBe "hh"  // index 2 clamped to 1
@@ -69,25 +145,19 @@ class LangPickInnerSpec : StringSpec({
 
     "pickmod() wraps out-of-bounds indices with modulo" {
         val lookup: List<Any> = listOf("bd", "hh")
-        val selector = seq("0 1 2 3 4")
-
-        val result = pickmod(lookup, selector)
+        val result = seq("0 1 2 3 4").pickmod(lookup)
         val events = result.queryArc(0.0, 1.0)
-
         events shouldHaveSize 5
-
-        events[0].data.value?.asString shouldBe "bd"  // index 0 % 2 = 0
-        events[1].data.value?.asString shouldBe "hh"  // index 1 % 2 = 1
-        events[2].data.value?.asString shouldBe "bd"  // index 2 % 2 = 0
-        events[3].data.value?.asString shouldBe "hh"  // index 3 % 2 = 1
-        events[4].data.value?.asString shouldBe "bd"  // index 4 % 2 = 0
+        events[0].data.value?.asString shouldBe "bd"  // 0 % 2 = 0
+        events[1].data.value?.asString shouldBe "hh"  // 1 % 2 = 1
+        events[2].data.value?.asString shouldBe "bd"  // 2 % 2 = 0
+        events[3].data.value?.asString shouldBe "hh"  // 3 % 2 = 1
+        events[4].data.value?.asString shouldBe "bd"  // 4 % 2 = 0
     }
 
-    // New test for spread arguments with pickmod
-    "pickmod() supports spread arguments" {
-        val result = pickmod("bd", "hh", "0 1 2 3")
+    "pickmod() supports varargs style" {
+        val result = seq("0 1 2 3").pickmod("bd", "hh")
         val events = result.queryArc(0.0, 1.0)
-
         events shouldHaveSize 4
         events[0].data.value?.asString shouldBe "bd"
         events[1].data.value?.asString shouldBe "hh"
@@ -101,13 +171,9 @@ class LangPickInnerSpec : StringSpec({
             "b" to "hh",
             "c" to "sn"
         )
-        val selector = seq("a b c")
-
-        val result = pick(lookup, selector)
+        val result = seq("a b c").pick(lookup)
         val events = result.queryArc(0.0, 1.0)
-
         events shouldHaveSize 3
-
         events[0].data.value?.asString shouldBe "bd"
         events[1].data.value?.asString shouldBe "hh"
         events[2].data.value?.asString shouldBe "sn"
@@ -118,14 +184,9 @@ class LangPickInnerSpec : StringSpec({
             "a" to "bd",
             "b" to "hh"
         )
-        val selector = seq("a b c")
-
-        val result = pick(lookup, selector)
+        val result = seq("a b c").pick(lookup)
         val events = result.queryArc(0.0, 1.0)
-
-        // Only events for "a" and "b", "c" is unknown so no event
         events shouldHaveSize 2
-
         events[0].data.value?.asString shouldBe "bd"
         events[1].data.value?.asString shouldBe "hh"
     }
@@ -135,33 +196,21 @@ class LangPickInnerSpec : StringSpec({
             sound("bd hh"),
             sound("sn cp")
         )
-        val selector = seq("0 1")
-
-        val result = pick(lookup, selector)
+        val result = seq("0 1").pick(lookup)
         val events = result.queryArc(0.0, 1.0)
-
-        // First selector event (0) picks "bd hh" which has 2 events in its half cycle
-        // Second selector event (1) picks "sn cp" which has 2 events in its half cycle
         events shouldHaveSize 2
-
-        // First Event from "bd hh" pattern
         events[0].data.sound shouldBe "bd"
-        // Second event from "sn cp" pattern
         events[1].data.sound shouldBe "cp"
     }
 
-    "pick() with fractional indices rounds to nearest integer" {
+    "pick() with fractional indices floors to integer" {
         val lookup: List<Any> = listOf("bd", "hh", "sd")
-        val selector = seq("0.2 1.5 2.8")
-
-        val result = pick(lookup, selector)
+        val result = seq("0.2 1.5 2.8").pick(lookup)
         val events = result.queryArc(0.0, 1.0)
-
         events shouldHaveSize 3
-
-        events[0].data.value?.asString shouldBe "bd"  // 0.2 rounds to 0
-        events[1].data.value?.asString shouldBe "hh"  // 1.5 rounds to 2
-        events[2].data.value?.asString shouldBe "sd"  // 2.8 rounds to 3, clamped to 2
+        events[0].data.value?.asString shouldBe "bd"  // floor(0.2) = 0
+        events[1].data.value?.asString shouldBe "hh"  // floor(1.5) = 1
+        events[2].data.value?.asString shouldBe "sd"  // floor(2.8) = 2
     }
 
     "pick() preserves timing from picked patterns (innerJoin)" {
@@ -169,14 +218,11 @@ class LangPickInnerSpec : StringSpec({
             sound("bd hh"),  // Two events
             sound("sd")      // One event
         )
-        val selector = seq("0 1")
-
-        val result = pick(lookup, selector)
+        val result = seq("0 1").pick(lookup)
         val events = result.queryArc(0.0, 1.0)
 
         assertSoftly {
             events shouldHaveSize 2
-            // First event of "bd hh" pattern events
             events[0].part.begin.toDouble() shouldBeExactly 0.0
             events[0].part.end.toDouble() shouldBeExactly 0.5
             events[0].data.sound shouldBe "bd"
@@ -189,18 +235,11 @@ class LangPickInnerSpec : StringSpec({
 
     "pickmod() handles negative indices correctly" {
         val lookup: List<Any> = listOf("bd", "hh", "sn")
-        val selector = seq("-1 -2 -3")
-
-        val result = pickmod(lookup, selector)
+        val result = seq("-1 -2 -3").pickmod(lookup)
         val events = result.queryArc(0.0, 1.0)
-
         events shouldHaveSize 3
-
-        // -1 % 3 = 2
-        events[0].data.value?.asString shouldBe "sn"
-        // -2 % 3 = 1
-        events[1].data.value?.asString shouldBe "hh"
-        // -3 % 3 = 0
-        events[2].data.value?.asString shouldBe "bd"
+        events[0].data.value?.asString shouldBe "sn"  // -1 mod 3 = 2
+        events[1].data.value?.asString shouldBe "hh"  // -2 mod 3 = 1
+        events[2].data.value?.asString shouldBe "bd"  // -3 mod 3 = 0
     }
 })

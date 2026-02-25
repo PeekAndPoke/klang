@@ -164,15 +164,15 @@ object JsCompatTestData {
         Example(SKIP, "echoWith echowith alias", """n("0").echowith(4, 0.125, x => x.add(2))"""),
 
         // Pattern Picking & Selection
-        // pick() - Basic pattern picking with index clamping
-        Example("pick() with list", """pick(["bd", "hh"], "0 1")"""),
-        Example("pick() with list patterns", """pick(["bd hh", "sn cp"], "0 1")"""),
-        Example("pick() different sized list patterns", """pick([sound("bd hh"), sound("sd")], "0 1")"""),
-        Example("pick() with map", """pick({a: "bd", b: "hh"}, "a b")"""),
-        Example("pick() clamps indices", """pick(["bd", "hh"], "0 1 2 3")"""),
+        // pick() - we are diverging from the JS impl here for the top level fn
+        Example("pick() with list", """seq("bd hh").apply(x => x.pick([0, 1]))"""),
+        Example("pick() with list patterns", """seq("sd cp").apply(x => x.pick("0 1"))"""),
+        Example("pick() different sized list patterns", """seq(sound("bd hh"), sound("sd")).pick("0 1")"""),
+        Example("pick() with map", """seq("a b").pick({a: "bd hh", b: "sd hh"})"""),
+        Example("pick() clamps indices", """seq("bd", "hh").pick("0 1 2 3")"""),
         // pickmod() - Pattern picking with modulo wrapping
-        Example("pickmod() wraps indices", """pickmod(["bd", "hh"], "0 1 2 3")"""),
-        Example("pickmod() with patterns", """pickmod(["bd hh", "sn cp"], "0 1 2 3")"""),
+        Example("pickmod() wraps indices", """seq("bd", "hh").pickmod("0 1 2 3")"""),
+        Example("pickmod() with patterns", """seq("bd hh", "sn cp").apply(x => x.pickmod("0 1 2 3"))"""),
         // pickOut() - Pattern picking with outerJoin (no clipping)
         Example("pickOut() basic", """pickOut(["bd hh", "sd cp"], "0 1")"""),
         Example("pickOut() with patterns", """pickOut([sound("bd hh"), sound("sn cp")], "0 1")"""),
