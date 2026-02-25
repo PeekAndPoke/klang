@@ -4,12 +4,30 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangDropSpec : StringSpec({
+
+    "drop dsl interface" {
+        val pat = "a b c d"
+        val ctrl = "1"
+        dslInterfaceTests(
+            "pattern.drop(ctrl)" to note(pat).drop(ctrl),
+            "script pattern.drop(ctrl)" to StrudelPattern.compile("""note("$pat").drop("$ctrl")"""),
+            "string.drop(ctrl)" to pat.drop(ctrl),
+            "script string.drop(ctrl)" to StrudelPattern.compile(""""$pat".drop("$ctrl")"""),
+            "drop(ctrl)" to note(pat).apply(drop(ctrl)),
+            "script drop(ctrl)" to StrudelPattern.compile("""note("$pat").apply(drop("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "note(\"c d e f\").drop(1) - drops first step, stretches remaining" {
         // Pattern: note("c d e f") creates 4 events: c[0, 0.25), d[0.25, 0.5), e[0.5, 0.75), f[0.75, 1.0)

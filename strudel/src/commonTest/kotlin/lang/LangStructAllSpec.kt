@@ -1,12 +1,29 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangStructAllSpec : StringSpec({
+
+    "structAll dsl interface" {
+        val pat = "c e"
+        val ctrl = "x x"
+        dslInterfaceTests(
+            "pattern.structAll(ctrl)" to note(pat).structAll(ctrl),
+            "script pattern.structAll(ctrl)" to StrudelPattern.compile("""note("$pat").structAll("$ctrl")"""),
+            "string.structAll(ctrl)" to pat.structAll(ctrl),
+            "script string.structAll(ctrl)" to StrudelPattern.compile(""""$pat".structAll("$ctrl")"""),
+            "structAll(ctrl)" to note(pat).apply(structAll(ctrl)),
+            "script structAll(ctrl)" to StrudelPattern.compile("""note("$pat").apply(structAll("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "structAll() keeps multiple source events within one structure step" {
         // Given: source "c e" (c at 0-0.5, e at 0.5-1.0)
@@ -33,8 +50,8 @@ class LangStructAllSpec : StringSpec({
         events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
 
-    "structAll() works as standalone function" {
-        val p = structAll("x", note("a b"))
+    "structAll() works as PatternMapperFn" {
+        val p = note("a b").apply(structAll("x"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
     }

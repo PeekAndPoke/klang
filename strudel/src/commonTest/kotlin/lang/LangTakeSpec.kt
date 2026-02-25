@@ -2,11 +2,29 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangTakeSpec : StringSpec({
+
+    "take dsl interface" {
+        val pat = "a b c d"
+        val ctrl = "2"
+        dslInterfaceTests(
+            "pattern.take(ctrl)" to note(pat).take(ctrl),
+            "script pattern.take(ctrl)" to StrudelPattern.compile("""note("$pat").take("$ctrl")"""),
+            "string.take(ctrl)" to pat.take(ctrl),
+            "script string.take(ctrl)" to StrudelPattern.compile(""""$pat".take("$ctrl")"""),
+            "take(ctrl)" to note(pat).apply(take(ctrl)),
+            "script take(ctrl)" to StrudelPattern.compile("""note("$pat").apply(take("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "take() keeps first n steps from pattern" {
         val p = note("c d e f").take(2)
@@ -33,13 +51,13 @@ class LangTakeSpec : StringSpec({
         events[2].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
-    "take() works as standalone function" {
-        val p = take(1, note("c d e f"))
+    "take() works as PatternMapperFn" {
+        val p = note("c d e f").apply(take(1))
 
         // Should keep only first step (c)
         val events = p.queryArc(0.0, 2.0)
         events shouldHaveSize 2  // One per cycle
-        events.all { it.data.note == "c" } shouldBe true
+        events.all { it.data.note?.lowercase() == "c" } shouldBe true
     }
 
     "take() works with string extension" {

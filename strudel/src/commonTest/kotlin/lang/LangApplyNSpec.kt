@@ -1,12 +1,30 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangApplyNSpec : StringSpec({
+
+    "applyN dsl interface" {
+        val pat = "a b"
+        val transform: PatternMapperFn = { it.fast(2) }
+        dslInterfaceTests(
+            "pattern.applyN(2, fn)" to note(pat).applyN(2, transform),
+            "script pattern.applyN(2, fn)" to StrudelPattern.compile("""note("$pat").applyN(2, x => x.fast(2))"""),
+            "string.applyN(2, fn)" to pat.applyN(2, transform),
+            "script string.applyN(2, fn)" to StrudelPattern.compile(""""$pat".applyN(2, x => x.fast(2))"""),
+            "applyN(2, fn)" to note(pat).apply(applyN(2, transform)),
+            "script applyN(2, fn)" to StrudelPattern.compile("""note("$pat").apply(applyN(2, x => x.fast(2)))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 8  // fast(2) applied twice = fast(4), 2 notes × 4 = 8
+        }
+    }
 
     "applyN() applies function n times" {
         // Apply fast(2) three times: fast(2).fast(2).fast(2) = fast(8)
@@ -60,8 +78,8 @@ class LangApplyNSpec : StringSpec({
         events[1].data.value?.asInt shouldBe 2 // Second half
     }
 
-    "applyN() works as standalone function" {
-        val pattern = applyN(2, { p: StrudelPattern -> p.fast(2) }, note("a"))
+    "applyN() works as PatternMapperFn" {
+        val pattern = note("a").apply(applyN(2) { p: StrudelPattern -> p.fast(2) })
         val events = pattern.queryArc(0.0, 1.0)
 
         // Should have 4 events (fast(2) applied twice)

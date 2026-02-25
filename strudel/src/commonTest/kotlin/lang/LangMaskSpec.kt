@@ -1,13 +1,31 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangMaskSpec : StringSpec({
+
+    "mask dsl interface" {
+        val pat = "c e"
+        val ctrl = "1 0"
+        dslInterfaceTests(
+            "pattern.mask(ctrl)" to note(pat).mask(ctrl),
+            "script pattern.mask(ctrl)" to StrudelPattern.compile("""note("$pat").mask("$ctrl")"""),
+            "string.mask(ctrl)" to pat.mask(ctrl),
+            "script string.mask(ctrl)" to StrudelPattern.compile(""""$pat".mask("$ctrl")"""),
+            "mask(ctrl)" to note(pat).apply(mask(ctrl)),
+            "script mask(ctrl)" to StrudelPattern.compile("""note("$pat").apply(mask("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 1  // only the truthy "1" slot passes
+        }
+    }
 
     "mask() filters source events based on mask truthiness" {
         // note("c e").mask("x ~") -> should only keep "c"
@@ -38,8 +56,8 @@ class LangMaskSpec : StringSpec({
         events.filter { it.part.begin.toDouble() >= 1.0 }.size shouldBe 2
     }
 
-    "mask() top-level function works" {
-        val p = mask("x ~", note("c e"))
+    "mask() as PatternMapperFn works" {
+        val p = note("c e").apply(mask("x ~"))
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1

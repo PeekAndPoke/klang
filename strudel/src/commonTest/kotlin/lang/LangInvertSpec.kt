@@ -1,10 +1,40 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangInvertSpec : StringSpec({
+
+    "invert dsl interface" {
+        val pat = "1 0"
+        dslInterfaceTests(
+            "pattern.invert()" to seq(pat).invert(),
+            "script pattern.invert()" to StrudelPattern.compile("""seq("$pat").invert()"""),
+            "string.invert()" to pat.invert(),
+            "script string.invert()" to StrudelPattern.compile(""""$pat".invert()"""),
+            "invert()" to seq(pat).apply(invert()),
+            "script invert()" to StrudelPattern.compile("""seq("$pat").apply(invert())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
+
+    "inv dsl interface" {
+        val pat = "1 0"
+        dslInterfaceTests(
+            "pattern.inv()" to seq(pat).inv(),
+            "script pattern.inv()" to StrudelPattern.compile("""seq("$pat").inv()"""),
+            "string.inv()" to pat.inv(),
+            "script string.inv()" to StrudelPattern.compile(""""$pat".inv()"""),
+            "inv()" to seq(pat).apply(inv()),
+            "script inv()" to StrudelPattern.compile("""seq("$pat").apply(inv())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "invert() inverts boolean values true to false" {
         val pattern = pure(true).invert()
@@ -57,8 +87,8 @@ class LangInvertSpec : StringSpec({
         events[0].data.value?.asBoolean shouldBe false
     }
 
-    "invert() works as standalone function" {
-        val pattern = invert(pure(true))
+    "invert() works as PatternMapperFn" {
+        val pattern = pure(true).apply(invert())
         val events = pattern.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

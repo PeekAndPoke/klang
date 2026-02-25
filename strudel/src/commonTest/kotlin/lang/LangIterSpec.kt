@@ -3,9 +3,27 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangIterSpec : StringSpec({
+
+    "iter dsl interface" {
+        val pat = "c d e f"
+        val n = 4
+        dslInterfaceTests(
+            "pattern.iter(n)" to note(pat).iter(n),
+            "script pattern.iter(n)" to StrudelPattern.compile("""note("$pat").iter($n)"""),
+            "string.iter(n)" to pat.iter(n),
+            "script string.iter(n)" to StrudelPattern.compile(""""$pat".iter($n)"""),
+            "iter(n)" to note(pat).apply(iter(n)),
+            "script iter(n)" to StrudelPattern.compile("""note("$pat").apply(iter($n))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "iter() shifts pattern each cycle" {
         val p = note("c d e f").iter(4)

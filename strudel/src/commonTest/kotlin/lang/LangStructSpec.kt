@@ -3,13 +3,31 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangStructSpec : StringSpec({
+
+    "struct dsl interface" {
+        val pat = "c"
+        val ctrl = "x x"
+        dslInterfaceTests(
+            "pattern.struct(ctrl)" to note(pat).struct(ctrl),
+            "script pattern.struct(ctrl)" to StrudelPattern.compile("""note("$pat").struct("$ctrl")"""),
+            "string.struct(ctrl)" to pat.struct(ctrl),
+            "script string.struct(ctrl)" to StrudelPattern.compile(""""$pat".struct("$ctrl")"""),
+            "struct(ctrl)" to note(pat).apply(struct(ctrl)),
+            "script struct(ctrl)" to StrudelPattern.compile("""note("$pat").apply(struct("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2  // "x x" gives 2 beats
+        }
+    }
 
     "note(\"c\").struct(\"x*2\") - struct creates multiple onset events" {
         // Pattern: note("c") creates one long note [0, 1)
@@ -136,8 +154,8 @@ class LangStructSpec : StringSpec({
         events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
-    "struct() as a standalone function" {
-        val p = struct("x x", note("c e"))
+    "struct() as a PatternMapperFn" {
+        val p = note("c e").apply(struct("x x"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2

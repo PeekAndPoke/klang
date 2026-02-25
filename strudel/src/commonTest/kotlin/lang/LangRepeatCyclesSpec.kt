@@ -2,9 +2,27 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangRepeatCyclesSpec : StringSpec({
+
+    "repeatCycles dsl interface" {
+        val pat = "a b"
+        val ctrl = "2"
+        dslInterfaceTests(
+            "pattern.repeatCycles(ctrl)" to note(pat).repeatCycles(ctrl),
+            "script pattern.repeatCycles(ctrl)" to StrudelPattern.compile("""note("$pat").repeatCycles("$ctrl")"""),
+            "string.repeatCycles(ctrl)" to pat.repeatCycles(ctrl),
+            "script string.repeatCycles(ctrl)" to StrudelPattern.compile(""""$pat".repeatCycles("$ctrl")"""),
+            "repeatCycles(ctrl)" to note(pat).apply(repeatCycles(ctrl)),
+            "script repeatCycles(ctrl)" to StrudelPattern.compile("""note("$pat").apply(repeatCycles("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "repeatCycles() repeats each cycle n times" {
         // For a static pattern like note("c"), repeatCycles acts as identity

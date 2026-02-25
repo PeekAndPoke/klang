@@ -1,11 +1,28 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangMaskAllSpec : StringSpec({
+
+    "maskAll dsl interface" {
+        val pat = "c e"
+        val ctrl = "x ~"
+        dslInterfaceTests(
+            "pattern.maskAll(ctrl)" to note(pat).maskAll(ctrl),
+            "script pattern.maskAll(ctrl)" to StrudelPattern.compile("""note("$pat").maskAll("$ctrl")"""),
+            "string.maskAll(ctrl)" to pat.maskAll(ctrl),
+            "script string.maskAll(ctrl)" to StrudelPattern.compile(""""$pat".maskAll("$ctrl")"""),
+            "maskAll(ctrl)" to note(pat).apply(maskAll(ctrl)),
+            "script maskAll(ctrl)" to StrudelPattern.compile("""note("$pat").apply(maskAll("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "maskAll() keeps source events regardless of mask truthiness (only checks existence)" {
         // note("c e").maskAll("x 0") -> keeps both because '0' is still an event
@@ -26,8 +43,8 @@ class LangMaskAllSpec : StringSpec({
         events[0].data.note shouldBeEqualIgnoringCase "c"
     }
 
-    "maskAll() top-level function works" {
-        val p = maskAll("x 0", note("c e"))
+    "maskAll() as PatternMapperFn works" {
+        val p = note("c e").apply(maskAll("x 0"))
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2

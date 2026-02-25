@@ -3,12 +3,44 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangPressSpec : StringSpec({
+
+    "press dsl interface" {
+        val pat = "a b"
+        dslInterfaceTests(
+            "pattern.press()" to note(pat).press(),
+            "script pattern.press()" to StrudelPattern.compile("""note("$pat").press()"""),
+            "string.press()" to pat.press(),
+            "script string.press()" to StrudelPattern.compile(""""$pat".press()"""),
+            "press()" to note(pat).apply(press()),
+            "script press()" to StrudelPattern.compile("""note("$pat").apply(press())"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
+
+    "pressBy dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5"
+        dslInterfaceTests(
+            "pattern.pressBy(ctrl)" to note(pat).pressBy(ctrl),
+            "script pattern.pressBy(ctrl)" to StrudelPattern.compile("""note("$pat").pressBy("$ctrl")"""),
+            "string.pressBy(ctrl)" to pat.pressBy(ctrl),
+            "script string.pressBy(ctrl)" to StrudelPattern.compile(""""$pat".pressBy("$ctrl")"""),
+            "pressBy(ctrl)" to note(pat).apply(pressBy(ctrl)),
+            "script pressBy(ctrl)" to StrudelPattern.compile("""note("$pat").apply(pressBy("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "s(\"bd sd\").press() syncopates by shifting events halfway" {
         val subject = s("bd sd").press()

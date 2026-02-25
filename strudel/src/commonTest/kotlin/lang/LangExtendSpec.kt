@@ -1,9 +1,27 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangExtendSpec : StringSpec({
+
+    "extend dsl interface" {
+        val pat = "a b"
+        val ctrl = "2"
+        dslInterfaceTests(
+            "pattern.extend(ctrl)" to note(pat).extend(ctrl),
+            "script pattern.extend(ctrl)" to StrudelPattern.compile("""note("$pat").extend("$ctrl")"""),
+            "string.extend(ctrl)" to pat.extend(ctrl),
+            "script string.extend(ctrl)" to StrudelPattern.compile(""""$pat".extend("$ctrl")"""),
+            "extend(ctrl)" to note(pat).apply(extend(ctrl)),
+            "script extend(ctrl)" to StrudelPattern.compile("""note("$pat").apply(extend("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+        }
+    }
 
     "extend() is alias for fast()" {
         val p1 = note("c d e f").extend(2)

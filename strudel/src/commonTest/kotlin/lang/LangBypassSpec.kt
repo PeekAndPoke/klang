@@ -46,7 +46,7 @@ class LangBypassSpec : StringSpec({
     }
 
     "bypass() works as top-level function" {
-        val p = bypass(1, note("a"))
+        val p = note("a").apply(bypass(1))
         p.queryArc(0.0, 1.0).size shouldBe 0
     }
 
