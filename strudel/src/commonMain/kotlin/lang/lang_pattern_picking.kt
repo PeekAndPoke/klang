@@ -989,8 +989,11 @@ private fun dispatchInhabit(
     }
 }
 
-internal val _inhabit by dslPatternFunction { args, _ ->
-    if (args.size < 2) return@dslPatternFunction silence
+internal val _inhabit by dslPatternMapper { args, callInfo ->
+    if (args.size < 2) {
+        val fn: PatternMapperFn = { silence }
+        return@dslPatternMapper fn
+    }
 
     val first = args[0].value
     val lookup: Any
@@ -1008,19 +1011,24 @@ internal val _inhabit by dslPatternFunction { args, _ ->
     }
 
     val pat = listOf(patArg).toPattern(voiceValueModifier)
-    dispatchInhabit(lookup, pat, modulo = false, lookupLocation)
+    val fn: PatternMapperFn = { dispatchInhabit(lookup, pat, modulo = false, lookupLocation) }
+    fn
 }
 
-internal val StrudelPattern._inhabit by dslPatternExtension { p, args, _ ->
+internal val StrudelPattern._inhabit by dslPatternExtension { p, args, callInfo ->
     if (args.isEmpty()) return@dslPatternExtension p
 
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
 
-    dispatchInhabit(lookup, p, modulo = false, args.firstOrNull()?.location)
+    dispatchInhabit(lookup, p, modulo = false, callInfo?.receiverLocation)
 }
 
 internal val String._inhabit by dslStringExtension { p, args, callInfo -> p._inhabit(args, callInfo) }
+
+internal val PatternMapperFn._inhabit by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_inhabit(args, callInfo))
+}
 
 /**
  * Selects patterns from a list or map by index and squeezes each into the trigger's timespan.
@@ -1042,13 +1050,22 @@ internal val String._inhabit by dslStringExtension { p, args, callInfo -> p._inh
  * @tags inhabit, pickSqueeze, squeeze, select, index, lookup
  */
 @StrudelDsl
-fun inhabit(vararg args: PatternLike): StrudelPattern = _inhabit(args.toList().asStrudelDslArgs())
+fun StrudelPattern.inhabit(vararg args: PatternLike): StrudelPattern = this._inhabit(args.toList().asStrudelDslArgs())
+
+/** Selects patterns from a [List] lookup by clamped index, squeezing each into this pattern's event timespans. */
+@StrudelDsl
+fun StrudelPattern.inhabit(lookup: List<Any>): StrudelPattern = this._inhabit(listOf(lookup).asStrudelDslArgs())
+
+/** Selects patterns from a [Map] lookup by string key, squeezing each into this pattern's event timespans. */
+@StrudelDsl
+fun StrudelPattern.inhabit(lookup: Map<String, Any>): StrudelPattern =
+    this._inhabit(listOf(lookup).asStrudelDslArgs())
 
 /**
  * Selects patterns from a list by index and squeezes each into the timespan of the trigger.
  *
- * Each event of this pattern picks a pattern from the lookup by index (clamped) and squeezes
- * it so that the full cycle of the chosen pattern fits within the duration of the event.
+ * Each event of this string pattern picks a pattern from the lookup by index (clamped) and
+ * squeezes it so that the full cycle of the chosen pattern fits within the duration of the event.
  * This is equivalent to [squeeze] with arguments reversed.
  *
  * ```KlangScript
@@ -1056,7 +1073,7 @@ fun inhabit(vararg args: PatternLike): StrudelPattern = _inhabit(args.toList().a
  * ```
  *
  * ```KlangScript
- * n("0 1").inhabit(note("c3 e3 g3"), note("b3 d4"))          // pattern squeezed per index
+ * "0 1".inhabit(note("c3 e3 g3"), note("b3 d4"))             // pattern squeezed per index
  * ```
  *
  * @alias pickSqueeze
@@ -1064,83 +1081,181 @@ fun inhabit(vararg args: PatternLike): StrudelPattern = _inhabit(args.toList().a
  * @tags inhabit, pickSqueeze, squeeze, select, index, lookup
  */
 @StrudelDsl
-fun StrudelPattern.inhabit(vararg args: PatternLike): StrudelPattern = this._inhabit(args.toList().asStrudelDslArgs())
-
-/** Selects patterns from a list (clamped index) and squeezes them into event timespans. */
-@StrudelDsl
 fun String.inhabit(vararg args: PatternLike): StrudelPattern = this._inhabit(args.toList().asStrudelDslArgs())
+
+/** Selects patterns from a [List] lookup by clamped index, squeezing each into this string pattern's event timespans. */
+@StrudelDsl
+fun String.inhabit(lookup: List<Any>): StrudelPattern = this._inhabit(listOf(lookup).asStrudelDslArgs())
+
+/** Selects patterns from a [Map] lookup by string key, squeezing each into this string pattern's event timespans. */
+@StrudelDsl
+fun String.inhabit(lookup: Map<String, Any>): StrudelPattern = this._inhabit(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that selects patterns from a lookup by index and squeezes them into event timespans.
+ *
+ * Like [inhabit] but as a top-level mapper: the last argument is the selector pattern and the
+ * preceding arguments form the lookup. Indices are clamped to valid bounds.
+ *
+ * ```KlangScript
+ * "<0 1>".apply(inhabit("bd sd hh", "rim cp", n("0 1 2 0"))).s()
+ * ```
+ *
+ * @alias pickSqueeze
+ * @category structural
+ * @tags inhabit, pickSqueeze, squeeze, select, index, lookup
+ */
+@StrudelDsl
+fun inhabit(vararg args: PatternLike): PatternMapperFn = _inhabit(args.toList().asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] that selects from a [List] lookup by clamped index and squeezes into event timespans. */
+@StrudelDsl
+fun inhabit(lookup: List<Any>): PatternMapperFn = _inhabit(listOf(lookup).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] that selects from a [Map] lookup by string key and squeezes into event timespans. */
+@StrudelDsl
+fun inhabit(lookup: Map<String, Any>): PatternMapperFn = _inhabit(listOf(lookup).asStrudelDslArgs())
+
+/** Chains an inhabit onto this [PatternMapperFn]; clamped index, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.inhabit(vararg args: PatternLike): PatternMapperFn =
+    this._inhabit(args.toList().asStrudelDslArgs())
+
+/** Chains an inhabit from a [List] lookup onto this [PatternMapperFn]; clamped index, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.inhabit(lookup: List<Any>): PatternMapperFn = this._inhabit(listOf(lookup).asStrudelDslArgs())
+
+/** Chains an inhabit from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.inhabit(lookup: Map<String, Any>): PatternMapperFn =
+    this._inhabit(listOf(lookup).asStrudelDslArgs())
 
 // -- pickSqueeze() ------------------------------------------------------------------------------------------------------------------------
 
-internal val _pickSqueeze by dslPatternFunction { args, callInfo -> _inhabit(args, callInfo) }
+internal val _pickSqueeze by dslPatternMapper { args, callInfo -> _inhabit(args, callInfo) }
 internal val StrudelPattern._pickSqueeze by dslPatternExtension { p, args, callInfo -> p._inhabit(args, callInfo) }
 internal val String._pickSqueeze by dslStringExtension { p, args, callInfo -> p._pickSqueeze(args, callInfo) }
+internal val PatternMapperFn._pickSqueeze by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_inhabit(args, callInfo))
+}
 
-/** Alias for [inhabit]. Selects patterns from a list by index and squeezes into event duration. */
-@StrudelDsl
-fun pickSqueeze(vararg args: PatternLike): StrudelPattern = _pickSqueeze(args.toList().asStrudelDslArgs())
-
-/** Alias for [inhabit] on this pattern. */
+/**
+ * Alias for [inhabit]. Selects patterns from a list by index and squeezes into event duration.
+ *
+ * @alias inhabit
+ * @category structural
+ * @tags pickSqueeze, inhabit, squeeze, select, index, lookup
+ */
 @StrudelDsl
 fun StrudelPattern.pickSqueeze(vararg args: PatternLike): StrudelPattern =
     this._pickSqueeze(args.toList().asStrudelDslArgs())
 
-/** Alias for [inhabit] on a string pattern. */
+/** Alias for [inhabit] — [List] lookup, clamped index, squeeze semantics. */
 @StrudelDsl
-fun String.pickSqueeze(vararg args: PatternLike): StrudelPattern = this._pickSqueeze(args.toList().asStrudelDslArgs())
+fun StrudelPattern.pickSqueeze(lookup: List<Any>): StrudelPattern =
+    this._pickSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Alias for [inhabit] — [Map] lookup, string key, squeeze semantics. */
+@StrudelDsl
+fun StrudelPattern.pickSqueeze(lookup: Map<String, Any>): StrudelPattern =
+    this._pickSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Alias for [inhabit] on a string pattern. Selects patterns from a lookup by index and squeezes into event duration.
+ *
+ * @alias inhabit
+ * @category structural
+ * @tags pickSqueeze, inhabit, squeeze, select, index, lookup
+ */
+@StrudelDsl
+fun String.pickSqueeze(vararg args: PatternLike): StrudelPattern =
+    this._pickSqueeze(args.toList().asStrudelDslArgs())
+
+/** Alias for [inhabit] — [List] lookup on a string pattern; clamped index, squeeze semantics. */
+@StrudelDsl
+fun String.pickSqueeze(lookup: List<Any>): StrudelPattern =
+    this._pickSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Alias for [inhabit] — [Map] lookup on a string pattern; string key, squeeze semantics. */
+@StrudelDsl
+fun String.pickSqueeze(lookup: Map<String, Any>): StrudelPattern =
+    this._pickSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [inhabit]; selects by clamped index and squeezes into event duration.
+ *
+ * @alias inhabit
+ * @category structural
+ * @tags pickSqueeze, inhabit, squeeze, select, index, lookup
+ */
+@StrudelDsl
+fun pickSqueeze(vararg args: PatternLike): PatternMapperFn = _pickSqueeze(args.toList().asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] — alias for [inhabit] — [List] lookup, clamped index, squeeze semantics. */
+@StrudelDsl
+fun pickSqueeze(lookup: List<Any>): PatternMapperFn = _pickSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] — alias for [inhabit] — [Map] lookup, string key, squeeze semantics. */
+@StrudelDsl
+fun pickSqueeze(lookup: Map<String, Any>): PatternMapperFn = _pickSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Chains a pickSqueeze (alias for [inhabit]) onto this [PatternMapperFn]; clamped index, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.pickSqueeze(vararg args: PatternLike): PatternMapperFn =
+    this._pickSqueeze(args.toList().asStrudelDslArgs())
+
+/** Chains a pickSqueeze from a [List] lookup onto this [PatternMapperFn]; clamped index, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.pickSqueeze(lookup: List<Any>): PatternMapperFn =
+    this._pickSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Chains a pickSqueeze from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.pickSqueeze(lookup: Map<String, Any>): PatternMapperFn =
+    this._pickSqueeze(listOf(lookup).asStrudelDslArgs())
 
 // -- inhabitmod() -----------------------------------------------------------------------------------------------------
 
-internal val _inhabitmod by dslPatternFunction { args, _ ->
-    if (args.size < 2) return@dslPatternFunction silence
+internal val _inhabitmod by dslPatternMapper { args, callInfo ->
+    if (args.size < 2) {
+        val fn: PatternMapperFn = { silence }
+        return@dslPatternMapper fn
+    }
 
     val first = args[0].value
     val lookup: Any
     val patArg: StrudelDslArg<Any?>
+    val lookupLocation: SourceLocation?
 
     if (first is List<*> || first is Map<*, *>) {
         lookup = first
+        lookupLocation = args[0].location
         patArg = args[1]
     } else {
         lookup = args.dropLast(1).map { it.value }
+        lookupLocation = args.firstOrNull()?.location
         patArg = args.last()
     }
 
     val pat = listOf(patArg).toPattern(voiceValueModifier)
-    dispatchInhabit(lookup, pat, modulo = true)
+    val fn: PatternMapperFn = { dispatchInhabit(lookup, pat, modulo = true, lookupLocation) }
+    fn
 }
 
-internal val StrudelPattern._inhabitmod by dslPatternExtension { p, args, _ ->
+internal val StrudelPattern._inhabitmod by dslPatternExtension { p, args, callInfo ->
     if (args.isEmpty()) return@dslPatternExtension p
 
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
 
-    dispatchInhabit(lookup, p, modulo = true, args.firstOrNull()?.location)
+    dispatchInhabit(lookup, p, modulo = true, callInfo?.receiverLocation)
 }
 
 internal val String._inhabitmod by dslStringExtension { p, args, callInfo -> p._inhabitmod(args, callInfo) }
 
-/**
- * Like [inhabit] but wraps indices with modulo.
- *
- * The last argument (or the second when the first is a list/map) is the index pattern.
- * Selected patterns are squeezed into each triggering event's timespan; indices wrap cyclically.
- *
- * ```KlangScript
- * inhabitmod("bd", "sd", "hh", n("0 1 2 3"))   // 3→0 mod 3; squeezed into event
- * ```
- *
- * ```KlangScript
- * inhabitmod(["c3 e3", "g3 b3"], n("0 5"))      // 5→1 mod 2; squeezed in
- * ```
- *
- * @alias pickmodSqueeze
- * @category structural
- * @tags inhabitmod, pickmodSqueeze, modulo, squeeze, select, index, lookup
- */
-@StrudelDsl
-fun inhabitmod(vararg args: PatternLike): StrudelPattern = _inhabitmod(args.toList().asStrudelDslArgs())
+internal val PatternMapperFn._inhabitmod by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_inhabitmod(args, callInfo))
+}
 
 /**
  * Like [inhabit] but wraps out-of-bounds indices with modulo arithmetic.
@@ -1164,59 +1279,177 @@ fun inhabitmod(vararg args: PatternLike): StrudelPattern = _inhabitmod(args.toLi
 fun StrudelPattern.inhabitmod(vararg args: PatternLike): StrudelPattern =
     this._inhabitmod(args.toList().asStrudelDslArgs())
 
-/** Selects patterns from a list (modulo-wrapped index) and squeezes them into event timespans. */
+/** Like [inhabit] with modulo — [List] lookup, modulo-wrapped index, squeezing into this pattern's event timespans. */
 @StrudelDsl
-fun String.inhabitmod(vararg args: PatternLike): StrudelPattern = this._inhabitmod(args.toList().asStrudelDslArgs())
+fun StrudelPattern.inhabitmod(lookup: List<Any>): StrudelPattern =
+    this._inhabitmod(listOf(lookup).asStrudelDslArgs())
 
-internal val _pickmodSqueeze by dslPatternFunction { args, callInfo -> _inhabitmod(args, callInfo) }
-internal val StrudelPattern._pickmodSqueeze by dslPatternExtension { p, args, callInfo ->
-    p._inhabitmod(
-        args,
-        callInfo
-    )
-}
+/** Like [inhabit] with modulo — [Map] lookup, string key, squeezing into this pattern's event timespans. */
+@StrudelDsl
+fun StrudelPattern.inhabitmod(lookup: Map<String, Any>): StrudelPattern =
+    this._inhabitmod(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Like [inhabit] but wraps out-of-bounds indices with modulo arithmetic — string receiver.
+ *
+ * This string is parsed as mini-notation to produce indices that select patterns from the
+ * lookup with modulo wrapping. Selected patterns are squeezed into each event's timespan.
+ *
+ * ```KlangScript
+ * "0 1 2 3".inhabitmod("bd sd", "hh rim", "cp").s()       // 3→0 mod 3; squeezed
+ * ```
+ *
+ * ```KlangScript
+ * "0 5".inhabitmod(note("c3"), note("e3"), note("g3"))     // 5→2 mod 3; squeezed
+ * ```
+ *
+ * @alias pickmodSqueeze
+ * @category structural
+ * @tags inhabitmod, pickmodSqueeze, modulo, squeeze, select, index, lookup
+ */
+@StrudelDsl
+fun String.inhabitmod(vararg args: PatternLike): StrudelPattern =
+    this._inhabitmod(args.toList().asStrudelDslArgs())
+
+/** Like [inhabit] with modulo — [List] lookup on a string pattern; modulo-wrapped index, squeeze semantics. */
+@StrudelDsl
+fun String.inhabitmod(lookup: List<Any>): StrudelPattern =
+    this._inhabitmod(listOf(lookup).asStrudelDslArgs())
+
+/** Like [inhabit] with modulo — [Map] lookup on a string pattern; string key, squeeze semantics. */
+@StrudelDsl
+fun String.inhabitmod(lookup: Map<String, Any>): StrudelPattern =
+    this._inhabitmod(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is like [inhabit] but wraps indices with modulo.
+ *
+ * The last argument is the selector pattern and the preceding arguments form the lookup.
+ * Indices wrap cyclically; negative indices are handled correctly.
+ *
+ * ```KlangScript
+ * "<0 1 2 3>".apply(inhabitmod("bd", "sd", "hh")).s()   // 3→0 mod 3; squeezed into event
+ * ```
+ *
+ * @alias pickmodSqueeze
+ * @category structural
+ * @tags inhabitmod, pickmodSqueeze, modulo, squeeze, select, index, lookup
+ */
+@StrudelDsl
+fun inhabitmod(vararg args: PatternLike): PatternMapperFn = _inhabitmod(args.toList().asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] like [inhabit] with modulo — [List] lookup, modulo-wrapped index, squeeze semantics. */
+@StrudelDsl
+fun inhabitmod(lookup: List<Any>): PatternMapperFn = _inhabitmod(listOf(lookup).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] like [inhabit] with modulo — [Map] lookup, string key, squeeze semantics. */
+@StrudelDsl
+fun inhabitmod(lookup: Map<String, Any>): PatternMapperFn = _inhabitmod(listOf(lookup).asStrudelDslArgs())
+
+/** Chains an inhabitmod onto this [PatternMapperFn]; modulo-wrapped index, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.inhabitmod(vararg args: PatternLike): PatternMapperFn =
+    this._inhabitmod(args.toList().asStrudelDslArgs())
+
+/** Chains an inhabitmod from a [List] lookup onto this [PatternMapperFn]; modulo-wrapped index, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.inhabitmod(lookup: List<Any>): PatternMapperFn =
+    this._inhabitmod(listOf(lookup).asStrudelDslArgs())
+
+/** Chains an inhabitmod from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.inhabitmod(lookup: Map<String, Any>): PatternMapperFn =
+    this._inhabitmod(listOf(lookup).asStrudelDslArgs())
+
+// -- pickmodSqueeze() -------------------------------------------------------------------------------------------------
+
+internal val _pickmodSqueeze by dslPatternMapper { args, callInfo -> _inhabitmod(args, callInfo) }
+internal val StrudelPattern._pickmodSqueeze by dslPatternExtension { p, args, callInfo -> p._inhabitmod(args, callInfo) }
 internal val String._pickmodSqueeze by dslStringExtension { p, args, callInfo -> p._pickmodSqueeze(args, callInfo) }
+internal val PatternMapperFn._pickmodSqueeze by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_inhabitmod(args, callInfo))
+}
 
-/** Alias for [inhabitmod]. Selects patterns by modulo-wrapped index and squeezes into events. */
-@StrudelDsl
-fun pickmodSqueeze(vararg args: PatternLike): StrudelPattern = _pickmodSqueeze(args.toList().asStrudelDslArgs())
-
-/** Alias for [inhabitmod] on this pattern. */
+/**
+ * Alias for [inhabitmod]. Selects patterns by modulo-wrapped index and squeezes into events.
+ *
+ * @alias inhabitmod
+ * @category structural
+ * @tags pickmodSqueeze, inhabitmod, modulo, squeeze, select, index, lookup
+ */
 @StrudelDsl
 fun StrudelPattern.pickmodSqueeze(vararg args: PatternLike): StrudelPattern =
     this._pickmodSqueeze(args.toList().asStrudelDslArgs())
 
-/** Alias for [inhabitmod] on a string pattern. */
+/** Alias for [inhabitmod] — [List] lookup, modulo-wrapped index, squeeze semantics. */
+@StrudelDsl
+fun StrudelPattern.pickmodSqueeze(lookup: List<Any>): StrudelPattern =
+    this._pickmodSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Alias for [inhabitmod] — [Map] lookup, string key, squeeze semantics. */
+@StrudelDsl
+fun StrudelPattern.pickmodSqueeze(lookup: Map<String, Any>): StrudelPattern =
+    this._pickmodSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Alias for [inhabitmod] on a string pattern. Selects patterns by modulo-wrapped index and squeezes into events.
+ *
+ * @alias inhabitmod
+ * @category structural
+ * @tags pickmodSqueeze, inhabitmod, modulo, squeeze, select, index, lookup
+ */
 @StrudelDsl
 fun String.pickmodSqueeze(vararg args: PatternLike): StrudelPattern =
     this._pickmodSqueeze(args.toList().asStrudelDslArgs())
 
+/** Alias for [inhabitmod] — [List] lookup on a string pattern; modulo-wrapped index, squeeze semantics. */
+@StrudelDsl
+fun String.pickmodSqueeze(lookup: List<Any>): StrudelPattern =
+    this._pickmodSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Alias for [inhabitmod] — [Map] lookup on a string pattern; string key, squeeze semantics. */
+@StrudelDsl
+fun String.pickmodSqueeze(lookup: Map<String, Any>): StrudelPattern =
+    this._pickmodSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [inhabitmod]; selects by modulo-wrapped index and squeezes.
+ *
+ * @alias inhabitmod
+ * @category structural
+ * @tags pickmodSqueeze, inhabitmod, modulo, squeeze, select, index, lookup
+ */
+@StrudelDsl
+fun pickmodSqueeze(vararg args: PatternLike): PatternMapperFn = _pickmodSqueeze(args.toList().asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] — alias for [inhabitmod] — [List] lookup, modulo-wrapped index, squeeze semantics. */
+@StrudelDsl
+fun pickmodSqueeze(lookup: List<Any>): PatternMapperFn = _pickmodSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] — alias for [inhabitmod] — [Map] lookup, string key, squeeze semantics. */
+@StrudelDsl
+fun pickmodSqueeze(lookup: Map<String, Any>): PatternMapperFn = _pickmodSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Chains a pickmodSqueeze (alias for [inhabitmod]) onto this [PatternMapperFn]; modulo-wrapped index, squeeze. */
+@StrudelDsl
+fun PatternMapperFn.pickmodSqueeze(vararg args: PatternLike): PatternMapperFn =
+    this._pickmodSqueeze(args.toList().asStrudelDslArgs())
+
+/** Chains a pickmodSqueeze from a [List] lookup onto this [PatternMapperFn]; modulo-wrapped index, squeeze. */
+@StrudelDsl
+fun PatternMapperFn.pickmodSqueeze(lookup: List<Any>): PatternMapperFn =
+    this._pickmodSqueeze(listOf(lookup).asStrudelDslArgs())
+
+/** Chains a pickmodSqueeze from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.pickmodSqueeze(lookup: Map<String, Any>): PatternMapperFn =
+    this._pickmodSqueeze(listOf(lookup).asStrudelDslArgs())
+
 // -- squeeze() --------------------------------------------------------------------------------------------------------
 
-internal val _squeeze by dslPatternFunction { args, _ ->
-    // squeeze(selector, lookup...)
-    if (args.size < 2) return@dslPatternFunction silence
+internal val _squeeze by dslPatternMapper { args, callInfo -> { p -> p._squeeze(args, callInfo) } }
 
-    val selectorArg = args[0]
-    val selector = listOf(selectorArg).toPattern(voiceValueModifier)
-
-    val secondArg = args[1]
-
-    val lookup: Any
-    val lookupLocation: SourceLocation?
-
-    if (secondArg.value is List<*> || secondArg.value is Map<*, *>) {
-        lookup = secondArg.value
-        lookupLocation = secondArg.location
-    } else {
-        lookup = args.drop(1).map { it.value }
-        lookupLocation = args.getOrNull(1)?.location
-    }
-
-    dispatchInhabit(lookup, selector, modulo = false, lookupLocation)
-}
-
-internal val StrudelPattern._squeeze by dslPatternExtension { p, args, _ ->
+internal val StrudelPattern._squeeze by dslPatternExtension { p, args, callInfo ->
     if (args.isEmpty()) return@dslPatternExtension p
 
     val first = args[0].value
@@ -1228,30 +1461,14 @@ internal val StrudelPattern._squeeze by dslPatternExtension { p, args, _ ->
         lookup = args.map { it.value }
     }
 
-    dispatchInhabit(lookup, p, modulo = false, args.firstOrNull()?.location)
+    dispatchInhabit(lookup, p, modulo = false, callInfo?.receiverLocation)
 }
 
 internal val String._squeeze by dslStringExtension { p, args, callInfo -> p._squeeze(args, callInfo) }
 
-/**
- * Selects patterns from a list by index and squeezes them into the triggering event's timespan.
- *
- * Like [inhabit] but with arguments in the opposite order: the first argument is the selector
- * (index) pattern and the remaining arguments are the lookup patterns. Indices are clamped.
- *
- * ```KlangScript
- * squeeze(n("0 1 2"), "bd sd hh", "rim cp", "hh*4").s()  // selector first, then lookup
- * ```
- *
- * ```KlangScript
- * squeeze(n("0 1"), note("c3 e3"), note("g3 b3"))         // index → squeezed pattern
- * ```
- *
- * @category structural
- * @tags squeeze, inhabit, pickSqueeze, select, index, lookup
- */
-@StrudelDsl
-fun squeeze(vararg args: PatternLike): StrudelPattern = _squeeze(args.toList().asStrudelDslArgs())
+internal val PatternMapperFn._squeeze by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_squeeze(args, callInfo))
+}
 
 /**
  * Squeezes patterns from a list into the timespans of events in this pattern (clamped index).
@@ -1273,9 +1490,86 @@ fun squeeze(vararg args: PatternLike): StrudelPattern = _squeeze(args.toList().a
 @StrudelDsl
 fun StrudelPattern.squeeze(vararg args: PatternLike): StrudelPattern = this._squeeze(args.toList().asStrudelDslArgs())
 
-/** Squeezes patterns from a list into the timespans of events in this string pattern (clamped). */
+/** Squeezes patterns from a [List] lookup into the timespans of events in this pattern (clamped index). */
 @StrudelDsl
-fun String.squeeze(vararg args: PatternLike): StrudelPattern = this._squeeze(args.toList().asStrudelDslArgs())
+fun StrudelPattern.squeeze(lookup: List<Any>): StrudelPattern = this._squeeze(listOf(lookup).asStrudelDslArgs())
+
+/** Squeezes patterns from a [Map] lookup into the timespans of events in this pattern (string key). */
+@StrudelDsl
+fun StrudelPattern.squeeze(lookup: Map<String, Any>): StrudelPattern =
+    this._squeeze(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Squeezes patterns from a list into the timespans of events in this string pattern (clamped).
+ *
+ * This string is parsed as mini-notation to produce index values. Those values select from the
+ * lookup with clamped out-of-bounds handling. Selected patterns are squeezed into each event's timespan.
+ *
+ * ```KlangScript
+ * "0 1".squeeze("bd sd hh", "rim cp").s()   // string receiver as index pattern
+ * ```
+ *
+ * @category structural
+ * @tags squeeze, inhabit, select, index, lookup
+ */
+@StrudelDsl
+fun String.squeeze(vararg args: PatternLike): StrudelPattern =
+    this._squeeze(args.toList().asStrudelDslArgs())
+
+/** Squeezes patterns from a [List] lookup into the timespans of events in this string pattern (clamped). */
+@StrudelDsl
+fun String.squeeze(lookup: List<Any>): StrudelPattern =
+    this._squeeze(listOf(lookup).asStrudelDslArgs())
+
+/** Squeezes patterns from a [Map] lookup into the timespans of events in this string pattern (string key). */
+@StrudelDsl
+fun String.squeeze(lookup: Map<String, Any>): StrudelPattern =
+    this._squeeze(listOf(lookup).asStrudelDslArgs())
+
+/**
+ * Selects patterns from a list by index and squeezes them into the triggering event's timespan.
+ *
+ * Like [inhabit] but with arguments in the opposite order: the first argument is the selector
+ * (index) pattern and the remaining arguments are the lookup patterns. Indices are clamped.
+ *
+ * ```KlangScript
+ * "<0 1>".apply(squeeze("bd sd hh", "rim cp")).s()   // selector first, then lookup
+ * ```
+ *
+ * ```KlangScript
+ * "<0 1>".apply(squeeze(note("c3 e3"), note("g3 b3")))  // index → squeezed pattern
+ * ```
+ *
+ * @category structural
+ * @tags squeeze, inhabit, pickSqueeze, select, index, lookup
+ */
+@StrudelDsl
+fun squeeze(vararg args: PatternLike): PatternMapperFn =
+    _squeeze(args.toList().asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] that selects from a [List] lookup by index and squeezes; clamped. */
+@StrudelDsl
+fun squeeze(lookup: List<Any>): PatternMapperFn =
+    _squeeze(listOf(lookup).asStrudelDslArgs())
+
+/** Returns a [PatternMapperFn] that selects from a [Map] lookup by string key and squeezes. */
+@StrudelDsl
+fun squeeze(lookup: Map<String, Any>): PatternMapperFn =
+    _squeeze(listOf(lookup).asStrudelDslArgs())
+
+/** Chains a squeeze onto this [PatternMapperFn]; clamped index, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.squeeze(vararg args: PatternLike): PatternMapperFn =
+    this._squeeze(args.toList().asStrudelDslArgs())
+
+/** Chains a squeeze from a [List] lookup onto this [PatternMapperFn]; clamped index, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.squeeze(lookup: List<Any>): PatternMapperFn = this._squeeze(listOf(lookup).asStrudelDslArgs())
+
+/** Chains a squeeze from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
+@StrudelDsl
+fun PatternMapperFn.squeeze(lookup: Map<String, Any>): PatternMapperFn =
+    this._squeeze(listOf(lookup).asStrudelDslArgs())
 
 // -- pickRestart() ----------------------------------------------------------------------------------------------------
 
@@ -1407,7 +1701,8 @@ fun StrudelPattern.pickRestart(lookup: Map<String, Any>): StrudelPattern =
  * @tags pickRestart, pick, restart, trigger, select, index
  */
 @StrudelDsl
-fun String.pickRestart(vararg args: PatternLike): StrudelPattern = this._pickRestart(args.toList().asStrudelDslArgs())
+fun String.pickRestart(vararg args: PatternLike): StrudelPattern =
+    this._pickRestart(args.toList().asStrudelDslArgs())
 
 /**
  * Like [pick] but restarts the chosen pattern — [List] lookup, this string as index pattern.
@@ -1420,7 +1715,8 @@ fun String.pickRestart(vararg args: PatternLike): StrudelPattern = this._pickRes
  * ```
  */
 @StrudelDsl
-fun String.pickRestart(lookup: List<PatternLike>): StrudelPattern = seq(this).pickRestart(lookup)
+fun String.pickRestart(lookup: List<PatternLike>): StrudelPattern =
+    this._pickRestart(listOf(lookup).asStrudelDslArgs())
 
 /**
  * Like [pick] but restarts the chosen pattern — [Map] lookup, this string as key pattern.
@@ -1433,7 +1729,8 @@ fun String.pickRestart(lookup: List<PatternLike>): StrudelPattern = seq(this).pi
  * ```
  */
 @StrudelDsl
-fun String.pickRestart(lookup: Map<String, Any>): StrudelPattern = seq(this).pickRestart(lookup)
+fun String.pickRestart(lookup: Map<String, Any>): StrudelPattern =
+    this._pickRestart(listOf(lookup).asStrudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that selects from a lookup and restarts the chosen pattern on each trigger.

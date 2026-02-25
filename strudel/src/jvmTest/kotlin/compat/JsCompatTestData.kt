@@ -180,46 +180,36 @@ object JsCompatTestData {
         Example("pickmodOut() basic", """seq("<0 1 2>").pickmodOut(["bd hh", "sd oh"])"""),
         Example("pickmodOut() no clipping", """seq("0 2").pickmodOut([sound("bd hh"), sound("sd oh")])"""),
         // pickRestart() - Pattern picking with restart
-        Example("pickRestart() basic", """pickRestart(["bd", "hh"], "0 1")"""),
-        Example("pickRestart() with patterns", """pickRestart([sound("bd hh"), sound("sn cp")], "0 1")"""),
+        Example("pickRestart() basic", """seq("0 1").pickRestart(["bd", "hh"])"""),
+        Example("pickRestart() with patterns", """seq("0 1").pickRestart([sound("bd hh"), sound("sn cp")])"""),
         // This case specifically tests the restart behavior:
         // Selector "0 ~ 0 ~" triggers "0" at 0.0 and 0.5.
         // Inner "0 1 2 3" (0.25 each).
         // At 0.0: get inner 0.0-0.25 ("0").
         // At 0.5: get inner 0.0-0.25 ("0") because of restart. Standard pick would get "2".
-        Example("pickRestart() restart test", """pickRestart([seq("0 1 2 3")], "0 ~ 0 ~")"""),
+        Example("pickRestart() restart test", """seq("0 ~ 0 ~").pickRestart([seq("0 1 2 3")])"""),
         // pickmodRestart()
-        Example("pickmodRestart() basic", """pickmodRestart(["bd", "hh"], "0 1 2")"""),
-        Example("pickmodRestart() restart test", """pickmodRestart([seq("0 1 2 3")], "0 ~ 2 ~")"""),
+        Example("pickmodRestart() basic", """seq("0 1 2").pickmodRestart(["bd", "hh"])"""),
+        Example("pickmodRestart() restart test", """seq("0 ~ 2 ~").pickmodRestart([seq("0 1 2 3")])"""),
         // pickReset() - Pattern picking with reset (phase alignment)
-        Example("pickReset() basic", """pickReset(["bd", "hh"], "0 1")"""),
-        Example("pickReset() with patterns", """pickReset([sound("bd hh"), sound("sn cp")], "0 1")"""),
-        Example("pickReset() reset test", """pickReset([seq("0 1 2 3")], "0 ~ 0 ~")"""),
+        Example("pickReset() basic", """seq("0 1").pickReset(["bd", "hh"])"""),
+        Example("pickReset() with patterns", """seq("0 1").pickReset([sound("bd hh"), sound("sn cp")])"""),
+        Example("pickReset() reset test", """seq("0 ~ 0 ~").pickReset([seq("0 1 2 3")])"""),
         // pickmodReset()
-        Example("pickmodReset() basic", """pickmodReset(["bd", "hh"], "0 1 2")"""),
-        Example("pickmodReset() reset test", """pickmodReset([seq("0 1 2 3")], "0 ~ 2 ~")"""),
+        Example("pickmodReset() basic", """seq("0 1 2").pickmodReset(["bd", "hh"])"""),
+        Example("pickmodReset() reset test", """seq("0 ~ 2 ~").pickmodReset([seq("0 1 2 3")])"""),
         // inhabit() / pickSqueeze()
-        Example("inhabit() with list of patterns", """inhabit([s('bd hh'), s('sd cp')], '0 1')"""),
-        Example("inhabit() with map of patterns", """inhabit({a: s('bd'), b: s('sd')}, 'a b')"""),
-        Example("pickSqueeze() is alias for inhabit()", """pickSqueeze([s('bd hh'), s('sd cp')], '0 1')"""),
-        Example(
-            SKIP,
-            "inhabit() via method call on selector",
-            """'0 1'.inhabit([s('bd hh'), s('sd cp')])"""
-        ), // does not compile in JS
-        Example(
-            SKIP,
-            "inhabit() via method call with map",
-            """'a b'.inhabit({a: s('bd'), b: s('sd')})"""
-        ), // does not compile in JS
+        Example("inhabit() with list of patterns", """seq("0 1").inhabit([s('bd hh'), s('sd cp')])"""),
+        Example("inhabit() with map of patterns", """seq("a b").inhabit({a: s('bd'), b: s('sd')})"""),
+        Example("pickSqueeze() is alias for inhabit()", """seq("0 1").pickSqueeze([s('bd hh'), s('sd cp')])"""),
+        Example("inhabit() via method call on selector", """seq("0 1").inhabit([s('bd hh'), s('sd cp')])"""),
+        Example("inhabit() via method call with map", """seq("a b").inhabit({a: s('bd'), b: s('sd')})"""),
         // squeeze() - inhabit with swapped args
-        Example("squeeze() basic", """squeeze(seq("0 1"), [s('bd hh'), s('sd cp')])"""),
+        Example("squeeze() basic", """seq("0 1").squeeze([s('bd hh'), s('sd cp')])"""),
         // Fails in Graal with "TypeError: e2.map is not a function".
         // Squeeze with map might not be fully supported or argument handling differs in JS.
-        Example(SKIP, "squeeze() with map", """squeeze("a b", {a: s('bd'), b: s('sd')})"""),
-        Example(SKIP, "squeeze() as method", """note("0 1").squeeze([s('bd hh'), s('sd cp')])"""),
-        // Does not compile in JS
-        Example(SKIP, "squeeze() as method on string", """"0 1".squeeze([s('bd hh'), s('sd cp')])"""),
+        Example("squeeze() with map", """seq("a b").squeeze({a: s('bd'), b: s('sd')})"""),
+        Example("squeeze() as method", """seq("0 1").squeeze([s('bd hh'), s('sd cp')])"""),
 
         // Euclidean Patterns from mini notation
         *(1..8).flatMap { pulses ->
