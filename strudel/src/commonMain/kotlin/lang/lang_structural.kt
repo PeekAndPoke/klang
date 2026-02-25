@@ -3686,10 +3686,7 @@ fun applyEuclid(source: StrudelPattern, pulses: Int, steps: Int, rotation: Int):
     )
 }
 
-internal val _euclid by dslPatternFunction { args, callInfo ->
-    val pattern = args.drop(2).toPattern()
-    pattern._euclid(args, callInfo)
-}
+internal val _euclid by dslPatternMapper { args, callInfo -> { p -> p._euclid(args, callInfo) } }
 
 internal val StrudelPattern._euclid by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
@@ -3724,6 +3721,9 @@ internal val StrudelPattern._euclid by dslPatternExtension { p, args, /* callInf
 }
 
 internal val String._euclid by dslStringExtension { p, args, callInfo -> p._euclid(args, callInfo) }
+internal val PatternMapperFn._euclid by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_euclid(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -3744,21 +3744,71 @@ internal val String._euclid by dslStringExtension { p, args, callInfo -> p._eucl
  * ```KlangScript
  * s("bd").euclid(5, 16)  // 5 beats distributed across 16 steps
  * ```
+ *
  * @category structural
  * @tags euclid, rhythm, euclidean, structure, pattern
  */
 @StrudelDsl
 fun euclid(pulses: Int, steps: Int, pattern: PatternLike): StrudelPattern =
-    _euclid(listOf(pulses, steps, pattern).asStrudelDslArgs())
+    euclid(pulses, steps)(listOf(pattern).asStrudelDslArgs().toPattern())
 
-/** Applies a Euclidean rhythm structure to the pattern. */
+/**
+ * Applies a Euclidean rhythm structure to the pattern.
+ *
+ * @param pulses Number of onsets (beats) to place.
+ * @param steps  Total number of steps in the rhythm.
+ * @return A pattern with the Euclidean rhythm applied as structure.
+ *
+ * ```KlangScript
+ * s("hh").euclid(3, 8)  // classic 3-over-8 Euclidean rhythm
+ * ```
+ *
+ * @category structural
+ * @tags euclid, rhythm, euclidean, structure, pattern
+ */
 @StrudelDsl
 fun StrudelPattern.euclid(pulses: Int, steps: Int): StrudelPattern =
     this._euclid(listOf(pulses, steps).asStrudelDslArgs())
 
-/** Applies a Euclidean rhythm structure to the mini-notation string. */
+/**
+ * Applies a Euclidean rhythm structure to the mini-notation string.
+ *
+ * @param pulses Number of onsets (beats) to place.
+ * @param steps  Total number of steps in the rhythm.
+ * @return A pattern with the Euclidean rhythm applied as structure.
+ *
+ * ```KlangScript
+ * "hh".euclid(3, 8).s()  // classic 3-over-8 Euclidean rhythm
+ * ```
+ *
+ * @category structural
+ * @tags euclid, rhythm, euclidean, structure, pattern
+ */
 @StrudelDsl
 fun String.euclid(pulses: Int, steps: Int): StrudelPattern =
+    this._euclid(listOf(pulses, steps).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that applies a Euclidean rhythm structure to the source pattern.
+ *
+ * @param pulses Number of onsets (beats) to place.
+ * @param steps  Total number of steps in the rhythm.
+ * @return A [PatternMapperFn] that restructures the source as a Euclidean rhythm.
+ *
+ * ```KlangScript
+ * s("hh").apply(euclid(3, 8))  // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags euclid, rhythm, euclidean, structure, pattern
+ */
+@StrudelDsl
+fun euclid(pulses: Int, steps: Int): PatternMapperFn =
+    _euclid(listOf(pulses, steps).asStrudelDslArgs())
+
+/** Chains a euclid onto this [PatternMapperFn]; applies Euclidean rhythm structure to the result. */
+@StrudelDsl
+fun PatternMapperFn.euclid(pulses: Int, steps: Int): PatternMapperFn =
     this._euclid(listOf(pulses, steps).asStrudelDslArgs())
 
 // -- euclidRot() ------------------------------------------------------------------------------------------------------

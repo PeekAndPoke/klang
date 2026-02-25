@@ -3,11 +3,29 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangEuclidSpec : StringSpec({
+
+    "euclid dsl interface" {
+        val pat = "hh"
+        dslInterfaceTests(
+            "pattern.euclid(3, 8)" to s(pat).euclid(3, 8),
+            "script pattern.euclid(3, 8)" to StrudelPattern.compile("""s("$pat").euclid(3, 8)"""),
+            "string.euclid(3, 8)" to pat.euclid(3, 8),
+            "script string.euclid(3, 8)" to StrudelPattern.compile(""""$pat".euclid(3, 8)"""),
+            "euclid(3, 8)" to s(pat).apply(euclid(3, 8)),
+            "script euclid(3, 8)" to StrudelPattern.compile("""s("$pat").apply(euclid(3, 8))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 3  // 3 pulses from 8 steps
+        }
+    }
 
     "note(\"x\").euclid(3, 5) - comprehensive test with part/whole assertions" {
         // Euclidean rhythm 3,5 distributes 3 hits across 5 steps as evenly as possible

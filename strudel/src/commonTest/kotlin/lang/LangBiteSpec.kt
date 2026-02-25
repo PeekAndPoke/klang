@@ -1,9 +1,27 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangBiteSpec : StringSpec({
+
+    "bite dsl interface" {
+        val pat = "0 1 2 3"
+        dslInterfaceTests(
+            "pattern.bite(4, '0 1 2 3')" to n(pat).bite(4, "0 1 2 3"),
+            "script pattern.bite(4, '0 1 2 3')" to StrudelPattern.compile("""n("$pat").bite(4, "0 1 2 3")"""),
+            "string.bite(4, '0 1 2 3')" to pat.bite(4, "0 1 2 3"),
+            "script string.bite(4, '0 1 2 3')" to StrudelPattern.compile(""""$pat".bite(4, "0 1 2 3")"""),
+            "bite(4, '0 1 2 3')" to n(pat).apply(bite(4, "0 1 2 3")),
+            "script bite(4, '0 1 2 3')" to StrudelPattern.compile("""n("$pat").apply(bite(4, "0 1 2 3"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 4
+        }
+    }
 
     "bite(4, '0 1 2 3') reconstructs the original pattern" {
         // Slicing into 4 and playing 0, 1, 2, 3 in order should be identity
