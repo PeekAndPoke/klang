@@ -509,10 +509,7 @@ fun bjork(pulses: Int, steps: Int, rotation: Int = 0, pattern: PatternLike): Str
 
 // -- euclidLegato() ---------------------------------------------------------------------------------------------------
 
-internal val _euclidLegato by dslPatternFunction { args, callInfo ->
-    val pattern = args.drop(2).toPattern()
-    pattern._euclidLegato(args, callInfo)
-}
+internal val _euclidLegato by dslPatternMapper { args, callInfo -> { p -> p._euclidLegato(args, callInfo) } }
 
 internal val StrudelPattern._euclidLegato by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
@@ -549,6 +546,9 @@ internal val StrudelPattern._euclidLegato by dslPatternExtension { p, args, /* c
 }
 
 internal val String._euclidLegato by dslStringExtension { p, args, callInfo -> p._euclidLegato(args, callInfo) }
+internal val PatternMapperFn._euclidLegato by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_euclidLegato(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -566,14 +566,10 @@ internal val String._euclidLegato by dslStringExtension { p, args, callInfo -> p
  * ```KlangScript
  * note("c").euclidLegato(5, 8)  // 5 legato notes across 8 steps
  * ```
+ *
  * @category structural
  * @tags euclidLegato, euclid, legato, rhythm, structure
  */
-@StrudelDsl
-fun euclidLegato(pulses: Int, steps: Int, pattern: PatternLike): StrudelPattern =
-    _euclidLegato(listOf(pulses, steps, pattern).asStrudelDslArgs())
-
-/** Applies legato Euclidean structure to the pattern. */
 @StrudelDsl
 fun StrudelPattern.euclidLegato(pulses: Int, steps: Int): StrudelPattern =
     this._euclidLegato(listOf(pulses, steps).asStrudelDslArgs())
@@ -582,6 +578,34 @@ fun StrudelPattern.euclidLegato(pulses: Int, steps: Int): StrudelPattern =
 @StrudelDsl
 fun String.euclidLegato(pulses: Int, steps: Int): StrudelPattern =
     this._euclidLegato(listOf(pulses, steps).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that applies legato Euclidean rhythm structure to the source pattern.
+ *
+ * @param pulses Number of onsets (beats) to place.
+ * @param steps  Total number of steps in the rhythm.
+ * @return A [PatternMapperFn] that restructures the source as a legato Euclidean rhythm.
+ *
+ * ```KlangScript
+ * s("hh").apply(euclidLegato(3, 8))  // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags euclidLegato, euclid, legato, rhythm, structure
+ */
+@StrudelDsl
+fun euclidLegato(pulses: Int, steps: Int): PatternMapperFn =
+    _euclidLegato(listOf(pulses, steps).asStrudelDslArgs())
+
+/** Chains a euclidLegato onto this [PatternMapperFn]; applies legato Euclidean rhythm to the result. */
+@StrudelDsl
+fun PatternMapperFn.euclidLegato(pulses: Int, steps: Int): PatternMapperFn =
+    this._euclidLegato(listOf(pulses, steps).asStrudelDslArgs())
+
+/** Like [euclidLegato] as a top-level function taking an explicit pattern argument. */
+@StrudelDsl
+fun euclidLegato(pulses: Int, steps: Int, pattern: PatternLike): StrudelPattern =
+    euclidLegato(pulses, steps)(listOf(pattern).asStrudelDslArgs().toPattern())
 
 // -- euclidLegatoRot() ------------------------------------------------------------------------------------------------
 

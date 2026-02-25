@@ -1,10 +1,29 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangBjorkSpec : StringSpec({
+
+    "bjork dsl interface" {
+        val pat = "hh"
+        dslInterfaceTests(
+            "pattern.bjork(3, 8, 0)" to s(pat).bjork(3, 8, 0),
+            "script pattern.bjork(3, 8, 0)" to StrudelPattern.compile("""s("$pat").bjork(3, 8, 0)"""),
+            "string.bjork(3, 8, 0)" to pat.bjork(3, 8, 0),
+            "script string.bjork(3, 8, 0)" to StrudelPattern.compile(""""$pat".bjork(3, 8, 0)"""),
+            "bjork(3, 8, 0)" to s(pat).apply(bjork(3, 8, 0)),
+            "script bjork(3, 8, 0)" to StrudelPattern.compile("""s("$pat").apply(bjork(3, 8, 0))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 3
+        }
+    }
+
 
     "bjork([3, 8]) works like euclid(3, 8)" {
         val p = note("a").bjork(pulses = 3, steps = 8)
