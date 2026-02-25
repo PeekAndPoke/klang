@@ -390,14 +390,7 @@ fun PatternMapperFn.euclidrot(pulses: Int, steps: Int, rotation: Int): PatternMa
 
 // -- bjork() ----------------------------------------------------------------------------------------------------------
 
-// We also need a top level function bjork(pattern, ...args)
-internal val _bjork by dslPatternFunction { args, callInfo ->
-    val params = args.getOrNull(0)?.value as? List<*> ?: return@dslPatternFunction silence
-
-    val pattern = args.getOrNull(1)?.toPattern() ?: return@dslPatternFunction silence
-
-    pattern._bjork(params, callInfo)
-}
+internal val _bjork by dslPatternMapper { args, callInfo -> { p -> p._bjork(args, callInfo) } }
 
 internal val StrudelPattern._bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
     val list = args.getOrNull(0)?.value as? List<*>
@@ -449,6 +442,9 @@ internal val StrudelPattern._bjork by dslPatternExtension { p, args, /* callInfo
 }
 
 internal val String._bjork by dslStringExtension { p, args, callInfo -> p._bjork(args, callInfo) }
+internal val PatternMapperFn._bjork by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bjork(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -482,10 +478,34 @@ fun StrudelPattern.bjork(pulses: Int, steps: Int, rotation: Int = 0): StrudelPat
 fun String.bjork(pulses: Int, steps: Int, rotation: Int = 0): StrudelPattern =
     this._bjork(listOf(listOf(pulses, steps, rotation)).asStrudelDslArgs())
 
-/** Like [bjork] as a top level function, produces events with voice value 1. */
+/**
+ * Returns a [PatternMapperFn] that applies a Euclidean rhythm specified as (pulses, steps, rotation).
+ *
+ * @param pulses   Number of onsets (beats).
+ * @param steps    Total number of steps.
+ * @param rotation Number of steps to rotate (default 0).
+ * @return A [PatternMapperFn] that restructures the source as a bjork Euclidean rhythm.
+ *
+ * ```KlangScript
+ * s("hh").apply(bjork(3, 8, 0))  // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags bjork, euclid, rhythm, rotation
+ */
+@StrudelDsl
+fun bjork(pulses: Int, steps: Int, rotation: Int = 0): PatternMapperFn =
+    _bjork(listOf(listOf(pulses, steps, rotation)).asStrudelDslArgs())
+
+/** Chains a bjork onto this [PatternMapperFn]; applies a Euclidean rhythm (pulses, steps, rotation). */
+@StrudelDsl
+fun PatternMapperFn.bjork(pulses: Int, steps: Int, rotation: Int = 0): PatternMapperFn =
+    this._bjork(listOf(listOf(pulses, steps, rotation)).asStrudelDslArgs())
+
+/** Like [bjork] as a top-level function taking an explicit pattern argument. */
 @StrudelDsl
 fun bjork(pulses: Int, steps: Int, rotation: Int = 0, pattern: PatternLike): StrudelPattern =
-    _bjork(listOf(listOf(pulses, steps, rotation), pattern).asStrudelDslArgs())
+    bjork(pulses, steps, rotation)(listOf(pattern).asStrudelDslArgs().toPattern())
 
 // -- euclidLegato() ---------------------------------------------------------------------------------------------------
 
