@@ -3101,10 +3101,17 @@ internal val StrudelPattern._echo by dslPatternExtension { p, args, /* callInfo 
 }
 
 internal val String._echo by dslStringExtension { p, args, callInfo -> p._echo(args, callInfo) }
+internal val _echo by dslPatternMapper { args, callInfo -> { p -> p._echo(args, callInfo) } }
+internal val PatternMapperFn._echo by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_echo(args, callInfo))
+}
 
 internal val StrudelPattern._stut by dslPatternExtension { p, args, callInfo -> p._echo(args, callInfo) }
-
 internal val String._stut by dslStringExtension { p, args, callInfo -> p._echo(args, callInfo) }
+internal val _stut by dslPatternMapper { args, callInfo -> { p -> p._stut(args, callInfo) } }
+internal val PatternMapperFn._stut by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_stut(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -3125,6 +3132,7 @@ internal val String._stut by dslStringExtension { p, args, callInfo -> p._echo(a
  * ```KlangScript
  * note("c e g").echo(4, 0.25, 0.5)  // 4 layers, quarter-cycle spacing, halving gain
  * ```
+ *
  * @alias stut
  * @category structural
  * @tags echo, stut, delay, decay, reverb, effect
@@ -3133,9 +3141,49 @@ internal val String._stut by dslStringExtension { p, args, callInfo -> p._echo(a
 fun StrudelPattern.echo(times: Int, delay: Double, decay: Double): StrudelPattern =
     this._echo(listOf(times, delay, decay).asStrudelDslArgs())
 
-/** Like [echo] applied to a mini-notation string. */
+/**
+ * Like [echo] applied to a mini-notation string.
+ *
+ * @param times Number of layers including the original (must be ≥ 1).
+ * @param delay Time offset per echo in cycles.
+ * @param decay Gain multiplier applied to each successive echo (0.0–1.0).
+ * @return A stacked pattern of the original plus decayed, delayed echoes.
+ *
+ * ```KlangScript
+ * "bd sd".echo(3, 0.125, 0.7).s()  // original + 2 echoes, 0.125 cycles apart
+ * ```
+ *
+ * @alias stut
+ * @category structural
+ * @tags echo, stut, delay, decay, reverb, effect
+ */
 @StrudelDsl
 fun String.echo(times: Int, delay: Double, decay: Double): StrudelPattern =
+    this._echo(listOf(times, delay, decay).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that superimposes delayed and decayed copies of the source pattern.
+ *
+ * @param times Number of layers including the original (must be ≥ 1).
+ * @param delay Time offset per echo in cycles.
+ * @param decay Gain multiplier applied to each successive echo (0.0–1.0).
+ * @return A [PatternMapperFn] that applies the echo effect to the source.
+ *
+ * ```KlangScript
+ * s("bd sd").apply(echo(3, 0.125, 0.7))  // via mapper
+ * ```
+ *
+ * @alias stut
+ * @category structural
+ * @tags echo, stut, delay, decay, reverb, effect
+ */
+@StrudelDsl
+fun echo(times: Int, delay: Double, decay: Double): PatternMapperFn =
+    _echo(listOf(times, delay, decay).asStrudelDslArgs())
+
+/** Chains an echo onto this [PatternMapperFn]; superimposes delayed and decayed copies of the result. */
+@StrudelDsl
+fun PatternMapperFn.echo(times: Int, delay: Double, decay: Double): PatternMapperFn =
     this._echo(listOf(times, delay, decay).asStrudelDslArgs())
 
 /**
@@ -3153,6 +3201,7 @@ fun String.echo(times: Int, delay: Double, decay: Double): StrudelPattern =
  * ```KlangScript
  * s("hh").stut(3, 0.125, 0.8)  // hi-hat with 2 trailing echoes
  * ```
+ *
  * @alias echo
  * @category structural
  * @tags stut, echo, delay, decay, reverb, effect
@@ -3161,9 +3210,49 @@ fun String.echo(times: Int, delay: Double, decay: Double): StrudelPattern =
 fun StrudelPattern.stut(times: Int, delay: Double, decay: Double): StrudelPattern =
     this._stut(listOf(times, delay, decay).asStrudelDslArgs())
 
-/** Alias for [echo]. */
+/**
+ * Alias for [echo] applied to a mini-notation string.
+ *
+ * @param times Number of layers including the original.
+ * @param delay Time offset per echo in cycles.
+ * @param decay Gain multiplier per echo (0.0–1.0).
+ * @return A stacked pattern of the original plus decayed, delayed echoes.
+ *
+ * ```KlangScript
+ * "hh".stut(3, 0.125, 0.8).s()  // hi-hat with 2 trailing echoes
+ * ```
+ *
+ * @alias echo
+ * @category structural
+ * @tags stut, echo, delay, decay, reverb, effect
+ */
 @StrudelDsl
 fun String.stut(times: Int, delay: Double, decay: Double): StrudelPattern =
+    this._stut(listOf(times, delay, decay).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [echo] — superimposes delayed and decayed copies.
+ *
+ * @param times Number of layers including the original.
+ * @param delay Time offset per echo in cycles.
+ * @param decay Gain multiplier per echo (0.0–1.0).
+ * @return A [PatternMapperFn] that applies the echo effect to the source.
+ *
+ * ```KlangScript
+ * s("hh").apply(stut(3, 0.125, 0.8))  // via mapper
+ * ```
+ *
+ * @alias echo
+ * @category structural
+ * @tags stut, echo, delay, decay, reverb, effect
+ */
+@StrudelDsl
+fun stut(times: Int, delay: Double, decay: Double): PatternMapperFn =
+    _stut(listOf(times, delay, decay).asStrudelDslArgs())
+
+/** Chains a stut onto this [PatternMapperFn]; alias for [PatternMapperFn.echo]. */
+@StrudelDsl
+fun PatternMapperFn.stut(times: Int, delay: Double, decay: Double): PatternMapperFn =
     this._stut(listOf(times, delay, decay).asStrudelDslArgs())
 
 // -- echoWith() / stutWith() ------------------------------------------------------------------------------------------
