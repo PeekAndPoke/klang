@@ -4,6 +4,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.lang.addons.notchf
+import io.peekandpoke.klang.strudel.lang.addons.notchq
+import io.peekandpoke.klang.strudel.lang.addons.nresonance
 
 class LangFiltersSpec : StringSpec({
 

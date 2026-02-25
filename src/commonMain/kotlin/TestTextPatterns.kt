@@ -177,7 +177,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4] [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[8,15]!4 [8,15]!3          [10,10|10|17|17|22]!9]>`).repeat(2),
-  ).fast(1).scale("C2:chromatic").pan(0.55).hpf(90).lpf(4500).warmth(0.5)
+  ).fast(1).scale("C2:chromatic").pan(0.55).hpf(90).lpf(2000).warmth(0.5)
     .s("supersaw").unison(6).detune(0.08).gain("0.55 0.525 0.5 0.525").distort(saw.range(3.5, /*  ---->  */ 11.0 /*  <----  */ ).slow(32)).postgain(0.19)
     .superimpose(x => x.pan(0.65).bandf("800 1150 950 1250|1250|1275|1300".slow(64)).bandq(saw.range(1.0, 5.0).slow(64)).postgain(0.15))    
     .adsr("0.01:0.1:0.5:0.01").clip(1.01).filterWhen(t => t % 64 >= 4).transpose(tp) // .solo()

@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.strudel.lang.addons
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
@@ -6,6 +6,9 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.strudel.lang.apply
+import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.strudel.lang.seq
 
 class LangNfreleaseSpec : StringSpec({
 
