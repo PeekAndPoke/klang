@@ -3501,12 +3501,17 @@ fun applySegment(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
 }
 
 internal val StrudelPattern._segment by dslPatternExtension { p, args, /* callInfo */ _ -> applySegment(p, args) }
-
 internal val String._segment by dslStringExtension { p, args, callInfo -> p._segment(args, callInfo) }
-
 internal val StrudelPattern._seg by dslPatternExtension { p, args, callInfo -> p._segment(args, callInfo) }
-
 internal val String._seg by dslStringExtension { p, args, callInfo -> p._segment(args, callInfo) }
+internal val _segment by dslPatternMapper { args, callInfo -> { p -> p._segment(args, callInfo) } }
+internal val PatternMapperFn._segment by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_segment(args, callInfo))
+}
+internal val _seg by dslPatternMapper { args, callInfo -> { p -> p._seg(args, callInfo) } }
+internal val PatternMapperFn._seg by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_seg(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -3525,6 +3530,7 @@ internal val String._seg by dslStringExtension { p, args, callInfo -> p._segment
  * ```KlangScript
  * note(sine.range(48, 60).segment(8))  // sine wave at 8 steps per cycle
  * ```
+ *
  * @alias seg
  * @category structural
  * @tags segment, seg, sample, discrete, quantize
@@ -3532,9 +3538,43 @@ internal val String._seg by dslStringExtension { p, args, callInfo -> p._segment
 @StrudelDsl
 fun StrudelPattern.segment(n: PatternLike): StrudelPattern = this._segment(listOf(n).asStrudelDslArgs())
 
-/** Like [segment] applied to a mini-notation string. */
+/**
+ * Like [segment] applied to a mini-notation string.
+ *
+ * @param n Number of segments per cycle. Can be an integer or a mini-notation string.
+ * @return A discrete pattern with `n` evenly-spaced samples per cycle.
+ *
+ * ```KlangScript
+ * "0".segment(4).note()  // four evenly-spaced notes per cycle
+ * ```
+ *
+ * @alias seg
+ * @category structural
+ * @tags segment, seg, sample, discrete, quantize
+ */
 @StrudelDsl
 fun String.segment(n: PatternLike): StrudelPattern = this._segment(listOf(n).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that samples the source pattern at `n` events per cycle.
+ *
+ * @param n Number of segments per cycle. Can be an integer or a mini-notation string.
+ * @return A [PatternMapperFn] that discretises the source into `n` evenly-spaced samples.
+ *
+ * ```KlangScript
+ * sine.range(40, 60).apply(segment(8)).note()  // via mapper
+ * ```
+ *
+ * @alias seg
+ * @category structural
+ * @tags segment, seg, sample, discrete, quantize
+ */
+@StrudelDsl
+fun segment(n: PatternLike): PatternMapperFn = _segment(listOf(n).asStrudelDslArgs())
+
+/** Chains a segment onto this [PatternMapperFn]; samples the result at `n` events per cycle. */
+@StrudelDsl
+fun PatternMapperFn.segment(n: PatternLike): PatternMapperFn = this._segment(listOf(n).asStrudelDslArgs())
 
 /**
  * Alias for [segment] — samples the pattern at a rate of `n` events per cycle.
@@ -3549,6 +3589,7 @@ fun String.segment(n: PatternLike): StrudelPattern = this._segment(listOf(n).asS
  * ```KlangScript
  * note(sine.range(48, 60).seg(8))  // sine wave at 8 steps per cycle
  * ```
+ *
  * @alias segment
  * @category structural
  * @tags seg, segment, sample, discrete, quantize
@@ -3556,9 +3597,43 @@ fun String.segment(n: PatternLike): StrudelPattern = this._segment(listOf(n).asS
 @StrudelDsl
 fun StrudelPattern.seg(n: PatternLike): StrudelPattern = this._seg(listOf(n).asStrudelDslArgs())
 
-/** Alias for [segment]. */
+/**
+ * Alias for [segment] applied to a mini-notation string.
+ *
+ * @param n Number of segments per cycle.
+ * @return A discrete pattern with `n` evenly-spaced samples per cycle.
+ *
+ * ```KlangScript
+ * "0".seg(4).note()  // four evenly-spaced notes per cycle
+ * ```
+ *
+ * @alias segment
+ * @category structural
+ * @tags seg, segment, sample, discrete, quantize
+ */
 @StrudelDsl
 fun String.seg(n: PatternLike): StrudelPattern = this._seg(listOf(n).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [segment] — samples the source at `n` events per cycle.
+ *
+ * @param n Number of segments per cycle.
+ * @return A [PatternMapperFn] that discretises the source into `n` evenly-spaced samples.
+ *
+ * ```KlangScript
+ * sine.range(40, 60).apply(seg(8)).note()  // via mapper
+ * ```
+ *
+ * @alias segment
+ * @category structural
+ * @tags seg, segment, sample, discrete, quantize
+ */
+@StrudelDsl
+fun seg(n: PatternLike): PatternMapperFn = _seg(listOf(n).asStrudelDslArgs())
+
+/** Chains a seg onto this [PatternMapperFn]; alias for [PatternMapperFn.segment]. */
+@StrudelDsl
+fun PatternMapperFn.seg(n: PatternLike): PatternMapperFn = this._seg(listOf(n).asStrudelDslArgs())
 
 // -- euclid() ---------------------------------------------------------------------------------------------------------
 
