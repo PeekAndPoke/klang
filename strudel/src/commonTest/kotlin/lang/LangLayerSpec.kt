@@ -1,10 +1,44 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangLayerSpec : StringSpec({
+
+    "layer dsl interface" {
+        val pat = "c e"
+        val transform: PatternMapperFn = { it.note("e") }
+        dslInterfaceTests(
+            "pattern.layer(fn)" to note(pat).layer(transform),
+            "script pattern.layer(fn)" to StrudelPattern.compile("""note("$pat").layer(x => x.note("e"))"""),
+            "string.layer(fn)" to pat.layer(transform),
+            "script string.layer(fn)" to StrudelPattern.compile(""""$pat".layer(x => x.note("e"))"""),
+            "layer(fn)" to note(pat).apply(layer(transform)),
+            "script layer(fn)" to StrudelPattern.compile("""note("$pat").apply(layer(x => x.note("e")))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2  // layer with one fn returns just the transformed pattern
+        }
+    }
+
+    "apply dsl interface" {
+        val pat = "c e"
+        val transform: PatternMapperFn = { it.note("e") }
+        dslInterfaceTests(
+            "pattern.apply(fn)" to note(pat).apply(transform),
+            "script pattern.apply(fn)" to StrudelPattern.compile("""note("$pat").apply(x => x.note("e"))"""),
+            "string.apply(fn)" to pat.apply(transform),
+            "script string.apply(fn)" to StrudelPattern.compile(""""$pat".apply(x => x.note("e"))"""),
+            "apply(fn)" to note(pat).apply(apply(transform)),
+            "script apply(fn)" to StrudelPattern.compile("""note("$pat").apply(apply(x => x.note("e")))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "layer() should stack results of multiple transformations" {
         // layer(original, fast(2)) should be equivalent to superimpose(fast(2))

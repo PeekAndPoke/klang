@@ -2125,7 +2125,7 @@ fun PatternMapperFn.superimpose(transform: PatternMapperFn): PatternMapperFn =
 
 // -- layer() ----------------------------------------------------------------------------------------------------------
 
-// delegates - still register with KlangScript
+internal val _layer by dslPatternMapper { args, callInfo -> { p -> p._layer(args, callInfo) } }
 internal val StrudelPattern._layer by dslPatternExtension { p, args, /* callInfo */ _ ->
     val transforms: List<PatternMapperFn> = args.mapNotNull { it.toPatternMapper() }
 
@@ -2148,31 +2148,35 @@ internal val StrudelPattern._layer by dslPatternExtension { p, args, /* callInfo
         }
     }
 }
-
 internal val String._layer by dslStringExtension { p, args, callInfo -> p._layer(args, callInfo) }
+internal val PatternMapperFn._layer by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_layer(args, callInfo))
+}
 
+internal val _apply by dslPatternMapper { args, callInfo -> _layer(args, callInfo) }
 internal val StrudelPattern._apply by dslPatternExtension { p, args, callInfo -> p._layer(args, callInfo) }
-
 internal val String._apply by dslStringExtension { p, args, callInfo -> p._apply(args, callInfo) }
-
-// ===== USER-FACING OVERLOADS =====
+internal val PatternMapperFn._apply by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_layer(args, callInfo))
+}
 
 /**
- * Applies multiple transformation functions to the pattern and stacks the results.
+ * Applies one or more transformation functions to this pattern and stacks the results.
  *
- * Each function in [transforms] is applied to the original pattern independently, and all results are
- * stacked together. Useful for building complex textures from a single source pattern.
+ * Each function in [transforms] is applied to the original pattern independently, and all
+ * results are stacked together. Useful for building complex textures from a single source.
  *
  * @param transforms One or more functions to apply; each result is stacked with the others.
  * @return All transformed copies stacked as a single pattern.
  *
  * ```KlangScript
- * s("bd hh sd oh").layer(x => x.fast(2), x => x.rev())  // two transformed layers stacked
+ * s("bd hh sd oh").layer(x => x.fast(2), x => x.rev())              // two transformed layers stacked
  * ```
  *
  * ```KlangScript
- * note("c e g").layer(x => x.transpose(7), x => x.transpose(12))  // fifth and octave layers stacked
+ * note("c e g").layer(x => x.transpose(7), x => x.transpose(12))    // fifth and octave stacked
  * ```
+ *
  * @alias apply
  * @category structural
  * @tags layer, stack, transform, superimpose
@@ -2181,16 +2185,32 @@ internal val String._apply by dslStringExtension { p, args, callInfo -> p._apply
 fun StrudelPattern.layer(vararg transforms: PatternMapperFn): StrudelPattern =
     this._layer(transforms.toList().asStrudelDslArgs())
 
-/**
- * Applies multiple transformation functions to this string-parsed pattern and stacks the results.
- *
- * ```KlangScript
- * "bd sd".layer(x => x.fast(2), x => x.rev()).s()  // two transformed layers stacked
- * ```
- * @alias apply
- */
+/** Applies transformations to this string pattern and stacks the results. */
 @StrudelDsl
 fun String.layer(vararg transforms: PatternMapperFn): StrudelPattern =
+    this._layer(transforms.toList().asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that applies the given transforms to the source and stacks results.
+ *
+ * @param transforms One or more functions; each is applied to the source and results are stacked.
+ * @return A [PatternMapperFn] that stacks the transformed copies.
+ *
+ * ```KlangScript
+ * s("bd sd").apply(layer(x => x.fast(2), x => x.rev()))   // via mapper
+ * ```
+ *
+ * @alias apply
+ * @category structural
+ * @tags layer, stack, transform, superimpose
+ */
+@StrudelDsl
+fun layer(vararg transforms: PatternMapperFn): PatternMapperFn =
+    _layer(transforms.toList().asStrudelDslArgs())
+
+/** Chains a layer onto this [PatternMapperFn]; stacks the transformed copies. */
+@StrudelDsl
+fun PatternMapperFn.layer(vararg transforms: PatternMapperFn): PatternMapperFn =
     this._layer(transforms.toList().asStrudelDslArgs())
 
 /**
@@ -2200,12 +2220,13 @@ fun String.layer(vararg transforms: PatternMapperFn): StrudelPattern =
  * @return All transformed copies stacked as a single pattern.
  *
  * ```KlangScript
- * s("bd hh sd oh").apply(x => x.fast(2), x => x.rev())  // two layers stacked
+ * s("bd hh sd oh").apply(x => x.fast(2), x => x.rev())   // two layers stacked
  * ```
  *
  * ```KlangScript
- * note("c e").apply(x => x.transpose(7))  // fifth layer stacked
+ * note("c e").apply(x => x.transpose(7))                  // fifth layer stacked
  * ```
+ *
  * @alias layer
  * @category structural
  * @tags layer, stack, transform, apply
@@ -2214,16 +2235,32 @@ fun String.layer(vararg transforms: PatternMapperFn): StrudelPattern =
 fun StrudelPattern.apply(vararg transforms: PatternMapperFn): StrudelPattern =
     this._apply(transforms.toList().asStrudelDslArgs())
 
-/**
- * Alias for [layer] on a string-parsed pattern.
- *
- * ```KlangScript
- * "bd sd hh hh".apply(x => x.fast(2), x => x.rev()).s()  // two layers stacked
- * ```
- * @alias layer
- */
+/** Alias for [layer] on a string pattern. */
 @StrudelDsl
 fun String.apply(vararg transforms: PatternMapperFn): StrudelPattern =
+    this._apply(transforms.toList().asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] — alias for [layer] — that applies transforms and stacks results.
+ *
+ * @param transforms One or more functions; results are stacked.
+ * @return A [PatternMapperFn] that stacks the transformed copies.
+ *
+ * ```KlangScript
+ * s("bd sd").apply(layer(x => x.fast(2), x => x.rev()))   // apply the layer mapper
+ * ```
+ *
+ * @alias layer
+ * @category structural
+ * @tags layer, stack, transform, apply
+ */
+@StrudelDsl
+fun apply(vararg transforms: PatternMapperFn): PatternMapperFn =
+    _apply(transforms.toList().asStrudelDslArgs())
+
+/** Chains an apply (alias for [layer]) onto this [PatternMapperFn]; stacks the transformed copies. */
+@StrudelDsl
+fun PatternMapperFn.apply(vararg transforms: PatternMapperFn): PatternMapperFn =
     this._apply(transforms.toList().asStrudelDslArgs())
 
 // -- zoom() -----------------------------------------------------------------------------------------------------------
