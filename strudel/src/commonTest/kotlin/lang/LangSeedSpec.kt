@@ -126,4 +126,37 @@ class LangSeedSpec : StringSpec({
             e1.part.begin shouldBe e2.part.begin
         }
     }
+
+    "seed() as top-level PatternMapperFn produces reproducible results" {
+        val mapper = seed(42)
+        val p1 = rand.apply(mapper)
+        val p2 = rand.apply(mapper)
+        val events1 = p1.queryArc(0.0, 1.0)
+        val events2 = p2.queryArc(0.0, 1.0)
+        events1.size shouldBe events2.size
+        events1.zip(events2).forEach { (e1, e2) ->
+            e1.data.value?.asDouble shouldBe e2.data.value?.asDouble
+        }
+    }
+
+    "PatternMapperFn.seed() chains seed onto an existing mapper" {
+        val mapper: PatternMapperFn = { it.degradeBy(0.5) }
+        val seeded = mapper.seed(42)
+        val p1 = seq("0 1 2 3").apply(seeded)
+        val p2 = seq("0 1 2 3").apply(seeded)
+        val events1 = p1.queryArc(0.0, 1.0)
+        val events2 = p2.queryArc(0.0, 1.0)
+        events1.size shouldBe events2.size
+    }
+
+    "withSeed() as top-level PatternMapperFn is alias for seed()" {
+        val p1 = rand.apply(withSeed(42))
+        val p2 = rand.apply(seed(42))
+        val events1 = p1.queryArc(0.0, 1.0)
+        val events2 = p2.queryArc(0.0, 1.0)
+        events1.size shouldBe events2.size
+        events1.zip(events2).forEach { (e1, e2) ->
+            e1.data.value?.asDouble shouldBe e2.data.value?.asDouble
+        }
+    }
 })

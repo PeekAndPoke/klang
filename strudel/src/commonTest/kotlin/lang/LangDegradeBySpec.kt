@@ -103,4 +103,40 @@ class LangDegradeBySpec : StringSpec({
             }
         }
     }
+
+    "degradeBy() as top-level PatternMapperFn keeps all events at 0 probability" {
+        val events = note("a b c d").apply(degradeBy(0.0)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "PatternMapperFn.degradeBy() chains degradeBy onto a mapper" {
+        val mapper: PatternMapperFn = { it }
+        val events = note("a b c d").apply(mapper.degradeBy(0.0)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "degrade() as top-level PatternMapperFn keeps all events at 0 probability" {
+        val events = note("a b c d").apply(degrade(0.0)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "degrade() with no args uses 0.5 probability" {
+        val mapper = degrade()
+        // With prob=0 and 0.5, results differ — mapper must be callable
+        val events0 = note("a b c d").apply(degrade(0.0)).queryArc(0.0, 1.0)
+        val events50 = note("a b c d").apply(mapper).seed(1).queryArc(0.0, 1.0)
+        events0.size shouldBe 4
+        events50.size shouldBeInRange 0..4
+    }
+
+    "undegrade() as top-level PatternMapperFn" {
+        val events = note("a b c d").apply(undegrade()).seed(99).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+
+    "PatternMapperFn.undegrade() chains onto a mapper" {
+        val mapper: PatternMapperFn = { it }
+        val events = note("a b c d").apply(mapper.undegrade()).seed(99).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
 })

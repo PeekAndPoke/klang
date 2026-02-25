@@ -24,4 +24,28 @@ class LangShuffleSpec : StringSpec({
         val values = events.mapNotNull { it.data.value?.asInt }
         values.sorted() shouldBe listOf(0, 1, 2, 3)
     }
+
+    "shuffle() as top-level PatternMapperFn reorders all slices" {
+        val events = seq("0 1 2 3").apply(shuffle(4)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+        events.mapNotNull { it.data.value?.asInt }.sorted() shouldBe listOf(0, 1, 2, 3)
+    }
+
+    "PatternMapperFn.shuffle() chains shuffle onto a mapper" {
+        val identity: PatternMapperFn = { it }
+        val events = seq("0 1 2 3").apply(identity.shuffle(4)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+        events.mapNotNull { it.data.value?.asInt }.sorted() shouldBe listOf(0, 1, 2, 3)
+    }
+
+    "scramble() as top-level PatternMapperFn selects slices with replacement" {
+        val events = seq("0 1 2 3").apply(scramble(4)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "PatternMapperFn.scramble() chains scramble onto a mapper" {
+        val identity: PatternMapperFn = { it }
+        val events = seq("0 1 2 3").apply(identity.scramble(4)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
 })

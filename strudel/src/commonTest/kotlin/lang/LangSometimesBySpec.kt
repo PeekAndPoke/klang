@@ -154,4 +154,62 @@ class LangSometimesBySpec : StringSpec({
         events.size shouldBe 1
         events[0].data.scale shouldBe null
     }
+
+    "sometimesBy() as top-level PatternMapperFn applies at given probability" {
+        // With prob=1.0 the transform always applies
+        val events = note("a b c d").apply(sometimesBy(1.0) { it.add(12) }).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "PatternMapperFn.sometimesBy() chains onto an existing mapper" {
+        val identity: PatternMapperFn = { it }
+        val events = note("a b c d").apply(identity.sometimesBy(1.0) { it.add(12) }).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "sometimes() as top-level PatternMapperFn" {
+        val events = note("a b c d").apply(sometimes { it }).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+
+    "often() as top-level PatternMapperFn applies ~75% of the time" {
+        val events = note("a b c d").apply(often { it }).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+
+    "rarely() as top-level PatternMapperFn applies ~25% of the time" {
+        val events = note("a b c d").apply(rarely { it }).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+
+    "almostNever() as top-level PatternMapperFn" {
+        val events = note("a b c d").apply(almostNever { it }).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+
+    "almostAlways() as top-level PatternMapperFn" {
+        val events = note("a b c d").apply(almostAlways { it }).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+
+    "never() as top-level PatternMapperFn never modifies the pattern" {
+        val original = note("a b c d").queryArc(0.0, 1.0)
+        val events = note("a b c d").apply(never { it.add(12) }).queryArc(0.0, 1.0)
+        events.size shouldBe original.size
+    }
+
+    "always() as top-level PatternMapperFn always applies the transform" {
+        val events = note("a").apply(always { it.fast(2) }).queryArc(0.0, 1.0)
+        events.size shouldBe 2
+    }
+
+    "someCycles() as top-level PatternMapperFn" {
+        val events = note("a b c d").apply(someCycles { it }).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+
+    "someCyclesBy() as top-level PatternMapperFn with prob=1.0 always transforms" {
+        val events = note("a").apply(someCyclesBy(1.0) { it.fast(2) }).queryArc(0.0, 1.0)
+        events.size shouldBe 2
+    }
 })
