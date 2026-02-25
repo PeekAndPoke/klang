@@ -362,16 +362,24 @@ fun PatternMapperFn.fmdec(seconds: PatternLike? = null): PatternMapperFn =
 private val fmsustainMutation = voiceModifier { copy(fmSustain = it?.asDoubleOrNull()) }
 
 fun applyFmsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, fmsustainMutation)
+    return source._liftOrReinterpretNumericalField(args, fmsustainMutation)
 }
 
-internal val _fmsustain by dslPatternFunction { args, _ -> args.toPattern(fmsustainMutation) }
 internal val StrudelPattern._fmsustain by dslPatternExtension { p, args, _ -> applyFmsustain(p, args) }
 internal val String._fmsustain by dslStringExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
+internal val _fmsustain by dslPatternMapper { args, callInfo -> { p -> p._fmsustain(args, callInfo) } }
+internal val PatternMapperFn._fmsustain by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmsustain(args, callInfo))
+}
 
-internal val _fmsus by dslPatternFunction { args, callInfo -> _fmsustain(args, callInfo) }
 internal val StrudelPattern._fmsus by dslPatternExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
-internal val String._fmsus by dslStringExtension { p, args, callInfo -> p._fmsus(args, callInfo) }
+internal val String._fmsus by dslStringExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
+internal val _fmsus by dslPatternMapper { args, callInfo -> { p -> p._fmsustain(args, callInfo) } }
+internal val PatternMapperFn._fmsus by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmsus(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the sustain level for the FM modulation envelope (0–1).
@@ -393,15 +401,33 @@ internal val String._fmsus by dslStringExtension { p, args, callInfo -> p._fmsus
  * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
  */
 @StrudelDsl
-fun fmsustain(level: PatternLike): StrudelPattern = _fmsustain(listOf(level).asStrudelDslArgs())
-
-/** Sets the FM modulation envelope sustain level on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmsustain(level: PatternLike): StrudelPattern = this._fmsustain(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.fmsustain(level: PatternLike? = null): StrudelPattern =
+    this._fmsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /** Sets the FM modulation envelope sustain level on a string pattern. */
 @StrudelDsl
-fun String.fmsustain(level: PatternLike): StrudelPattern = this._fmsustain(listOf(level).asStrudelDslArgs())
+fun String.fmsustain(level: PatternLike? = null): StrudelPattern =
+    this._fmsustain(listOfNotNull(level).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the FM modulation envelope sustain level on the source pattern.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmsustain(0.0))  // via mapper
+ * ```
+ *
+ * @alias fmsus
+ * @category synthesis
+ * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
+ */
+@StrudelDsl
+fun fmsustain(level: PatternLike? = null): PatternMapperFn =
+    _fmsustain(listOfNotNull(level).asStrudelDslArgs())
+
+/** Chains a fmsustain onto this [PatternMapperFn]; sets the FM envelope sustain level on the result. */
+@StrudelDsl
+fun PatternMapperFn.fmsustain(level: PatternLike? = null): PatternMapperFn =
+    this._fmsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /**
  * Alias for [fmsustain]. Sets the FM modulation envelope sustain level.
@@ -411,15 +437,33 @@ fun String.fmsustain(level: PatternLike): StrudelPattern = this._fmsustain(listO
  * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
  */
 @StrudelDsl
-fun fmsus(level: PatternLike): StrudelPattern = _fmsus(listOf(level).asStrudelDslArgs())
-
-/** Alias for [fmsustain] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmsus(level: PatternLike): StrudelPattern = this._fmsus(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.fmsus(level: PatternLike? = null): StrudelPattern =
+    this._fmsus(listOfNotNull(level).asStrudelDslArgs())
 
 /** Alias for [fmsustain] on a string pattern. */
 @StrudelDsl
-fun String.fmsus(level: PatternLike): StrudelPattern = this._fmsus(listOf(level).asStrudelDslArgs())
+fun String.fmsus(level: PatternLike? = null): StrudelPattern =
+    this._fmsus(listOfNotNull(level).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [fmsustain].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmsus(0.0))  // via mapper
+ * ```
+ *
+ * @alias fmsustain
+ * @category synthesis
+ * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
+ */
+@StrudelDsl
+fun fmsus(level: PatternLike? = null): PatternMapperFn =
+    _fmsus(listOfNotNull(level).asStrudelDslArgs())
+
+/** Chains a fmsus onto this [PatternMapperFn]; alias for [PatternMapperFn.fmsustain]. */
+@StrudelDsl
+fun PatternMapperFn.fmsus(level: PatternLike? = null): PatternMapperFn =
+    this._fmsus(listOfNotNull(level).asStrudelDslArgs())
 
 // -- fmenv() / fmmod() ------------------------------------------------------------------------------------------------
 
