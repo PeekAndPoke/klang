@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangHpsustainSpec : StringSpec({
 
-    "hpsustain() sets StrudelVoiceData.hpsustain" {
-        val p = hpsustain("0.6 0.8")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- hpsustain ----
 
+    "hpsustain dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.hpsustain(ctrl)" to seq(pat).hpsustain(ctrl),
+            "script pattern.hpsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").hpsustain("$ctrl")"""),
+            "string.hpsustain(ctrl)" to pat.hpsustain(ctrl),
+            "script string.hpsustain(ctrl)" to StrudelPattern.compile(""""$pat".hpsustain("$ctrl")"""),
+            "hpsustain(ctrl)" to seq(pat).apply(hpsustain(ctrl)),
+            "script hpsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpsustain("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.hpsustain shouldBe 0.5
+            events[1].data.hpsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpsustain | seq(\"0.5 1.0\").hpsustain()" {
+        val p = seq("0.5 1.0").hpsustain()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpsustain shouldBe 0.5
+            events[1].data.hpsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpsustain | \"0.5 1.0\".hpsustain()" {
+        val p = "0.5 1.0".hpsustain()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpsustain shouldBe 0.5
+            events[1].data.hpsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpsustain | seq(\"0.5 1.0\").apply(hpsustain())" {
+        val p = seq("0.5 1.0").apply(hpsustain())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpsustain shouldBe 0.5
+            events[1].data.hpsustain shouldBe 1.0
+        }
+    }
+
+    "hpsustain() sets VoiceData.hpsustain" {
+        val p = note("a b").apply(hpsustain("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.hpsustain shouldBe 0.6
-        events[1].data.hpsustain shouldBe 0.8
+        events.map { it.data.hpsustain } shouldBe listOf(0.5, 1.0)
     }
 
     "hpsustain() works as pattern extension" {
@@ -65,14 +115,40 @@ class LangHpsustainSpec : StringSpec({
         hpf.envelope?.sustain shouldBe 0.8
     }
 
-    // Alias tests
+    // ---- hps (alias) ----
 
-    "hps() is an alias for hpsustain()" {
-        val p = hps("0.75")
+    "hps dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.hps(ctrl)" to seq(pat).hps(ctrl),
+            "script pattern.hps(ctrl)" to StrudelPattern.compile("""seq("$pat").hps("$ctrl")"""),
+            "string.hps(ctrl)" to pat.hps(ctrl),
+            "script string.hps(ctrl)" to StrudelPattern.compile(""""$pat".hps("$ctrl")"""),
+            "hps(ctrl)" to seq(pat).apply(hps(ctrl)),
+            "script hps(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hps("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.hpsustain shouldBe 0.5
+            events[1].data.hpsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpsustain | seq(\"0.5 1.0\").hps()" {
+        val p = seq("0.5 1.0").hps()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpsustain shouldBe 0.5
+            events[1].data.hpsustain shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.hpsustain shouldBe 0.75
+    "hps() sets VoiceData.hpsustain" {
+        val p = note("a b").apply(hps("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.hpsustain } shouldBe listOf(0.5, 1.0)
     }
 
     "hps() works as pattern extension" {

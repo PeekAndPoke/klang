@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangBpattackSpec : StringSpec({
 
-    "bpattack() sets StrudelVoiceData.bpattack" {
-        val p = bpattack("0.05 0.1")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- bpattack ----
 
+    "bpattack dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.bpattack(ctrl)" to seq(pat).bpattack(ctrl),
+            "script pattern.bpattack(ctrl)" to StrudelPattern.compile("""seq("$pat").bpattack("$ctrl")"""),
+            "string.bpattack(ctrl)" to pat.bpattack(ctrl),
+            "script string.bpattack(ctrl)" to StrudelPattern.compile(""""$pat".bpattack("$ctrl")"""),
+            "bpattack(ctrl)" to seq(pat).apply(bpattack(ctrl)),
+            "script bpattack(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpattack("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bpattack shouldBe 0.5
+            events[1].data.bpattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpattack | seq(\"0.5 1.0\").bpattack()" {
+        val p = seq("0.5 1.0").bpattack()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpattack shouldBe 0.5
+            events[1].data.bpattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpattack | \"0.5 1.0\".bpattack()" {
+        val p = "0.5 1.0".bpattack()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpattack shouldBe 0.5
+            events[1].data.bpattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpattack | seq(\"0.5 1.0\").apply(bpattack())" {
+        val p = seq("0.5 1.0").apply(bpattack())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpattack shouldBe 0.5
+            events[1].data.bpattack shouldBe 1.0
+        }
+    }
+
+    "bpattack() sets VoiceData.bpattack" {
+        val p = note("a b").apply(bpattack("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.bpattack shouldBe 0.05
-        events[1].data.bpattack shouldBe 0.1
+        events.map { it.data.bpattack } shouldBe listOf(0.5, 1.0)
     }
 
     "bpattack() works as pattern extension" {
@@ -70,14 +120,40 @@ class LangBpattackSpec : StringSpec({
         bpf.envelope?.attack shouldBe 0.05
     }
 
-    // Alias tests
+    // ---- bpa (alias) ----
 
-    "bpa() is an alias for bpattack()" {
-        val p = bpa("0.08")
+    "bpa dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.bpa(ctrl)" to seq(pat).bpa(ctrl),
+            "script pattern.bpa(ctrl)" to StrudelPattern.compile("""seq("$pat").bpa("$ctrl")"""),
+            "string.bpa(ctrl)" to pat.bpa(ctrl),
+            "script string.bpa(ctrl)" to StrudelPattern.compile(""""$pat".bpa("$ctrl")"""),
+            "bpa(ctrl)" to seq(pat).apply(bpa(ctrl)),
+            "script bpa(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpa("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bpattack shouldBe 0.5
+            events[1].data.bpattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpattack | seq(\"0.5 1.0\").bpa()" {
+        val p = seq("0.5 1.0").bpa()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpattack shouldBe 0.5
+            events[1].data.bpattack shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.bpattack shouldBe 0.08
+    "bpa() sets VoiceData.bpattack" {
+        val p = note("a b").apply(bpa("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.bpattack } shouldBe listOf(0.5, 1.0)
     }
 
     "bpa() works as pattern extension" {

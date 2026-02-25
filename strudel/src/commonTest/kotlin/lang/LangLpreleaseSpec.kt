@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangLpreleaseSpec : StringSpec({
 
-    "lprelease() sets StrudelVoiceData.lprelease" {
-        val p = lprelease("0.5 0.7")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- lprelease ----
 
+    "lprelease dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.lprelease(ctrl)" to seq(pat).lprelease(ctrl),
+            "script pattern.lprelease(ctrl)" to StrudelPattern.compile("""seq("$pat").lprelease("$ctrl")"""),
+            "string.lprelease(ctrl)" to pat.lprelease(ctrl),
+            "script string.lprelease(ctrl)" to StrudelPattern.compile(""""$pat".lprelease("$ctrl")"""),
+            "lprelease(ctrl)" to seq(pat).apply(lprelease(ctrl)),
+            "script lprelease(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lprelease("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.lprelease shouldBe 0.5
+            events[1].data.lprelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lprelease | seq(\"0.5 1.0\").lprelease()" {
+        val p = seq("0.5 1.0").lprelease()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lprelease shouldBe 0.5
+            events[1].data.lprelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lprelease | \"0.5 1.0\".lprelease()" {
+        val p = "0.5 1.0".lprelease()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lprelease shouldBe 0.5
+            events[1].data.lprelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lprelease | seq(\"0.5 1.0\").apply(lprelease())" {
+        val p = seq("0.5 1.0").apply(lprelease())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lprelease shouldBe 0.5
+            events[1].data.lprelease shouldBe 1.0
+        }
+    }
+
+    "lprelease() sets VoiceData.lprelease" {
+        val p = note("a b").apply(lprelease("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.lprelease shouldBe 0.5
-        events[1].data.lprelease shouldBe 0.7
+        events.map { it.data.lprelease } shouldBe listOf(0.5, 1.0)
     }
 
     "lprelease() works as pattern extension" {
@@ -70,14 +120,40 @@ class LangLpreleaseSpec : StringSpec({
         lpf.envelope?.release shouldBe 0.5
     }
 
-    // Alias tests
+    // ---- lpr (alias) ----
 
-    "lpr() is an alias for lprelease()" {
-        val p = lpr("0.6")
+    "lpr dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.lpr(ctrl)" to seq(pat).lpr(ctrl),
+            "script pattern.lpr(ctrl)" to StrudelPattern.compile("""seq("$pat").lpr("$ctrl")"""),
+            "string.lpr(ctrl)" to pat.lpr(ctrl),
+            "script string.lpr(ctrl)" to StrudelPattern.compile(""""$pat".lpr("$ctrl")"""),
+            "lpr(ctrl)" to seq(pat).apply(lpr(ctrl)),
+            "script lpr(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lpr("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.lprelease shouldBe 0.5
+            events[1].data.lprelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lprelease | seq(\"0.5 1.0\").lpr()" {
+        val p = seq("0.5 1.0").lpr()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lprelease shouldBe 0.5
+            events[1].data.lprelease shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.lprelease shouldBe 0.6
+    "lpr() sets VoiceData.lprelease" {
+        val p = note("a b").apply(lpr("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.lprelease } shouldBe listOf(0.5, 1.0)
     }
 
     "lpr() works as pattern extension" {

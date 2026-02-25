@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangBpenvSpec : StringSpec({
 
-    "bpenv() sets StrudelVoiceData.bpenv" {
-        val p = bpenv("0.5 0.7")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- bpenv ----
 
+    "bpenv dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.bpenv(ctrl)" to seq(pat).bpenv(ctrl),
+            "script pattern.bpenv(ctrl)" to StrudelPattern.compile("""seq("$pat").bpenv("$ctrl")"""),
+            "string.bpenv(ctrl)" to pat.bpenv(ctrl),
+            "script string.bpenv(ctrl)" to StrudelPattern.compile(""""$pat".bpenv("$ctrl")"""),
+            "bpenv(ctrl)" to seq(pat).apply(bpenv(ctrl)),
+            "script bpenv(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpenv("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bpenv shouldBe 0.5
+            events[1].data.bpenv shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpenv | seq(\"0.5 1.0\").bpenv()" {
+        val p = seq("0.5 1.0").bpenv()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpenv shouldBe 0.5
+            events[1].data.bpenv shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpenv | \"0.5 1.0\".bpenv()" {
+        val p = "0.5 1.0".bpenv()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpenv shouldBe 0.5
+            events[1].data.bpenv shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpenv | seq(\"0.5 1.0\").apply(bpenv())" {
+        val p = seq("0.5 1.0").apply(bpenv())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpenv shouldBe 0.5
+            events[1].data.bpenv shouldBe 1.0
+        }
+    }
+
+    "bpenv() sets VoiceData.bpenv" {
+        val p = note("a b").apply(bpenv("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.bpenv shouldBe 0.5
-        events[1].data.bpenv shouldBe 0.7
+        events.map { it.data.bpenv } shouldBe listOf(0.5, 1.0)
     }
 
     "bpenv() works as pattern extension" {
@@ -70,14 +120,40 @@ class LangBpenvSpec : StringSpec({
         bpf.envelope?.depth shouldBe 0.5
     }
 
-    // Alias tests
+    // ---- bpe (alias) ----
 
-    "bpe() is an alias for bpenv()" {
-        val p = bpe("0.6")
+    "bpe dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.bpe(ctrl)" to seq(pat).bpe(ctrl),
+            "script pattern.bpe(ctrl)" to StrudelPattern.compile("""seq("$pat").bpe("$ctrl")"""),
+            "string.bpe(ctrl)" to pat.bpe(ctrl),
+            "script string.bpe(ctrl)" to StrudelPattern.compile(""""$pat".bpe("$ctrl")"""),
+            "bpe(ctrl)" to seq(pat).apply(bpe(ctrl)),
+            "script bpe(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpe("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bpenv shouldBe 0.5
+            events[1].data.bpenv shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpenv | seq(\"0.5 1.0\").bpe()" {
+        val p = seq("0.5 1.0").bpe()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpenv shouldBe 0.5
+            events[1].data.bpenv shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.bpenv shouldBe 0.6
+    "bpe() sets VoiceData.bpenv" {
+        val p = note("a b").apply(bpe("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.bpenv } shouldBe listOf(0.5, 1.0)
     }
 
     "bpe() works as pattern extension" {

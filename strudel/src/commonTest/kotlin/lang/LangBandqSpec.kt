@@ -1,16 +1,68 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangBandqSpec : StringSpec({
 
+    // ---- bandq ----
+
+    "bandq dsl interface" {
+        val pat = "a b"
+        val ctrl = "1.2 1.8"
+        dslInterfaceTests(
+            "pattern.bandq(ctrl)" to seq(pat).bandq(ctrl),
+            "script pattern.bandq(ctrl)" to StrudelPattern.compile("""seq("$pat").bandq("$ctrl")"""),
+            "string.bandq(ctrl)" to pat.bandq(ctrl),
+            "script string.bandq(ctrl)" to StrudelPattern.compile(""""$pat".bandq("$ctrl")"""),
+            "bandq(ctrl)" to seq(pat).apply(bandq(ctrl)),
+            "script bandq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bandq("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bandq shouldBe 1.2
+            events[1].data.bandq shouldBe 1.8
+        }
+    }
+
+    "reinterpret voice data as bandq | seq(\"1.2 1.8\").bandq()" {
+        val p = seq("1.2 1.8").bandq()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bandq shouldBe 1.2
+            events[1].data.bandq shouldBe 1.8
+        }
+    }
+
+    "reinterpret voice data as bandq | \"1.2 1.8\".bandq()" {
+        val p = "1.2 1.8".bandq()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bandq shouldBe 1.2
+            events[1].data.bandq shouldBe 1.8
+        }
+    }
+
+    "reinterpret voice data as bandq | seq(\"1.2 1.8\").apply(bandq())" {
+        val p = seq("1.2 1.8").apply(bandq())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bandq shouldBe 1.2
+            events[1].data.bandq shouldBe 1.8
+        }
+    }
+
     "bandq() sets StrudelVoiceData.bandq" {
-        val p = bandq("1.2 1.8")
+        val p = note("a b").apply(bandq("1.2 1.8"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -71,8 +123,37 @@ class LangBandqSpec : StringSpec({
         events[3].data.bandq shouldBe (0.0 plusOrMinus EPSILON)
     }
 
+    // ---- bpq (alias) ----
+
+    "bpq dsl interface" {
+        val pat = "a b"
+        val ctrl = "1.2 1.8"
+        dslInterfaceTests(
+            "pattern.bpq(ctrl)" to seq(pat).bpq(ctrl),
+            "script pattern.bpq(ctrl)" to StrudelPattern.compile("""seq("$pat").bpq("$ctrl")"""),
+            "string.bpq(ctrl)" to pat.bpq(ctrl),
+            "script string.bpq(ctrl)" to StrudelPattern.compile(""""$pat".bpq("$ctrl")"""),
+            "bpq(ctrl)" to seq(pat).apply(bpq(ctrl)),
+            "script bpq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpq("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bandq shouldBe 1.2
+            events[1].data.bandq shouldBe 1.8
+        }
+    }
+
+    "reinterpret voice data as bandq | seq(\"1.2 1.8\").bpq()" {
+        val p = seq("1.2 1.8").bpq()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bandq shouldBe 1.2
+            events[1].data.bandq shouldBe 1.8
+        }
+    }
+
     "bpq() is an alias for bandq()" {
-        val p = bpq("2.5")
+        val p = note("a").apply(bpq("2.5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1

@@ -1,16 +1,68 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangNotchfSpec : StringSpec({
 
-    "notchf() sets VoiceData.cutoff and adds FilterDef.Notch" {
-        // Note: notchf currently sets 'cutoff' in VoiceData, similar to lpf
-        val p = notchf("1000 500")
+    // ---- notchf ----
+
+    "notchf dsl interface" {
+        val pat = "a b"
+        val ctrl = "1000 500"
+
+        dslInterfaceTests(
+            "pattern.notchf(ctrl)" to seq(pat).notchf(ctrl),
+            "script pattern.notchf(ctrl)" to StrudelPattern.compile("""seq("$pat").notchf("$ctrl")"""),
+            "string.notchf(ctrl)" to pat.notchf(ctrl),
+            "script string.notchf(ctrl)" to StrudelPattern.compile(""""$pat".notchf("$ctrl")"""),
+            "notchf(ctrl)" to seq(pat).apply(notchf(ctrl)),
+            "script notchf(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(notchf("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.notchf shouldBe 1000.0
+            events[1].data.notchf shouldBe 500.0
+        }
+    }
+
+    "reinterpret voice data as notchf | seq(\"1000 500\").notchf()" {
+        val p = seq("1000 500").notchf()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.notchf shouldBe 1000.0
+            events[1].data.notchf shouldBe 500.0
+        }
+    }
+
+    "reinterpret voice data as notchf | \"1000 500\".notchf()" {
+        val p = "1000 500".notchf()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.notchf shouldBe 1000.0
+            events[1].data.notchf shouldBe 500.0
+        }
+    }
+
+    "reinterpret voice data as notchf | seq(\"1000 500\").apply(notchf())" {
+        val p = seq("1000 500").apply(notchf())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.notchf shouldBe 1000.0
+            events[1].data.notchf shouldBe 500.0
+        }
+    }
+
+    "notchf() sets VoiceData.notchf" {
+        val p = note("a b").apply(notchf("1000 500"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -37,23 +89,19 @@ class LangNotchfSpec : StringSpec({
     "notchf() works in compiled code" {
         val p = StrudelPattern.compile("""note("c").notchf("1000")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+
         events.size shouldBe 1
         events[0].data.notchf shouldBe 1000.0
     }
 
-    "notchf() with continuous pattern sets cutoffHz correctly" {
-        // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
+    "notchf() with continuous pattern sets notchf correctly" {
         val p = note("a b c d").notchf(sine)
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
-        // t=0.0: sine(0) = 0.5
         events[0].data.notchf shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.25: sine(0.25) = 1.0
         events[1].data.notchf shouldBe (1.0 plusOrMinus EPSILON)
-        // t=0.5: sine(0.5) = 0.5
         events[2].data.notchf shouldBe (0.5 plusOrMinus EPSILON)
-        // t=0.75: sine(0.75) = 0.0
         events[3].data.notchf shouldBe (0.0 plusOrMinus EPSILON)
     }
 })

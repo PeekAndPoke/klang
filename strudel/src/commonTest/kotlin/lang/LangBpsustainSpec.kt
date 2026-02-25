@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangBpsustainSpec : StringSpec({
 
-    "bpsustain() sets StrudelVoiceData.bpsustain" {
-        val p = bpsustain("0.7 0.8")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- bpsustain ----
 
+    "bpsustain dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.bpsustain(ctrl)" to seq(pat).bpsustain(ctrl),
+            "script pattern.bpsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").bpsustain("$ctrl")"""),
+            "string.bpsustain(ctrl)" to pat.bpsustain(ctrl),
+            "script string.bpsustain(ctrl)" to StrudelPattern.compile(""""$pat".bpsustain("$ctrl")"""),
+            "bpsustain(ctrl)" to seq(pat).apply(bpsustain(ctrl)),
+            "script bpsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpsustain("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bpsustain shouldBe 0.5
+            events[1].data.bpsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpsustain | seq(\"0.5 1.0\").bpsustain()" {
+        val p = seq("0.5 1.0").bpsustain()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpsustain shouldBe 0.5
+            events[1].data.bpsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpsustain | \"0.5 1.0\".bpsustain()" {
+        val p = "0.5 1.0".bpsustain()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpsustain shouldBe 0.5
+            events[1].data.bpsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpsustain | seq(\"0.5 1.0\").apply(bpsustain())" {
+        val p = seq("0.5 1.0").apply(bpsustain())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpsustain shouldBe 0.5
+            events[1].data.bpsustain shouldBe 1.0
+        }
+    }
+
+    "bpsustain() sets VoiceData.bpsustain" {
+        val p = note("a b").apply(bpsustain("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.bpsustain shouldBe 0.7
-        events[1].data.bpsustain shouldBe 0.8
+        events.map { it.data.bpsustain } shouldBe listOf(0.5, 1.0)
     }
 
     "bpsustain() works as pattern extension" {
@@ -70,14 +120,40 @@ class LangBpsustainSpec : StringSpec({
         bpf.envelope?.sustain shouldBe 0.7
     }
 
-    // Alias tests
+    // ---- bps (alias) ----
 
-    "bps() is an alias for bpsustain()" {
-        val p = bps("0.85")
+    "bps dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.bps(ctrl)" to seq(pat).bps(ctrl),
+            "script pattern.bps(ctrl)" to StrudelPattern.compile("""seq("$pat").bps("$ctrl")"""),
+            "string.bps(ctrl)" to pat.bps(ctrl),
+            "script string.bps(ctrl)" to StrudelPattern.compile(""""$pat".bps("$ctrl")"""),
+            "bps(ctrl)" to seq(pat).apply(bps(ctrl)),
+            "script bps(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bps("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bpsustain shouldBe 0.5
+            events[1].data.bpsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bpsustain | seq(\"0.5 1.0\").bps()" {
+        val p = seq("0.5 1.0").bps()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bpsustain shouldBe 0.5
+            events[1].data.bpsustain shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.bpsustain shouldBe 0.85
+    "bps() sets VoiceData.bpsustain" {
+        val p = note("a b").apply(bps("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.bpsustain } shouldBe listOf(0.5, 1.0)
     }
 
     "bps() works as pattern extension" {

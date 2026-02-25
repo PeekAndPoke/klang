@@ -9,7 +9,7 @@ class LangFiltersSpec : StringSpec({
 
     // lpf()
     "top-level lpf() adds/sets LowPass filter with cutoff" {
-        val p = lpf("200 400")
+        val p = note("a b").apply(lpf("200 400"))
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -33,7 +33,7 @@ class LangFiltersSpec : StringSpec({
 
     // hpf()
     "top-level hpf() adds/sets HighPass filter with cutoff" {
-        val p = hpf("100 250")
+        val p = note("a b").apply(hpf("100 250"))
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -56,7 +56,7 @@ class LangFiltersSpec : StringSpec({
 
     // bandf()/bpf alias
     "top-level bandf() adds/sets BandPass filter with cutoff" {
-        val p = bandf("700 900")
+        val p = note("a b").apply(bandf("700 900"))
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -66,7 +66,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "alias bpf behaves like bandf (top-level and modifier)" {
-        val pTop = bpf("800 1000")
+        val pTop = note("a b").apply(bpf("800 1000"))
         val eventsTop = pTop.queryArc(0.0, 1.0)
         eventsTop.size shouldBe 2
         eventsTop.map { it.data.bandf } shouldBe listOf(800.0, 1000.0)
@@ -86,7 +86,7 @@ class LangFiltersSpec : StringSpec({
 
     // notchf()
     "top-level notchf() adds/sets Notch filter with cutoff" {
-        val p = notchf("400 500")
+        val p = note("a b").apply(notchf("400 500"))
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -182,7 +182,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "lpf() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""lpf("200 400")""")
+        val p = StrudelPattern.compile("""seq("200 400").lpf()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -200,7 +200,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "hpf() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""hpf("100 250")""")
+        val p = StrudelPattern.compile("""seq("100 250").hpf()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -218,7 +218,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "bandf() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""bandf("700 900")""")
+        val p = StrudelPattern.compile("""seq("700 900").bandf()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -236,7 +236,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "notchf() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""notchf("400 500")""")
+        val p = StrudelPattern.compile("""seq("400 500").notchf()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -254,7 +254,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "resonance() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""lpf("200 400").resonance("1.5 2.5")""")
+        val p = StrudelPattern.compile("""seq("200 400").lpf().resonance("1.5 2.5")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangHpdecaySpec : StringSpec({
 
-    "hpdecay() sets StrudelVoiceData.hpdecay" {
-        val p = hpdecay("0.2 0.3")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- hpdecay ----
 
+    "hpdecay dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.hpdecay(ctrl)" to seq(pat).hpdecay(ctrl),
+            "script pattern.hpdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").hpdecay("$ctrl")"""),
+            "string.hpdecay(ctrl)" to pat.hpdecay(ctrl),
+            "script string.hpdecay(ctrl)" to StrudelPattern.compile(""""$pat".hpdecay("$ctrl")"""),
+            "hpdecay(ctrl)" to seq(pat).apply(hpdecay(ctrl)),
+            "script hpdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpdecay("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.hpdecay shouldBe 0.5
+            events[1].data.hpdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpdecay | seq(\"0.5 1.0\").hpdecay()" {
+        val p = seq("0.5 1.0").hpdecay()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpdecay shouldBe 0.5
+            events[1].data.hpdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpdecay | \"0.5 1.0\".hpdecay()" {
+        val p = "0.5 1.0".hpdecay()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpdecay shouldBe 0.5
+            events[1].data.hpdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpdecay | seq(\"0.5 1.0\").apply(hpdecay())" {
+        val p = seq("0.5 1.0").apply(hpdecay())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpdecay shouldBe 0.5
+            events[1].data.hpdecay shouldBe 1.0
+        }
+    }
+
+    "hpdecay() sets VoiceData.hpdecay" {
+        val p = note("a b").apply(hpdecay("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.hpdecay shouldBe 0.2
-        events[1].data.hpdecay shouldBe 0.3
+        events.map { it.data.hpdecay } shouldBe listOf(0.5, 1.0)
     }
 
     "hpdecay() works as pattern extension" {
@@ -65,14 +115,40 @@ class LangHpdecaySpec : StringSpec({
         hpf.envelope?.decay shouldBe 0.2
     }
 
-    // Alias tests
+    // ---- hpd (alias) ----
 
-    "hpd() is an alias for hpdecay()" {
-        val p = hpd("0.25")
+    "hpd dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.hpd(ctrl)" to seq(pat).hpd(ctrl),
+            "script pattern.hpd(ctrl)" to StrudelPattern.compile("""seq("$pat").hpd("$ctrl")"""),
+            "string.hpd(ctrl)" to pat.hpd(ctrl),
+            "script string.hpd(ctrl)" to StrudelPattern.compile(""""$pat".hpd("$ctrl")"""),
+            "hpd(ctrl)" to seq(pat).apply(hpd(ctrl)),
+            "script hpd(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpd("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.hpdecay shouldBe 0.5
+            events[1].data.hpdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpdecay | seq(\"0.5 1.0\").hpd()" {
+        val p = seq("0.5 1.0").hpd()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpdecay shouldBe 0.5
+            events[1].data.hpdecay shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.hpdecay shouldBe 0.25
+    "hpd() sets VoiceData.hpdecay" {
+        val p = note("a b").apply(hpd("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.hpdecay } shouldBe listOf(0.5, 1.0)
     }
 
     "hpd() works as pattern extension" {

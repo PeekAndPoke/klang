@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangBpreleaseSpec : StringSpec({
 
-    "bprelease() sets StrudelVoiceData.bprelease" {
-        val p = bprelease("0.4 0.5")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- bprelease ----
 
+    "bprelease dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.bprelease(ctrl)" to seq(pat).bprelease(ctrl),
+            "script pattern.bprelease(ctrl)" to StrudelPattern.compile("""seq("$pat").bprelease("$ctrl")"""),
+            "string.bprelease(ctrl)" to pat.bprelease(ctrl),
+            "script string.bprelease(ctrl)" to StrudelPattern.compile(""""$pat".bprelease("$ctrl")"""),
+            "bprelease(ctrl)" to seq(pat).apply(bprelease(ctrl)),
+            "script bprelease(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bprelease("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bprelease shouldBe 0.5
+            events[1].data.bprelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bprelease | seq(\"0.5 1.0\").bprelease()" {
+        val p = seq("0.5 1.0").bprelease()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bprelease shouldBe 0.5
+            events[1].data.bprelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bprelease | \"0.5 1.0\".bprelease()" {
+        val p = "0.5 1.0".bprelease()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bprelease shouldBe 0.5
+            events[1].data.bprelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bprelease | seq(\"0.5 1.0\").apply(bprelease())" {
+        val p = seq("0.5 1.0").apply(bprelease())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bprelease shouldBe 0.5
+            events[1].data.bprelease shouldBe 1.0
+        }
+    }
+
+    "bprelease() sets VoiceData.bprelease" {
+        val p = note("a b").apply(bprelease("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.bprelease shouldBe 0.4
-        events[1].data.bprelease shouldBe 0.5
+        events.map { it.data.bprelease } shouldBe listOf(0.5, 1.0)
     }
 
     "bprelease() works as pattern extension" {
@@ -70,14 +120,40 @@ class LangBpreleaseSpec : StringSpec({
         bpf.envelope?.release shouldBe 0.4
     }
 
-    // Alias tests
+    // ---- bpr (alias) ----
 
-    "bpr() is an alias for bprelease()" {
-        val p = bpr("0.45")
+    "bpr dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.bpr(ctrl)" to seq(pat).bpr(ctrl),
+            "script pattern.bpr(ctrl)" to StrudelPattern.compile("""seq("$pat").bpr("$ctrl")"""),
+            "string.bpr(ctrl)" to pat.bpr(ctrl),
+            "script string.bpr(ctrl)" to StrudelPattern.compile(""""$pat".bpr("$ctrl")"""),
+            "bpr(ctrl)" to seq(pat).apply(bpr(ctrl)),
+            "script bpr(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpr("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.bprelease shouldBe 0.5
+            events[1].data.bprelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as bprelease | seq(\"0.5 1.0\").bpr()" {
+        val p = seq("0.5 1.0").bpr()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.bprelease shouldBe 0.5
+            events[1].data.bprelease shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.bprelease shouldBe 0.45
+    "bpr() sets VoiceData.bprelease" {
+        val p = note("a b").apply(bpr("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.bprelease } shouldBe listOf(0.5, 1.0)
     }
 
     "bpr() works as pattern extension" {

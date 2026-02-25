@@ -1,13 +1,66 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangNfattackSpec : StringSpec({
 
-    "top-level nfattack() sets VoiceData.nfattack correctly" {
-        val p = nfattack("0.5 1.0")
+    // ---- nfattack ----
+
+    "nfattack dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+
+        dslInterfaceTests(
+            "pattern.nfattack(ctrl)" to seq(pat).nfattack(ctrl),
+            "script pattern.nfattack(ctrl)" to StrudelPattern.compile("""seq("$pat").nfattack("$ctrl")"""),
+            "string.nfattack(ctrl)" to pat.nfattack(ctrl),
+            "script string.nfattack(ctrl)" to StrudelPattern.compile(""""$pat".nfattack("$ctrl")"""),
+            "nfattack(ctrl)" to seq(pat).apply(nfattack(ctrl)),
+            "script nfattack(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfattack("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.nfattack shouldBe 0.5
+            events[1].data.nfattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfattack | seq(\"0.5 1.0\").nfattack()" {
+        val p = seq("0.5 1.0").nfattack()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfattack shouldBe 0.5
+            events[1].data.nfattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfattack | \"0.5 1.0\".nfattack()" {
+        val p = "0.5 1.0".nfattack()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfattack shouldBe 0.5
+            events[1].data.nfattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfattack | seq(\"0.5 1.0\").apply(nfattack())" {
+        val p = seq("0.5 1.0").apply(nfattack())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfattack shouldBe 0.5
+            events[1].data.nfattack shouldBe 1.0
+        }
+    }
+
+    "nfattack() sets VoiceData.nfattack" {
+        val p = note("a b").apply(nfattack("0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -40,12 +93,34 @@ class LangNfattackSpec : StringSpec({
         events.map { it.data.nfattack } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfa() alias works as top-level function" {
-        val p = nfa("0.3 0.7")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- nfa (alias) ----
 
-        events.size shouldBe 2
-        events.map { it.data.nfattack } shouldBe listOf(0.3, 0.7)
+    "nfa dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+
+        dslInterfaceTests(
+            "pattern.nfa(ctrl)" to seq(pat).nfa(ctrl),
+            "script pattern.nfa(ctrl)" to StrudelPattern.compile("""seq("$pat").nfa("$ctrl")"""),
+            "string.nfa(ctrl)" to pat.nfa(ctrl),
+            "script string.nfa(ctrl)" to StrudelPattern.compile(""""$pat".nfa("$ctrl")"""),
+            "nfa(ctrl)" to seq(pat).apply(nfa(ctrl)),
+            "script nfa(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfa("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.nfattack shouldBe 0.5
+            events[1].data.nfattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfattack | seq(\"0.5 1.0\").nfa()" {
+        val p = seq("0.5 1.0").nfa()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfattack shouldBe 0.5
+            events[1].data.nfattack shouldBe 1.0
+        }
     }
 
     "nfa() alias works as pattern extension" {

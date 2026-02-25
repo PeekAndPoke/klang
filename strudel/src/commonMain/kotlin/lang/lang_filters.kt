@@ -3,7 +3,7 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel._liftNumericField
+import io.peekandpoke.klang.strudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
@@ -12,17 +12,43 @@ import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArg
  */
 var strudelLangFiltersInit = false
 
-// -- lpf() ------------------------------------------------------------------------------------------------------------
+// -- lpf() / cutoff() / ctf() / lp() ---------------------------------------------------------------------------------
 
 private val lpfMutation = voiceModifier { copy(cutoff = it?.asDoubleOrNull()) }
 
 fun applyLpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, lpfMutation)
+    return source._liftOrReinterpretNumericalField(args, lpfMutation)
 }
 
-internal val _lpf by dslPatternFunction { args, _ -> args.toPattern(lpfMutation) }
+internal val _lpf by dslPatternMapper { args, callInfo -> { p -> p._lpf(args, callInfo) } }
 internal val StrudelPattern._lpf by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
 internal val String._lpf by dslStringExtension { p, args, callInfo -> p._lpf(args, callInfo) }
+internal val PatternMapperFn._lpf by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpf(args, callInfo))
+}
+
+internal val _cutoff by dslPatternMapper { args, callInfo -> { p -> p._cutoff(args, callInfo) } }
+internal val StrudelPattern._cutoff by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
+internal val String._cutoff by dslStringExtension { p, args, callInfo -> p._cutoff(args, callInfo) }
+internal val PatternMapperFn._cutoff by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_cutoff(args, callInfo))
+}
+
+internal val _ctf by dslPatternMapper { args, callInfo -> { p -> p._ctf(args, callInfo) } }
+internal val StrudelPattern._ctf by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
+internal val String._ctf by dslStringExtension { p, args, callInfo -> p._ctf(args, callInfo) }
+internal val PatternMapperFn._ctf by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_ctf(args, callInfo))
+}
+
+internal val _lp by dslPatternMapper { args, callInfo -> { p -> p._lp(args, callInfo) } }
+internal val StrudelPattern._lp by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
+internal val String._lp by dslStringExtension { p, args, callInfo -> p._lp(args, callInfo) }
+internal val PatternMapperFn._lp by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lp(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies a Low Pass Filter (LPF) with the given cutoff frequency in Hz.
@@ -31,12 +57,21 @@ internal val String._lpf by dslStringExtension { p, args, callInfo -> p._lpf(arg
  * muffled sound; higher values let more signal through. Use [resonance] to add emphasis
  * at the cutoff frequency.
  *
+ * When [freq] is omitted, the pattern's own numeric values are reinterpreted as cutoff frequencies.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with LPF applied.
+ *
  * ```KlangScript
  * s("bd sd hh").lpf(500)             // dark, muffled sound
  * ```
  *
  * ```KlangScript
- * note("c4 e4").lpf("<200 2000>")    // alternating cutoff frequencies per cycle
+ * note("c4 e4").lpf("<200 2000>")    // alternating cutoff per cycle
+ * ```
+ *
+ * ```KlangScript
+ * seq("200 500 1000").lpf()          // reinterpret values as cutoff
  * ```
  *
  * @alias cutoff, ctf, lp
@@ -44,93 +79,328 @@ internal val String._lpf by dslStringExtension { p, args, callInfo -> p._lpf(arg
  * @tags lpf, cutoff, low pass filter, filter, frequency
  */
 @StrudelDsl
-fun lpf(freq: PatternLike): StrudelPattern = _lpf(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.lpf(freq: PatternLike? = null): StrudelPattern =
+    this._lpf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Applies a Low Pass Filter to this pattern with the given cutoff frequency in Hz. */
+/**
+ * Parses this string as a pattern, then applies a Low Pass Filter.
+ *
+ * When [freq] is omitted, the string pattern's values are reinterpreted as cutoff frequencies.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with LPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".lpf(500).note()           // LPF on string pattern
+ * ```
+ *
+ * @alias cutoff, ctf, lp
+ * @category effects
+ * @tags lpf, cutoff, low pass filter, filter, frequency
+ */
 @StrudelDsl
-fun StrudelPattern.lpf(freq: PatternLike): StrudelPattern = this._lpf(listOf(freq).asStrudelDslArgs())
+fun String.lpf(freq: PatternLike? = null): StrudelPattern =
+    this._lpf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Applies a Low Pass Filter to a string pattern with the given cutoff frequency in Hz. */
+/**
+ * Returns a [PatternMapperFn] that applies a Low Pass Filter.
+ *
+ * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
+ * When [freq] is omitted, the pattern's own numeric values are reinterpreted as cutoff frequencies.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A [PatternMapperFn] that applies LPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(500))                     // apply LPF via mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, lpf(200).resonance(20))   // resonant LPF on first cycle
+ * ```
+ *
+ * @alias cutoff, ctf, lp
+ * @category effects
+ * @tags lpf, cutoff, low pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.lpf(freq: PatternLike): StrudelPattern = this._lpf(listOf(freq).asStrudelDslArgs())
+fun lpf(freq: PatternLike? = null): PatternMapperFn = _lpf(listOfNotNull(freq).asStrudelDslArgs())
 
-internal val _cutoff by dslPatternFunction { args, _ -> args.toPattern(lpfMutation) }
-internal val StrudelPattern._cutoff by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
-internal val String._cutoff by dslStringExtension { p, args, callInfo -> p._cutoff(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that applies a Low Pass Filter after the previous mapper.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(gain(0.8).lpf(500))           // gain then LPF
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, lpf(300).resonance(15))   // resonant LPF chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.lpf(freq: PatternLike? = null): PatternMapperFn =
+    _lpf(listOfNotNull(freq).asStrudelDslArgs())
 
 /**
  * Alias for [lpf]. Applies a Low Pass Filter with the given cutoff frequency.
+ *
+ * When [freq] is omitted, the pattern's own numeric values are reinterpreted as cutoff frequencies.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with LPF applied.
+ *
+ * ```KlangScript
+ * note("c4").cutoff(800)            // alias for lpf
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").cutoff("<200 2000>")   // alternating cutoff per cycle
+ * ```
  *
  * @alias lpf, ctf, lp
  * @category effects
  * @tags cutoff, lpf, low pass filter, filter, frequency
  */
 @StrudelDsl
-fun cutoff(freq: PatternLike): StrudelPattern = _cutoff(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.cutoff(freq: PatternLike? = null): StrudelPattern =
+    this._cutoff(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [lpf] on this pattern. */
+/**
+ * Alias for [lpf] on a string pattern.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new pattern with LPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".cutoff(500).note()        // alias for String.lpf
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.cutoff(freq: PatternLike): StrudelPattern = this._cutoff(listOf(freq).asStrudelDslArgs())
+fun String.cutoff(freq: PatternLike? = null): StrudelPattern =
+    this._cutoff(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [lpf] on a string pattern. */
+/**
+ * Alias for [lpf]. Returns a [PatternMapperFn] that applies a Low Pass Filter.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A [PatternMapperFn] that applies LPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(cutoff(500))      // alias for lpf()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, cutoff(200))  // LPF on first cycle
+ * ```
+ *
+ * @alias lpf, ctf, lp
+ * @category effects
+ * @tags cutoff, lpf, low pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.cutoff(freq: PatternLike): StrudelPattern = this._cutoff(listOf(freq).asStrudelDslArgs())
+fun cutoff(freq: PatternLike? = null): PatternMapperFn = _cutoff(listOfNotNull(freq).asStrudelDslArgs())
 
-internal val _ctf by dslPatternFunction { args, _ -> args.toPattern(lpfMutation) }
-internal val StrudelPattern._ctf by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
-internal val String._ctf by dslStringExtension { p, args, callInfo -> p._ctf(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that applies LPF (alias for [lpf]) after the previous mapper.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4").apply(gain(0.8).cutoff(500))           // gain then cutoff
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, cutoff(300).resonance(10))  // chain cutoff + resonance
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.cutoff(freq: PatternLike? = null): PatternMapperFn =
+    _cutoff(listOfNotNull(freq).asStrudelDslArgs())
 
 /**
  * Alias for [lpf]. Applies a Low Pass Filter with the given cutoff frequency.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with LPF applied.
+ *
+ * ```KlangScript
+ * note("c4").ctf(600)               // short alias for lpf
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").ctf("<100 5000>")      // sweeping cutoff
+ * ```
  *
  * @alias lpf, cutoff, lp
  * @category effects
  * @tags ctf, lpf, low pass filter, filter, frequency
  */
 @StrudelDsl
-fun ctf(freq: PatternLike): StrudelPattern = _ctf(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.ctf(freq: PatternLike? = null): StrudelPattern =
+    this._ctf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [lpf] on this pattern. */
+/**
+ * Alias for [lpf] on a string pattern.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new pattern with LPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".ctf(500).note()           // short alias
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.ctf(freq: PatternLike): StrudelPattern = this._ctf(listOf(freq).asStrudelDslArgs())
+fun String.ctf(freq: PatternLike? = null): StrudelPattern =
+    this._ctf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [lpf] on a string pattern. */
+/**
+ * Alias for [lpf]. Returns a [PatternMapperFn] that applies a Low Pass Filter.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A [PatternMapperFn] that applies LPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(ctf(500))     // short alias for lpf()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, ctf(200)) // LPF on first cycle
+ * ```
+ *
+ * @alias lpf, cutoff, lp
+ * @category effects
+ * @tags ctf, lpf, low pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.ctf(freq: PatternLike): StrudelPattern = this._ctf(listOf(freq).asStrudelDslArgs())
+fun ctf(freq: PatternLike? = null): PatternMapperFn = _ctf(listOfNotNull(freq).asStrudelDslArgs())
 
-internal val _lp by dslPatternFunction { args, _ -> args.toPattern(lpfMutation) }
-internal val StrudelPattern._lp by dslPatternExtension { p, args, _ -> applyLpf(p, args) }
-internal val String._lp by dslStringExtension { p, args, callInfo -> p._lp(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that applies LPF (alias for [lpf]) after the previous mapper.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4").apply(gain(0.8).ctf(500))              // gain then ctf
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, ctf(300).resonance(10))   // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.ctf(freq: PatternLike? = null): PatternMapperFn =
+    _ctf(listOfNotNull(freq).asStrudelDslArgs())
 
 /**
  * Alias for [lpf]. Applies a Low Pass Filter with the given cutoff frequency.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with LPF applied.
+ *
+ * ```KlangScript
+ * note("c4").lp(400)                // short alias for lpf
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").lp("<200 3000>")       // sweeping cutoff
+ * ```
  *
  * @alias lpf, cutoff, ctf
  * @category effects
  * @tags lp, lpf, low pass filter, filter, frequency
  */
 @StrudelDsl
-fun lp(freq: PatternLike): StrudelPattern = _lp(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.lp(freq: PatternLike? = null): StrudelPattern =
+    this._lp(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [lpf] on this pattern. */
+/**
+ * Alias for [lpf] on a string pattern.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new pattern with LPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".lp(500).note()            // alias for String.lpf
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.lp(freq: PatternLike): StrudelPattern = this._lp(listOf(freq).asStrudelDslArgs())
+fun String.lp(freq: PatternLike? = null): StrudelPattern =
+    this._lp(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [lpf] on a string pattern. */
+/**
+ * Alias for [lpf]. Returns a [PatternMapperFn] that applies a Low Pass Filter.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A [PatternMapperFn] that applies LPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lp(500))      // alias for lpf()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, lp(200))  // LPF on first cycle
+ * ```
+ *
+ * @alias lpf, cutoff, ctf
+ * @category effects
+ * @tags lp, lpf, low pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.lp(freq: PatternLike): StrudelPattern = this._lp(listOf(freq).asStrudelDslArgs())
+fun lp(freq: PatternLike? = null): PatternMapperFn = _lp(listOfNotNull(freq).asStrudelDslArgs())
 
-// -- hpf() ------------------------------------------------------------------------------------------------------------
+/**
+ * Creates a chained [PatternMapperFn] that applies LPF (alias for [lpf]) after the previous mapper.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4").apply(gain(0.8).lp(500))               // gain then lp filter
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, lp(300).resonance(10))    // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.lp(freq: PatternLike? = null): PatternMapperFn =
+    _lp(listOfNotNull(freq).asStrudelDslArgs())
+
+// -- hpf() / hp() / hcutoff() -----------------------------------------------------------------------------------------
 
 private val hpfMutation = voiceModifier { copy(hcutoff = it?.asDoubleOrNull()) }
 
 fun applyHpf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, hpfMutation)
+    return source._liftOrReinterpretNumericalField(args, hpfMutation)
 }
 
-internal val _hpf by dslPatternFunction { args, _ -> args.toPattern(hpfMutation) }
+internal val _hpf by dslPatternMapper { args, callInfo -> { p -> p._hpf(args, callInfo) } }
 internal val StrudelPattern._hpf by dslPatternExtension { p, args, _ -> applyHpf(p, args) }
 internal val String._hpf by dslStringExtension { p, args, callInfo -> p._hpf(args, callInfo) }
+internal val PatternMapperFn._hpf by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpf(args, callInfo))
+}
+
+internal val _hp by dslPatternMapper { args, callInfo -> { p -> p._hp(args, callInfo) } }
+internal val StrudelPattern._hp by dslPatternExtension { p, args, _ -> applyHpf(p, args) }
+internal val String._hp by dslStringExtension { p, args, callInfo -> p._hp(args, callInfo) }
+internal val PatternMapperFn._hp by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hp(args, callInfo))
+}
+
+internal val _hcutoff by dslPatternMapper { args, callInfo -> { p -> p._hcutoff(args, callInfo) } }
+internal val StrudelPattern._hcutoff by dslPatternExtension { p, args, _ -> applyHpf(p, args) }
+internal val String._hcutoff by dslStringExtension { p, args, callInfo -> p._hcutoff(args, callInfo) }
+internal val PatternMapperFn._hcutoff by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hcutoff(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies a High Pass Filter (HPF) with the given cutoff frequency in Hz.
@@ -138,12 +408,21 @@ internal val String._hpf by dslStringExtension { p, args, callInfo -> p._hpf(arg
  * Only frequencies above the cutoff pass through. Higher values produce a thinner, brighter
  * sound by removing low-frequency content. Use [hresonance] to add emphasis at the cutoff.
  *
+ * When [freq] is omitted, the pattern's own numeric values are reinterpreted as cutoff frequencies.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with HPF applied.
+ *
  * ```KlangScript
- * s("bd sd").hpf(300)              // removes bass frequencies, thin sound
+ * s("bd sd").hpf(300)              // removes bass, thin sound
  * ```
  *
  * ```KlangScript
- * note("c4 e4").hpf("<100 800>")   // alternating high-pass cutoffs per cycle
+ * note("c4 e4").hpf("<100 800>")   // alternating HPF cutoff per cycle
+ * ```
+ *
+ * ```KlangScript
+ * seq("100 300 800").hpf()         // reinterpret values as HPF cutoff
  * ```
  *
  * @alias hp, hcutoff
@@ -151,71 +430,246 @@ internal val String._hpf by dslStringExtension { p, args, callInfo -> p._hpf(arg
  * @tags hpf, hcutoff, high pass filter, filter, frequency
  */
 @StrudelDsl
-fun hpf(freq: PatternLike): StrudelPattern = _hpf(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.hpf(freq: PatternLike? = null): StrudelPattern =
+    this._hpf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Applies a High Pass Filter to this pattern with the given cutoff frequency in Hz. */
+/**
+ * Parses this string as a pattern, then applies a High Pass Filter.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with HPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".hpf(300).note()          // HPF on string pattern
+ * ```
+ *
+ * @alias hp, hcutoff
+ * @category effects
+ * @tags hpf, hcutoff, high pass filter, filter, frequency
+ */
 @StrudelDsl
-fun StrudelPattern.hpf(freq: PatternLike): StrudelPattern = this._hpf(listOf(freq).asStrudelDslArgs())
+fun String.hpf(freq: PatternLike? = null): StrudelPattern =
+    this._hpf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Applies a High Pass Filter to a string pattern with the given cutoff frequency in Hz. */
+/**
+ * Returns a [PatternMapperFn] that applies a High Pass Filter.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A [PatternMapperFn] that applies HPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hpf(300))                     // apply HPF via mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, hpf(200).hresonance(10))  // resonant HPF on first cycle
+ * ```
+ *
+ * @alias hp, hcutoff
+ * @category effects
+ * @tags hpf, hcutoff, high pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.hpf(freq: PatternLike): StrudelPattern = this._hpf(listOf(freq).asStrudelDslArgs())
+fun hpf(freq: PatternLike? = null): PatternMapperFn = _hpf(listOfNotNull(freq).asStrudelDslArgs())
 
-internal val _hp by dslPatternFunction { args, _ -> args.toPattern(hpfMutation) }
-internal val StrudelPattern._hp by dslPatternExtension { p, args, _ -> applyHpf(p, args) }
-internal val String._hp by dslStringExtension { p, args, callInfo -> p._hp(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that applies a High Pass Filter after the previous mapper.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new [PatternMapperFn] chaining HPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(gain(0.8).hpf(300))           // gain then HPF
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hpf(200).hresonance(15))  // resonant HPF chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.hpf(freq: PatternLike? = null): PatternMapperFn =
+    _hpf(listOfNotNull(freq).asStrudelDslArgs())
 
 /**
  * Alias for [hpf]. Applies a High Pass Filter with the given cutoff frequency.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with HPF applied.
+ *
+ * ```KlangScript
+ * note("c4").hp(300)               // alias for hpf
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").hp("<100 800>")       // alternating HPF cutoff
+ * ```
  *
  * @alias hpf, hcutoff
  * @category effects
  * @tags hp, hpf, high pass filter, filter, frequency
  */
 @StrudelDsl
-fun hp(freq: PatternLike): StrudelPattern = _hp(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.hp(freq: PatternLike? = null): StrudelPattern =
+    this._hp(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [hpf] on this pattern. */
+/**
+ * Alias for [hpf] on a string pattern.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new pattern with HPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".hp(300).note()           // alias for String.hpf
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.hp(freq: PatternLike): StrudelPattern = this._hp(listOf(freq).asStrudelDslArgs())
+fun String.hp(freq: PatternLike? = null): StrudelPattern =
+    this._hp(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [hpf] on a string pattern. */
+/**
+ * Alias for [hpf]. Returns a [PatternMapperFn] that applies a High Pass Filter.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A [PatternMapperFn] that applies HPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hp(300))      // alias for hpf()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hp(200))  // HPF on first cycle
+ * ```
+ *
+ * @alias hpf, hcutoff
+ * @category effects
+ * @tags hp, hpf, high pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.hp(freq: PatternLike): StrudelPattern = this._hp(listOf(freq).asStrudelDslArgs())
+fun hp(freq: PatternLike? = null): PatternMapperFn = _hp(listOfNotNull(freq).asStrudelDslArgs())
 
-internal val _hcutoff by dslPatternFunction { args, _ -> args.toPattern(hpfMutation) }
-internal val StrudelPattern._hcutoff by dslPatternExtension { p, args, _ -> applyHpf(p, args) }
-internal val String._hcutoff by dslStringExtension { p, args, callInfo -> p._hcutoff(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that applies HPF (alias for [hpf]) after the previous mapper.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new [PatternMapperFn] chaining HPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4").apply(gain(0.8).hp(300))               // gain then hp filter
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hp(200).hresonance(10))   // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.hp(freq: PatternLike? = null): PatternMapperFn =
+    _hp(listOfNotNull(freq).asStrudelDslArgs())
 
 /**
  * Alias for [hpf]. Applies a High Pass Filter with the given cutoff frequency.
+ *
+ * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
+ * @return A new pattern with HPF applied.
+ *
+ * ```KlangScript
+ * note("c4").hcutoff(300)          // alias for hpf
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").hcutoff("<100 800>")  // alternating HPF cutoff
+ * ```
  *
  * @alias hpf, hp
  * @category effects
  * @tags hcutoff, hpf, high pass filter, filter, frequency
  */
 @StrudelDsl
-fun hcutoff(freq: PatternLike): StrudelPattern = _hcutoff(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.hcutoff(freq: PatternLike? = null): StrudelPattern =
+    this._hcutoff(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [hpf] on this pattern. */
+/**
+ * Alias for [hpf] on a string pattern.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new pattern with HPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".hcutoff(300).note()      // alias for String.hpf
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.hcutoff(freq: PatternLike): StrudelPattern = this._hcutoff(listOf(freq).asStrudelDslArgs())
+fun String.hcutoff(freq: PatternLike? = null): StrudelPattern =
+    this._hcutoff(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [hpf] on a string pattern. */
+/**
+ * Alias for [hpf]. Returns a [PatternMapperFn] that applies a High Pass Filter.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A [PatternMapperFn] that applies HPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hcutoff(300))      // alias for hpf()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hcutoff(200))  // HPF on first cycle
+ * ```
+ *
+ * @alias hpf, hp
+ * @category effects
+ * @tags hcutoff, hpf, high pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.hcutoff(freq: PatternLike): StrudelPattern = this._hcutoff(listOf(freq).asStrudelDslArgs())
+fun hcutoff(freq: PatternLike? = null): PatternMapperFn = _hcutoff(listOfNotNull(freq).asStrudelDslArgs())
 
-// -- bandf() / bpf() --------------------------------------------------------------------------------------------------
+/**
+ * Creates a chained [PatternMapperFn] that applies HPF (alias for [hpf]) after the previous mapper.
+ *
+ * @param freq The cutoff frequency in Hz.
+ * @return A new [PatternMapperFn] chaining HPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4").apply(gain(0.8).hcutoff(300))           // gain then hcutoff
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hcutoff(200).hresonance(10))  // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.hcutoff(freq: PatternLike? = null): PatternMapperFn =
+    _hcutoff(listOfNotNull(freq).asStrudelDslArgs())
+
+// -- bandf() / bpf() / bp() -------------------------------------------------------------------------------------------
 
 private val bandfMutation = voiceModifier { copy(bandf = it?.asDoubleOrNull()) }
 
 fun applyBandf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, bandfMutation)
+    return source._liftOrReinterpretNumericalField(args, bandfMutation)
 }
 
-internal val _bandf by dslPatternFunction { args, _ -> args.toPattern(bandfMutation) }
+internal val _bandf by dslPatternMapper { args, callInfo -> { p -> p._bandf(args, callInfo) } }
 internal val StrudelPattern._bandf by dslPatternExtension { p, args, _ -> applyBandf(p, args) }
 internal val String._bandf by dslStringExtension { p, args, callInfo -> p._bandf(args, callInfo) }
+internal val PatternMapperFn._bandf by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bandf(args, callInfo))
+}
+
+internal val _bpf by dslPatternMapper { args, callInfo -> { p -> p._bpf(args, callInfo) } }
+internal val StrudelPattern._bpf by dslPatternExtension { p, args, _ -> applyBandf(p, args) }
+internal val String._bpf by dslStringExtension { p, args, callInfo -> p._bpf(args, callInfo) }
+internal val PatternMapperFn._bpf by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpf(args, callInfo))
+}
+
+internal val _bp by dslPatternMapper { args, callInfo -> { p -> p._bp(args, callInfo) } }
+internal val StrudelPattern._bp by dslPatternExtension { p, args, _ -> applyBandf(p, args) }
+internal val String._bp by dslStringExtension { p, args, callInfo -> p._bp(args, callInfo) }
+internal val PatternMapperFn._bp by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bp(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies a Band Pass Filter (BPF) with the given centre frequency in Hz.
@@ -223,12 +677,21 @@ internal val String._bandf by dslStringExtension { p, args, callInfo -> p._bandf
  * Only a band of frequencies around the centre frequency passes through. Use [bandq] to
  * control the bandwidth (Q factor); higher Q values create a narrower band.
  *
+ * When [freq] is omitted, the pattern's own numeric values are reinterpreted as centre frequencies.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A new pattern with BPF applied.
+ *
  * ```KlangScript
  * s("sd").bandf(1000)               // emphasise mid-range around 1 kHz
  * ```
  *
  * ```KlangScript
- * note("c4").bandf("<500 2000>")    // alternating band-pass centre per cycle
+ * note("c4").bandf("<500 2000>")    // alternating centre per cycle
+ * ```
+ *
+ * ```KlangScript
+ * seq("500 1000 2000").bandf()      // reinterpret values as BPF centre
  * ```
  *
  * @alias bpf, bp
@@ -236,77 +699,243 @@ internal val String._bandf by dslStringExtension { p, args, callInfo -> p._bandf
  * @tags bandf, bpf, band pass filter, filter, frequency
  */
 @StrudelDsl
-fun bandf(freq: PatternLike): StrudelPattern = _bandf(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.bandf(freq: PatternLike? = null): StrudelPattern =
+    this._bandf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Applies a Band Pass Filter to this pattern with the given centre frequency in Hz. */
+/**
+ * Parses this string as a pattern, then applies a Band Pass Filter.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A new pattern with BPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".bandf(1000).note()        // BPF on string pattern
+ * ```
+ *
+ * @alias bpf, bp
+ * @category effects
+ * @tags bandf, bpf, band pass filter, filter, frequency
+ */
 @StrudelDsl
-fun StrudelPattern.bandf(freq: PatternLike): StrudelPattern = this._bandf(listOf(freq).asStrudelDslArgs())
+fun String.bandf(freq: PatternLike? = null): StrudelPattern =
+    this._bandf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Applies a Band Pass Filter to a string pattern with the given centre frequency in Hz. */
+/**
+ * Returns a [PatternMapperFn] that applies a Band Pass Filter.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A [PatternMapperFn] that applies BPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(bandf(1000))                    // apply BPF via mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, bandf(800).bandq(5))        // narrow BPF on first cycle
+ * ```
+ *
+ * @alias bpf, bp
+ * @category effects
+ * @tags bandf, bpf, band pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.bandf(freq: PatternLike): StrudelPattern = this._bandf(listOf(freq).asStrudelDslArgs())
+fun bandf(freq: PatternLike? = null): PatternMapperFn = _bandf(listOfNotNull(freq).asStrudelDslArgs())
 
-internal val _bpf by dslPatternFunction { args, _ -> args.toPattern(bandfMutation) }
-internal val StrudelPattern._bpf by dslPatternExtension { p, args, _ -> applyBandf(p, args) }
-internal val String._bpf by dslStringExtension { p, args, callInfo -> p._bpf(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that applies a Band Pass Filter after the previous mapper.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A new [PatternMapperFn] chaining BPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(gain(0.8).bandf(1000))          // gain then BPF
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, bandf(800).bandq(8))        // narrow BPF chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.bandf(freq: PatternLike? = null): PatternMapperFn =
+    _bandf(listOfNotNull(freq).asStrudelDslArgs())
 
 /**
  * Alias for [bandf]. Applies a Band Pass Filter with the given centre frequency.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A new pattern with BPF applied.
+ *
+ * ```KlangScript
+ * note("c4").bpf(1000)              // alias for bandf
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").bpf("<500 2000>")      // alternating centre per cycle
+ * ```
  *
  * @alias bandf, bp
  * @category effects
  * @tags bpf, bandf, band pass filter, filter, frequency
  */
 @StrudelDsl
-fun bpf(freq: PatternLike): StrudelPattern = _bpf(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.bpf(freq: PatternLike? = null): StrudelPattern =
+    this._bpf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [bandf] on this pattern. */
+/**
+ * Alias for [bandf] on a string pattern.
+ *
+ * @param freq The centre frequency in Hz.
+ * @return A new pattern with BPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".bpf(1000).note()          // alias for String.bandf
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.bpf(freq: PatternLike): StrudelPattern = this._bpf(listOf(freq).asStrudelDslArgs())
+fun String.bpf(freq: PatternLike? = null): StrudelPattern =
+    this._bpf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [bandf] on a string pattern. */
+/**
+ * Alias for [bandf]. Returns a [PatternMapperFn] that applies a Band Pass Filter.
+ *
+ * @param freq The centre frequency in Hz.
+ * @return A [PatternMapperFn] that applies BPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(bpf(1000))    // alias for bandf()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, bpf(800)) // BPF on first cycle
+ * ```
+ *
+ * @alias bandf, bp
+ * @category effects
+ * @tags bpf, bandf, band pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.bpf(freq: PatternLike): StrudelPattern = this._bpf(listOf(freq).asStrudelDslArgs())
+fun bpf(freq: PatternLike? = null): PatternMapperFn = _bpf(listOfNotNull(freq).asStrudelDslArgs())
 
-internal val _bp by dslPatternFunction { args, _ -> args.toPattern(bandfMutation) }
-internal val StrudelPattern._bp by dslPatternExtension { p, args, _ -> applyBandf(p, args) }
-internal val String._bp by dslStringExtension { p, args, callInfo -> p._bp(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that applies BPF (alias for [bandf]) after the previous mapper.
+ *
+ * @param freq The centre frequency in Hz.
+ * @return A new [PatternMapperFn] chaining BPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4").apply(gain(0.8).bpf(1000))              // gain then BPF
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, bpf(800).bandq(5))         // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.bpf(freq: PatternLike? = null): PatternMapperFn =
+    _bpf(listOfNotNull(freq).asStrudelDslArgs())
 
 /**
  * Alias for [bandf]. Applies a Band Pass Filter with the given centre frequency.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A new pattern with BPF applied.
+ *
+ * ```KlangScript
+ * note("c4").bp(1000)               // short alias for bandf
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").bp("<500 2000>")       // alternating centre per cycle
+ * ```
  *
  * @alias bandf, bpf
  * @category effects
  * @tags bp, bandf, band pass filter, filter, frequency
  */
 @StrudelDsl
-fun bp(freq: PatternLike): StrudelPattern = _bp(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.bp(freq: PatternLike? = null): StrudelPattern =
+    this._bp(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [bandf] on this pattern. */
+/**
+ * Alias for [bandf] on a string pattern.
+ *
+ * @param freq The centre frequency in Hz.
+ * @return A new pattern with BPF applied.
+ *
+ * ```KlangScript
+ * "c4 e4".bp(1000).note()           // alias for String.bandf
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.bp(freq: PatternLike): StrudelPattern = this._bp(listOf(freq).asStrudelDslArgs())
+fun String.bp(freq: PatternLike? = null): StrudelPattern =
+    this._bp(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Alias for [bandf] on a string pattern. */
+/**
+ * Alias for [bandf]. Returns a [PatternMapperFn] that applies a Band Pass Filter.
+ *
+ * @param freq The centre frequency in Hz.
+ * @return A [PatternMapperFn] that applies BPF.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(bp(1000))     // alias for bandf()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, bp(800))  // BPF on first cycle
+ * ```
+ *
+ * @alias bandf, bpf
+ * @category effects
+ * @tags bp, bandf, band pass filter, filter, frequency
+ */
 @StrudelDsl
-fun String.bp(freq: PatternLike): StrudelPattern = this._bp(listOf(freq).asStrudelDslArgs())
+fun bp(freq: PatternLike? = null): PatternMapperFn = _bp(listOfNotNull(freq).asStrudelDslArgs())
+
+/**
+ * Creates a chained [PatternMapperFn] that applies BPF (alias for [bandf]) after the previous mapper.
+ *
+ * @param freq The centre frequency in Hz.
+ * @return A new [PatternMapperFn] chaining BPF after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4").apply(gain(0.8).bp(1000))               // gain then bp filter
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, bp(800).bandq(5))          // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.bp(freq: PatternLike? = null): PatternMapperFn =
+    _bp(listOfNotNull(freq).asStrudelDslArgs())
 
 // -- notchf() ---------------------------------------------------------------------------------------------------------
 
 private val notchfMutation = voiceModifier { copy(notchf = it?.asDoubleOrNull()) }
 
 fun applyNotchf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, notchfMutation)
+    return source._liftOrReinterpretNumericalField(args, notchfMutation)
 }
 
-internal val _notchf by dslPatternFunction { args, _ -> args.toPattern(notchfMutation) }
+internal val _notchf by dslPatternMapper { args, callInfo -> { p -> p._notchf(args, callInfo) } }
 internal val StrudelPattern._notchf by dslPatternExtension { p, args, _ -> applyNotchf(p, args) }
 internal val String._notchf by dslStringExtension { p, args, callInfo -> p._notchf(args, callInfo) }
+internal val PatternMapperFn._notchf by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_notchf(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies a Notch Filter with the given centre frequency in Hz.
  *
  * Attenuates a narrow band of frequencies around the centre while passing everything else.
  * This is the opposite of a band pass filter. Use [nresonance] to control the notch width.
+ *
+ * When [freq] is omitted, the pattern's own numeric values are reinterpreted as centre frequencies.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A new pattern with notch filter applied.
  *
  * ```KlangScript
  * note("c4 e4").notchf(1000)           // notch out 1 kHz
@@ -316,37 +945,113 @@ internal val String._notchf by dslStringExtension { p, args, callInfo -> p._notc
  * s("bd sd").notchf("<500 2000>")      // alternating notch centre per cycle
  * ```
  *
+ * ```KlangScript
+ * seq("500 1000 2000").notchf()        // reinterpret values as notch centre
+ * ```
+ *
  * @category effects
  * @tags notchf, notch filter, filter, frequency
  */
 @StrudelDsl
-fun notchf(freq: PatternLike): StrudelPattern = _notchf(listOf(freq).asStrudelDslArgs())
+fun StrudelPattern.notchf(freq: PatternLike? = null): StrudelPattern =
+    this._notchf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Applies a Notch Filter to this pattern with the given centre frequency in Hz. */
+/**
+ * Parses this string as a pattern, then applies a Notch Filter.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A new pattern with notch filter applied.
+ *
+ * ```KlangScript
+ * "c4 e4".notchf(1000).note()          // notch filter on string pattern
+ * ```
+ *
+ * @category effects
+ * @tags notchf, notch filter, filter, frequency
+ */
 @StrudelDsl
-fun StrudelPattern.notchf(freq: PatternLike): StrudelPattern = this._notchf(listOf(freq).asStrudelDslArgs())
+fun String.notchf(freq: PatternLike? = null): StrudelPattern =
+    this._notchf(listOfNotNull(freq).asStrudelDslArgs())
 
-/** Applies a Notch Filter to a string pattern with the given centre frequency in Hz. */
+/**
+ * Returns a [PatternMapperFn] that applies a Notch Filter.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A [PatternMapperFn] that applies a notch filter.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(notchf(1000))                   // apply notch via mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, notchf(500).nresonance(10)) // resonant notch on first cycle
+ * ```
+ *
+ * @category effects
+ * @tags notchf, notch filter, filter, frequency
+ */
 @StrudelDsl
-fun String.notchf(freq: PatternLike): StrudelPattern = this._notchf(listOf(freq).asStrudelDslArgs())
+fun notchf(freq: PatternLike? = null): PatternMapperFn = _notchf(listOfNotNull(freq).asStrudelDslArgs())
 
-// -- resonance() / res() - Low Pass Filter resonance -----------------------------------------------------------------
+/**
+ * Creates a chained [PatternMapperFn] that applies a Notch Filter after the previous mapper.
+ *
+ * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
+ * @return A new [PatternMapperFn] chaining the notch filter after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(gain(0.8).notchf(1000))         // gain then notch filter
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, notchf(500).nresonance(10)) // notch chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.notchf(freq: PatternLike? = null): PatternMapperFn =
+    _notchf(listOfNotNull(freq).asStrudelDslArgs())
+
+// -- resonance() / res() / lpq() - Low Pass Filter resonance ---------------------------------------------------------
 
 private val resonanceMutation = voiceModifier { copy(resonance = it?.asDoubleOrNull()) }
 
 fun applyResonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, resonanceMutation)
+    return source._liftOrReinterpretNumericalField(args, resonanceMutation)
 }
 
-internal val _resonance by dslPatternFunction { args, _ -> args.toPattern(resonanceMutation) }
+internal val _resonance by dslPatternMapper { args, callInfo -> { p -> p._resonance(args, callInfo) } }
 internal val StrudelPattern._resonance by dslPatternExtension { p, args, _ -> applyResonance(p, args) }
 internal val String._resonance by dslStringExtension { p, args, callInfo -> p._resonance(args, callInfo) }
+internal val PatternMapperFn._resonance by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_resonance(args, callInfo))
+}
+
+internal val _res by dslPatternMapper { args, callInfo -> { p -> p._res(args, callInfo) } }
+internal val StrudelPattern._res by dslPatternExtension { p, args, _ -> applyResonance(p, args) }
+internal val String._res by dslStringExtension { p, args, callInfo -> p._res(args, callInfo) }
+internal val PatternMapperFn._res by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_res(args, callInfo))
+}
+
+internal val _lpq by dslPatternMapper { args, callInfo -> { p -> p._lpq(args, callInfo) } }
+internal val StrudelPattern._lpq by dslPatternExtension { p, args, _ -> applyResonance(p, args) }
+internal val String._lpq by dslStringExtension { p, args, callInfo -> p._lpq(args, callInfo) }
+internal val PatternMapperFn._lpq by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpq(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the resonance (Q factor) of the Low Pass Filter.
  *
  * Resonance adds emphasis (a peak) at the filter's cutoff frequency. Higher values create a
  * more pronounced ringing effect. Use with [lpf] to set the cutoff frequency.
+ *
+ * When [q] is omitted, the pattern's own numeric values are reinterpreted as Q values.
+ *
+ * @param q The Q factor. Higher values produce more resonance. Omit to reinterpret pattern values.
+ * @return A new pattern with LPF resonance applied.
  *
  * ```KlangScript
  * note("c4 e4").lpf(800).resonance(15)    // LPF with high resonance peak
@@ -356,82 +1061,266 @@ internal val String._resonance by dslStringExtension { p, args, callInfo -> p._r
  * s("bd").lpf(500).resonance("<0 20>")    // resonance sweeps from flat to peaked
  * ```
  *
+ * ```KlangScript
+ * seq("0 5 10 20").resonance()            // reinterpret values as resonance Q
+ * ```
+ *
  * @alias res, lpq
  * @category effects
- * @tags resonance, res, lpq, low pass filter, Q, resonance
+ * @tags resonance, res, lpq, low pass filter, Q
  */
 @StrudelDsl
-fun resonance(q: PatternLike): StrudelPattern = _resonance(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.resonance(q: PatternLike? = null): StrudelPattern =
+    this._resonance(listOfNotNull(q).asStrudelDslArgs())
 
-/** Sets the LPF resonance/Q on this pattern. */
+/**
+ * Parses this string as a pattern, then sets LPF resonance.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with LPF resonance applied.
+ *
+ * ```KlangScript
+ * "c4 e4".lpf(800).resonance(15)    // resonance on string pattern
+ * ```
+ *
+ * @alias res, lpq
+ * @category effects
+ * @tags resonance, res, lpq, low pass filter, Q
+ */
 @StrudelDsl
-fun StrudelPattern.resonance(q: PatternLike): StrudelPattern = this._resonance(listOf(q).asStrudelDslArgs())
+fun String.resonance(q: PatternLike? = null): StrudelPattern =
+    this._resonance(listOfNotNull(q).asStrudelDslArgs())
 
-/** Sets the LPF resonance/Q on a string pattern. */
+/**
+ * Returns a [PatternMapperFn] that sets LPF resonance.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A [PatternMapperFn] that applies LPF resonance.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(800).resonance(15))        // LPF + resonance chain
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, resonance(20))             // high resonance on first cycle
+ * ```
+ *
+ * @alias res, lpq
+ * @category effects
+ * @tags resonance, res, lpq, low pass filter, Q
+ */
 @StrudelDsl
-fun String.resonance(q: PatternLike): StrudelPattern = this._resonance(listOf(q).asStrudelDslArgs())
+fun resonance(q: PatternLike? = null): PatternMapperFn = _resonance(listOfNotNull(q).asStrudelDslArgs())
 
-internal val _res by dslPatternFunction { args, _ -> args.toPattern(resonanceMutation) }
-internal val StrudelPattern._res by dslPatternExtension { p, args, _ -> applyResonance(p, args) }
-internal val String._res by dslStringExtension { p, args, callInfo -> p._res(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that sets LPF resonance after the previous mapper.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new [PatternMapperFn] chaining resonance after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(500).resonance(15))        // LPF then resonance
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, lpf(300).resonance(20))    // resonant LPF chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.resonance(q: PatternLike? = null): PatternMapperFn =
+    _resonance(listOfNotNull(q).asStrudelDslArgs())
 
 /**
  * Alias for [resonance]. Sets the LPF resonance/Q.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with LPF resonance applied.
+ *
+ * ```KlangScript
+ * note("c4").lpf(500).res(10)       // alias for resonance
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").res("<0 20>")          // sweeping resonance
+ * ```
  *
  * @alias resonance, lpq
  * @category effects
  * @tags res, resonance, lpq, low pass filter, Q
  */
 @StrudelDsl
-fun res(q: PatternLike): StrudelPattern = _res(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.res(q: PatternLike? = null): StrudelPattern =
+    this._res(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [resonance] on this pattern. */
+/**
+ * Alias for [resonance] on a string pattern.
+ *
+ * @param q The Q factor.
+ * @return A new pattern with LPF resonance applied.
+ *
+ * ```KlangScript
+ * "c4".lpf(500).res(10)             // alias for String.resonance
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.res(q: PatternLike): StrudelPattern = this._res(listOf(q).asStrudelDslArgs())
+fun String.res(q: PatternLike? = null): StrudelPattern =
+    this._res(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [resonance] on a string pattern. */
+/**
+ * Alias for [resonance]. Returns a [PatternMapperFn] that sets LPF resonance.
+ *
+ * @param q The Q factor.
+ * @return A [PatternMapperFn] that applies LPF resonance.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(500).res(10))  // alias for resonance()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, res(20))       // high resonance on first cycle
+ * ```
+ *
+ * @alias resonance, lpq
+ * @category effects
+ * @tags res, resonance, lpq, low pass filter, Q
+ */
 @StrudelDsl
-fun String.res(q: PatternLike): StrudelPattern = this._res(listOf(q).asStrudelDslArgs())
+fun res(q: PatternLike? = null): PatternMapperFn = _res(listOfNotNull(q).asStrudelDslArgs())
 
-internal val _lpq by dslPatternFunction { args, _ -> args.toPattern(resonanceMutation) }
-internal val StrudelPattern._lpq by dslPatternExtension { p, args, _ -> applyResonance(p, args) }
-internal val String._lpq by dslStringExtension { p, args, callInfo -> p._lpq(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that sets LPF resonance (alias for [resonance]) after the previous mapper.
+ *
+ * @param q The Q factor.
+ * @return A new [PatternMapperFn] chaining resonance after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(500).res(10))  // LPF then res
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, lpf(300).res(20))  // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.res(q: PatternLike? = null): PatternMapperFn =
+    _res(listOfNotNull(q).asStrudelDslArgs())
 
 /**
  * Alias for [resonance]. Sets the LPF resonance/Q.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with LPF resonance applied.
+ *
+ * ```KlangScript
+ * note("c4").lpf(500).lpq(10)       // alias for resonance
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").lpq("<0 20>")          // sweeping Q
+ * ```
  *
  * @alias resonance, res
  * @category effects
  * @tags lpq, resonance, res, low pass filter, Q
  */
 @StrudelDsl
-fun lpq(q: PatternLike): StrudelPattern = _lpq(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.lpq(q: PatternLike? = null): StrudelPattern =
+    this._lpq(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [resonance] on this pattern. */
+/**
+ * Alias for [resonance] on a string pattern.
+ *
+ * @param q The Q factor.
+ * @return A new pattern with LPF resonance applied.
+ *
+ * ```KlangScript
+ * "c4".lpf(500).lpq(10)             // alias for String.resonance
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.lpq(q: PatternLike): StrudelPattern = this._lpq(listOf(q).asStrudelDslArgs())
+fun String.lpq(q: PatternLike? = null): StrudelPattern =
+    this._lpq(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [resonance] on a string pattern. */
+/**
+ * Alias for [resonance]. Returns a [PatternMapperFn] that sets LPF resonance.
+ *
+ * @param q The Q factor.
+ * @return A [PatternMapperFn] that applies LPF resonance.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(500).lpq(10))  // alias for resonance()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, lpq(20))       // high Q on first cycle
+ * ```
+ *
+ * @alias resonance, res
+ * @category effects
+ * @tags lpq, resonance, res, low pass filter, Q
+ */
 @StrudelDsl
-fun String.lpq(q: PatternLike): StrudelPattern = this._lpq(listOf(q).asStrudelDslArgs())
+fun lpq(q: PatternLike? = null): PatternMapperFn = _lpq(listOfNotNull(q).asStrudelDslArgs())
 
-// -- hresonance() / hres() - High Pass Filter resonance --------------------------------------------------------------
+/**
+ * Creates a chained [PatternMapperFn] that sets LPF resonance (alias for [resonance]) after the previous mapper.
+ *
+ * @param q The Q factor.
+ * @return A new [PatternMapperFn] chaining resonance after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(500).lpq(10))  // LPF then lpq
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, lpf(300).lpq(20))  // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.lpq(q: PatternLike? = null): PatternMapperFn =
+    _lpq(listOfNotNull(q).asStrudelDslArgs())
+
+// -- hresonance() / hres() / hpq() - High Pass Filter resonance ------------------------------------------------------
 
 private val hresonanceMutation = voiceModifier { copy(hresonance = it?.asDoubleOrNull()) }
 
 fun applyHresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, hresonanceMutation)
+    return source._liftOrReinterpretNumericalField(args, hresonanceMutation)
 }
 
-internal val _hresonance by dslPatternFunction { args, _ -> args.toPattern(hresonanceMutation) }
+internal val _hresonance by dslPatternMapper { args, callInfo -> { p -> p._hresonance(args, callInfo) } }
 internal val StrudelPattern._hresonance by dslPatternExtension { p, args, _ -> applyHresonance(p, args) }
 internal val String._hresonance by dslStringExtension { p, args, callInfo -> p._hresonance(args, callInfo) }
+internal val PatternMapperFn._hresonance by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hresonance(args, callInfo))
+}
+
+internal val _hres by dslPatternMapper { args, callInfo -> { p -> p._hres(args, callInfo) } }
+internal val StrudelPattern._hres by dslPatternExtension { p, args, _ -> applyHresonance(p, args) }
+internal val String._hres by dslStringExtension { p, args, callInfo -> p._hres(args, callInfo) }
+internal val PatternMapperFn._hres by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hres(args, callInfo))
+}
+
+internal val _hpq by dslPatternMapper { args, callInfo -> { p -> p._hpq(args, callInfo) } }
+internal val StrudelPattern._hpq by dslPatternExtension { p, args, _ -> applyHresonance(p, args) }
+internal val String._hpq by dslStringExtension { p, args, callInfo -> p._hpq(args, callInfo) }
+internal val PatternMapperFn._hpq by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpq(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the resonance (Q factor) of the High Pass Filter.
  *
  * Resonance adds emphasis at the HPF's cutoff frequency, creating a peak effect.
  * Higher values make the resonance more pronounced. Use with [hpf] to set the cutoff.
+ *
+ * When [q] is omitted, the pattern's own numeric values are reinterpreted as Q values.
+ *
+ * @param q The Q factor. Higher values produce more resonance. Omit to reinterpret pattern values.
+ * @return A new pattern with HPF resonance applied.
  *
  * ```KlangScript
  * note("c4").hpf(300).hresonance(15)        // HPF with strong resonance peak
@@ -441,82 +1330,252 @@ internal val String._hresonance by dslStringExtension { p, args, callInfo -> p._
  * s("sd").hpf(200).hresonance("<0 20>")     // resonance sweeps per cycle
  * ```
  *
+ * ```KlangScript
+ * seq("0 5 15").hresonance()                // reinterpret values as HPF Q
+ * ```
+ *
  * @alias hres, hpq
  * @category effects
  * @tags hresonance, hres, hpq, high pass filter, Q, resonance
  */
 @StrudelDsl
-fun hresonance(q: PatternLike): StrudelPattern = _hresonance(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.hresonance(q: PatternLike? = null): StrudelPattern =
+    this._hresonance(listOfNotNull(q).asStrudelDslArgs())
 
-/** Sets the HPF resonance/Q on this pattern. */
+/**
+ * Parses this string as a pattern, then sets HPF resonance.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with HPF resonance applied.
+ *
+ * ```KlangScript
+ * "c4".hpf(300).hresonance(15)      // resonance on string pattern
+ * ```
+ *
+ * @alias hres, hpq
+ * @category effects
+ * @tags hresonance, hres, hpq, high pass filter, Q, resonance
+ */
 @StrudelDsl
-fun StrudelPattern.hresonance(q: PatternLike): StrudelPattern = this._hresonance(listOf(q).asStrudelDslArgs())
+fun String.hresonance(q: PatternLike? = null): StrudelPattern =
+    this._hresonance(listOfNotNull(q).asStrudelDslArgs())
 
-/** Sets the HPF resonance/Q on a string pattern. */
+/**
+ * Returns a [PatternMapperFn] that sets HPF resonance.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A [PatternMapperFn] that applies HPF resonance.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hpf(300).hresonance(15))       // HPF + resonance chain
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, hresonance(20))            // high HPF resonance on first cycle
+ * ```
+ *
+ * @alias hres, hpq
+ * @category effects
+ * @tags hresonance, hres, hpq, high pass filter, Q, resonance
+ */
 @StrudelDsl
-fun String.hresonance(q: PatternLike): StrudelPattern = this._hresonance(listOf(q).asStrudelDslArgs())
+fun hresonance(q: PatternLike? = null): PatternMapperFn = _hresonance(listOfNotNull(q).asStrudelDslArgs())
 
-internal val _hres by dslPatternFunction { args, _ -> args.toPattern(hresonanceMutation) }
-internal val StrudelPattern._hres by dslPatternExtension { p, args, _ -> applyHresonance(p, args) }
-internal val String._hres by dslStringExtension { p, args, callInfo -> p._hres(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that sets HPF resonance after the previous mapper.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new [PatternMapperFn] chaining HPF resonance after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hpf(200).hresonance(15))       // HPF then resonance
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hpf(300).hresonance(20))   // resonant HPF chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.hresonance(q: PatternLike? = null): PatternMapperFn =
+    _hresonance(listOfNotNull(q).asStrudelDslArgs())
 
 /**
  * Alias for [hresonance]. Sets the HPF resonance/Q.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with HPF resonance applied.
+ *
+ * ```KlangScript
+ * note("c4").hpf(300).hres(10)      // alias for hresonance
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").hres("<0 20>")         // sweeping HPF Q
+ * ```
  *
  * @alias hresonance, hpq
  * @category effects
  * @tags hres, hresonance, hpq, high pass filter, Q
  */
 @StrudelDsl
-fun hres(q: PatternLike): StrudelPattern = _hres(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.hres(q: PatternLike? = null): StrudelPattern =
+    this._hres(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [hresonance] on this pattern. */
+/**
+ * Alias for [hresonance] on a string pattern.
+ *
+ * @param q The Q factor.
+ * @return A new pattern with HPF resonance applied.
+ *
+ * ```KlangScript
+ * "c4".hpf(300).hres(10)            // alias for String.hresonance
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.hres(q: PatternLike): StrudelPattern = this._hres(listOf(q).asStrudelDslArgs())
+fun String.hres(q: PatternLike? = null): StrudelPattern =
+    this._hres(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [hresonance] on a string pattern. */
+/**
+ * Alias for [hresonance]. Returns a [PatternMapperFn] that sets HPF resonance.
+ *
+ * @param q The Q factor.
+ * @return A [PatternMapperFn] that applies HPF resonance.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hpf(300).hres(10))  // alias for hresonance()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hres(20))       // high Q on first cycle
+ * ```
+ *
+ * @alias hresonance, hpq
+ * @category effects
+ * @tags hres, hresonance, hpq, high pass filter, Q
+ */
 @StrudelDsl
-fun String.hres(q: PatternLike): StrudelPattern = this._hres(listOf(q).asStrudelDslArgs())
+fun hres(q: PatternLike? = null): PatternMapperFn = _hres(listOfNotNull(q).asStrudelDslArgs())
 
-internal val _hpq by dslPatternFunction { args, _ -> args.toPattern(hresonanceMutation) }
-internal val StrudelPattern._hpq by dslPatternExtension { p, args, _ -> applyHresonance(p, args) }
-internal val String._hpq by dslStringExtension { p, args, callInfo -> p._hpq(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that sets HPF resonance (alias for [hresonance]) after the previous mapper.
+ *
+ * @param q The Q factor.
+ * @return A new [PatternMapperFn] chaining HPF resonance after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hpf(300).hres(10))  // HPF then hres
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hpf(200).hres(20))  // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.hres(q: PatternLike? = null): PatternMapperFn =
+    _hres(listOfNotNull(q).asStrudelDslArgs())
 
 /**
  * Alias for [hresonance]. Sets the HPF resonance/Q.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with HPF resonance applied.
+ *
+ * ```KlangScript
+ * note("c4").hpf(300).hpq(10)       // alias for hresonance
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").hpq("<0 20>")          // sweeping HPF Q
+ * ```
  *
  * @alias hresonance, hres
  * @category effects
  * @tags hpq, hresonance, hres, high pass filter, Q
  */
 @StrudelDsl
-fun hpq(q: PatternLike): StrudelPattern = _hpq(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.hpq(q: PatternLike? = null): StrudelPattern =
+    this._hpq(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [hresonance] on this pattern. */
+/**
+ * Alias for [hresonance] on a string pattern.
+ *
+ * @param q The Q factor.
+ * @return A new pattern with HPF resonance applied.
+ *
+ * ```KlangScript
+ * "c4".hpf(300).hpq(10)             // alias for String.hresonance
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.hpq(q: PatternLike): StrudelPattern = this._hpq(listOf(q).asStrudelDslArgs())
+fun String.hpq(q: PatternLike? = null): StrudelPattern =
+    this._hpq(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [hresonance] on a string pattern. */
+/**
+ * Alias for [hresonance]. Returns a [PatternMapperFn] that sets HPF resonance.
+ *
+ * @param q The Q factor.
+ * @return A [PatternMapperFn] that applies HPF resonance.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hpf(300).hpq(10))  // alias for hresonance()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hpq(20))       // high Q on first cycle
+ * ```
+ *
+ * @alias hresonance, hres
+ * @category effects
+ * @tags hpq, hresonance, hres, high pass filter, Q
+ */
 @StrudelDsl
-fun String.hpq(q: PatternLike): StrudelPattern = this._hpq(listOf(q).asStrudelDslArgs())
+fun hpq(q: PatternLike? = null): PatternMapperFn = _hpq(listOfNotNull(q).asStrudelDslArgs())
 
-// -- bandq() - Band Pass Filter resonance ----------------------------------------------------------------------------
+/**
+ * Creates a chained [PatternMapperFn] that sets HPF resonance (alias for [hresonance]) after the previous mapper.
+ *
+ * @param q The Q factor.
+ * @return A new [PatternMapperFn] chaining HPF resonance after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(hpf(300).hpq(10))  // HPF then hpq
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, hpf(200).hpq(20))  // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.hpq(q: PatternLike? = null): PatternMapperFn =
+    _hpq(listOfNotNull(q).asStrudelDslArgs())
+
+// -- bandq() / bpq() - Band Pass Filter resonance --------------------------------------------------------------------
 
 private val bandqMutation = voiceModifier { copy(bandq = it?.asDoubleOrNull()) }
 
 fun applyBandq(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, bandqMutation)
+    return source._liftOrReinterpretNumericalField(args, bandqMutation)
 }
 
-internal val _bandq by dslPatternFunction { args, _ -> args.toPattern(bandqMutation) }
+internal val _bandq by dslPatternMapper { args, callInfo -> { p -> p._bandq(args, callInfo) } }
 internal val StrudelPattern._bandq by dslPatternExtension { p, args, _ -> applyBandq(p, args) }
 internal val String._bandq by dslStringExtension { p, args, callInfo -> p._bandq(args, callInfo) }
+internal val PatternMapperFn._bandq by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bandq(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS (bandq) =====
 
 /**
  * Sets the Q factor (bandwidth) of the Band Pass Filter.
  *
  * Higher Q values create a narrower, more selective frequency band. Lower values let a
  * wider range through. Use with [bandf] to set the centre frequency.
+ *
+ * When [q] is omitted, the pattern's own numeric values are reinterpreted as Q values.
+ *
+ * @param q The Q factor. Higher values create a narrower band. Omit to reinterpret pattern values.
+ * @return A new pattern with BPF Q applied.
  *
  * ```KlangScript
  * note("c4").bandf(1000).bandq(5)         // narrow band pass at 1 kHz
@@ -526,60 +1585,187 @@ internal val String._bandq by dslStringExtension { p, args, callInfo -> p._bandq
  * s("sd").bandf(800).bandq("<1 20>")      // Q sweeps from wide to narrow
  * ```
  *
+ * ```KlangScript
+ * seq("1 5 10 20").bandq()                // reinterpret values as BPF Q
+ * ```
+ *
  * @alias bpq
  * @category effects
  * @tags bandq, bpq, band pass filter, Q, bandwidth
  */
 @StrudelDsl
-fun bandq(q: PatternLike): StrudelPattern = _bandq(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.bandq(q: PatternLike? = null): StrudelPattern =
+    this._bandq(listOfNotNull(q).asStrudelDslArgs())
 
-/** Sets the BPF Q (bandwidth) on this pattern. */
+/**
+ * Parses this string as a pattern, then sets BPF Q.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with BPF Q applied.
+ *
+ * ```KlangScript
+ * "c4".bandf(800).bandq(5)          // BPF Q on string pattern
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.bandq(q: PatternLike): StrudelPattern = this._bandq(listOf(q).asStrudelDslArgs())
+fun String.bandq(q: PatternLike? = null): StrudelPattern =
+    this._bandq(listOfNotNull(q).asStrudelDslArgs())
 
-/** Sets the BPF Q (bandwidth) on a string pattern. */
+/**
+ * Returns a [PatternMapperFn] that sets BPF Q.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A [PatternMapperFn] that applies BPF Q.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(bandf(1000).bandq(5))          // BPF + Q chain
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, bandq(10))                 // narrow BPF on first cycle
+ * ```
+ *
+ * @alias bpq
+ * @category effects
+ * @tags bandq, bpq, band pass filter, Q, bandwidth
+ */
 @StrudelDsl
-fun String.bandq(q: PatternLike): StrudelPattern = this._bandq(listOf(q).asStrudelDslArgs())
+fun bandq(q: PatternLike? = null): PatternMapperFn = _bandq(listOfNotNull(q).asStrudelDslArgs())
 
-internal val _bpq by dslPatternFunction { args, _ -> args.toPattern(bandqMutation) }
+/**
+ * Creates a chained [PatternMapperFn] that sets BPF Q after the previous mapper.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new [PatternMapperFn] chaining BPF Q after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(bandf(800).bandq(5))           // bandf then bandq
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, bandf(1000).bandq(8))      // narrow BPF chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.bandq(q: PatternLike? = null): PatternMapperFn =
+    _bandq(listOfNotNull(q).asStrudelDslArgs())
+
+internal val _bpq by dslPatternMapper { args, callInfo -> { p -> p._bpq(args, callInfo) } }
 internal val StrudelPattern._bpq by dslPatternExtension { p, args, _ -> applyBandq(p, args) }
 internal val String._bpq by dslStringExtension { p, args, callInfo -> p._bpq(args, callInfo) }
+internal val PatternMapperFn._bpq by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpq(args, callInfo))
+}
 
 /**
  * Alias for [bandq]. Sets the BPF Q (bandwidth).
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with BPF Q applied.
+ *
+ * ```KlangScript
+ * note("c4").bandf(800).bpq(5)      // alias for bandq
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").bpq("<1 20>")          // sweeping BPF Q
+ * ```
  *
  * @alias bandq
  * @category effects
  * @tags bpq, bandq, band pass filter, Q, bandwidth
  */
 @StrudelDsl
-fun bpq(q: PatternLike): StrudelPattern = _bpq(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.bpq(q: PatternLike? = null): StrudelPattern =
+    this._bpq(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [bandq] on this pattern. */
+/**
+ * Alias for [bandq] on a string pattern.
+ *
+ * @param q The Q factor.
+ * @return A new pattern with BPF Q applied.
+ *
+ * ```KlangScript
+ * "c4".bandf(800).bpq(5)            // alias for String.bandq
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.bpq(q: PatternLike): StrudelPattern = this._bpq(listOf(q).asStrudelDslArgs())
+fun String.bpq(q: PatternLike? = null): StrudelPattern =
+    this._bpq(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [bandq] on a string pattern. */
+/**
+ * Alias for [bandq]. Returns a [PatternMapperFn] that sets BPF Q.
+ *
+ * @param q The Q factor.
+ * @return A [PatternMapperFn] that applies BPF Q.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(bandf(800).bpq(5))  // alias for bandq()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, bpq(10))        // narrow BPF on first cycle
+ * ```
+ *
+ * @alias bandq
+ * @category effects
+ * @tags bpq, bandq, band pass filter, Q, bandwidth
+ */
 @StrudelDsl
-fun String.bpq(q: PatternLike): StrudelPattern = this._bpq(listOf(q).asStrudelDslArgs())
+fun bpq(q: PatternLike? = null): PatternMapperFn = _bpq(listOfNotNull(q).asStrudelDslArgs())
+
+/**
+ * Creates a chained [PatternMapperFn] that sets BPF Q (alias for [bandq]) after the previous mapper.
+ *
+ * @param q The Q factor.
+ * @return A new [PatternMapperFn] chaining BPF Q after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(bandf(800).bpq(5))  // bandf then bpq
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, bandf(1000).bpq(8))  // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.bpq(q: PatternLike? = null): PatternMapperFn =
+    _bpq(listOfNotNull(q).asStrudelDslArgs())
 
 // -- nresonance() / nres() - Notch Filter resonance ------------------------------------------------------------------
 
 private val nresonanceMutation = voiceModifier { copy(nresonance = it?.asDoubleOrNull()) }
 
 fun applyNresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, nresonanceMutation)
+    return source._liftOrReinterpretNumericalField(args, nresonanceMutation)
 }
 
-internal val _nresonance by dslPatternFunction { args, _ -> args.toPattern(nresonanceMutation) }
+internal val _nresonance by dslPatternMapper { args, callInfo -> { p -> p._nresonance(args, callInfo) } }
 internal val StrudelPattern._nresonance by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
 internal val String._nresonance by dslStringExtension { p, args, callInfo -> p._nresonance(args, callInfo) }
+internal val PatternMapperFn._nresonance by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nresonance(args, callInfo))
+}
+
+internal val _nres by dslPatternMapper { args, callInfo -> { p -> p._nres(args, callInfo) } }
+internal val StrudelPattern._nres by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
+internal val String._nres by dslStringExtension { p, args, callInfo -> p._nres(args, callInfo) }
+internal val PatternMapperFn._nres by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nres(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the resonance (Q factor) of the Notch Filter.
  *
  * Controls how narrow the notch is. Higher values create a narrower, deeper notch.
  * Use with [notchf] to set the notch frequency.
+ *
+ * When [q] is omitted, the pattern's own numeric values are reinterpreted as Q values.
+ *
+ * @param q The Q factor. Higher values create a narrower notch. Omit to reinterpret pattern values.
+ * @return A new pattern with notch resonance applied.
  *
  * ```KlangScript
  * note("c4").notchf(1000).nresonance(10)   // narrow deep notch at 1 kHz
@@ -589,60 +1775,177 @@ internal val String._nresonance by dslStringExtension { p, args, callInfo -> p._
  * s("bd").notchf(500).nresonance("<5 20>") // Q sweeps from wide to narrow per cycle
  * ```
  *
+ * ```KlangScript
+ * seq("1 5 15").nresonance()               // reinterpret values as notch Q
+ * ```
+ *
  * @alias nres
  * @category effects
  * @tags nresonance, nres, notch filter, Q, resonance
  */
 @StrudelDsl
-fun nresonance(q: PatternLike): StrudelPattern = _nresonance(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.nresonance(q: PatternLike? = null): StrudelPattern =
+    this._nresonance(listOfNotNull(q).asStrudelDslArgs())
 
-/** Sets the notch filter Q on this pattern. */
+/**
+ * Parses this string as a pattern, then sets notch filter resonance.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with notch resonance applied.
+ *
+ * ```KlangScript
+ * "c4".notchf(1000).nresonance(10)  // notch Q on string pattern
+ * ```
+ *
+ * @alias nres
+ * @category effects
+ * @tags nresonance, nres, notch filter, Q, resonance
+ */
 @StrudelDsl
-fun StrudelPattern.nresonance(q: PatternLike): StrudelPattern = this._nresonance(listOf(q).asStrudelDslArgs())
+fun String.nresonance(q: PatternLike? = null): StrudelPattern =
+    this._nresonance(listOfNotNull(q).asStrudelDslArgs())
 
-/** Sets the notch filter Q on a string pattern. */
+/**
+ * Returns a [PatternMapperFn] that sets notch filter resonance.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A [PatternMapperFn] that applies notch resonance.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(notchf(1000).nresonance(10))   // notch + Q chain
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, nresonance(15))            // narrow notch on first cycle
+ * ```
+ *
+ * @alias nres
+ * @category effects
+ * @tags nresonance, nres, notch filter, Q, resonance
+ */
 @StrudelDsl
-fun String.nresonance(q: PatternLike): StrudelPattern = this._nresonance(listOf(q).asStrudelDslArgs())
+fun nresonance(q: PatternLike? = null): PatternMapperFn = _nresonance(listOfNotNull(q).asStrudelDslArgs())
 
-internal val _nres by dslPatternFunction { args, _ -> args.toPattern(nresonanceMutation) }
-internal val StrudelPattern._nres by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
-internal val String._nres by dslStringExtension { p, args, callInfo -> p._nres(args, callInfo) }
+/**
+ * Creates a chained [PatternMapperFn] that sets notch resonance after the previous mapper.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new [PatternMapperFn] chaining notch resonance after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(notchf(500).nresonance(10))    // notchf then resonance
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, notchf(1000).nresonance(15))  // narrow notch chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.nresonance(q: PatternLike? = null): PatternMapperFn =
+    _nresonance(listOfNotNull(q).asStrudelDslArgs())
 
 /**
  * Alias for [nresonance]. Sets the notch filter Q.
+ *
+ * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
+ * @return A new pattern with notch resonance applied.
+ *
+ * ```KlangScript
+ * note("c4").notchf(500).nres(10)   // alias for nresonance
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").nres("<5 20>")         // sweeping notch Q
+ * ```
  *
  * @alias nresonance
  * @category effects
  * @tags nres, nresonance, notch filter, Q
  */
 @StrudelDsl
-fun nres(q: PatternLike): StrudelPattern = _nres(listOf(q).asStrudelDslArgs())
+fun StrudelPattern.nres(q: PatternLike? = null): StrudelPattern =
+    this._nres(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [nresonance] on this pattern. */
+/**
+ * Alias for [nresonance] on a string pattern.
+ *
+ * @param q The Q factor.
+ * @return A new pattern with notch resonance applied.
+ *
+ * ```KlangScript
+ * "c4".notchf(500).nres(10)         // alias for String.nresonance
+ * ```
+ */
 @StrudelDsl
-fun StrudelPattern.nres(q: PatternLike): StrudelPattern = this._nres(listOf(q).asStrudelDslArgs())
+fun String.nres(q: PatternLike? = null): StrudelPattern =
+    this._nres(listOfNotNull(q).asStrudelDslArgs())
 
-/** Alias for [nresonance] on a string pattern. */
+/**
+ * Alias for [nresonance]. Returns a [PatternMapperFn] that sets notch filter resonance.
+ *
+ * @param q The Q factor.
+ * @return A [PatternMapperFn] that applies notch resonance.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(notchf(1000).nres(10))  // alias for nresonance()
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, nres(15))           // narrow notch on first cycle
+ * ```
+ *
+ * @alias nresonance
+ * @category effects
+ * @tags nres, nresonance, notch filter, Q
+ */
 @StrudelDsl
-fun String.nres(q: PatternLike): StrudelPattern = this._nres(listOf(q).asStrudelDslArgs())
+fun nres(q: PatternLike? = null): PatternMapperFn = _nres(listOfNotNull(q).asStrudelDslArgs())
 
-// -- lpattack() - Low Pass Filter Envelope Attack -----------------------------------------------------------------------
+/**
+ * Creates a chained [PatternMapperFn] that sets notch resonance (alias for [nresonance]) after the previous mapper.
+ *
+ * @param q The Q factor.
+ * @return A new [PatternMapperFn] chaining notch resonance after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(notchf(500).nres(10))   // notchf then nres
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, notchf(1000).nres(15))  // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.nres(q: PatternLike? = null): PatternMapperFn =
+    _nres(listOfNotNull(q).asStrudelDslArgs())
+
+// -- lpattack() / lpa() - Low Pass Filter Envelope Attack ---------------------------------------------------------------
 
 private val lpattackMutation = voiceModifier { copy(lpattack = it?.asDoubleOrNull()) }
 
 fun applyLpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, lpattackMutation)
+    return source._liftOrReinterpretNumericalField(args, lpattackMutation)
 }
 
-internal val _lpattack by dslPatternFunction { args, _ -> args.toPattern(lpattackMutation) }
+internal val _lpattack by dslPatternMapper { args, callInfo -> { p -> p._lpattack(args, callInfo) } }
 internal val StrudelPattern._lpattack by dslPatternExtension { p, args, _ -> applyLpattack(p, args) }
 internal val String._lpattack by dslStringExtension { p, args, callInfo -> p._lpattack(args, callInfo) }
+internal val PatternMapperFn._lpattack by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpattack(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the LPF envelope attack time in seconds.
  *
  * Controls how quickly the low pass filter cutoff sweeps from its baseline to the peak
  * at note onset. Use with [lpenv], [lpdecay], [lpsustain], [lprelease].
+ *
+ * When [seconds] is omitted, the pattern's own numeric values are reinterpreted as attack times.
+ *
+ * @param seconds The attack time in seconds. Omit to reinterpret the pattern's values as attack time.
+ * @return A new pattern with LPF attack applied.
  *
  * ```KlangScript
  * s("bd").lpf(200).lpenv(5000).lpattack(0.1)   // filter opens over 100 ms
@@ -657,55 +1960,150 @@ internal val String._lpattack by dslStringExtension { p, args, callInfo -> p._lp
  * @tags lpattack, lpa, low pass filter, envelope, attack
  */
 @StrudelDsl
-fun lpattack(seconds: PatternLike): StrudelPattern = _lpattack(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.lpattack(seconds: PatternLike? = null): StrudelPattern =
+    this._lpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
-/** Sets the LPF envelope attack time on this pattern. */
+/**
+ * Parses this string as a pattern, then sets LPF envelope attack time.
+ *
+ * @param seconds The attack time in seconds.
+ * @return A new pattern with LPF attack applied.
+ *
+ * ```KlangScript
+ * "c4".lpattack(0.1)                 // LPF attack on string pattern
+ * ```
+ *
+ * @alias lpa
+ * @category effects
+ * @tags lpattack, lpa, low pass filter, envelope, attack
+ */
 @StrudelDsl
-fun StrudelPattern.lpattack(seconds: PatternLike): StrudelPattern = this._lpattack(listOf(seconds).asStrudelDslArgs())
+fun String.lpattack(seconds: PatternLike? = null): StrudelPattern =
+    this._lpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
-/** Sets the LPF envelope attack time on a string pattern. */
+/**
+ * Returns a [PatternMapperFn] that sets LPF envelope attack time.
+ *
+ * @param seconds The attack time in seconds. Omit to reinterpret the pattern's values as attack time.
+ * @return A [PatternMapperFn] that applies LPF attack.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(200).lpenv(4000).lpattack(0.1))  // LPF attack chain
+ * ```
+ *
+ * ```KlangScript
+ * note("c4*4").firstOf(4, lpattack(0.5))   // slow attack on first cycle
+ * ```
+ *
+ * @alias lpa
+ * @category effects
+ * @tags lpattack, lpa, low pass filter, envelope, attack
+ */
 @StrudelDsl
-fun String.lpattack(seconds: PatternLike): StrudelPattern = this._lpattack(listOf(seconds).asStrudelDslArgs())
+fun lpattack(seconds: PatternLike? = null): PatternMapperFn = _lpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _lpa by dslPatternFunction { args, _ -> args.toPattern(lpattackMutation) }
+/**
+ * Creates a chained [PatternMapperFn] that sets LPF envelope attack after the previous mapper.
+ *
+ * @param seconds The attack time in seconds.
+ * @return A new [PatternMapperFn] chaining LPF attack after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(200).lpattack(0.1))  // lpf then attack
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").firstOf(4, lpf(300).lpattack(0.2))  // chain
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.lpattack(seconds: PatternLike? = null): PatternMapperFn =
+    _lpattack(listOfNotNull(seconds).asStrudelDslArgs())
+
+internal val _lpa by dslPatternMapper { args, callInfo -> { p -> p._lpa(args, callInfo) } }
 internal val StrudelPattern._lpa by dslPatternExtension { p, args, _ -> applyLpattack(p, args) }
 internal val String._lpa by dslStringExtension { p, args, callInfo -> p._lpa(args, callInfo) }
+internal val PatternMapperFn._lpa by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpa(args, callInfo))
+}
 
 /**
  * Alias for [lpattack]. Sets the LPF envelope attack time.
+ *
+ * @param seconds The attack time in seconds. Omit to reinterpret the pattern's values as attack time.
+ * @return A new pattern with LPF attack applied.
+ *
+ * ```KlangScript
+ * s("bd").lpf(200).lpenv(5000).lpa(0.1)   // filter opens over 100 ms
+ * ```
  *
  * @alias lpattack
  * @category effects
  * @tags lpa, lpattack, low pass filter, envelope, attack
  */
 @StrudelDsl
-fun lpa(seconds: PatternLike): StrudelPattern = _lpa(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [lpattack] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.lpa(seconds: PatternLike): StrudelPattern = this._lpa(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.lpa(seconds: PatternLike? = null): StrudelPattern =
+    this._lpa(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [lpattack] on a string pattern. */
 @StrudelDsl
-fun String.lpa(seconds: PatternLike): StrudelPattern = this._lpa(listOf(seconds).asStrudelDslArgs())
+fun String.lpa(seconds: PatternLike? = null): StrudelPattern =
+    this._lpa(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- lpdecay() - Low Pass Filter Envelope Decay -------------------------------------------------------------------------
+/**
+ * Alias for [lpattack]. Returns a [PatternMapperFn] that sets LPF envelope attack.
+ *
+ * @param seconds The attack time in seconds.
+ * @return A [PatternMapperFn] that applies LPF attack.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(200).lpa(0.1))   // alias for lpattack()
+ * ```
+ *
+ * @alias lpattack
+ * @category effects
+ * @tags lpa, lpattack, low pass filter, envelope, attack
+ */
+@StrudelDsl
+fun lpa(seconds: PatternLike? = null): PatternMapperFn = _lpa(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets LPF attack (alias for [lpattack]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lpa(seconds: PatternLike? = null): PatternMapperFn =
+    _lpa(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- lpdecay() / lpd() - Low Pass Filter Envelope Decay ----------------------------------------------------------------
 
 private val lpdecayMutation = voiceModifier { copy(lpdecay = it?.asDoubleOrNull()) }
 
 fun applyLpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, lpdecayMutation)
+    return source._liftOrReinterpretNumericalField(args, lpdecayMutation)
 }
 
-internal val _lpdecay by dslPatternFunction { args, _ -> args.toPattern(lpdecayMutation) }
+internal val _lpdecay by dslPatternMapper { args, callInfo -> { p -> p._lpdecay(args, callInfo) } }
 internal val StrudelPattern._lpdecay by dslPatternExtension { p, args, _ -> applyLpdecay(p, args) }
 internal val String._lpdecay by dslStringExtension { p, args, callInfo -> p._lpdecay(args, callInfo) }
+internal val PatternMapperFn._lpdecay by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpdecay(args, callInfo))
+}
+
+internal val _lpd by dslPatternMapper { args, callInfo -> { p -> p._lpd(args, callInfo) } }
+internal val StrudelPattern._lpd by dslPatternExtension { p, args, _ -> applyLpdecay(p, args) }
+internal val String._lpd by dslStringExtension { p, args, callInfo -> p._lpd(args, callInfo) }
+internal val PatternMapperFn._lpd by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpd(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the LPF envelope decay time in seconds.
  *
  * Controls how quickly the filter cutoff moves from peak to sustain level after the attack.
  * Use with [lpattack], [lpsustain], [lprelease], [lpenv].
+ *
+ * @param seconds The decay time in seconds. Omit to reinterpret the pattern's values as decay time.
+ * @return A new pattern with LPF decay applied.
  *
  * ```KlangScript
  * s("bd").lpf(200).lpenv(5000).lpdecay(0.2)   // filter decays over 200 ms
@@ -720,49 +2118,104 @@ internal val String._lpdecay by dslStringExtension { p, args, callInfo -> p._lpd
  * @tags lpdecay, lpd, low pass filter, envelope, decay
  */
 @StrudelDsl
-fun lpdecay(seconds: PatternLike): StrudelPattern = _lpdecay(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.lpdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._lpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
-/** Sets the LPF envelope decay time on this pattern. */
+/** Parses this string as a pattern, then sets LPF envelope decay time. */
 @StrudelDsl
-fun StrudelPattern.lpdecay(seconds: PatternLike): StrudelPattern = this._lpdecay(listOf(seconds).asStrudelDslArgs())
+fun String.lpdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._lpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
-/** Sets the LPF envelope decay time on a string pattern. */
+/**
+ * Returns a [PatternMapperFn] that sets LPF envelope decay time.
+ *
+ * @param seconds The decay time in seconds.
+ * @return A [PatternMapperFn] that applies LPF decay.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(200).lpenv(4000).lpdecay(0.2))  // LPF decay chain
+ * ```
+ *
+ * @alias lpd
+ * @category effects
+ * @tags lpdecay, lpd, low pass filter, envelope, decay
+ */
 @StrudelDsl
-fun String.lpdecay(seconds: PatternLike): StrudelPattern = this._lpdecay(listOf(seconds).asStrudelDslArgs())
+fun lpdecay(seconds: PatternLike? = null): PatternMapperFn = _lpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _lpd by dslPatternFunction { args, _ -> args.toPattern(lpdecayMutation) }
-internal val StrudelPattern._lpd by dslPatternExtension { p, args, _ -> applyLpdecay(p, args) }
-internal val String._lpd by dslStringExtension { p, args, callInfo -> p._lpd(args, callInfo) }
+/** Creates a chained [PatternMapperFn] that sets LPF decay after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lpdecay(seconds: PatternLike? = null): PatternMapperFn =
+    _lpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [lpdecay]. Sets the LPF envelope decay time.
+ *
+ * @param seconds The decay time in seconds.
+ * @return A new pattern with LPF decay applied.
+ *
+ * ```KlangScript
+ * s("bd").lpf(200).lpenv(5000).lpd(0.2)   // alias for lpdecay
+ * ```
  *
  * @alias lpdecay
  * @category effects
  * @tags lpd, lpdecay, low pass filter, envelope, decay
  */
 @StrudelDsl
-fun lpd(seconds: PatternLike): StrudelPattern = _lpd(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [lpdecay] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.lpd(seconds: PatternLike): StrudelPattern = this._lpd(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.lpd(seconds: PatternLike? = null): StrudelPattern =
+    this._lpd(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [lpdecay] on a string pattern. */
 @StrudelDsl
-fun String.lpd(seconds: PatternLike): StrudelPattern = this._lpd(listOf(seconds).asStrudelDslArgs())
+fun String.lpd(seconds: PatternLike? = null): StrudelPattern =
+    this._lpd(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- lpsustain() - Low Pass Filter Envelope Sustain ---------------------------------------------------------------------
+/**
+ * Alias for [lpdecay]. Returns a [PatternMapperFn] that sets LPF envelope decay.
+ *
+ * @param seconds The decay time in seconds.
+ * @return A [PatternMapperFn] that applies LPF decay.
+ *
+ * ```KlangScript
+ * note("c4 e4").apply(lpf(200).lpd(0.2))   // alias for lpdecay()
+ * ```
+ *
+ * @alias lpdecay
+ * @category effects
+ * @tags lpd, lpdecay, low pass filter, envelope, decay
+ */
+@StrudelDsl
+fun lpd(seconds: PatternLike? = null): PatternMapperFn = _lpd(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets LPF decay (alias for [lpdecay]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lpd(seconds: PatternLike? = null): PatternMapperFn =
+    _lpd(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- lpsustain() / lps() - Low Pass Filter Envelope Sustain ------------------------------------------------------------
 
 private val lpsustainMutation = voiceModifier { copy(lpsustain = it?.asDoubleOrNull()) }
 
 fun applyLpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, lpsustainMutation)
+    return source._liftOrReinterpretNumericalField(args, lpsustainMutation)
 }
 
-internal val _lpsustain by dslPatternFunction { args, _ -> args.toPattern(lpsustainMutation) }
+internal val _lpsustain by dslPatternMapper { args, callInfo -> { p -> p._lpsustain(args, callInfo) } }
 internal val StrudelPattern._lpsustain by dslPatternExtension { p, args, _ -> applyLpsustain(p, args) }
 internal val String._lpsustain by dslStringExtension { p, args, callInfo -> p._lpsustain(args, callInfo) }
+internal val PatternMapperFn._lpsustain by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpsustain(args, callInfo))
+}
+
+internal val _lps by dslPatternMapper { args, callInfo -> { p -> p._lps(args, callInfo) } }
+internal val StrudelPattern._lps by dslPatternExtension { p, args, _ -> applyLpsustain(p, args) }
+internal val String._lps by dslStringExtension { p, args, callInfo -> p._lps(args, callInfo) }
+internal val PatternMapperFn._lps by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lps(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the LPF envelope sustain level (0–1).
@@ -778,54 +2231,88 @@ internal val String._lpsustain by dslStringExtension { p, args, callInfo -> p._l
  * note("c4").lpsustain("<0 1>")                     // closed vs fully open sustain
  * ```
  *
+ * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the LPF sustain level, or [StrudelPattern] when called on a pattern.
  * @alias lps
  * @category effects
  * @tags lpsustain, lps, low pass filter, envelope, sustain
  */
 @StrudelDsl
-fun lpsustain(level: PatternLike): StrudelPattern = _lpsustain(listOf(level).asStrudelDslArgs())
-
-/** Sets the LPF envelope sustain level on this pattern. */
-@StrudelDsl
-fun StrudelPattern.lpsustain(level: PatternLike): StrudelPattern = this._lpsustain(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.lpsustain(level: PatternLike? = null): StrudelPattern =
+    this._lpsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /** Sets the LPF envelope sustain level on a string pattern. */
 @StrudelDsl
-fun String.lpsustain(level: PatternLike): StrudelPattern = this._lpsustain(listOf(level).asStrudelDslArgs())
+fun String.lpsustain(level: PatternLike? = null): StrudelPattern =
+    this._lpsustain(listOfNotNull(level).asStrudelDslArgs())
 
-internal val _lps by dslPatternFunction { args, _ -> args.toPattern(lpsustainMutation) }
-internal val StrudelPattern._lps by dslPatternExtension { p, args, _ -> applyLpsustain(p, args) }
-internal val String._lps by dslStringExtension { p, args, callInfo -> p._lps(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the LPF envelope sustain level. */
+@StrudelDsl
+fun lpsustain(level: PatternLike? = null): PatternMapperFn = _lpsustain(listOfNotNull(level).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the LPF envelope sustain level after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lpsustain(level: PatternLike? = null): PatternMapperFn =
+    _lpsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /**
  * Alias for [lpsustain]. Sets the LPF envelope sustain level.
  *
+ * ```KlangScript
+ * note("c4").lpf(200).lps(0.5)   // alias for lpsustain()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(lpf(200).lps(0.5))   // chained PatternMapperFn
+ * ```
+ *
+ * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the LPF sustain level, or [StrudelPattern] when called on a pattern.
  * @alias lpsustain
  * @category effects
  * @tags lps, lpsustain, low pass filter, envelope, sustain
  */
 @StrudelDsl
-fun lps(level: PatternLike): StrudelPattern = _lps(listOf(level).asStrudelDslArgs())
-
-/** Alias for [lpsustain] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.lps(level: PatternLike): StrudelPattern = this._lps(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.lps(level: PatternLike? = null): StrudelPattern =
+    this._lps(listOfNotNull(level).asStrudelDslArgs())
 
 /** Alias for [lpsustain] on a string pattern. */
 @StrudelDsl
-fun String.lps(level: PatternLike): StrudelPattern = this._lps(listOf(level).asStrudelDslArgs())
+fun String.lps(level: PatternLike? = null): StrudelPattern =
+    this._lps(listOfNotNull(level).asStrudelDslArgs())
 
-// -- lprelease() - Low Pass Filter Envelope Release ---------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the LPF envelope sustain level (alias for [lpsustain]). */
+@StrudelDsl
+fun lps(level: PatternLike? = null): PatternMapperFn = _lps(listOfNotNull(level).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets LPF sustain (alias for [lpsustain]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lps(level: PatternLike? = null): PatternMapperFn =
+    _lps(listOfNotNull(level).asStrudelDslArgs())
+
+// -- lprelease() / lpr() - Low Pass Filter Envelope Release ------------------------------------------------------------
 
 private val lpreleaseMutation = voiceModifier { copy(lprelease = it?.asDoubleOrNull()) }
 
 fun applyLprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, lpreleaseMutation)
+    return source._liftOrReinterpretNumericalField(args, lpreleaseMutation)
 }
 
-internal val _lprelease by dslPatternFunction { args, _ -> args.toPattern(lpreleaseMutation) }
+internal val _lprelease by dslPatternMapper { args, callInfo -> { p -> p._lprelease(args, callInfo) } }
 internal val StrudelPattern._lprelease by dslPatternExtension { p, args, _ -> applyLprelease(p, args) }
 internal val String._lprelease by dslStringExtension { p, args, callInfo -> p._lprelease(args, callInfo) }
+internal val PatternMapperFn._lprelease by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lprelease(args, callInfo))
+}
+
+internal val _lpr by dslPatternMapper { args, callInfo -> { p -> p._lpr(args, callInfo) } }
+internal val StrudelPattern._lpr by dslPatternExtension { p, args, _ -> applyLprelease(p, args) }
+internal val String._lpr by dslStringExtension { p, args, callInfo -> p._lpr(args, callInfo) }
+internal val PatternMapperFn._lpr by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpr(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the LPF envelope release time in seconds.
@@ -841,54 +2328,88 @@ internal val String._lprelease by dslStringExtension { p, args, callInfo -> p._l
  * note("c4").lprelease("<0.05 1.0>")              // short vs long filter release per cycle
  * ```
  *
+ * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the LPF release time, or [StrudelPattern] when called on a pattern.
  * @alias lpr
  * @category effects
  * @tags lprelease, lpr, low pass filter, envelope, release
  */
 @StrudelDsl
-fun lprelease(seconds: PatternLike): StrudelPattern = _lprelease(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the LPF envelope release time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.lprelease(seconds: PatternLike): StrudelPattern = this._lprelease(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.lprelease(seconds: PatternLike? = null): StrudelPattern =
+    this._lprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the LPF envelope release time on a string pattern. */
 @StrudelDsl
-fun String.lprelease(seconds: PatternLike): StrudelPattern = this._lprelease(listOf(seconds).asStrudelDslArgs())
+fun String.lprelease(seconds: PatternLike? = null): StrudelPattern =
+    this._lprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _lpr by dslPatternFunction { args, _ -> args.toPattern(lpreleaseMutation) }
-internal val StrudelPattern._lpr by dslPatternExtension { p, args, _ -> applyLprelease(p, args) }
-internal val String._lpr by dslStringExtension { p, args, callInfo -> p._lpr(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the LPF envelope release time. */
+@StrudelDsl
+fun lprelease(seconds: PatternLike? = null): PatternMapperFn = _lprelease(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the LPF envelope release time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lprelease(seconds: PatternLike? = null): PatternMapperFn =
+    _lprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [lprelease]. Sets the LPF envelope release time.
  *
+ * ```KlangScript
+ * note("c4").lpf(200).lpr(0.4)   // alias for lprelease()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(lpf(200).lpr(0.4))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the LPF release time, or [StrudelPattern] when called on a pattern.
  * @alias lprelease
  * @category effects
  * @tags lpr, lprelease, low pass filter, envelope, release
  */
 @StrudelDsl
-fun lpr(seconds: PatternLike): StrudelPattern = _lpr(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [lprelease] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.lpr(seconds: PatternLike): StrudelPattern = this._lpr(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.lpr(seconds: PatternLike? = null): StrudelPattern =
+    this._lpr(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [lprelease] on a string pattern. */
 @StrudelDsl
-fun String.lpr(seconds: PatternLike): StrudelPattern = this._lpr(listOf(seconds).asStrudelDslArgs())
+fun String.lpr(seconds: PatternLike? = null): StrudelPattern =
+    this._lpr(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- lpenv() - Low Pass Filter Envelope Depth ---------------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the LPF envelope release time (alias for [lprelease]). */
+@StrudelDsl
+fun lpr(seconds: PatternLike? = null): PatternMapperFn = _lpr(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets LPF release (alias for [lprelease]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lpr(seconds: PatternLike? = null): PatternMapperFn =
+    _lpr(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- lpenv() / lpe() - Low Pass Filter Envelope Depth ------------------------------------------------------------------
 
 private val lpenvMutation = voiceModifier { copy(lpenv = it?.asDoubleOrNull()) }
 
 fun applyLpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, lpenvMutation)
+    return source._liftOrReinterpretNumericalField(args, lpenvMutation)
 }
 
-internal val _lpenv by dslPatternFunction { args, _ -> args.toPattern(lpenvMutation) }
+internal val _lpenv by dslPatternMapper { args, callInfo -> { p -> p._lpenv(args, callInfo) } }
 internal val StrudelPattern._lpenv by dslPatternExtension { p, args, _ -> applyLpenv(p, args) }
 internal val String._lpenv by dslStringExtension { p, args, callInfo -> p._lpenv(args, callInfo) }
+internal val PatternMapperFn._lpenv by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpenv(args, callInfo))
+}
+
+internal val _lpe by dslPatternMapper { args, callInfo -> { p -> p._lpe(args, callInfo) } }
+internal val StrudelPattern._lpe by dslPatternExtension { p, args, _ -> applyLpenv(p, args) }
+internal val String._lpe by dslStringExtension { p, args, callInfo -> p._lpe(args, callInfo) }
+internal val PatternMapperFn._lpe by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_lpe(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the LPF envelope depth (modulation amount) in Hz.
@@ -905,54 +2426,88 @@ internal val String._lpenv by dslStringExtension { p, args, callInfo -> p._lpenv
  * note("c4").lpf(300).lpenv("<1000 8000>")    // subtle vs dramatic sweep per cycle
  * ```
  *
+ * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the LPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @alias lpe
  * @category effects
  * @tags lpenv, lpe, low pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-fun lpenv(depth: PatternLike): StrudelPattern = _lpenv(listOf(depth).asStrudelDslArgs())
-
-/** Sets the LPF envelope depth/amount on this pattern. */
-@StrudelDsl
-fun StrudelPattern.lpenv(depth: PatternLike): StrudelPattern = this._lpenv(listOf(depth).asStrudelDslArgs())
+fun StrudelPattern.lpenv(depth: PatternLike? = null): StrudelPattern =
+    this._lpenv(listOfNotNull(depth).asStrudelDslArgs())
 
 /** Sets the LPF envelope depth/amount on a string pattern. */
 @StrudelDsl
-fun String.lpenv(depth: PatternLike): StrudelPattern = this._lpenv(listOf(depth).asStrudelDslArgs())
+fun String.lpenv(depth: PatternLike? = null): StrudelPattern =
+    this._lpenv(listOfNotNull(depth).asStrudelDslArgs())
 
-internal val _lpe by dslPatternFunction { args, _ -> args.toPattern(lpenvMutation) }
-internal val StrudelPattern._lpe by dslPatternExtension { p, args, _ -> applyLpenv(p, args) }
-internal val String._lpe by dslStringExtension { p, args, callInfo -> p._lpe(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the LPF envelope depth. */
+@StrudelDsl
+fun lpenv(depth: PatternLike? = null): PatternMapperFn = _lpenv(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the LPF envelope depth after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lpenv(depth: PatternLike? = null): PatternMapperFn =
+    _lpenv(listOfNotNull(depth).asStrudelDslArgs())
 
 /**
  * Alias for [lpenv]. Sets the LPF envelope depth.
  *
+ * ```KlangScript
+ * note("c4").lpf(200).lpe(4000)   // alias for lpenv()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(lpf(200).lpe(4000))   // chained PatternMapperFn
+ * ```
+ *
+ * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the LPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @alias lpenv
  * @category effects
  * @tags lpe, lpenv, low pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-fun lpe(depth: PatternLike): StrudelPattern = _lpe(listOf(depth).asStrudelDslArgs())
-
-/** Alias for [lpenv] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.lpe(depth: PatternLike): StrudelPattern = this._lpe(listOf(depth).asStrudelDslArgs())
+fun StrudelPattern.lpe(depth: PatternLike? = null): StrudelPattern =
+    this._lpe(listOfNotNull(depth).asStrudelDslArgs())
 
 /** Alias for [lpenv] on a string pattern. */
 @StrudelDsl
-fun String.lpe(depth: PatternLike): StrudelPattern = this._lpe(listOf(depth).asStrudelDslArgs())
+fun String.lpe(depth: PatternLike? = null): StrudelPattern =
+    this._lpe(listOfNotNull(depth).asStrudelDslArgs())
 
-// -- hpattack() - High Pass Filter Envelope Attack ----------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the LPF envelope depth (alias for [lpenv]). */
+@StrudelDsl
+fun lpe(depth: PatternLike? = null): PatternMapperFn = _lpe(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets LPF envelope depth (alias for [lpenv]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.lpe(depth: PatternLike? = null): PatternMapperFn =
+    _lpe(listOfNotNull(depth).asStrudelDslArgs())
+
+// -- hpattack() / hpa() - High Pass Filter Envelope Attack -------------------------------------------------------------
 
 private val hpattackMutation = voiceModifier { copy(hpattack = it?.asDoubleOrNull()) }
 
 fun applyHpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, hpattackMutation)
+    return source._liftOrReinterpretNumericalField(args, hpattackMutation)
 }
 
-internal val _hpattack by dslPatternFunction { args, _ -> args.toPattern(hpattackMutation) }
+internal val _hpattack by dslPatternMapper { args, callInfo -> { p -> p._hpattack(args, callInfo) } }
 internal val StrudelPattern._hpattack by dslPatternExtension { p, args, _ -> applyHpattack(p, args) }
 internal val String._hpattack by dslStringExtension { p, args, callInfo -> p._hpattack(args, callInfo) }
+internal val PatternMapperFn._hpattack by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpattack(args, callInfo))
+}
+
+internal val _hpa by dslPatternMapper { args, callInfo -> { p -> p._hpa(args, callInfo) } }
+internal val StrudelPattern._hpa by dslPatternExtension { p, args, _ -> applyHpattack(p, args) }
+internal val String._hpa by dslStringExtension { p, args, callInfo -> p._hpa(args, callInfo) }
+internal val PatternMapperFn._hpa by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpa(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the HPF envelope attack time in seconds.
@@ -968,54 +2523,88 @@ internal val String._hpattack by dslStringExtension { p, args, callInfo -> p._hp
  * note("c4").hpattack("<0.01 0.5>")              // fast vs slow filter attack per cycle
  * ```
  *
+ * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF attack time, or [StrudelPattern] when called on a pattern.
  * @alias hpa
  * @category effects
  * @tags hpattack, hpa, high pass filter, envelope, attack
  */
 @StrudelDsl
-fun hpattack(seconds: PatternLike): StrudelPattern = _hpattack(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the HPF envelope attack time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hpattack(seconds: PatternLike): StrudelPattern = this._hpattack(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.hpattack(seconds: PatternLike? = null): StrudelPattern =
+    this._hpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the HPF envelope attack time on a string pattern. */
 @StrudelDsl
-fun String.hpattack(seconds: PatternLike): StrudelPattern = this._hpattack(listOf(seconds).asStrudelDslArgs())
+fun String.hpattack(seconds: PatternLike? = null): StrudelPattern =
+    this._hpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _hpa by dslPatternFunction { args, _ -> args.toPattern(hpattackMutation) }
-internal val StrudelPattern._hpa by dslPatternExtension { p, args, _ -> applyHpattack(p, args) }
-internal val String._hpa by dslStringExtension { p, args, callInfo -> p._hpa(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the HPF envelope attack time. */
+@StrudelDsl
+fun hpattack(seconds: PatternLike? = null): PatternMapperFn = _hpattack(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the HPF envelope attack time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hpattack(seconds: PatternLike? = null): PatternMapperFn =
+    _hpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [hpattack]. Sets the HPF envelope attack time.
  *
+ * ```KlangScript
+ * note("c4").hpf(100).hpa(0.1)   // alias for hpattack()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(hpf(100).hpa(0.1))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF attack time, or [StrudelPattern] when called on a pattern.
  * @alias hpattack
  * @category effects
  * @tags hpa, hpattack, high pass filter, envelope, attack
  */
 @StrudelDsl
-fun hpa(seconds: PatternLike): StrudelPattern = _hpa(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [hpattack] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hpa(seconds: PatternLike): StrudelPattern = this._hpa(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.hpa(seconds: PatternLike? = null): StrudelPattern =
+    this._hpa(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [hpattack] on a string pattern. */
 @StrudelDsl
-fun String.hpa(seconds: PatternLike): StrudelPattern = this._hpa(listOf(seconds).asStrudelDslArgs())
+fun String.hpa(seconds: PatternLike? = null): StrudelPattern =
+    this._hpa(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- hpdecay() - High Pass Filter Envelope Decay ------------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the HPF envelope attack time (alias for [hpattack]). */
+@StrudelDsl
+fun hpa(seconds: PatternLike? = null): PatternMapperFn = _hpa(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets HPF attack (alias for [hpattack]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hpa(seconds: PatternLike? = null): PatternMapperFn =
+    _hpa(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- hpdecay() / hpd() - High Pass Filter Envelope Decay ---------------------------------------------------------------
 
 private val hpdecayMutation = voiceModifier { copy(hpdecay = it?.asDoubleOrNull()) }
 
 fun applyHpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, hpdecayMutation)
+    return source._liftOrReinterpretNumericalField(args, hpdecayMutation)
 }
 
-internal val _hpdecay by dslPatternFunction { args, _ -> args.toPattern(hpdecayMutation) }
+internal val _hpdecay by dslPatternMapper { args, callInfo -> { p -> p._hpdecay(args, callInfo) } }
 internal val StrudelPattern._hpdecay by dslPatternExtension { p, args, _ -> applyHpdecay(p, args) }
 internal val String._hpdecay by dslStringExtension { p, args, callInfo -> p._hpdecay(args, callInfo) }
+internal val PatternMapperFn._hpdecay by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpdecay(args, callInfo))
+}
+
+internal val _hpd by dslPatternMapper { args, callInfo -> { p -> p._hpd(args, callInfo) } }
+internal val StrudelPattern._hpd by dslPatternExtension { p, args, _ -> applyHpdecay(p, args) }
+internal val String._hpd by dslStringExtension { p, args, callInfo -> p._hpd(args, callInfo) }
+internal val PatternMapperFn._hpd by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpd(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the HPF envelope decay time in seconds.
@@ -1031,54 +2620,88 @@ internal val String._hpdecay by dslStringExtension { p, args, callInfo -> p._hpd
  * note("c4").hpdecay("<0.05 0.5>")              // short vs long filter decay per cycle
  * ```
  *
+ * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF decay time, or [StrudelPattern] when called on a pattern.
  * @alias hpd
  * @category effects
  * @tags hpdecay, hpd, high pass filter, envelope, decay
  */
 @StrudelDsl
-fun hpdecay(seconds: PatternLike): StrudelPattern = _hpdecay(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the HPF envelope decay time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hpdecay(seconds: PatternLike): StrudelPattern = this._hpdecay(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.hpdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._hpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the HPF envelope decay time on a string pattern. */
 @StrudelDsl
-fun String.hpdecay(seconds: PatternLike): StrudelPattern = this._hpdecay(listOf(seconds).asStrudelDslArgs())
+fun String.hpdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._hpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _hpd by dslPatternFunction { args, _ -> args.toPattern(hpdecayMutation) }
-internal val StrudelPattern._hpd by dslPatternExtension { p, args, _ -> applyHpdecay(p, args) }
-internal val String._hpd by dslStringExtension { p, args, callInfo -> p._hpd(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the HPF envelope decay time. */
+@StrudelDsl
+fun hpdecay(seconds: PatternLike? = null): PatternMapperFn = _hpdecay(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the HPF envelope decay time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hpdecay(seconds: PatternLike? = null): PatternMapperFn =
+    _hpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [hpdecay]. Sets the HPF envelope decay time.
  *
+ * ```KlangScript
+ * note("c4").hpf(100).hpd(0.2)   // alias for hpdecay()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(hpf(100).hpd(0.2))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF decay time, or [StrudelPattern] when called on a pattern.
  * @alias hpdecay
  * @category effects
  * @tags hpd, hpdecay, high pass filter, envelope, decay
  */
 @StrudelDsl
-fun hpd(seconds: PatternLike): StrudelPattern = _hpd(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [hpdecay] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hpd(seconds: PatternLike): StrudelPattern = this._hpd(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.hpd(seconds: PatternLike? = null): StrudelPattern =
+    this._hpd(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [hpdecay] on a string pattern. */
 @StrudelDsl
-fun String.hpd(seconds: PatternLike): StrudelPattern = this._hpd(listOf(seconds).asStrudelDslArgs())
+fun String.hpd(seconds: PatternLike? = null): StrudelPattern =
+    this._hpd(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- hpsustain() - High Pass Filter Envelope Sustain --------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the HPF envelope decay time (alias for [hpdecay]). */
+@StrudelDsl
+fun hpd(seconds: PatternLike? = null): PatternMapperFn = _hpd(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets HPF decay (alias for [hpdecay]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hpd(seconds: PatternLike? = null): PatternMapperFn =
+    _hpd(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- hpsustain() / hps() - High Pass Filter Envelope Sustain -----------------------------------------------------------
 
 private val hpsustainMutation = voiceModifier { copy(hpsustain = it?.asDoubleOrNull()) }
 
 fun applyHpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, hpsustainMutation)
+    return source._liftOrReinterpretNumericalField(args, hpsustainMutation)
 }
 
-internal val _hpsustain by dslPatternFunction { args, _ -> args.toPattern(hpsustainMutation) }
+internal val _hpsustain by dslPatternMapper { args, callInfo -> { p -> p._hpsustain(args, callInfo) } }
 internal val StrudelPattern._hpsustain by dslPatternExtension { p, args, _ -> applyHpsustain(p, args) }
 internal val String._hpsustain by dslStringExtension { p, args, callInfo -> p._hpsustain(args, callInfo) }
+internal val PatternMapperFn._hpsustain by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpsustain(args, callInfo))
+}
+
+internal val _hps by dslPatternMapper { args, callInfo -> { p -> p._hps(args, callInfo) } }
+internal val StrudelPattern._hps by dslPatternExtension { p, args, _ -> applyHpsustain(p, args) }
+internal val String._hps by dslStringExtension { p, args, callInfo -> p._hps(args, callInfo) }
+internal val PatternMapperFn._hps by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hps(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the HPF envelope sustain level (0–1).
@@ -1095,54 +2718,88 @@ internal val String._hpsustain by dslStringExtension { p, args, callInfo -> p._h
  * note("c4").hpsustain("<0 1>")                     // closed vs fully open sustain
  * ```
  *
+ * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF sustain level, or [StrudelPattern] when called on a pattern.
  * @alias hps
  * @category effects
  * @tags hpsustain, hps, high pass filter, envelope, sustain
  */
 @StrudelDsl
-fun hpsustain(level: PatternLike): StrudelPattern = _hpsustain(listOf(level).asStrudelDslArgs())
-
-/** Sets the HPF envelope sustain level on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hpsustain(level: PatternLike): StrudelPattern = this._hpsustain(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.hpsustain(level: PatternLike? = null): StrudelPattern =
+    this._hpsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /** Sets the HPF envelope sustain level on a string pattern. */
 @StrudelDsl
-fun String.hpsustain(level: PatternLike): StrudelPattern = this._hpsustain(listOf(level).asStrudelDslArgs())
+fun String.hpsustain(level: PatternLike? = null): StrudelPattern =
+    this._hpsustain(listOfNotNull(level).asStrudelDslArgs())
 
-internal val _hps by dslPatternFunction { args, _ -> args.toPattern(hpsustainMutation) }
-internal val StrudelPattern._hps by dslPatternExtension { p, args, _ -> applyHpsustain(p, args) }
-internal val String._hps by dslStringExtension { p, args, callInfo -> p._hps(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the HPF envelope sustain level. */
+@StrudelDsl
+fun hpsustain(level: PatternLike? = null): PatternMapperFn = _hpsustain(listOfNotNull(level).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the HPF envelope sustain level after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hpsustain(level: PatternLike? = null): PatternMapperFn =
+    _hpsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /**
  * Alias for [hpsustain]. Sets the HPF envelope sustain level.
  *
+ * ```KlangScript
+ * note("c4").hpf(100).hps(0.5)   // alias for hpsustain()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(hpf(100).hps(0.5))   // chained PatternMapperFn
+ * ```
+ *
+ * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF sustain level, or [StrudelPattern] when called on a pattern.
  * @alias hpsustain
  * @category effects
  * @tags hps, hpsustain, high pass filter, envelope, sustain
  */
 @StrudelDsl
-fun hps(level: PatternLike): StrudelPattern = _hps(listOf(level).asStrudelDslArgs())
-
-/** Alias for [hpsustain] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hps(level: PatternLike): StrudelPattern = this._hps(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.hps(level: PatternLike? = null): StrudelPattern =
+    this._hps(listOfNotNull(level).asStrudelDslArgs())
 
 /** Alias for [hpsustain] on a string pattern. */
 @StrudelDsl
-fun String.hps(level: PatternLike): StrudelPattern = this._hps(listOf(level).asStrudelDslArgs())
+fun String.hps(level: PatternLike? = null): StrudelPattern =
+    this._hps(listOfNotNull(level).asStrudelDslArgs())
 
-// -- hprelease() - High Pass Filter Envelope Release --------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the HPF envelope sustain level (alias for [hpsustain]). */
+@StrudelDsl
+fun hps(level: PatternLike? = null): PatternMapperFn = _hps(listOfNotNull(level).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets HPF sustain (alias for [hpsustain]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hps(level: PatternLike? = null): PatternMapperFn =
+    _hps(listOfNotNull(level).asStrudelDslArgs())
+
+// -- hprelease() / hpr() - High Pass Filter Envelope Release -----------------------------------------------------------
 
 private val hpreleaseMutation = voiceModifier { copy(hprelease = it?.asDoubleOrNull()) }
 
 fun applyHprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, hpreleaseMutation)
+    return source._liftOrReinterpretNumericalField(args, hpreleaseMutation)
 }
 
-internal val _hprelease by dslPatternFunction { args, _ -> args.toPattern(hpreleaseMutation) }
+internal val _hprelease by dslPatternMapper { args, callInfo -> { p -> p._hprelease(args, callInfo) } }
 internal val StrudelPattern._hprelease by dslPatternExtension { p, args, _ -> applyHprelease(p, args) }
 internal val String._hprelease by dslStringExtension { p, args, callInfo -> p._hprelease(args, callInfo) }
+internal val PatternMapperFn._hprelease by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hprelease(args, callInfo))
+}
+
+internal val _hpr by dslPatternMapper { args, callInfo -> { p -> p._hpr(args, callInfo) } }
+internal val StrudelPattern._hpr by dslPatternExtension { p, args, _ -> applyHprelease(p, args) }
+internal val String._hpr by dslStringExtension { p, args, callInfo -> p._hpr(args, callInfo) }
+internal val PatternMapperFn._hpr by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpr(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the HPF envelope release time in seconds.
@@ -1158,54 +2815,88 @@ internal val String._hprelease by dslStringExtension { p, args, callInfo -> p._h
  * note("c4").hprelease("<0.05 1.0>")              // short vs long filter release per cycle
  * ```
  *
+ * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF release time, or [StrudelPattern] when called on a pattern.
  * @alias hpr
  * @category effects
  * @tags hprelease, hpr, high pass filter, envelope, release
  */
 @StrudelDsl
-fun hprelease(seconds: PatternLike): StrudelPattern = _hprelease(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the HPF envelope release time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hprelease(seconds: PatternLike): StrudelPattern = this._hprelease(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.hprelease(seconds: PatternLike? = null): StrudelPattern =
+    this._hprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the HPF envelope release time on a string pattern. */
 @StrudelDsl
-fun String.hprelease(seconds: PatternLike): StrudelPattern = this._hprelease(listOf(seconds).asStrudelDslArgs())
+fun String.hprelease(seconds: PatternLike? = null): StrudelPattern =
+    this._hprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _hpr by dslPatternFunction { args, _ -> args.toPattern(hpreleaseMutation) }
-internal val StrudelPattern._hpr by dslPatternExtension { p, args, _ -> applyHprelease(p, args) }
-internal val String._hpr by dslStringExtension { p, args, callInfo -> p._hpr(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the HPF envelope release time. */
+@StrudelDsl
+fun hprelease(seconds: PatternLike? = null): PatternMapperFn = _hprelease(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the HPF envelope release time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hprelease(seconds: PatternLike? = null): PatternMapperFn =
+    _hprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [hprelease]. Sets the HPF envelope release time.
  *
+ * ```KlangScript
+ * note("c4").hpf(100).hpr(0.4)   // alias for hprelease()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(hpf(100).hpr(0.4))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF release time, or [StrudelPattern] when called on a pattern.
  * @alias hprelease
  * @category effects
  * @tags hpr, hprelease, high pass filter, envelope, release
  */
 @StrudelDsl
-fun hpr(seconds: PatternLike): StrudelPattern = _hpr(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [hprelease] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hpr(seconds: PatternLike): StrudelPattern = this._hpr(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.hpr(seconds: PatternLike? = null): StrudelPattern =
+    this._hpr(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [hprelease] on a string pattern. */
 @StrudelDsl
-fun String.hpr(seconds: PatternLike): StrudelPattern = this._hpr(listOf(seconds).asStrudelDslArgs())
+fun String.hpr(seconds: PatternLike? = null): StrudelPattern =
+    this._hpr(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- hpenv() - High Pass Filter Envelope Depth --------------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the HPF envelope release time (alias for [hprelease]). */
+@StrudelDsl
+fun hpr(seconds: PatternLike? = null): PatternMapperFn = _hpr(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets HPF release (alias for [hprelease]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hpr(seconds: PatternLike? = null): PatternMapperFn =
+    _hpr(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- hpenv() / hpe() - High Pass Filter Envelope Depth -----------------------------------------------------------------
 
 private val hpenvMutation = voiceModifier { copy(hpenv = it?.asDoubleOrNull()) }
 
 fun applyHpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, hpenvMutation)
+    return source._liftOrReinterpretNumericalField(args, hpenvMutation)
 }
 
-internal val _hpenv by dslPatternFunction { args, _ -> args.toPattern(hpenvMutation) }
+internal val _hpenv by dslPatternMapper { args, callInfo -> { p -> p._hpenv(args, callInfo) } }
 internal val StrudelPattern._hpenv by dslPatternExtension { p, args, _ -> applyHpenv(p, args) }
 internal val String._hpenv by dslStringExtension { p, args, callInfo -> p._hpenv(args, callInfo) }
+internal val PatternMapperFn._hpenv by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpenv(args, callInfo))
+}
+
+internal val _hpe by dslPatternMapper { args, callInfo -> { p -> p._hpe(args, callInfo) } }
+internal val StrudelPattern._hpe by dslPatternExtension { p, args, _ -> applyHpenv(p, args) }
+internal val String._hpe by dslStringExtension { p, args, callInfo -> p._hpe(args, callInfo) }
+internal val PatternMapperFn._hpe by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_hpe(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the HPF envelope depth (modulation amount) in Hz.
@@ -1222,54 +2913,88 @@ internal val String._hpenv by dslStringExtension { p, args, callInfo -> p._hpenv
  * note("c4").hpf(200).hpenv("<500 5000>")     // subtle vs dramatic sweep per cycle
  * ```
  *
+ * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @alias hpe
  * @category effects
  * @tags hpenv, hpe, high pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-fun hpenv(depth: PatternLike): StrudelPattern = _hpenv(listOf(depth).asStrudelDslArgs())
-
-/** Sets the HPF envelope depth/amount on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hpenv(depth: PatternLike): StrudelPattern = this._hpenv(listOf(depth).asStrudelDslArgs())
+fun StrudelPattern.hpenv(depth: PatternLike? = null): StrudelPattern =
+    this._hpenv(listOfNotNull(depth).asStrudelDslArgs())
 
 /** Sets the HPF envelope depth/amount on a string pattern. */
 @StrudelDsl
-fun String.hpenv(depth: PatternLike): StrudelPattern = this._hpenv(listOf(depth).asStrudelDslArgs())
+fun String.hpenv(depth: PatternLike? = null): StrudelPattern =
+    this._hpenv(listOfNotNull(depth).asStrudelDslArgs())
 
-internal val _hpe by dslPatternFunction { args, _ -> args.toPattern(hpenvMutation) }
-internal val StrudelPattern._hpe by dslPatternExtension { p, args, _ -> applyHpenv(p, args) }
-internal val String._hpe by dslStringExtension { p, args, callInfo -> p._hpe(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the HPF envelope depth. */
+@StrudelDsl
+fun hpenv(depth: PatternLike? = null): PatternMapperFn = _hpenv(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the HPF envelope depth after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hpenv(depth: PatternLike? = null): PatternMapperFn =
+    _hpenv(listOfNotNull(depth).asStrudelDslArgs())
 
 /**
  * Alias for [hpenv]. Sets the HPF envelope depth.
  *
+ * ```KlangScript
+ * note("c4").hpf(200).hpe(3000)   // alias for hpenv()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(hpf(200).hpe(3000))   // chained PatternMapperFn
+ * ```
+ *
+ * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the HPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @alias hpenv
  * @category effects
  * @tags hpe, hpenv, high pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-fun hpe(depth: PatternLike): StrudelPattern = _hpe(listOf(depth).asStrudelDslArgs())
-
-/** Alias for [hpenv] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.hpe(depth: PatternLike): StrudelPattern = this._hpe(listOf(depth).asStrudelDslArgs())
+fun StrudelPattern.hpe(depth: PatternLike? = null): StrudelPattern =
+    this._hpe(listOfNotNull(depth).asStrudelDslArgs())
 
 /** Alias for [hpenv] on a string pattern. */
 @StrudelDsl
-fun String.hpe(depth: PatternLike): StrudelPattern = this._hpe(listOf(depth).asStrudelDslArgs())
+fun String.hpe(depth: PatternLike? = null): StrudelPattern =
+    this._hpe(listOfNotNull(depth).asStrudelDslArgs())
 
-// -- bpattack() - Band Pass Filter Envelope Attack ----------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the HPF envelope depth (alias for [hpenv]). */
+@StrudelDsl
+fun hpe(depth: PatternLike? = null): PatternMapperFn = _hpe(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets HPF envelope depth (alias for [hpenv]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.hpe(depth: PatternLike? = null): PatternMapperFn =
+    _hpe(listOfNotNull(depth).asStrudelDslArgs())
+
+// -- bpattack() / bpa() - Band Pass Filter Envelope Attack -------------------------------------------------------------
 
 private val bpattackMutation = voiceModifier { copy(bpattack = it?.asDoubleOrNull()) }
 
 fun applyBpattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, bpattackMutation)
+    return source._liftOrReinterpretNumericalField(args, bpattackMutation)
 }
 
-internal val _bpattack by dslPatternFunction { args, _ -> args.toPattern(bpattackMutation) }
+internal val _bpattack by dslPatternMapper { args, callInfo -> { p -> p._bpattack(args, callInfo) } }
 internal val StrudelPattern._bpattack by dslPatternExtension { p, args, _ -> applyBpattack(p, args) }
 internal val String._bpattack by dslStringExtension { p, args, callInfo -> p._bpattack(args, callInfo) }
+internal val PatternMapperFn._bpattack by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpattack(args, callInfo))
+}
+
+internal val _bpa by dslPatternMapper { args, callInfo -> { p -> p._bpa(args, callInfo) } }
+internal val StrudelPattern._bpa by dslPatternExtension { p, args, _ -> applyBpattack(p, args) }
+internal val String._bpa by dslStringExtension { p, args, callInfo -> p._bpa(args, callInfo) }
+internal val PatternMapperFn._bpa by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpa(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the BPF envelope attack time in seconds.
@@ -1285,54 +3010,88 @@ internal val String._bpattack by dslStringExtension { p, args, callInfo -> p._bp
  * note("c4").bpattack("<0.01 0.5>")               // fast vs slow filter attack per cycle
  * ```
  *
+ * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF attack time, or [StrudelPattern] when called on a pattern.
  * @alias bpa
  * @category effects
  * @tags bpattack, bpa, band pass filter, envelope, attack
  */
 @StrudelDsl
-fun bpattack(seconds: PatternLike): StrudelPattern = _bpattack(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the BPF envelope attack time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bpattack(seconds: PatternLike): StrudelPattern = this._bpattack(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.bpattack(seconds: PatternLike? = null): StrudelPattern =
+    this._bpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the BPF envelope attack time on a string pattern. */
 @StrudelDsl
-fun String.bpattack(seconds: PatternLike): StrudelPattern = this._bpattack(listOf(seconds).asStrudelDslArgs())
+fun String.bpattack(seconds: PatternLike? = null): StrudelPattern =
+    this._bpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _bpa by dslPatternFunction { args, _ -> args.toPattern(bpattackMutation) }
-internal val StrudelPattern._bpa by dslPatternExtension { p, args, _ -> applyBpattack(p, args) }
-internal val String._bpa by dslStringExtension { p, args, callInfo -> p._bpa(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the BPF envelope attack time. */
+@StrudelDsl
+fun bpattack(seconds: PatternLike? = null): PatternMapperFn = _bpattack(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the BPF envelope attack time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bpattack(seconds: PatternLike? = null): PatternMapperFn =
+    _bpattack(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [bpattack]. Sets the BPF envelope attack time.
  *
+ * ```KlangScript
+ * note("c4").bandf(500).bpa(0.1)   // alias for bpattack()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(bandf(500).bpa(0.1))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF attack time, or [StrudelPattern] when called on a pattern.
  * @alias bpattack
  * @category effects
  * @tags bpa, bpattack, band pass filter, envelope, attack
  */
 @StrudelDsl
-fun bpa(seconds: PatternLike): StrudelPattern = _bpa(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [bpattack] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bpa(seconds: PatternLike): StrudelPattern = this._bpa(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.bpa(seconds: PatternLike? = null): StrudelPattern =
+    this._bpa(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [bpattack] on a string pattern. */
 @StrudelDsl
-fun String.bpa(seconds: PatternLike): StrudelPattern = this._bpa(listOf(seconds).asStrudelDslArgs())
+fun String.bpa(seconds: PatternLike? = null): StrudelPattern =
+    this._bpa(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- bpdecay() - Band Pass Filter Envelope Decay ------------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the BPF envelope attack time (alias for [bpattack]). */
+@StrudelDsl
+fun bpa(seconds: PatternLike? = null): PatternMapperFn = _bpa(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets BPF attack (alias for [bpattack]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bpa(seconds: PatternLike? = null): PatternMapperFn =
+    _bpa(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- bpdecay() / bpd() - Band Pass Filter Envelope Decay ---------------------------------------------------------------
 
 private val bpdecayMutation = voiceModifier { copy(bpdecay = it?.asDoubleOrNull()) }
 
 fun applyBpdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, bpdecayMutation)
+    return source._liftOrReinterpretNumericalField(args, bpdecayMutation)
 }
 
-internal val _bpdecay by dslPatternFunction { args, _ -> args.toPattern(bpdecayMutation) }
+internal val _bpdecay by dslPatternMapper { args, callInfo -> { p -> p._bpdecay(args, callInfo) } }
 internal val StrudelPattern._bpdecay by dslPatternExtension { p, args, _ -> applyBpdecay(p, args) }
 internal val String._bpdecay by dslStringExtension { p, args, callInfo -> p._bpdecay(args, callInfo) }
+internal val PatternMapperFn._bpdecay by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpdecay(args, callInfo))
+}
+
+internal val _bpd by dslPatternMapper { args, callInfo -> { p -> p._bpd(args, callInfo) } }
+internal val StrudelPattern._bpd by dslPatternExtension { p, args, _ -> applyBpdecay(p, args) }
+internal val String._bpd by dslStringExtension { p, args, callInfo -> p._bpd(args, callInfo) }
+internal val PatternMapperFn._bpd by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpd(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the BPF envelope decay time in seconds.
@@ -1348,54 +3107,88 @@ internal val String._bpdecay by dslStringExtension { p, args, callInfo -> p._bpd
  * note("c4").bpdecay("<0.05 0.5>")               // short vs long filter decay per cycle
  * ```
  *
+ * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF decay time, or [StrudelPattern] when called on a pattern.
  * @alias bpd
  * @category effects
  * @tags bpdecay, bpd, band pass filter, envelope, decay
  */
 @StrudelDsl
-fun bpdecay(seconds: PatternLike): StrudelPattern = _bpdecay(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the BPF envelope decay time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bpdecay(seconds: PatternLike): StrudelPattern = this._bpdecay(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.bpdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._bpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the BPF envelope decay time on a string pattern. */
 @StrudelDsl
-fun String.bpdecay(seconds: PatternLike): StrudelPattern = this._bpdecay(listOf(seconds).asStrudelDslArgs())
+fun String.bpdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._bpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _bpd by dslPatternFunction { args, _ -> args.toPattern(bpdecayMutation) }
-internal val StrudelPattern._bpd by dslPatternExtension { p, args, _ -> applyBpdecay(p, args) }
-internal val String._bpd by dslStringExtension { p, args, callInfo -> p._bpd(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the BPF envelope decay time. */
+@StrudelDsl
+fun bpdecay(seconds: PatternLike? = null): PatternMapperFn = _bpdecay(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the BPF envelope decay time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bpdecay(seconds: PatternLike? = null): PatternMapperFn =
+    _bpdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [bpdecay]. Sets the BPF envelope decay time.
  *
+ * ```KlangScript
+ * note("c4").bandf(500).bpd(0.2)   // alias for bpdecay()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(bandf(500).bpd(0.2))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF decay time, or [StrudelPattern] when called on a pattern.
  * @alias bpdecay
  * @category effects
  * @tags bpd, bpdecay, band pass filter, envelope, decay
  */
 @StrudelDsl
-fun bpd(seconds: PatternLike): StrudelPattern = _bpd(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [bpdecay] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bpd(seconds: PatternLike): StrudelPattern = this._bpd(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.bpd(seconds: PatternLike? = null): StrudelPattern =
+    this._bpd(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [bpdecay] on a string pattern. */
 @StrudelDsl
-fun String.bpd(seconds: PatternLike): StrudelPattern = this._bpd(listOf(seconds).asStrudelDslArgs())
+fun String.bpd(seconds: PatternLike? = null): StrudelPattern =
+    this._bpd(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- bpsustain() - Band Pass Filter Envelope Sustain --------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the BPF envelope decay time (alias for [bpdecay]). */
+@StrudelDsl
+fun bpd(seconds: PatternLike? = null): PatternMapperFn = _bpd(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets BPF decay (alias for [bpdecay]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bpd(seconds: PatternLike? = null): PatternMapperFn =
+    _bpd(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- bpsustain() / bps() - Band Pass Filter Envelope Sustain -----------------------------------------------------------
 
 private val bpsustainMutation = voiceModifier { copy(bpsustain = it?.asDoubleOrNull()) }
 
 fun applyBpsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, bpsustainMutation)
+    return source._liftOrReinterpretNumericalField(args, bpsustainMutation)
 }
 
-internal val _bpsustain by dslPatternFunction { args, _ -> args.toPattern(bpsustainMutation) }
+internal val _bpsustain by dslPatternMapper { args, callInfo -> { p -> p._bpsustain(args, callInfo) } }
 internal val StrudelPattern._bpsustain by dslPatternExtension { p, args, _ -> applyBpsustain(p, args) }
 internal val String._bpsustain by dslStringExtension { p, args, callInfo -> p._bpsustain(args, callInfo) }
+internal val PatternMapperFn._bpsustain by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpsustain(args, callInfo))
+}
+
+internal val _bps by dslPatternMapper { args, callInfo -> { p -> p._bps(args, callInfo) } }
+internal val StrudelPattern._bps by dslPatternExtension { p, args, _ -> applyBpsustain(p, args) }
+internal val String._bps by dslStringExtension { p, args, callInfo -> p._bps(args, callInfo) }
+internal val PatternMapperFn._bps by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bps(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the BPF envelope sustain level (0–1).
@@ -1412,54 +3205,88 @@ internal val String._bpsustain by dslStringExtension { p, args, callInfo -> p._b
  * note("c4").bpsustain("<0 1>")                      // closed vs fully open sustain
  * ```
  *
+ * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF sustain level, or [StrudelPattern] when called on a pattern.
  * @alias bps
  * @category effects
  * @tags bpsustain, bps, band pass filter, envelope, sustain
  */
 @StrudelDsl
-fun bpsustain(level: PatternLike): StrudelPattern = _bpsustain(listOf(level).asStrudelDslArgs())
-
-/** Sets the BPF envelope sustain level on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bpsustain(level: PatternLike): StrudelPattern = this._bpsustain(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.bpsustain(level: PatternLike? = null): StrudelPattern =
+    this._bpsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /** Sets the BPF envelope sustain level on a string pattern. */
 @StrudelDsl
-fun String.bpsustain(level: PatternLike): StrudelPattern = this._bpsustain(listOf(level).asStrudelDslArgs())
+fun String.bpsustain(level: PatternLike? = null): StrudelPattern =
+    this._bpsustain(listOfNotNull(level).asStrudelDslArgs())
 
-internal val _bps by dslPatternFunction { args, _ -> args.toPattern(bpsustainMutation) }
-internal val StrudelPattern._bps by dslPatternExtension { p, args, _ -> applyBpsustain(p, args) }
-internal val String._bps by dslStringExtension { p, args, callInfo -> p._bps(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the BPF envelope sustain level. */
+@StrudelDsl
+fun bpsustain(level: PatternLike? = null): PatternMapperFn = _bpsustain(listOfNotNull(level).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the BPF envelope sustain level after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bpsustain(level: PatternLike? = null): PatternMapperFn =
+    _bpsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /**
  * Alias for [bpsustain]. Sets the BPF envelope sustain level.
  *
+ * ```KlangScript
+ * note("c4").bandf(500).bps(0.5)   // alias for bpsustain()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(bandf(500).bps(0.5))   // chained PatternMapperFn
+ * ```
+ *
+ * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF sustain level, or [StrudelPattern] when called on a pattern.
  * @alias bpsustain
  * @category effects
  * @tags bps, bpsustain, band pass filter, envelope, sustain
  */
 @StrudelDsl
-fun bps(level: PatternLike): StrudelPattern = _bps(listOf(level).asStrudelDslArgs())
-
-/** Alias for [bpsustain] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bps(level: PatternLike): StrudelPattern = this._bps(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.bps(level: PatternLike? = null): StrudelPattern =
+    this._bps(listOfNotNull(level).asStrudelDslArgs())
 
 /** Alias for [bpsustain] on a string pattern. */
 @StrudelDsl
-fun String.bps(level: PatternLike): StrudelPattern = this._bps(listOf(level).asStrudelDslArgs())
+fun String.bps(level: PatternLike? = null): StrudelPattern =
+    this._bps(listOfNotNull(level).asStrudelDslArgs())
 
-// -- bprelease() - Band Pass Filter Envelope Release --------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the BPF envelope sustain level (alias for [bpsustain]). */
+@StrudelDsl
+fun bps(level: PatternLike? = null): PatternMapperFn = _bps(listOfNotNull(level).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets BPF sustain (alias for [bpsustain]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bps(level: PatternLike? = null): PatternMapperFn =
+    _bps(listOfNotNull(level).asStrudelDslArgs())
+
+// -- bprelease() / bpr() - Band Pass Filter Envelope Release -----------------------------------------------------------
 
 private val bpreleaseMutation = voiceModifier { copy(bprelease = it?.asDoubleOrNull()) }
 
 fun applyBprelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, bpreleaseMutation)
+    return source._liftOrReinterpretNumericalField(args, bpreleaseMutation)
 }
 
-internal val _bprelease by dslPatternFunction { args, _ -> args.toPattern(bpreleaseMutation) }
+internal val _bprelease by dslPatternMapper { args, callInfo -> { p -> p._bprelease(args, callInfo) } }
 internal val StrudelPattern._bprelease by dslPatternExtension { p, args, _ -> applyBprelease(p, args) }
 internal val String._bprelease by dslStringExtension { p, args, callInfo -> p._bprelease(args, callInfo) }
+internal val PatternMapperFn._bprelease by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bprelease(args, callInfo))
+}
+
+internal val _bpr by dslPatternMapper { args, callInfo -> { p -> p._bpr(args, callInfo) } }
+internal val StrudelPattern._bpr by dslPatternExtension { p, args, _ -> applyBprelease(p, args) }
+internal val String._bpr by dslStringExtension { p, args, callInfo -> p._bpr(args, callInfo) }
+internal val PatternMapperFn._bpr by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpr(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the BPF envelope release time in seconds.
@@ -1475,54 +3302,88 @@ internal val String._bprelease by dslStringExtension { p, args, callInfo -> p._b
  * note("c4").bprelease("<0.05 1.0>")               // short vs long filter release per cycle
  * ```
  *
+ * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF release time, or [StrudelPattern] when called on a pattern.
  * @alias bpr
  * @category effects
  * @tags bprelease, bpr, band pass filter, envelope, release
  */
 @StrudelDsl
-fun bprelease(seconds: PatternLike): StrudelPattern = _bprelease(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the BPF envelope release time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bprelease(seconds: PatternLike): StrudelPattern = this._bprelease(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.bprelease(seconds: PatternLike? = null): StrudelPattern =
+    this._bprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the BPF envelope release time on a string pattern. */
 @StrudelDsl
-fun String.bprelease(seconds: PatternLike): StrudelPattern = this._bprelease(listOf(seconds).asStrudelDslArgs())
+fun String.bprelease(seconds: PatternLike? = null): StrudelPattern =
+    this._bprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _bpr by dslPatternFunction { args, _ -> args.toPattern(bpreleaseMutation) }
-internal val StrudelPattern._bpr by dslPatternExtension { p, args, _ -> applyBprelease(p, args) }
-internal val String._bpr by dslStringExtension { p, args, callInfo -> p._bpr(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the BPF envelope release time. */
+@StrudelDsl
+fun bprelease(seconds: PatternLike? = null): PatternMapperFn = _bprelease(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the BPF envelope release time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bprelease(seconds: PatternLike? = null): PatternMapperFn =
+    _bprelease(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [bprelease]. Sets the BPF envelope release time.
  *
+ * ```KlangScript
+ * note("c4").bandf(500).bpr(0.4)   // alias for bprelease()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(bandf(500).bpr(0.4))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF release time, or [StrudelPattern] when called on a pattern.
  * @alias bprelease
  * @category effects
  * @tags bpr, bprelease, band pass filter, envelope, release
  */
 @StrudelDsl
-fun bpr(seconds: PatternLike): StrudelPattern = _bpr(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [bprelease] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bpr(seconds: PatternLike): StrudelPattern = this._bpr(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.bpr(seconds: PatternLike? = null): StrudelPattern =
+    this._bpr(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [bprelease] on a string pattern. */
 @StrudelDsl
-fun String.bpr(seconds: PatternLike): StrudelPattern = this._bpr(listOf(seconds).asStrudelDslArgs())
+fun String.bpr(seconds: PatternLike? = null): StrudelPattern =
+    this._bpr(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- bpenv() - Band Pass Filter Envelope Depth --------------------------------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the BPF envelope release time (alias for [bprelease]). */
+@StrudelDsl
+fun bpr(seconds: PatternLike? = null): PatternMapperFn = _bpr(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets BPF release (alias for [bprelease]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bpr(seconds: PatternLike? = null): PatternMapperFn =
+    _bpr(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- bpenv() / bpe() - Band Pass Filter Envelope Depth -----------------------------------------------------------------
 
 private val bpenvMutation = voiceModifier { copy(bpenv = it?.asDoubleOrNull()) }
 
 fun applyBpenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, bpenvMutation)
+    return source._liftOrReinterpretNumericalField(args, bpenvMutation)
 }
 
-internal val _bpenv by dslPatternFunction { args, _ -> args.toPattern(bpenvMutation) }
+internal val _bpenv by dslPatternMapper { args, callInfo -> { p -> p._bpenv(args, callInfo) } }
 internal val StrudelPattern._bpenv by dslPatternExtension { p, args, _ -> applyBpenv(p, args) }
 internal val String._bpenv by dslStringExtension { p, args, callInfo -> p._bpenv(args, callInfo) }
+internal val PatternMapperFn._bpenv by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpenv(args, callInfo))
+}
+
+internal val _bpe by dslPatternMapper { args, callInfo -> { p -> p._bpe(args, callInfo) } }
+internal val StrudelPattern._bpe by dslPatternExtension { p, args, _ -> applyBpenv(p, args) }
+internal val String._bpe by dslStringExtension { p, args, callInfo -> p._bpe(args, callInfo) }
+internal val PatternMapperFn._bpe by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_bpe(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the BPF envelope depth (modulation amount) in Hz.
@@ -1539,54 +3400,88 @@ internal val String._bpenv by dslStringExtension { p, args, callInfo -> p._bpenv
  * note("c4").bandf(300).bpenv("<500 5000>")     // subtle vs dramatic sweep per cycle
  * ```
  *
+ * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @alias bpe
  * @category effects
  * @tags bpenv, bpe, band pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-fun bpenv(depth: PatternLike): StrudelPattern = _bpenv(listOf(depth).asStrudelDslArgs())
-
-/** Sets the BPF envelope depth/amount on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bpenv(depth: PatternLike): StrudelPattern = this._bpenv(listOf(depth).asStrudelDslArgs())
+fun StrudelPattern.bpenv(depth: PatternLike? = null): StrudelPattern =
+    this._bpenv(listOfNotNull(depth).asStrudelDslArgs())
 
 /** Sets the BPF envelope depth/amount on a string pattern. */
 @StrudelDsl
-fun String.bpenv(depth: PatternLike): StrudelPattern = this._bpenv(listOf(depth).asStrudelDslArgs())
+fun String.bpenv(depth: PatternLike? = null): StrudelPattern =
+    this._bpenv(listOfNotNull(depth).asStrudelDslArgs())
 
-internal val _bpe by dslPatternFunction { args, _ -> args.toPattern(bpenvMutation) }
-internal val StrudelPattern._bpe by dslPatternExtension { p, args, _ -> applyBpenv(p, args) }
-internal val String._bpe by dslStringExtension { p, args, callInfo -> p._bpe(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the BPF envelope depth. */
+@StrudelDsl
+fun bpenv(depth: PatternLike? = null): PatternMapperFn = _bpenv(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the BPF envelope depth after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bpenv(depth: PatternLike? = null): PatternMapperFn =
+    _bpenv(listOfNotNull(depth).asStrudelDslArgs())
 
 /**
  * Alias for [bpenv]. Sets the BPF envelope depth.
  *
+ * ```KlangScript
+ * note("c4").bandf(200).bpe(3000)   // alias for bpenv()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(bandf(200).bpe(3000))   // chained PatternMapperFn
+ * ```
+ *
+ * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the BPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @alias bpenv
  * @category effects
  * @tags bpe, bpenv, band pass filter, envelope, depth, modulation
  */
 @StrudelDsl
-fun bpe(depth: PatternLike): StrudelPattern = _bpe(listOf(depth).asStrudelDslArgs())
-
-/** Alias for [bpenv] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.bpe(depth: PatternLike): StrudelPattern = this._bpe(listOf(depth).asStrudelDslArgs())
+fun StrudelPattern.bpe(depth: PatternLike? = null): StrudelPattern =
+    this._bpe(listOfNotNull(depth).asStrudelDslArgs())
 
 /** Alias for [bpenv] on a string pattern. */
 @StrudelDsl
-fun String.bpe(depth: PatternLike): StrudelPattern = this._bpe(listOf(depth).asStrudelDslArgs())
+fun String.bpe(depth: PatternLike? = null): StrudelPattern =
+    this._bpe(listOfNotNull(depth).asStrudelDslArgs())
 
-// -- nfattack() - Notch Filter Envelope Attack (NOT IN ORIGINAL STRUDEL) -------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the BPF envelope depth (alias for [bpenv]). */
+@StrudelDsl
+fun bpe(depth: PatternLike? = null): PatternMapperFn = _bpe(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets BPF envelope depth (alias for [bpenv]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.bpe(depth: PatternLike? = null): PatternMapperFn =
+    _bpe(listOfNotNull(depth).asStrudelDslArgs())
+
+// -- nfattack() / nfa() - Notch Filter Envelope Attack -----------------------------------------------------------------
 
 private val nfattackMutation = voiceModifier { copy(nfattack = it?.asDoubleOrNull()) }
 
 fun applyNfattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, nfattackMutation)
+    return source._liftOrReinterpretNumericalField(args, nfattackMutation)
 }
 
-internal val _nfattack by dslPatternFunction { args, _ -> args.toPattern(nfattackMutation) }
+internal val _nfattack by dslPatternMapper { args, callInfo -> { p -> p._nfattack(args, callInfo) } }
 internal val StrudelPattern._nfattack by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
 internal val String._nfattack by dslStringExtension { p, args, callInfo -> p._nfattack(args, callInfo) }
+internal val PatternMapperFn._nfattack by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfattack(args, callInfo))
+}
+
+internal val _nfa by dslPatternMapper { args, callInfo -> { p -> p._nfa(args, callInfo) } }
+internal val StrudelPattern._nfa by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
+internal val String._nfa by dslStringExtension { p, args, callInfo -> p._nfa(args, callInfo) }
+internal val PatternMapperFn._nfa by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfa(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the notch filter envelope attack time in seconds.
@@ -1602,54 +3497,88 @@ internal val String._nfattack by dslStringExtension { p, args, callInfo -> p._nf
  * s("bd").nfattack("<0.01 0.5>")                        // fast vs slow attack per cycle
  * ```
  *
+ * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter attack time, or [StrudelPattern] when called on a pattern.
  * @alias nfa
  * @category effects
  * @tags nfattack, nfa, notch filter, envelope, attack
  */
 @StrudelDsl
-fun nfattack(seconds: PatternLike): StrudelPattern = _nfattack(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the notch filter envelope attack time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfattack(seconds: PatternLike): StrudelPattern = this._nfattack(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.nfattack(seconds: PatternLike? = null): StrudelPattern =
+    this._nfattack(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the notch filter envelope attack time on a string pattern. */
 @StrudelDsl
-fun String.nfattack(seconds: PatternLike): StrudelPattern = this._nfattack(listOf(seconds).asStrudelDslArgs())
+fun String.nfattack(seconds: PatternLike? = null): StrudelPattern =
+    this._nfattack(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _nfa by dslPatternFunction { args, _ -> args.toPattern(nfattackMutation) }
-internal val StrudelPattern._nfa by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
-internal val String._nfa by dslStringExtension { p, args, callInfo -> p._nfa(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the notch filter envelope attack time. */
+@StrudelDsl
+fun nfattack(seconds: PatternLike? = null): PatternMapperFn = _nfattack(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the notch filter envelope attack time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfattack(seconds: PatternLike? = null): PatternMapperFn =
+    _nfattack(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [nfattack]. Sets the notch filter envelope attack time.
  *
+ * ```KlangScript
+ * note("c4").notchf(1000).nfa(0.1)   // alias for nfattack()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(notchf(1000).nfa(0.1))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter attack time, or [StrudelPattern] when called on a pattern.
  * @alias nfattack
  * @category effects
  * @tags nfa, nfattack, notch filter, envelope, attack
  */
 @StrudelDsl
-fun nfa(seconds: PatternLike): StrudelPattern = _nfa(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [nfattack] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfa(seconds: PatternLike): StrudelPattern = this._nfa(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.nfa(seconds: PatternLike? = null): StrudelPattern =
+    this._nfa(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [nfattack] on a string pattern. */
 @StrudelDsl
-fun String.nfa(seconds: PatternLike): StrudelPattern = this._nfa(listOf(seconds).asStrudelDslArgs())
+fun String.nfa(seconds: PatternLike? = null): StrudelPattern =
+    this._nfa(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- nfdecay() - Notch Filter Envelope Decay (NOT IN ORIGINAL STRUDEL) ---------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the notch filter envelope attack time (alias for [nfattack]). */
+@StrudelDsl
+fun nfa(seconds: PatternLike? = null): PatternMapperFn = _nfa(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets notch filter attack (alias for [nfattack]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfa(seconds: PatternLike? = null): PatternMapperFn =
+    _nfa(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- nfdecay() / nfd() - Notch Filter Envelope Decay -------------------------------------------------------------------
 
 private val nfdecayMutation = voiceModifier { copy(nfdecay = it?.asDoubleOrNull()) }
 
 fun applyNfdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, nfdecayMutation)
+    return source._liftOrReinterpretNumericalField(args, nfdecayMutation)
 }
 
-internal val _nfdecay by dslPatternFunction { args, _ -> args.toPattern(nfdecayMutation) }
+internal val _nfdecay by dslPatternMapper { args, callInfo -> { p -> p._nfdecay(args, callInfo) } }
 internal val StrudelPattern._nfdecay by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
 internal val String._nfdecay by dslStringExtension { p, args, callInfo -> p._nfdecay(args, callInfo) }
+internal val PatternMapperFn._nfdecay by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfdecay(args, callInfo))
+}
+
+internal val _nfd by dslPatternMapper { args, callInfo -> { p -> p._nfd(args, callInfo) } }
+internal val StrudelPattern._nfd by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
+internal val String._nfd by dslStringExtension { p, args, callInfo -> p._nfd(args, callInfo) }
+internal val PatternMapperFn._nfd by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfd(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the notch filter envelope decay time in seconds.
@@ -1665,54 +3594,88 @@ internal val String._nfdecay by dslStringExtension { p, args, callInfo -> p._nfd
  * s("bd").nfdecay("<0.05 0.5>")                        // short vs long decay per cycle
  * ```
  *
+ * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter decay time, or [StrudelPattern] when called on a pattern.
  * @alias nfd
  * @category effects
  * @tags nfdecay, nfd, notch filter, envelope, decay
  */
 @StrudelDsl
-fun nfdecay(seconds: PatternLike): StrudelPattern = _nfdecay(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the notch filter envelope decay time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfdecay(seconds: PatternLike): StrudelPattern = this._nfdecay(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.nfdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._nfdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the notch filter envelope decay time on a string pattern. */
 @StrudelDsl
-fun String.nfdecay(seconds: PatternLike): StrudelPattern = this._nfdecay(listOf(seconds).asStrudelDslArgs())
+fun String.nfdecay(seconds: PatternLike? = null): StrudelPattern =
+    this._nfdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _nfd by dslPatternFunction { args, _ -> args.toPattern(nfdecayMutation) }
-internal val StrudelPattern._nfd by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
-internal val String._nfd by dslStringExtension { p, args, callInfo -> p._nfd(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the notch filter envelope decay time. */
+@StrudelDsl
+fun nfdecay(seconds: PatternLike? = null): PatternMapperFn = _nfdecay(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the notch filter envelope decay time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfdecay(seconds: PatternLike? = null): PatternMapperFn =
+    _nfdecay(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [nfdecay]. Sets the notch filter envelope decay time.
  *
+ * ```KlangScript
+ * note("c4").notchf(1000).nfd(0.2)   // alias for nfdecay()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(notchf(1000).nfd(0.2))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter decay time, or [StrudelPattern] when called on a pattern.
  * @alias nfdecay
  * @category effects
  * @tags nfd, nfdecay, notch filter, envelope, decay
  */
 @StrudelDsl
-fun nfd(seconds: PatternLike): StrudelPattern = _nfd(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [nfdecay] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfd(seconds: PatternLike): StrudelPattern = this._nfd(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.nfd(seconds: PatternLike? = null): StrudelPattern =
+    this._nfd(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [nfdecay] on a string pattern. */
 @StrudelDsl
-fun String.nfd(seconds: PatternLike): StrudelPattern = this._nfd(listOf(seconds).asStrudelDslArgs())
+fun String.nfd(seconds: PatternLike? = null): StrudelPattern =
+    this._nfd(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- nfsustain() - Notch Filter Envelope Sustain (NOT IN ORIGINAL STRUDEL) -----------------------------------------------
+/** Creates a [PatternMapperFn] that sets the notch filter envelope decay time (alias for [nfdecay]). */
+@StrudelDsl
+fun nfd(seconds: PatternLike? = null): PatternMapperFn = _nfd(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets notch filter decay (alias for [nfdecay]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfd(seconds: PatternLike? = null): PatternMapperFn =
+    _nfd(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- nfsustain() / nfs() - Notch Filter Envelope Sustain ---------------------------------------------------------------
 
 private val nfsustainMutation = voiceModifier { copy(nfsustain = it?.asDoubleOrNull()) }
 
 fun applyNfsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, nfsustainMutation)
+    return source._liftOrReinterpretNumericalField(args, nfsustainMutation)
 }
 
-internal val _nfsustain by dslPatternFunction { args, _ -> args.toPattern(nfsustainMutation) }
+internal val _nfsustain by dslPatternMapper { args, callInfo -> { p -> p._nfsustain(args, callInfo) } }
 internal val StrudelPattern._nfsustain by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
 internal val String._nfsustain by dslStringExtension { p, args, callInfo -> p._nfsustain(args, callInfo) }
+internal val PatternMapperFn._nfsustain by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfsustain(args, callInfo))
+}
+
+internal val _nfs by dslPatternMapper { args, callInfo -> { p -> p._nfs(args, callInfo) } }
+internal val StrudelPattern._nfs by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
+internal val String._nfs by dslStringExtension { p, args, callInfo -> p._nfs(args, callInfo) }
+internal val PatternMapperFn._nfs by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfs(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the notch filter envelope sustain level (0–1).
@@ -1729,54 +3692,88 @@ internal val String._nfsustain by dslStringExtension { p, args, callInfo -> p._n
  * note("c4").nfsustain("<0 1>")                         // closed vs fully open sustain
  * ```
  *
+ * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter sustain level, or [StrudelPattern] when called on a pattern.
  * @alias nfs
  * @category effects
  * @tags nfsustain, nfs, notch filter, envelope, sustain
  */
 @StrudelDsl
-fun nfsustain(level: PatternLike): StrudelPattern = _nfsustain(listOf(level).asStrudelDslArgs())
-
-/** Sets the notch filter envelope sustain level on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfsustain(level: PatternLike): StrudelPattern = this._nfsustain(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.nfsustain(level: PatternLike? = null): StrudelPattern =
+    this._nfsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /** Sets the notch filter envelope sustain level on a string pattern. */
 @StrudelDsl
-fun String.nfsustain(level: PatternLike): StrudelPattern = this._nfsustain(listOf(level).asStrudelDslArgs())
+fun String.nfsustain(level: PatternLike? = null): StrudelPattern =
+    this._nfsustain(listOfNotNull(level).asStrudelDslArgs())
 
-internal val _nfs by dslPatternFunction { args, _ -> args.toPattern(nfsustainMutation) }
-internal val StrudelPattern._nfs by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
-internal val String._nfs by dslStringExtension { p, args, callInfo -> p._nfs(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level. */
+@StrudelDsl
+fun nfsustain(level: PatternLike? = null): PatternMapperFn = _nfsustain(listOfNotNull(level).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the notch filter sustain level after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfsustain(level: PatternLike? = null): PatternMapperFn =
+    _nfsustain(listOfNotNull(level).asStrudelDslArgs())
 
 /**
  * Alias for [nfsustain]. Sets the notch filter envelope sustain level.
  *
+ * ```KlangScript
+ * note("c4").notchf(1000).nfs(0.5)   // alias for nfsustain()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(notchf(1000).nfs(0.5))   // chained PatternMapperFn
+ * ```
+ *
+ * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter sustain level, or [StrudelPattern] when called on a pattern.
  * @alias nfsustain
  * @category effects
  * @tags nfs, nfsustain, notch filter, envelope, sustain
  */
 @StrudelDsl
-fun nfs(level: PatternLike): StrudelPattern = _nfs(listOf(level).asStrudelDslArgs())
-
-/** Alias for [nfsustain] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfs(level: PatternLike): StrudelPattern = this._nfs(listOf(level).asStrudelDslArgs())
+fun StrudelPattern.nfs(level: PatternLike? = null): StrudelPattern =
+    this._nfs(listOfNotNull(level).asStrudelDslArgs())
 
 /** Alias for [nfsustain] on a string pattern. */
 @StrudelDsl
-fun String.nfs(level: PatternLike): StrudelPattern = this._nfs(listOf(level).asStrudelDslArgs())
+fun String.nfs(level: PatternLike? = null): StrudelPattern =
+    this._nfs(listOfNotNull(level).asStrudelDslArgs())
 
-// -- nfrelease() - Notch Filter Envelope Release (NOT IN ORIGINAL STRUDEL) -----------------------------------------------
+/** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level (alias for [nfsustain]). */
+@StrudelDsl
+fun nfs(level: PatternLike? = null): PatternMapperFn = _nfs(listOfNotNull(level).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets notch filter sustain (alias for [nfsustain]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfs(level: PatternLike? = null): PatternMapperFn =
+    _nfs(listOfNotNull(level).asStrudelDslArgs())
+
+// -- nfrelease() / nfr() - Notch Filter Envelope Release ---------------------------------------------------------------
 
 private val nfreleaseMutation = voiceModifier { copy(nfrelease = it?.asDoubleOrNull()) }
 
 fun applyNfrelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, nfreleaseMutation)
+    return source._liftOrReinterpretNumericalField(args, nfreleaseMutation)
 }
 
-internal val _nfrelease by dslPatternFunction { args, _ -> args.toPattern(nfreleaseMutation) }
+internal val _nfrelease by dslPatternMapper { args, callInfo -> { p -> p._nfrelease(args, callInfo) } }
 internal val StrudelPattern._nfrelease by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
 internal val String._nfrelease by dslStringExtension { p, args, callInfo -> p._nfrelease(args, callInfo) }
+internal val PatternMapperFn._nfrelease by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfrelease(args, callInfo))
+}
+
+internal val _nfr by dslPatternMapper { args, callInfo -> { p -> p._nfr(args, callInfo) } }
+internal val StrudelPattern._nfr by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
+internal val String._nfr by dslStringExtension { p, args, callInfo -> p._nfr(args, callInfo) }
+internal val PatternMapperFn._nfr by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfr(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the notch filter envelope release time in seconds.
@@ -1792,54 +3789,88 @@ internal val String._nfrelease by dslStringExtension { p, args, callInfo -> p._n
  * s("bd").nfrelease("<0.05 1.0>")                        // short vs long release per cycle
  * ```
  *
+ * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter release time, or [StrudelPattern] when called on a pattern.
  * @alias nfr
  * @category effects
  * @tags nfrelease, nfr, notch filter, envelope, release
  */
 @StrudelDsl
-fun nfrelease(seconds: PatternLike): StrudelPattern = _nfrelease(listOf(seconds).asStrudelDslArgs())
-
-/** Sets the notch filter envelope release time on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfrelease(seconds: PatternLike): StrudelPattern = this._nfrelease(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.nfrelease(seconds: PatternLike? = null): StrudelPattern =
+    this._nfrelease(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Sets the notch filter envelope release time on a string pattern. */
 @StrudelDsl
-fun String.nfrelease(seconds: PatternLike): StrudelPattern = this._nfrelease(listOf(seconds).asStrudelDslArgs())
+fun String.nfrelease(seconds: PatternLike? = null): StrudelPattern =
+    this._nfrelease(listOfNotNull(seconds).asStrudelDslArgs())
 
-internal val _nfr by dslPatternFunction { args, _ -> args.toPattern(nfreleaseMutation) }
-internal val StrudelPattern._nfr by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
-internal val String._nfr by dslStringExtension { p, args, callInfo -> p._nfr(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the notch filter envelope release time. */
+@StrudelDsl
+fun nfrelease(seconds: PatternLike? = null): PatternMapperFn = _nfrelease(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the notch filter envelope release time after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfrelease(seconds: PatternLike? = null): PatternMapperFn =
+    _nfrelease(listOfNotNull(seconds).asStrudelDslArgs())
 
 /**
  * Alias for [nfrelease]. Sets the notch filter envelope release time.
  *
+ * ```KlangScript
+ * note("c4").notchf(1000).nfr(0.4)   // alias for nfrelease()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(notchf(1000).nfr(0.4))   // chained PatternMapperFn
+ * ```
+ *
+ * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter release time, or [StrudelPattern] when called on a pattern.
  * @alias nfrelease
  * @category effects
  * @tags nfr, nfrelease, notch filter, envelope, release
  */
 @StrudelDsl
-fun nfr(seconds: PatternLike): StrudelPattern = _nfr(listOf(seconds).asStrudelDslArgs())
-
-/** Alias for [nfrelease] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfr(seconds: PatternLike): StrudelPattern = this._nfr(listOf(seconds).asStrudelDslArgs())
+fun StrudelPattern.nfr(seconds: PatternLike? = null): StrudelPattern =
+    this._nfr(listOfNotNull(seconds).asStrudelDslArgs())
 
 /** Alias for [nfrelease] on a string pattern. */
 @StrudelDsl
-fun String.nfr(seconds: PatternLike): StrudelPattern = this._nfr(listOf(seconds).asStrudelDslArgs())
+fun String.nfr(seconds: PatternLike? = null): StrudelPattern =
+    this._nfr(listOfNotNull(seconds).asStrudelDslArgs())
 
-// -- nfenv() - Notch Filter Envelope Depth (NOT IN ORIGINAL STRUDEL) -----------------------------------------------------
+/** Creates a [PatternMapperFn] that sets the notch filter envelope release time (alias for [nfrelease]). */
+@StrudelDsl
+fun nfr(seconds: PatternLike? = null): PatternMapperFn = _nfr(listOfNotNull(seconds).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets notch filter release (alias for [nfrelease]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfr(seconds: PatternLike? = null): PatternMapperFn =
+    _nfr(listOfNotNull(seconds).asStrudelDslArgs())
+
+// -- nfenv() / nfe() - Notch Filter Envelope Depth ---------------------------------------------------------------------
 
 private val nfenvMutation = voiceModifier { copy(nfenv = it?.asDoubleOrNull()) }
 
 fun applyNfenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftNumericField(args, nfenvMutation)
+    return source._liftOrReinterpretNumericalField(args, nfenvMutation)
 }
 
-internal val _nfenv by dslPatternFunction { args, _ -> args.toPattern(nfenvMutation) }
+internal val _nfenv by dslPatternMapper { args, callInfo -> { p -> p._nfenv(args, callInfo) } }
 internal val StrudelPattern._nfenv by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
 internal val String._nfenv by dslStringExtension { p, args, callInfo -> p._nfenv(args, callInfo) }
+internal val PatternMapperFn._nfenv by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfenv(args, callInfo))
+}
+
+internal val _nfe by dslPatternMapper { args, callInfo -> { p -> p._nfe(args, callInfo) } }
+internal val StrudelPattern._nfe by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
+internal val String._nfe by dslStringExtension { p, args, callInfo -> p._nfe(args, callInfo) }
+internal val PatternMapperFn._nfe by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_nfe(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the notch filter envelope depth (modulation amount) in Hz.
@@ -1855,39 +3886,61 @@ internal val String._nfenv by dslStringExtension { p, args, callInfo -> p._nfenv
  * s("bd").notchf(500).nfenv("<1000 8000>")         // subtle vs dramatic sweep per cycle
  * ```
  *
+ * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [StrudelPattern] when called on a pattern.
  * @alias nfe
  * @category effects
  * @tags nfenv, nfe, notch filter, envelope, depth, modulation
  */
 @StrudelDsl
-fun nfenv(depth: PatternLike): StrudelPattern = _nfenv(listOf(depth).asStrudelDslArgs())
-
-/** Sets the notch filter envelope depth/amount on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfenv(depth: PatternLike): StrudelPattern = this._nfenv(listOf(depth).asStrudelDslArgs())
+fun StrudelPattern.nfenv(depth: PatternLike? = null): StrudelPattern =
+    this._nfenv(listOfNotNull(depth).asStrudelDslArgs())
 
 /** Sets the notch filter envelope depth/amount on a string pattern. */
 @StrudelDsl
-fun String.nfenv(depth: PatternLike): StrudelPattern = this._nfenv(listOf(depth).asStrudelDslArgs())
+fun String.nfenv(depth: PatternLike? = null): StrudelPattern =
+    this._nfenv(listOfNotNull(depth).asStrudelDslArgs())
 
-internal val _nfe by dslPatternFunction { args, _ -> args.toPattern(nfenvMutation) }
-internal val StrudelPattern._nfe by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
-internal val String._nfe by dslStringExtension { p, args, callInfo -> p._nfe(args, callInfo) }
+/** Creates a [PatternMapperFn] that sets the notch filter envelope depth. */
+@StrudelDsl
+fun nfenv(depth: PatternLike? = null): PatternMapperFn = _nfenv(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets the notch filter envelope depth after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfenv(depth: PatternLike? = null): PatternMapperFn =
+    _nfenv(listOfNotNull(depth).asStrudelDslArgs())
 
 /**
  * Alias for [nfenv]. Sets the notch filter envelope depth.
  *
+ * ```KlangScript
+ * note("c4").notchf(500).nfe(4000)   // alias for nfenv()
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").apply(notchf(500).nfe(4000))   // chained PatternMapperFn
+ * ```
+ *
+ * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [StrudelPattern] when called on a pattern.
  * @alias nfenv
  * @category effects
  * @tags nfe, nfenv, notch filter, envelope, depth, modulation
  */
 @StrudelDsl
-fun nfe(depth: PatternLike): StrudelPattern = _nfe(listOf(depth).asStrudelDslArgs())
-
-/** Alias for [nfenv] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.nfe(depth: PatternLike): StrudelPattern = this._nfe(listOf(depth).asStrudelDslArgs())
+fun StrudelPattern.nfe(depth: PatternLike? = null): StrudelPattern =
+    this._nfe(listOfNotNull(depth).asStrudelDslArgs())
 
 /** Alias for [nfenv] on a string pattern. */
 @StrudelDsl
-fun String.nfe(depth: PatternLike): StrudelPattern = this._nfe(listOf(depth).asStrudelDslArgs())
+fun String.nfe(depth: PatternLike? = null): StrudelPattern =
+    this._nfe(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a [PatternMapperFn] that sets the notch filter envelope depth (alias for [nfenv]). */
+@StrudelDsl
+fun nfe(depth: PatternLike? = null): PatternMapperFn = _nfe(listOfNotNull(depth).asStrudelDslArgs())
+
+/** Creates a chained [PatternMapperFn] that sets notch filter envelope depth (alias for [nfenv]) after the previous mapper. */
+@StrudelDsl
+fun PatternMapperFn.nfe(depth: PatternLike? = null): PatternMapperFn =
+    _nfe(listOfNotNull(depth).asStrudelDslArgs())

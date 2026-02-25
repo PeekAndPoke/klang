@@ -1,13 +1,66 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangNfdecaySpec : StringSpec({
 
-    "top-level nfdecay() sets VoiceData.nfdecay correctly" {
-        val p = nfdecay("0.5 1.0")
+    // ---- nfdecay ----
+
+    "nfdecay dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+
+        dslInterfaceTests(
+            "pattern.nfdecay(ctrl)" to seq(pat).nfdecay(ctrl),
+            "script pattern.nfdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").nfdecay("$ctrl")"""),
+            "string.nfdecay(ctrl)" to pat.nfdecay(ctrl),
+            "script string.nfdecay(ctrl)" to StrudelPattern.compile(""""$pat".nfdecay("$ctrl")"""),
+            "nfdecay(ctrl)" to seq(pat).apply(nfdecay(ctrl)),
+            "script nfdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfdecay("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.nfdecay shouldBe 0.5
+            events[1].data.nfdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfdecay | seq(\"0.5 1.0\").nfdecay()" {
+        val p = seq("0.5 1.0").nfdecay()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfdecay shouldBe 0.5
+            events[1].data.nfdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfdecay | \"0.5 1.0\".nfdecay()" {
+        val p = "0.5 1.0".nfdecay()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfdecay shouldBe 0.5
+            events[1].data.nfdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfdecay | seq(\"0.5 1.0\").apply(nfdecay())" {
+        val p = seq("0.5 1.0").apply(nfdecay())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfdecay shouldBe 0.5
+            events[1].data.nfdecay shouldBe 1.0
+        }
+    }
+
+    "nfdecay() sets VoiceData.nfdecay" {
+        val p = note("a b").apply(nfdecay("0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -40,12 +93,34 @@ class LangNfdecaySpec : StringSpec({
         events.map { it.data.nfdecay } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfd() alias works as top-level function" {
-        val p = nfd("0.3 0.7")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- nfd (alias) ----
 
-        events.size shouldBe 2
-        events.map { it.data.nfdecay } shouldBe listOf(0.3, 0.7)
+    "nfd dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+
+        dslInterfaceTests(
+            "pattern.nfd(ctrl)" to seq(pat).nfd(ctrl),
+            "script pattern.nfd(ctrl)" to StrudelPattern.compile("""seq("$pat").nfd("$ctrl")"""),
+            "string.nfd(ctrl)" to pat.nfd(ctrl),
+            "script string.nfd(ctrl)" to StrudelPattern.compile(""""$pat".nfd("$ctrl")"""),
+            "nfd(ctrl)" to seq(pat).apply(nfd(ctrl)),
+            "script nfd(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfd("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.nfdecay shouldBe 0.5
+            events[1].data.nfdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfdecay | seq(\"0.5 1.0\").nfd()" {
+        val p = seq("0.5 1.0").nfd()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfdecay shouldBe 0.5
+            events[1].data.nfdecay shouldBe 1.0
+        }
     }
 
     "nfd() alias works as pattern extension" {

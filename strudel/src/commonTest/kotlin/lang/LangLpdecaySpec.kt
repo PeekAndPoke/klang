@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangLpdecaySpec : StringSpec({
 
-    "lpdecay() sets StrudelVoiceData.lpdecay" {
-        val p = lpdecay("0.2 0.3")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- lpdecay ----
 
+    "lpdecay dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.lpdecay(ctrl)" to seq(pat).lpdecay(ctrl),
+            "script pattern.lpdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").lpdecay("$ctrl")"""),
+            "string.lpdecay(ctrl)" to pat.lpdecay(ctrl),
+            "script string.lpdecay(ctrl)" to StrudelPattern.compile(""""$pat".lpdecay("$ctrl")"""),
+            "lpdecay(ctrl)" to seq(pat).apply(lpdecay(ctrl)),
+            "script lpdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lpdecay("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.lpdecay shouldBe 0.5
+            events[1].data.lpdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lpdecay | seq(\"0.5 1.0\").lpdecay()" {
+        val p = seq("0.5 1.0").lpdecay()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lpdecay shouldBe 0.5
+            events[1].data.lpdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lpdecay | \"0.5 1.0\".lpdecay()" {
+        val p = "0.5 1.0".lpdecay()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lpdecay shouldBe 0.5
+            events[1].data.lpdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lpdecay | seq(\"0.5 1.0\").apply(lpdecay())" {
+        val p = seq("0.5 1.0").apply(lpdecay())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lpdecay shouldBe 0.5
+            events[1].data.lpdecay shouldBe 1.0
+        }
+    }
+
+    "lpdecay() sets VoiceData.lpdecay" {
+        val p = note("a b").apply(lpdecay("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.lpdecay shouldBe 0.2
-        events[1].data.lpdecay shouldBe 0.3
+        events.map { it.data.lpdecay } shouldBe listOf(0.5, 1.0)
     }
 
     "lpdecay() works as pattern extension" {
@@ -70,14 +120,40 @@ class LangLpdecaySpec : StringSpec({
         lpf.envelope?.decay shouldBe 0.2
     }
 
-    // Alias tests
+    // ---- lpd (alias) ----
 
-    "lpd() is an alias for lpdecay()" {
-        val p = lpd("0.25")
+    "lpd dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.lpd(ctrl)" to seq(pat).lpd(ctrl),
+            "script pattern.lpd(ctrl)" to StrudelPattern.compile("""seq("$pat").lpd("$ctrl")"""),
+            "string.lpd(ctrl)" to pat.lpd(ctrl),
+            "script string.lpd(ctrl)" to StrudelPattern.compile(""""$pat".lpd("$ctrl")"""),
+            "lpd(ctrl)" to seq(pat).apply(lpd(ctrl)),
+            "script lpd(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lpd("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.lpdecay shouldBe 0.5
+            events[1].data.lpdecay shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lpdecay | seq(\"0.5 1.0\").lpd()" {
+        val p = seq("0.5 1.0").lpd()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lpdecay shouldBe 0.5
+            events[1].data.lpdecay shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.lpdecay shouldBe 0.25
+    "lpd() sets VoiceData.lpdecay" {
+        val p = note("a b").apply(lpd("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.lpdecay } shouldBe listOf(0.5, 1.0)
     }
 
     "lpd() works as pattern extension" {

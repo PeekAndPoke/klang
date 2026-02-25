@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangLpenvSpec : StringSpec({
 
-    "lpenv() sets StrudelVoiceData.lpenv" {
-        val p = lpenv("0.5 0.7")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- lpenv ----
 
+    "lpenv dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.lpenv(ctrl)" to seq(pat).lpenv(ctrl),
+            "script pattern.lpenv(ctrl)" to StrudelPattern.compile("""seq("$pat").lpenv("$ctrl")"""),
+            "string.lpenv(ctrl)" to pat.lpenv(ctrl),
+            "script string.lpenv(ctrl)" to StrudelPattern.compile(""""$pat".lpenv("$ctrl")"""),
+            "lpenv(ctrl)" to seq(pat).apply(lpenv(ctrl)),
+            "script lpenv(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lpenv("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.lpenv shouldBe 0.5
+            events[1].data.lpenv shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lpenv | seq(\"0.5 1.0\").lpenv()" {
+        val p = seq("0.5 1.0").lpenv()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lpenv shouldBe 0.5
+            events[1].data.lpenv shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lpenv | \"0.5 1.0\".lpenv()" {
+        val p = "0.5 1.0".lpenv()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lpenv shouldBe 0.5
+            events[1].data.lpenv shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lpenv | seq(\"0.5 1.0\").apply(lpenv())" {
+        val p = seq("0.5 1.0").apply(lpenv())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lpenv shouldBe 0.5
+            events[1].data.lpenv shouldBe 1.0
+        }
+    }
+
+    "lpenv() sets VoiceData.lpenv" {
+        val p = note("a b").apply(lpenv("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.lpenv shouldBe 0.5
-        events[1].data.lpenv shouldBe 0.7
+        events.map { it.data.lpenv } shouldBe listOf(0.5, 1.0)
     }
 
     "lpenv() works as pattern extension" {
@@ -70,14 +120,40 @@ class LangLpenvSpec : StringSpec({
         lpf.envelope?.depth shouldBe 0.7
     }
 
-    // Alias tests
+    // ---- lpe (alias) ----
 
-    "lpe() is an alias for lpenv()" {
-        val p = lpe("0.6")
+    "lpe dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.lpe(ctrl)" to seq(pat).lpe(ctrl),
+            "script pattern.lpe(ctrl)" to StrudelPattern.compile("""seq("$pat").lpe("$ctrl")"""),
+            "string.lpe(ctrl)" to pat.lpe(ctrl),
+            "script string.lpe(ctrl)" to StrudelPattern.compile(""""$pat".lpe("$ctrl")"""),
+            "lpe(ctrl)" to seq(pat).apply(lpe(ctrl)),
+            "script lpe(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lpe("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.lpenv shouldBe 0.5
+            events[1].data.lpenv shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as lpenv | seq(\"0.5 1.0\").lpe()" {
+        val p = seq("0.5 1.0").lpe()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.lpenv shouldBe 0.5
+            events[1].data.lpenv shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.lpenv shouldBe 0.6
+    "lpe() sets VoiceData.lpenv" {
+        val p = note("a b").apply(lpe("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.lpenv } shouldBe listOf(0.5, 1.0)
     }
 
     "lpe() works as pattern extension" {

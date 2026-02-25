@@ -1,13 +1,66 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangNfsustainSpec : StringSpec({
 
-    "top-level nfsustain() sets VoiceData.nfsustain correctly" {
-        val p = nfsustain("0.5 1.0")
+    // ---- nfsustain ----
+
+    "nfsustain dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+
+        dslInterfaceTests(
+            "pattern.nfsustain(ctrl)" to seq(pat).nfsustain(ctrl),
+            "script pattern.nfsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").nfsustain("$ctrl")"""),
+            "string.nfsustain(ctrl)" to pat.nfsustain(ctrl),
+            "script string.nfsustain(ctrl)" to StrudelPattern.compile(""""$pat".nfsustain("$ctrl")"""),
+            "nfsustain(ctrl)" to seq(pat).apply(nfsustain(ctrl)),
+            "script nfsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfsustain("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.nfsustain shouldBe 0.5
+            events[1].data.nfsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfsustain | seq(\"0.5 1.0\").nfsustain()" {
+        val p = seq("0.5 1.0").nfsustain()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfsustain shouldBe 0.5
+            events[1].data.nfsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfsustain | \"0.5 1.0\".nfsustain()" {
+        val p = "0.5 1.0".nfsustain()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfsustain shouldBe 0.5
+            events[1].data.nfsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfsustain | seq(\"0.5 1.0\").apply(nfsustain())" {
+        val p = seq("0.5 1.0").apply(nfsustain())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfsustain shouldBe 0.5
+            events[1].data.nfsustain shouldBe 1.0
+        }
+    }
+
+    "nfsustain() sets VoiceData.nfsustain" {
+        val p = note("a b").apply(nfsustain("0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -40,12 +93,34 @@ class LangNfsustainSpec : StringSpec({
         events.map { it.data.nfsustain } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfs() alias works as top-level function" {
-        val p = nfs("0.3 0.7")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- nfs (alias) ----
 
-        events.size shouldBe 2
-        events.map { it.data.nfsustain } shouldBe listOf(0.3, 0.7)
+    "nfs dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+
+        dslInterfaceTests(
+            "pattern.nfs(ctrl)" to seq(pat).nfs(ctrl),
+            "script pattern.nfs(ctrl)" to StrudelPattern.compile("""seq("$pat").nfs("$ctrl")"""),
+            "string.nfs(ctrl)" to pat.nfs(ctrl),
+            "script string.nfs(ctrl)" to StrudelPattern.compile(""""$pat".nfs("$ctrl")"""),
+            "nfs(ctrl)" to seq(pat).apply(nfs(ctrl)),
+            "script nfs(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfs("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.nfsustain shouldBe 0.5
+            events[1].data.nfsustain shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfsustain | seq(\"0.5 1.0\").nfs()" {
+        val p = seq("0.5 1.0").nfs()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfsustain shouldBe 0.5
+            events[1].data.nfsustain shouldBe 1.0
+        }
     }
 
     "nfs() alias works as pattern extension" {

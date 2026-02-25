@@ -1,13 +1,66 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangNfreleaseSpec : StringSpec({
 
-    "top-level nfrelease() sets VoiceData.nfrelease correctly" {
-        val p = nfrelease("0.5 1.0")
+    // ---- nfrelease ----
+
+    "nfrelease dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+
+        dslInterfaceTests(
+            "pattern.nfrelease(ctrl)" to seq(pat).nfrelease(ctrl),
+            "script pattern.nfrelease(ctrl)" to StrudelPattern.compile("""seq("$pat").nfrelease("$ctrl")"""),
+            "string.nfrelease(ctrl)" to pat.nfrelease(ctrl),
+            "script string.nfrelease(ctrl)" to StrudelPattern.compile(""""$pat".nfrelease("$ctrl")"""),
+            "nfrelease(ctrl)" to seq(pat).apply(nfrelease(ctrl)),
+            "script nfrelease(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfrelease("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.nfrelease shouldBe 0.5
+            events[1].data.nfrelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfrelease | seq(\"0.5 1.0\").nfrelease()" {
+        val p = seq("0.5 1.0").nfrelease()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfrelease shouldBe 0.5
+            events[1].data.nfrelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfrelease | \"0.5 1.0\".nfrelease()" {
+        val p = "0.5 1.0".nfrelease()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfrelease shouldBe 0.5
+            events[1].data.nfrelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfrelease | seq(\"0.5 1.0\").apply(nfrelease())" {
+        val p = seq("0.5 1.0").apply(nfrelease())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfrelease shouldBe 0.5
+            events[1].data.nfrelease shouldBe 1.0
+        }
+    }
+
+    "nfrelease() sets VoiceData.nfrelease" {
+        val p = note("a b").apply(nfrelease("0.5 1.0"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -40,12 +93,34 @@ class LangNfreleaseSpec : StringSpec({
         events.map { it.data.nfrelease } shouldBe listOf(0.5, 1.0)
     }
 
-    "nfr() alias works as top-level function" {
-        val p = nfr("0.3 0.7")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- nfr (alias) ----
 
-        events.size shouldBe 2
-        events.map { it.data.nfrelease } shouldBe listOf(0.3, 0.7)
+    "nfr dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+
+        dslInterfaceTests(
+            "pattern.nfr(ctrl)" to seq(pat).nfr(ctrl),
+            "script pattern.nfr(ctrl)" to StrudelPattern.compile("""seq("$pat").nfr("$ctrl")"""),
+            "string.nfr(ctrl)" to pat.nfr(ctrl),
+            "script string.nfr(ctrl)" to StrudelPattern.compile(""""$pat".nfr("$ctrl")"""),
+            "nfr(ctrl)" to seq(pat).apply(nfr(ctrl)),
+            "script nfr(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfr("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.nfrelease shouldBe 0.5
+            events[1].data.nfrelease shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as nfrelease | seq(\"0.5 1.0\").nfr()" {
+        val p = seq("0.5 1.0").nfr()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.nfrelease shouldBe 0.5
+            events[1].data.nfrelease shouldBe 1.0
+        }
     }
 
     "nfr() alias works as pattern extension" {

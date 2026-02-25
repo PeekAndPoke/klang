@@ -1,22 +1,72 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangHpattackSpec : StringSpec({
 
-    "hpattack() sets StrudelVoiceData.hpattack" {
-        val p = hpattack("0.05 0.1")
-        val events = p.queryArc(0.0, 1.0)
+    // ---- hpattack ----
 
+    "hpattack dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.hpattack(ctrl)" to seq(pat).hpattack(ctrl),
+            "script pattern.hpattack(ctrl)" to StrudelPattern.compile("""seq("$pat").hpattack("$ctrl")"""),
+            "string.hpattack(ctrl)" to pat.hpattack(ctrl),
+            "script string.hpattack(ctrl)" to StrudelPattern.compile(""""$pat".hpattack("$ctrl")"""),
+            "hpattack(ctrl)" to seq(pat).apply(hpattack(ctrl)),
+            "script hpattack(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpattack("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.hpattack shouldBe 0.5
+            events[1].data.hpattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpattack | seq(\"0.5 1.0\").hpattack()" {
+        val p = seq("0.5 1.0").hpattack()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpattack shouldBe 0.5
+            events[1].data.hpattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpattack | \"0.5 1.0\".hpattack()" {
+        val p = "0.5 1.0".hpattack()
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpattack shouldBe 0.5
+            events[1].data.hpattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpattack | seq(\"0.5 1.0\").apply(hpattack())" {
+        val p = seq("0.5 1.0").apply(hpattack())
+        val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpattack shouldBe 0.5
+            events[1].data.hpattack shouldBe 1.0
+        }
+    }
+
+    "hpattack() sets VoiceData.hpattack" {
+        val p = note("a b").apply(hpattack("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events[0].data.hpattack shouldBe 0.05
-        events[1].data.hpattack shouldBe 0.1
+        events.map { it.data.hpattack } shouldBe listOf(0.5, 1.0)
     }
 
     "hpattack() works as pattern extension" {
@@ -70,14 +120,40 @@ class LangHpattackSpec : StringSpec({
         hpf.envelope?.attack shouldBe 0.05
     }
 
-    // Alias tests
+    // ---- hpa (alias) ----
 
-    "hpa() is an alias for hpattack()" {
-        val p = hpa("0.08")
+    "hpa dsl interface" {
+        val pat = "a b"
+        val ctrl = "0.5 1.0"
+        dslInterfaceTests(
+            "pattern.hpa(ctrl)" to seq(pat).hpa(ctrl),
+            "script pattern.hpa(ctrl)" to StrudelPattern.compile("""seq("$pat").hpa("$ctrl")"""),
+            "string.hpa(ctrl)" to pat.hpa(ctrl),
+            "script string.hpa(ctrl)" to StrudelPattern.compile(""""$pat".hpa("$ctrl")"""),
+            "hpa(ctrl)" to seq(pat).apply(hpa(ctrl)),
+            "script hpa(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpa("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.hpattack shouldBe 0.5
+            events[1].data.hpattack shouldBe 1.0
+        }
+    }
+
+    "reinterpret voice data as hpattack | seq(\"0.5 1.0\").hpa()" {
+        val p = seq("0.5 1.0").hpa()
         val events = p.queryArc(0.0, 1.0)
+        assertSoftly {
+            events.size shouldBe 2
+            events[0].data.hpattack shouldBe 0.5
+            events[1].data.hpattack shouldBe 1.0
+        }
+    }
 
-        events.size shouldBe 1
-        events[0].data.hpattack shouldBe 0.08
+    "hpa() sets VoiceData.hpattack" {
+        val p = note("a b").apply(hpa("0.5 1.0"))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 2
+        events.map { it.data.hpattack } shouldBe listOf(0.5, 1.0)
     }
 
     "hpa() works as pattern extension" {
