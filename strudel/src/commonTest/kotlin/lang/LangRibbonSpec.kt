@@ -3,11 +3,44 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class LangRibbonSpec : StringSpec({
+
+    "ribbon dsl interface" {
+        val pat = "0 1 2 3"
+        dslInterfaceTests(
+            "pattern.ribbon(0, 1)" to n(pat).ribbon(0, 1),
+            "script pattern.ribbon(0, 1)" to StrudelPattern.compile("""n("$pat").ribbon(0, 1)"""),
+            "string.ribbon(0, 1)" to pat.ribbon(0, 1),
+            "script string.ribbon(0, 1)" to StrudelPattern.compile(""""$pat".ribbon(0, 1)"""),
+            "ribbon(0, 1)" to n(pat).apply(ribbon(0, 1)),
+            "script ribbon(0, 1)" to StrudelPattern.compile("""n("$pat").apply(ribbon(0, 1))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 4
+        }
+    }
+
+    "rib dsl interface" {
+        val pat = "0 1 2 3"
+        dslInterfaceTests(
+            "pattern.rib(0, 1)" to n(pat).rib(0, 1),
+            "script pattern.rib(0, 1)" to StrudelPattern.compile("""n("$pat").rib(0, 1)"""),
+            "string.rib(0, 1)" to pat.rib(0, 1),
+            "script string.rib(0, 1)" to StrudelPattern.compile(""""$pat".rib(0, 1)"""),
+            "rib(0, 1)" to n(pat).apply(rib(0, 1)),
+            "script rib(0, 1)" to StrudelPattern.compile("""n("$pat").apply(rib(0, 1))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 4
+        }
+    }
 
     "ribbon(offset, cycles) loops a segment of the pattern" {
         // Pattern: 0 1 2 3 (1 cycle)

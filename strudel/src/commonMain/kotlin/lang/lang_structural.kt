@@ -5500,12 +5500,17 @@ fun applyRibbon(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
 }
 
 internal val StrudelPattern._ribbon by dslPatternExtension { p, args, /* callInfo */ _ -> applyRibbon(p, args) }
-
 internal val String._ribbon by dslStringExtension { p, args, callInfo -> p._ribbon(args, callInfo) }
-
 internal val StrudelPattern._rib by dslPatternExtension { p, args, callInfo -> p._ribbon(args, callInfo) }
-
 internal val String._rib by dslStringExtension { p, args, callInfo -> p._ribbon(args, callInfo) }
+internal val _ribbon by dslPatternMapper { args, callInfo -> { p -> p._ribbon(args, callInfo) } }
+internal val PatternMapperFn._ribbon by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_ribbon(args, callInfo))
+}
+internal val _rib by dslPatternMapper { args, callInfo -> { p -> p._rib(args, callInfo) } }
+internal val PatternMapperFn._rib by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_rib(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -5516,7 +5521,7 @@ internal val String._rib by dslStringExtension { p, args, callInfo -> p._ribbon(
  * `cycles`, then loops that piece indefinitely.
  *
  * @param offset Start point of the loop in cycles.
- * @param cycles Length of the looped segment in cycles.
+ * @param cycles Length of the looped segment in cycles (default 1.0).
  * @return A pattern that loops the specified segment.
  *
  * ```KlangScript
@@ -5526,6 +5531,7 @@ internal val String._rib by dslStringExtension { p, args, callInfo -> p._ribbon(
  * ```KlangScript
  * s("bd sd hh cp").ribbon(0.5, 1)  // starts half a cycle in, loops 1 cycle
  * ```
+ *
  * @alias rib
  * @category structural
  * @tags ribbon, rib, loop, slice, offset, cycle
@@ -5534,16 +5540,54 @@ internal val String._rib by dslStringExtension { p, args, callInfo -> p._ribbon(
 fun StrudelPattern.ribbon(offset: PatternLike, cycles: PatternLike = 1.0): StrudelPattern =
     this._ribbon(listOf(offset, cycles).asStrudelDslArgs())
 
-/** Loops a segment of the mini-notation string pattern starting at `offset` for `cycles` cycles. */
+/**
+ * Loops a segment of the mini-notation string pattern starting at `offset` for `cycles` cycles.
+ *
+ * @param offset Start point of the loop in cycles.
+ * @param cycles Length of the looped segment in cycles (default 1.0).
+ * @return A pattern that loops the specified segment.
+ *
+ * ```KlangScript
+ * "bd sd hh cp".ribbon(0.5, 1).s()  // starts half a cycle in, loops 1 cycle
+ * ```
+ *
+ * @alias rib
+ * @category structural
+ * @tags ribbon, rib, loop, slice, offset, cycle
+ */
 @StrudelDsl
 fun String.ribbon(offset: PatternLike, cycles: PatternLike = 1.0): StrudelPattern =
+    this._ribbon(listOf(offset, cycles).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that loops a segment of the source pattern starting at `offset` for `cycles` cycles.
+ *
+ * @param offset Start point of the loop in cycles.
+ * @param cycles Length of the looped segment in cycles (default 1.0).
+ * @return A [PatternMapperFn] that loops the specified segment of the source.
+ *
+ * ```KlangScript
+ * note("<c d e f>").apply(ribbon(1, 2))  // via mapper
+ * ```
+ *
+ * @alias rib
+ * @category structural
+ * @tags ribbon, rib, loop, slice, offset, cycle
+ */
+@StrudelDsl
+fun ribbon(offset: PatternLike, cycles: PatternLike = 1.0): PatternMapperFn =
+    _ribbon(listOf(offset, cycles).asStrudelDslArgs())
+
+/** Chains a ribbon onto this [PatternMapperFn]; loops a segment of the result starting at `offset`. */
+@StrudelDsl
+fun PatternMapperFn.ribbon(offset: PatternLike, cycles: PatternLike = 1.0): PatternMapperFn =
     this._ribbon(listOf(offset, cycles).asStrudelDslArgs())
 
 /**
  * Alias for [ribbon]. Loops a segment of the pattern starting at `offset` for `cycles` cycles.
  *
  * @param offset Start point of the loop in cycles.
- * @param cycles Length of the looped segment in cycles.
+ * @param cycles Length of the looped segment in cycles (default 1.0).
  * @return A pattern that loops the specified segment.
  *
  * ```KlangScript
@@ -5553,15 +5597,54 @@ fun String.ribbon(offset: PatternLike, cycles: PatternLike = 1.0): StrudelPatter
  * ```KlangScript
  * s("bd sd hh cp").rib(0.5, 1)  // starts half a cycle in, loops 1 cycle
  * ```
+ *
  * @alias ribbon
  * @category structural
- * @tags ribbon, rib, loop, slice, offset, cycle
+ * @tags rib, ribbon, loop, slice, offset, cycle
  */
 @StrudelDsl
 fun StrudelPattern.rib(offset: PatternLike, cycles: PatternLike = 1.0): StrudelPattern =
     this._rib(listOf(offset, cycles).asStrudelDslArgs())
 
-/** Alias for [ribbon]. Loops a segment of the mini-notation string pattern. */
+/**
+ * Alias for [ribbon] applied to a mini-notation string.
+ *
+ * @param offset Start point of the loop in cycles.
+ * @param cycles Length of the looped segment in cycles (default 1.0).
+ * @return A pattern that loops the specified segment.
+ *
+ * ```KlangScript
+ * "bd sd hh cp".rib(0.5, 1).s()  // starts half a cycle in, loops 1 cycle
+ * ```
+ *
+ * @alias ribbon
+ * @category structural
+ * @tags rib, ribbon, loop, slice, offset, cycle
+ */
 @StrudelDsl
 fun String.rib(offset: PatternLike, cycles: PatternLike = 1.0): StrudelPattern =
+    this._rib(listOf(offset, cycles).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [ribbon] — loops a segment of the source pattern.
+ *
+ * @param offset Start point of the loop in cycles.
+ * @param cycles Length of the looped segment in cycles (default 1.0).
+ * @return A [PatternMapperFn] that loops the specified segment of the source.
+ *
+ * ```KlangScript
+ * note("<c d e f>").apply(rib(1, 2))  // via mapper
+ * ```
+ *
+ * @alias ribbon
+ * @category structural
+ * @tags rib, ribbon, loop, slice, offset, cycle
+ */
+@StrudelDsl
+fun rib(offset: PatternLike, cycles: PatternLike = 1.0): PatternMapperFn =
+    _rib(listOf(offset, cycles).asStrudelDslArgs())
+
+/** Chains a rib onto this [PatternMapperFn]; alias for [PatternMapperFn.ribbon]. */
+@StrudelDsl
+fun PatternMapperFn.rib(offset: PatternLike, cycles: PatternLike = 1.0): PatternMapperFn =
     this._rib(listOf(offset, cycles).asStrudelDslArgs())
