@@ -1854,7 +1854,7 @@ fun PatternMapperFn.juxBy(amount: Double, transform: PatternMapperFn): PatternMa
 
 // -- off() ------------------------------------------------------------------------------------------------------------
 
-// delegates - still register with KlangScript
+internal val _off by dslPatternMapper { args, callInfo -> { p -> p._off(args, callInfo) } }
 internal val StrudelPattern._off by dslPatternExtension { p, args, /* callInfo */ _ ->
     // TODO: we must support control patterns for the first parameter
     val time = args.getOrNull(0)?.value?.asRationalOrNull() ?: Rational.QUARTER
@@ -1864,13 +1864,13 @@ internal val StrudelPattern._off by dslPatternExtension { p, args, /* callInfo *
 
     p.stack(transform(p).late(time))
 }
-
 internal val String._off by dslStringExtension { p, args, callInfo -> p._off(args, callInfo) }
-
-// ===== USER-FACING OVERLOADS =====
+internal val PatternMapperFn._off by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_off(args, callInfo))
+}
 
 /**
- * Layers a time-shifted, transformed copy of the pattern on top of itself.
+ * Layers a time-shifted, transformed copy of this pattern on top of itself.
  *
  * Stacks the original with a delayed copy produced by applying [transform]. Useful for creating rhythmic
  * echoes, counterpoint, or call-and-response effects.
@@ -1880,12 +1880,13 @@ internal val String._off by dslStringExtension { p, args, callInfo -> p._off(arg
  * @return The original pattern stacked with a time-shifted, transformed copy.
  *
  * ```KlangScript
- * s("bd sd").off(0.125, x => x.gain(0.2))  // quiet echo 1/8 cycle behind
+ * s("bd sd").off(0.125, x => x.gain(0.2))       // quiet echo 1/8 cycle behind
  * ```
  *
  * ```KlangScript
- * note("c e g").off(0.25, x => x.transpose(12))  // octave-up copy a quarter cycle behind
+ * note("c e g").off(0.25, x => x.transpose(12)) // octave-up copy a quarter cycle behind
  * ```
+ *
  * @category structural
  * @tags off, delay, echo, layer, stack, time
  */
@@ -1893,15 +1894,32 @@ internal val String._off by dslStringExtension { p, args, callInfo -> p._off(arg
 fun StrudelPattern.off(time: Double, transform: PatternMapperFn): StrudelPattern =
     this._off(listOf(time, transform).asStrudelDslArgs())
 
-/**
- * Layers a time-shifted, transformed copy of this string-parsed pattern on top of itself.
- *
- * ```KlangScript
- * "bd sd".off(0.125, x => x.gain(0.7)).s()  // quiet echo behind the beat
- * ```
- */
+/** Layers a time-shifted, transformed copy of this string pattern on top of itself. */
 @StrudelDsl
 fun String.off(time: Double, transform: PatternMapperFn): StrudelPattern =
+    this._off(listOf(time, transform).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that layers a time-shifted, transformed copy on top of the source.
+ *
+ * @param time Time offset in cycles for the delayed copy.
+ * @param transform Function applied to the delayed copy.
+ * @return A [PatternMapperFn] that stacks the source with a late, transformed copy.
+ *
+ * ```KlangScript
+ * s("bd sd").apply(off(0.125, x => x.gain(0.2)))   // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags off, delay, echo, layer, stack, time
+ */
+@StrudelDsl
+fun off(time: Double, transform: PatternMapperFn): PatternMapperFn =
+    _off(listOf(time, transform).asStrudelDslArgs())
+
+/** Chains an off onto this [PatternMapperFn]; layers a time-shifted, transformed copy. */
+@StrudelDsl
+fun PatternMapperFn.off(time: Double, transform: PatternMapperFn): PatternMapperFn =
     this._off(listOf(time, transform).asStrudelDslArgs())
 
 // -- filter() ---------------------------------------------------------------------------------------------------------
@@ -1910,17 +1928,7 @@ fun applyFilter(source: StrudelPattern, predicate: (StrudelPatternEvent) -> Bool
     return source.map { events -> events.filter(predicate) }
 }
 
-// delegates - still register with KlangScript
-internal val _filter by dslPatternFunction { args, /* callInfo */ _ ->
-    @Suppress("UNCHECKED_CAST")
-    val predicate: ((StrudelPatternEvent) -> Boolean)? =
-        args.getOrNull(0)?.value as? (StrudelPatternEvent) -> Boolean
-
-    val pat: StrudelPattern = args.getOrNull(1)?.value as? StrudelPattern ?: silence
-
-    if (predicate != null) applyFilter(pat) { predicate(it) } else pat
-}
-
+internal val _filter by dslPatternMapper { args, callInfo -> { p -> p._filter(args, callInfo) } }
 internal val StrudelPattern._filter by dslPatternExtension { p, args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val predicate: ((StrudelPatternEvent) -> Boolean)? =
@@ -1928,107 +1936,126 @@ internal val StrudelPattern._filter by dslPatternExtension { p, args, /* callInf
 
     if (predicate != null) applyFilter(source = p, predicate = predicate) else p
 }
-
 internal val String._filter by dslStringExtension { p, args, callInfo -> p._filter(args, callInfo) }
-
-// ===== USER-FACING OVERLOADS =====
+internal val PatternMapperFn._filter by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_filter(args, callInfo))
+}
 
 /**
- * Filters events from the pattern using a predicate function.
+ * Filters events from this pattern using a predicate function.
  *
- * Only events for which [predicate] returns `true` are kept; all others are removed from the pattern.
+ * Only events for which [predicate] returns `true` are kept.
  *
  * @param predicate Function that receives a [StrudelPatternEvent] and returns `true` to keep it.
- * @return A new pattern containing only the events that satisfy the predicate.
+ * @return A pattern containing only the events that satisfy the predicate.
  *
  * ```KlangScript
  * s("bd sd hh cp").filter(x => x.part.begin < 0.5)  // keep first-half events
  * ```
  *
  * ```KlangScript
- * note("c d e f").filter(x => x.isOnset)  // keep only onset events
+ * note("c d e f").filter(x => x.isOnset)             // keep only onset events
  * ```
+ *
  * @category structural
  * @tags filter, gate, conditional, predicate
  */
 @StrudelDsl
 fun StrudelPattern.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern =
-    applyFilter(source = this, predicate = predicate)
+    this._filter(listOf(predicate).asStrudelDslArgs())
 
-/**
- * Filters events from this string-parsed pattern using a predicate function.
- *
- * ```KlangScript
- * "bd sd hh cp".filter { it.part.begin.toDouble() < 0.5 }.s()  // keep first-half events
- * ```
- */
+/** Filters events from this string pattern using a predicate function. */
 @StrudelDsl
 fun String.filter(predicate: (StrudelPatternEvent) -> Boolean): StrudelPattern =
     this._filter(listOf(predicate).asStrudelDslArgs())
 
+/**
+ * Returns a [PatternMapperFn] that filters events from the source using a predicate.
+ *
+ * @param predicate Function that receives a [StrudelPatternEvent] and returns `true` to keep it.
+ * @return A [PatternMapperFn] that keeps only events satisfying the predicate.
+ *
+ * ```KlangScript
+ * s("bd sd hh cp").apply(filter(x => x.part.begin < 0.5))  // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags filter, gate, conditional, predicate
+ */
 @StrudelDsl
-fun filter(predicate: (StrudelPatternEvent) -> Boolean) = _filter(predicate)
+fun filter(predicate: (StrudelPatternEvent) -> Boolean): PatternMapperFn =
+    _filter(listOf(predicate).asStrudelDslArgs())
+
+/** Chains a filter onto this [PatternMapperFn]; keeps only events satisfying the predicate. */
+@StrudelDsl
+fun PatternMapperFn.filter(predicate: (StrudelPatternEvent) -> Boolean): PatternMapperFn =
+    this._filter(listOf(predicate).asStrudelDslArgs())
 
 // -- filterWhen() -----------------------------------------------------------------------------------------------------
 
-// delegates - still register with KlangScript
-internal val _filterWhen by dslPatternFunction { args, /* callInfo */ _ ->
-    @Suppress("UNCHECKED_CAST")
-    val predicate: ((Double) -> Boolean)? = args.getOrNull(0)?.value as? (Double) -> Boolean
-
-    val pat: StrudelPattern = args.getOrNull(1)?.value as? StrudelPattern ?: silence
-
-    if (predicate != null) applyFilter(pat) { predicate(it.part.begin.toDouble()) } else pat
-}
-
+internal val _filterWhen by dslPatternMapper { args, callInfo -> { p -> p._filterWhen(args, callInfo) } }
 internal val StrudelPattern._filterWhen by dslPatternExtension { source, args, /* callInfo */ _ ->
     @Suppress("UNCHECKED_CAST")
     val predicate: ((Double) -> Boolean)? = args.firstOrNull()?.value as? (Double) -> Boolean
 
     if (predicate != null) applyFilter(source = source) { predicate(it.part.begin.toDouble()) } else source
 }
-
 internal val String._filterWhen by dslStringExtension { source, args, callInfo ->
     source._filterWhen(args, callInfo)
 }
-
-// ===== USER-FACING OVERLOADS =====
+internal val PatternMapperFn._filterWhen by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_filterWhen(args, callInfo))
+}
 
 /**
- * Filters events from the pattern based on their begin time.
+ * Filters events from this pattern based on their begin time.
  *
- * Only events whose `part.begin` value (as `Double`) satisfies [predicate] are kept.
+ * Only events whose `part.begin` (as `Double`) satisfies [predicate] are kept.
  *
- * @param predicate Function that receives the begin time as a `Double` and returns `true` to keep the event.
- * @return A new pattern with only the events whose begin time satisfies the predicate.
+ * @param predicate Function that receives the begin time as a `Double`; returns `true` to keep the event.
+ * @return A pattern with only the events whose begin time satisfies the predicate.
  *
  * ```KlangScript
- * note("c d e f").filterWhen(t => t < 0.5)  // keep only first-half events
+ * note("c d e f").filterWhen(t => t < 0.5)       // keep only first-half events
  * ```
  *
  * ```KlangScript
- * s("bd sd hh cp").filterWhen(t => t % 0.25 == 0)  // keep only events on beat boundaries
+ * s("bd sd hh cp").filterWhen(t => t % 0.25 == 0) // keep only events on beat boundaries
  * ```
+ *
  * @category structural
- * @tags filter, time, conditional, predicate
+ * @tags filterWhen, filter, time, conditional, predicate
  */
 @StrudelDsl
 fun StrudelPattern.filterWhen(predicate: (Double) -> Boolean): StrudelPattern =
     this._filterWhen(listOf(predicate).asStrudelDslArgs())
 
-/**
- * Filters events from this string-parsed pattern based on their begin time.
- *
- * ```KlangScript
- * "bd sd hh cp".filterWhen(t => t < 0.5).s()  // keep only first-half events
- * ```
- */
+/** Filters events from this string pattern based on their begin time. */
 @StrudelDsl
 fun String.filterWhen(predicate: (Double) -> Boolean): StrudelPattern =
     this._filterWhen(listOf(predicate).asStrudelDslArgs())
 
+/**
+ * Returns a [PatternMapperFn] that filters events from the source based on their begin time.
+ *
+ * @param predicate Function that receives the begin time as a `Double`; returns `true` to keep the event.
+ * @return A [PatternMapperFn] that filters events by their begin time.
+ *
+ * ```KlangScript
+ * note("c d e f").apply(filterWhen(t => t < 0.5))   // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags filterWhen, filter, time, conditional, predicate
+ */
 @StrudelDsl
-fun filterWhen(predicate: (Double) -> Boolean) = _filterWhen(predicate)
+fun filterWhen(predicate: (Double) -> Boolean): PatternMapperFn =
+    _filterWhen(listOf(predicate).asStrudelDslArgs())
+
+/** Chains a filterWhen onto this [PatternMapperFn]; filters events by their begin time. */
+@StrudelDsl
+fun PatternMapperFn.filterWhen(predicate: (Double) -> Boolean): PatternMapperFn =
+    this._filterWhen(listOf(predicate).asStrudelDslArgs())
 
 // -- superimpose() ----------------------------------------------------------------------------------------------------
 

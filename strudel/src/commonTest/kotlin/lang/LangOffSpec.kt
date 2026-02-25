@@ -3,9 +3,28 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangOffSpec : StringSpec({
+
+    "off dsl interface" {
+        val pat = "c e"
+        val transform: PatternMapperFn = { it.note("e") }
+        dslInterfaceTests(
+            "pattern.off(0.25, fn)" to note(pat).off(0.25, transform),
+            "script pattern.off(0.25, fn)" to StrudelPattern.compile("""note("$pat").off(0.25, x => x.note("e"))"""),
+            "string.off(0.25, fn)" to pat.off(0.25, transform),
+            "script string.off(0.25, fn)" to StrudelPattern.compile(""""$pat".off(0.25, x => x.note("e"))"""),
+            "off(0.25, fn)" to note(pat).apply(off(0.25, transform)),
+            "script off(0.25, fn)" to StrudelPattern.compile("""note("$pat").apply(off(0.25, x => x.note("e")))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 5  // original 2 + delayed copy 2
+        }
+    }
 
     "off() layers a time-shifted transformation" {
         // Original at 0.0

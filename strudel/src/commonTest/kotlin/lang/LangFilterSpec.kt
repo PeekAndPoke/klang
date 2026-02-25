@@ -1,12 +1,42 @@
 // strudel/src/commonTest/kotlin/lang/LangFilterSpec.kt
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
+import io.peekandpoke.klang.strudel.StrudelPatternEvent
 
 class LangFilterSpec : StringSpec({
+
+    "filter dsl interface" {
+        val predicate: (StrudelPatternEvent) -> Boolean = {
+            it.data.value?.asString == "a"
+        }
+        // All 3 call styles produce: only "a" from "a b" passes
+        val pat = seq("a b")
+
+        val viaPat = pat.filter(predicate)
+        val viaStr = "a b".filter(predicate)
+        val viaMapper = pat.apply(filter(predicate))
+
+        listOf(
+            "viaPat" to viaPat,
+            "viaStr" to viaStr,
+            "viaMapper" to viaMapper,
+        ).forEach { (name, p) ->
+            withClue(name) {
+                assertSoftly {
+                    val events = p.queryArc(0.0, 1.0)
+                    events.shouldNotBeEmpty()
+                    events.size shouldBe 1
+                    events[0].data.value?.asString?.lowercase() shouldBe "a"
+                }
+            }
+        }
+    }
 
     "filter() works as pattern extension" {
         // filter(predicate)
@@ -26,11 +56,10 @@ class LangFilterSpec : StringSpec({
         events[0].data.note shouldBeEqualIgnoringCase "B"
     }
 
-    "filter() works as top-level function" {
-        // filter(predicate, pattern)
-        val p = filter { it.data.note?.lowercase() == "a" }
+    "filter() works as top-level PatternMapperFn" {
+        val p = note("a b").apply(filter { it.data.note?.lowercase() == "a" })
 
-        p.queryArc(0.0, 1.0).shouldBeEmpty()
+        p.queryArc(0.0, 1.0).size shouldBe 1
     }
 
     "filter() can use other properties" {

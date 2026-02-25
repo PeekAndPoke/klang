@@ -2,11 +2,25 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 
 class LangFilterWhenSpec : StringSpec({
+
+    "filterWhen dsl interface" {
+        // keep only the first half of the cycle (t < 0.5): "a b c d" → "a" and "b"
+        val predicate: (Double) -> Boolean = { it < 0.5 }
+        val pat = note("a b c d")
+        val viaPat = pat.filterWhen(predicate)
+        val viaStr = "a b c d".filterWhen(predicate)
+        val viaMapper = pat.apply(filterWhen(predicate))
+        listOf(viaPat, viaStr, viaMapper).forEach { p ->
+            val events = p.queryArc(0.0, 1.0)
+            events.shouldNotBeEmpty()
+            events.size shouldBe 2
+        }
+    }
 
     "filterWhen() works as pattern extension" {
         // filterWhen(predicate)
@@ -30,10 +44,11 @@ class LangFilterWhenSpec : StringSpec({
         events[1].data.note shouldBeEqualIgnoringCase "B"
     }
 
-    "filterWhen() works as top-level function" {
-        val p = filterWhen { it >= 0.75 }
+    "filterWhen() works as top-level PatternMapperFn" {
+        val p = note("a b c d").apply(filterWhen { it >= 0.75 })
 
-        p.queryArc(0.0, 1.0).shouldBeEmpty()
+        // Only the last quarter of the cycle passes
+        p.queryArc(0.0, 1.0).size shouldBe 1
     }
 
     "filterWhen() with time logic" {
