@@ -1,11 +1,44 @@
 package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangEuclidishSpec : StringSpec({
+
+    "euclidish dsl interface" {
+        val pat = "hh"
+        dslInterfaceTests(
+            "pattern.euclidish(3, 8, 0.0)" to s(pat).euclidish(3, 8, 0.0),
+            "script pattern.euclidish(3, 8, 0.0)" to StrudelPattern.compile("""s("$pat").euclidish(3, 8, 0.0)"""),
+            "string.euclidish(3, 8, 0.0)" to pat.euclidish(3, 8, 0.0),
+            "script string.euclidish(3, 8, 0.0)" to StrudelPattern.compile(""""$pat".euclidish(3, 8, 0.0)"""),
+            "euclidish(3, 8, 0.0)" to s(pat).apply(euclidish(3, 8, 0.0)),
+            "script euclidish(3, 8, 0.0)" to StrudelPattern.compile("""s("$pat").apply(euclidish(3, 8, 0.0))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 3
+        }
+    }
+
+    "eish dsl interface" {
+        val pat = "hh"
+        dslInterfaceTests(
+            "pattern.eish(3, 8, 0.0)" to s(pat).eish(3, 8, 0.0),
+            "script pattern.eish(3, 8, 0.0)" to StrudelPattern.compile("""s("$pat").eish(3, 8, 0.0)"""),
+            "string.eish(3, 8, 0.0)" to pat.eish(3, 8, 0.0),
+            "script string.eish(3, 8, 0.0)" to StrudelPattern.compile(""""$pat".eish(3, 8, 0.0)"""),
+            "eish(3, 8, 0.0)" to s(pat).apply(eish(3, 8, 0.0)),
+            "script eish(3, 8, 0.0)" to StrudelPattern.compile("""s("$pat").apply(eish(3, 8, 0.0))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 3
+        }
+    }
 
     "euclidish(3, 8, 0) behaves like euclid(3, 8)" {
         // groove 0 -> standard euclidean
@@ -47,7 +80,7 @@ class LangEuclidishSpec : StringSpec({
     }
 
     "euclidish works as top-level function" {
-        val p = euclidish(pulses = 3, steps = 8, groove = 0.0, pattern = note("a"))
+        val p = note("a").apply(euclidish(pulses = 3, steps = 8, groove = 0.0))
         p.queryArc(0.0, 1.0).size shouldBe 3
     }
 
