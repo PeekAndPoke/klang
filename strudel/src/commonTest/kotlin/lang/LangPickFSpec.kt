@@ -78,7 +78,7 @@ class LangPickFSpec : StringSpec({
             { it.fast(2) }
         )
 
-        val pattern = pickF("0", functions, note("c"))
+        val pattern = note("c").pickF("0", functions)
         val events = pattern.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -125,7 +125,7 @@ class LangPickFSpec : StringSpec({
             { it.fast(2) }
         )
 
-        val pattern = pickmodF("5", functions, note("c"))
+        val pattern = note("c").pickmodF("5", functions)
         val events = pattern.queryArc(0.0, 1.0)
 
         // Index 5 wraps to 0 (5 % 1 = 0)

@@ -2415,47 +2415,27 @@ fun applyPickF(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
     }
 }
 
-internal val StrudelPattern._pickF by dslPatternExtension { p, args, _ -> applyPickF(p, args) }
+internal val _pickF by dslPatternMapper { args, callInfo -> { p -> p._pickF(args, callInfo) } }
 
-internal val _pickF by dslPatternFunction { args, _ ->
-    if (args.size < 3) return@dslPatternFunction silence
-    val lookupArg = args[0]
-    val funcsArg = args[1]
-    val patArg = args[2]
-    val pattern = listOf(patArg).toPattern(voiceValueModifier)
-    applyPickF(pattern, listOf(lookupArg, funcsArg))
-}
+internal val StrudelPattern._pickF by dslPatternExtension { p, args, _ -> applyPickF(p, args) }
 
 internal val String._pickF by dslStringExtension { p, args, callInfo -> p._pickF(args, callInfo) }
 
-/**
- * Applies functions from a list to a pattern, selected by an index pattern (clamped).
- *
- * Arguments: index pattern, function list, source pattern. The index pattern drives which
- * function from the list is applied to the source pattern. Out-of-bounds indices are clamped.
- *
- * ```KlangScript
- * pickF("<0 1 2>", [rev, fast(2), jux(rev)], s("bd rim hh"))  // fn selected by index
- * ```
- *
- * ```KlangScript
- * pickF(n("0 1"), [slow(2), fast(3)], note("c3 e3"))           // 0→slow(2), 1→fast(3)
- * ```
- *
- * @category structural
- * @tags pickF, pick, apply, transform, function, index
- */
-@StrudelDsl
-fun pickF(vararg args: PatternLike): StrudelPattern = _pickF(args.toList().asStrudelDslArgs())
+internal val PatternMapperFn._pickF by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_pickF(args, callInfo))
+}
 
 /**
- * Applies functions from a list to this pattern, selected by an index pattern (clamped).
+ * Applies a function from a list to this pattern, selected by an index pattern (clamped).
  *
- * The first argument is the index pattern and the second is a list of pattern-transforming
- * functions. Each index (clamped to bounds) selects a function which is applied to this pattern.
+ * The first argument is the index pattern; the second is a list of pattern-transforming functions.
+ * The index (clamped to bounds) selects which function is applied to this pattern.
+ *
+ * @param args Index pattern followed by the function list — `pickF(indexPat, [fn1, fn2, ...])`.
+ * @return A pattern with the selected function applied.
  *
  * ```KlangScript
- * s("bd rim hh").pickF("<0 1 2>", [rev, fast(2), jux(rev)])  // apply fn by index
+ * s("bd rim hh").pickF("<0 1 2>", [rev, fast(2), jux(rev)])  // fn selected by index
  * ```
  *
  * ```KlangScript
@@ -2468,9 +2448,48 @@ fun pickF(vararg args: PatternLike): StrudelPattern = _pickF(args.toList().asStr
 @StrudelDsl
 fun StrudelPattern.pickF(vararg args: PatternLike): StrudelPattern = this._pickF(args.toList().asStrudelDslArgs())
 
-/** Applies functions from a list to this string pattern, selected by an index pattern (clamped). */
+/**
+ * Applies a function from a list to this string pattern, selected by an index pattern (clamped).
+ *
+ * @param args Index pattern followed by the function list.
+ * @return A pattern with the selected function applied.
+ *
+ * ```KlangScript
+ * "bd rim hh".pickF("<0 1 2>", [rev, fast(2), jux(rev)]).s()  // string source, fn by index
+ * ```
+ *
+ * @category structural
+ * @tags pickF, pick, apply, transform, function, index
+ */
 @StrudelDsl
 fun String.pickF(vararg args: PatternLike): StrudelPattern = this._pickF(args.toList().asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that applies a function from a list to the source, selected by index (clamped).
+ *
+ * The first argument is the index pattern; the second is the function list. Apply using `.apply()`.
+ *
+ * @param args Index pattern followed by the function list.
+ * @return A [PatternMapperFn] that applies the selected function to the source pattern.
+ *
+ * ```KlangScript
+ * s("bd rim hh").apply(pickF("<0 1 2>", [rev, fast(2), jux(rev)]))  // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags pickF, pick, apply, transform, function, index
+ */
+@StrudelDsl
+fun pickF(vararg args: PatternLike): PatternMapperFn = _pickF(args.toList().asStrudelDslArgs())
+
+/**
+ * Chains a pickF onto this [PatternMapperFn]; applies a function selected by clamped index.
+ *
+ * @param args Index pattern followed by the function list.
+ * @return A new [PatternMapperFn] composing this mapper with the function-select operation.
+ */
+@StrudelDsl
+fun PatternMapperFn.pickF(vararg args: PatternLike): PatternMapperFn = this._pickF(args.toList().asStrudelDslArgs())
 
 // -- pickmodF() -------------------------------------------------------------------------------------------------------
 
@@ -2499,51 +2518,30 @@ fun applyPickmodF(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     }
 }
 
-internal val StrudelPattern._pickmodF by dslPatternExtension { p, args, _ -> applyPickmodF(p, args) }
+internal val _pickmodF by dslPatternMapper { args, callInfo -> { p -> p._pickmodF(args, callInfo) } }
 
-internal val _pickmodF by dslPatternFunction { args, _ ->
-    if (args.size < 3) return@dslPatternFunction silence
-    val lookupArg = args[0]
-    val funcsArg = args[1]
-    val patArg = args[2]
-    val pattern = listOf(patArg).toPattern(voiceValueModifier)
-    applyPickmodF(pattern, listOf(lookupArg, funcsArg))
-}
+internal val StrudelPattern._pickmodF by dslPatternExtension { p, args, _ -> applyPickmodF(p, args) }
 
 internal val String._pickmodF by dslStringExtension { p, args, callInfo -> p._pickmodF(args, callInfo) }
 
-/**
- * Like [pickF] but wraps indices with modulo.
- *
- * Arguments: index pattern, function list, source pattern. The index selects a function from
- * the list with modulo wrapping when out of bounds.
- *
- * ```KlangScript
- * pickmodF("<0 1 2 3>", [rev, fast(2)], s("bd rim hh"))  // 2→0, 3→1 mod 2; apply fn
- * ```
- *
- * ```KlangScript
- * pickmodF(n("0 5"), [slow(2), fast(3)], note("c3 e3"))   // 5→1 mod 2; apply fn
- * ```
- *
- * @category structural
- * @tags pickmodF, pickF, modulo, apply, transform, function, index
- */
-@StrudelDsl
-fun pickmodF(vararg args: PatternLike): StrudelPattern = _pickmodF(args.toList().asStrudelDslArgs())
+internal val PatternMapperFn._pickmodF by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_pickmodF(args, callInfo))
+}
 
 /**
  * Like [pickF] but wraps out-of-bounds indices with modulo arithmetic.
  *
- * Applies functions from a list to this pattern. The first argument is the index pattern and
- * the second is the function list. Indices exceeding the list length wrap cyclically.
+ * The first argument is the index pattern; the second is the function list. Indices wrap cyclically.
+ *
+ * @param args Index pattern followed by the function list.
+ * @return A pattern with the modulo-selected function applied.
  *
  * ```KlangScript
- * s("bd rim hh").pickmodF("<0 1 2 3>", [rev, fast(2)])  // 2→0, 3→1 mod 2; apply fn
+ * s("bd rim hh").pickmodF("<0 1 2 3>", [rev, fast(2)])          // 2→0, 3→1 mod 2
  * ```
  *
  * ```KlangScript
- * note("c3 e3").pickmodF(n("0 5"), [slow(2), fast(3), jux(rev)])  // 5→2 mod 3; fn applied
+ * note("c3 e3 g3").pickmodF(n("0 5"), [slow(2), fast(3)])       // 5→1 mod 2
  * ```
  *
  * @category structural
@@ -2552,6 +2550,45 @@ fun pickmodF(vararg args: PatternLike): StrudelPattern = _pickmodF(args.toList()
 @StrudelDsl
 fun StrudelPattern.pickmodF(vararg args: PatternLike): StrudelPattern = this._pickmodF(args.toList().asStrudelDslArgs())
 
-/** Applies functions from a list to this string pattern, selected by an index pattern (modulo). */
+/**
+ * Like [pickF] but wraps indices with modulo — this string pattern is the source.
+ *
+ * @param args Index pattern followed by the function list.
+ * @return A pattern with the modulo-selected function applied.
+ *
+ * ```KlangScript
+ * "bd rim hh".pickmodF("<0 1 2 3>", [rev, fast(2)]).s()  // string source, modulo index
+ * ```
+ *
+ * @category structural
+ * @tags pickmodF, pickF, modulo, apply, transform, function, index
+ */
 @StrudelDsl
 fun String.pickmodF(vararg args: PatternLike): StrudelPattern = this._pickmodF(args.toList().asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that applies a function from a list with modulo-wrapped index.
+ *
+ * Like [pickF] but indices wrap cyclically. Apply using `.apply()`.
+ *
+ * @param args Index pattern followed by the function list.
+ * @return A [PatternMapperFn] that applies the modulo-selected function to the source pattern.
+ *
+ * ```KlangScript
+ * s("bd rim hh").apply(pickmodF("<0 1 2 3>", [rev, fast(2)]))  // via mapper, modulo
+ * ```
+ *
+ * @category structural
+ * @tags pickmodF, pickF, modulo, apply, transform, function, index
+ */
+@StrudelDsl
+fun pickmodF(vararg args: PatternLike): PatternMapperFn = _pickmodF(args.toList().asStrudelDslArgs())
+
+/**
+ * Chains a pickmodF onto this [PatternMapperFn]; applies a function selected by modulo-wrapped index.
+ *
+ * @param args Index pattern followed by the function list.
+ * @return A new [PatternMapperFn] composing this mapper with the modulo function-select operation.
+ */
+@StrudelDsl
+fun PatternMapperFn.pickmodF(vararg args: PatternLike): PatternMapperFn = this._pickmodF(args.toList().asStrudelDslArgs())
