@@ -3002,8 +3002,11 @@ fun applyLinger(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strud
 }
 
 internal val StrudelPattern._linger by dslPatternExtension { p, args, /* callInfo */ _ -> applyLinger(p, args) }
-
 internal val String._linger by dslStringExtension { p, args, callInfo -> p._linger(args, callInfo) }
+internal val _linger by dslPatternMapper { args, callInfo -> { p -> p._linger(args, callInfo) } }
+internal val PatternMapperFn._linger by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_linger(args, callInfo))
+}
 
 // ===== USER-FACING OVERLOADS =====
 
@@ -3016,7 +3019,7 @@ internal val String._linger by dslStringExtension { p, args, callInfo -> p._ling
  *
  * The selected portion is slowed down by the fraction amount to fill the full cycle time.
  *
- * @param t Fraction to select (positive = from start, negative = from end, 0 = silence).
+ * @param t Fraction to select (positive = from start, negative = from end, 0 = silence). Can be a pattern string.
  * @return A pattern of the selected fraction, looped to fill the cycle.
  *
  * ```KlangScript
@@ -3026,15 +3029,48 @@ internal val String._linger by dslStringExtension { p, args, callInfo -> p._ling
  * ```KlangScript
  * s("lt ht mt cp").linger("<1 .5 .25 .125 .0625 .03125>")  // different fraction each cycle
  * ```
+ *
  * @category structural
  * @tags linger, loop, fraction, repeat, slice
  */
 @StrudelDsl
 fun StrudelPattern.linger(t: PatternLike): StrudelPattern = this._linger(listOf(t).asStrudelDslArgs())
 
-/** Selects the given fraction of the pattern and repeats that part to fill the remainder of the cycle. */
+/**
+ * Selects the given fraction of this string-parsed pattern and repeats that part to fill the cycle.
+ *
+ * @param t Fraction to select (positive = from start, negative = from end, 0 = silence). Can be a pattern string.
+ * @return A pattern of the selected fraction, looped to fill the cycle.
+ *
+ * ```KlangScript
+ * "bd sd ht lt".linger(0.5).s()  // repeats "bd sd" throughout the cycle
+ * ```
+ *
+ * @category structural
+ * @tags linger, loop, fraction, repeat, slice
+ */
 @StrudelDsl
 fun String.linger(t: PatternLike): StrudelPattern = this._linger(listOf(t).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that selects the given fraction of the source pattern and repeats it to fill the cycle.
+ *
+ * @param t Fraction to select (positive = from start, negative = from end, 0 = silence). Can be a pattern string.
+ * @return A [PatternMapperFn] that lingers on the selected fraction of the source.
+ *
+ * ```KlangScript
+ * s("bd sd ht lt").apply(linger(0.5))  // via mapper
+ * ```
+ *
+ * @category structural
+ * @tags linger, loop, fraction, repeat, slice
+ */
+@StrudelDsl
+fun linger(t: PatternLike): PatternMapperFn = _linger(listOf(t).asStrudelDslArgs())
+
+/** Chains a linger onto this [PatternMapperFn]; repeats the selected fraction of the result to fill the cycle. */
+@StrudelDsl
+fun PatternMapperFn.linger(t: PatternLike): PatternMapperFn = this._linger(listOf(t).asStrudelDslArgs())
 
 // -- echo() / stut() --------------------------------------------------------------------------------------------------
 

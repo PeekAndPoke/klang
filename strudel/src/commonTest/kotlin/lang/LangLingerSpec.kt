@@ -3,12 +3,30 @@ package io.peekandpoke.klang.strudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
 
 class LangLingerSpec : StringSpec({
+
+    "linger dsl interface" {
+        val pat = "bd sd ht lt"
+        dslInterfaceTests(
+            "pattern.linger(0.5)" to s(pat).linger(0.5),
+            "script pattern.linger(0.5)" to StrudelPattern.compile("""s("$pat").linger(0.5)"""),
+            "string.linger(0.5)" to pat.linger(0.5),
+            "script string.linger(0.5)" to StrudelPattern.compile(""""$pat".linger(0.5)"""),
+            "linger(0.5)" to s(pat).apply(linger(0.5)),
+            "script linger(0.5)" to StrudelPattern.compile("""s("$pat").apply(linger(0.5))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events.size shouldBe 4  // first half (bd sd) repeated to fill cycle
+        }
+    }
 
     "s(\"bd sd ht lt\").linger(0.5) repeats first half" {
         val subject = s("bd sd ht lt").linger(0.5)
