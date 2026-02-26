@@ -22,13 +22,16 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.blockly.BlocklyEditorComp
 import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
+import io.peekandpoke.klang.comp.mapToEditorError
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.script.docs.DslDocsRegistry
 import io.peekandpoke.klang.script.docs.FunctionDoc
+import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -39,6 +42,9 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
+
+/** View mode for the editor panel. */
+enum class EditorMode { CODE, BLOCKS }
 
 @Suppress("FunctionName")
 fun Tag.CodeSongPage(
@@ -86,6 +92,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val isPlaying get() = playback != null
 
     private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
+    private val blocklyRef = ComponentRef.Tracker<BlocklyEditorComp>()
+
     private val highlightBuffer = CodeHighlightBuffer(editorRef)
     private var highlightPerEvent by value(highlightBuffer.maxHighlightsPerEvent) {
         highlightBuffer.maxHighlightsPerEvent = it
@@ -94,11 +102,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private var title: String by value(titleStream()) { titleStream(it) }
 
     private var cps: Double by value(cpsStream()) {
-        // store cps
         cpsStream(it)
-        // clear highlight buffer
         highlightBuffer.cancelAll()
-        // Update the playback
         playback?.updateCyclesPerSecond(it)
     }
 
@@ -107,6 +112,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     private var isCodeModified by value(false)
+
+    /** Current view: text editor or visual block editor. */
+    private var editorMode by value(EditorMode.CODE)
 
     private suspend fun getPlayer(): KlangPlayer {
         return Player.ensure().await()
@@ -123,11 +131,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun onPlay() {
-        // Update the code
         codeStream(code)
-        // set as up to date
         isCodeModified = false
-        // clear the highlight buffer
         highlightBuffer.cancelAll()
 
         when (val s = playback) {
@@ -140,14 +145,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                             playback = p.playStrudel(pattern)
 
-                            // Set up live code highlighting via signals
                             playback?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
                                 signal.voices.forEach { voiceEvent ->
                                     highlightBuffer.scheduleHighlight(voiceEvent)
                                 }
                             }
 
-                            // Optional: Listen to other lifecycle signals
                             playback?.signals?.on<KlangPlaybackSignal.PreloadingSamples> { signal ->
                                 console.log("Preloading ${signal.count} samples...")
                             }
@@ -181,6 +184,28 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         playback = null
     }
 
+    /** Switch to Blocks mode. Validates the code first; stays in Code mode on parse error. */
+    private fun switchToBlocks() {
+        try {
+            KlangScriptParser.parse(code)
+        } catch (e: Throwable) {
+            editorRef { it.setErrors(listOf(mapToEditorError(e))) }
+            return
+        }
+        editorMode = EditorMode.BLOCKS
+        // Push current code into Blockly once the component is mounted (next frame)
+        launch {
+            blocklyRef { it.setCode(code) }
+        }
+    }
+
+    /** Switch to Code mode. The code state already reflects the latest workspace contents. */
+    private fun switchToCode() {
+        editorMode = EditorMode.CODE
+    }
+
+    //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
+
     override fun VDom.render() {
 
         ui.fluid.container.with("noise-bg") {
@@ -201,13 +226,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     ui.horizontal.list {
                         key = "dashboard-form-fields"
 
+                        // Play / Update / Stop controls
                         noui.item {
                             if (!isPlaying) {
                                 ui.large.circular.black.button {
-                                    onClick {
-                                        onPlay()
-                                    }
-
+                                    onClick { onPlay() }
                                     if (loading) {
                                         icon.loading.spinner()
                                         +"Loading"
@@ -224,16 +247,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                             }
 
-//                            ui.large.circular.icon.givenNot(isPlaying) { disabled }
-//                                .given(isPlaying) { white }.button {
-//                                            onClick {
-//                                                song?.stop()
-//                                                song = null
-//                                            }
-//
-//                                    icon.black.pause()
-//                                }
-
                             ui.large.circular.icon.givenNot(isPlaying) { disabled }
                                 .given(isPlaying) { white }.button {
                                     onClick { onStop() }
@@ -241,40 +254,39 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                         }
 
+                        // CPS field
                         noui.item {
                             UiInputField(cps, { cps = it }) {
                                 step(0.01)
-
                                 appear { large }
-
                                 leftLabel {
                                     ui.basic.label { icon.clock(); +"CPS" }
                                 }
                             }
                         }
 
+                        // Title field
                         noui.item {
                             UiInputField(title, { title = it }) {
                                 appear { large }
-
                                 leftLabel {
                                     ui.basic.label { icon.music(); +"Title" }
                                 }
                             }
                         }
 
+                        // Highlight-per-event field
                         noui.item {
                             UiInputField(highlightPerEvent, { highlightPerEvent = it }) {
                                 step(1)
-
                                 appear { large }
-
                                 leftLabel {
                                     ui.basic.label { icon.clock(); +"EVT" }
                                 }
                             }
                         }
 
+                        // Fullscreen toggle
                         noui.item {
                             ui.large.circular.icon.basic.black.button {
                                 if (document.fullscreenElement != null) {
@@ -298,6 +310,26 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                             }
                         }
+
+                        // Code / Blocks toggle
+                        noui.item {
+                            ui.large.circular
+                                .given(editorMode == EditorMode.CODE) { black }
+                                .givenNot(editorMode == EditorMode.CODE) { basic }
+                                .button {
+                                    onClick { switchToCode() }
+                                    icon.code()
+                                    +"Code"
+                                }
+                            ui.large.circular
+                                .given(editorMode == EditorMode.BLOCKS) { black }
+                                .givenNot(editorMode == EditorMode.BLOCKS) { basic }
+                                .button {
+                                    onClick { switchToBlocks() }
+                                    icon.puzzle_piece()
+                                    +"Blocks"
+                                }
+                        }
                     }
                 }
 
@@ -313,25 +345,38 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         }
                     }
 
-                    // CodeMirror editor container
-                    CodeMirrorComp(
-                        code = code,
-                        onCodeChanged = { newCode ->
-                            code = newCode
-                            // Clear errors when user types
-                            editorRef { it.setErrors(emptyList()) }
-                        },
-                        extraExtensions = listOf(
-                            dslHoverTooltipExtension(
-                                docProvider = { DslDocsRegistry.global.get(it) },
-                                onNavigate = ::navToDoc,
-                            ),
-                            dslGoToDocsExtension(
-                                docProvider = { DslDocsRegistry.global.get(it) },
-                                onNavigate = ::navToDoc,
-                            ),
-                        ),
-                    ).track(editorRef)
+                    when (editorMode) {
+                        EditorMode.CODE -> {
+                            CodeMirrorComp(
+                                code = code,
+                                onCodeChanged = { newCode ->
+                                    code = newCode
+                                    editorRef { it.setErrors(emptyList()) }
+                                },
+                                extraExtensions = listOf(
+                                    dslHoverTooltipExtension(
+                                        docProvider = { DslDocsRegistry.global.get(it) },
+                                        onNavigate = ::navToDoc,
+                                    ),
+                                    dslGoToDocsExtension(
+                                        docProvider = { DslDocsRegistry.global.get(it) },
+                                        onNavigate = ::navToDoc,
+                                    ),
+                                ),
+                            ).track(editorRef)
+                        }
+
+                        EditorMode.BLOCKS -> {
+                            BlocklyEditorComp(
+                                code = code,
+                                onCodeChanged = { newCode ->
+                                    code = newCode
+                                    codeStream(newCode)
+                                    isCodeModified = false
+                                },
+                            ).track(blocklyRef)
+                        }
+                    }
                 }
             }
         }
