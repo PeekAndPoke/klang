@@ -25,10 +25,19 @@ fun dslHoverTooltipExtension(docProvider: (String) -> FunctionDoc?): Extension {
             """({
             ".cm-dsl-tooltip": {
                 padding: "6px 10px",
-                maxWidth: "400px",
+                maxWidth: "80vw",
                 fontFamily: "inherit",
-                fontSize: "13px",
+                fontSize: "14px",
                 lineHeight: "1.4"
+            },
+            ".cm-dsl-section-title": {
+                fontWeight: "bold",
+                fontSize: "11px",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: "#888",
+                marginTop: "8px",
+                marginBottom: "2px"
             },
             ".cm-dsl-sig": {
                 marginBottom: "4px"
@@ -81,20 +90,23 @@ private fun buildTooltipObject(from: Int, to: Int, doc: FunctionDoc): dynamic {
 
 private fun buildTooltipHtml(doc: FunctionDoc): String {
     return buildString {
-        doc.variants.forEach { variant ->
-            append("""<div class="cm-dsl-sig"><code>${escapeHtml(variant.signature)}</code></div>""")
-        }
-
         doc.variants.firstOrNull()?.description
             ?.takeIf { it.isNotBlank() }
             ?.let { desc ->
                 val firstParagraph = desc.split("\n\n").first().trim()
+                append("""<div class="cm-dsl-section-title">Description</div>""")
                 append("""<div class="cm-dsl-desc">${escapeHtml(firstParagraph)}</div>""")
             }
+
+        append("""<div class="cm-dsl-section-title">Signatures</div>""")
+        doc.variants.forEach { variant ->
+            append("""<div class="cm-dsl-sig"><code>${escapeHtml(variant.signature)}</code></div>""")
+        }
 
         doc.variants.firstOrNull { it.samples.isNotEmpty() }?.samples?.firstOrNull()
             ?.takeIf { it.isNotBlank() }
             ?.let { sample ->
+                append("""<div class="cm-dsl-section-title">Example</div>""")
                 append("""<pre class="cm-dsl-sample"><code>${escapeHtml(sample)}</code></pre>""")
             }
     }
