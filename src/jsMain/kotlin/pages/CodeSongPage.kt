@@ -28,6 +28,7 @@ import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.script.docs.DslDocsRegistry
+import io.peekandpoke.klang.script.docs.FunctionDoc
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -37,6 +38,7 @@ import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.serialization.builtins.serializer
+import org.w3c.dom.pointerevents.PointerEvent
 
 @Suppress("FunctionName")
 fun Tag.CodeSongPage(
@@ -302,6 +304,15 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 div {
                     key = "dashboard-form-code"
 
+                    fun navToDoc(doc: FunctionDoc, event: PointerEvent) {
+                        val uri = Nav.docsStrudelSearch("function:${doc.name}")
+                        if (event.shiftKey) {
+                            router.navToUri(event, uri)
+                        } else {
+                            router.navToUri(uri)
+                        }
+                    }
+
                     // CodeMirror editor container
                     CodeMirrorComp(
                         code = code,
@@ -311,18 +322,13 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             editorRef { it.setErrors(emptyList()) }
                         },
                         extraExtensions = listOf(
-                            dslHoverTooltipExtension { DslDocsRegistry.global.get(it) },
+                            dslHoverTooltipExtension(
+                                docProvider = { DslDocsRegistry.global.get(it) },
+                                onNavigate = ::navToDoc,
+                            ),
                             dslGoToDocsExtension(
                                 docProvider = { DslDocsRegistry.global.get(it) },
-                                onNavigate = { doc, event ->
-                                    val uri = Nav.docsStrudelSearch("function:${doc.name}")
-
-                                    if (event.shiftKey == true) {
-                                        router.navToUri(event, uri)
-                                    } else {
-                                        router.navToUri(uri)
-                                    }
-                                },
+                                onNavigate = ::navToDoc,
                             ),
                         ),
                     ).track(editorRef)

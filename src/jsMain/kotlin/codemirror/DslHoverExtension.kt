@@ -6,9 +6,13 @@ import io.peekandpoke.klang.codemirror.ext.Extension
 import io.peekandpoke.klang.codemirror.ext.hoverTooltip
 import io.peekandpoke.klang.script.docs.FunctionDoc
 import kotlinx.browser.document
+import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 
-fun dslHoverTooltipExtension(docProvider: (String) -> FunctionDoc?): Extension {
+fun dslHoverTooltipExtension(
+    docProvider: (String) -> FunctionDoc?,
+    onNavigate: (doc: FunctionDoc, event: dynamic) -> Unit,
+): Extension {
     val source: (EditorView, Int, Int) -> dynamic = { view, pos, _ ->
         val word = view.state.wordAt(pos)
         if (word == null) null
@@ -16,7 +20,7 @@ fun dslHoverTooltipExtension(docProvider: (String) -> FunctionDoc?): Extension {
             val name = view.state.doc.sliceString(word.from, word.to)
             val doc = docProvider(name)
             if (doc == null) null
-            else buildTooltipObject(word.from, word.to, doc)
+            else buildTooltipObject(word.from, word.to, doc, onNavigate)
         }
     }
 
@@ -52,15 +56,47 @@ fun dslHoverTooltipExtension(docProvider: (String) -> FunctionDoc?): Extension {
                 color: "#555",
                 marginTop: "4px"
             },
+            ".cm-dsl-sample-wrapper": {
+                position: "relative",
+                marginTop: "6px"
+            },
             ".cm-dsl-sample": {
                 fontFamily: "monospace",
                 backgroundColor: "#f8f8f8",
                 border: "1px solid #ddd",
                 borderRadius: "3px",
                 padding: "4px 8px",
-                marginTop: "6px",
+                paddingRight: "28px",
                 overflowX: "auto",
+                fontSize: "12px",
+                margin: "0"
+            },
+            ".cm-dsl-copy-btn": {
+                position: "absolute",
+                top: "4px",
+                right: "4px",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#999",
+                padding: "2px 4px",
+                lineHeight: "1",
+                fontSize: "13px"
+            },
+            ".cm-dsl-copy-btn:hover": {
+                color: "#333"
+            },
+            ".cm-dsl-docs-link": {
+                marginTop: "8px",
+                paddingTop: "6px",
+                borderTop: "1px solid #eee",
+                color: "#333",
+                cursor: "pointer",
                 fontSize: "12px"
+            },
+            ".cm-dsl-docs-link:hover": {
+                color: "#000",
+                textDecoration: "underline"
             }
         })"""
         )
@@ -72,7 +108,12 @@ fun dslHoverTooltipExtension(docProvider: (String) -> FunctionDoc?): Extension {
     ).unsafeCast<Extension>()
 }
 
-private fun buildTooltipObject(from: Int, to: Int, doc: FunctionDoc): dynamic {
+private fun buildTooltipObject(
+    from: Int,
+    to: Int,
+    doc: FunctionDoc,
+    onNavigate: (FunctionDoc, dynamic) -> Unit,
+): dynamic {
     val html = buildTooltipHtml(doc)
     return jsObject {
         this.pos = from
@@ -83,6 +124,22 @@ private fun buildTooltipObject(from: Int, to: Int, doc: FunctionDoc): dynamic {
             val el = document.createElement("div") as HTMLElement
             el.className = "cm-dsl-tooltip"
             el.innerHTML = html
+            (el.querySelector(".cm-dsl-docs-link") as? HTMLElement)?.onclick = { e: dynamic ->
+                onNavigate(doc, e)
+                null
+            }
+            val copyBtns = el.querySelectorAll(".cm-dsl-copy-btn")
+            for (i in 0 until copyBtns.length) {
+                val btn = copyBtns.item(i) as? HTMLElement ?: continue
+                val sample = btn.getAttribute("data-sample") ?: continue
+                btn.onclick = { e: dynamic ->
+                    e.stopPropagation()
+                    window.asDynamic().navigator.clipboard.writeText(sample)
+                    btn.innerHTML = """<i class="check icon"></i>"""
+                    window.setTimeout({ btn.innerHTML = """<i class="copy icon"></i>""" }, 1500)
+                    null
+                }
+            }
             jsObject<dynamic> { this.dom = el }
         }
     }
@@ -107,8 +164,13 @@ private fun buildTooltipHtml(doc: FunctionDoc): String {
             ?.takeIf { it.isNotBlank() }
             ?.let { sample ->
                 append("""<div class="cm-dsl-section-title">Example</div>""")
+                append("""<div class="cm-dsl-sample-wrapper">""")
+                append("""<button class="cm-dsl-copy-btn" data-sample="${escapeHtml(sample)}"><i class="copy icon"></i></button>""")
                 append("""<pre class="cm-dsl-sample"><code>${escapeHtml(sample)}</code></pre>""")
+                append("""</div>""")
             }
+
+        append("""<div class="cm-dsl-docs-link"><i class="book icon"></i> View docs</div>""")
     }
 }
 
