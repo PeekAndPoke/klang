@@ -785,7 +785,7 @@ internal val PatternMapperFn._sometimesBy by dslPatternMapperExtension { m, args
  * ```
  *
  * ```KlangScript
- * note("c d e f").sometimesBy(0.5, x => x.add(12)) // 50% of notes an octave higher
+ * note("c d e f").sometimesBy(0.5, x => x.transpose(12)) // 50% of notes an octave higher
  * ```
  *
  * @category random
@@ -849,7 +849,7 @@ internal val PatternMapperFn._sometimes by dslPatternMapperExtension { m, args, 
  * ```
  *
  * ```KlangScript
- * note("c d e f").sometimes(x => x.add(7))     // 50% of notes shifted a fifth up
+ * note("c d e f").sometimes(x => x.transpose(7))     // 50% of notes shifted a fifth up
  * ```
  *
  * @category random
@@ -937,7 +937,7 @@ internal val PatternMapperFn._rarely by dslPatternMapperExtension { m, args, cal
  * @return A pattern with `mapper` applied to ~25% of events.
  *
  * ```KlangScript
- * note("c d e f").rarely(x => x.add(12))   // only 1 in 4 notes shifted an octave
+ * note("c d e f").rarely(x => x.transpose(12))   // only 1 in 4 notes shifted an octave
  * ```
  *
  * @category random
