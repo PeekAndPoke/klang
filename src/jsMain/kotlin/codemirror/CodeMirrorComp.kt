@@ -17,8 +17,9 @@ import org.w3c.dom.HTMLDivElement
 fun Tag.CodeMirrorComp(
     code: String,
     onCodeChanged: OnChange<String>,
+    extraExtensions: List<Extension> = emptyList(),
 ): ComponentRef<CodeMirrorComp> = comp(
-    CodeMirrorComp.Props(code = code, onCodeChanged = onCodeChanged)
+    CodeMirrorComp.Props(code = code, onCodeChanged = onCodeChanged, extraExtensions = extraExtensions)
 ) {
     CodeMirrorComp(it)
 }
@@ -30,6 +31,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
     data class Props(
         val code: String,
         val onCodeChanged: OnChange<String>,
+        val extraExtensions: List<Extension> = emptyList(),
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -165,7 +167,8 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                 updateListenerExtension,
                 createHighlightExtension(),
                 linterExtension,  // Initialize lint state with autoPanel
-                lintGutter()      // Add lint gutter for error markers
+                lintGutter(),     // Add lint gutter for error markers
+                *props.extraExtensions.toTypedArray(),
             )
         ).unsafeCast<Array<Extension>>()
 

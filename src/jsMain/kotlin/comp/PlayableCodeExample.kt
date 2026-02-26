@@ -16,6 +16,8 @@ import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
+import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
+import io.peekandpoke.klang.script.docs.DslDocsRegistry
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
@@ -231,7 +233,8 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 onCodeChanged = { newCode ->
                     currentCode = newCode
                     editorRef { it.setErrors(emptyList()) }
-                }
+                },
+                extraExtensions = listOf(dslHoverTooltipExtension { DslDocsRegistry.global.get(it) }),
             ).track(editorRef)
         }
     }

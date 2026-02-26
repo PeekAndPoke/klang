@@ -58,6 +58,8 @@ external class EditorState {
     fun field(field: StateField<*>): Any?
     fun facet(facet: Facet<*>): Any?
 
+    fun wordAt(pos: Int): SelectionRange?
+
     fun sliceDoc(from: Int = definedExternally, to: Int = definedExternally): String
     fun toJSON(): Any
 

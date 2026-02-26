@@ -324,3 +324,8 @@ external fun showPanel(panelConstructor: (view: EditorView) -> Panel): Extension
 external fun panels(config: dynamic = definedExternally): Extension
 
 external val showTooltip: Facet<Tooltip>
+
+external fun hoverTooltip(
+    source: (view: EditorView, pos: Int, side: Int) -> dynamic,
+    options: dynamic = definedExternally,
+): Extension
