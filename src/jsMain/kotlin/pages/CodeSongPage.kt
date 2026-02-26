@@ -22,7 +22,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
-import io.peekandpoke.klang.codemirror.EditorError
+import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -126,7 +126,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         when (val s = playback) {
             null -> launch {
                 if (!loading) {
-                    try {
+                    withEditorErrorHandling(editorRef) {
                         getPlayer().let { p ->
                             val pattern = StrudelPattern.compileRaw(code)
                                 ?: error("Failed to compile Strudel pattern from code")
@@ -152,34 +152,16 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             playback?.start(
                                 StrudelPlayback.Options(cyclesPerSecond = cps)
                             )
-
-                            // Clear errors on success
-                            editorRef { it.setErrors(emptyList()) }
                         }
-                    } catch (e: Throwable) {
-                        console.error("Error compiling/playing pattern:", e)
-                        val editorError = mapToEditorError(e)
-                        console.log("[CodeSongPage] Mapped error:", editorError)
-                        // Set errors via component ref
-                        editorRef { it.setErrors(listOf(editorError)) }
                     }
                 }
             }
 
-            else -> {
-                try {
+            else -> launch {
+                withEditorErrorHandling(editorRef) {
                     val pattern = StrudelPattern.compileRaw(code)
                         ?: error("Failed to compile Strudel pattern from code")
                     s.updatePattern(pattern)
-
-                    // Clear errors on success
-                    editorRef { it.setErrors(emptyList()) }
-                } catch (e: Throwable) {
-                    console.error("Error updating pattern:", e)
-                    val editorError = mapToEditorError(e)
-                    console.log("[CodeSongPage] Mapped error:", editorError)
-                    // Set errors via component ref
-                    editorRef { it.setErrors(listOf(editorError)) }
                 }
             }
         }
@@ -190,61 +172,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         playback?.signals?.clear()
         highlightBuffer.cancelAll()
         playback = null
-    }
-
-    /**
-     * Map a Throwable to an EditorError
-     * Tries to extract line and column information from the exception
-     */
-    private fun mapToEditorError(e: Throwable): EditorError {
-        // Try to extract location info from the exception message
-        // Common patterns:
-        // - "Parse error at 14:3: Expected expression"
-        // - "Error at line X, column Y"
-        // - "Line X: error message"
-        // - "at line X"
-
-        val message = e.message ?: "Unknown error"
-
-        // Try pattern: "at line:col:" (e.g., "Parse error at 14:3: Expected expression")
-        val atLineColRegex = Regex("at\\s+(\\d+):(\\d+)", RegexOption.IGNORE_CASE)
-        val atLineColMatch = atLineColRegex.find(message)
-
-        val line: Int
-        val col: Int
-
-        if (atLineColMatch != null) {
-            line = atLineColMatch.groupValues.getOrNull(1)?.toIntOrNull() ?: 1
-            col = atLineColMatch.groupValues.getOrNull(2)?.toIntOrNull() ?: 1
-        } else {
-            // Fallback to separate line and column patterns
-            val lineRegex = Regex("line[:\\s]+(\\d+)", RegexOption.IGNORE_CASE)
-            val columnRegex = Regex("column[:\\s]+(\\d+)", RegexOption.IGNORE_CASE)
-
-            val lineMatch = lineRegex.find(message)
-            val columnMatch = columnRegex.find(message)
-
-            line = lineMatch?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-            col = columnMatch?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-        }
-
-        // Try to extract a cleaner message (without the location prefix)
-        val cleanMessage = message
-            .replace(Regex("Parse error at \\d+:\\d+[:\\s]*", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("at line \\d+(, column \\d+)?[:\\s]*", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("line \\d+[:\\s]*", RegexOption.IGNORE_CASE), "")
-            .trim()
-            .takeIf { it.isNotEmpty() } ?: message
-
-        // Add line number to the message for display in error panel
-        val messageWithLine = "Line $line: $cleanMessage"
-
-        return EditorError(
-            message = messageWithLine,
-            line = line,
-            col = col,
-            len = 1
-        )
     }
 
     override fun VDom.render() {
