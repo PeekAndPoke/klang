@@ -33,6 +33,9 @@ object BlockFieldNaming {
     fun numField(index: Int) = "ARG_${index}_$KIND_NUM"
     fun boolField(index: Int) = "ARG_${index}_$KIND_BOOL"
 
+    /** Name of the value-input socket for a PatternLike arg at [index]. */
+    fun patInput(index: Int) = "PAT_$index"
+
     /**
      * Return the canonical field name for a parameter at [index] given its Kotlin [typeName].
      */
@@ -51,6 +54,9 @@ object BlockFieldNaming {
 
     fun isBoolType(typeName: String): Boolean =
         typeName == "Boolean"
+
+    fun isPatternLikeType(typeName: String): Boolean =
+        typeName in setOf("PatternLike", "StrudelPattern", "Pattern")
 
     /**
      * Parse the kind suffix from a field name (e.g. "ARG_0_STR" → "STR").

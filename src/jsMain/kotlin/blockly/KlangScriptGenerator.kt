@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.blockly
 
 import io.peekandpoke.klang.blockly.BlockFieldNaming.formatValue
+import io.peekandpoke.klang.blockly.KlangScriptGenerator.generateChain
 import io.peekandpoke.klang.blockly.ext.Block
 import io.peekandpoke.klang.blockly.ext.WorkspaceSvg
 
@@ -17,6 +18,9 @@ import io.peekandpoke.klang.blockly.ext.WorkspaceSvg
  *
  * Field-value quoting is delegated to [BlockFieldNaming.formatValue] which uses the field-name
  * suffix (`_STR`, `_NUM`, `_BOOL`) to decide whether to wrap the value in quotes.
+ *
+ * For vararg PatternLike parameters, blocks snap into `input_statement` sockets (`PAT_<i>`).
+ * The first block in each such socket is rendered as a nested sub-expression via [generateChain].
  */
 object KlangScriptGenerator {
 
@@ -94,13 +98,17 @@ object KlangScriptGenerator {
     }
 
     // ----------------------------------------------------------------
-    // Field collection
+    // Argument collection
     // ----------------------------------------------------------------
 
     /**
-     * Collect formatted argument strings from a block's `ARG_<i>_*` fields in index order.
+     * Collect formatted argument strings from a block's `ARG_<i>_*` fields and/or `PAT_<i>`
+     * statement-input sockets in index order.
      *
-     * Iteration terminates as soon as neither `_STR`, `_NUM`, nor `_BOOL` exists for index `i`.
+     * At each index `i`, regular fields are tried first (`_NUM`, `_BOOL`, `_STR`).
+     * If no regular field exists at `i`, a `PAT_i` statement-input socket is checked;
+     * the block(s) inside that pocket are rendered as a nested sub-expression via [generateChain].
+     * Iteration terminates when neither a field nor a statement input is found at index `i`.
      */
     private fun collectArgs(block: Block): List<String> {
         val args = mutableListOf<String>()
@@ -110,15 +118,26 @@ object KlangScriptGenerator {
             val strField = BlockFieldNaming.strField(i)
             val numField = BlockFieldNaming.numField(i)
             val boolField = BlockFieldNaming.boolField(i)
+            val patInput = BlockFieldNaming.patInput(i)
 
             val (fieldName, rawValue) = when {
-                block.getFieldValue(strField) != null -> strField to block.getFieldValue(strField)!!
                 block.getFieldValue(numField) != null -> numField to block.getFieldValue(numField)!!
                 block.getFieldValue(boolField) != null -> boolField to block.getFieldValue(boolField)!!
-                else -> break
+                block.getFieldValue(strField) != null -> strField to block.getFieldValue(strField)!!
+                else -> {
+                    // No regular field at index i — check for a statement-input socket (PAT_i)
+                    val nested = block.getInputTargetBlock(patInput)
+                    if (nested != null) {
+                        val code = generateChain(nested)
+                        if (code != null) args += code
+                        i++
+                        continue
+                    }
+                    break
+                }
             }
 
-            // Skip trailing empty string slots (from optional vararg fields)
+            // Skip blank optional string slots (vararg placeholders)
             if (rawValue.isBlank() && BlockFieldNaming.kindOf(fieldName) == BlockFieldNaming.KIND_STR) {
                 i++
                 continue

@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.blockly
 
+import io.peekandpoke.klang.blockly.AstToBlockly.buildBlockJson
+import io.peekandpoke.klang.blockly.AstToBlockly.chainToJson
 import io.peekandpoke.klang.blockly.ext.WorkspaceSvg
 import io.peekandpoke.klang.blockly.ext.serialization
 import io.peekandpoke.klang.script.ast.*
@@ -180,53 +182,96 @@ object AstToBlockly {
     }
 
     /**
-     * Build a single block object for Blockly serialisation.
-     *
-     * The function uses [DslDocsRegistry] to determine the expected parameter types (and thus
-     * the correct field names).  If the function is not in the registry, field names default
-     * to `ARG_<i>_STR` for all positions.
+     * Build a single statement-block object for Blockly serialisation.
+     * Delegates to [buildBlockJson] with the standard `klang_` type prefix.
      */
-    private fun stepToJson(step: ChainStep, isHead: Boolean, x: Int?, y: Int?): dynamic? {
-        val blockType = BlockDefinitionBuilder.blockType(step.funcName)
+    private fun stepToJson(step: ChainStep, isHead: Boolean, x: Int?, y: Int?): dynamic? =
+        buildBlockJson(step.funcName, step.args, x = x, y = y)
 
-        // Look up parameter types from registry (optional — graceful fallback)
+    /**
+     * Build a Blockly serialisation object for a single block.
+     *
+     * For each argument:
+     * - If the corresponding param is a vararg [PatternLike], the argument is recursively
+     *   converted to a block and placed in the `inputs` map under `PAT_<idx>` (statement pocket).
+     * - Otherwise the argument is serialised to a field value in the `fields` map.
+     */
+    private fun buildBlockJson(
+        funcName: String,
+        args: List<Expression>,
+        x: Int? = null,
+        y: Int? = null,
+    ): dynamic? {
+        val blockType = BlockDefinitionBuilder.blockType(funcName)
+
         val paramModels: List<ParamModel>? =
-            DslDocsRegistry.global.get(step.funcName)
+            DslDocsRegistry.global.get(funcName)
                 ?.variants
                 ?.firstOrNull { it.signatureModel.params != null }
                 ?.signatureModel
                 ?.params
 
-        // Build the block object directly as dynamic
         val block: dynamic = js("{}")
         block.type = blockType
-
         if (x != null) block.x = x
         if (y != null) block.y = y
 
         val fields: dynamic = js("{}")
         var hasFields = false
+        val inputs: dynamic = js("{}")
+        var hasInputs = false
 
-        step.args.forEachIndexed { idx, argExpr ->
-            val typeName = paramModels
-                ?.getOrNull(idx)
-                ?.let { if (it.isVararg) it.type.simpleName else it.type.simpleName }
-                ?: "PatternLike"  // fallback: treat as string
+        val funcCategory = DslDocsRegistry.global.get(funcName)?.category ?: ""
 
-            val fieldName = BlockFieldNaming.fieldName(idx, typeName)
-            val rawValue = expressionToFieldValue(argExpr, typeName)
+        args.forEachIndexed { idx, argExpr ->
+            // Resolve param model — for vararg, last param covers all overflow indices
+            val param = paramModels?.getOrNull(idx)
+                ?: paramModels?.lastOrNull()?.takeIf { it.isVararg }
+            val typeName = param?.type?.simpleName ?: "PatternLike"
+            // Only structural combinators (stack, seq, gap, …) use PAT pockets;
+            // other vararg PatternLike functions (note, etc.) use regular text fields.
+            val isVarargPatternLike = param?.isVararg == true &&
+                    BlockFieldNaming.isPatternLikeType(typeName) &&
+                    funcCategory in BlockDefinitionBuilder.PAT_POCKET_CATEGORIES
 
-            if (rawValue != null) {
-                fields[fieldName] = rawValue
-                hasFields = true
+            if (isVarargPatternLike) {
+                val inputName = BlockFieldNaming.patInput(idx)
+                val nestedBlock = expressionToValueBlock(argExpr)
+                if (nestedBlock != null) {
+                    inputs[inputName] = js("{}")
+                    inputs[inputName].block = nestedBlock
+                    hasInputs = true
+                }
+            } else {
+                val fieldName = BlockFieldNaming.fieldName(idx, typeName)
+                val rawValue = expressionToFieldValue(argExpr, typeName)
+                if (rawValue != null) {
+                    fields[fieldName] = rawValue
+                    hasFields = true
+                }
             }
         }
 
-        if (hasFields) {
-            block.fields = fields
-        }
+        if (hasFields) block.fields = fields
+        if (hasInputs) block.inputs = inputs
 
         return block
+    }
+
+    /**
+     * Convert an [Expression] argument into a block object (or chain) suitable for placing
+     * inside a `PAT_<i>` statement-input socket.
+     *
+     * Supports both simple calls (`sound("bd")`) and chained calls
+     * (`sound("bd hh sd").slow(2)`) by extracting a full chain and rendering it
+     * as a linked sequence of blocks via [chainToJson].
+     *
+     * Returns null for expression forms that cannot be represented as a chain.
+     */
+    private fun expressionToValueBlock(expr: Expression): dynamic? {
+        val chain = extractChain(expr)
+        if (chain.isEmpty()) return null
+        return chainToJson(chain, x = 0, y = 0)
     }
 
     /**

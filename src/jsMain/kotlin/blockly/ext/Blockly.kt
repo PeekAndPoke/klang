@@ -106,6 +106,12 @@ external class BlockSvg {
     fun setFieldValue(value: String, name: String)
 
     /**
+     * Return the block connected to the named value input socket, or null when nothing is
+     * connected.  Use this to read blocks that were snapped into `input_value` sockets.
+     */
+    fun getInputTargetBlock(name: String): BlockSvg?
+
+    /**
      * Initialise the block's SVG representation.
      * Must be called on a newly created block before [render].
      */
