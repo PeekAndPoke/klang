@@ -17,7 +17,7 @@ import org.w3c.dom.HTMLElement
  */
 fun dslGoToDocsExtension(
     docProvider: (String) -> FunctionDoc?,
-    docsUrlBase: String,
+    onNavigate: (doc: FunctionDoc, event: dynamic) -> Unit,
 ): Extension {
 
     // ── Underline decoration (CTRL/Cmd-hover) ─────────────────────────────
@@ -76,13 +76,6 @@ fun dslGoToDocsExtension(
         return word to doc
     }
 
-    fun docsUrl(name: String) = "$docsUrlBase?search=function:$name"
-
-    fun navigate(name: String, newTab: Boolean) {
-        val url = docsUrl(name)
-        if (newTab) window.open(url, "_blank") else window.location.href = url
-    }
-
     fun dispatchClear(view: EditorView) {
         view.dispatch(view.state.update(jsObject {
             this.effects = clearUnderlineEffect.of(Unit.unsafeCast<Unit>())
@@ -105,20 +98,22 @@ fun dslGoToDocsExtension(
             """.trimIndent()
         }
 
-        fun menuItem(label: String, onClick: () -> Unit): HTMLElement =
+        fun menuItem(label: String, onItemClick: (dynamic) -> Unit): HTMLElement =
             (document.createElement("div") as HTMLElement).also { el ->
                 el.style.cssText = "padding:7px 14px;cursor:pointer;color:#333;white-space:nowrap;"
                 el.textContent = label
                 el.onmouseover = { el.style.backgroundColor = "#f0f4ff"; null }
                 el.onmouseout = { el.style.backgroundColor = ""; null }
-                el.onclick = { onClick(); menu.asDynamic().remove(); null }
+                el.onclick = { e: dynamic -> onItemClick(e); menu.asDynamic().remove(); null }
             }
 
-        menu.appendChild(menuItem("Go to docs: ${func.name}") {
-            navigate(func.name, newTab = false)
+        // Same tab: pass the actual click event (shiftKey will be false)
+        menu.appendChild(menuItem("Go to docs: ${func.name}") { e ->
+            onNavigate(func, e)
         })
-        menu.appendChild(menuItem("Open docs in new tab: ${func.name}") {
-            navigate(func.name, newTab = true)
+        // New tab: synthesise an event-like object with shiftKey = true
+        menu.appendChild(menuItem("Open docs in new tab: ${func.name}") { e ->
+            onNavigate(func, jsObject<dynamic> { this.shiftKey = true; this.ctrlKey = e.ctrlKey; this.metaKey = e.metaKey })
         })
 
         document.body?.appendChild(menu)
@@ -154,7 +149,7 @@ fun dslGoToDocsExtension(
             if (!isModifier(event)) return@click false
             val result = wordDocAt(view, event) ?: return@click false
             event.preventDefault()
-            navigate(result.second.name, newTab = event.shiftKey == true)
+            onNavigate(result.second, event)
             true
         }
 

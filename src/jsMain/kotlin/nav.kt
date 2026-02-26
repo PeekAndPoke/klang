@@ -24,6 +24,7 @@ object Nav {
     val docsBase = "/docs"
     val docs = Static(docsBase)
     val docsStrudel = Static("$docsBase/strudel")
+    fun docsStrudelSearch(search: String) = docsStrudel().withQueryParams(StrudelDocsPage.PARAM_SEARCH to search)
     val docsKlangScript = Static("$docsBase/klang-script")
 
     val tour = Static("/tour")

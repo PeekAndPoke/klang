@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
@@ -11,6 +12,7 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
@@ -239,7 +241,15 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     dslHoverTooltipExtension { DslDocsRegistry.global.get(it) },
                     dslGoToDocsExtension(
                         docProvider = { DslDocsRegistry.global.get(it) },
-                        docsUrlBase = "/docs/strudel",
+                        onNavigate = { doc, event ->
+                            val uri = Nav.docsStrudelSearch("function:${doc.name}")
+
+                            if (event.shiftKey == true) {
+                                router.navToUri(event, uri)
+                            } else {
+                                router.navToUri(uri)
+                            }
+                        },
                     ),
                 ),
             ).track(editorRef)

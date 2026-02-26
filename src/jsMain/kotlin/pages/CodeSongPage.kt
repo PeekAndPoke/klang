@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
@@ -17,6 +18,7 @@ import de.peekandpoke.ultra.streams.StreamSource
 import de.peekandpoke.ultra.streams.ops.map
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import io.peekandpoke.klang.BuiltInSongs
+import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
@@ -312,7 +314,15 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             dslHoverTooltipExtension { DslDocsRegistry.global.get(it) },
                             dslGoToDocsExtension(
                                 docProvider = { DslDocsRegistry.global.get(it) },
-                                docsUrlBase = "/docs/strudel",
+                                onNavigate = { doc, event ->
+                                    val uri = Nav.docsStrudelSearch("function:${doc.name}")
+
+                                    if (event.shiftKey == true) {
+                                        router.navToUri(event, uri)
+                                    } else {
+                                        router.navToUri(uri)
+                                    }
+                                },
                             ),
                         ),
                     ).track(editorRef)
