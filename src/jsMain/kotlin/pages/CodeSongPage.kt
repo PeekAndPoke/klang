@@ -22,6 +22,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
+import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.script.docs.DslDocsRegistry
@@ -307,7 +308,13 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             // Clear errors when user types
                             editorRef { it.setErrors(emptyList()) }
                         },
-                        extraExtensions = listOf(dslHoverTooltipExtension { DslDocsRegistry.global.get(it) }),
+                        extraExtensions = listOf(
+                            dslHoverTooltipExtension { DslDocsRegistry.global.get(it) },
+                            dslGoToDocsExtension(
+                                docProvider = { DslDocsRegistry.global.get(it) },
+                                docsUrlBase = "/docs/strudel",
+                            ),
+                        ),
                     ).track(editorRef)
                 }
             }

@@ -74,7 +74,7 @@ fun dslHoverTooltipExtension(docProvider: (String) -> FunctionDoc?): Extension {
 
 private fun buildTooltipObject(from: Int, to: Int, doc: FunctionDoc): dynamic {
     val html = buildTooltipHtml(doc)
-    return jsObject<dynamic> {
+    return jsObject {
         this.pos = from
         this.end = to
         this.above = true
