@@ -5,44 +5,102 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.html.onMouseDown
-import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.input
+import kotlinx.html.span
 
 @Suppress("FunctionName")
 fun Tag.KlangBlocksPaletteComp(
+    availableLibraries: List<KlangScriptLibrary>,
+    importedLibraryNames: Set<String>,
+    onImportLibrary: (String) -> Unit,
     onDragStart: (funcName: String, x: Double, y: Double) -> Unit,
-) = comp(KlangBlocksPaletteComp.Props(onDragStart = onDragStart)) {
+) = comp(
+    KlangBlocksPaletteComp.Props(
+        availableLibraries = availableLibraries,
+        importedLibraryNames = importedLibraryNames,
+        onImportLibrary = onImportLibrary,
+        onDragStart = onDragStart,
+    )
+) {
     KlangBlocksPaletteComp(it)
 }
 
 class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp.Props>(ctx) {
 
     data class Props(
+        val availableLibraries: List<KlangScriptLibrary>,
+        val importedLibraryNames: Set<String>,
+        val onImportLibrary: (String) -> Unit,
         val onDragStart: (funcName: String, x: Double, y: Double) -> Unit,
     )
 
     private var searchQuery: String by value("")
 
     override fun VDom.render() {
-        val registry = KlangDocsRegistry.global
         val query = searchQuery.trim().lowercase()
+        val importedLibraries = props.availableLibraries.filter { it.name in props.importedLibraryNames }
+        val notImportedLibraries = props.availableLibraries.filter { it.name !in props.importedLibraryNames }
 
         div {
             css {
                 width = 200.px
                 flexShrink = 0.0
-                overflowY = Overflow.auto
                 backgroundColor = Color("#252535")
                 put("border-right", "1px solid #333")
                 display = Display.flex
                 flexDirection = FlexDirection.column
+            }
+
+            // Available-but-not-imported libraries
+            if (notImportedLibraries.isNotEmpty()) {
+                div {
+                    css {
+                        padding = Padding(8.px)
+                        flexShrink = 0.0
+                        put("border-bottom", "1px solid #333")
+                    }
+                    div {
+                        css {
+                            color = Color("#888")
+                            fontSize = 10.px
+                            fontWeight = FontWeight.bold
+                            textTransform = TextTransform.uppercase
+                            letterSpacing = LinearDimension("0.08em")
+                            marginBottom = 6.px
+                        }
+                        +"Import library"
+                    }
+                    notImportedLibraries.forEach { library ->
+                        div {
+                            css {
+                                display = Display.inlineFlex
+                                alignItems = Align.center
+                                put("gap", "4px")
+                                backgroundColor = Color("#333")
+                                color = Color("#aaa")
+                                borderRadius = 4.px
+                                padding = Padding(vertical = 3.px, horizontal = 8.px)
+                                marginBottom = 3.px
+                                fontSize = 12.px
+                                fontFamily = "monospace"
+                                cursor = Cursor.pointer
+                                userSelect = UserSelect.none
+                            }
+                            onClick { props.onImportLibrary(library.name) }
+                            span { css { color = Color("#666"); marginRight = 4.px }; +"+" }
+                            +library.name
+                        }
+                    }
+                }
             }
 
             // Search input
@@ -72,7 +130,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                 }
             }
 
-            // Block list
+            // Block list — only from imported libraries
             div {
                 css {
                     flex = Flex(1.0, 1.0, FlexBasis.auto)
@@ -80,54 +138,70 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                     padding = Padding(8.px)
                 }
 
-                registry.categories.forEach { category ->
-                    val funcs = registry.getByCategory(category)
-                        .filter { hasVisibleBlock(it) }
-                        .filter { query.isEmpty() || it.name.lowercase().contains(query) }
-
-                    if (funcs.isEmpty()) return@forEach
-
-                    // Category header
+                if (importedLibraries.isEmpty()) {
                     div {
                         css {
-                            color = Color(categoryColour(category))
-                            fontSize = 10.px
-                            fontWeight = FontWeight.bold
-                            textTransform = TextTransform.uppercase
-                            letterSpacing = LinearDimension("0.08em")
-                            padding = Padding(vertical = 6.px, horizontal = 4.px)
-                            marginTop = 4.px
+                            color = Color("#555")
+                            fontSize = 12.px
+                            padding = Padding(8.px)
+                            textAlign = TextAlign.center
                         }
-                        +category
+                        +"Import a library to see blocks"
                     }
+                } else {
+                    importedLibraries.forEach { library ->
+                        val symbolsByCategory = library.docs.symbols.values
+                            .filter { hasVisibleBlock(it) }
+                            .filter { query.isEmpty() || it.name.lowercase().contains(query) }
+                            .groupBy { it.category }
+                            .entries
+                            .sortedBy { it.key }
 
-                    // Function pills
-                    funcs.forEach { doc ->
-                        div {
-                            css {
-                                display = Display.block
-                                backgroundColor = Color(categoryColour(category))
-                                color = Color.white
-                                borderRadius = 6.px
-                                padding = Padding(vertical = 4.px, horizontal = 8.px)
-                                marginBottom = 3.px
-                                fontSize = 12.px
-                                fontFamily = "monospace"
-                                cursor = Cursor.grab
-                                userSelect = UserSelect.none
-                                whiteSpace = WhiteSpace.nowrap
-                                overflow = Overflow.hidden
-                                textOverflow = TextOverflow.ellipsis
+                        symbolsByCategory.forEach { entry ->
+                            val category = entry.key
+                            val funcs = entry.value
+                            // Category header
+                            div {
+                                css {
+                                    color = Color(categoryColour(category))
+                                    fontSize = 10.px
+                                    fontWeight = FontWeight.bold
+                                    textTransform = TextTransform.uppercase
+                                    letterSpacing = LinearDimension("0.08em")
+                                    padding = Padding(vertical = 6.px, horizontal = 4.px)
+                                    marginTop = 4.px
+                                }
+                                +category
                             }
-                            onMouseDown { event ->
-                                event.preventDefault()
-                                props.onDragStart(
-                                    doc.name,
-                                    event.clientX.toDouble(),
-                                    event.clientY.toDouble(),
-                                )
+
+                            funcs.sortedBy { it.name }.forEach { doc ->
+                                div {
+                                    css {
+                                        display = Display.block
+                                        backgroundColor = Color(categoryColour(category))
+                                        color = Color.white
+                                        borderRadius = 6.px
+                                        padding = Padding(vertical = 4.px, horizontal = 8.px)
+                                        marginBottom = 3.px
+                                        fontSize = 12.px
+                                        fontFamily = "monospace"
+                                        cursor = Cursor.grab
+                                        userSelect = UserSelect.none
+                                        whiteSpace = WhiteSpace.nowrap
+                                        overflow = Overflow.hidden
+                                        textOverflow = TextOverflow.ellipsis
+                                    }
+                                    onMouseDown { event ->
+                                        event.preventDefault()
+                                        props.onDragStart(
+                                            doc.name,
+                                            event.clientX.toDouble(),
+                                            event.clientY.toDouble(),
+                                        )
+                                    }
+                                    +doc.name
+                                }
                             }
-                            +doc.name
                         }
                     }
                 }

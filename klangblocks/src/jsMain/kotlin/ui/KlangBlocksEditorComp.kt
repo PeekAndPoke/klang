@@ -9,7 +9,9 @@ import de.peekandpoke.ultra.html.onMouseMove
 import de.peekandpoke.ultra.html.onMouseUp
 import io.peekandpoke.klang.blocks.model.KBCallBlock
 import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.KBImportStmt
 import io.peekandpoke.klang.blocks.model.KBProgram
+import io.peekandpoke.klang.script.KlangScriptLibrary
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -18,14 +20,18 @@ import org.w3c.dom.HTMLElement
 
 @Suppress("FunctionName")
 fun Tag.KlangBlocksEditorComp(
+    availableLibraries: List<KlangScriptLibrary>,
     onCodeChanged: (String) -> Unit,
-) = comp(KlangBlocksEditorComp.Props(onCodeChanged = onCodeChanged)) {
+) = comp(KlangBlocksEditorComp.Props(availableLibraries = availableLibraries, onCodeChanged = onCodeChanged)) {
     KlangBlocksEditorComp(it)
 }
 
 class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.Props>(ctx) {
 
-    data class Props(val onCodeChanged: (String) -> Unit)
+    data class Props(
+        val availableLibraries: List<KlangScriptLibrary>,
+        val onCodeChanged: (String) -> Unit,
+    )
 
     // ---- Drag state ------------------------------------------------
 
@@ -44,6 +50,11 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     private var dragState: DragState by value(DragState.None)
 
     private val canvasDivId = "kb-canvas-${hashCode()}"
+
+    // ---- Derived -------------------------------------------------------
+
+    private val importedLibraryNames: Set<String>
+        get() = program.statements.filterIsInstance<KBImportStmt>().map { it.libraryName }.toSet()
 
     // ---- Drag logic ------------------------------------------------
 
@@ -85,6 +96,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         props.onCodeChanged("")
     }
 
+    private fun commitImportLibrary(libraryName: String) {
+        val import = KBImportStmt(id = uuid(), libraryName = libraryName)
+        program = program.copy(statements = listOf(import) + program.statements)
+        props.onCodeChanged("")
+    }
+
     // ---- Render ----------------------------------------------------
 
     override fun VDom.render() {
@@ -107,7 +124,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             }
 
             // Palette
-            KlangBlocksPaletteComp(onDragStart = ::onPaletteDragStart)
+            KlangBlocksPaletteComp(
+                availableLibraries = props.availableLibraries,
+                importedLibraryNames = importedLibraryNames,
+                onImportLibrary = ::commitImportLibrary,
+                onDragStart = ::onPaletteDragStart,
+            )
 
             // Canvas
             KlangBlocksCanvasComp(program = program, canvasDivId = canvasDivId)

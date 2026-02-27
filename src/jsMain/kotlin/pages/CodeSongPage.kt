@@ -29,10 +29,12 @@ import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
+import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.playStrudel
 import kotlinx.browser.document
 import kotlinx.css.*
@@ -371,6 +373,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                         EditorMode.BLOCKS -> {
                             KlangBlocksEditorComp(
+                                availableLibraries = listOf(stdlibLib, strudelLib),
                                 onCodeChanged = { newCode ->
                                     code = newCode
                                     codeStream(newCode)
