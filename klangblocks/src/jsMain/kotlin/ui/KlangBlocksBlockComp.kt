@@ -17,19 +17,13 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangBlocksBlockComp(
     block: KBCallBlock,
-    stmtId: String,
-    dndState: DndState?,
-    onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
-    onRemove: () -> Unit,
-    onDragStart: (x: Double, y: Double) -> Unit,
+    chain: KBChainStmt,
+    ctx: KlangBlocksCtx,
 ) = comp(
     KlangBlocksBlockComp.Props(
         block = block,
-        stmtId = stmtId,
-        dndState = dndState,
-        onArgChanged = onArgChanged,
-        onRemove = onRemove,
-        onDragStart = onDragStart,
+        chain = chain,
+        ctx = ctx,
     )
 ) {
     KlangBlocksBlockComp(it)
@@ -39,11 +33,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
     data class Props(
         val block: KBCallBlock,
-        val stmtId: String,
-        val dndState: DndState?,
-        val onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
-        val onRemove: () -> Unit,
-        val onDragStart: (x: Double, y: Double) -> Unit,
+        val chain: KBChainStmt,
+        val ctx: KlangBlocksCtx,
     )
 
     private var editingSlotIndex: Int? by value(null)
@@ -63,7 +54,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             val num = text.toDoubleOrNull()
             if (num != null) KBNumberArg(num) else KBStringArg(text)
         }
-        props.onArgChanged(slotIndex, arg)
+        props.ctx.editing.onArgChanged(props.block.id, slotIndex, arg)
         editingSlotIndex = null
         editText = ""
     }
@@ -75,9 +66,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
     override fun VDom.render() {
         val block = props.block
+        val ctx = props.ctx
+        val dndState = ctx.dnd.state
         val doc = KlangDocsRegistry.global.get(block.funcName)
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
-        val canDropToSlot = props.dndState?.onDropToSlot != null
+        val canDropToSlot = dndState?.onDropToSlot != null
 
         div("kb-block") {
             css {
@@ -102,7 +95,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             onMouseDown { event ->
                 if (!canDropToSlot) {
                     event.preventDefault()
-                    props.onDragStart(event.clientX.toDouble(), event.clientY.toDouble())
+                    ctx.dnd.startCanvasDrag(
+                        props.chain.id, props.chain,
+                        event.clientX.toDouble(), event.clientY.toDouble(),
+                    )
                 }
             }
 
@@ -144,6 +140,43 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                             put("box-sizing", "border-box")
                         }
                     }
+                } else if (arg is KBNestedChainArg && !canDrop) {
+                    // Render the nested chain as inline mini-blocks
+                    span {
+                        css {
+                            display = Display.inlineFlex
+                            alignItems = Align.center
+                            put("gap", "2px")
+                            borderRadius = 4.px
+                            backgroundColor = Color("rgba(0,0,0,0.2)")
+                            padding = Padding(horizontal = 4.px, vertical = 2.px)
+                        }
+                        onMouseDown { event -> event.stopPropagation() }
+                        var prevWasBlock = false
+                        arg.chain.steps.forEach { nestedItem ->
+                            when (nestedItem) {
+                                is KBCallBlock -> {
+                                    if (prevWasBlock) {
+                                        span {
+                                            css {
+                                                color = Color("rgba(255,255,255,0.4)")
+                                                fontSize = 10.px
+                                                padding = Padding(horizontal = 1.px)
+                                            }
+                                            +"•"
+                                        }
+                                    }
+                                    KlangBlocksNestedBlockComp(
+                                        block = nestedItem,
+                                        ctx = ctx,
+                                    )
+                                    prevWasBlock = true
+                                }
+
+                                is KBNewlineHint -> prevWasBlock = false
+                            }
+                        }
+                    }
                 } else {
                     span {
                         css {
@@ -164,7 +197,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         if (canDrop) {
                             onMouseUp { event ->
                                 event.stopPropagation()
-                                props.dndState?.onDropToSlot?.invoke(props.stmtId, block.id, i)
+                                dndState?.onDropToSlot?.invoke(props.chain.id, block.id, i)
                             }
                             onMouseDown { event -> event.stopPropagation() }
                         } else {
@@ -209,7 +242,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                     }
                     onClick { event ->
                         event.stopPropagation()
-                        props.onRemove()
+                        ctx.editing.onRemoveBlock(props.block.id)
                     }
                     onMouseDown { event -> event.stopPropagation() }
                     +"×"
@@ -226,7 +259,7 @@ private fun slotAcceptsChainDrop(slot: KBSlot): Boolean = when (val k = slot.kin
     else -> false
 }
 
-private fun KBArgValue.renderShort(): String = when (this) {
+internal fun KBArgValue.renderShort(): String = when (this) {
     is KBEmptyArg -> ""
     is KBStringArg -> "\"$value\""
     is KBNumberArg -> value.toString()

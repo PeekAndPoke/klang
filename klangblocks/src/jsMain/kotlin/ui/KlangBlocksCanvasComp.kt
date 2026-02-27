@@ -13,24 +13,12 @@ import kotlinx.html.*
 
 @Suppress("FunctionName")
 fun Tag.KlangBlocksCanvasComp(
-    program: KBProgram,
+    ctx: KlangBlocksCtx,
     canvasDivId: String,
-    dndState: DndState?,
-    onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
-    onRemoveBlock: (stmtId: String, blockId: String) -> Unit,
-    onRemoveStmt: (stmtId: String) -> Unit,
-    onCanvasDragStart: (stmtId: String, chain: KBChainStmt, x: Double, y: Double) -> Unit,
-    onInsertBlankLine: (index: Int) -> Unit,
 ) = comp(
     KlangBlocksCanvasComp.Props(
-        program = program,
+        ctx = ctx,
         canvasDivId = canvasDivId,
-        dndState = dndState,
-        onArgChanged = onArgChanged,
-        onRemoveBlock = onRemoveBlock,
-        onRemoveStmt = onRemoveStmt,
-        onCanvasDragStart = onCanvasDragStart,
-        onInsertBlankLine = onInsertBlankLine,
     )
 ) {
     KlangBlocksCanvasComp(it)
@@ -39,19 +27,13 @@ fun Tag.KlangBlocksCanvasComp(
 class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.Props>(ctx) {
 
     data class Props(
-        val program: KBProgram,
+        val ctx: KlangBlocksCtx,
         val canvasDivId: String,
-        val dndState: DndState?,
-        val onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
-        val onRemoveBlock: (stmtId: String, blockId: String) -> Unit,
-        val onRemoveStmt: (stmtId: String) -> Unit,
-        val onCanvasDragStart: (stmtId: String, chain: KBChainStmt, x: Double, y: Double) -> Unit,
-        val onInsertBlankLine: (index: Int) -> Unit,
     )
 
     override fun VDom.render() {
-        val program = props.program
-        val dndState = props.dndState
+        val ctx = props.ctx
+        val program = ctx.editing.program
 
         div {
             id = props.canvasDivId
@@ -81,8 +63,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                     // Gap before each row (and a final gap after the last row below)
                     KlangBlocksRowGapComp(
                         index = rowIndex,
-                        dndState = dndState,
-                        onInsertBlankLine = props.onInsertBlankLine,
+                        ctx = ctx,
                     )
 
                     div {
@@ -111,7 +92,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             if (stmt is KBChainStmt) {
                                 onMouseDown { event ->
                                     event.preventDefault()
-                                    props.onCanvasDragStart(
+                                    ctx.dnd.startCanvasDrag(
                                         stmt.id, stmt,
                                         event.clientX.toDouble(), event.clientY.toDouble(),
                                     )
@@ -130,17 +111,8 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                             if (prevWasBlock) chainConnector()
                                             KlangBlocksBlockComp(
                                                 block = item,
-                                                stmtId = stmt.id,
-                                                dndState = dndState,
-                                                onArgChanged = { slotIndex, arg ->
-                                                    props.onArgChanged(stmt.id, item.id, slotIndex, arg)
-                                                },
-                                                onRemove = {
-                                                    props.onRemoveBlock(stmt.id, item.id)
-                                                },
-                                                onDragStart = { x, y ->
-                                                    props.onCanvasDragStart(stmt.id, stmt, x, y)
-                                                },
+                                                chain = stmt,
+                                                ctx = ctx,
                                             )
                                             prevWasBlock = true
                                         }
@@ -160,7 +132,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                                 KlangBlocksChainDropZoneComp(
                                     chainId = stmt.id,
-                                    dndState = dndState,
+                                    ctx = ctx,
                                 )
                             }
 
@@ -169,7 +141,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                     css { stmtPillStyle() }
                                     +"import * from \"${stmt.libraryName}\""
                                 }
-                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
                             is KBLetStmt -> {
@@ -177,7 +149,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                     css { stmtPillStyle() }
                                     +"let ${stmt.name}"
                                 }
-                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
                             is KBConstStmt -> {
@@ -185,7 +157,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                     css { stmtPillStyle() }
                                     +"const ${stmt.name}"
                                 }
-                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
                             is KBBlankLine -> {
@@ -195,7 +167,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                         height = 16.px
                                     }
                                 }
-                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
                             }
                         }
                     }
@@ -204,8 +176,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                 // Gap after the last row
                 KlangBlocksRowGapComp(
                     index = program.statements.size,
-                    dndState = dndState,
-                    onInsertBlankLine = props.onInsertBlankLine,
+                    ctx = ctx,
                 )
             }
         }

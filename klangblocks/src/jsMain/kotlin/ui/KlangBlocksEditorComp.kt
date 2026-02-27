@@ -55,19 +55,29 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             val ghostX: Double,
             val ghostY: Double,
         ) : DragState()
+
+        data class DraggingNestedBlock(
+            val block: KBCallBlock,
+            val ghostX: Double,
+            val ghostY: Double,
+        ) : DragState()
     }
 
     // ---- Component state -------------------------------------------
 
-    private var program: KBProgram by value(parseInitialCode()) { props.onCodeChanged(it.toCode()) }
+    private val editingCtx = KBProgramEditingCtx(
+        initialProgram = parseInitialCode(),
+        onChanged = { newProgram ->
+            props.onCodeChanged(newProgram.toCode())
+            triggerRedraw()
+        },
+    )
+
     private var dragState: DragState by value(DragState.None)
 
     private val canvasDivId = "kb-canvas-${hashCode()}"
 
     // ---- Derived ---------------------------------------------------
-
-    private val importedLibraryNames: Set<String>
-        get() = program.statements.filterIsInstance<KBImportStmt>().map { it.libraryName }.toSet()
 
     /** Builds the DndState passed to all children; null when nothing is dragging. */
     private fun buildDndState(): DndState? = when (val ds = dragState) {
@@ -76,11 +86,11 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             ghostY = ds.ghostY,
             ghostLabel = ds.funcName,
             onDropToPosition = { index ->
-                commitPaletteDropAtPosition(ds.funcName, index)
+                editingCtx.commitPaletteDropAtPosition(ds.funcName, index)
                 dragState = DragState.None
             },
             onDropToChain = { chainId ->
-                commitChainAppend(chainId, ds.funcName)
+                editingCtx.commitChainAppend(chainId, ds.funcName)
                 dragState = DragState.None
             },
             onDropToSlot = null,
@@ -91,15 +101,33 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             ghostY = ds.ghostY,
             ghostLabel = ds.chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName },
             onDropToPosition = { index ->
-                commitMoveToPosition(ds.stmtId, index)
+                editingCtx.commitMoveToPosition(ds.stmtId, index)
                 dragState = DragState.None
             },
             onDropToChain = { chainId ->
-                commitCanvasChainAppend(ds.stmtId, ds.chain, chainId)
+                editingCtx.commitCanvasChainAppend(ds.stmtId, ds.chain, chainId)
                 dragState = DragState.None
             },
             onDropToSlot = { stmtId, blockId, slotIdx ->
-                commitCanvasSlotDrop(ds.stmtId, ds.chain, stmtId, blockId, slotIdx)
+                editingCtx.commitCanvasSlotDrop(ds.stmtId, ds.chain, stmtId, blockId, slotIdx)
+                dragState = DragState.None
+            },
+        )
+
+        is DragState.DraggingNestedBlock -> DndState(
+            ghostX = ds.ghostX,
+            ghostY = ds.ghostY,
+            ghostLabel = ds.block.funcName,
+            onDropToPosition = { index ->
+                editingCtx.commitNestedBlockDragToPosition(ds.block, index)
+                dragState = DragState.None
+            },
+            onDropToChain = { chainId ->
+                editingCtx.commitNestedBlockDragToChain(ds.block, chainId)
+                dragState = DragState.None
+            },
+            onDropToSlot = { _, blockId, slotIdx ->
+                editingCtx.commitNestedBlockDragToSlot(ds.block, blockId, slotIdx)
                 dragState = DragState.None
             },
         )
@@ -115,6 +143,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         return try {
             AstToKBlocks.convert(KlangScriptParser.parse(src))
         } catch (e: Exception) {
+            console.error("Error parsing initial code:", e)
             KBProgram()
         }
     }
@@ -129,10 +158,15 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         dragState = DragState.DraggingFromCanvas(stmtId, chain, x, y)
     }
 
+    private fun onNestedBlockDragStart(block: KBCallBlock, x: Double, y: Double) {
+        dragState = DragState.DraggingNestedBlock(block, x, y)
+    }
+
     private fun onMouseMoved(x: Double, y: Double) {
         dragState = when (val current = dragState) {
             is DragState.DraggingFromPalette -> current.copy(ghostX = x, ghostY = y)
             is DragState.DraggingFromCanvas -> current.copy(ghostX = x, ghostY = y)
+            is DragState.DraggingNestedBlock -> current.copy(ghostX = x, ghostY = y)
             else -> return
         }
     }
@@ -142,149 +176,19 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         dragState = DragState.None
     }
 
-    // ---- Program mutations -----------------------------------------
-
-    /** Insert a new single-block chain at a specific row index. */
-    private fun commitPaletteDropAtPosition(funcName: String, index: Int) {
-        val chain = KBChainStmt(
-            id = uuid(),
-            steps = listOf(KBCallBlock(id = uuid(), funcName = funcName, isHead = true))
-        )
-        val stmts = program.statements.toMutableList()
-        stmts.add(index.coerceIn(0, stmts.size), chain)
-        program = program.copy(statements = stmts)
-    }
-
-    /** Move an existing canvas chain to a new row index. */
-    private fun commitMoveToPosition(stmtId: String, index: Int) {
-        val stmts = program.statements.toMutableList()
-        val srcIndex = stmts.indexOfFirst { it.id == stmtId }
-        if (srcIndex < 0) return
-        val chain = stmts.removeAt(srcIndex)
-        val insertAt = if (index > srcIndex) (index - 1).coerceAtLeast(0) else index
-        stmts.add(insertAt.coerceIn(0, stmts.size), chain)
-        program = program.copy(statements = stmts)
-    }
-
-    /** Append a palette block to an existing chain. */
-    private fun commitChainAppend(chainId: String, funcName: String) {
-        program = program.copy(
-            statements = program.statements.map { stmt ->
-                if (stmt.id != chainId || stmt !is KBChainStmt) stmt
-                else stmt.copy(
-                    steps = stmt.steps + KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
-                )
-            }
-        )
-    }
-
-    /** Append a canvas chain's blocks onto another chain, removing the source row. */
-    private fun commitCanvasChainAppend(sourceStmtId: String, sourceChain: KBChainStmt, targetChainId: String) {
-        if (sourceStmtId == targetChainId) return
-        val sourceBlocks = sourceChain.steps.filterIsInstance<KBCallBlock>().map { it.copy(isHead = false) }
-        program = program.copy(
-            statements = program.statements.mapNotNull { stmt ->
-                when {
-                    stmt.id == sourceStmtId -> null
-                    stmt.id == targetChainId && stmt is KBChainStmt -> stmt.copy(steps = stmt.steps + sourceBlocks)
-                    else -> stmt
-                }
-            }
-        )
-    }
-
-    /** Drop a canvas chain into a block slot; removes the source row. */
-    private fun commitCanvasSlotDrop(
-        sourceStmtId: String,
-        sourceChain: KBChainStmt,
-        targetStmtId: String,
-        blockId: String,
-        slotIndex: Int,
-    ) {
-        if (sourceStmtId == targetStmtId) return
-        program = program.copy(
-            statements = program.statements.mapNotNull { stmt ->
-                when {
-                    stmt.id == sourceStmtId -> null
-                    stmt.id == targetStmtId && stmt is KBChainStmt -> stmt.copy(
-                        steps = stmt.steps.map { item ->
-                            if (item !is KBCallBlock || item.id != blockId) item
-                            else {
-                                val newArgs = item.args.toMutableList()
-                                while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
-                                newArgs[slotIndex] = KBNestedChainArg(sourceChain)
-                                item.copy(args = newArgs.toList())
-                            }
-                        }
-                    )
-                    else -> stmt
-                }
-            }
-        )
-    }
-
-    private fun commitImportLibrary(libraryName: String) {
-        val import = KBImportStmt(id = uuid(), libraryName = libraryName)
-        program = program.copy(statements = listOf(import) + program.statements)
-    }
-
-    private fun onArgChanged(stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) {
-        program = program.copy(
-            statements = program.statements.map { stmt ->
-                if (stmt.id != stmtId) stmt
-                else when (stmt) {
-                    is KBChainStmt -> stmt.copy(
-                        steps = stmt.steps.map { item ->
-                            if (item is KBCallBlock && item.id == blockId) {
-                                val newArgs = item.args.toMutableList()
-                                while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
-                                newArgs[slotIndex] = arg
-                                item.copy(args = newArgs.toList())
-                            } else item
-                        }
-                    )
-                    else -> stmt
-                }
-            }
-        )
-    }
-
-    /** Remove a single call block; auto-removes the chain if it becomes empty. */
-    private fun onRemoveBlock(stmtId: String, blockId: String) {
-        program = program.copy(
-            statements = program.statements.mapNotNull { stmt ->
-                if (stmt.id != stmtId) return@mapNotNull stmt
-                when (stmt) {
-                    is KBChainStmt -> {
-                        val newSteps = stmt.steps.filter { !(it is KBCallBlock && it.id == blockId) }
-                        if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) null
-                        else stmt.copy(steps = newSteps)
-                    }
-                    else -> null
-                }
-            }
-        )
-    }
-
-    /** Remove an entire statement (import / let / const / blank line). */
-    private fun onRemoveStmt(stmtId: String) {
-        program = program.copy(
-            statements = program.statements.filter { it.id != stmtId }
-        )
-    }
-
-    /** Insert a blank line at the given row index. */
-    private fun insertBlankLine(index: Int) {
-        val blank = KBBlankLine(id = uuid())
-        val stmts = program.statements.toMutableList()
-        stmts.add(index.coerceIn(0, stmts.size), blank)
-        program = program.copy(statements = stmts)
-    }
-
     // ---- Render ----------------------------------------------------
 
     override fun VDom.render() {
         val dndState = buildDndState()
+        val ctx = KlangBlocksCtx(
+            editing = editingCtx,
+            dnd = DndCtrl(
+                state = dndState,
+                startPaletteDrag = ::onPaletteDragStart,
+                startCanvasDrag = ::onCanvasDragStart,
+                startNestedBlockDrag = ::onNestedBlockDragStart,
+            ),
+        )
 
         div {
             css {
@@ -307,21 +211,13 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             // Palette
             KlangBlocksPaletteComp(
                 availableLibraries = props.availableLibraries,
-                importedLibraryNames = importedLibraryNames,
-                onImportLibrary = ::commitImportLibrary,
-                onDragStart = ::onPaletteDragStart,
+                ctx = ctx,
             )
 
             // Canvas
             KlangBlocksCanvasComp(
-                program = program,
+                ctx = ctx,
                 canvasDivId = canvasDivId,
-                dndState = dndState,
-                onArgChanged = ::onArgChanged,
-                onRemoveBlock = ::onRemoveBlock,
-                onRemoveStmt = ::onRemoveStmt,
-                onCanvasDragStart = ::onCanvasDragStart,
-                onInsertBlankLine = ::insertBlankLine,
             )
 
             // Drag ghost — follows cursor during any drag

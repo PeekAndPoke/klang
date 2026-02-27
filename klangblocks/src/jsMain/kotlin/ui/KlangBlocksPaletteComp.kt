@@ -8,6 +8,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.html.onMouseDown
+import io.peekandpoke.klang.blocks.model.KBImportStmt
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -20,15 +21,11 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangBlocksPaletteComp(
     availableLibraries: List<KlangScriptLibrary>,
-    importedLibraryNames: Set<String>,
-    onImportLibrary: (String) -> Unit,
-    onDragStart: (funcName: String, x: Double, y: Double) -> Unit,
+    ctx: KlangBlocksCtx,
 ) = comp(
     KlangBlocksPaletteComp.Props(
         availableLibraries = availableLibraries,
-        importedLibraryNames = importedLibraryNames,
-        onImportLibrary = onImportLibrary,
-        onDragStart = onDragStart,
+        ctx = ctx,
     )
 ) {
     KlangBlocksPaletteComp(it)
@@ -38,17 +35,17 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
 
     data class Props(
         val availableLibraries: List<KlangScriptLibrary>,
-        val importedLibraryNames: Set<String>,
-        val onImportLibrary: (String) -> Unit,
-        val onDragStart: (funcName: String, x: Double, y: Double) -> Unit,
+        val ctx: KlangBlocksCtx,
     )
 
     private var searchQuery: String by value("")
 
     override fun VDom.render() {
         val query = searchQuery.trim().lowercase()
-        val importedLibraries = props.availableLibraries.filter { it.name in props.importedLibraryNames }
-        val notImportedLibraries = props.availableLibraries.filter { it.name !in props.importedLibraryNames }
+        val importedLibraryNames = props.ctx.editing.program.statements
+            .filterIsInstance<KBImportStmt>().map { it.libraryName }.toSet()
+        val importedLibraries = props.availableLibraries.filter { it.name in importedLibraryNames }
+        val notImportedLibraries = props.availableLibraries.filter { it.name !in importedLibraryNames }
 
         div {
             css {
@@ -95,7 +92,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                                 cursor = Cursor.pointer
                                 userSelect = UserSelect.none
                             }
-                            onClick { props.onImportLibrary(library.name) }
+                            onClick { props.ctx.editing.commitImportLibrary(library.name) }
                             span { css { color = Color("#666"); marginRight = 4.px }; +"+" }
                             +library.name
                         }
@@ -193,7 +190,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                                     }
                                     onMouseDown { event ->
                                         event.preventDefault()
-                                        props.onDragStart(
+                                        props.ctx.dnd.startPaletteDrag(
                                             doc.name,
                                             event.clientX.toDouble(),
                                             event.clientY.toDouble(),

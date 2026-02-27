@@ -15,11 +15,11 @@ import kotlinx.html.div
 @Suppress("FunctionName")
 fun Tag.KlangBlocksChainDropZoneComp(
     chainId: String,
-    dndState: DndState?,
+    ctx: KlangBlocksCtx,
 ) = comp(
     KlangBlocksChainDropZoneComp.Props(
         chainId = chainId,
-        dndState = dndState,
+        ctx = ctx,
     )
 ) {
     KlangBlocksChainDropZoneComp(it)
@@ -29,13 +29,14 @@ class KlangBlocksChainDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksChain
 
     data class Props(
         val chainId: String,
-        val dndState: DndState?,
+        val ctx: KlangBlocksCtx,
     )
 
     private var isHovered: Boolean by value(false)
 
     override fun VDom.render() {
-        val canDrop = props.dndState?.onDropToChain != null
+        val dndState = props.ctx.dnd.state
+        val canDrop = dndState?.onDropToChain != null
         if (!canDrop) return
 
         div {
@@ -58,7 +59,7 @@ class KlangBlocksChainDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksChain
             onMouseLeave { isHovered = false }
             onMouseUp { event ->
                 event.stopPropagation()
-                props.dndState?.onDropToChain?.invoke(props.chainId)
+                dndState?.onDropToChain?.invoke(props.chainId)
             }
             +"+"
         }

@@ -13,13 +13,11 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangBlocksRowGapComp(
     index: Int,
-    dndState: DndState?,
-    onInsertBlankLine: (index: Int) -> Unit,
+    ctx: KlangBlocksCtx,
 ) = comp(
     KlangBlocksRowGapComp.Props(
         index = index,
-        dndState = dndState,
-        onInsertBlankLine = onInsertBlankLine,
+        ctx = ctx,
     )
 ) {
     KlangBlocksRowGapComp(it)
@@ -29,15 +27,15 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
 
     data class Props(
         val index: Int,
-        val dndState: DndState?,
-        val onInsertBlankLine: (index: Int) -> Unit,
+        val ctx: KlangBlocksCtx,
     )
 
     private var isHovered: Boolean by value(false)
     private var isDropHovered: Boolean by value(false)
 
     override fun VDom.render() {
-        val canDrop = props.dndState?.onDropToPosition != null
+        val dndState = props.ctx.dnd.state
+        val canDrop = dndState?.onDropToPosition != null
 
         div {
             css {
@@ -67,7 +65,7 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
                             backgroundColor = Color("rgba(255,255,255,0.06)")
                         }
                     }
-                    onClick { props.onInsertBlankLine(props.index) }
+                    onClick { props.ctx.editing.insertBlankLine(props.index) }
                     onMouseDown { event -> event.preventDefault() }
                     +"+ blank line"
                 }
@@ -89,7 +87,7 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
                     onMouseLeave { isDropHovered = false }
                     onMouseUp { event ->
                         event.stopPropagation()
-                        props.dndState?.onDropToPosition?.invoke(props.index)
+                        dndState?.onDropToPosition?.invoke(props.index)
                     }
                 }
             }

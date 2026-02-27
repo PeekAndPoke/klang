@@ -1,5 +1,15 @@
 package io.peekandpoke.klang.blocks.ui
 
+import io.peekandpoke.klang.blocks.model.KBCallBlock
+import io.peekandpoke.klang.blocks.model.KBChainStmt
+
+data class DndCtrl(
+    val state: DndState?,
+    val startPaletteDrag: (funcName: String, x: Double, y: Double) -> Unit,
+    val startCanvasDrag: (stmtId: String, chain: KBChainStmt, x: Double, y: Double) -> Unit,
+    val startNestedBlockDrag: (block: KBCallBlock, x: Double, y: Double) -> Unit,
+)
+
 class DndState(
     val ghostX: Double,
     val ghostY: Double,
