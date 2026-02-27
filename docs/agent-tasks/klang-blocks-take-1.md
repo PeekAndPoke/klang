@@ -1,9 +1,9 @@
 # KlangBlocks — Implementation Plan (Take 1, Rev 2)
 
-> **Status**: In progress
+> **Status**: In progress — MVP playable
 > **Author**: Claude + user
-> **Date**: 2026-02-26
-> **Revision**: 4 — blockly removed; type-system renames done; KlangDecl redesign added
+> **Date**: 2026-02-27
+> **Revision**: 5 — code generation + inline slot editing landed; first sounds play from blocks
 
 ---
 
@@ -1065,13 +1065,40 @@ see if that covers all practical cases.
 
 ## 16. Current State (as of 2026-02-27)
 
-The following items are already implemented or completed:
+### 16.1 Completed
 
-| Item                                                                                                                      | Status             |
-|---------------------------------------------------------------------------------------------------------------------------|--------------------|
-| `blockly/` package deleted (all 7 source files)                                                                           | ✅ Done             |
-| npm `blockly` dependency removed from `build.gradle.kts` and `Deps.kt`                                                    | ✅ Done             |
-| `KlangBlocksEditorComp` wired into `CodeSongPage` (replaces `BlocklyEditorComp`)                                          | ✅ Done             |
-| `klangblocks` module scaffolding created                                                                                  | ✅ Done             |
-| Type renames: `TypeModel→KlangType`, `ParamModel→KlangParam`, `DslDocsRegistry→KlangDocsRegistry`, `FunctionDoc→KlangFun` | ✅ Done             |
-| `KlangDecl` sealed hierarchy replacing `KlangFunKind`/`KlangFunVariant`/`KlangFunSignature`                               | ⏳ Next up (step 0) |
+| Item                                                                                                                                  | Status |
+|---------------------------------------------------------------------------------------------------------------------------------------|--------|
+| `blockly/` package deleted; npm `blockly` dep removed                                                                                 | ✅ Done |
+| `klangblocks` module scaffolding created                                                                                              | ✅ Done |
+| Type renames: `TypeModel→KlangType`, `ParamModel→KlangParam`, `DslDocsRegistry→KlangDocsRegistry`, `FunctionDoc→KlangFun`             | ✅ Done |
+| `KlangDecl` sealed hierarchy: `KlangFun→KlangSymbol`, `KlangObject→KlangProperty`, `KlangMutability` enum added                       | ✅ Done |
+| `KlangDocsRegistry` method renames: `functions→symbols`, `getFunctionsByCategory→getByCategory`, `getFunctionsByLibrary→getByLibrary` | ✅ Done |
+| `KlangScriptLibrary` gains `docs: KlangDocsRegistry` + `docs { }` builder; each lib owns its own registry                             | ✅ Done |
+| `stdlibLib` singleton in `index_common.kt`; `klangScript()` factory reuses it                                                         | ✅ Done |
+| `strudelLib` registers docs via `docs { registerStrudelDocs(this) }`                                                                  | ✅ Done |
+| `KBProgram`, `KBChainStmt`, `KBCallBlock` use immutable `List` throughout (no `MutableList` in model)                                 | ✅ Done |
+| `KBSlotKind`, `KBTypeMapping`, `KBSlot` — block type system foundation                                                                | ✅ Done |
+| `KBCodeGen.kt` — `KBProgram.toCode()` and all arg/stmt variant code generation                                                        | ✅ Done |
+| `KlangBlocksEditorComp` — drag from palette, `by value { onCodeChanged(it.toCode()) }` auto-sync, `onArgChanged` handler              | ✅ Done |
+| `KlangBlocksPaletteComp` — search filter, "Import library" section, blocks only from imported libs                                    | ✅ Done |
+| `KlangBlocksCanvasComp` — line-number gutter, renders all `KBStmt` types, threads `onArgChanged` to block components                  | ✅ Done |
+| `KlangBlocksBlockComp` — block pill, inline slot editing (click → `<input>` → Enter/blur commits, Escape reverts)                     | ✅ Done |
+| `CodeSongPage` integration — full-height layout, `EditorMode.CODE`/`BLOCKS` toggle, both `stdlibLib` + `strudelLib` importable        | ✅ Done |
+| **First sounds playing from blocks** — drop `sound`, click slot, type `"bd hh sd oh"`, hit Play                                       | ✅ Done |
+
+### 16.2 Pending (next steps)
+
+| #  | Task                                                           | Notes                                                             |
+|----|----------------------------------------------------------------|-------------------------------------------------------------------|
+| 6  | `RoundTripTest`, `AstToKBlocksTest`, `KBlocksToCodeTest`       | `AstToKBlocks` not yet implemented; code→blocks direction missing |
+| 7  | Undo / redo (`undoStack` / `redoStack` in editor)              | Code snapshots; Ctrl+Z / Ctrl+Y                                   |
+| 8  | `AstToKBlocks` — parse existing code into block model          | Required for Code→Blocks switch to preserve content               |
+| 11 | Full drag machinery: block reorder within chain, row reorder   | Currently only palette→canvas drop works                          |
+| 12 | Drop block into a `PatternLike` pocket slot (nested chain arg) | `KBNestedChainArg` not yet supported in UI                        |
+| 14 | `KBNewlineHint` + S-curve SVG connector                        | Long chain wrapping                                               |
+| 15 | `KBBinaryArg` / `KBUnaryArg` inline expression blocks          | Arithmetic args                                                   |
+| 16 | `KBLetStmt` / `KBConstStmt` statement blocks in canvas         | Currently rendered as static pills only                           |
+| 17 | Mobile touch (long-press, swipe undo)                          | Touch support                                                     |
+| —  | `×` remove button on blocks                                    | No delete UI yet                                                  |
+| —  | Hover tooltip on palette pills (function docs)                 | Planned but not implemented                                       |

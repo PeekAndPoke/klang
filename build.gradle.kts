@@ -37,7 +37,7 @@ allprojects {
         // Snapshots
         // maven("https://oss.sonatype.org/content/repositories/snapshots")
         // Local
-        // mavenLocal()
+        mavenLocal()
     }
 }
 
