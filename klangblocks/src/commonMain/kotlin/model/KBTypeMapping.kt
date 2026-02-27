@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.blocks.model
 
+import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
 
@@ -29,8 +30,8 @@ object KBTypeMapping {
     }
 
     fun slotsFor(doc: KlangSymbol): List<KBSlot> {
-        val params = doc.variants.firstOrNull { it.signatureModel.params != null }
-            ?.signatureModel?.params ?: return emptyList()
+        val params = doc.variants.filterIsInstance<KlangCallable>()
+            .firstOrNull()?.params ?: return emptyList()
         val result = mutableListOf<KBSlot>()
         for (param in params) {
             val kind = slotKindFor(param.type)

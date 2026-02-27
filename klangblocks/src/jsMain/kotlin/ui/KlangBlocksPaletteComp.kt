@@ -7,6 +7,7 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -93,4 +94,4 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
 }
 
 private fun hasVisibleBlock(doc: KlangSymbol): Boolean =
-    doc.variants.any { it.signatureModel.params != null }
+    doc.variants.any { it is KlangCallable }
