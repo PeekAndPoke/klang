@@ -124,7 +124,10 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 editingCtx.commitChainAppend(chainId, ds.funcName)
                 dragState = DragState.None
             },
-            onDropToSlot = null,
+            onDropToSlot = { stmtId, blockId, slotIdx ->
+                editingCtx.commitPaletteDropToSlot(ds.funcName, stmtId, blockId, slotIdx)
+                dragState = DragState.None
+            },
         )
 
         is DragState.DraggingFromCanvas -> DndState(

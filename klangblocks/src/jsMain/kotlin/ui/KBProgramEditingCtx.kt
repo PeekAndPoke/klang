@@ -69,6 +69,29 @@ class KBProgramEditingCtx(
         }
     }
 
+    /** Drop a palette block directly into a slot (creates a single-block nested chain). */
+    fun commitPaletteDropToSlot(funcName: String, targetStmtId: String, blockId: String, slotIndex: Int) {
+        val newChain = KBChainStmt(id = uuid(), steps = listOf(KBCallBlock(id = uuid(), funcName = funcName, isHead = true)))
+        update { current ->
+            current.copy(
+                statements = current.statements.map { stmt ->
+                    if (stmt.id != targetStmtId || stmt !is KBChainStmt) stmt
+                    else stmt.copy(
+                        steps = stmt.steps.map { item ->
+                            if (item !is KBCallBlock || item.id != blockId) item
+                            else {
+                                val newArgs = item.args.toMutableList()
+                                while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
+                                newArgs[slotIndex] = KBNestedChainArg(newChain)
+                                item.copy(args = newArgs.toList())
+                            }
+                        }
+                    )
+                }
+            )
+        }
+    }
+
     /** Append a palette block to an existing chain. */
     fun commitChainAppend(chainId: String, funcName: String) {
         update { current ->
