@@ -8,6 +8,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.html.onMouseDown
+import io.peekandpoke.klang.blocks.model.KBImportStmt
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -20,13 +21,13 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangBlocksPaletteComp(
     availableLibraries: List<KlangScriptLibrary>,
-    importedLibraryNames: Set<String>,
+    importedLibraries: Set<KBImportStmt>,
     onImportLibrary: (String) -> Unit,
     onDragStart: (funcName: String, x: Double, y: Double) -> Unit,
 ) = comp(
     KlangBlocksPaletteComp.Props(
         availableLibraries = availableLibraries,
-        importedLibraryNames = importedLibraryNames,
+        importedLibraries = importedLibraries,
         onImportLibrary = onImportLibrary,
         onDragStart = onDragStart,
     )
@@ -38,17 +39,18 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
 
     data class Props(
         val availableLibraries: List<KlangScriptLibrary>,
-        val importedLibraryNames: Set<String>,
+        val importedLibraries: Set<KBImportStmt>,
         val onImportLibrary: (String) -> Unit,
         val onDragStart: (funcName: String, x: Double, y: Double) -> Unit,
     )
 
+    private val importedLibraryNames: Set<String> get() = props.importedLibraries.map { it.libraryName }.toSet()
     private var searchQuery: String by value("")
 
     override fun VDom.render() {
         val query = searchQuery.trim().lowercase()
-        val importedLibraries = props.availableLibraries.filter { it.name in props.importedLibraryNames }
-        val notImportedLibraries = props.availableLibraries.filter { it.name !in props.importedLibraryNames }
+        val importedLibraries = props.availableLibraries.filter { it.name in importedLibraryNames }
+        val notImportedLibraries = props.availableLibraries.filter { it.name !in importedLibraryNames }
 
         div {
             css {

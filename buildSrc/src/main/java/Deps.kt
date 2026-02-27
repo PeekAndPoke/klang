@@ -43,7 +43,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.100.1"
+        private const val ultra_version = "0.100.2"
 
         object Ultra {
             const val common = "io.peekandpoke.ultra:common:$ultra_version"
@@ -56,6 +56,11 @@ object Deps {
             const val slumber = "io.peekandpoke.ultra:slumber:$ultra_version"
             const val streams = "io.peekandpoke.ultra:stream:$ultra_version"
             const val vault = "io.peekandpoke.ultra:vault:$ultra_version"
+        }
+
+        object Mutator {
+            const val core = "io.peekandpoke.mutator:core:$ultra_version"
+            const val ksp = "io.peekandpoke.mutator:ksp:$ultra_version"
         }
 
         object Kraft {

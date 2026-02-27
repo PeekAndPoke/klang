@@ -4,16 +4,19 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.mutator.Mutator
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
-import de.peekandpoke.ultra.html.onMouseDown
-import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.blocks.model.KBArgValue
+import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.KBProgram
+import io.peekandpoke.klang.blocks.model.statements
 import kotlinx.css.*
 import kotlinx.html.*
 
 @Suppress("FunctionName")
 fun Tag.KlangBlocksCanvasComp(
-    program: KBProgram,
+    program: Mutator<KBProgram>,
     canvasDivId: String,
     dndState: DndState?,
     onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
@@ -39,7 +42,7 @@ fun Tag.KlangBlocksCanvasComp(
 class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.Props>(ctx) {
 
     data class Props(
-        val program: KBProgram,
+        val program: Mutator<KBProgram>,
         val canvasDivId: String,
         val dndState: DndState?,
         val onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
@@ -76,130 +79,146 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                     +"Drop blocks here"
                 }
             } else {
-                program.statements.forEachIndexed { rowIndex, stmt ->
+                try {
+                    console.log("program.statements:", program.statements)
+                    val stmts = program.statements
 
-                    // Gap before each row (and a final gap after the last row below)
-                    KlangBlocksRowGapComp(
-                        index = rowIndex,
-                        dndState = dndState,
-                        onInsertBlankLine = props.onInsertBlankLine,
-                    )
-
-                    div {
-                        css {
-                            display = Display.flex
-                            flexDirection = FlexDirection.row
-                            alignItems = Align.center
-                            put("gap", "8px")
-                            marginBottom = 4.px
-                        }
-
-                        // Row number — doubles as a drag handle for KBChainStmt rows
-                        span {
-                            css {
-                                color = Color("#666")
-                                fontSize = 11.px
-                                fontFamily = "monospace"
-                                width = 24.px
-                                flexShrink = 0.0
-                                textAlign = TextAlign.right
-                                if (stmt is KBChainStmt) {
-                                    cursor = Cursor.grab
-                                    hover { color = Color("#aaa") }
-                                }
-                            }
-                            if (stmt is KBChainStmt) {
-                                onMouseDown { event ->
-                                    event.preventDefault()
-                                    props.onCanvasDragStart(
-                                        stmt.id, stmt,
-                                        event.clientX.toDouble(), event.clientY.toDouble(),
-                                    )
-                                }
-                            }
-                            val n = rowIndex + 1
-                            +(if (n < 10) "0$n" else "$n")
-                        }
-
-                        when (stmt) {
-                            is KBChainStmt -> {
-                                var prevWasBlock = false
-                                stmt.steps.forEach { item ->
-                                    when (item) {
-                                        is KBCallBlock -> {
-                                            if (prevWasBlock) chainConnector()
-                                            KlangBlocksBlockComp(
-                                                block = item,
-                                                stmtId = stmt.id,
-                                                dndState = dndState,
-                                                onArgChanged = { slotIndex, arg ->
-                                                    props.onArgChanged(stmt.id, item.id, slotIndex, arg)
-                                                },
-                                                onRemove = {
-                                                    props.onRemoveBlock(stmt.id, item.id)
-                                                },
-                                                onDragStart = { x, y ->
-                                                    props.onCanvasDragStart(stmt.id, stmt, x, y)
-                                                },
-                                            )
-                                            prevWasBlock = true
-                                        }
-
-                                        is KBNewlineHint -> {
-                                            span {
-                                                css {
-                                                    color = Color("#888")
-                                                    padding = Padding(horizontal = 4.px)
-                                                }
-                                                +"↩"
-                                            }
-                                            prevWasBlock = false
-                                        }
-                                    }
-                                }
-
-                                KlangBlocksChainDropZoneComp(
-                                    chainId = stmt.id,
-                                    dndState = dndState,
-                                )
-                            }
-
-                            is KBImportStmt -> {
-                                span {
-                                    css { stmtPillStyle() }
-                                    +"import * from \"${stmt.libraryName}\""
-                                }
-                                removeStmtButton { props.onRemoveStmt(stmt.id) }
-                            }
-
-                            is KBLetStmt -> {
-                                span {
-                                    css { stmtPillStyle() }
-                                    +"let ${stmt.name}"
-                                }
-                                removeStmtButton { props.onRemoveStmt(stmt.id) }
-                            }
-
-                            is KBConstStmt -> {
-                                span {
-                                    css { stmtPillStyle() }
-                                    +"const ${stmt.name}"
-                                }
-                                removeStmtButton { props.onRemoveStmt(stmt.id) }
-                            }
-
-                            is KBBlankLine -> {
-                                span {
-                                    css {
-                                        display = Display.inlineBlock
-                                        height = 16.px
-                                    }
-                                }
-                                removeStmtButton { props.onRemoveStmt(stmt.id) }
-                            }
-                        }
+                    stmts.forEach { stmt ->
+                        console.log("stmt:", stmt)
                     }
+                } catch (e: Throwable) {
+                    console.error("Error accessing program.statements:", e, e.stackTraceToString())
                 }
+
+
+//                program.statements.forEachIndexed { rowIndex, stmtMutator ->
+//
+//                    return@forEachIndexed
+//
+//                    val stmt = stmtMutator()
+//
+//                    // Gap before each row (and a final gap after the last row below)
+//                    KlangBlocksRowGapComp(
+//                        index = rowIndex,
+//                        dndState = dndState,
+//                        onInsertBlankLine = props.onInsertBlankLine,
+//                    )
+//
+//                    div {
+//                        css {
+//                            display = Display.flex
+//                            flexDirection = FlexDirection.row
+//                            alignItems = Align.center
+//                            put("gap", "8px")
+//                            marginBottom = 4.px
+//                        }
+//
+//                        // Row number — doubles as a drag handle for KBChainStmt rows
+//                        span {
+//                            css {
+//                                color = Color("#666")
+//                                fontSize = 11.px
+//                                fontFamily = "monospace"
+//                                width = 24.px
+//                                flexShrink = 0.0
+//                                textAlign = TextAlign.right
+//                                if (stmt is KBChainStmt) {
+//                                    cursor = Cursor.grab
+//                                    hover { color = Color("#aaa") }
+//                                }
+//                            }
+//                            if (stmt is KBChainStmt) {
+//                                onMouseDown { event ->
+//                                    event.preventDefault()
+//                                    props.onCanvasDragStart(
+//                                        stmt.id, stmt,
+//                                        event.clientX.toDouble(), event.clientY.toDouble(),
+//                                    )
+//                                }
+//                            }
+//                            val n = rowIndex + 1
+//                            +(if (n < 10) "0$n" else "$n")
+//                        }
+//
+//                        when (stmt) {
+//                            is KBChainStmt -> stmtMutator.cast(stmt) {
+//                                var prevWasBlock = false
+//                                stmt.steps.forEach { item ->
+//                                    when (item) {
+//                                        is KBCallBlock -> {
+//                                            if (prevWasBlock) chainConnector()
+//                                            KlangBlocksBlockComp(
+//                                                block = item,
+//                                                stmtId = stmt.id,
+//                                                dndState = dndState,
+//                                                onArgChanged = { slotIndex, arg ->
+//                                                    props.onArgChanged(stmt.id, item.id, slotIndex, arg)
+//                                                },
+//                                                onRemove = {
+//                                                    props.onRemoveBlock(stmt.id, item.id)
+//                                                },
+//                                                onDragStart = { x, y ->
+//                                                    props.onCanvasDragStart(stmt.id, stmt, x, y)
+//                                                },
+//                                            )
+//                                            prevWasBlock = true
+//                                        }
+//
+//                                        is KBNewlineHint -> {
+//                                            span {
+//                                                css {
+//                                                    color = Color("#888")
+//                                                    padding = Padding(horizontal = 4.px)
+//                                                }
+//                                                +"↩"
+//                                            }
+//                                            prevWasBlock = false
+//                                        }
+//                                    }
+//                                }
+//
+//                                KlangBlocksChainDropZoneComp(
+//                                    chainId = stmt.id,
+//                                    dndState = dndState,
+//                                )
+//                            }
+//
+//                            is KBImportStmt -> stmtMutator.cast(stmt) {
+//                                span {
+//                                    css { stmtPillStyle() }
+//                                    +"import * from \"${stmt.libraryName}\""
+//                                }
+//                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+//                            }
+//
+//                            is KBLetStmt -> stmtMutator.cast(stmt) {
+//                                span {
+//                                    css { stmtPillStyle() }
+//                                    +"let ${stmt.name}"
+//                                }
+//                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+//                            }
+//
+//                            is KBConstStmt -> stmtMutator.cast(stmt) {
+//                                span {
+//                                    css { stmtPillStyle() }
+//                                    +"const ${stmt.name}"
+//                                }
+//                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+//                            }
+//
+//                            is KBBlankLine -> stmtMutator.cast(stmt) {
+//                                span {
+//                                    css {
+//                                        display = Display.inlineBlock
+//                                        height = 16.px
+//                                    }
+//                                }
+//                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+//                            }
+//                        }
+//                    }
+//                }
 
                 // Gap after the last row
                 KlangBlocksRowGapComp(

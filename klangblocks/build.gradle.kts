@@ -5,6 +5,7 @@ import Deps.Test.configureJvmTests
 plugins {
     idea
     kotlin("multiplatform")
+    id("com.google.devtools.ksp")
 }
 
 val GROUP: String by project
@@ -34,6 +35,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                api(Deps.KotlinLibs.Mutator.core)
                 api(project(":klangscript"))
             }
         }
@@ -59,6 +61,11 @@ kotlin {
             }
         }
     }
+}
+
+dependencies {
+    add("kspJvm", Deps.KotlinLibs.Mutator.ksp)
+    add("kspJs", Deps.KotlinLibs.Mutator.ksp)
 }
 
 tasks {
