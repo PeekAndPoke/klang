@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.script.types
 
-data class KlangFun(
+data class KlangSymbol(
     val name: String,
     val variants: List<KlangDecl>,
     val category: String,

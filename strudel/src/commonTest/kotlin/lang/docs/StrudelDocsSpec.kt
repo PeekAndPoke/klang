@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangCallable
-import io.peekandpoke.klang.script.types.KlangObject
+import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.strudel.lang.initStrudelLang
 import io.kotest.matchers.string.shouldContain as stringShouldContain
 
@@ -72,15 +72,15 @@ class StrudelDocsSpec : StringSpec({
         names shouldContain "seq"
     }
 
-    "KlangDocsRegistry.getFunctionsByCategory should return seq" {
-        val structural = KlangDocsRegistry.global.getFunctionsByCategory("structural")
+    "KlangDocsRegistry.getByCategory should return seq" {
+        val structural = KlangDocsRegistry.global.getByCategory("structural")
         val names = structural.map { it.name }
 
         names shouldContain "seq"
     }
 
-    "KlangDocsRegistry.getFunctionsByLibrary should return seq" {
-        val strudelFuncs = KlangDocsRegistry.global.getFunctionsByLibrary("strudel")
+    "KlangDocsRegistry.getByLibrary should return seq" {
+        val strudelFuncs = KlangDocsRegistry.global.getByLibrary("strudel")
         val names = strudelFuncs.map { it.name }
 
         names shouldContain "seq"
@@ -88,7 +88,7 @@ class StrudelDocsSpec : StringSpec({
 
     // --- Property / dslObject docs ---
 
-    "sine documentation should be registered as KlangObject variant" {
+    "sine documentation should be registered as KlangProperty variant" {
         val doc = KlangDocsRegistry.global.get("sine")
 
         doc shouldNotBe null
@@ -97,13 +97,13 @@ class StrudelDocsSpec : StringSpec({
         doc.library shouldBe "strudel"
         doc.tags shouldContain "oscillator"
 
-        val variant = doc.variants.filterIsInstance<KlangObject>().first()
-        variant.signature shouldBe "sine: StrudelPattern"
+        val variant = doc.variants.filterIsInstance<KlangProperty>().first()
+        variant.signature shouldBe "val sine: StrudelPattern"
     }
 
-    "sine KlangObject variant should have samples parsed from fenced KlangScript blocks" {
+    "sine KlangProperty variant should have samples parsed from fenced KlangScript blocks" {
         val variant = KlangDocsRegistry.global.get("sine")!!
-            .variants.filterIsInstance<KlangObject>().first()
+            .variants.filterIsInstance<KlangProperty>().first()
 
         variant.samples shouldHaveAtLeastSize 2
         variant.samples.any { it.contains("sine") } shouldBe true
@@ -178,15 +178,15 @@ class StrudelDocsSpec : StringSpec({
         receivers shouldContain "String"
     }
 
-    "sine KlangObject variant should have no params (renders without parens)" {
+    "sine KlangProperty variant should have no params (renders without parens)" {
         val variant = KlangDocsRegistry.global.get("sine")!!
-            .variants.filterIsInstance<KlangObject>().first()
+            .variants.filterIsInstance<KlangProperty>().first()
 
         variant.name shouldBe "sine"
         variant.owner shouldBe null
         variant.type.simpleName shouldBe "StrudelPattern"
 
         // Rendered signature has no parens
-        variant.signature shouldBe "sine: StrudelPattern"
+        variant.signature shouldBe "val sine: StrudelPattern"
     }
 })

@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.script.docs
 
-import io.peekandpoke.klang.script.types.KlangFun
+import io.peekandpoke.klang.script.types.KlangSymbol
 
 class KlangDocsRegistry {
 
@@ -8,53 +8,53 @@ class KlangDocsRegistry {
         val global = KlangDocsRegistry()
     }
 
-    private val _functions = mutableMapOf<String, KlangFun>()
+    private val _symbols = mutableMapOf<String, KlangSymbol>()
 
-    val functions: Map<String, KlangFun>
-        get() = _functions.toMap()
+    val symbols: Map<String, KlangSymbol>
+        get() = _symbols.toMap()
 
-    fun register(doc: KlangFun) {
-        _functions[doc.name] = doc
+    fun register(doc: KlangSymbol) {
+        _symbols[doc.name] = doc
     }
 
-    fun registerAll(docs: List<KlangFun>) {
+    fun registerAll(docs: List<KlangSymbol>) {
         docs.forEach { register(it) }
     }
 
-    fun registerAll(docs: Map<String, KlangFun>) {
+    fun registerAll(docs: Map<String, KlangSymbol>) {
         docs.values.forEach { register(it) }
     }
 
     fun clear() {
-        _functions.clear()
+        _symbols.clear()
     }
 
-    fun get(functionName: String): KlangFun? =
-        _functions[functionName]
+    fun get(name: String): KlangSymbol? =
+        _symbols[name]
 
-    val functionNames: List<String>
-        get() = _functions.keys.sorted()
+    val symbolNames: List<String>
+        get() = _symbols.keys.sorted()
 
     val categories: List<String>
-        get() = _functions.values.map { it.category }.distinct().sorted()
+        get() = _symbols.values.map { it.category }.distinct().sorted()
 
     val libraries: List<String>
-        get() = _functions.values.map { it.library }.filter { it.isNotEmpty() }.distinct().sorted()
+        get() = _symbols.values.map { it.library }.filter { it.isNotEmpty() }.distinct().sorted()
 
-    fun getFunctionsByCategory(category: String): List<KlangFun> =
-        _functions.values.filter { it.category == category }.sortedBy { it.name }
+    fun getByCategory(category: String): List<KlangSymbol> =
+        _symbols.values.filter { it.category == category }.sortedBy { it.name }
 
-    fun getFunctionsByLibrary(library: String): List<KlangFun> =
-        _functions.values.filter { it.library == library }.sortedBy { it.name }
+    fun getByLibrary(library: String): List<KlangSymbol> =
+        _symbols.values.filter { it.library == library }.sortedBy { it.name }
 
-    fun search(query: String): List<KlangFun> {
+    fun search(query: String): List<KlangSymbol> {
         val lowerQuery = query.lowercase()
-        return _functions.values.filter { func ->
-            func.name.lowercase().contains(lowerQuery) ||
-                    func.aliases.any { it.lowercase().contains(lowerQuery) } ||
-                    func.tags.any { it.lowercase().contains(lowerQuery) } ||
-                    func.category.lowercase().contains(lowerQuery) ||
-                    func.library.lowercase().contains(lowerQuery)
+        return _symbols.values.filter { symbol ->
+            symbol.name.lowercase().contains(lowerQuery) ||
+                    symbol.aliases.any { it.lowercase().contains(lowerQuery) } ||
+                    symbol.tags.any { it.lowercase().contains(lowerQuery) } ||
+                    symbol.category.lowercase().contains(lowerQuery) ||
+                    symbol.library.lowercase().contains(lowerQuery)
         }.sortedBy { it.name }
     }
 }

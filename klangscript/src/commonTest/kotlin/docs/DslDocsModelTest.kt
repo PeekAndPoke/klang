@@ -4,14 +4,11 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.script.types.KlangCallable
-import io.peekandpoke.klang.script.types.KlangObject
-import io.peekandpoke.klang.script.types.KlangParam
-import io.peekandpoke.klang.script.types.KlangType
+import io.peekandpoke.klang.script.types.*
 
 /**
  * Unit tests for the structured DSL documentation model:
- * [KlangType], [KlangParam], [KlangCallable], and [KlangObject].
+ * [KlangType], [KlangParam], [KlangCallable], and [KlangProperty].
  *
  * These tests verify the render logic and data-model invariants
  * independently of KSP / code generation.
@@ -72,21 +69,49 @@ class DslDocsModelTest : StringSpec({
         p2.description shouldBe "The x value"
     }
 
-    // ─── KlangObject — property / object mode (no parens) ───────────────────
+    // ─── KlangProperty — property / object mode (no parens) ─────────────────
 
-    "KlangObject.signature renders as 'name: type' (no parens)" {
-        KlangObject(
+    "KlangProperty.signature renders as 'val name: type' (no parens)" {
+        KlangProperty(
             name = "sine",
             type = KlangType("StrudelPattern"),
-        ).signature shouldBe "sine: StrudelPattern"
+        ).signature shouldBe "val sine: StrudelPattern"
     }
 
-    "KlangObject.signature with owner renders with dot notation" {
-        KlangObject(
+    "KlangProperty.signature with owner renders with dot notation" {
+        KlangProperty(
             name = "fmh",
             owner = KlangType("StrudelPattern"),
             type = KlangType("StrudelPattern"),
-        ).signature shouldBe "StrudelPattern.fmh: StrudelPattern"
+        ).signature shouldBe "val StrudelPattern.fmh: StrudelPattern"
+    }
+
+    // ─── KlangMutability ─────────────────────────────────────────────────────
+
+    "KlangProperty with READ_ONLY mutability signature starts with 'val '" {
+        KlangProperty(
+            name = "sine",
+            type = KlangType("StrudelPattern"),
+            mutability = KlangMutability.READ_ONLY,
+        ).signature.startsWith("val ") shouldBe true
+    }
+
+    "KlangProperty with READ_WRITE mutability signature starts with 'var '" {
+        KlangProperty(
+            name = "sine",
+            type = KlangType("StrudelPattern"),
+            mutability = KlangMutability.READ_WRITE,
+        ).signature.startsWith("var ") shouldBe true
+    }
+
+    "KlangProperty with WRITE_ONLY mutability signature has no val/var prefix" {
+        val sig = KlangProperty(
+            name = "sine",
+            type = KlangType("StrudelPattern"),
+            mutability = KlangMutability.WRITE_ONLY,
+        ).signature
+        sig.startsWith("val ") shouldBe false
+        sig.startsWith("var ") shouldBe false
     }
 
     // ─── KlangCallable — callable mode (parens) ──────────────────────────────
@@ -182,14 +207,14 @@ class DslDocsModelTest : StringSpec({
         callable.signature shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "KlangObject.params is always empty (object has no params)" {
-        val obj = KlangObject(
+    "KlangProperty.params is always empty (property has no params)" {
+        val prop = KlangProperty(
             name = "sine",
             type = KlangType("StrudelPattern"),
             description = "Sine oscillator.",
         )
 
-        obj.signature shouldBe "sine: StrudelPattern"
+        prop.signature shouldBe "val sine: StrudelPattern"
     }
 
     "KlangCallable with emptyList params has empty params" {

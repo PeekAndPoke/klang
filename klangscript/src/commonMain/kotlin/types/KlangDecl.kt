@@ -27,16 +27,25 @@ data class KlangCallable(
         }
 }
 
-data class KlangObject(
+enum class KlangMutability { READ_ONLY, READ_WRITE, WRITE_ONLY }
+
+data class KlangProperty(
     val name: String,
     val owner: KlangType? = null,
     val type: KlangType,
+    val mutability: KlangMutability = KlangMutability.READ_ONLY,
     override val description: String = "",
     override val returnDoc: String = "",
     override val samples: List<String> = emptyList(),
 ) : KlangDecl {
     override val signature: String
         get() = buildString {
+            when (mutability) {
+                KlangMutability.READ_ONLY -> append("val ")
+                KlangMutability.READ_WRITE -> append("var ")
+                KlangMutability.WRITE_ONLY -> { /* no prefix — mutability shown as UI badge only */
+                }
+            }
             owner?.let { append("${it.render()}.") }
             append(name)
             append(": ${type.render()}")

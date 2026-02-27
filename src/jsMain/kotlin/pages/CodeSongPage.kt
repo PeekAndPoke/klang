@@ -29,7 +29,7 @@ import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.types.KlangFun
+import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -323,7 +323,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 div {
                     key = "dashboard-form-code"
 
-                    fun navToDoc(doc: KlangFun, event: PointerEvent) {
+                    fun navToDoc(doc: KlangSymbol, event: PointerEvent) {
                         val uri = Nav.docsStrudelSearch("function:${doc.name}")
                         if (event.shiftKey) {
                             router.navToUri(event, uri)

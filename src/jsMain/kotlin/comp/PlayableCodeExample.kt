@@ -21,7 +21,7 @@ import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.types.KlangFun
+import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
@@ -232,7 +232,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 }
             }
 
-            fun navToDoc(doc: KlangFun, event: PointerEvent) {
+            fun navToDoc(doc: KlangSymbol, event: PointerEvent) {
                 val uri = Nav.docsStrudelSearch("function:${doc.name}")
                 if (event.shiftKey) {
                     router.navToUri(event, uri)

@@ -2,7 +2,7 @@ package io.peekandpoke.klang.codemirror
 
 import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.*
-import io.peekandpoke.klang.script.types.KlangFun
+import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
@@ -16,8 +16,8 @@ import org.w3c.dom.HTMLElement
  * - Ctrl/Cmd held while hovering  → underline the function name
  */
 fun dslGoToDocsExtension(
-    docProvider: (String) -> KlangFun?,
-    onNavigate: (doc: KlangFun, event: dynamic) -> Unit,
+    docProvider: (String) -> KlangSymbol?,
+    onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
 ): Extension {
 
     // ── Underline decoration (CTRL/Cmd-hover) ─────────────────────────────
@@ -64,7 +64,7 @@ fun dslGoToDocsExtension(
         event.ctrlKey == true || event.metaKey == true
 
     /** Resolve the word under the mouse and look it up in the doc registry. */
-    fun wordDocAt(view: EditorView, event: dynamic): Pair<SelectionRange, KlangFun>? {
+    fun wordDocAt(view: EditorView, event: dynamic): Pair<SelectionRange, KlangSymbol>? {
         val coords = jsObject<dynamic> {
             this.x = event.clientX
             this.y = event.clientY
@@ -84,7 +84,7 @@ fun dslGoToDocsExtension(
 
     // ── Context menu ───────────────────────────────────────────────────────
 
-    fun showContextMenu(event: dynamic, func: KlangFun) {
+    fun showContextMenu(event: dynamic, func: KlangSymbol) {
         // Remove any stale menu from a previous right-click
         document.getElementById("cm-dsl-ctx-menu")?.asDynamic()?.remove()
 

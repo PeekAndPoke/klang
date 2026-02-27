@@ -109,7 +109,7 @@ class StrudelDocsProcessor(
             }
 
             // The actual val just combines all chunk maps — keeps <clinit> tiny.
-            appendLine("actual val generatedStrudelKlangFuns: Map<String, KlangFun> = buildMap {")
+            appendLine("actual val generatedStrudelKlangSymbols: Map<String, KlangSymbol> = buildMap {")
             chunks.forEachIndexed { chunkIdx, _ ->
                 appendLine("    putAll(generatedDocsChunk$chunkIdx())")
             }
@@ -176,7 +176,7 @@ class StrudelDocsProcessor(
 
         return buildString {
             appendLine()
-            appendLine("    \"$functionName\" to KlangFun(")
+            appendLine("    \"$functionName\" to KlangSymbol(")
             appendLine("        name = \"$functionName\",")
             appendLine("        category = \"$category\",")
             appendLine("        tags = listOf($tagsString),")
@@ -292,7 +292,7 @@ class StrudelDocsProcessor(
         return buildString {
             if (!isDslCallable && !isExtension) {
                 // Plain object / constant
-                appendLine("            KlangObject(")
+                appendLine("            KlangProperty(")
                 appendLine("                name = \"$propertyName\",")
                 appendLine("                type = ${generateTypeModelCode(propertyType)},")
                 appendLine("                description = \"\"\"$description\"\"\",")

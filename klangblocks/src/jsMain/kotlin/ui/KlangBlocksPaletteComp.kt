@@ -7,7 +7,7 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.types.KlangFun
+import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -39,7 +39,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
             }
 
             registry.categories.forEach { category ->
-                val funcs = registry.getFunctionsByCategory(category)
+                val funcs = registry.getByCategory(category)
                     .filter { hasVisibleBlock(it) }
 
                 if (funcs.isEmpty()) return@forEach
@@ -92,5 +92,5 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
     }
 }
 
-private fun hasVisibleBlock(doc: KlangFun): Boolean =
+private fun hasVisibleBlock(doc: KlangSymbol): Boolean =
     doc.variants.any { it.signatureModel.params != null }

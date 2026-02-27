@@ -16,10 +16,7 @@ import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.MarkdownDisplay
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.types.KlangCallable
-import io.peekandpoke.klang.script.types.KlangDecl
-import io.peekandpoke.klang.script.types.KlangFun
-import io.peekandpoke.klang.script.types.KlangObject
+import io.peekandpoke.klang.script.types.*
 import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
 import kotlinx.css.*
 import kotlinx.html.*
@@ -46,12 +43,12 @@ private object DocSearch {
     fun parseTerms(query: String): List<String> =
         query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
 
-    /** Returns true if [func] matches ALL given search terms (logical AND). */
-    fun matches(func: KlangFun, terms: List<String>): Boolean =
-        terms.all { term -> matchesTerm(func, term) }
+    /** Returns true if [symbol] matches ALL given search terms (logical AND). */
+    fun matches(symbol: KlangSymbol, terms: List<String>): Boolean =
+        terms.all { term -> matchesTerm(symbol, term) }
 
     /**
-     * Returns a relevance score for [func] against all [terms].
+     * Returns a relevance score for [symbol] against all [terms].
      * Higher score = better match. Scores per term are summed.
      *
      * Score tiers (per term):
@@ -65,20 +62,20 @@ private object DocSearch {
      *      5 — tag contains term
      *      3 — category / library contains term
      */
-    fun score(func: KlangFun, terms: List<String>): Int =
-        terms.sumOf { term -> scoreTerm(func, term) }
+    fun score(symbol: KlangSymbol, terms: List<String>): Int =
+        terms.sumOf { term -> scoreTerm(symbol, term) }
 
-    private fun scoreTerm(func: KlangFun, term: String): Int {
+    private fun scoreTerm(symbol: KlangSymbol, term: String): Int {
         val lower = term.lowercase()
         return when {
             lower.startsWith(PREFIX_CATEGORY) -> {
                 val value = lower.removePrefix(PREFIX_CATEGORY)
-                if (func.category.lowercase().contains(value)) 3 else 0
+                if (symbol.category.lowercase().contains(value)) 3 else 0
             }
 
             lower.startsWith(PREFIX_TAG) -> {
                 val value = lower.removePrefix(PREFIX_TAG)
-                func.tags.maxOfOrNull { tag ->
+                symbol.tags.maxOfOrNull { tag ->
                     val t = tag.lowercase()
                     when {
                         t == value -> 10
@@ -90,7 +87,7 @@ private object DocSearch {
 
             lower.startsWith(PREFIX_FUNCTION) -> {
                 val value = lower.removePrefix(PREFIX_FUNCTION)
-                val name = func.name.lowercase()
+                val name = symbol.name.lowercase()
                 when {
                     name == value -> 1000
                     name.startsWith(value) -> 500
@@ -101,7 +98,7 @@ private object DocSearch {
 
             else -> {
                 // Name score
-                val name = func.name.lowercase()
+                val name = symbol.name.lowercase()
                 val nameScore = when {
                     name == lower -> 1000
                     name.startsWith(lower) -> 500
@@ -109,7 +106,7 @@ private object DocSearch {
                     else -> 0
                 }
                 // Alias score
-                val aliasScore = func.aliases.maxOfOrNull { alias ->
+                val aliasScore = symbol.aliases.maxOfOrNull { alias ->
                     val a = alias.lowercase()
                     when {
                         a == lower -> 80
@@ -119,7 +116,7 @@ private object DocSearch {
                     }
                 } ?: 0
                 // Tag score
-                val tagScore = func.tags.maxOfOrNull { tag ->
+                val tagScore = symbol.tags.maxOfOrNull { tag ->
                     val t = tag.lowercase()
                     when {
                         t == lower -> 10
@@ -129,8 +126,8 @@ private object DocSearch {
                 } ?: 0
                 // Category / library score
                 val catScore = when {
-                    func.category.lowercase().contains(lower) -> 3
-                    func.library.lowercase().contains(lower) -> 3
+                    symbol.category.lowercase().contains(lower) -> 3
+                    symbol.library.lowercase().contains(lower) -> 3
                     else -> 0
                 }
                 nameScore + aliasScore + tagScore + catScore
@@ -138,31 +135,31 @@ private object DocSearch {
         }
     }
 
-    private fun matchesTerm(func: KlangFun, term: String): Boolean {
+    private fun matchesTerm(symbol: KlangSymbol, term: String): Boolean {
         val lower = term.lowercase()
         return when {
             lower.startsWith(PREFIX_CATEGORY) -> {
                 val value = lower.removePrefix(PREFIX_CATEGORY)
-                func.category.lowercase().contains(value)
+                symbol.category.lowercase().contains(value)
             }
 
             lower.startsWith(PREFIX_TAG) -> {
                 val value = lower.removePrefix(PREFIX_TAG)
-                func.tags.any { it.lowercase().contains(value) }
+                symbol.tags.any { it.lowercase().contains(value) }
             }
 
             lower.startsWith(PREFIX_FUNCTION) -> {
                 val value = lower.removePrefix(PREFIX_FUNCTION)
-                func.name.lowercase().contains(value)
+                symbol.name.lowercase().contains(value)
             }
 
             else -> {
                 // Plain term: search across name, aliases, tags, category, library
-                func.name.lowercase().contains(lower) ||
-                        func.aliases.any { it.lowercase().contains(lower) } ||
-                        func.tags.any { it.lowercase().contains(lower) } ||
-                        func.category.lowercase().contains(lower) ||
-                        func.library.lowercase().contains(lower)
+                symbol.name.lowercase().contains(lower) ||
+                        symbol.aliases.any { it.lowercase().contains(lower) } ||
+                        symbol.tags.any { it.lowercase().contains(lower) } ||
+                        symbol.category.lowercase().contains(lower) ||
+                        symbol.library.lowercase().contains(lower)
             }
         }
     }
@@ -192,10 +189,10 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
 
-    private val filteredFunctions: List<KlangFun>
+    private val filteredSymbols: List<KlangSymbol>
         get() {
             val terms = DocSearch.parseTerms(searchQuery)
-            val all = registry.functions.values.sortedBy { it.name }
+            val all = registry.symbols.values.sortedBy { it.name }
 
             return when {
                 // Smart search: filter by match, then sort by score descending (exact matches first)
@@ -238,16 +235,16 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             // Results count
             ui.message {
                 css { marginTop = 1.rem }
-                +"Found ${filteredFunctions.size} entries"
+                +"Found ${filteredSymbols.size} entries"
             }
 
-            // Function list
-            filteredFunctions.forEach { func ->
-                renderKlangFun(func)
+            // Symbol list
+            filteredSymbols.forEach { symbol ->
+                renderKlangSymbol(symbol)
             }
 
             // Empty state
-            if (filteredFunctions.isEmpty()) {
+            if (filteredSymbols.isEmpty()) {
                 ui.message {
                     ui.header { +"No functions found" }
                     p { +"Try adjusting your search or filters" }
@@ -256,19 +253,19 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun DIV.renderKlangFun(func: KlangFun) {
+    private fun DIV.renderKlangSymbol(symbol: KlangSymbol) {
         ui.segments {
-            key = func.name
+            key = symbol.name
             css {
                 marginBottom = 2.rem
             }
 
-            // Function name and category
+            // Symbol name and category
             ui.segment {
                 ui.relaxed.horizontal.list {
                     noui.item {
                         ui.large.header {
-                            +func.name
+                            +symbol.name
                         }
                     }
 
@@ -276,12 +273,12 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                         // Category label — click to search by category
                         ui.label {
                             css { cursor = Cursor.pointer }
-                            onClick { searchQuery = DocSearch.categoryQuery(func.category) }
+                            onClick { searchQuery = DocSearch.categoryQuery(symbol.category) }
                             icon.tag()
-                            +func.category
+                            +symbol.category
                         }
                         // Tag labels — click to search by tag
-                        func.tags.forEach { tag ->
+                        symbol.tags.forEach { tag ->
                             ui.label {
                                 key = tag
                                 css { cursor = Cursor.pointer }
@@ -293,9 +290,9 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                     }
 
                     // Alias labels — click to search by function name
-                    if (func.aliases.isNotEmpty()) {
+                    if (symbol.aliases.isNotEmpty()) {
                         noui.item {
-                            func.aliases.forEach { alias ->
+                            symbol.aliases.forEach { alias ->
                                 key = alias
                                 ui.label {
                                     css { cursor = Cursor.pointer }
@@ -310,7 +307,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             // Variants
-            func.variants.forEach { decl ->
+            symbol.variants.forEach { decl ->
                 ui.attached.segment {
                     renderDecl(decl)
                 }
@@ -331,7 +328,11 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                     is KlangCallable -> if (decl.receiver == null) "Top Level Function"
                     else "${decl.receiver} Extension Function"
 
-                    is KlangObject -> "Object"
+                    is KlangProperty -> when (decl.mutability) {
+                        KlangMutability.READ_ONLY -> "Read-only Property"
+                        KlangMutability.READ_WRITE -> "Read-write Property"
+                        KlangMutability.WRITE_ONLY -> "Write-only Property"
+                    }
                 }
             }
 
