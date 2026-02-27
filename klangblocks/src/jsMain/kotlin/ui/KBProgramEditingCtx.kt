@@ -10,13 +10,35 @@ class KBProgramEditingCtx(
     var program: KBProgram = initialProgram
         private set
 
+    private val undoStack = ArrayDeque<KBProgram>()
+    private val redoStack = ArrayDeque<KBProgram>()
+
+    val canUndo: Boolean get() = undoStack.isNotEmpty()
+    val canRedo: Boolean get() = redoStack.isNotEmpty()
+
     private fun update(block: (current: KBProgram) -> KBProgram) {
         val current = program
         val next = block(current)
         if (next != current) {
+            undoStack.addLast(current)
+            redoStack.clear()
             program = next
             onChanged(program)
         }
+    }
+
+    fun undo() {
+        if (undoStack.isEmpty()) return
+        redoStack.addLast(program)
+        program = undoStack.removeLast()
+        onChanged(program)
+    }
+
+    fun redo() {
+        if (redoStack.isEmpty()) return
+        undoStack.addLast(program)
+        program = redoStack.removeLast()
+        onChanged(program)
     }
 
     // ---- Top-level program mutations -----------------------------------------------

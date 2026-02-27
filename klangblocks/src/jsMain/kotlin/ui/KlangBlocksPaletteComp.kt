@@ -8,6 +8,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.html.onMouseDown
+import de.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.klang.blocks.model.KBImportStmt
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangCallable
@@ -55,6 +56,42 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                 put("border-right", "1px solid #333")
                 display = Display.flex
                 flexDirection = FlexDirection.column
+            }
+
+            // Undo / Redo toolbar
+            val canUndo = props.ctx.editing.canUndo
+            val canRedo = props.ctx.editing.canRedo
+            div {
+                css {
+                    display = Display.flex
+                    flexDirection = FlexDirection.row
+                    alignItems = Align.center
+                    put("gap", "4px")
+                    padding = Padding(6.px)
+                    put("border-bottom", "1px solid #333")
+                }
+                // Undo
+                div {
+                    css {
+                        cursor = if (canUndo) Cursor.pointer else Cursor.default
+                        opacity = if (canUndo) 1.0 else 0.3
+                        padding = Padding(4.px)
+                        borderRadius = 4.px
+                    }
+                    onClick { if (canUndo) props.ctx.editing.undo() }
+                    if (canUndo) icon.white.undo() else icon.grey.undo()
+                }
+                // Redo
+                div {
+                    css {
+                        cursor = if (canRedo) Cursor.pointer else Cursor.default
+                        opacity = if (canRedo) 1.0 else 0.3
+                        padding = Padding(4.px)
+                        borderRadius = 4.px
+                    }
+                    onClick { if (canRedo) props.ctx.editing.redo() }
+                    if (canRedo) icon.white.redo() else icon.grey.redo()
+                }
             }
 
             // Available-but-not-imported libraries

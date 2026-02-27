@@ -96,8 +96,10 @@ class KlangBlocksNestedBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksNestedB
                 +block.funcName
             }
 
-            slots.toRenderItems(block.args).forEach { (i, slot) ->
-                val arg: KBArgValue? = block.args.getOrNull(i)
+            slots.toRenderItems(block.args).forEach { item ->
+                val i = item.index
+                val arg = item.arg
+                val slot = item.slot
 
                 if (editingSlotIndex == i) {
                     input {

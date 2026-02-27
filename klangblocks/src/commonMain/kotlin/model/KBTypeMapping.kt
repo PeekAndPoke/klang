@@ -53,25 +53,41 @@ object KBTypeMapping {
 }
 
 /**
- * Expands slots into (argIndex, slot) render pairs.
+ * One item in the rendered slot list.
  *
- * - KBSingleSlot  → one pair at slot.index
- * - KBVarArgSlot  → one pair per filled arg starting at slot.index, plus one extra empty slot
+ * [index] is the **actual** position in the args list — used for both reads and writes.
+ * [arg]   is the current value at that position (null = empty / not yet set).
+ * [slot]  is the slot descriptor.
  */
-fun List<KBSlot>.toRenderItems(args: List<KBArgValue>): List<Pair<Int, KBSlot>> {
-    val items = mutableListOf<Pair<Int, KBSlot>>()
+data class KBRenderItem(val index: Int, val arg: KBArgValue?, val slot: KBSlot)
+
+/**
+ * Expands slots into render items.
+ *
+ * - KBSingleSlot  → one item at slot.index
+ * - KBVarArgSlot  → one item per *filled* arg (holes from mid-list empties are skipped),
+ *                   plus one extra empty item at the next available position.
+ *                   Each item carries its actual arg-list index so reads/writes stay correct.
+ */
+fun List<KBSlot>.toRenderItems(args: List<KBArgValue>): List<KBRenderItem> {
+    val items = mutableListOf<KBRenderItem>()
     for (slot in this) {
         when (slot) {
-            is KBSingleSlot -> items.add(slot.index to slot)
+            is KBSingleSlot -> items.add(KBRenderItem(slot.index, args.getOrNull(slot.index), slot))
             is KBVarArgSlot -> {
-                var idx = slot.index
-                while (true) {
-                    val a = args.getOrNull(idx)
-                    if (a == null || a is KBEmptyArg) break
-                    items.add(idx to slot)
-                    idx++
+                // Collect actual positions of non-empty args in the vararg range, skipping holes
+                val filled = mutableListOf<Int>()
+                var scanIdx = slot.index
+                while (scanIdx < args.size) {
+                    if (args[scanIdx] !is KBEmptyArg) filled.add(scanIdx)
+                    scanIdx++
                 }
-                items.add(idx to slot) // always one empty slot at the end
+                for (actualIdx in filled) {
+                    items.add(KBRenderItem(actualIdx, args[actualIdx], slot))
+                }
+                // Always one empty slot at the next position after the last filled
+                val nextIdx = (filled.lastOrNull()?.plus(1)) ?: slot.index
+                items.add(KBRenderItem(nextIdx, null, slot))
             }
         }
     }

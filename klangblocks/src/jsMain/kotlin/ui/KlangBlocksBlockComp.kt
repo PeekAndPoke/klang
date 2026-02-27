@@ -109,8 +109,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 +block.funcName
             }
 
-            slots.toRenderItems(block.args).forEach { (i, slot) ->
-                val arg: KBArgValue? = block.args.getOrNull(i)
+            slots.toRenderItems(block.args).forEach { item ->
+                val i = item.index
+                val arg = item.arg
+                val slot = item.slot
                 val canDrop = canDropToSlot && slotAcceptsChainDrop(slot)
 
                 if (editingSlotIndex == i) {

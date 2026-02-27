@@ -10,10 +10,13 @@ import de.peekandpoke.ultra.html.onMouseUp
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
+import org.w3c.dom.events.Event
+import org.w3c.dom.events.KeyboardEvent
 
 @Suppress("FunctionName")
 fun Tag.KlangBlocksEditorComp(
@@ -74,6 +77,34 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     )
 
     private var dragState: DragState by value(DragState.None)
+
+    private val keydownListener: (Event) -> Unit = listener@{ event ->
+        val ke = event as? KeyboardEvent ?: return@listener
+        // Let the browser handle undo/redo inside text inputs
+        val tag = ke.target?.asDynamic()?.tagName?.toString()?.uppercase() ?: ""
+        if (tag == "INPUT" || tag == "TEXTAREA") return@listener
+        if (!ke.ctrlKey && !ke.metaKey) return@listener
+        when {
+            ke.key == "z" && !ke.shiftKey -> {
+                ke.preventDefault(); editingCtx.undo()
+            }
+
+            ke.key == "z" && ke.shiftKey -> {
+                ke.preventDefault(); editingCtx.redo()
+            }
+
+            ke.key == "y" -> {
+                ke.preventDefault(); editingCtx.redo()
+            }
+        }
+    }
+
+    init {
+        lifecycle {
+            onMount { document.addEventListener("keydown", keydownListener) }
+            onUnmount { document.removeEventListener("keydown", keydownListener) }
+        }
+    }
 
     private val canvasDivId = "kb-canvas-${hashCode()}"
 
