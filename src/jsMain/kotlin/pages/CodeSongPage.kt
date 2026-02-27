@@ -22,16 +22,14 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.blockly.BlocklyEditorComp
+import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
 import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
-import io.peekandpoke.klang.comp.mapToEditorError
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.script.docs.DslDocsRegistry
 import io.peekandpoke.klang.script.docs.FunctionDoc
-import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.delay
@@ -92,7 +90,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val isPlaying get() = playback != null
 
     private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
-    private val blocklyRef = ComponentRef.Tracker<BlocklyEditorComp>()
 
     private val highlightBuffer = CodeHighlightBuffer(editorRef)
     private var highlightPerEvent by value(highlightBuffer.maxHighlightsPerEvent) {
@@ -184,19 +181,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         playback = null
     }
 
-    /** Switch to Blocks mode. Validates the code first; stays in Code mode on parse error. */
+    /** Switch to Blocks mode. */
     private fun switchToBlocks() {
-        try {
-            KlangScriptParser.parse(code)
-        } catch (e: Throwable) {
-            editorRef { it.setErrors(listOf(mapToEditorError(e))) }
-            return
-        }
         editorMode = EditorMode.BLOCKS
-        // Push current code into Blockly once the component is mounted (next frame)
-        launch {
-            blocklyRef { it.setCode(code) }
-        }
     }
 
     /** Switch to Code mode. The code state already reflects the latest workspace contents. */
@@ -367,14 +354,13 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         }
 
                         EditorMode.BLOCKS -> {
-                            BlocklyEditorComp(
-                                code = code,
+                            KlangBlocksEditorComp(
                                 onCodeChanged = { newCode ->
                                     code = newCode
                                     codeStream(newCode)
                                     isCodeModified = false
                                 },
-                            ).track(blocklyRef)
+                            )
                         }
                     }
                 }

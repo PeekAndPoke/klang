@@ -1,0 +1,151 @@
+package io.peekandpoke.klang.blocks.ui
+
+import de.peekandpoke.kraft.components.Component
+import de.peekandpoke.kraft.components.Ctx
+import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.onMouseMove
+import de.peekandpoke.ultra.html.onMouseUp
+import io.peekandpoke.klang.blocks.model.KBCallBlock
+import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.KBProgram
+import kotlinx.css.*
+import kotlinx.html.Tag
+import kotlinx.html.div
+import kotlinx.html.span
+import org.w3c.dom.HTMLElement
+
+@Suppress("FunctionName")
+fun Tag.KlangBlocksEditorComp(
+    onCodeChanged: (String) -> Unit,
+) = comp(KlangBlocksEditorComp.Props(onCodeChanged = onCodeChanged)) {
+    KlangBlocksEditorComp(it)
+}
+
+class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.Props>(ctx) {
+
+    data class Props(val onCodeChanged: (String) -> Unit)
+
+    // ---- Drag state ------------------------------------------------
+
+    sealed class DragState {
+        object None : DragState()
+        data class DraggingFromPalette(
+            val funcName: String,
+            val ghostX: Double,
+            val ghostY: Double,
+        ) : DragState()
+    }
+
+    // ---- Component state -------------------------------------------
+
+    private var program: KBProgram by value(KBProgram())
+    private var dragState: DragState by value(DragState.None)
+
+    private val canvasDivId = "kb-canvas-${hashCode()}"
+
+    // ---- Drag logic ------------------------------------------------
+
+    private fun onPaletteDragStart(funcName: String, x: Double, y: Double) {
+        dragState = DragState.DraggingFromPalette(funcName, x, y)
+    }
+
+    private fun onMouseMoved(x: Double, y: Double) {
+        val current = dragState
+        if (current is DragState.DraggingFromPalette) {
+            dragState = current.copy(ghostX = x, ghostY = y)
+        }
+    }
+
+    private fun onMouseReleased(x: Double, y: Double) {
+        val current = dragState
+        if (current is DragState.DraggingFromPalette) {
+            if (isInsideCanvas(x, y)) {
+                commitDrop(current.funcName)
+            }
+            dragState = DragState.None
+        }
+    }
+
+    private fun isInsideCanvas(x: Double, y: Double): Boolean {
+        val el = dom?.querySelector("#$canvasDivId") as? HTMLElement ?: return false
+        val rect = el.getBoundingClientRect()
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+    }
+
+    private fun commitDrop(funcName: String) {
+        val chain = KBChainStmt(
+            id = uuid(),
+            steps = mutableListOf(
+                KBCallBlock(id = uuid(), funcName = funcName, isHead = true)
+            )
+        )
+        program.statements.add(chain)
+        program = program.copy(statements = program.statements)
+        props.onCodeChanged("")
+    }
+
+    // ---- Render ----------------------------------------------------
+
+    override fun VDom.render() {
+        div {
+            css {
+                display = Display.flex
+                flexDirection = FlexDirection.row
+                width = 100.pct
+                height = 500.px
+                position = Position.relative
+                overflow = Overflow.hidden
+                backgroundColor = Color("#1e1e2e")
+            }
+
+            onMouseMove { event ->
+                onMouseMoved(event.clientX.toDouble(), event.clientY.toDouble())
+            }
+            onMouseUp { event ->
+                onMouseReleased(event.clientX.toDouble(), event.clientY.toDouble())
+            }
+
+            // Palette
+            KlangBlocksPaletteComp(onDragStart = ::onPaletteDragStart)
+
+            // Canvas
+            KlangBlocksCanvasComp(program = program, canvasDivId = canvasDivId)
+
+            // Drag ghost — follows cursor while dragging
+            val ds = dragState
+            if (ds is DragState.DraggingFromPalette) {
+                div {
+                    css {
+                        position = Position.fixed
+                        left = ds.ghostX.px
+                        top = ds.ghostY.px
+                        put("pointer-events", "none")
+                        zIndex = 9999
+                        opacity = 0.85
+                        put("transform", "translate(-50%, -50%)")
+                    }
+                    span {
+                        css {
+                            display = Display.inlineBlock
+                            backgroundColor = Color(categoryColour(null))
+                            color = Color.white
+                            borderRadius = 8.px
+                            padding = Padding(vertical = 5.px, horizontal = 10.px)
+                            fontSize = 13.px
+                            fontFamily = "monospace"
+                            fontWeight = FontWeight.bold
+                            whiteSpace = WhiteSpace.nowrap
+                            put("box-shadow", "0 4px 12px rgba(0,0,0,0.4)")
+                        }
+                        +ds.funcName
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun uuid(): String =
+    (0 until 16).joinToString("") { kotlin.random.Random.nextInt(16).toString(16) }

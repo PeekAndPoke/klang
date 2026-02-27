@@ -76,6 +76,7 @@ kotlin {
 
                 api(project(":klang"))
                 api(project(":strudel"))
+                api(project(":klangblocks"))
             }
         }
 

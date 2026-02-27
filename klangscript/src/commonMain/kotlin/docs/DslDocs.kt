@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.script.docs
 
+typealias TypeModel = io.peekandpoke.klang.script.types.TypeModel
+
 /**
  * Type of DSL function variant based on how it's invoked.
  */
@@ -15,30 +17,6 @@ enum class DslType {
 
     /** Named object/constant pattern: `sine`, `berlin`, `silence` */
     OBJECT
-}
-
-/**
- * Represents a Kotlin type in structured form.
- *
- * Used to build DSL function signatures from structured data rather than raw strings.
- */
-data class TypeModel(
-    /** Simple (unqualified) type name, e.g. "StrudelPattern", "PatternLike" */
-    val simpleName: String,
-
-    /** True when this type is a type alias (e.g. PatternLike = Any) */
-    val isTypeAlias: Boolean = false,
-
-    /** True when the type is nullable (e.g. String?) */
-    val isNullable: Boolean = false,
-) {
-    /** Renders the type as a human-readable string. */
-    fun render(): String = buildString {
-        append(simpleName)
-        if (isNullable) append("?")
-    }
-
-    override fun toString(): String = render()
 }
 
 /**
