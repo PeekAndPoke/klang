@@ -17,9 +17,21 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangBlocksBlockComp(
     block: KBCallBlock,
+    isDraggingFromCanvas: Boolean,
     onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
     onRemove: () -> Unit,
-) = comp(KlangBlocksBlockComp.Props(block = block, onArgChanged = onArgChanged, onRemove = onRemove)) {
+    onCanvasDrop: (slotIndex: Int) -> Unit,
+    onDragStart: (x: Double, y: Double) -> Unit,
+) = comp(
+    KlangBlocksBlockComp.Props(
+        block = block,
+        isDraggingFromCanvas = isDraggingFromCanvas,
+        onArgChanged = onArgChanged,
+        onRemove = onRemove,
+        onCanvasDrop = onCanvasDrop,
+        onDragStart = onDragStart,
+    )
+) {
     KlangBlocksBlockComp(it)
 }
 
@@ -27,8 +39,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
     data class Props(
         val block: KBCallBlock,
+        val isDraggingFromCanvas: Boolean,
         val onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
         val onRemove: () -> Unit,
+        val onCanvasDrop: (slotIndex: Int) -> Unit,
+        val onDragStart: (x: Double, y: Double) -> Unit,
     )
 
     private var editingSlotIndex: Int? by value(null)
@@ -62,6 +77,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val block = props.block
         val doc = KlangDocsRegistry.global.get(block.funcName)
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
+        val dragging = props.isDraggingFromCanvas
 
         div("kb-block") {
             css {
@@ -77,9 +93,18 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 whiteSpace = WhiteSpace.nowrap
                 userSelect = UserSelect.none
                 position = Position.relative
+                if (!dragging) cursor = Cursor.grab
             }
             onMouseEnter { isHovered = true }
             onMouseLeave { isHovered = false }
+            // Start a canvas drag when pressing on the block background or function name.
+            // Slot spans stop mousedown propagation, so they won't trigger this.
+            onMouseDown { event ->
+                if (!dragging) {
+                    event.preventDefault()
+                    props.onDragStart(event.clientX.toDouble(), event.clientY.toDouble())
+                }
+            }
 
             span {
                 css { fontWeight = FontWeight.bold }
@@ -88,6 +113,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
             slots.forEachIndexed { i, slot ->
                 val arg: KBArgValue? = block.args.getOrNull(i)
+                val canDrop = dragging && slotAcceptsChainDrop(slot)
 
                 if (editingSlotIndex == i) {
                     input {
@@ -121,27 +147,42 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 } else {
                     span {
                         css {
-                            backgroundColor = Color("rgba(0,0,0,0.2)")
                             borderRadius = 4.px
                             padding = Padding(horizontal = 6.px, vertical = 2.px)
                             fontSize = 12.px
-                            cursor = Cursor.text
-                            if (arg == null || arg is KBEmptyArg) opacity = 0.6
-                        }
-                        onClick { event ->
-                            event.stopPropagation()
-                            val currentText = when (arg) {
-                                is KBStringArg -> arg.value
-                                is KBNumberArg -> {
-                                    val l = arg.value.toLong()
-                                    if (arg.value == l.toDouble()) l.toString() else arg.value.toString()
-                                }
-
-                                else -> ""
+                            if (canDrop) {
+                                // Highlight as a valid drop target
+                                backgroundColor = Color("rgba(255,255,255,0.25)")
+                                border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.7)"))
+                                cursor = Cursor.copy
+                            } else {
+                                backgroundColor = Color("rgba(0,0,0,0.2)")
+                                cursor = Cursor.text
+                                if (arg == null || arg is KBEmptyArg) opacity = 0.6
                             }
-                            startEdit(i, currentText)
                         }
-                        onMouseDown { event -> event.stopPropagation() }
+                        if (canDrop) {
+                            onMouseUp { event ->
+                                event.stopPropagation()
+                                props.onCanvasDrop(i)
+                            }
+                            onMouseDown { event -> event.stopPropagation() }
+                        } else {
+                            onClick { event ->
+                                event.stopPropagation()
+                                val currentText = when (arg) {
+                                    is KBStringArg -> arg.value
+                                    is KBNumberArg -> {
+                                        val l = arg.value.toLong()
+                                        if (arg.value == l.toDouble()) l.toString() else arg.value.toString()
+                                    }
+
+                                    else -> ""
+                                }
+                                startEdit(i, currentText)
+                            }
+                            onMouseDown { event -> event.stopPropagation() }
+                        }
                         when (arg) {
                             null, is KBEmptyArg -> +"[${slot.name}]"
                             else -> +arg.renderShort()
@@ -150,8 +191,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 }
             }
 
-            // Remove (×) — appears on hover
-            if (isHovered) {
+            // Remove (×) — appears on hover, hidden while canvas-dragging to avoid clutter
+            if (isHovered && !dragging) {
                 span {
                     css {
                         marginLeft = 4.px
@@ -178,13 +219,20 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     }
 }
 
+/** Returns true if a slot can accept a KBChainStmt dropped from the canvas. */
+private fun slotAcceptsChainDrop(slot: KBSlot): Boolean = when (val k = slot.kind) {
+    is KBSlotKind.PatternResult -> true
+    is KBSlotKind.Union -> k.acceptsBlock
+    else -> false
+}
+
 private fun KBArgValue.renderShort(): String = when (this) {
     is KBEmptyArg -> ""
     is KBStringArg -> "\"$value\""
     is KBNumberArg -> value.toString()
     is KBBoolArg -> value.toString()
     is KBIdentifierArg -> name
-    is KBNestedChainArg -> "…"
+    is KBNestedChainArg -> chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName }
     is KBBinaryArg -> "${left.renderShort()} $op ${right.renderShort()}"
     is KBUnaryArg -> "$op${operand.renderShort()}"
     is KBArrowFunctionArg -> "(${params.joinToString()}) => …"

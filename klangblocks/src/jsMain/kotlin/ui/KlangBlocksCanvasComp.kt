@@ -4,10 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.html.onClick
-import de.peekandpoke.ultra.html.onMouseEnter
-import de.peekandpoke.ultra.html.onMouseLeave
+import de.peekandpoke.ultra.html.*
 import io.peekandpoke.klang.blocks.model.*
 import kotlinx.css.*
 import kotlinx.html.*
@@ -16,22 +13,28 @@ import kotlinx.html.*
 fun Tag.KlangBlocksCanvasComp(
     program: KBProgram,
     canvasDivId: String,
-    isDragging: Boolean,
+    isDraggingFromPalette: Boolean,
+    isDraggingFromCanvas: Boolean,
     onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
     onRemoveBlock: (stmtId: String, blockId: String) -> Unit,
     onRemoveStmt: (stmtId: String) -> Unit,
     onChainHoverStart: (chainId: String) -> Unit,
     onChainHoverEnd: () -> Unit,
+    onCanvasDragStart: (stmtId: String, chain: KBChainStmt, x: Double, y: Double) -> Unit,
+    onCanvasSlotDrop: (stmtId: String, blockId: String, slotIndex: Int) -> Unit,
 ) = comp(
     KlangBlocksCanvasComp.Props(
         program = program,
         canvasDivId = canvasDivId,
-        isDragging = isDragging,
+        isDraggingFromPalette = isDraggingFromPalette,
+        isDraggingFromCanvas = isDraggingFromCanvas,
         onArgChanged = onArgChanged,
         onRemoveBlock = onRemoveBlock,
         onRemoveStmt = onRemoveStmt,
         onChainHoverStart = onChainHoverStart,
         onChainHoverEnd = onChainHoverEnd,
+        onCanvasDragStart = onCanvasDragStart,
+        onCanvasSlotDrop = onCanvasSlotDrop,
     )
 ) {
     KlangBlocksCanvasComp(it)
@@ -42,12 +45,15 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
     data class Props(
         val program: KBProgram,
         val canvasDivId: String,
-        val isDragging: Boolean,
+        val isDraggingFromPalette: Boolean,
+        val isDraggingFromCanvas: Boolean,
         val onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
         val onRemoveBlock: (stmtId: String, blockId: String) -> Unit,
         val onRemoveStmt: (stmtId: String) -> Unit,
         val onChainHoverStart: (chainId: String) -> Unit,
         val onChainHoverEnd: () -> Unit,
+        val onCanvasDragStart: (stmtId: String, chain: KBChainStmt, x: Double, y: Double) -> Unit,
+        val onCanvasSlotDrop: (stmtId: String, blockId: String, slotIndex: Int) -> Unit,
     )
 
     override fun VDom.render() {
@@ -86,7 +92,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             marginBottom = 8.px
                         }
 
-                        // Row number
+                        // Row number — doubles as a drag handle for KBChainStmt rows
                         span {
                             css {
                                 color = Color("#666")
@@ -95,6 +101,19 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                 width = 24.px
                                 flexShrink = 0.0
                                 textAlign = TextAlign.right
+                                if (stmt is KBChainStmt) {
+                                    cursor = Cursor.grab
+                                    hover { color = Color("#aaa") }
+                                }
+                            }
+                            if (stmt is KBChainStmt) {
+                                onMouseDown { event ->
+                                    event.preventDefault()
+                                    props.onCanvasDragStart(
+                                        stmt.id, stmt,
+                                        event.clientX.toDouble(), event.clientY.toDouble(),
+                                    )
+                                }
                             }
                             val n = rowIndex + 1
                             +(if (n < 10) "0$n" else "$n")
@@ -109,11 +128,18 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                             if (prevWasBlock) chainConnector()
                                             KlangBlocksBlockComp(
                                                 block = item,
+                                                isDraggingFromCanvas = props.isDraggingFromCanvas,
                                                 onArgChanged = { slotIndex, arg ->
                                                     props.onArgChanged(stmt.id, item.id, slotIndex, arg)
                                                 },
                                                 onRemove = {
                                                     props.onRemoveBlock(stmt.id, item.id)
+                                                },
+                                                onCanvasDrop = { slotIndex ->
+                                                    props.onCanvasSlotDrop(stmt.id, item.id, slotIndex)
+                                                },
+                                                onDragStart = { x, y ->
+                                                    props.onCanvasDragStart(stmt.id, stmt, x, y)
                                                 },
                                             )
                                             prevWasBlock = true
@@ -132,8 +158,8 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                     }
                                 }
 
-                                // Chain drop zone — visible while dragging
-                                if (props.isDragging) {
+                                // Chain drop zone — visible while dragging from palette
+                                if (props.isDraggingFromPalette) {
                                     chainDropZone(stmt.id)
                                 }
                             }
@@ -212,18 +238,18 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
         }
     }
 
-    /** A "chain here" drop target shown at the end of each chain row while dragging. */
+    /** A "chain here" drop target shown at the end of each chain row while dragging from palette. */
     private fun DIV.chainDropZone(chainId: String) {
         div {
             css {
                 display = Display.inlineFlex
                 alignItems = Align.center
                 justifyContent = JustifyContent.center
-                minWidth = 32.px
+                minWidth = 60.px
                 height = 30.px
                 borderRadius = 6.px
-                border = Border(1.px, BorderStyle.dashed, Color("#888"))
-                color = Color("#888")
+                border = Border(2.px, BorderStyle.dashed, Color("#CCC"))
+                color = Color("#CCC")
                 fontSize = 16.px
                 cursor = Cursor.copy
                 put("transition", "all 0.15s ease")

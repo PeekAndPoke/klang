@@ -43,12 +43,21 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     sealed class DragState {
         object None : DragState()
+
         data class DraggingFromPalette(
             val funcName: String,
             val ghostX: Double,
             val ghostY: Double,
             /** ID of the KBChainStmt the cursor is hovering over for chaining, or null. */
             val hoveredChainId: String? = null,
+        ) : DragState()
+
+        /** Dragging an existing canvas row into a compatible block slot. */
+        data class DraggingFromCanvas(
+            val stmtId: String,
+            val chain: KBChainStmt,
+            val ghostX: Double,
+            val ghostY: Double,
         ) : DragState()
     }
 
@@ -64,8 +73,11 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     private val importedLibraryNames: Set<String>
         get() = program.statements.filterIsInstance<KBImportStmt>().map { it.libraryName }.toSet()
 
-    private val isDragging: Boolean
+    private val isDraggingFromPalette: Boolean
         get() = dragState is DragState.DraggingFromPalette
+
+    private val isDraggingFromCanvas: Boolean
+        get() = dragState is DragState.DraggingFromCanvas
 
     // ---- Init helpers ----------------------------------------------
 
@@ -85,25 +97,33 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         dragState = DragState.DraggingFromPalette(funcName, x, y)
     }
 
+    private fun onCanvasDragStart(stmtId: String, chain: KBChainStmt, x: Double, y: Double) {
+        dragState = DragState.DraggingFromCanvas(stmtId, chain, x, y)
+    }
+
     private fun onMouseMoved(x: Double, y: Double) {
-        val current = dragState
-        if (current is DragState.DraggingFromPalette) {
-            dragState = current.copy(ghostX = x, ghostY = y)
+        dragState = when (val current = dragState) {
+            is DragState.DraggingFromPalette -> current.copy(ghostX = x, ghostY = y)
+            is DragState.DraggingFromCanvas -> current.copy(ghostX = x, ghostY = y)
+            else -> return
         }
     }
 
     private fun onMouseReleased(x: Double, y: Double) {
-        val current = dragState
-        if (current is DragState.DraggingFromPalette) {
-            if (isInsideCanvas(x, y)) {
-                val chainId = current.hoveredChainId
-                if (chainId != null) {
-                    commitChainDrop(chainId, current.funcName)
-                } else {
-                    commitDrop(current.funcName)
+        when (val current = dragState) {
+            is DragState.DraggingFromPalette -> {
+                if (isInsideCanvas(x, y)) {
+                    val chainId = current.hoveredChainId
+                    if (chainId != null) commitChainDrop(chainId, current.funcName)
+                    else commitDrop(current.funcName)
                 }
+                dragState = DragState.None
             }
-            dragState = DragState.None
+
+            // Canvas drag released without landing on a compatible slot → cancel
+            is DragState.DraggingFromCanvas -> dragState = DragState.None
+
+            else -> {}
         }
     }
 
@@ -129,18 +149,16 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     // ---- Program mutations -----------------------------------------
 
-    /** Drop as a new standalone chain row. */
+    /** Drop palette block as a new standalone chain row. */
     private fun commitDrop(funcName: String) {
         val chain = KBChainStmt(
             id = uuid(),
-            steps = listOf(
-                KBCallBlock(id = uuid(), funcName = funcName, isHead = true)
-            )
+            steps = listOf(KBCallBlock(id = uuid(), funcName = funcName, isHead = true))
         )
         program = program.copy(statements = program.statements + chain)
     }
 
-    /** Append a new call block to an existing chain. */
+    /** Append a new call block to an existing chain (palette drag onto chain drop zone). */
     private fun commitChainDrop(chainId: String, funcName: String) {
         program = program.copy(
             statements = program.statements.map { stmt ->
@@ -150,6 +168,47 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 )
             }
         )
+    }
+
+    /**
+     * Drop a canvas chain into a slot: removes the source row and sets the slot value
+     * to KBNestedChainArg wrapping the source chain.
+     */
+    private fun commitCanvasSlotDrop(
+        sourceStmtId: String,
+        sourceChain: KBChainStmt,
+        targetStmtId: String,
+        blockId: String,
+        slotIndex: Int,
+    ) {
+        if (sourceStmtId == targetStmtId) return  // prevent self-nesting
+        program = program.copy(
+            statements = program.statements.mapNotNull { stmt ->
+                when {
+                    stmt.id == sourceStmtId -> null  // remove source row
+                    stmt.id == targetStmtId && stmt is KBChainStmt -> stmt.copy(
+                        steps = stmt.steps.map { item ->
+                            if (item !is KBCallBlock || item.id != blockId) item
+                            else {
+                                val newArgs = item.args.toMutableList()
+                                while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
+                                newArgs[slotIndex] = KBNestedChainArg(sourceChain)
+                                item.copy(args = newArgs.toList())
+                            }
+                        }
+                    )
+
+                    else -> stmt
+                }
+            }
+        )
+    }
+
+    /** Called by the canvas when a canvas-drag is released onto a compatible slot. */
+    private fun onCanvasSlotDrop(targetStmtId: String, blockId: String, slotIndex: Int) {
+        val current = dragState as? DragState.DraggingFromCanvas ?: return
+        commitCanvasSlotDrop(current.stmtId, current.chain, targetStmtId, blockId, slotIndex)
+        dragState = DragState.None
     }
 
     private fun commitImportLibrary(libraryName: String) {
@@ -237,42 +296,53 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             KlangBlocksCanvasComp(
                 program = program,
                 canvasDivId = canvasDivId,
-                isDragging = isDragging,
+                isDraggingFromPalette = isDraggingFromPalette,
+                isDraggingFromCanvas = isDraggingFromCanvas,
                 onArgChanged = ::onArgChanged,
                 onRemoveBlock = ::onRemoveBlock,
                 onRemoveStmt = ::onRemoveStmt,
                 onChainHoverStart = ::onChainHoverStart,
                 onChainHoverEnd = ::onChainHoverEnd,
+                onCanvasDragStart = ::onCanvasDragStart,
+                onCanvasSlotDrop = ::onCanvasSlotDrop,
             )
 
-            // Drag ghost — follows cursor while dragging
+            // Drag ghost — follows cursor during any drag
             val ds = dragState
-            if (ds is DragState.DraggingFromPalette) {
-                div {
+            val (ghostX, ghostY, ghostLabel) = when (ds) {
+                is DragState.DraggingFromPalette -> Triple(ds.ghostX, ds.ghostY, ds.funcName)
+                is DragState.DraggingFromCanvas -> Triple(
+                    ds.ghostX, ds.ghostY,
+                    ds.chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName }
+                )
+
+                else -> return@div
+            }
+
+            div {
+                css {
+                    position = Position.fixed
+                    left = ghostX.px
+                    top = ghostY.px
+                    put("pointer-events", "none")
+                    zIndex = 9999
+                    opacity = 0.85
+                    put("transform", "translate(-50%, -50%)")
+                }
+                span {
                     css {
-                        position = Position.fixed
-                        left = ds.ghostX.px
-                        top = ds.ghostY.px
-                        put("pointer-events", "none")
-                        zIndex = 9999
-                        opacity = 0.85
-                        put("transform", "translate(-50%, -50%)")
+                        display = Display.inlineBlock
+                        backgroundColor = Color(categoryColour(null))
+                        color = Color.white
+                        borderRadius = 8.px
+                        padding = Padding(vertical = 5.px, horizontal = 10.px)
+                        fontSize = 13.px
+                        fontFamily = "monospace"
+                        fontWeight = FontWeight.bold
+                        whiteSpace = WhiteSpace.nowrap
+                        put("box-shadow", "0 4px 12px rgba(0,0,0,0.4)")
                     }
-                    span {
-                        css {
-                            display = Display.inlineBlock
-                            backgroundColor = Color(categoryColour(null))
-                            color = Color.white
-                            borderRadius = 8.px
-                            padding = Padding(vertical = 5.px, horizontal = 10.px)
-                            fontSize = 13.px
-                            fontFamily = "monospace"
-                            fontWeight = FontWeight.bold
-                            whiteSpace = WhiteSpace.nowrap
-                            put("box-shadow", "0 4px 12px rgba(0,0,0,0.4)")
-                        }
-                        +ds.funcName
-                    }
+                    +ghostLabel
                 }
             }
         }
