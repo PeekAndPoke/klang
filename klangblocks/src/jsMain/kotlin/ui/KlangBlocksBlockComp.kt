@@ -4,21 +4,55 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.*
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.input
 import kotlinx.html.span
 
 @Suppress("FunctionName")
-fun Tag.KlangBlocksBlockComp(block: KBCallBlock) =
-    comp(KlangBlocksBlockComp.Props(block = block)) { KlangBlocksBlockComp(it) }
+fun Tag.KlangBlocksBlockComp(
+    block: KBCallBlock,
+    onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
+) = comp(KlangBlocksBlockComp.Props(block = block, onArgChanged = onArgChanged)) {
+    KlangBlocksBlockComp(it)
+}
 
 class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Props>(ctx) {
 
-    data class Props(val block: KBCallBlock)
+    data class Props(
+        val block: KBCallBlock,
+        val onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
+    )
+
+    private var editingSlotIndex: Int? by value(null)
+    private var editText: String by value("")
+
+    private fun startEdit(slotIndex: Int, currentText: String) {
+        editingSlotIndex = slotIndex
+        editText = currentText
+    }
+
+    private fun commitEdit(slotIndex: Int) {
+        val text = editText.trim()
+        val arg: KBArgValue = if (text.isEmpty()) {
+            KBEmptyArg("")
+        } else {
+            val num = text.toDoubleOrNull()
+            if (num != null) KBNumberArg(num) else KBStringArg(text)
+        }
+        props.onArgChanged(slotIndex, arg)
+        editingSlotIndex = null
+        editText = ""
+    }
+
+    private fun cancelEdit() {
+        editingSlotIndex = null
+        editText = ""
+    }
 
     override fun VDom.render() {
         val block = props.block
@@ -47,17 +81,64 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
             slots.forEachIndexed { i, slot ->
                 val arg: KBArgValue? = block.args.getOrNull(i)
-                span {
-                    css {
-                        backgroundColor = Color("rgba(0,0,0,0.2)")
-                        borderRadius = 4.px
-                        padding = Padding(horizontal = 6.px, vertical = 2.px)
-                        fontSize = 12.px
-                        if (arg == null || arg is KBEmptyArg) opacity = 0.6
+
+                if (editingSlotIndex == i) {
+                    input {
+                        value = editText
+                        autoFocus = true
+                        onInput { event ->
+                            editText = event.asDynamic().target.value as String
+                        }
+                        onBlur { commitEdit(i) }
+                        onKeyDown { event ->
+                            when (event.key) {
+                                "Enter" -> commitEdit(i)
+                                "Escape" -> cancelEdit()
+                            }
+                        }
+                        onMouseDown { event -> event.stopPropagation() }
+                        css {
+                            backgroundColor = Color("rgba(0,0,0,0.4)")
+                            border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
+                            borderRadius = 3.px
+                            color = Color.white
+                            fontSize = 12.px
+                            fontFamily = "monospace"
+                            padding = Padding(horizontal = 4.px, vertical = 1.px)
+                            minWidth = 50.px
+                            maxWidth = 140.px
+                            outline = Outline.none
+                            put("box-sizing", "border-box")
+                        }
                     }
-                    when (arg) {
-                        null, is KBEmptyArg -> +"[${slot.name}]"
-                        else -> +arg.renderShort()
+                } else {
+                    span {
+                        css {
+                            backgroundColor = Color("rgba(0,0,0,0.2)")
+                            borderRadius = 4.px
+                            padding = Padding(horizontal = 6.px, vertical = 2.px)
+                            fontSize = 12.px
+                            cursor = Cursor.text
+                            if (arg == null || arg is KBEmptyArg) opacity = 0.6
+                        }
+                        onClick { event ->
+                            event.stopPropagation()
+                            val currentText = when (arg) {
+                                is KBStringArg -> arg.value
+                                is KBNumberArg -> {
+                                    val l = arg.value.toLong()
+                                    if (arg.value == l.toDouble()) l.toString() else arg.value.toString()
+                                }
+
+                                else -> ""
+                            }
+                            startEdit(i, currentText)
+                        }
+                        onMouseDown { event -> event.stopPropagation() }
+                        when (arg) {
+                            null, is KBEmptyArg -> +"[${slot.name}]"
+                            else -> +arg.renderShort()
+                        }
                     }
                 }
             }

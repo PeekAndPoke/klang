@@ -7,10 +7,7 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onMouseMove
 import de.peekandpoke.ultra.html.onMouseUp
-import io.peekandpoke.klang.blocks.model.KBCallBlock
-import io.peekandpoke.klang.blocks.model.KBChainStmt
-import io.peekandpoke.klang.blocks.model.KBImportStmt
-import io.peekandpoke.klang.blocks.model.KBProgram
+import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -46,7 +43,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     // ---- Component state -------------------------------------------
 
-    private var program: KBProgram by value(KBProgram())
+    private var program: KBProgram by value(KBProgram()) { props.onCodeChanged(it.toCode()) }
     private var dragState: DragState by value(DragState.None)
 
     private val canvasDivId = "kb-canvas-${hashCode()}"
@@ -93,13 +90,33 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             )
         )
         program = program.copy(statements = program.statements + chain)
-        props.onCodeChanged("")
     }
 
     private fun commitImportLibrary(libraryName: String) {
         val import = KBImportStmt(id = uuid(), libraryName = libraryName)
         program = program.copy(statements = listOf(import) + program.statements)
-        props.onCodeChanged("")
+    }
+
+    private fun onArgChanged(stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) {
+        program = program.copy(
+            statements = program.statements.map { stmt ->
+                if (stmt.id != stmtId) stmt
+                else when (stmt) {
+                    is KBChainStmt -> stmt.copy(
+                        steps = stmt.steps.map { item ->
+                            if (item is KBCallBlock && item.id == blockId) {
+                                val newArgs = item.args.toMutableList()
+                                while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
+                                newArgs[slotIndex] = arg
+                                item.copy(args = newArgs.toList())
+                            } else item
+                        }
+                    )
+
+                    else -> stmt
+                }
+            }
+        )
     }
 
     // ---- Render ----------------------------------------------------
@@ -132,7 +149,11 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             )
 
             // Canvas
-            KlangBlocksCanvasComp(program = program, canvasDivId = canvasDivId)
+            KlangBlocksCanvasComp(
+                program = program,
+                canvasDivId = canvasDivId,
+                onArgChanged = ::onArgChanged,
+            )
 
             // Drag ghost — follows cursor while dragging
             val ds = dragState

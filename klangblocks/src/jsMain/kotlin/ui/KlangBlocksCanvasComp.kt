@@ -16,7 +16,14 @@ import kotlinx.html.span
 fun Tag.KlangBlocksCanvasComp(
     program: KBProgram,
     canvasDivId: String,
-) = comp(KlangBlocksCanvasComp.Props(program = program, canvasDivId = canvasDivId)) {
+    onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
+) = comp(
+    KlangBlocksCanvasComp.Props(
+        program = program,
+        canvasDivId = canvasDivId,
+        onArgChanged = onArgChanged,
+    )
+) {
     KlangBlocksCanvasComp(it)
 }
 
@@ -25,6 +32,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
     data class Props(
         val program: KBProgram,
         val canvasDivId: String,
+        val onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
     )
 
     override fun VDom.render() {
@@ -81,7 +89,12 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             is KBChainStmt -> {
                                 stmt.steps.forEach { item ->
                                     when (item) {
-                                        is KBCallBlock -> KlangBlocksBlockComp(item)
+                                        is KBCallBlock -> KlangBlocksBlockComp(
+                                            block = item,
+                                            onArgChanged = { slotIndex, arg ->
+                                                props.onArgChanged(stmt.id, item.id, slotIndex, arg)
+                                            },
+                                        )
                                         is KBNewlineHint -> span {
                                             css {
                                                 color = Color("#888")
