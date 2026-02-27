@@ -4,7 +4,9 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.*
+import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.klang.blocks.model.*
 import kotlinx.css.*
 import kotlinx.html.*
@@ -13,28 +15,22 @@ import kotlinx.html.*
 fun Tag.KlangBlocksCanvasComp(
     program: KBProgram,
     canvasDivId: String,
-    isDraggingFromPalette: Boolean,
-    isDraggingFromCanvas: Boolean,
+    dndState: DndState?,
     onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
     onRemoveBlock: (stmtId: String, blockId: String) -> Unit,
     onRemoveStmt: (stmtId: String) -> Unit,
-    onChainHoverStart: (chainId: String) -> Unit,
-    onChainHoverEnd: () -> Unit,
     onCanvasDragStart: (stmtId: String, chain: KBChainStmt, x: Double, y: Double) -> Unit,
-    onCanvasSlotDrop: (stmtId: String, blockId: String, slotIndex: Int) -> Unit,
+    onInsertBlankLine: (index: Int) -> Unit,
 ) = comp(
     KlangBlocksCanvasComp.Props(
         program = program,
         canvasDivId = canvasDivId,
-        isDraggingFromPalette = isDraggingFromPalette,
-        isDraggingFromCanvas = isDraggingFromCanvas,
+        dndState = dndState,
         onArgChanged = onArgChanged,
         onRemoveBlock = onRemoveBlock,
         onRemoveStmt = onRemoveStmt,
-        onChainHoverStart = onChainHoverStart,
-        onChainHoverEnd = onChainHoverEnd,
         onCanvasDragStart = onCanvasDragStart,
-        onCanvasSlotDrop = onCanvasSlotDrop,
+        onInsertBlankLine = onInsertBlankLine,
     )
 ) {
     KlangBlocksCanvasComp(it)
@@ -45,19 +41,17 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
     data class Props(
         val program: KBProgram,
         val canvasDivId: String,
-        val isDraggingFromPalette: Boolean,
-        val isDraggingFromCanvas: Boolean,
+        val dndState: DndState?,
         val onArgChanged: (stmtId: String, blockId: String, slotIndex: Int, arg: KBArgValue) -> Unit,
         val onRemoveBlock: (stmtId: String, blockId: String) -> Unit,
         val onRemoveStmt: (stmtId: String) -> Unit,
-        val onChainHoverStart: (chainId: String) -> Unit,
-        val onChainHoverEnd: () -> Unit,
         val onCanvasDragStart: (stmtId: String, chain: KBChainStmt, x: Double, y: Double) -> Unit,
-        val onCanvasSlotDrop: (stmtId: String, blockId: String, slotIndex: Int) -> Unit,
+        val onInsertBlankLine: (index: Int) -> Unit,
     )
 
     override fun VDom.render() {
         val program = props.program
+        val dndState = props.dndState
 
         div {
             id = props.canvasDivId
@@ -83,13 +77,21 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                 }
             } else {
                 program.statements.forEachIndexed { rowIndex, stmt ->
+
+                    // Gap before each row (and a final gap after the last row below)
+                    KlangBlocksRowGapComp(
+                        index = rowIndex,
+                        dndState = dndState,
+                        onInsertBlankLine = props.onInsertBlankLine,
+                    )
+
                     div {
                         css {
                             display = Display.flex
                             flexDirection = FlexDirection.row
                             alignItems = Align.center
                             put("gap", "8px")
-                            marginBottom = 8.px
+                            marginBottom = 4.px
                         }
 
                         // Row number — doubles as a drag handle for KBChainStmt rows
@@ -128,15 +130,13 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                             if (prevWasBlock) chainConnector()
                                             KlangBlocksBlockComp(
                                                 block = item,
-                                                isDraggingFromCanvas = props.isDraggingFromCanvas,
+                                                stmtId = stmt.id,
+                                                dndState = dndState,
                                                 onArgChanged = { slotIndex, arg ->
                                                     props.onArgChanged(stmt.id, item.id, slotIndex, arg)
                                                 },
                                                 onRemove = {
                                                     props.onRemoveBlock(stmt.id, item.id)
-                                                },
-                                                onCanvasDrop = { slotIndex ->
-                                                    props.onCanvasSlotDrop(stmt.id, item.id, slotIndex)
                                                 },
                                                 onDragStart = { x, y ->
                                                     props.onCanvasDragStart(stmt.id, stmt, x, y)
@@ -158,10 +158,10 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                     }
                                 }
 
-                                // Chain drop zone — visible while dragging from palette
-                                if (props.isDraggingFromPalette) {
-                                    chainDropZone(stmt.id)
-                                }
+                                KlangBlocksChainDropZoneComp(
+                                    chainId = stmt.id,
+                                    dndState = dndState,
+                                )
                             }
 
                             is KBImportStmt -> {
@@ -187,9 +187,26 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                 }
                                 removeStmtButton { props.onRemoveStmt(stmt.id) }
                             }
+
+                            is KBBlankLine -> {
+                                span {
+                                    css {
+                                        display = Display.inlineBlock
+                                        height = 16.px
+                                    }
+                                }
+                                removeStmtButton { props.onRemoveStmt(stmt.id) }
+                            }
                         }
                     }
                 }
+
+                // Gap after the last row
+                KlangBlocksRowGapComp(
+                    index = program.statements.size,
+                    dndState = dndState,
+                    onInsertBlankLine = props.onInsertBlankLine,
+                )
             }
         }
     }
@@ -201,8 +218,6 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                 display = Display.inlineFlex
                 alignItems = Align.center
                 flexShrink = 0.0
-                // Cancel the parent row's gap on both sides so each dot lands
-                // flush against the adjacent block edge.
                 marginLeft = (-10).px
                 marginRight = (-10).px
             }
@@ -235,34 +250,6 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                     flexShrink = 0.0
                 }
             }
-        }
-    }
-
-    /** A "chain here" drop target shown at the end of each chain row while dragging from palette. */
-    private fun DIV.chainDropZone(chainId: String) {
-        div {
-            css {
-                display = Display.inlineFlex
-                alignItems = Align.center
-                justifyContent = JustifyContent.center
-                minWidth = 60.px
-                height = 30.px
-                borderRadius = 6.px
-                border = Border(2.px, BorderStyle.dashed, Color("#CCC"))
-                color = Color("#CCC")
-                fontSize = 16.px
-                cursor = Cursor.copy
-                put("transition", "all 0.15s ease")
-                marginLeft = 4.px
-                hover {
-                    backgroundColor = Color("rgba(255,255,255,0.08)")
-                    borderColor = Color("#aaa")
-                    color = Color("#ddd")
-                }
-            }
-            onMouseEnter { props.onChainHoverStart(chainId) }
-            onMouseLeave { props.onChainHoverEnd() }
-            +"+"
         }
     }
 }

@@ -17,18 +17,18 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangBlocksBlockComp(
     block: KBCallBlock,
-    isDraggingFromCanvas: Boolean,
+    stmtId: String,
+    dndState: DndState?,
     onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
     onRemove: () -> Unit,
-    onCanvasDrop: (slotIndex: Int) -> Unit,
     onDragStart: (x: Double, y: Double) -> Unit,
 ) = comp(
     KlangBlocksBlockComp.Props(
         block = block,
-        isDraggingFromCanvas = isDraggingFromCanvas,
+        stmtId = stmtId,
+        dndState = dndState,
         onArgChanged = onArgChanged,
         onRemove = onRemove,
-        onCanvasDrop = onCanvasDrop,
         onDragStart = onDragStart,
     )
 ) {
@@ -39,10 +39,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
     data class Props(
         val block: KBCallBlock,
-        val isDraggingFromCanvas: Boolean,
+        val stmtId: String,
+        val dndState: DndState?,
         val onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
         val onRemove: () -> Unit,
-        val onCanvasDrop: (slotIndex: Int) -> Unit,
         val onDragStart: (x: Double, y: Double) -> Unit,
     )
 
@@ -77,7 +77,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val block = props.block
         val doc = KlangDocsRegistry.global.get(block.funcName)
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
-        val dragging = props.isDraggingFromCanvas
+        val canDropToSlot = props.dndState?.onDropToSlot != null
 
         div("kb-block") {
             css {
@@ -93,14 +93,14 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 whiteSpace = WhiteSpace.nowrap
                 userSelect = UserSelect.none
                 position = Position.relative
-                if (!dragging) cursor = Cursor.grab
+                if (!canDropToSlot) cursor = Cursor.grab
             }
             onMouseEnter { isHovered = true }
             onMouseLeave { isHovered = false }
             // Start a canvas drag when pressing on the block background or function name.
             // Slot spans stop mousedown propagation, so they won't trigger this.
             onMouseDown { event ->
-                if (!dragging) {
+                if (!canDropToSlot) {
                     event.preventDefault()
                     props.onDragStart(event.clientX.toDouble(), event.clientY.toDouble())
                 }
@@ -113,7 +113,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
             slots.forEachIndexed { i, slot ->
                 val arg: KBArgValue? = block.args.getOrNull(i)
-                val canDrop = dragging && slotAcceptsChainDrop(slot)
+                val canDrop = canDropToSlot && slotAcceptsChainDrop(slot)
 
                 if (editingSlotIndex == i) {
                     input {
@@ -164,7 +164,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         if (canDrop) {
                             onMouseUp { event ->
                                 event.stopPropagation()
-                                props.onCanvasDrop(i)
+                                props.dndState?.onDropToSlot?.invoke(props.stmtId, block.id, i)
                             }
                             onMouseDown { event -> event.stopPropagation() }
                         } else {
@@ -191,8 +191,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 }
             }
 
-            // Remove (×) — appears on hover, hidden while canvas-dragging to avoid clutter
-            if (isHovered && !dragging) {
+            // Remove (×) — appears on hover, hidden while a drag is active to avoid clutter
+            if (isHovered && !canDropToSlot) {
                 span {
                     css {
                         marginLeft = 4.px
@@ -236,17 +236,4 @@ private fun KBArgValue.renderShort(): String = when (this) {
     is KBBinaryArg -> "${left.renderShort()} $op ${right.renderShort()}"
     is KBUnaryArg -> "$op${operand.renderShort()}"
     is KBArrowFunctionArg -> "(${params.joinToString()}) => …"
-}
-
-internal fun categoryColour(category: String?): String = when (category) {
-    "synthesis" -> "#4a6fa5"
-    "sample" -> "#3a8a4a"
-    "effects" -> "#3a7a3a"
-    "tempo" -> "#8a7a20"
-    "structural" -> "#7a3a8a"
-    "random" -> "#8a3a20"
-    "tonal" -> "#4a3a8a"
-    "continuous" -> "#2a7a7a"
-    "filters" -> "#2a6a3a"
-    else -> "#555"
 }

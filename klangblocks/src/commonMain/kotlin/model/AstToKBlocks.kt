@@ -5,8 +5,20 @@ import kotlin.random.Random
 
 object AstToKBlocks {
 
-    fun convert(program: Program): KBProgram =
-        KBProgram(statements = program.statements.mapNotNull { convertStmt(it) })
+    fun convert(program: Program): KBProgram {
+        val result = mutableListOf<KBStmt>()
+        program.statements.forEachIndexed { index, stmt ->
+            if (index > 0) {
+                val prevEnd = program.statements[index - 1].location?.endLine ?: 0
+                val currStart = stmt.location?.startLine ?: 0
+                if (currStart > prevEnd + 1) {
+                    result.add(KBBlankLine(id = uuid()))
+                }
+            }
+            convertStmt(stmt)?.let { result.add(it) }
+        }
+        return KBProgram(statements = result)
+    }
 
     // ---- Statements -------------------------------------------------
 

@@ -45,3 +45,7 @@ data class KBChainStmt(
     override val id: String,
     val steps: List<KBChainItem> = emptyList(),
 ) : KBStmt()
+
+data class KBBlankLine(
+    override val id: String,
+) : KBStmt()

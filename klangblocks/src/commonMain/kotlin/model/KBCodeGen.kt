@@ -8,6 +8,7 @@ fun KBStmt.toCode(): String? = when (this) {
     is KBChainStmt -> toCode()
     is KBLetStmt -> toCode()
     is KBConstStmt -> toCode()
+    is KBBlankLine -> ""
 }
 
 fun KBImportStmt.toCode(): String {
