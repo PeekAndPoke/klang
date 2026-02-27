@@ -9,6 +9,7 @@ import de.peekandpoke.ultra.html.onMouseMove
 import de.peekandpoke.ultra.html.onMouseUp
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
+import io.peekandpoke.klang.script.parser.KlangScriptParser
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -18,8 +19,15 @@ import org.w3c.dom.HTMLElement
 @Suppress("FunctionName")
 fun Tag.KlangBlocksEditorComp(
     availableLibraries: List<KlangScriptLibrary>,
+    initialCode: String = "",
     onCodeChanged: (String) -> Unit,
-) = comp(KlangBlocksEditorComp.Props(availableLibraries = availableLibraries, onCodeChanged = onCodeChanged)) {
+) = comp(
+    KlangBlocksEditorComp.Props(
+        availableLibraries = availableLibraries,
+        initialCode = initialCode,
+        onCodeChanged = onCodeChanged,
+    )
+) {
     KlangBlocksEditorComp(it)
 }
 
@@ -27,6 +35,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     data class Props(
         val availableLibraries: List<KlangScriptLibrary>,
+        val initialCode: String = "",
         val onCodeChanged: (String) -> Unit,
     )
 
@@ -43,7 +52,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     // ---- Component state -------------------------------------------
 
-    private var program: KBProgram by value(KBProgram()) { props.onCodeChanged(it.toCode()) }
+    private var program: KBProgram by value(parseInitialCode()) { props.onCodeChanged(it.toCode()) }
     private var dragState: DragState by value(DragState.None)
 
     private val canvasDivId = "kb-canvas-${hashCode()}"
@@ -52,6 +61,18 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     private val importedLibraryNames: Set<String>
         get() = program.statements.filterIsInstance<KBImportStmt>().map { it.libraryName }.toSet()
+
+    // ---- Init helpers ----------------------------------------------
+
+    private fun parseInitialCode(): KBProgram {
+        val src = props.initialCode.trim()
+        if (src.isEmpty()) return KBProgram()
+        return try {
+            AstToKBlocks.convert(KlangScriptParser.parse(src))
+        } catch (e: Exception) {
+            KBProgram()
+        }
+    }
 
     // ---- Drag logic ------------------------------------------------
 
@@ -189,5 +210,3 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     }
 }
 
-private fun uuid(): String =
-    (0 until 16).joinToString("") { kotlin.random.Random.nextInt(16).toString(16) }

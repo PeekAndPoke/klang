@@ -416,6 +416,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         EditorMode.BLOCKS -> {
                             KlangBlocksEditorComp(
                                 availableLibraries = listOf(stdlibLib, strudelLib),
+                                initialCode = code,
                                 onCodeChanged = { newCode ->
                                     code = newCode
                                     codeStream(newCode)
