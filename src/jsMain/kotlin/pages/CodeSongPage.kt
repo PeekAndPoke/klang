@@ -198,16 +198,26 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         ui.fluid.container.with("noise-bg") {
             key = "make-song-page"
             css {
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                height = 100.vh
                 padding = Padding(0.px)
                 backgroundColor = Color.white
             }
             ui.form {
                 key = "dashboard-form"
+                css {
+                    display = Display.flex
+                    flexDirection = FlexDirection.column
+                    flex = Flex(1.0, 1.0, FlexBasis.auto)
+                    overflow = Overflow.hidden
+                }
                 ui.basic.segment {
                     key = "dashboard-form-segment"
 
                     css {
                         paddingBottom = 0.px
+                        flexShrink = 0.0
                     }
 
                     ui.horizontal.list {
@@ -322,6 +332,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                 div {
                     key = "dashboard-form-code"
+                    css {
+                        flex = Flex(1.0, 1.0, FlexBasis.auto)
+                        overflow = Overflow.hidden
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                    }
 
                     fun navToDoc(doc: KlangSymbol, event: PointerEvent) {
                         val uri = Nav.docsStrudelSearch("function:${doc.name}")

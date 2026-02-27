@@ -5,6 +5,7 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangCallable
@@ -12,6 +13,7 @@ import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.input
 
 @Suppress("FunctionName")
 fun Tag.KlangBlocksPaletteComp(
@@ -26,8 +28,11 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
         val onDragStart: (funcName: String, x: Double, y: Double) -> Unit,
     )
 
+    private var searchQuery: String by value("")
+
     override fun VDom.render() {
         val registry = KlangDocsRegistry.global
+        val query = searchQuery.trim().lowercase()
 
         div {
             css {
@@ -36,56 +41,94 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                 overflowY = Overflow.auto
                 backgroundColor = Color("#252535")
                 put("border-right", "1px solid #333")
-                padding = Padding(8.px)
+                display = Display.flex
+                flexDirection = FlexDirection.column
             }
 
-            registry.categories.forEach { category ->
-                val funcs = registry.getByCategory(category)
-                    .filter { hasVisibleBlock(it) }
-
-                if (funcs.isEmpty()) return@forEach
-
-                // Category header
-                div {
-                    css {
-                        color = Color(categoryColour(category))
-                        fontSize = 10.px
-                        fontWeight = FontWeight.bold
-                        textTransform = TextTransform.uppercase
-                        letterSpacing = LinearDimension("0.08em")
-                        padding = Padding(vertical = 6.px, horizontal = 4.px)
-                        marginTop = 4.px
+            // Search input
+            div {
+                css {
+                    padding = Padding(8.px)
+                    flexShrink = 0.0
+                    put("border-bottom", "1px solid #333")
+                }
+                input {
+                    placeholder = "Search blocks…"
+                    value = searchQuery
+                    onInput { event ->
+                        searchQuery = event.asDynamic().target.value as String
                     }
-                    +category
+                    css {
+                        width = 100.pct
+                        backgroundColor = Color("#1e1e2e")
+                        color = Color("#ccc")
+                        border = Border(1.px, BorderStyle.solid, Color("#444"))
+                        borderRadius = 4.px
+                        padding = Padding(vertical = 4.px, horizontal = 6.px)
+                        fontSize = 12.px
+                        outline = Outline.none
+                        put("box-sizing", "border-box")
+                    }
+                }
+            }
+
+            // Block list
+            div {
+                css {
+                    flex = Flex(1.0, 1.0, FlexBasis.auto)
+                    overflowY = Overflow.auto
+                    padding = Padding(8.px)
                 }
 
-                // Function pills
-                funcs.forEach { doc ->
+                registry.categories.forEach { category ->
+                    val funcs = registry.getByCategory(category)
+                        .filter { hasVisibleBlock(it) }
+                        .filter { query.isEmpty() || it.name.lowercase().contains(query) }
+
+                    if (funcs.isEmpty()) return@forEach
+
+                    // Category header
                     div {
                         css {
-                            display = Display.block
-                            backgroundColor = Color(categoryColour(category))
-                            color = Color.white
-                            borderRadius = 6.px
-                            padding = Padding(vertical = 4.px, horizontal = 8.px)
-                            marginBottom = 3.px
-                            fontSize = 12.px
-                            fontFamily = "monospace"
-                            cursor = Cursor.grab
-                            userSelect = UserSelect.none
-                            whiteSpace = WhiteSpace.nowrap
-                            overflow = Overflow.hidden
-                            textOverflow = TextOverflow.ellipsis
+                            color = Color(categoryColour(category))
+                            fontSize = 10.px
+                            fontWeight = FontWeight.bold
+                            textTransform = TextTransform.uppercase
+                            letterSpacing = LinearDimension("0.08em")
+                            padding = Padding(vertical = 6.px, horizontal = 4.px)
+                            marginTop = 4.px
                         }
-                        onMouseDown { event ->
-                            event.preventDefault()
-                            props.onDragStart(
-                                doc.name,
-                                event.clientX.toDouble(),
-                                event.clientY.toDouble(),
-                            )
+                        +category
+                    }
+
+                    // Function pills
+                    funcs.forEach { doc ->
+                        div {
+                            css {
+                                display = Display.block
+                                backgroundColor = Color(categoryColour(category))
+                                color = Color.white
+                                borderRadius = 6.px
+                                padding = Padding(vertical = 4.px, horizontal = 8.px)
+                                marginBottom = 3.px
+                                fontSize = 12.px
+                                fontFamily = "monospace"
+                                cursor = Cursor.grab
+                                userSelect = UserSelect.none
+                                whiteSpace = WhiteSpace.nowrap
+                                overflow = Overflow.hidden
+                                textOverflow = TextOverflow.ellipsis
+                            }
+                            onMouseDown { event ->
+                                event.preventDefault()
+                                props.onDragStart(
+                                    doc.name,
+                                    event.clientX.toDouble(),
+                                    event.clientY.toDouble(),
+                                )
+                            }
+                            +doc.name
                         }
-                        +doc.name
                     }
                 }
             }

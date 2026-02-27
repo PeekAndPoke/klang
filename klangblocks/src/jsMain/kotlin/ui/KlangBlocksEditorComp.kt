@@ -94,7 +94,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 display = Display.flex
                 flexDirection = FlexDirection.row
                 width = 100.pct
-                height = 500.px
+                height = 100.pct
                 position = Position.relative
                 overflow = Overflow.hidden
                 backgroundColor = Color("#1e1e2e")
