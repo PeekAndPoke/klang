@@ -4,6 +4,8 @@ import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.Extension
 import io.peekandpoke.klang.codemirror.ext.hoverTooltip
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -156,9 +158,16 @@ private fun buildTooltipHtml(doc: KlangSymbol): String {
             }
 
         append("""<div class="cm-dsl-section-title">Signatures</div>""")
-        doc.variants.forEach { variant ->
-            append("""<div class="cm-dsl-sig"><code>${escapeHtml(variant.signature)}</code></div>""")
-        }
+        doc.variants
+            .sortedBy {
+                when (it) {
+                    is KlangCallable -> it.receiver?.simpleName?.length ?: 0
+                    is KlangProperty -> it.owner?.simpleName?.length ?: 0
+                }
+            }
+            .forEach { variant ->
+                append("""<div class="cm-dsl-sig"><code>${escapeHtml(variant.signature)}</code></div>""")
+            }
 
         doc.variants.firstOrNull { it.samples.isNotEmpty() }?.samples?.firstOrNull()
             ?.takeIf { it.isNotBlank() }

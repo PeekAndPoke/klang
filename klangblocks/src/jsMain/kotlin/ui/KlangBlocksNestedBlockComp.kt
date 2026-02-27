@@ -96,7 +96,7 @@ class KlangBlocksNestedBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksNestedB
                 +block.funcName
             }
 
-            slots.forEachIndexed { i, slot ->
+            slots.toRenderItems(block.args).forEach { (i, slot) ->
                 val arg: KBArgValue? = block.args.getOrNull(i)
 
                 if (editingSlotIndex == i) {
@@ -137,6 +137,9 @@ class KlangBlocksNestedBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksNestedB
                             backgroundColor = Color("rgba(0,0,0,0.2)")
                             cursor = Cursor.text
                             if (arg == null || arg is KBEmptyArg) opacity = 0.6
+                            hover {
+                                backgroundColor = Color("rgba(255,255,255,0.15)")
+                            }
                         }
                         onClick { event ->
                             event.stopPropagation()

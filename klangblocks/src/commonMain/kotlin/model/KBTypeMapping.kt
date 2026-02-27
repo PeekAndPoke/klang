@@ -6,8 +6,6 @@ import io.peekandpoke.klang.script.types.KlangType
 
 object KBTypeMapping {
 
-    const val MAX_VARARG_SLOTS = 4
-
     fun slotKindFor(type: KlangType): KBSlotKind {
         if (type.isUnion) {
             val members = type.unionMembers!!.map { slotKindFor(it) }.distinct()
@@ -35,12 +33,10 @@ object KBTypeMapping {
         val result = mutableListOf<KBSlot>()
         for (param in params) {
             val kind = slotKindFor(param.type)
-            if (param.isVararg) {
-                repeat(MAX_VARARG_SLOTS) { slot ->
-                    result += KBSlot(result.size, "${param.name}[$slot]", kind, isVararg = true)
-                }
+            result += if (param.isVararg) {
+                KBVarArgSlot(result.size, param.name, kind)
             } else {
-                result += KBSlot(result.size, param.name, kind)
+                KBSingleSlot(result.size, param.name, kind)
             }
         }
         return result
@@ -54,4 +50,30 @@ object KBTypeMapping {
         KBSlotKind.Bool -> argValue is KBBoolArg || argValue is KBEmptyArg
         else -> true
     }
+}
+
+/**
+ * Expands slots into (argIndex, slot) render pairs.
+ *
+ * - KBSingleSlot  → one pair at slot.index
+ * - KBVarArgSlot  → one pair per filled arg starting at slot.index, plus one extra empty slot
+ */
+fun List<KBSlot>.toRenderItems(args: List<KBArgValue>): List<Pair<Int, KBSlot>> {
+    val items = mutableListOf<Pair<Int, KBSlot>>()
+    for (slot in this) {
+        when (slot) {
+            is KBSingleSlot -> items.add(slot.index to slot)
+            is KBVarArgSlot -> {
+                var idx = slot.index
+                while (true) {
+                    val a = args.getOrNull(idx)
+                    if (a == null || a is KBEmptyArg) break
+                    items.add(idx to slot)
+                    idx++
+                }
+                items.add(idx to slot) // always one empty slot at the end
+            }
+        }
+    }
+    return items
 }

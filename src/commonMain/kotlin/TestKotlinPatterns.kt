@@ -27,7 +27,7 @@ object TestKotlinPatterns {
             .clip(0.3)
             .hpf(600)
 //            .adsr("0.025:0.2:0.5:0.0")
-            .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
+            .superimpose({ x -> x.transpose("<0 12 0 -12>/8") })
 //            .rev(4.1).rev(3)
         ,
 
@@ -51,7 +51,7 @@ object TestKotlinPatterns {
             .adsr("0.01:0.3:0.4:0.5")
 //            .lpf(4000)
             .room(0.02).rsize(0.5)
-            .superimpose { x -> x.transpose("<0 12 0 -12>/8") }
+            .superimpose({ x -> x.transpose("<0 12 0 -12>/8") })
 //            .rev(4).rev(3)
         ,
 
@@ -127,7 +127,7 @@ object TestKotlinPatterns {
             .scale("<c3:major>/2")
             .s("supersaw")
             .distort(0.7)
-            .superimpose { x -> x.detune("<0.5>") }
+            .superimpose({ x -> x.detune("<0.5>") })
 //        .lpenv(perlin.slow(3).range(1, 4))
             .lpf(perlin.range(100, 2000).slow(4))
             .gain(0.3),

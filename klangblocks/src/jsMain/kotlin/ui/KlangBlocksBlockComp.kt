@@ -107,16 +107,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 +block.funcName
             }
 
-            // For vararg slots: show filled slots + 1 empty, minimum 1.
-            // Find the highest slot index that is vararg and has a filled arg.
-            val lastFilledVarargIndex = slots.indices
-                .filter { slots[it].isVararg }
-                .lastOrNull { i -> val a = block.args.getOrNull(i); a != null && a !is KBEmptyArg }
-            // Show vararg slots up to this index (inclusive): last filled + 1, or just the first vararg slot.
-            val varargShowUpTo = lastFilledVarargIndex?.plus(1) ?: slots.indexOfFirst { it.isVararg }
-
-            slots.forEachIndexed { i, slot ->
-                if (slot.isVararg && i > varargShowUpTo) return@forEachIndexed
+            slots.toRenderItems(block.args).forEach { (i, slot) ->
                 val arg: KBArgValue? = block.args.getOrNull(i)
                 val canDrop = canDropToSlot && slotAcceptsChainDrop(slot)
 
@@ -197,10 +188,17 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                                 backgroundColor = Color("rgba(255,255,255,0.25)")
                                 border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.7)"))
                                 cursor = Cursor.copy
+                                hover {
+                                    backgroundColor = Color("rgba(255,255,255,0.5)")
+                                    border = Border(1.px, BorderStyle.solid, Color.white)
+                                }
                             } else {
                                 backgroundColor = Color("rgba(0,0,0,0.2)")
                                 cursor = Cursor.text
                                 if (arg == null || arg is KBEmptyArg) opacity = 0.6
+                                hover {
+                                    backgroundColor = Color("rgba(255,255,255,0.15)")
+                                }
                             }
                         }
                         if (canDrop) {
