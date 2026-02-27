@@ -47,6 +47,8 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             val funcName: String,
             val ghostX: Double,
             val ghostY: Double,
+            /** ID of the KBChainStmt the cursor is hovering over for chaining, or null. */
+            val hoveredChainId: String? = null,
         ) : DragState()
     }
 
@@ -61,6 +63,9 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     private val importedLibraryNames: Set<String>
         get() = program.statements.filterIsInstance<KBImportStmt>().map { it.libraryName }.toSet()
+
+    private val isDragging: Boolean
+        get() = dragState is DragState.DraggingFromPalette
 
     // ---- Init helpers ----------------------------------------------
 
@@ -91,9 +96,28 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         val current = dragState
         if (current is DragState.DraggingFromPalette) {
             if (isInsideCanvas(x, y)) {
-                commitDrop(current.funcName)
+                val chainId = current.hoveredChainId
+                if (chainId != null) {
+                    commitChainDrop(chainId, current.funcName)
+                } else {
+                    commitDrop(current.funcName)
+                }
             }
             dragState = DragState.None
+        }
+    }
+
+    private fun onChainHoverStart(chainId: String) {
+        val current = dragState
+        if (current is DragState.DraggingFromPalette) {
+            dragState = current.copy(hoveredChainId = chainId)
+        }
+    }
+
+    private fun onChainHoverEnd() {
+        val current = dragState
+        if (current is DragState.DraggingFromPalette && current.hoveredChainId != null) {
+            dragState = current.copy(hoveredChainId = null)
         }
     }
 
@@ -103,6 +127,9 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
     }
 
+    // ---- Program mutations -----------------------------------------
+
+    /** Drop as a new standalone chain row. */
     private fun commitDrop(funcName: String) {
         val chain = KBChainStmt(
             id = uuid(),
@@ -111,6 +138,18 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             )
         )
         program = program.copy(statements = program.statements + chain)
+    }
+
+    /** Append a new call block to an existing chain. */
+    private fun commitChainDrop(chainId: String, funcName: String) {
+        program = program.copy(
+            statements = program.statements.map { stmt ->
+                if (stmt.id != chainId || stmt !is KBChainStmt) stmt
+                else stmt.copy(
+                    steps = stmt.steps + KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
+                )
+            }
+        )
     }
 
     private fun commitImportLibrary(libraryName: String) {
@@ -137,6 +176,31 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                     else -> stmt
                 }
             }
+        )
+    }
+
+    /** Remove a single call block; auto-removes the chain if it becomes empty. */
+    private fun onRemoveBlock(stmtId: String, blockId: String) {
+        program = program.copy(
+            statements = program.statements.mapNotNull { stmt ->
+                if (stmt.id != stmtId) return@mapNotNull stmt
+                when (stmt) {
+                    is KBChainStmt -> {
+                        val newSteps = stmt.steps.filter { !(it is KBCallBlock && it.id == blockId) }
+                        if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) null
+                        else stmt.copy(steps = newSteps)
+                    }
+
+                    else -> null
+                }
+            }
+        )
+    }
+
+    /** Remove an entire statement (import / let / const). */
+    private fun onRemoveStmt(stmtId: String) {
+        program = program.copy(
+            statements = program.statements.filter { it.id != stmtId }
         )
     }
 
@@ -173,7 +237,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             KlangBlocksCanvasComp(
                 program = program,
                 canvasDivId = canvasDivId,
+                isDragging = isDragging,
                 onArgChanged = ::onArgChanged,
+                onRemoveBlock = ::onRemoveBlock,
+                onRemoveStmt = ::onRemoveStmt,
+                onChainHoverStart = ::onChainHoverStart,
+                onChainHoverEnd = ::onChainHoverEnd,
             )
 
             // Drag ghost — follows cursor while dragging
@@ -209,4 +278,3 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         }
     }
 }
-

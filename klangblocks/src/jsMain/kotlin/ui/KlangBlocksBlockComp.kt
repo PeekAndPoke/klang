@@ -8,6 +8,7 @@ import de.peekandpoke.ultra.html.*
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import kotlinx.css.*
+import kotlinx.css.properties.LineHeight
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.input
@@ -17,7 +18,8 @@ import kotlinx.html.span
 fun Tag.KlangBlocksBlockComp(
     block: KBCallBlock,
     onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
-) = comp(KlangBlocksBlockComp.Props(block = block, onArgChanged = onArgChanged)) {
+    onRemove: () -> Unit,
+) = comp(KlangBlocksBlockComp.Props(block = block, onArgChanged = onArgChanged, onRemove = onRemove)) {
     KlangBlocksBlockComp(it)
 }
 
@@ -26,10 +28,12 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     data class Props(
         val block: KBCallBlock,
         val onArgChanged: (slotIndex: Int, arg: KBArgValue) -> Unit,
+        val onRemove: () -> Unit,
     )
 
     private var editingSlotIndex: Int? by value(null)
     private var editText: String by value("")
+    private var isHovered: Boolean by value(false)
 
     private fun startEdit(slotIndex: Int, currentText: String) {
         editingSlotIndex = slotIndex
@@ -72,7 +76,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 fontFamily = "monospace"
                 whiteSpace = WhiteSpace.nowrap
                 userSelect = UserSelect.none
+                position = Position.relative
             }
+            onMouseEnter { isHovered = true }
+            onMouseLeave { isHovered = false }
 
             span {
                 css { fontWeight = FontWeight.bold }
@@ -140,6 +147,31 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                             else -> +arg.renderShort()
                         }
                     }
+                }
+            }
+
+            // Remove (×) — appears on hover
+            if (isHovered) {
+                span {
+                    css {
+                        marginLeft = 4.px
+                        fontSize = 12.px
+                        lineHeight = LineHeight("1")
+                        color = Color("rgba(255,255,255,0.55)")
+                        cursor = Cursor.pointer
+                        borderRadius = 3.px
+                        padding = Padding(horizontal = 3.px, vertical = 1.px)
+                        hover {
+                            backgroundColor = Color("rgba(255,255,255,0.18)")
+                            color = Color.white
+                        }
+                    }
+                    onClick { event ->
+                        event.stopPropagation()
+                        props.onRemove()
+                    }
+                    onMouseDown { event -> event.stopPropagation() }
+                    +"×"
                 }
             }
         }
