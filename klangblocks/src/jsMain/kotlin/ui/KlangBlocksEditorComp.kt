@@ -77,12 +77,11 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     private fun commitDrop(funcName: String) {
         val chain = KBChainStmt(
             id = uuid(),
-            steps = mutableListOf(
+            steps = listOf(
                 KBCallBlock(id = uuid(), funcName = funcName, isHead = true)
             )
         )
-        program.statements.add(chain)
-        program = program.copy(statements = program.statements)
+        program = program.copy(statements = program.statements + chain)
         props.onCodeChanged("")
     }
 

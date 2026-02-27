@@ -9,7 +9,7 @@ enum class KBPocketLayout { HORIZONTAL, VERTICAL }
 data class KBCallBlock(
     val id: String,
     val funcName: String,
-    val args: MutableList<KBArgValue> = mutableListOf(),
+    val args: List<KBArgValue> = emptyList(),
     val isHead: Boolean = true,
     val pocketLayout: KBPocketLayout = KBPocketLayout.HORIZONTAL,
 ) : KBChainItem()
@@ -43,5 +43,5 @@ data class KBConstStmt(
 
 data class KBChainStmt(
     override val id: String,
-    val steps: MutableList<KBChainItem> = mutableListOf(),
+    val steps: List<KBChainItem> = emptyList(),
 ) : KBStmt()
