@@ -103,9 +103,6 @@ kotlin {
                 api(Deps.Npm { codemirrorLangJavascript() })
                 api(Deps.Npm { codemirrorBasicSetup() })
                 api(Deps.Npm { codemirrorLint() })
-
-                // Blockly visual block editor
-                api(Deps.Npm { blockly() })
             }
         }
 

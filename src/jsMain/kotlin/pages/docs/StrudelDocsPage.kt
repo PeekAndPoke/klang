@@ -16,9 +16,10 @@ import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.MarkdownDisplay
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangDecl
 import io.peekandpoke.klang.script.types.KlangFun
-import io.peekandpoke.klang.script.types.KlangFunKind
-import io.peekandpoke.klang.script.types.KlangFunVariant
+import io.peekandpoke.klang.script.types.KlangObject
 import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
 import kotlinx.css.*
 import kotlinx.html.*
@@ -309,15 +310,15 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             // Variants
-            func.variants.forEach { variant ->
+            func.variants.forEach { decl ->
                 ui.attached.segment {
-                    renderVariant(variant)
+                    renderDecl(decl)
                 }
             }
         }
     }
 
-    private fun DIV.renderVariant(variant: KlangFunVariant) {
+    private fun DIV.renderDecl(decl: KlangDecl) {
         div {
             css {
                 marginTop = 1.rem
@@ -326,14 +327,11 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
             // Variant type badge
             ui.label {
-                +when (variant.type) {
-                    KlangFunKind.TOP_LEVEL -> "Top Level Function"
-                    KlangFunKind.EXTENSION_METHOD -> {
-                        "${variant.signatureModel.receiver} Extension Function"
-                    }
+                +when (decl) {
+                    is KlangCallable -> if (decl.receiver == null) "Top Level Function"
+                    else "${decl.receiver} Extension Function"
 
-                    KlangFunKind.PROPERTY -> "Property"
-                    KlangFunKind.OBJECT -> "Object"
+                    is KlangObject -> "Object"
                 }
             }
 
@@ -348,7 +346,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                     marginBottom = 0.5.rem
                 }
                 code {
-                    +variant.signature
+                    +decl.signature
                 }
             }
 
@@ -359,11 +357,12 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                     marginBottom = 0.5.rem
                 }
 
-                MarkdownDisplay(variant.description)
+                MarkdownDisplay(decl.description)
             }
 
             // Parameters
-            if (variant.params.isNotEmpty()) {
+            val params = if (decl is KlangCallable) decl.params else emptyList()
+            if (params.isNotEmpty()) {
                 ui.header H4 {
                     css {
                         marginTop = 0.75.rem
@@ -371,7 +370,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                     +"Parameters"
                 }
                 ui.list {
-                    variant.params.forEach { param ->
+                    params.forEach { param ->
                         noui.item {
                             key = param.name
                             b { +param.name }
@@ -382,7 +381,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             // Return value
-            if (variant.returnDoc.isNotEmpty()) {
+            if (decl.returnDoc.isNotEmpty()) {
                 ui.header H4 {
                     css {
                         marginTop = 0.75.rem
@@ -390,19 +389,19 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                     +"Returns"
                 }
                 p {
-                    +variant.returnDoc
+                    +decl.returnDoc
                 }
             }
 
             // Examples
-            if (variant.samples.isNotEmpty()) {
+            if (decl.samples.isNotEmpty()) {
                 ui.header H4 {
                     css {
                         marginTop = 0.75.rem
                     }
                     +"Examples"
                 }
-                variant.samples.forEach { sample ->
+                decl.samples.forEach { sample ->
                     key = sample
                     InViewport {
                         PlayableCodeExample(code = sample)

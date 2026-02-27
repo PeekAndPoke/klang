@@ -429,9 +429,6 @@ object Deps {
         // https://www.npmjs.com/package/@codemirror/lint
         fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.4")
 
-        // Blockly (Google, MIT)
-        // https://www.npmjs.com/package/blockly
-        fun KotlinDependencyHandler.blockly() = npm("blockly", "12.4.1")
     }
 
     // // Test dependencies ////////////////////////////////////////////////////////////////////////

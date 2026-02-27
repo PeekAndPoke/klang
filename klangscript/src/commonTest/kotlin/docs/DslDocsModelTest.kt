@@ -4,11 +4,14 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.script.types.*
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangObject
+import io.peekandpoke.klang.script.types.KlangParam
+import io.peekandpoke.klang.script.types.KlangType
 
 /**
  * Unit tests for the structured DSL documentation model:
- * [KlangType], [KlangParam], [KlangFunSignature], and [KlangFunVariant].
+ * [KlangType], [KlangParam], [KlangCallable], and [KlangObject].
  *
  * These tests verify the render logic and data-model invariants
  * independently of KSP / code generation.
@@ -69,68 +72,62 @@ class DslDocsModelTest : StringSpec({
         p2.description shouldBe "The x value"
     }
 
-    // ─── KlangFunSignature — property / object mode (params = null) ────────────
+    // ─── KlangObject — property / object mode (no parens) ───────────────────
 
-    "KlangFunSignature with params=null renders as 'name: ReturnType' (no parens)" {
-        KlangFunSignature(
+    "KlangObject.signature renders as 'name: type' (no parens)" {
+        KlangObject(
             name = "sine",
-            returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "sine: StrudelPattern"
+            type = KlangType("StrudelPattern"),
+        ).signature shouldBe "sine: StrudelPattern"
     }
 
-    "KlangFunSignature with params=null and no return type renders as bare name" {
-        KlangFunSignature(name = "silence").render() shouldBe "silence"
-    }
-
-    "KlangFunSignature extension property (params=null with receiver) renders with dot notation" {
-        KlangFunSignature(
+    "KlangObject.signature with owner renders with dot notation" {
+        KlangObject(
             name = "fmh",
-            receiver = KlangType("StrudelPattern"),
-            returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "StrudelPattern.fmh: StrudelPattern"
+            owner = KlangType("StrudelPattern"),
+            type = KlangType("StrudelPattern"),
+        ).signature shouldBe "StrudelPattern.fmh: StrudelPattern"
     }
 
-    // ─── KlangFunSignature — callable / unknown params mode (params = emptyList) ─
+    // ─── KlangCallable — callable mode (parens) ──────────────────────────────
 
-    "KlangFunSignature with emptyList params renders with empty parens" {
-        KlangFunSignature(
+    "KlangCallable.signature with emptyList params renders with empty parens" {
+        KlangCallable(
             name = "accelerate",
             params = emptyList(),
             returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "accelerate(): StrudelPattern"
+        ).signature shouldBe "accelerate(): StrudelPattern"
     }
 
-    "KlangFunSignature extension callable with emptyList params renders receiver.name()" {
-        KlangFunSignature(
+    "KlangCallable.signature extension callable with emptyList params renders receiver.name()" {
+        KlangCallable(
             name = "accelerate",
             receiver = KlangType("StrudelPattern"),
             params = emptyList(),
             returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "StrudelPattern.accelerate(): StrudelPattern"
+        ).signature shouldBe "StrudelPattern.accelerate(): StrudelPattern"
     }
 
-    // ─── KlangFunSignature — full param list mode (params = [...]) ──────────────
-
-    "KlangFunSignature with one param renders full signature" {
-        KlangFunSignature(
+    "KlangCallable.signature with one param renders full signature" {
+        KlangCallable(
             name = "gain",
             params = listOf(KlangParam("value", KlangType("PatternLike"))),
             returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "gain(value: PatternLike): StrudelPattern"
+        ).signature shouldBe "gain(value: PatternLike): StrudelPattern"
     }
 
-    "KlangFunSignature with vararg param renders vararg keyword" {
-        KlangFunSignature(
+    "KlangCallable.signature with vararg param renders vararg keyword" {
+        KlangCallable(
             name = "seq",
             params = listOf(
                 KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
             ),
             returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
+        ).signature shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "KlangFunSignature with multiple params renders comma-separated list" {
-        KlangFunSignature(
+    "KlangCallable.signature with multiple params renders comma-separated list" {
+        KlangCallable(
             name = "echo",
             params = listOf(
                 KlangParam("times", KlangType("Int")),
@@ -138,133 +135,120 @@ class DslDocsModelTest : StringSpec({
                 KlangParam("delay", KlangType("Double")),
             ),
             returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "echo(times: Int, decay: Double, delay: Double): StrudelPattern"
+        ).signature shouldBe "echo(times: Int, decay: Double, delay: Double): StrudelPattern"
     }
 
-    "KlangFunSignature extension function with params renders receiver.name(...): ReturnType" {
-        KlangFunSignature(
+    "KlangCallable.signature extension function with params renders receiver.name(...): ReturnType" {
+        KlangCallable(
             name = "seq",
             receiver = KlangType("StrudelPattern"),
             params = listOf(
                 KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
             ),
             returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "StrudelPattern.seq(vararg patterns: PatternLike): StrudelPattern"
+        ).signature shouldBe "StrudelPattern.seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "KlangFunSignature String extension function renders correctly" {
-        KlangFunSignature(
+    "KlangCallable.signature String extension function renders correctly" {
+        KlangCallable(
             name = "seq",
             receiver = KlangType("String"),
             params = listOf(
                 KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
             ),
             returnType = KlangType("StrudelPattern"),
-        ).render() shouldBe "String.seq(vararg patterns: PatternLike): StrudelPattern"
+        ).signature shouldBe "String.seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "KlangFunSignature with no return type omits colon" {
-        KlangFunSignature(
+    "KlangCallable.signature with no return type omits colon" {
+        KlangCallable(
             name = "doSomething",
             params = emptyList(),
-        ).render() shouldBe "doSomething()"
+        ).signature shouldBe "doSomething()"
     }
 
-    // ─── KlangFunVariant computed properties ──────────────────────────────────────
+    // ─── KlangCallable computed properties ──────────────────────────────────
 
-    "KlangFunVariant.signature is computed from signatureModel.render()" {
-        val variant = KlangFunVariant(
-            type = KlangFunKind.TOP_LEVEL,
-            signatureModel = KlangFunSignature(
-                name = "seq",
-                params = listOf(
-                    KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
-                ),
-                returnType = KlangType("StrudelPattern"),
+    "KlangCallable.signature is computed from name, params, returnType" {
+        val callable = KlangCallable(
+            name = "seq",
+            params = listOf(
+                KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
             ),
+            returnType = KlangType("StrudelPattern"),
             description = "Creates a sequence pattern.",
         )
 
-        variant.signature shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
+        callable.signature shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "KlangFunVariant.params returns emptyList when signatureModel.params is null (object mode)" {
-        val variant = KlangFunVariant(
-            type = KlangFunKind.OBJECT,
-            signatureModel = KlangFunSignature(
-                name = "sine",
-                returnType = KlangType("StrudelPattern"),
-            ),
+    "KlangObject.params is always empty (object has no params)" {
+        val obj = KlangObject(
+            name = "sine",
+            type = KlangType("StrudelPattern"),
             description = "Sine oscillator.",
         )
 
-        variant.params.shouldBeEmpty()
-        variant.signature shouldBe "sine: StrudelPattern"
+        obj.signature shouldBe "sine: StrudelPattern"
     }
 
-    "KlangFunVariant.params returns emptyList when signatureModel.params is emptyList (callable mode)" {
-        val variant = KlangFunVariant(
-            type = KlangFunKind.TOP_LEVEL,
-            signatureModel = KlangFunSignature(
-                name = "accelerate",
-                params = emptyList(),
-                returnType = KlangType("StrudelPattern"),
-            ),
+    "KlangCallable with emptyList params has empty params" {
+        val callable = KlangCallable(
+            name = "accelerate",
+            params = emptyList(),
+            returnType = KlangType("StrudelPattern"),
             description = "Pitch ramp.",
         )
 
-        variant.params.shouldBeEmpty()
-        variant.signature shouldBe "accelerate(): StrudelPattern"
+        callable.params.shouldBeEmpty()
+        callable.signature shouldBe "accelerate(): StrudelPattern"
     }
 
-    "KlangFunVariant.params reflects KlangParam list from signatureModel" {
+    "KlangCallable.params reflects KlangParam list" {
         val paramModel = KlangParam(
             name = "patterns",
             type = KlangType("PatternLike", isTypeAlias = true),
             isVararg = true,
             description = "Patterns to sequence.",
         )
-        val variant = KlangFunVariant(
-            type = KlangFunKind.TOP_LEVEL,
-            signatureModel = KlangFunSignature(
-                name = "seq",
-                params = listOf(paramModel),
-                returnType = KlangType("StrudelPattern"),
-            ),
+        val callable = KlangCallable(
+            name = "seq",
+            params = listOf(paramModel),
+            returnType = KlangType("StrudelPattern"),
             description = "Creates a sequence.",
         )
 
-        variant.params shouldHaveSize 1
-        variant.params[0].name shouldBe "patterns"
-        variant.params[0].type.simpleName shouldBe "PatternLike"
-        variant.params[0].type.isTypeAlias shouldBe true
-        variant.params[0].isVararg shouldBe true
-        variant.params[0].description shouldBe "Patterns to sequence."
+        callable.params shouldHaveSize 1
+        callable.params[0].name shouldBe "patterns"
+        callable.params[0].type.simpleName shouldBe "PatternLike"
+        callable.params[0].type.isTypeAlias shouldBe true
+        callable.params[0].isVararg shouldBe true
+        callable.params[0].description shouldBe "Patterns to sequence."
     }
 
-    "KlangFunVariant samples and returnDoc default to empty" {
-        val variant = KlangFunVariant(
-            type = KlangFunKind.TOP_LEVEL,
-            signatureModel = KlangFunSignature(name = "foo", params = emptyList()),
+    "KlangCallable samples and returnDoc default to empty" {
+        val callable = KlangCallable(
+            name = "foo",
+            params = emptyList(),
             description = "A function.",
         )
 
-        variant.returnDoc shouldBe ""
-        variant.samples.shouldBeEmpty()
+        callable.returnDoc shouldBe ""
+        callable.samples.shouldBeEmpty()
     }
 
-    "KlangFunVariant with samples and returnDoc stores them correctly" {
-        val variant = KlangFunVariant(
-            type = KlangFunKind.TOP_LEVEL,
-            signatureModel = KlangFunSignature(name = "seq", params = emptyList()),
+    "KlangCallable with samples and returnDoc stores them correctly" {
+        val callable = KlangCallable(
+            name = "seq",
+            params = emptyList(),
             description = "A function.",
             returnDoc = "A new pattern.",
             samples = listOf("""seq("a b c").note()""", """seq("bd", "sd").s()"""),
         )
 
-        variant.returnDoc shouldBe "A new pattern."
-        variant.samples shouldHaveSize 2
-        variant.samples[0] shouldBe """seq("a b c").note()"""
-        variant.samples[1] shouldBe """seq("bd", "sd").s()"""
+        callable.returnDoc shouldBe "A new pattern."
+        callable.samples shouldHaveSize 2
+        callable.samples[0] shouldBe """seq("a b c").note()"""
+        callable.samples[1] shouldBe """seq("bd", "sd").s()"""
     }
 })

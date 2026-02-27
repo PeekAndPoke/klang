@@ -1,9 +1,9 @@
 # KlangBlocks — Implementation Plan (Take 1, Rev 2)
 
-> **Status**: Design / pre-implementation
+> **Status**: In progress
 > **Author**: Claude + user
 > **Date**: 2026-02-26
-> **Revision**: 3 — updated with user feedback (round 2)
+> **Revision**: 4 — blockly removed; type-system renames done; KlangDecl redesign added
 
 ---
 
@@ -34,7 +34,7 @@ klangblocks/
         KBBlock.kt          ← sealed block-model hierarchy
         KBSlot.kt           ← KBSlotKind sealed class + slot typing
         KBProgram.kt        ← top-level program container
-        KBTypeMapping.kt    ← canonical TypeModel.simpleName ↔ KBSlotKind mapping
+        KBTypeMapping.kt    ← canonical KlangType.simpleName ↔ KBSlotKind mapping
       transform/
         AstToKBlocks.kt     ← KlangScript AST  →  KBBlock model
         KBlocksToCode.kt    ← KBBlock model    →  KlangScript String
@@ -61,7 +61,7 @@ klangblocks/
 
 ```kotlin
 // commonMain
-api(project(":klangscript"))   // AST types + DslDocsRegistry + TypeModel
+api(project(":klangscript"))   // AST types + KlangDocsRegistry + KlangType
 
 // jsMain — Kraft is inherited from the root build; no extra npm deps
 ```
@@ -72,23 +72,23 @@ api(project(":klangscript"))   // AST types + DslDocsRegistry + TypeModel
 
 ### 3.1 Where it lives
 
-The type system foundation lives in **`klangscript` / KlangDocs** (`DslDocs.kt`),
+The type system foundation lives in **`klangscript` / KlangDocs** (`KlangDocs.kt`),
 not in `klangblocks`. This makes type information available to any consumer of
 the docs registry without depending on `klangblocks`.
 
 `klangblocks/commonMain` adds `KBSlotKind` and `KBTypeMapping` on top of those
 `klangscript` types — they are the block-editor's view of the same information.
 
-### 3.2 Union types in `TypeModel` (klangscript change)
+### 3.2 Union types in `KlangType` (klangscript change)
 
-`PatternLike` is a Kotlin type alias for `Any?`. The current `TypeModel` has no
+`PatternLike` is a Kotlin type alias for `Any?`. The current `KlangType` has no
 way to express this — it only carries `simpleName`. We extend it to optionally
 hold union-member types:
 
 ```kotlin
-// klangscript/commonMain — DslDocs.kt
+// klangscript/commonMain — KlangDocs.kt
 
-data class TypeModel(
+data class KlangType(
     val simpleName: String,
     val isTypeAlias: Boolean = false,
     val isNullable: Boolean = false,
@@ -100,7 +100,7 @@ data class TypeModel(
      * v1: hardcoded for known aliases in KBTypeMapping.
      * v2: populated by the KSP processor via @KlangType annotation.
      */
-    val unionMembers: List<TypeModel>? = null,
+    val unionMembers: List<KlangType>? = null,
 ) {
     val isUnion: Boolean get() = !unionMembers.isNullOrEmpty()
 }
@@ -123,11 +123,56 @@ annotation class KlangBlocks(
 )
 ```
 
-`FunctionDoc` gains `blocksMeta: KlangBlocksMeta?` populated by the KSP processor.
+`KlangFun` gains `blocksMeta: KlangBlocksMeta?` populated by the KSP processor.
 This is a **v2 feature** — the CSS custom-property hooks in §7.2 ensure no UI
 rewrites are needed when it lands.
 
-### 3.4 `KBSlotKind` — sealed class (klangblocks/commonMain)
+### 3.4 `KlangDecl` sealed hierarchy (klangscript change)
+
+`KlangFunVariant`, `KlangFunKind`, and `KlangFunSignature` are replaced by a
+single `KlangDecl` sealed interface. `KlangFun.variants` changes from
+`List<KlangFunVariant>` to `List<KlangDecl>`.
+
+```kotlin
+// klangscript/commonMain — KlangDocs.kt
+
+sealed interface KlangDecl {
+    val description: String
+    val returnDoc: String
+    val samples: List<String>
+    val signature: String
+}
+
+data class KlangCallable(
+    // fun foo() or fun Receiver.foo()
+    val name: String,
+    val receiver: KlangType? = null,   // null = top-level
+    val params: List<KlangParam>,
+    val returnType: KlangType? = null,
+    override val description: String = "",
+    override val returnDoc: String = "",
+    override val samples: List<String> = emptyList(),
+) : KlangDecl {
+    override val signature: String get() = buildString { /* ... */ }
+}
+
+data class KlangObject(
+    // val sine: StrudelPattern (non-callable)
+    val name: String,
+    val owner: KlangType? = null,
+    val type: KlangType,
+    override val description: String = "",
+    override val returnDoc: String = "",
+    override val samples: List<String> = emptyList(),
+) : KlangDecl {
+    override val signature: String get() = buildString { /* ... */ }
+}
+```
+
+`KlangFunVariant`, `KlangFunKind`, and `KlangFunSignature` are deleted once
+all consumers are migrated to `KlangDecl`.
+
+### 3.5 `KBSlotKind` — sealed class (klangblocks/commonMain)
 
 ```kotlin
 sealed interface KBSlotKind {
@@ -174,13 +219,13 @@ sealed interface KBSlotKind {
 }
 ```
 
-### 3.5 `KBTypeMapping` — canonical mapping (klangblocks/commonMain)
+### 3.6 `KBTypeMapping` — canonical mapping (klangblocks/commonMain)
 
 ```kotlin
 object KBTypeMapping {
 
-    /** Map a DslDocs TypeModel to a KBSlotKind (union members recursively mapped). */
-    fun slotKindFor(type: TypeModel): KBSlotKind {
+    /** Map a KlangType to a KBSlotKind (union members recursively mapped). */
+    fun slotKindFor(type: KlangType): KBSlotKind {
         if (type.isUnion) {
             val members = type.unionMembers!!.map { slotKindFor(it) }.distinct()
             return KBSlotKind.Union(members)
@@ -413,7 +458,7 @@ data class KBSlot(
  */
 fun slotsFor(
     funcName: String,
-    registry: DslDocsRegistry,
+    registry: KlangDocsRegistry,
     maxVarargSlots: Int = 4,
 ): List<KBSlot>
 ```
@@ -540,9 +585,9 @@ Undo stack depth: cap at 100 entries.
 ### 6.3 `KlangBlocksPaletteComp`
 
 - Left panel, ~220 px, vertically scrollable.
-- Lists all `DslDocsRegistry.categories` as collapsible accordion sections.
+- Lists all `KlangDocsRegistry.categories` as collapsible accordion sections.
 - Each function → a compact pill in category colour.
-- **Hover tooltip**: shows the function's description and first example from `FunctionDoc`.
+- **Hover tooltip**: shows the function's description and first example from `KlangFun`.
 - Palette pills are drag sources: dragging creates a `DragSource.PaletteBlock(funcName)`,
   slots pre-filled with `KBEmptyArg`.
 - Search field at top filters by name / tag / category in real time.
@@ -886,10 +931,9 @@ This means undo/redo "just works" for free once the code↔model round-trip is s
 
 ## 12. Integration into `CodeSongPage`
 
-1. Replace `BlocklyEditorComp` with `KlangBlocksEditorComp` — same props interface.
+1. Replace `BlocklyEditorComp` with `KlangBlocksEditorComp` — same props interface. ✅ Done
 2. `EditorMode` enum and toggle button unchanged.
 3. `switchToBlocks()` / `switchToCode()` logic unchanged.
-4. Remove `blockly/` package and npm `blockly` dependency.
 
 ---
 
@@ -918,6 +962,7 @@ include(
 
 | #  | Task                                                              | Deliverable                        |
 |----|-------------------------------------------------------------------|------------------------------------|
+| 0  | Implement `KlangDecl` sealed hierarchy (replace `KlangFunKind`)   | Type system redesign               |
 | 1  | Create `klangblocks` module scaffolding                           | Compiling empty module             |
 | 2  | `KBSlotKind`, `KBTypeMapping`, `KBSlot`                           | Type system foundation             |
 | 3  | `KBBlock.kt`, `KBProgram.kt`                                      | Block model hierarchy              |
@@ -935,7 +980,6 @@ include(
 | 15 | `KBBinaryArg` / `KBUnaryArg` inline expression blocks             | Arithmetic args                    |
 | 16 | Import / let / const statement blocks                             | Full KlangScript feature coverage  |
 | 17 | Mobile touch interactions (long-press, swipe undo)                | Touch support                      |
-| 18 | Remove old `blockly/` package + npm dep                           | Cleanup                            |
 
 ---
 
@@ -946,9 +990,9 @@ Legend: ✅ Resolved · 🔜 Deferred (decide when we reach that step) · ❓ St
 ---
 
 **Q-A — Type-name unification scope** ✅
-Type system lives in `klangscript` / KlangDocs (`TypeModel` extended with
+Type system lives in `klangscript` / KlangDocs (`KlangType` extended with
 `unionMembers`). `KBTypeMapping` and `KBSlotKind` live in `klangblocks`.
-`BlockFieldNaming` is deleted together with the old `blockly/` package (step 18).
+`BlockFieldNaming` was deleted together with the old `blockly/` package (done).
 
 ---
 
@@ -976,7 +1020,7 @@ friction in practice we will revisit (e.g. `// @layout vertical` comment).
 ---
 
 **Q-E — `@KlangBlocks` annotation** ✅ (v2 confirmed)
-Annotation defined and wired through `strudel-ksp` into `FunctionDoc.blocksMeta`
+Annotation defined and wired through `strudel-ksp` into `KlangFun.blocksMeta`
 is planned as a v2 feature. CSS custom-property hooks in the block styles ensure
 no UI rewrites are needed when it arrives.
 
@@ -1019,14 +1063,15 @@ see if that covers all practical cases.
 
 ---
 
-## 16. What to Carry Over from the Blockly Implementation
+## 16. Current State (as of 2026-02-27)
 
-| Old file                                          | Reused in                                    |
-|---------------------------------------------------|----------------------------------------------|
-| `AstToBlockly.kt` — chain extraction algorithm    | `AstToKBlocks.kt` (port, no `dynamic`)       |
-| `KlangScriptGenerator.kt` — code gen logic        | `KBlocksToCode.kt` (typed, cleaner)          |
-| `BlockDefinitionBuilder.kt` — category colour map | `KlangBlocksPaletteComp` colour map          |
-| `BlockFieldNaming.kt` — slot kind predicates      | `KBTypeMapping.kt` (supersedes, then delete) |
+The following items are already implemented or completed:
 
-Removed entirely: `blockly/ext/Blockly.kt`, npm `blockly` dependency, all
-Blockly JSON serialisation code.
+| Item                                                                                                                      | Status             |
+|---------------------------------------------------------------------------------------------------------------------------|--------------------|
+| `blockly/` package deleted (all 7 source files)                                                                           | ✅ Done             |
+| npm `blockly` dependency removed from `build.gradle.kts` and `Deps.kt`                                                    | ✅ Done             |
+| `KlangBlocksEditorComp` wired into `CodeSongPage` (replaces `BlocklyEditorComp`)                                          | ✅ Done             |
+| `klangblocks` module scaffolding created                                                                                  | ✅ Done             |
+| Type renames: `TypeModel→KlangType`, `ParamModel→KlangParam`, `DslDocsRegistry→KlangDocsRegistry`, `FunctionDoc→KlangFun` | ✅ Done             |
+| `KlangDecl` sealed hierarchy replacing `KlangFunKind`/`KlangFunVariant`/`KlangFunSignature`                               | ⏳ Next up (step 0) |
