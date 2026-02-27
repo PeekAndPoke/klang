@@ -9,16 +9,16 @@ import io.peekandpoke.klang.blockly.BlockFieldNaming.isNumericType
 import io.peekandpoke.klang.blockly.BlockFieldNaming.numField
 import io.peekandpoke.klang.blockly.BlockFieldNaming.strField
 import io.peekandpoke.klang.blockly.ext.defineBlocksWithJsonArray
-import io.peekandpoke.klang.script.docs.DslDocsRegistry
-import io.peekandpoke.klang.script.docs.DslType
-import io.peekandpoke.klang.script.docs.FunctionDoc
-import io.peekandpoke.klang.script.docs.ParamModel
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.types.KlangFun
+import io.peekandpoke.klang.script.types.KlangFunKind
+import io.peekandpoke.klang.script.types.KlangParam
 
 /**
- * Builds Blockly block definitions and a toolbox configuration from [DslDocsRegistry].
+ * Builds Blockly block definitions and a toolbox configuration from [KlangDocsRegistry].
  *
  * Design rules:
- * - One Blockly block per [FunctionDoc], type = `"klang_<funcName>"`.
+ * - One Blockly block per [KlangFun], type = `"klang_<funcName>"`.
  * - ALL blocks get both `previousStatement` and `nextStatement` with no type check, so any
  *   block can be placed anywhere — snapped into method chains or into the pattern-input
  *   sockets of combinators like `stack` and `seq`.
@@ -68,7 +68,7 @@ object BlockDefinitionBuilder {
      * Safe to call multiple times — Blockly replaces any previously registered definition
      * for the same type.
      */
-    fun registerBlocks(registry: DslDocsRegistry = DslDocsRegistry.global) {
+    fun registerBlocks(registry: KlangDocsRegistry = KlangDocsRegistry.global) {
         val defs = registry.functions.values.mapNotNull { buildBlockDef(it) }
         if (defs.isNotEmpty()) {
             defineBlocksWithJsonArray(defs.toTypedArray())
@@ -77,10 +77,10 @@ object BlockDefinitionBuilder {
 
     /**
      * Build and return a Blockly toolbox JSON object (parsed from a JSON string).
-     * Categories are derived from [DslDocsRegistry.categories]; within each category
+     * Categories are derived from [KlangDocsRegistry.categories]; within each category
      * blocks are listed alphabetically.
      */
-    fun buildToolbox(registry: DslDocsRegistry = DslDocsRegistry.global): dynamic {
+    fun buildToolbox(registry: KlangDocsRegistry = KlangDocsRegistry.global): dynamic {
         val json = buildString {
             append("""{"kind":"categoryToolbox","contents":[""")
 
@@ -112,7 +112,7 @@ object BlockDefinitionBuilder {
     // ---------------------------------------------------------------
 
     /** A function doc has a visible block when it has at least one callable variant. */
-    private fun hasVisibleBlock(doc: FunctionDoc): Boolean =
+    private fun hasVisibleBlock(doc: KlangFun): Boolean =
         doc.variants.any { it.signatureModel.params != null }
 
     private fun categoryColour(category: String): Int =
@@ -125,12 +125,12 @@ object BlockDefinitionBuilder {
      * Every block gets both `previousStatement` and `nextStatement` with no type check so
      * that any block can snap into any socket or chain position.
      */
-    private fun buildBlockDef(doc: FunctionDoc): dynamic? {
+    private fun buildBlockDef(doc: KlangFun): dynamic? {
         // Use the first callable variant as the primary signature
         val variant = doc.variants.firstOrNull { it.signatureModel.params != null } ?: return null
         val params = variant.signatureModel.params!!  // non-null guaranteed by filter above
 
-        val isExtension = variant.type == DslType.EXTENSION_METHOD
+        val isExtension = variant.type == KlangFunKind.EXTENSION_METHOD
         val colour = categoryColour(doc.category)
 
         // Expand parameters into field / input descriptors
@@ -186,14 +186,14 @@ object BlockDefinitionBuilder {
     )
 
     /**
-     * Expand a list of [ParamModel]s into [FieldDescriptor]s.
+     * Expand a list of [KlangParam]s into [FieldDescriptor]s.
      * Non-vararg parameters produce one descriptor each.
      * A vararg PatternLike parameter in a [PAT_POCKET_CATEGORIES] function produces
      * [MAX_VARARG_SLOTS] `input_statement` sockets; in all other functions it produces
      * [MAX_VARARG_SLOTS] text-field descriptors (so `note("c d e")` stays editable).
      * A vararg non-PatternLike parameter always produces [MAX_VARARG_SLOTS] text-field descriptors.
      */
-    private fun expandParams(params: List<ParamModel>, category: String = ""): List<FieldDescriptor> {
+    private fun expandParams(params: List<KlangParam>, category: String = ""): List<FieldDescriptor> {
         val result = mutableListOf<FieldDescriptor>()
 
         for (param in params) {

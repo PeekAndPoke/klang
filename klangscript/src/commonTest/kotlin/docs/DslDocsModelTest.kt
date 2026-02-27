@@ -4,182 +4,183 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.script.types.*
 
 /**
  * Unit tests for the structured DSL documentation model:
- * [TypeModel], [ParamModel], [SignatureModel], and [VariantDoc].
+ * [KlangType], [KlangParam], [KlangFunSignature], and [KlangFunVariant].
  *
  * These tests verify the render logic and data-model invariants
  * independently of KSP / code generation.
  */
 class DslDocsModelTest : StringSpec({
 
-    // ─── TypeModel ──────────────────────────────────────────────────────────
+    // ─── KlangType ──────────────────────────────────────────────────────────
 
-    "TypeModel renders simple name" {
-        TypeModel("StrudelPattern").render() shouldBe "StrudelPattern"
+    "KlangType renders simple name" {
+        KlangType("StrudelPattern").render() shouldBe "StrudelPattern"
     }
 
-    "TypeModel renders nullable type with trailing question mark" {
-        TypeModel("String", isNullable = true).render() shouldBe "String?"
+    "KlangType renders nullable type with trailing question mark" {
+        KlangType("String", isNullable = true).render() shouldBe "String?"
     }
 
-    "TypeModel with isTypeAlias=true still renders just the alias name" {
+    "KlangType with isTypeAlias=true still renders just the alias name" {
         // The alias flag is metadata for the UI; it does not change the rendered string
-        TypeModel("PatternLike", isTypeAlias = true).render() shouldBe "PatternLike"
+        KlangType("PatternLike", isTypeAlias = true).render() shouldBe "PatternLike"
     }
 
-    "TypeModel with both isTypeAlias and isNullable renders alias name with question mark" {
-        TypeModel("PatternLike", isTypeAlias = true, isNullable = true).render() shouldBe "PatternLike?"
+    "KlangType with both isTypeAlias and isNullable renders alias name with question mark" {
+        KlangType("PatternLike", isTypeAlias = true, isNullable = true).render() shouldBe "PatternLike?"
     }
 
-    "TypeModel.toString delegates to render so string interpolation works" {
-        val t = TypeModel("StrudelPattern")
+    "KlangType.toString delegates to render so string interpolation works" {
+        val t = KlangType("StrudelPattern")
         "$t" shouldBe "StrudelPattern"
         t.toString() shouldBe t.render()
     }
 
-    // ─── ParamModel ──────────────────────────────────────────────────────────
+    // ─── KlangParam ──────────────────────────────────────────────────────────
 
-    "ParamModel renders plain name: type" {
-        ParamModel("amount", TypeModel("Double")).render() shouldBe "amount: Double"
+    "KlangParam renders plain name: type" {
+        KlangParam("amount", KlangType("Double")).render() shouldBe "amount: Double"
     }
 
-    "ParamModel renders vararg prefix" {
-        ParamModel("patterns", TypeModel("PatternLike"), isVararg = true)
+    "KlangParam renders vararg prefix" {
+        KlangParam("patterns", KlangType("PatternLike"), isVararg = true)
             .render() shouldBe "vararg patterns: PatternLike"
     }
 
-    "ParamModel renders nullable type" {
-        ParamModel("label", TypeModel("String", isNullable = true))
+    "KlangParam renders nullable type" {
+        KlangParam("label", KlangType("String", isNullable = true))
             .render() shouldBe "label: String?"
     }
 
-    "ParamModel renders vararg + nullable type" {
-        ParamModel("args", TypeModel("Any", isNullable = true), isVararg = true)
+    "KlangParam renders vararg + nullable type" {
+        KlangParam("args", KlangType("Any", isNullable = true), isVararg = true)
             .render() shouldBe "vararg args: Any?"
     }
 
-    "ParamModel description is accessible and defaults to empty string" {
-        val p = ParamModel("x", TypeModel("Int"))
+    "KlangParam description is accessible and defaults to empty string" {
+        val p = KlangParam("x", KlangType("Int"))
         p.description shouldBe ""
 
-        val p2 = ParamModel("x", TypeModel("Int"), description = "The x value")
+        val p2 = KlangParam("x", KlangType("Int"), description = "The x value")
         p2.description shouldBe "The x value"
     }
 
-    // ─── SignatureModel — property / object mode (params = null) ────────────
+    // ─── KlangFunSignature — property / object mode (params = null) ────────────
 
-    "SignatureModel with params=null renders as 'name: ReturnType' (no parens)" {
-        SignatureModel(
+    "KlangFunSignature with params=null renders as 'name: ReturnType' (no parens)" {
+        KlangFunSignature(
             name = "sine",
-            returnType = TypeModel("StrudelPattern"),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "sine: StrudelPattern"
     }
 
-    "SignatureModel with params=null and no return type renders as bare name" {
-        SignatureModel(name = "silence").render() shouldBe "silence"
+    "KlangFunSignature with params=null and no return type renders as bare name" {
+        KlangFunSignature(name = "silence").render() shouldBe "silence"
     }
 
-    "SignatureModel extension property (params=null with receiver) renders with dot notation" {
-        SignatureModel(
+    "KlangFunSignature extension property (params=null with receiver) renders with dot notation" {
+        KlangFunSignature(
             name = "fmh",
-            receiver = TypeModel("StrudelPattern"),
-            returnType = TypeModel("StrudelPattern"),
+            receiver = KlangType("StrudelPattern"),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "StrudelPattern.fmh: StrudelPattern"
     }
 
-    // ─── SignatureModel — callable / unknown params mode (params = emptyList) ─
+    // ─── KlangFunSignature — callable / unknown params mode (params = emptyList) ─
 
-    "SignatureModel with emptyList params renders with empty parens" {
-        SignatureModel(
+    "KlangFunSignature with emptyList params renders with empty parens" {
+        KlangFunSignature(
             name = "accelerate",
             params = emptyList(),
-            returnType = TypeModel("StrudelPattern"),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "accelerate(): StrudelPattern"
     }
 
-    "SignatureModel extension callable with emptyList params renders receiver.name()" {
-        SignatureModel(
+    "KlangFunSignature extension callable with emptyList params renders receiver.name()" {
+        KlangFunSignature(
             name = "accelerate",
-            receiver = TypeModel("StrudelPattern"),
+            receiver = KlangType("StrudelPattern"),
             params = emptyList(),
-            returnType = TypeModel("StrudelPattern"),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "StrudelPattern.accelerate(): StrudelPattern"
     }
 
-    // ─── SignatureModel — full param list mode (params = [...]) ──────────────
+    // ─── KlangFunSignature — full param list mode (params = [...]) ──────────────
 
-    "SignatureModel with one param renders full signature" {
-        SignatureModel(
+    "KlangFunSignature with one param renders full signature" {
+        KlangFunSignature(
             name = "gain",
-            params = listOf(ParamModel("value", TypeModel("PatternLike"))),
-            returnType = TypeModel("StrudelPattern"),
+            params = listOf(KlangParam("value", KlangType("PatternLike"))),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "gain(value: PatternLike): StrudelPattern"
     }
 
-    "SignatureModel with vararg param renders vararg keyword" {
-        SignatureModel(
+    "KlangFunSignature with vararg param renders vararg keyword" {
+        KlangFunSignature(
             name = "seq",
             params = listOf(
-                ParamModel("patterns", TypeModel("PatternLike"), isVararg = true),
+                KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
             ),
-            returnType = TypeModel("StrudelPattern"),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "SignatureModel with multiple params renders comma-separated list" {
-        SignatureModel(
+    "KlangFunSignature with multiple params renders comma-separated list" {
+        KlangFunSignature(
             name = "echo",
             params = listOf(
-                ParamModel("times", TypeModel("Int")),
-                ParamModel("decay", TypeModel("Double")),
-                ParamModel("delay", TypeModel("Double")),
+                KlangParam("times", KlangType("Int")),
+                KlangParam("decay", KlangType("Double")),
+                KlangParam("delay", KlangType("Double")),
             ),
-            returnType = TypeModel("StrudelPattern"),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "echo(times: Int, decay: Double, delay: Double): StrudelPattern"
     }
 
-    "SignatureModel extension function with params renders receiver.name(...): ReturnType" {
-        SignatureModel(
+    "KlangFunSignature extension function with params renders receiver.name(...): ReturnType" {
+        KlangFunSignature(
             name = "seq",
-            receiver = TypeModel("StrudelPattern"),
+            receiver = KlangType("StrudelPattern"),
             params = listOf(
-                ParamModel("patterns", TypeModel("PatternLike"), isVararg = true),
+                KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
             ),
-            returnType = TypeModel("StrudelPattern"),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "StrudelPattern.seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "SignatureModel String extension function renders correctly" {
-        SignatureModel(
+    "KlangFunSignature String extension function renders correctly" {
+        KlangFunSignature(
             name = "seq",
-            receiver = TypeModel("String"),
+            receiver = KlangType("String"),
             params = listOf(
-                ParamModel("patterns", TypeModel("PatternLike"), isVararg = true),
+                KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
             ),
-            returnType = TypeModel("StrudelPattern"),
+            returnType = KlangType("StrudelPattern"),
         ).render() shouldBe "String.seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "SignatureModel with no return type omits colon" {
-        SignatureModel(
+    "KlangFunSignature with no return type omits colon" {
+        KlangFunSignature(
             name = "doSomething",
             params = emptyList(),
         ).render() shouldBe "doSomething()"
     }
 
-    // ─── VariantDoc computed properties ──────────────────────────────────────
+    // ─── KlangFunVariant computed properties ──────────────────────────────────────
 
-    "VariantDoc.signature is computed from signatureModel.render()" {
-        val variant = VariantDoc(
-            type = DslType.TOP_LEVEL,
-            signatureModel = SignatureModel(
+    "KlangFunVariant.signature is computed from signatureModel.render()" {
+        val variant = KlangFunVariant(
+            type = KlangFunKind.TOP_LEVEL,
+            signatureModel = KlangFunSignature(
                 name = "seq",
                 params = listOf(
-                    ParamModel("patterns", TypeModel("PatternLike"), isVararg = true),
+                    KlangParam("patterns", KlangType("PatternLike"), isVararg = true),
                 ),
-                returnType = TypeModel("StrudelPattern"),
+                returnType = KlangType("StrudelPattern"),
             ),
             description = "Creates a sequence pattern.",
         )
@@ -187,12 +188,12 @@ class DslDocsModelTest : StringSpec({
         variant.signature shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
     }
 
-    "VariantDoc.params returns emptyList when signatureModel.params is null (object mode)" {
-        val variant = VariantDoc(
-            type = DslType.OBJECT,
-            signatureModel = SignatureModel(
+    "KlangFunVariant.params returns emptyList when signatureModel.params is null (object mode)" {
+        val variant = KlangFunVariant(
+            type = KlangFunKind.OBJECT,
+            signatureModel = KlangFunSignature(
                 name = "sine",
-                returnType = TypeModel("StrudelPattern"),
+                returnType = KlangType("StrudelPattern"),
             ),
             description = "Sine oscillator.",
         )
@@ -201,13 +202,13 @@ class DslDocsModelTest : StringSpec({
         variant.signature shouldBe "sine: StrudelPattern"
     }
 
-    "VariantDoc.params returns emptyList when signatureModel.params is emptyList (callable mode)" {
-        val variant = VariantDoc(
-            type = DslType.TOP_LEVEL,
-            signatureModel = SignatureModel(
+    "KlangFunVariant.params returns emptyList when signatureModel.params is emptyList (callable mode)" {
+        val variant = KlangFunVariant(
+            type = KlangFunKind.TOP_LEVEL,
+            signatureModel = KlangFunSignature(
                 name = "accelerate",
                 params = emptyList(),
-                returnType = TypeModel("StrudelPattern"),
+                returnType = KlangType("StrudelPattern"),
             ),
             description = "Pitch ramp.",
         )
@@ -216,19 +217,19 @@ class DslDocsModelTest : StringSpec({
         variant.signature shouldBe "accelerate(): StrudelPattern"
     }
 
-    "VariantDoc.params reflects ParamModel list from signatureModel" {
-        val paramModel = ParamModel(
+    "KlangFunVariant.params reflects KlangParam list from signatureModel" {
+        val paramModel = KlangParam(
             name = "patterns",
-            type = TypeModel("PatternLike", isTypeAlias = true),
+            type = KlangType("PatternLike", isTypeAlias = true),
             isVararg = true,
             description = "Patterns to sequence.",
         )
-        val variant = VariantDoc(
-            type = DslType.TOP_LEVEL,
-            signatureModel = SignatureModel(
+        val variant = KlangFunVariant(
+            type = KlangFunKind.TOP_LEVEL,
+            signatureModel = KlangFunSignature(
                 name = "seq",
                 params = listOf(paramModel),
-                returnType = TypeModel("StrudelPattern"),
+                returnType = KlangType("StrudelPattern"),
             ),
             description = "Creates a sequence.",
         )
@@ -241,10 +242,10 @@ class DslDocsModelTest : StringSpec({
         variant.params[0].description shouldBe "Patterns to sequence."
     }
 
-    "VariantDoc samples and returnDoc default to empty" {
-        val variant = VariantDoc(
-            type = DslType.TOP_LEVEL,
-            signatureModel = SignatureModel(name = "foo", params = emptyList()),
+    "KlangFunVariant samples and returnDoc default to empty" {
+        val variant = KlangFunVariant(
+            type = KlangFunKind.TOP_LEVEL,
+            signatureModel = KlangFunSignature(name = "foo", params = emptyList()),
             description = "A function.",
         )
 
@@ -252,10 +253,10 @@ class DslDocsModelTest : StringSpec({
         variant.samples.shouldBeEmpty()
     }
 
-    "VariantDoc with samples and returnDoc stores them correctly" {
-        val variant = VariantDoc(
-            type = DslType.TOP_LEVEL,
-            signatureModel = SignatureModel(name = "seq", params = emptyList()),
+    "KlangFunVariant with samples and returnDoc stores them correctly" {
+        val variant = KlangFunVariant(
+            type = KlangFunKind.TOP_LEVEL,
+            signatureModel = KlangFunSignature(name = "seq", params = emptyList()),
             description = "A function.",
             returnDoc = "A new pattern.",
             samples = listOf("""seq("a b c").note()""", """seq("bd", "sd").s()"""),

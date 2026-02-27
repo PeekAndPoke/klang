@@ -7,8 +7,8 @@ import io.kotest.matchers.collections.shouldHaveAtLeastSize
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.script.docs.DslDocsRegistry
-import io.peekandpoke.klang.script.docs.DslType
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.types.KlangFunKind
 import io.peekandpoke.klang.strudel.lang.initStrudelLang
 import io.kotest.matchers.string.shouldContain as stringShouldContain
 
@@ -20,7 +20,7 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "seq documentation should be registered" {
-        val seqDoc = DslDocsRegistry.global.get("seq")
+        val seqDoc = KlangDocsRegistry.global.get("seq")
 
         seqDoc shouldNotBe null
         seqDoc!!.name shouldBe "seq"
@@ -30,19 +30,19 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "seq should have 3 variants" {
-        val seqDoc = DslDocsRegistry.global.get("seq")!!
+        val seqDoc = KlangDocsRegistry.global.get("seq")!!
 
         seqDoc.variants shouldHaveSize 3
 
         // Check variant types
         val variantTypes = seqDoc.variants.map { it.type }
-        variantTypes shouldContain DslType.TOP_LEVEL
-        variantTypes shouldContain DslType.EXTENSION_METHOD
+        variantTypes shouldContain KlangFunKind.TOP_LEVEL
+        variantTypes shouldContain KlangFunKind.EXTENSION_METHOD
     }
 
     "seq top-level variant should have complete documentation" {
-        val seqDoc = DslDocsRegistry.global.get("seq")!!
-        val topLevel = seqDoc.variants.first { it.type == DslType.TOP_LEVEL }
+        val seqDoc = KlangDocsRegistry.global.get("seq")!!
+        val topLevel = seqDoc.variants.first { it.type == KlangFunKind.TOP_LEVEL }
 
         topLevel.signature shouldBe "seq(vararg patterns: PatternLike): StrudelPattern"
         topLevel.description.stringShouldContain("one cycle")
@@ -51,35 +51,35 @@ class StrudelDocsSpec : StringSpec({
         topLevel.samples.size shouldBe 3
     }
 
-    "DslDocsRegistry.search should find seq by name" {
-        val results = DslDocsRegistry.global.search("seq")
+    "KlangDocsRegistry.search should find seq by name" {
+        val results = KlangDocsRegistry.global.search("seq")
 
         results shouldHaveAtLeastSize 10
     }
 
-    "DslDocsRegistry.search should find seq by category" {
-        val results = DslDocsRegistry.global.search("structural")
+    "KlangDocsRegistry.search should find seq by category" {
+        val results = KlangDocsRegistry.global.search("structural")
         val names = results.map { it.name }
 
         names shouldContain "seq"
     }
 
-    "DslDocsRegistry.search should find seq by tag" {
-        val results = DslDocsRegistry.global.search("sequence")
+    "KlangDocsRegistry.search should find seq by tag" {
+        val results = KlangDocsRegistry.global.search("sequence")
         val names = results.map { it.name }
 
         names shouldContain "seq"
     }
 
-    "DslDocsRegistry.getFunctionsByCategory should return seq" {
-        val structural = DslDocsRegistry.global.getFunctionsByCategory("structural")
+    "KlangDocsRegistry.getFunctionsByCategory should return seq" {
+        val structural = KlangDocsRegistry.global.getFunctionsByCategory("structural")
         val names = structural.map { it.name }
 
         names shouldContain "seq"
     }
 
-    "DslDocsRegistry.getFunctionsByLibrary should return seq" {
-        val strudelFuncs = DslDocsRegistry.global.getFunctionsByLibrary("strudel")
+    "KlangDocsRegistry.getFunctionsByLibrary should return seq" {
+        val strudelFuncs = KlangDocsRegistry.global.getFunctionsByLibrary("strudel")
         val names = strudelFuncs.map { it.name }
 
         names shouldContain "seq"
@@ -88,7 +88,7 @@ class StrudelDocsSpec : StringSpec({
     // --- Property / dslObject docs ---
 
     "sine documentation should be registered as OBJECT variant" {
-        val doc = DslDocsRegistry.global.get("sine")
+        val doc = KlangDocsRegistry.global.get("sine")
 
         doc shouldNotBe null
         doc!!.name shouldBe "sine"
@@ -96,13 +96,13 @@ class StrudelDocsSpec : StringSpec({
         doc.library shouldBe "strudel"
         doc.tags shouldContain "oscillator"
 
-        val variant = doc.variants.first { it.type == DslType.OBJECT }
+        val variant = doc.variants.first { it.type == KlangFunKind.OBJECT }
         variant.signature shouldBe "sine: StrudelPattern"
     }
 
     "sine OBJECT variant should have samples parsed from fenced KlangScript blocks" {
-        val variant = DslDocsRegistry.global.get("sine")!!
-            .variants.first { it.type == DslType.OBJECT }
+        val variant = KlangDocsRegistry.global.get("sine")!!
+            .variants.first { it.type == KlangFunKind.OBJECT }
 
         variant.samples shouldHaveAtLeastSize 2
         variant.samples.any { it.contains("sine") } shouldBe true
@@ -111,8 +111,8 @@ class StrudelDocsSpec : StringSpec({
     // ─── SignatureModel integration tests ────────────────────────────────────
 
     "seq top-level variant SignatureModel should have full param details" {
-        val topLevel = DslDocsRegistry.global.get("seq")!!
-            .variants.first { it.type == DslType.TOP_LEVEL }
+        val topLevel = KlangDocsRegistry.global.get("seq")!!
+            .variants.first { it.type == KlangFunKind.TOP_LEVEL }
 
         val model = topLevel.signatureModel
         model.name shouldBe "seq"
@@ -131,9 +131,9 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "seq extension method should have StrudelPattern receiver in SignatureModel" {
-        val extension = DslDocsRegistry.global.get("seq")!!
+        val extension = KlangDocsRegistry.global.get("seq")!!
             .variants.first {
-                it.type == DslType.EXTENSION_METHOD &&
+                it.type == KlangFunKind.EXTENSION_METHOD &&
                         it.signatureModel.receiver?.simpleName == "StrudelPattern"
             }
 
@@ -146,9 +146,9 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "seq String extension should have String receiver in SignatureModel" {
-        val extension = DslDocsRegistry.global.get("seq")!!
+        val extension = KlangDocsRegistry.global.get("seq")!!
             .variants.first {
-                it.type == DslType.EXTENSION_METHOD &&
+                it.type == KlangFunKind.EXTENSION_METHOD &&
                         it.signatureModel.receiver?.simpleName == "String"
             }
 
@@ -157,14 +157,14 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "accelerate property-based delegate should be classified as TOP_LEVEL (not OBJECT)" {
-        val doc = DslDocsRegistry.global.get("accelerate")!!
+        val doc = KlangDocsRegistry.global.get("accelerate")!!
         val types = doc.variants.map { it.type }
-        types shouldContain DslType.TOP_LEVEL
+        types shouldContain KlangFunKind.TOP_LEVEL
     }
 
     "accelerate top-level variant should have emptyList params (callable but no param info from property)" {
-        val topLevel = DslDocsRegistry.global.get("accelerate")!!
-            .variants.first { it.type == DslType.TOP_LEVEL }
+        val topLevel = KlangDocsRegistry.global.get("accelerate")!!
+            .variants.first { it.type == KlangFunKind.TOP_LEVEL }
 
         val model = topLevel.signatureModel
         model.name shouldBe "accelerate"
@@ -175,8 +175,8 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "accelerate extension variants should have receiver in SignatureModel" {
-        val extensions = DslDocsRegistry.global.get("accelerate")!!
-            .variants.filter { it.type == DslType.EXTENSION_METHOD }
+        val extensions = KlangDocsRegistry.global.get("accelerate")!!
+            .variants.filter { it.type == KlangFunKind.EXTENSION_METHOD }
 
         extensions shouldHaveAtLeastSize 1
         val receivers = extensions.map { it.signatureModel.receiver?.simpleName }
@@ -185,8 +185,8 @@ class StrudelDocsSpec : StringSpec({
     }
 
     "sine OBJECT variant should have params=null in SignatureModel (renders without parens)" {
-        val variant = DslDocsRegistry.global.get("sine")!!
-            .variants.first { it.type == DslType.OBJECT }
+        val variant = KlangDocsRegistry.global.get("sine")!!
+            .variants.first { it.type == KlangFunKind.OBJECT }
 
         val model = variant.signatureModel
         model.name shouldBe "sine"

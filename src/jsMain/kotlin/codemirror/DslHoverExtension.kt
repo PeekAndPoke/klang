@@ -4,14 +4,14 @@ import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.codemirror.ext.Extension
 import io.peekandpoke.klang.codemirror.ext.hoverTooltip
-import io.peekandpoke.klang.script.docs.FunctionDoc
+import io.peekandpoke.klang.script.types.KlangFun
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 
 fun dslHoverTooltipExtension(
-    docProvider: (String) -> FunctionDoc?,
-    onNavigate: (doc: FunctionDoc, event: dynamic) -> Unit,
+    docProvider: (String) -> KlangFun?,
+    onNavigate: (doc: KlangFun, event: dynamic) -> Unit,
 ): Extension {
     val source: (EditorView, Int, Int) -> dynamic = { view, pos, _ ->
         val word = view.state.wordAt(pos)
@@ -111,8 +111,8 @@ fun dslHoverTooltipExtension(
 private fun buildTooltipObject(
     from: Int,
     to: Int,
-    doc: FunctionDoc,
-    onNavigate: (FunctionDoc, dynamic) -> Unit,
+    doc: KlangFun,
+    onNavigate: (KlangFun, dynamic) -> Unit,
 ): dynamic {
     val html = buildTooltipHtml(doc)
     return jsObject {
@@ -145,7 +145,7 @@ private fun buildTooltipObject(
     }
 }
 
-private fun buildTooltipHtml(doc: FunctionDoc): String {
+private fun buildTooltipHtml(doc: KlangFun): String {
     return buildString {
         doc.variants.firstOrNull()?.description
             ?.takeIf { it.isNotBlank() }

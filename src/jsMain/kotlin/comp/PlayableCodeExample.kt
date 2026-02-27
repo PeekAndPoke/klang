@@ -20,8 +20,8 @@ import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
-import io.peekandpoke.klang.script.docs.DslDocsRegistry
-import io.peekandpoke.klang.script.docs.FunctionDoc
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.types.KlangFun
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
@@ -232,7 +232,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 }
             }
 
-            fun navToDoc(doc: FunctionDoc, event: PointerEvent) {
+            fun navToDoc(doc: KlangFun, event: PointerEvent) {
                 val uri = Nav.docsStrudelSearch("function:${doc.name}")
                 if (event.shiftKey) {
                     router.navToUri(event, uri)
@@ -250,11 +250,11 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 },
                 extraExtensions = listOf(
                     dslHoverTooltipExtension(
-                        docProvider = { DslDocsRegistry.global.get(it) },
+                        docProvider = { KlangDocsRegistry.global.get(it) },
                         onNavigate = ::navToDoc,
                     ),
                     dslGoToDocsExtension(
-                        docProvider = { DslDocsRegistry.global.get(it) },
+                        docProvider = { KlangDocsRegistry.global.get(it) },
                         onNavigate = ::navToDoc,
                     ),
                 ),

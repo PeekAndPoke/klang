@@ -15,10 +15,10 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.MarkdownDisplay
 import io.peekandpoke.klang.comp.PlayableCodeExample
-import io.peekandpoke.klang.script.docs.DslDocsRegistry
-import io.peekandpoke.klang.script.docs.DslType
-import io.peekandpoke.klang.script.docs.FunctionDoc
-import io.peekandpoke.klang.script.docs.VariantDoc
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.types.KlangFun
+import io.peekandpoke.klang.script.types.KlangFunKind
+import io.peekandpoke.klang.script.types.KlangFunVariant
 import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
 import kotlinx.css.*
 import kotlinx.html.*
@@ -46,7 +46,7 @@ private object DocSearch {
         query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
 
     /** Returns true if [func] matches ALL given search terms (logical AND). */
-    fun matches(func: FunctionDoc, terms: List<String>): Boolean =
+    fun matches(func: KlangFun, terms: List<String>): Boolean =
         terms.all { term -> matchesTerm(func, term) }
 
     /**
@@ -64,10 +64,10 @@ private object DocSearch {
      *      5 — tag contains term
      *      3 — category / library contains term
      */
-    fun score(func: FunctionDoc, terms: List<String>): Int =
+    fun score(func: KlangFun, terms: List<String>): Int =
         terms.sumOf { term -> scoreTerm(func, term) }
 
-    private fun scoreTerm(func: FunctionDoc, term: String): Int {
+    private fun scoreTerm(func: KlangFun, term: String): Int {
         val lower = term.lowercase()
         return when {
             lower.startsWith(PREFIX_CATEGORY) -> {
@@ -137,7 +137,7 @@ private object DocSearch {
         }
     }
 
-    private fun matchesTerm(func: FunctionDoc, term: String): Boolean {
+    private fun matchesTerm(func: KlangFun, term: String): Boolean {
         val lower = term.lowercase()
         return when {
             lower.startsWith(PREFIX_CATEGORY) -> {
@@ -181,7 +181,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
     //  REGISTRY  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Create isolated registry for Strudel docs only
-    private val registry = DslDocsRegistry().apply {
+    private val registry = KlangDocsRegistry().apply {
         registerStrudelDocs(this)
     }
 
@@ -191,7 +191,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
 
-    private val filteredFunctions: List<FunctionDoc>
+    private val filteredFunctions: List<KlangFun>
         get() {
             val terms = DocSearch.parseTerms(searchQuery)
             val all = registry.functions.values.sortedBy { it.name }
@@ -242,7 +242,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
             // Function list
             filteredFunctions.forEach { func ->
-                renderFunctionDoc(func)
+                renderKlangFun(func)
             }
 
             // Empty state
@@ -255,7 +255,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun DIV.renderFunctionDoc(func: FunctionDoc) {
+    private fun DIV.renderKlangFun(func: KlangFun) {
         ui.segments {
             key = func.name
             css {
@@ -317,7 +317,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun DIV.renderVariant(variant: VariantDoc) {
+    private fun DIV.renderVariant(variant: KlangFunVariant) {
         div {
             css {
                 marginTop = 1.rem
@@ -327,13 +327,13 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             // Variant type badge
             ui.label {
                 +when (variant.type) {
-                    DslType.TOP_LEVEL -> "Top Level Function"
-                    DslType.EXTENSION_METHOD -> {
+                    KlangFunKind.TOP_LEVEL -> "Top Level Function"
+                    KlangFunKind.EXTENSION_METHOD -> {
                         "${variant.signatureModel.receiver} Extension Function"
                     }
 
-                    DslType.PROPERTY -> "Property"
-                    DslType.OBJECT -> "Object"
+                    KlangFunKind.PROPERTY -> "Property"
+                    KlangFunKind.OBJECT -> "Object"
                 }
             }
 

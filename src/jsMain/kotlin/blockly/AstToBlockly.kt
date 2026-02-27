@@ -5,9 +5,9 @@ import io.peekandpoke.klang.blockly.AstToBlockly.chainToJson
 import io.peekandpoke.klang.blockly.ext.WorkspaceSvg
 import io.peekandpoke.klang.blockly.ext.serialization
 import io.peekandpoke.klang.script.ast.*
-import io.peekandpoke.klang.script.docs.DslDocsRegistry
-import io.peekandpoke.klang.script.docs.ParamModel
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import io.peekandpoke.klang.script.types.KlangParam
 
 /**
  * Converts KlangScript source code into a Blockly workspace state using Blockly's
@@ -204,8 +204,8 @@ object AstToBlockly {
     ): dynamic? {
         val blockType = BlockDefinitionBuilder.blockType(funcName)
 
-        val paramModels: List<ParamModel>? =
-            DslDocsRegistry.global.get(funcName)
+        val paramModels: List<KlangParam>? =
+            KlangDocsRegistry.global.get(funcName)
                 ?.variants
                 ?.firstOrNull { it.signatureModel.params != null }
                 ?.signatureModel
@@ -221,7 +221,7 @@ object AstToBlockly {
         val inputs: dynamic = js("{}")
         var hasInputs = false
 
-        val funcCategory = DslDocsRegistry.global.get(funcName)?.category ?: ""
+        val funcCategory = KlangDocsRegistry.global.get(funcName)?.category ?: ""
 
         args.forEachIndexed { idx, argExpr ->
             // Resolve param model — for vararg, last param covers all overflow indices

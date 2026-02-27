@@ -6,7 +6,7 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import io.peekandpoke.klang.blocks.model.*
-import io.peekandpoke.klang.script.docs.DslDocsRegistry
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -22,7 +22,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
     override fun VDom.render() {
         val block = props.block
-        val doc = DslDocsRegistry.global.get(block.funcName)
+        val doc = KlangDocsRegistry.global.get(block.funcName)
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
 
         div("kb-block") {

@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.script.types
 
-data class TypeModel(
+data class KlangType(
     val simpleName: String,
     val isTypeAlias: Boolean = false,
     val isNullable: Boolean = false,
-    val unionMembers: List<TypeModel>? = null,
+    val unionMembers: List<KlangType>? = null,
 ) {
     val isUnion: Boolean get() = !unionMembers.isNullOrEmpty()
 

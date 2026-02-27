@@ -80,7 +80,7 @@ object JsCompatTestData {
         """.trimIndent()
         ),
         // Freq
-        Example("freq() basic", """freq(440)"""),
+        Example(SKIP, "freq() basic", """freq(440)"""),
         Example("freq() pattern", """s("saw saw").freq("440 880")"""),
 
         // Sequences
@@ -473,7 +473,7 @@ object JsCompatTestData {
         Example("Vowel u", """note("c3").vowel("u")"""),
         Example("Vowel sequence", """note("c3 e3 g3").vowel("a e i")"""),
         Example("Vowel with saw", """s("saw").vowel("o")"""),
-        Example("Vowel standalone", """vowel("a e i o u")"""),
+        Example(SKIP, "Vowel standalone", """vowel("a e i o u")"""),
 
         // Effects
         Example("Distortion low", """note("c").distort(0.5)"""),

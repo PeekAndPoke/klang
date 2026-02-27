@@ -1,13 +1,13 @@
 package io.peekandpoke.klang.blocks.model
 
-import io.peekandpoke.klang.script.docs.FunctionDoc
-import io.peekandpoke.klang.script.types.TypeModel
+import io.peekandpoke.klang.script.types.KlangFun
+import io.peekandpoke.klang.script.types.KlangType
 
 object KBTypeMapping {
 
     const val MAX_VARARG_SLOTS = 4
 
-    fun slotKindFor(type: TypeModel): KBSlotKind {
+    fun slotKindFor(type: KlangType): KBSlotKind {
         if (type.isUnion) {
             val members = type.unionMembers!!.map { slotKindFor(it) }.distinct()
             return KBSlotKind.Union(members)
@@ -20,7 +20,7 @@ object KBTypeMapping {
         "Double", "Float", "Int", "Long", "Number" -> KBSlotKind.Num
         "Boolean" -> KBSlotKind.Bool
         "StrudelPattern", "Pattern" -> KBSlotKind.PatternResult
-        // v1: PatternLike hardcoded; v2 will use @KlangType annotation wired into TypeModel.unionMembers
+        // v1: PatternLike hardcoded; v2 will use @KlangType annotation wired into KlangType.unionMembers
         "PatternLike" -> KBSlotKind.Union(
             listOf(KBSlotKind.Str, KBSlotKind.Num, KBSlotKind.PatternResult)
         )
@@ -28,7 +28,7 @@ object KBTypeMapping {
         else -> KBSlotKind.NamedObject(typeName)
     }
 
-    fun slotsFor(doc: FunctionDoc): List<KBSlot> {
+    fun slotsFor(doc: KlangFun): List<KBSlot> {
         val params = doc.variants.firstOrNull { it.signatureModel.params != null }
             ?.signatureModel?.params ?: return emptyList()
         val result = mutableListOf<KBSlot>()
