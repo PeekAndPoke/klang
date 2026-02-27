@@ -40,6 +40,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     private var editingSlotIndex: Int? by value(null)
     private var editText: String by value("")
     private var isHovered: Boolean by value(false)
+    private var isVertical: Boolean by value(props.block.pocketLayout == KBPocketLayout.VERTICAL)
 
     private fun startEdit(slotIndex: Int, currentText: String) {
         editingSlotIndex = slotIndex
@@ -75,7 +76,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         div("kb-block") {
             css {
                 display = Display.inlineFlex
-                alignItems = Align.center
+                flexDirection = if (isVertical) FlexDirection.column else FlexDirection.row
+                alignItems = if (isVertical) Align.flexStart else Align.center
                 put("gap", "4px")
                 padding = Padding(horizontal = 10.px, vertical = 5.px)
                 borderRadius = 8.px
@@ -231,28 +233,63 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 }
             }
 
-            // Remove (×) — appears on hover, hidden while a drag is active to avoid clutter
+            // Layout toggle + Remove (×) — appear on hover, hidden while a drag is active
             if (isHovered && !canDropToSlot) {
                 span {
                     css {
-                        marginLeft = 4.px
-                        fontSize = 12.px
-                        lineHeight = LineHeight("1")
-                        color = Color("rgba(255,255,255,0.55)")
-                        cursor = Cursor.pointer
-                        borderRadius = 3.px
-                        padding = Padding(horizontal = 3.px, vertical = 1.px)
-                        hover {
-                            backgroundColor = Color("rgba(255,255,255,0.18)")
-                            color = Color.white
+                        display = Display.inlineFlex
+                        alignItems = Align.center
+                        put("gap", "2px")
+                        if (isVertical) {
+                            position = Position.absolute
+                            top = 4.px
+                            right = 4.px
+                        } else {
+                            marginLeft = 4.px
                         }
                     }
-                    onClick { event ->
-                        event.stopPropagation()
-                        ctx.editing.onRemoveBlock(props.block.id)
+                    // Layout toggle button
+                    span {
+                        css {
+                            fontSize = 12.px
+                            lineHeight = LineHeight("1")
+                            color = Color("rgba(255,255,255,0.55)")
+                            cursor = Cursor.pointer
+                            borderRadius = 3.px
+                            padding = Padding(horizontal = 3.px, vertical = 1.px)
+                            hover {
+                                backgroundColor = Color("rgba(255,255,255,0.18)")
+                                color = Color.white
+                            }
+                        }
+                        onClick { event ->
+                            event.stopPropagation()
+                            isVertical = !isVertical
+                        }
+                        onMouseDown { event -> event.stopPropagation() }
+                        +if (isVertical) "↔" else "↕"
                     }
-                    onMouseDown { event -> event.stopPropagation() }
-                    +"×"
+                    // Remove button
+                    span {
+                        css {
+                            fontSize = 12.px
+                            lineHeight = LineHeight("1")
+                            color = Color("rgba(255,255,255,0.55)")
+                            cursor = Cursor.pointer
+                            borderRadius = 3.px
+                            padding = Padding(horizontal = 3.px, vertical = 1.px)
+                            hover {
+                                backgroundColor = Color("rgba(255,255,255,0.18)")
+                                color = Color.white
+                            }
+                        }
+                        onClick { event ->
+                            event.stopPropagation()
+                            ctx.editing.onRemoveBlock(props.block.id)
+                        }
+                        onMouseDown { event -> event.stopPropagation() }
+                        +"×"
+                    }
                 }
             }
         }

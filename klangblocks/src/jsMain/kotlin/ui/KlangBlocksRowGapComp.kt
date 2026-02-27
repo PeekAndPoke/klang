@@ -5,6 +5,7 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
+import de.peekandpoke.ultra.semanticui.icon
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -37,57 +38,68 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
         val dndState = props.ctx.dnd.state
         val canDrop = dndState?.onDropToPosition != null
 
+        // Fixed-height outer container — never changes size
         div {
             css {
-                display = Display.flex
-                flexDirection = FlexDirection.row
-                alignItems = Align.center
-                height = if (isHovered || canDrop) 20.px else 6.px
-                put("transition", "height 0.1s ease")
+                height = 6.px
                 position = Position.relative
             }
             onMouseEnter { isHovered = true }
             onMouseLeave { isHovered = false; isDropHovered = false }
 
-            // Blank-line button — visible on hover, independent of drag
+            // "+" icon in the line-number gutter — visible on hover when not dragging
             if (isHovered && !canDrop) {
                 span {
                     css {
-                        marginLeft = 28.px  // align with row content (past the row-number column)
-                        fontSize = 10.px
-                        color = Color("#555")
+                        position = Position.absolute
+                        top = (-13).px
+                        left = 4.px
+                        width = 28.px
+                        height = 28.px
+                        display = Display.flex
+                        alignItems = Align.center
                         cursor = Cursor.pointer
-                        borderRadius = 3.px
-                        padding = Padding(horizontal = 4.px, vertical = 1.px)
-                        userSelect = UserSelect.none
-                        hover {
-                            color = Color("#aaa")
-                            backgroundColor = Color("rgba(255,255,255,0.06)")
-                        }
+                        color = Color("#888")
                     }
                     onClick { props.ctx.editing.insertBlankLine(props.index) }
                     onMouseDown { event -> event.preventDefault() }
-                    +"+ blank line"
+                    icon.bordered.plus {
+                        css {
+                            color = Color("#888")
+                        }
+                    }
                 }
             }
 
-            // Row drop zone — visible while any draggable thing is active
+            // Drop zone — absolutely positioned so it overlaps rows above and below
             if (canDrop) {
                 div {
                     css {
-                        flex = Flex(1.0, 1.0, FlexBasis.auto)
-                        marginLeft = 28.px
-                        height = 4.px
-                        borderRadius = 2.px
-                        backgroundColor = Color(if (isDropHovered) "#6a9fd8" else "rgba(106,159,216,0.35)")
-                        put("transition", "background-color 0.1s ease")
+                        position = Position.absolute
+                        top = (-10).px
+                        bottom = (-10).px
+                        left = 28.px
+                        right = 0.px
+                        display = Display.flex
+                        alignItems = Align.center
                         cursor = Cursor.copy
+                        put("z-index", "10")
                     }
                     onMouseEnter { isDropHovered = true }
                     onMouseLeave { isDropHovered = false }
                     onMouseUp { event ->
                         event.stopPropagation()
-                        dndState?.onDropToPosition?.invoke(props.index)
+                        dndState.onDropToPosition.invoke(props.index)
+                    }
+                    // Visual indicator — thin line centred in the hit area
+                    div {
+                        css {
+                            width = 100.pct
+                            height = 3.px
+                            borderRadius = 2.px
+                            backgroundColor = Color(if (isDropHovered) "#6a9fd8" else "rgba(106,159,216,0.35)")
+                            put("transition", "background-color 0.1s ease")
+                        }
                     }
                 }
             }

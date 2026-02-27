@@ -50,12 +50,13 @@ object AstToKBlocks {
 
     private fun convertExprStmt(expr: Expression): KBChainStmt? {
         val chain = extractChain(expr) ?: return null
-        val steps = chain.mapIndexed { i, (funcName, args) ->
+        val steps = chain.mapIndexed { i, link ->
             KBCallBlock(
                 id = uuid(),
-                funcName = funcName,
-                args = args.map { convertExpr(it) },
+                funcName = link.funcName,
+                args = link.args.map { convertExpr(it) },
                 isHead = i == 0,
+                pocketLayout = layoutForLink(link),
             )
         }
         return KBChainStmt(id = uuid(), steps = steps)
@@ -63,24 +64,40 @@ object AstToKBlocks {
 
     // ---- Chain extraction -------------------------------------------
 
+    private data class ChainLink(
+        val funcName: String,
+        val args: List<Expression>,
+        val callLocation: SourceLocation?,
+    )
+
     /**
      * Recursively unwraps a left-recursive chain of calls:
-     *   sound("bd").gain(0.5)  →  [("sound", ["bd"]), ("gain", [0.5])]
+     *   sound("bd").gain(0.5)  →  [ChainLink("sound", ["bd"], loc), ChainLink("gain", [0.5], loc)]
      *
      * Returns null for any expression that is not a plain call chain
      * (e.g. arbitrary member access on non-call, object/array literals, etc.).
      */
-    private fun extractChain(expr: Expression): List<Pair<String, List<Expression>>>? = when {
+    private fun extractChain(expr: Expression): List<ChainLink>? = when {
         expr is CallExpression && expr.callee is Identifier ->
-            listOf((expr.callee as Identifier).name to expr.arguments)
+            listOf(ChainLink((expr.callee as Identifier).name, expr.arguments, expr.location))
 
         expr is CallExpression && expr.callee is MemberAccess -> {
             val access = expr.callee as MemberAccess
             val prefix = extractChain(access.obj) ?: return null
-            prefix + (access.property to expr.arguments)
+            prefix + ChainLink(access.property, expr.arguments, expr.location)
         }
 
         else -> null
+    }
+
+    private fun layoutForLink(link: ChainLink): KBPocketLayout {
+        if (link.args.isEmpty() || link.callLocation == null) return KBPocketLayout.HORIZONTAL
+        val callLine = link.callLocation.startLine
+        return if (link.args.all { it.location?.startLine == callLine }) {
+            KBPocketLayout.HORIZONTAL
+        } else {
+            KBPocketLayout.VERTICAL
+        }
     }
 
     // ---- Expression → KBArgValue ------------------------------------
@@ -112,8 +129,14 @@ object AstToKBlocks {
         is CallExpression, is MemberAccess -> {
             val chain = extractChain(expr)
             if (chain != null) {
-                val steps = chain.mapIndexed { i, (name, args) ->
-                    KBCallBlock(id = uuid(), funcName = name, args = args.map { convertExpr(it) }, isHead = i == 0)
+                val steps = chain.mapIndexed { i, link ->
+                    KBCallBlock(
+                        id = uuid(),
+                        funcName = link.funcName,
+                        args = link.args.map { convertExpr(it) },
+                        isHead = i == 0,
+                        pocketLayout = layoutForLink(link),
+                    )
                 }
                 KBNestedChainArg(KBChainStmt(id = uuid(), steps = steps))
             } else {
