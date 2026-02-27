@@ -4,10 +4,9 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.modals.ModalsManager.Companion.modals
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
-import de.peekandpoke.kraft.semanticui.modals.OkCancelModal
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
@@ -42,6 +41,7 @@ import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.p
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
 
@@ -191,40 +191,19 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     /** Switch to Blocks mode — asks for confirmation first if the code has comments. */
     private fun switchToBlocks(event: PointerEvent) {
         if (codeHasComments()) {
-            modals.show { handle ->
-                OkCancelModal {
-                    mini(
-                        handle = handle,
-                        header = {
-                            ui.header { +"Switch to Blocks mode?" }
-                        },
-                        content = {
-                            ui.content { +"Your code contains comments, which will be lost when switching to Blocks mode. Continue?" }
-                        },
-                    ) { result ->
-                        if (result == OkCancelModal.Result.Ok) {
-                            editorMode = EditorMode.BLOCKS
-                        }
+            popups.showContextMenu(event) { handle ->
+                ui.compact.segment {
+                    p { +"Comments will be lost when switching to Blocks mode." }
+                    ui.mini.basic.button {
+                        onClick { handle.close() }
+                        +"Cancel"
+                    }
+                    ui.mini.black.button {
+                        onClick { handle.close(); editorMode = EditorMode.BLOCKS }
+                        +"Switch anyway"
                     }
                 }
             }
-
-//            popups.showContextMenu(event) { handle ->
-//                ui.compact.segment {
-//                    css {
-//                        zIndex = 10000
-//                    }
-//                    p { +"Comments will be lost when switching to Blocks mode." }
-//                    ui.mini.basic.button {
-//                        onClick { handle.close() }
-//                        +"Cancel"
-//                    }
-//                    ui.mini.black.button {
-//                        onClick { handle.close(); editorMode = EditorMode.BLOCKS }
-//                        +"Switch anyway"
-//                    }
-//                }
-//            }
         } else {
             editorMode = EditorMode.BLOCKS
         }
