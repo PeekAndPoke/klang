@@ -64,6 +64,19 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             val ghostX: Double,
             val ghostY: Double,
         ) : DragState()
+
+        /**
+         * Dragging a block from a canvas chain.
+         * [ctrlHeld] = false → single block; true → block + all following (tail).
+         */
+        data class DraggingBlock(
+            val sourceChainId: String,
+            val sourceChain: KBChainStmt,
+            val block: KBCallBlock,
+            val ctrlHeld: Boolean,
+            val ghostX: Double,
+            val ghostY: Double,
+        ) : DragState()
     }
 
     // ---- Component state -------------------------------------------
@@ -83,6 +96,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         // Let the browser handle undo/redo inside text inputs
         val tag = ke.target?.asDynamic()?.tagName?.toString()?.uppercase() ?: ""
         if (tag == "INPUT" || tag == "TEXTAREA") return@listener
+        // CTRL held during a block drag → switch to tail mode
+        if (ke.key == "Control") {
+            val ds = dragState
+            if (ds is DragState.DraggingBlock && !ds.ctrlHeld) dragState = ds.copy(ctrlHeld = true)
+            return@listener
+        }
         if (!ke.ctrlKey && !ke.metaKey) return@listener
         val key = ke.key.lowercase()
         when {
@@ -100,10 +119,25 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         }
     }
 
+    private val keyupListener: (Event) -> Unit = listener@{ event ->
+        val ke = event as? KeyboardEvent ?: return@listener
+        // CTRL released during a block drag → revert to single-block mode
+        if (ke.key == "Control") {
+            val ds = dragState
+            if (ds is DragState.DraggingBlock && ds.ctrlHeld) dragState = ds.copy(ctrlHeld = false)
+        }
+    }
+
     init {
         lifecycle {
-            onMount { document.addEventListener("keydown", keydownListener) }
-            onUnmount { document.removeEventListener("keydown", keydownListener) }
+            onMount {
+                document.addEventListener("keydown", keydownListener)
+                document.addEventListener("keyup", keyupListener)
+            }
+            onUnmount {
+                document.removeEventListener("keydown", keydownListener)
+                document.removeEventListener("keyup", keyupListener)
+            }
         }
     }
 
@@ -176,6 +210,34 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             },
         )
 
+        is DragState.DraggingBlock -> {
+            // Compute the list of blocks to drag: single block or tail (block + all following)
+            val allBlocks = ds.sourceChain.steps.filterIsInstance<KBCallBlock>()
+            val fromIdx = allBlocks.indexOfFirst { it.id == ds.block.id }
+            val blocks = if (ds.ctrlHeld && fromIdx >= 0) allBlocks.drop(fromIdx) else listOf(ds.block)
+            DndState(
+                ghostX = ds.ghostX,
+                ghostY = ds.ghostY,
+                ghostLabel = blocks.joinToString(".") { it.funcName },
+                onDropToPosition = { index ->
+                    editingCtx.commitMoveBlocksToPosition(blocks, index)
+                    dragState = DragState.None
+                },
+                onDropToChain = { chainId ->
+                    editingCtx.commitMoveBlocksToChain(blocks, chainId)
+                    dragState = DragState.None
+                },
+                onDropToSlot = { stmtId, blockId, slotIdx ->
+                    editingCtx.commitMoveBlocksToSlot(blocks, stmtId, blockId, slotIdx)
+                    dragState = DragState.None
+                },
+                onDropToChainAt = { chainId, insertBeforeBlockId ->
+                    editingCtx.commitMoveBlocksToChainAt(blocks, chainId, insertBeforeBlockId)
+                    dragState = DragState.None
+                },
+            )
+        }
+
         else -> null
     }
 
@@ -206,11 +268,19 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         dragState = DragState.DraggingNestedBlock(block, x, y)
     }
 
+    private fun onBlockDragStart(
+        sourceChainId: String, sourceChain: KBChainStmt,
+        block: KBCallBlock, ctrlHeld: Boolean, x: Double, y: Double,
+    ) {
+        dragState = DragState.DraggingBlock(sourceChainId, sourceChain, block, ctrlHeld, x, y)
+    }
+
     private fun onMouseMoved(x: Double, y: Double) {
         dragState = when (val current = dragState) {
             is DragState.DraggingFromPalette -> current.copy(ghostX = x, ghostY = y)
             is DragState.DraggingFromCanvas -> current.copy(ghostX = x, ghostY = y)
             is DragState.DraggingNestedBlock -> current.copy(ghostX = x, ghostY = y)
+            is DragState.DraggingBlock -> current.copy(ghostX = x, ghostY = y)
             else -> return
         }
     }
@@ -228,9 +298,10 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             editing = editingCtx,
             dnd = DndCtrl(
                 state = dndState,
-                startPaletteDrag = ::onPaletteDragStart,
-                startCanvasDrag = ::onCanvasDragStart,
-                startNestedBlockDrag = ::onNestedBlockDragStart,
+                startPaletteDrag = DndCtrl.PaletteDragStarter(::onPaletteDragStart),
+                startCanvasDrag = DndCtrl.CanvasDragStarter(::onCanvasDragStart),
+                startNestedBlockDrag = DndCtrl.NestedBlockDragStarter(::onNestedBlockDragStart),
+                startBlockDrag = DndCtrl.BlockDragStarter(::onBlockDragStart),
             ),
         )
 

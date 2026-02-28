@@ -239,6 +239,65 @@ class KBProgramEditingCtx(
         }
     }
 
+    // ---- Multi-block move (single block or tail chain from canvas) -----------------
+
+    /** Remove [blocks] from wherever they live and place them as a new top-level chain at [index]. */
+    fun commitMoveBlocksToPosition(blocks: List<KBCallBlock>, index: Int) {
+        val newChain = KBChainStmt(
+            id = uuid(),
+            steps = blocks.mapIndexed { i, b -> b.copy(isHead = i == 0) },
+        )
+        update { current ->
+            var stmts = current.statements
+            for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
+            val mutable = stmts.toMutableList()
+            mutable.add(index.coerceIn(0, mutable.size), newChain)
+            current.copy(statements = mutable)
+        }
+    }
+
+    /** Remove [blocks] from wherever they live and append them to chain [targetChainId]. */
+    fun commitMoveBlocksToChain(blocks: List<KBCallBlock>, targetChainId: String) {
+        update { current ->
+            var stmts = current.statements
+            for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
+            current.copy(
+                statements = blocks.fold(stmts) { s, block ->
+                    appendBlockToChain(s, targetChainId, block.copy(isHead = false))
+                }
+            )
+        }
+    }
+
+    /** Remove [blocks] from wherever they live and insert them before [insertBeforeBlockId] in [targetChainId]. */
+    fun commitMoveBlocksToChainAt(blocks: List<KBCallBlock>, targetChainId: String, insertBeforeBlockId: String?) {
+        update { current ->
+            var stmts = current.statements
+            for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
+            // Insert in forward order; each block is inserted before the same target so they land in order.
+            current.copy(
+                statements = blocks.fold(stmts) { s, block ->
+                    insertBlockIntoChain(s, targetChainId, block.copy(isHead = false), insertBeforeBlockId)
+                }
+            )
+        }
+    }
+
+    /** Remove [blocks] from wherever they live and place them as a nested chain in a slot. */
+    fun commitMoveBlocksToSlot(blocks: List<KBCallBlock>, targetStmtId: String, blockId: String, slotIndex: Int) {
+        val newChain = KBChainStmt(
+            id = uuid(),
+            steps = blocks.mapIndexed { i, b -> b.copy(isHead = i == 0) },
+        )
+        update { current ->
+            var stmts = current.statements
+            for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
+            current.copy(
+                statements = updateBlockInStmts(stmts, blockId, slotIndex, KBNestedChainArg(newChain))
+            )
+        }
+    }
+
     // ---- Recursive tree helpers ----------------------------------------------------
 
     private fun updateBlockInStmts(
@@ -293,7 +352,7 @@ class KBProgramEditingCtx(
         stmts.mapNotNull { stmt ->
             when (stmt) {
                 is KBChainStmt -> {
-                    val newSteps = removeBlockFromItems(stmt.steps, blockId)
+                    val newSteps = removeBlockFromItems(stmt.steps, blockId).fixHeads()
                     if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) null
                     else stmt.copy(steps = newSteps)
                 }
@@ -316,7 +375,7 @@ class KBProgramEditingCtx(
         args.map { argValue ->
             when (argValue) {
                 is KBNestedChainArg -> {
-                    val newSteps = removeBlockFromItems(argValue.chain.steps, blockId)
+                    val newSteps = removeBlockFromItems(argValue.chain.steps, blockId).fixHeads()
                     if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) KBEmptyArg("")
                     else argValue.copy(chain = argValue.chain.copy(steps = newSteps))
                 }
