@@ -61,17 +61,24 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     private var editingSlotIndex: Int? by value(null)
     private var editText: String by value("")
     private var isHovered: Boolean by value(false)
-    private var isActive: Boolean by value(false)
-    private var highlightTimeoutId: Int = 0
+
+    // Each active atom has its own fade-out timer so concurrent atoms don't cancel each other.
+    private var activeAtoms: Set<AtomKey> by value(emptySet())
+    private val atomTimeouts = mutableMapOf<AtomKey, Int>()  // non-reactive bookkeeping
 
     @Suppress("unused")
     private val highlightSub by subscribingTo(
         props.ctx.highlights.filter { it?.blockId == props.block.id }
     ) { signal ->
         if (signal != null) {
-            window.clearTimeout(highlightTimeoutId)
-            isActive = true
-            highlightTimeoutId = window.setTimeout({ isActive = false }, signal.durationMs.toInt())
+            val key = AtomKey(signal.slotIndex, signal.atomStart, signal.atomEnd)
+            // Cancel any existing fade-out for the same atom before restarting it.
+            atomTimeouts[key]?.let { window.clearTimeout(it) }
+            activeAtoms = activeAtoms + key
+            atomTimeouts[key] = window.setTimeout({
+                activeAtoms = activeAtoms - key
+                atomTimeouts.remove(key)
+            }, signal.durationMs.toInt())
         }
     }
 
@@ -124,7 +131,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 fontFamily = "monospace"
                 whiteSpace = WhiteSpace.nowrap
                 userSelect = UserSelect.none
-                if (isActive) put("filter", "brightness(1.5)")
+                if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
                 put("transition", "filter 0.15s ease")
                 position = Position.relative
                 // Nested blocks are always draggable; top-level only when not in slot-drop mode.
@@ -250,7 +257,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         if (canDrop) {
                             onMouseUp { event ->
                                 event.stopPropagation()
-                                dndState?.onDropToSlot?.invoke(props.chain.id, block.id, i)
+                                dndState.onDropToSlot(stmtId = props.chain.id, blockId = block.id, slotIdx = i)
                             }
                         }
                         onMouseDown { event -> event.stopPropagation() }
@@ -322,7 +329,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         if (canDrop) {
                             onMouseUp { event ->
                                 event.stopPropagation()
-                                dndState?.onDropToSlot?.invoke(props.chain.id, block.id, i)
+                                dndState.onDropToSlot(stmtId = props.chain.id, blockId = block.id, slotIdx = i)
                             }
                             onMouseDown { event -> event.stopPropagation() }
                         } else {
@@ -343,7 +350,15 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         }
                         when (arg) {
                             null, is KBEmptyArg -> +"[${slot.name}]"
-                            is KBStringArg -> +arg.value
+                            is KBStringArg -> {
+                                val atomRanges = activeAtoms
+                                    .filter { it.slotIndex == i && it.atomStart != null && it.atomEnd != null }
+                                    .map { it.atomStart!! until it.atomEnd!! }
+                                    .sortedBy { it.first }
+                                    .let { mergeRanges(it) }
+                                renderWithHighlights(arg.value, atomRanges)
+                            }
+
                             else -> +arg.renderShort()
                         }
                     }
@@ -434,6 +449,54 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             }
         }
     }
+}
+
+/** Identifies a unique active atom by its slot and char range. */
+private data class AtomKey(val slotIndex: Int?, val atomStart: Int?, val atomEnd: Int?)
+
+/**
+ * Merges overlapping or adjacent [IntRange]s in an already-sorted list.
+ * Ranges use inclusive [IntRange.last] (i.e. built with `start until end`).
+ */
+private fun mergeRanges(sorted: List<IntRange>): List<IntRange> {
+    if (sorted.isEmpty()) return emptyList()
+    val result = mutableListOf(sorted[0])
+    for (r in sorted.drop(1)) {
+        val last = result.last()
+        if (r.first <= last.last + 1) {
+            result[result.lastIndex] = last.first..maxOf(last.last, r.last)
+        } else {
+            result.add(r)
+        }
+    }
+    return result
+}
+
+/**
+ * Renders [text] as a mix of plain text nodes and highlighted `<span>`s for each
+ * range in [ranges] (sorted, non-overlapping, [IntRange.last] is inclusive).
+ */
+private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRange>) {
+    if (ranges.isEmpty()) {
+        +text
+        return
+    }
+    var pos = 0
+    for (range in ranges) {
+        val start = range.first.coerceIn(0, text.length)
+        val end = (range.last + 1).coerceIn(start, text.length)
+        if (pos < start) +text.substring(pos, start)
+        span {
+            css {
+                backgroundColor = Color("rgba(255,255,255,0.4)")
+                borderRadius = 2.px
+                padding = Padding(0.px, 1.px)
+            }
+            +text.substring(start, end)
+        }
+        pos = end
+    }
+    if (pos < text.length) +text.substring(pos)
 }
 
 /** Returns true if a slot can accept a dropped block/chain. */

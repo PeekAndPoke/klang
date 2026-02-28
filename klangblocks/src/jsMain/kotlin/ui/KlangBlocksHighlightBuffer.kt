@@ -5,11 +5,6 @@ import io.peekandpoke.klang.blocks.model.CodeGenResult
 import io.peekandpoke.klang.script.ast.SourceLocation
 import kotlinx.browser.window
 
-data class HighlightSignal(
-    val blockId: String,
-    val durationMs: Double,
-)
-
 /**
  * Emits [HighlightSignal]s onto a stream at the scheduled wall-clock time.
  *
@@ -17,6 +12,17 @@ data class HighlightSignal(
  * so only the matching component re-renders on each event.
  */
 class KlangBlocksHighlightBuffer {
+
+    data class HighlightSignal(
+        val blockId: String,
+        val durationMs: Double,
+        /** Non-null when the hit was inside a specific string slot. */
+        val slotIndex: Int? = null,
+        /** 0-based start offset of the atom within the slot string content. */
+        val atomStart: Int? = null,
+        /** 0-based exclusive end offset of the atom within the slot string content. */
+        val atomEnd: Int? = null,
+    )
 
     var codeGenResult: CodeGenResult? = null
 
@@ -30,11 +36,26 @@ class KlangBlocksHighlightBuffer {
      * and remain visible for [durationMs] ms.
      */
     fun scheduleHighlight(location: SourceLocation, startFromNowMs: Double, durationMs: Double) {
-        val blockId = codeGenResult?.findBlockAt(location.startLine, location.startColumn) ?: return
+        val hit = codeGenResult?.findAt(location.startLine, location.startColumn) ?: return
+
+        // Compute atom end offset within the slot content (single-line atoms only).
+        val atomEnd = if (hit.slotIndex != null && hit.offsetInSlot != null &&
+            location.startLine == location.endLine
+        ) {
+            hit.offsetInSlot + (location.endColumn - location.startColumn)
+        } else null
 
         var timeoutId = 0
         timeoutId = window.setTimeout({
-            highlightSource(HighlightSignal(blockId, durationMs))
+            highlightSource(
+                HighlightSignal(
+                    blockId = hit.blockId,
+                    durationMs = durationMs,
+                    slotIndex = hit.slotIndex,
+                    atomStart = hit.offsetInSlot,
+                    atomEnd = atomEnd,
+                )
+            )
             pendingTimeouts.remove(timeoutId)
         }, startFromNowMs.toInt())
         pendingTimeouts.add(timeoutId)

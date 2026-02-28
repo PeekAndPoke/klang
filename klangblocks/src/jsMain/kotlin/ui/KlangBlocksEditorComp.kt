@@ -25,7 +25,7 @@ fun Tag.KlangBlocksEditorComp(
     initialCode: String = "",
     onCodeChanged: (String) -> Unit,
     onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
-    highlights: Stream<HighlightSignal?>,
+    highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
 ) = comp(
     KlangBlocksEditorComp.Props(
         availableLibraries = availableLibraries,
@@ -45,7 +45,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         val initialCode: String = "",
         val onCodeChanged: (String) -> Unit,
         val onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
-        val highlights: Stream<HighlightSignal?>,
+        val highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
     )
 
     // ---- Drag state FSM --------------------------------------------

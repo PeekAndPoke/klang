@@ -5,5 +5,5 @@ import de.peekandpoke.ultra.streams.Stream
 data class KlangBlocksCtx(
     val editing: KBProgramEditingCtx,
     val dnd: DndCtrl,
-    val highlights: Stream<HighlightSignal?>,
+    val highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
 )

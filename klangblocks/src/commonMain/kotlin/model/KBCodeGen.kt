@@ -5,14 +5,26 @@ package io.peekandpoke.klang.blocks.model
 /**
  * The output of [KBProgram.toCodeGen].
  *
- * @param code        The generated source code string.
- * @param blockRanges Maps each [KBCallBlock.id] to the [IntRange] of characters
- *                    it occupies in [code].  Nested blocks are included.
+ * @param code              The generated source code string.
+ * @param blockRanges       Maps each [KBCallBlock.id] to the [IntRange] of characters
+ *                          it occupies in [code].  Nested blocks are included.
+ * @param slotContentRanges Maps (blockId, slotIndex) to the [IntRange] of the string
+ *                          *content* (excluding surrounding quotes/backticks) in [code].
  */
 class CodeGenResult(
     val code: String,
     val blockRanges: Map<String, IntRange>,
+    val slotContentRanges: Map<Pair<String, Int>, IntRange> = emptyMap(),
 ) {
+    /** Full hit info returned by [findAt]. */
+    data class HitResult(
+        val blockId: String,
+        /** Non-null when the hit falls inside a tracked string slot's content. */
+        val slotIndex: Int?,
+        /** 0-based char offset within the slot string content; non-null iff [slotIndex] is non-null. */
+        val offsetInSlot: Int?,
+    )
+
     // Ranges sorted by start offset — built once on first lookup, enables binary search.
     private val sortedRanges: List<Triple<Int, Int, String>> by lazy {
         blockRanges.entries
@@ -20,19 +32,34 @@ class CodeGenResult(
             .sortedBy { it.first }
     }
 
-    // Caches (line, col) → blockId results; same location is queried on every audio tick.
+    // Caches (line, col) → HitResult; same location is queried on every audio tick.
     // Key packs both values into a single Long to avoid boxing.
-    private val locationCache = mutableMapOf<Long, String?>()
+    private val hitCache = mutableMapOf<Long, HitResult?>()
 
     /**
      * Returns the [KBCallBlock.id] whose generated-code range contains the given
      * 1-based [line]/[col] position, or null if no block covers that position.
-     * Results are cached — repeated calls for the same location are O(1).
      */
-    fun findBlockAt(line: Int, col: Int): String? {
+    fun findBlockAt(line: Int, col: Int): String? = findAt(line, col)?.blockId
+
+    /**
+     * Returns a [HitResult] for the given 1-based [line]/[col] position, including
+     * which slot and offset within that slot when the location falls inside a string
+     * argument's content.  Results are cached — repeated calls are O(1).
+     */
+    fun findAt(line: Int, col: Int): HitResult? {
         val key = line.toLong().shl(32) or (col.toLong() and 0xFFFFFFFFL)
-        return locationCache.getOrPut(key) {
-            findByOffset(code.lineColToCharOffset(line, col))
+        return hitCache.getOrPut(key) {
+            val offset = code.lineColToCharOffset(line, col)
+            val blockId = findByOffset(offset) ?: return@getOrPut null
+            // Check whether the offset falls inside a string slot's content range.
+            for ((pair, range) in slotContentRanges) {
+                val (bid, slotIdx) = pair
+                if (bid == blockId && offset in range) {
+                    return@getOrPut HitResult(blockId, slotIdx, offset - range.first)
+                }
+            }
+            HitResult(blockId, null, null)
         }
     }
 
@@ -69,6 +96,7 @@ private fun String.lineColToCharOffset(line: Int, col: Int): Int {
 class CodeBuilder {
     private val sb = StringBuilder()
     private val _blockRanges = mutableMapOf<String, IntRange>()
+    private val _slotContentRanges = mutableMapOf<Pair<String, Int>, IntRange>()
 
     val length: Int get() = sb.length
 
@@ -82,7 +110,12 @@ class CodeBuilder {
         _blockRanges[blockId] = start until sb.length
     }
 
-    fun build() = CodeGenResult(sb.toString(), _blockRanges.toMap())
+    /** Records the string content range (excluding quotes) for [blockId] / [slotIndex]. */
+    fun trackSlotContent(blockId: String, slotIndex: Int, range: IntRange) {
+        _slotContentRanges[blockId to slotIndex] = range
+    }
+
+    fun build() = CodeGenResult(sb.toString(), _blockRanges.toMap(), _slotContentRanges.toMap())
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -170,27 +203,41 @@ private fun KBChainStmt.appendTo(builder: CodeBuilder) {
 
 private fun KBCallBlock.appendTo(builder: CodeBuilder) {
     builder.trackBlock(id) {
-        val filledArgs = args.filter { it !is KBEmptyArg }
-        if (pocketLayout == KBPocketLayout.VERTICAL && filledArgs.isNotEmpty()) {
+        // Pair each non-empty arg with its original slot index so string content
+        // ranges are keyed by the same index used in the UI slot loop.
+        val nonEmptyArgs = args.mapIndexedNotNull { slotIdx, arg ->
+            if (arg is KBEmptyArg) null else slotIdx to arg
+        }
+        if (pocketLayout == KBPocketLayout.VERTICAL && nonEmptyArgs.isNotEmpty()) {
             append(funcName).append("(\n  ")
-            filledArgs.forEachIndexed { index, arg ->
-                if (index > 0) append(",\n  ")
-                arg.appendTo(this)
+            nonEmptyArgs.forEachIndexed { i, (slotIdx, arg) ->
+                if (i > 0) append(",\n  ")
+                arg.appendTo(this, id, slotIdx)
             }
             append("\n)")
         } else {
             append(funcName).append("(")
-            filledArgs.forEachIndexed { index, arg ->
-                if (index > 0) append(", ")
-                arg.appendTo(this)
+            nonEmptyArgs.forEachIndexed { i, (slotIdx, arg) ->
+                if (i > 0) append(", ")
+                arg.appendTo(this, id, slotIdx)
             }
             append(")")
         }
     }
 }
 
-private fun KBArgValue.appendTo(builder: CodeBuilder) {
+private fun KBArgValue.appendTo(builder: CodeBuilder, blockId: String, slotIndex: Int) {
     when (this) {
+        is KBStringArg -> {
+            // Write the surrounding quotes and record the content range (excluding quotes).
+            val multiline = '\n' in value
+            builder.append(if (multiline) "`" else "\"")
+            val contentStart = builder.length
+            builder.append(value)
+            builder.trackSlotContent(blockId, slotIndex, contentStart until builder.length)
+            builder.append(if (multiline) "`" else "\"")
+        }
+
         // Recurse so nested block positions are tracked.
         is KBNestedChainArg -> {
             val blocks = chain.steps.filterIsInstance<KBCallBlock>()
