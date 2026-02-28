@@ -211,6 +211,13 @@ class KBProgramEditingCtx(
         }
     }
 
+    /** Toggle the pocket layout of a specific block between HORIZONTAL and VERTICAL. */
+    fun onToggleLayout(blockId: String) {
+        update { current ->
+            current.copy(statements = toggleLayoutInStmts(current.statements, blockId))
+        }
+    }
+
     /** Remove an entire statement (import / let / const / blank line). */
     fun onRemoveStmt(stmtId: String) {
         update { current -> current.copy(statements = current.statements.filter { it.id != stmtId }) }
@@ -308,6 +315,40 @@ class KBProgramEditingCtx(
                     else argValue.copy(chain = argValue.chain.copy(steps = newSteps))
                 }
 
+                else -> argValue
+            }
+        }
+
+    private fun toggleLayoutInStmts(stmts: List<KBStmt>, blockId: String): List<KBStmt> =
+        stmts.map { stmt ->
+            when (stmt) {
+                is KBChainStmt -> stmt.copy(steps = toggleLayoutInItems(stmt.steps, blockId))
+                else -> stmt
+            }
+        }
+
+    private fun toggleLayoutInItems(items: List<KBChainItem>, blockId: String): List<KBChainItem> =
+        items.map { item ->
+            when {
+                item is KBCallBlock && item.id == blockId -> {
+                    val newLayout = if (item.pocketLayout == KBPocketLayout.VERTICAL)
+                        KBPocketLayout.HORIZONTAL else KBPocketLayout.VERTICAL
+                    item.copy(pocketLayout = newLayout)
+                }
+
+                item is KBCallBlock -> item.copy(args = toggleLayoutInArgs(item.args, blockId))
+                else -> item
+            }
+        }
+
+    private fun toggleLayoutInArgs(args: List<KBArgValue>, blockId: String): List<KBArgValue> =
+        args.map { argValue ->
+            when (argValue) {
+                is KBNestedChainArg -> argValue.copy(
+                    chain = argValue.chain.copy(
+                        steps = toggleLayoutInItems(argValue.chain.steps, blockId)
+                    )
+                )
                 else -> argValue
             }
         }

@@ -84,16 +84,17 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         val tag = ke.target?.asDynamic()?.tagName?.toString()?.uppercase() ?: ""
         if (tag == "INPUT" || tag == "TEXTAREA") return@listener
         if (!ke.ctrlKey && !ke.metaKey) return@listener
+        val key = ke.key.lowercase()
         when {
-            ke.key == "z" && !ke.shiftKey -> {
+            key == "z" && !ke.shiftKey -> {
                 ke.preventDefault(); editingCtx.undo()
             }
 
-            ke.key == "z" && ke.shiftKey -> {
+            key == "z" && ke.shiftKey -> {
                 ke.preventDefault(); editingCtx.redo()
             }
 
-            ke.key == "y" -> {
+            key == "y" -> {
                 ke.preventDefault(); editingCtx.redo()
             }
         }

@@ -40,7 +40,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     private var editingSlotIndex: Int? by value(null)
     private var editText: String by value("")
     private var isHovered: Boolean by value(false)
-    private var isVertical: Boolean by value(props.block.pocketLayout == KBPocketLayout.VERTICAL)
 
     private fun startEdit(slotIndex: Int, currentText: String) {
         editingSlotIndex = slotIndex
@@ -70,6 +69,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val block = props.block
         val ctx = props.ctx
         val dndState = ctx.dnd.state
+        val isVertical = block.pocketLayout == KBPocketLayout.VERTICAL
         val doc = KlangDocsRegistry.global.get(block.funcName)
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
         val canDropToSlot = dndState?.onDropToSlot != null
@@ -267,7 +267,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         }
                         onClick { event ->
                             event.stopPropagation()
-                            isVertical = !isVertical
+                            ctx.editing.onToggleLayout(block.id)
                         }
                         onMouseDown { event -> event.stopPropagation() }
                         +if (isVertical) "↔" else "↕"

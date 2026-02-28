@@ -23,13 +23,23 @@ fun KBImportStmt.toCode(): String {
 fun KBChainStmt.toCode(): String? {
     val blocks = steps.filterIsInstance<KBCallBlock>()
     if (blocks.isEmpty()) return null
-    return blocks.joinToString(".") { it.toCode() }
+    val hasVertical = blocks.any { it.pocketLayout == KBPocketLayout.VERTICAL }
+    return if (hasVertical) {
+        blocks.joinToString("\n  .") { it.toCode() }
+    } else {
+        blocks.joinToString(".") { it.toCode() }
+    }
 }
 
 fun KBCallBlock.toCode(): String {
     val filledArgs = args.filter { it !is KBEmptyArg }
-    val argStr = filledArgs.joinToString(", ") { it.toCode() }
-    return "$funcName($argStr)"
+    return if (pocketLayout == KBPocketLayout.VERTICAL && filledArgs.isNotEmpty()) {
+        val argStr = filledArgs.joinToString(",\n  ") { it.toCode() }
+        "$funcName(\n  $argStr\n)"
+    } else {
+        val argStr = filledArgs.joinToString(", ") { it.toCode() }
+        "$funcName($argStr)"
+    }
 }
 
 fun KBArgValue.toCode(): String = when (this) {
