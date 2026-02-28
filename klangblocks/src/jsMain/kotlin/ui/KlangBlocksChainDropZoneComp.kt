@@ -66,10 +66,9 @@ class KlangBlocksChainDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksChain
                 onMouseLeave { isHovered = false }
                 onMouseUp { event ->
                     event.stopPropagation()
-                    dndState?.onDropToChain?.invoke(props.chainId)
+                    dndState.onDropToChain.invoke(props.chainId)
                 }
-            }
-            if (canDrop) {
+
                 icon.tiny.plus {
                     css {
                         color = Color(if (isHovered) "rgba(255,255,255,0.95)" else "rgba(255,255,255,0.4)")

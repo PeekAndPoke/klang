@@ -103,26 +103,24 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                         when (stmt) {
                             is KBChainStmt -> {
-                                var prevWasBlock = false
+                                var isFirstBlock = true
                                 stmt.steps.forEach { item ->
                                     when (item) {
                                         is KBCallBlock -> {
-                                            // Always the same component between consecutive blocks;
-                                            // it switches between connector and drop-zone visuals
-                                            // without changing its layout footprint.
-                                            if (prevWasBlock) {
-                                                KlangBlocksInlineDropZoneComp(
-                                                    chainId = stmt.id,
-                                                    insertBeforeBlockId = item.id,
-                                                    ctx = ctx,
-                                                )
-                                            }
+                                            // Before every block: leading zone (hidden idle) before the first,
+                                            // connector/drop zone between subsequent blocks.
+                                            KlangBlocksInlineDropZoneComp(
+                                                chainId = stmt.id,
+                                                insertBeforeBlockId = item.id,
+                                                ctx = ctx,
+                                                showConnectorWhenIdle = !isFirstBlock,
+                                            )
                                             KlangBlocksBlockComp(
                                                 block = item,
                                                 chain = stmt,
                                                 ctx = ctx,
                                             )
-                                            prevWasBlock = true
+                                            isFirstBlock = false
                                         }
 
                                         is KBNewlineHint -> {
@@ -133,7 +131,6 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                                 }
                                                 +"↩"
                                             }
-                                            prevWasBlock = false
                                         }
                                     }
                                 }

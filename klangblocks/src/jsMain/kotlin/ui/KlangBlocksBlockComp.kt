@@ -177,26 +177,26 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                             }
                         }
                         onMouseDown { event -> event.stopPropagation() }
-                        var prevWasBlock = false
+                        var isFirstBlock = true
                         arg.chain.steps.forEach { nestedItem ->
                             when (nestedItem) {
                                 is KBCallBlock -> {
-                                    if (prevWasBlock) {
-                                        KlangBlocksInlineDropZoneComp(
-                                            chainId = arg.chain.id,
-                                            insertBeforeBlockId = nestedItem.id,
-                                            ctx = ctx,
-                                        )
-                                    }
+                                    KlangBlocksInlineDropZoneComp(
+                                        chainId = arg.chain.id,
+                                        insertBeforeBlockId = nestedItem.id,
+                                        ctx = ctx,
+                                        showConnectorWhenIdle = !isFirstBlock,
+                                    )
                                     KlangBlocksNestedBlockComp(
                                         block = nestedItem,
                                         chain = arg.chain,
                                         ctx = ctx,
                                     )
-                                    prevWasBlock = true
+                                    isFirstBlock = false
                                 }
 
-                                is KBNewlineHint -> prevWasBlock = false
+                                is KBNewlineHint -> { /* newline hint, no connector reset needed */
+                                }
                             }
                         }
                         KlangBlocksChainDropZoneComp(

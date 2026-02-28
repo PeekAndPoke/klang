@@ -25,11 +25,13 @@ fun Tag.KlangBlocksInlineDropZoneComp(
     chainId: String,
     insertBeforeBlockId: String,
     ctx: KlangBlocksCtx,
+    showConnectorWhenIdle: Boolean = true,
 ) = comp(
     KlangBlocksInlineDropZoneComp.Props(
         chainId = chainId,
         insertBeforeBlockId = insertBeforeBlockId,
         ctx = ctx,
+        showConnectorWhenIdle = showConnectorWhenIdle,
     )
 ) {
     KlangBlocksInlineDropZoneComp(it)
@@ -41,6 +43,7 @@ class KlangBlocksInlineDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksInli
         val chainId: String,
         val insertBeforeBlockId: String,
         val ctx: KlangBlocksCtx,
+        val showConnectorWhenIdle: Boolean = true,
     )
 
     private var isHovered: Boolean by value(false)
@@ -62,7 +65,8 @@ class KlangBlocksInlineDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksInli
                 marginRight = (-10).px
                 width = 20.px           // same as 6 + 8 + 6 connector content
                 alignSelf = Align.stretch
-                position = Position.relative  // anchor for the pill overlay
+                position = Position.relative  // anchor for the pill overlay + stacking context
+                zIndex = 1                    // paint over adjacent block edges so both dots are fully visible
                 if (canDrop) cursor = Cursor.copy
             }
             if (canDrop) {
@@ -70,11 +74,9 @@ class KlangBlocksInlineDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksInli
                 onMouseLeave { isHovered = false }
                 onMouseUp { event ->
                     event.stopPropagation()
-                    dndState?.onDropToChainAt?.invoke(props.chainId, props.insertBeforeBlockId)
+                    dndState.onDropToChainAt.invoke(props.chainId, props.insertBeforeBlockId)
                 }
-            }
 
-            if (canDrop) {
                 // ── Drag-active state ────────────────────────────────────────
                 // Pill is absolutely positioned so it can be slightly larger than
                 // the 20 px container without affecting the surrounding layout.
@@ -105,7 +107,7 @@ class KlangBlocksInlineDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksInli
                         }
                     }
                 }
-            } else {
+            } else if (props.showConnectorWhenIdle) {
                 // ── Normal connector ─────────────────────────────────────────
                 div { css { width = 6.px; height = 6.px; borderRadius = 50.pct; backgroundColor = Color("#888"); flexShrink = 0.0 } }
                 div { css { width = 8.px; height = 2.px; backgroundColor = Color("#888"); flexShrink = 0.0 } }
