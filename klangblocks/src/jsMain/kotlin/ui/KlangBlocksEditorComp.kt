@@ -7,6 +7,7 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onMouseMove
 import de.peekandpoke.ultra.html.onMouseUp
+import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
@@ -23,11 +24,15 @@ fun Tag.KlangBlocksEditorComp(
     availableLibraries: List<KlangScriptLibrary>,
     initialCode: String = "",
     onCodeChanged: (String) -> Unit,
+    onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
+    highlights: Stream<HighlightSignal?>,
 ) = comp(
     KlangBlocksEditorComp.Props(
         availableLibraries = availableLibraries,
         initialCode = initialCode,
         onCodeChanged = onCodeChanged,
+        onCodeGenChanged = onCodeGenChanged,
+        highlights = highlights,
     )
 ) {
     KlangBlocksEditorComp(it)
@@ -39,6 +44,8 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         val availableLibraries: List<KlangScriptLibrary>,
         val initialCode: String = "",
         val onCodeChanged: (String) -> Unit,
+        val onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
+        val highlights: Stream<HighlightSignal?>,
     )
 
     // ---- Drag state FSM --------------------------------------------
@@ -78,7 +85,9 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     private val editingCtx = KBProgramEditingCtx(
         initialProgram = parseInitialCode(),
         onChanged = { newProgram ->
-            props.onCodeChanged(newProgram.toCode())
+            val result = newProgram.toCodeGen()
+            props.onCodeChanged(result.code)
+            props.onCodeGenChanged?.invoke(result)
             triggerRedraw()
         },
     )
@@ -125,6 +134,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     init {
         lifecycle {
             onMount {
+                props.onCodeGenChanged?.invoke(editingCtx.program.toCodeGen())
                 document.addEventListener("keydown", keydownListener)
                 document.addEventListener("keyup", keyupListener)
             }
@@ -263,6 +273,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         val dndState = buildDndState()
         val ctx = KlangBlocksCtx(
             editing = editingCtx,
+            highlights = props.highlights,
             dnd = DndCtrl(
                 state = dndState,
                 startPaletteDrag = DndCtrl.PaletteDragStarter(::onPaletteDragStart),

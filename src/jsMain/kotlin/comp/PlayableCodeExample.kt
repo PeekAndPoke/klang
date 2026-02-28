@@ -16,8 +16,8 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
+import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
@@ -53,7 +53,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private val isPlaying get() = playback != null
 
     private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
-    private val highlightBuffer = CodeHighlightBuffer(editorRef)
+    private val highlightBuffer = CodeMirrorHighlightBuffer(editorRef)
 
     private var currentCode: String by value(props.code)
     private var playingCode: String? by value(null)

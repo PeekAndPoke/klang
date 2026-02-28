@@ -18,7 +18,7 @@ import kotlin.js.Date
  * - Clean cancellation: All pending timeouts can be cleared
  * - Stack depth limit: Max [maxHighlightsPerEvent] locations from each event's source location chain
  */
-class CodeHighlightBuffer(
+class CodeMirrorHighlightBuffer(
     private val editorRef: ComponentRef.Tracker<CodeMirrorComp>,
     private val maxRefreshRatePerLocation: Int = 16,
     private val maxSimultaneousHighlights: Int = 100,

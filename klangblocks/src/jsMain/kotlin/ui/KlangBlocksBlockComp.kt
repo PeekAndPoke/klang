@@ -5,8 +5,10 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
+import de.peekandpoke.ultra.streams.ops.filter
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.html.*
@@ -59,6 +61,19 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     private var editingSlotIndex: Int? by value(null)
     private var editText: String by value("")
     private var isHovered: Boolean by value(false)
+    private var isActive: Boolean by value(false)
+    private var highlightTimeoutId: Int = 0
+
+    @Suppress("unused")
+    private val highlightSub by subscribingTo(
+        props.ctx.highlights.filter { it?.blockId == props.block.id }
+    ) { signal ->
+        if (signal != null) {
+            window.clearTimeout(highlightTimeoutId)
+            isActive = true
+            highlightTimeoutId = window.setTimeout({ isActive = false }, signal.durationMs.toInt())
+        }
+    }
 
     private fun startEdit(slotIndex: Int, currentText: String) {
         editingSlotIndex = slotIndex
@@ -109,6 +124,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 fontFamily = "monospace"
                 whiteSpace = WhiteSpace.nowrap
                 userSelect = UserSelect.none
+                if (isActive) put("filter", "brightness(1.5)")
+                put("transition", "filter 0.15s ease")
                 position = Position.relative
                 // Nested blocks are always draggable; top-level only when not in slot-drop mode.
                 if (!variant.isTopLevel || !canDropToSlot) cursor = Cursor.grab

@@ -24,11 +24,13 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
-import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
+import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
+import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
 import io.peekandpoke.klang.comp.withEditorErrorHandling
+import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -44,6 +46,7 @@ import kotlinx.html.div
 import kotlinx.html.p
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
+import kotlin.js.Date
 
 /** View mode for the editor panel. */
 enum class EditorMode { CODE, BLOCKS }
@@ -95,16 +98,19 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
 
-    private val highlightBuffer = CodeHighlightBuffer(editorRef)
+    private val highlightBuffer = CodeMirrorHighlightBuffer(editorRef)
     private var highlightPerEvent by value(highlightBuffer.maxHighlightsPerEvent) {
         highlightBuffer.maxHighlightsPerEvent = it
     }
+
+    private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
 
     private var title: String by value(titleStream()) { titleStream(it) }
 
     private var cps: Double by value(cpsStream()) {
         cpsStream(it)
         highlightBuffer.cancelAll()
+        blocksHighlightBuffer.cancelAll()
         playback?.updateCyclesPerSecond(it)
     }
 
@@ -135,6 +141,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         codeStream(code)
         isCodeModified = false
         highlightBuffer.cancelAll()
+        blocksHighlightBuffer.cancelAll()
 
         when (val s = playback) {
             null -> launch {
@@ -149,6 +156,13 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             playback?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
                                 signal.voices.forEach { voiceEvent ->
                                     highlightBuffer.scheduleHighlight(voiceEvent)
+                                    val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return@forEach
+                                    val now = Date.now()
+                                    val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
+                                    val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
+                                    chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
+                                        blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
+                                    }
                                 }
                             }
 
@@ -182,6 +196,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         playback?.stop()
         playback?.signals?.clear()
         highlightBuffer.cancelAll()
+        blocksHighlightBuffer.cancelAll()
         playback = null
     }
 
@@ -396,9 +411,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             KlangBlocksEditorComp(
                                 availableLibraries = listOf(stdlibLib, strudelLib),
                                 initialCode = code,
-                                onCodeChanged = { newCode ->
-                                    code = newCode
-                                },
+                                onCodeChanged = { newCode -> code = newCode },
+                                onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
+                                highlights = blocksHighlightBuffer.highlights,
                             )
                         }
                     }
