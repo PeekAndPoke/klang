@@ -926,7 +926,7 @@ class KlangScriptParser private constructor(
             match(TokenType.LET) -> parseLetDeclaration()
             match(TokenType.CONST) -> parseConstDeclaration()
             match(TokenType.RETURN) -> parseReturnStatement()
-            else -> ExpressionStatement(parseExpression())
+            else -> parseExpression().let { ExpressionStatement(it, it.location) }
         }
     }
 
