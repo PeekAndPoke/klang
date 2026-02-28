@@ -48,6 +48,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     }
 
     private fun commitEdit(slotIndex: Int) {
+        if (editingSlotIndex != slotIndex) return  // guard: onBlur fires again when input is removed from DOM
         val text = editText.trim()
         val arg: KBArgValue = if (text.isEmpty()) {
             KBEmptyArg("")

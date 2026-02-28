@@ -44,6 +44,7 @@ class KlangBlocksNestedBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksNestedB
     }
 
     private fun commitEdit(nestedSlotIndex: Int) {
+        if (editingSlotIndex != nestedSlotIndex) return  // guard: onBlur fires again when input is removed from DOM
         val text = editText.trim()
         val arg: KBArgValue = if (text.isEmpty()) {
             KBEmptyArg("")
