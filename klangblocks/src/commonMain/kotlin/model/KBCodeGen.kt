@@ -51,7 +51,7 @@ fun KBCallBlock.toCode(): String {
 
 fun KBArgValue.toCode(): String = when (this) {
     is KBEmptyArg -> ""
-    is KBStringArg -> "\"$value\""
+    is KBStringArg -> if ('\n' in value) "`$value`" else "\"$value\""
     is KBNumberArg -> {
         val long = value.toLong()
         if (value == long.toDouble()) long.toString() else value.toString()

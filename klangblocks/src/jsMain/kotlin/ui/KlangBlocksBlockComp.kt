@@ -24,10 +24,9 @@ enum class BlockVariant {
     val slotPadH get() = if (this == TopLevel) 6.px else 4.px
     val slotPadV get() = if (this == TopLevel) 2.px else 1.px
     val textareaPadH get() = if (this == TopLevel) 4.px else 3.px
-    val textareaMinW get() = if (this == TopLevel) 50.px else 40.px
-    val textareaMaxW get() = if (this == TopLevel) 200.px else 160.px
+    val textareaMinW get() = if (this == TopLevel) 100.px else 80.px
     val textareaMinH get() = if (this == TopLevel) 26.px else 22.px
-    val inputMaxW get() = if (this == TopLevel) 140.px else 100.px
+
     val isTopLevel get() = this == TopLevel
 }
 
@@ -151,8 +150,14 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         // Multiline-capable textarea: Enter = commit, Shift+Enter = newline
                         textArea {
                             +editText
+                            rows = editText.lines().size.coerceAtLeast(1).toString()
                             autoFocus = true
-                            onInput { event -> editText = event.asDynamic().target.value as String }
+                            onInput { event ->
+                                editText = event.asDynamic().target.value as String
+                                val el = event.asDynamic().target
+                                el.style.height = "auto"
+                                el.style.height = "${el.scrollHeight}px"
+                            }
                             onBlur { commitEdit(i) }
                             onKeyDown { event ->
                                 when {
@@ -173,8 +178,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                                 fontFamily = "monospace"
                                 padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
                                 minWidth = variant.textareaMinW
-                                maxWidth = variant.textareaMaxW
                                 minHeight = variant.textareaMinH
+                                overflow = Overflow.hidden
                                 outline = Outline.none
                                 resize = Resize.none
                                 put("box-sizing", "border-box")
@@ -203,7 +208,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                                 fontFamily = "monospace"
                                 padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
                                 minWidth = variant.textareaMinW
-                                maxWidth = variant.inputMaxW
                                 outline = Outline.none
                                 put("box-sizing", "border-box")
                             }
@@ -272,11 +276,13 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         )
                     }
                 } else {
+                    val isMultilineString = arg is KBStringArg && '\n' in arg.value
                     span {
                         css {
                             borderRadius = variant.slotRadius
                             padding = Padding(horizontal = variant.slotPadH, vertical = variant.slotPadV)
                             fontSize = variant.editFontSize
+                            if (isMultilineString) whiteSpace = WhiteSpace.preWrap
                             if (canDrop) {
                                 // Highlight as a valid drop target
                                 backgroundColor = Color("rgba(255,255,255,0.25)")
@@ -320,6 +326,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         }
                         when (arg) {
                             null, is KBEmptyArg -> +"[${slot.name}]"
+                            is KBStringArg -> +arg.value
                             else -> +arg.renderShort()
                         }
                     }
