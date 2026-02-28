@@ -25,7 +25,8 @@ class CodeGenResult(
         val offsetInSlot: Int?,
     )
 
-    // Ranges sorted by start offset — built once on first lookup, enables binary search.
+    // Ranges sorted by start offset — used by findByOffset for early-exit scan.
+    // Stored as (start, lastInclusive, id) where lastInclusive = IntRange.last.
     private val sortedRanges: List<Triple<Int, Int, String>> by lazy {
         blockRanges.entries
             .map { (id, range) -> Triple(range.first, range.last, id) }
@@ -63,20 +64,31 @@ class CodeGenResult(
         }
     }
 
-    /** Binary search over sorted ranges — O(log n) per unique (line, col). */
+    /**
+     * Returns the **innermost** (smallest) block range containing [offset].
+     *
+     * Iterates ranges sorted by start offset with an early-exit once `start > offset`.
+     * Among all matching ranges it picks the one with the smallest span — this correctly
+     * resolves nested blocks (e.g. a slot-nested chain inside an outer block) where
+     * multiple ranges overlap and we want the most specific one.
+     *
+     * Fix 1: uses `offset <= lastInclusive` (not `offset < lastInclusive`) so the last
+     * character of every block is correctly matched (fixes the previous off-by-one).
+     */
     private fun findByOffset(offset: Int): String? {
-        var lo = 0
-        var hi = sortedRanges.size - 1
-        while (lo <= hi) {
-            val mid = (lo + hi) ushr 1
-            val (start, end, id) = sortedRanges[mid]
-            when {
-                offset < start -> hi = mid - 1
-                offset >= end -> lo = mid + 1   // IntRange is start until end (exclusive)
-                else -> return id
+        var bestId: String? = null
+        var bestSize = Int.MAX_VALUE
+        for ((start, lastInclusive, id) in sortedRanges) {
+            if (start > offset) break          // sorted — no subsequent range can start before offset
+            if (offset <= lastInclusive) {     // offset is within [start, lastInclusive] inclusive
+                val size = lastInclusive - start
+                if (size < bestSize) {
+                    bestId = id
+                    bestSize = size
+                }
             }
         }
-        return null
+        return bestId
     }
 }
 
@@ -160,7 +172,10 @@ fun KBArgValue.toCode(): String = when (this) {
     is KBNestedChainArg -> chain.toCode() ?: ""  // fallback; appendTo handles tracking
     is KBBinaryArg -> "${left.toCode()} $op ${right.toCode()}"
     is KBUnaryArg -> "$op${operand.toCode()}"
-    is KBArrowFunctionArg -> "(${params.joinToString(", ")}) => $bodySource"
+    is KBArrowFunctionArg -> {
+        val paramsStr = if (params.size == 1) params[0] else "(${params.joinToString(", ")})"
+        "$paramsStr => $bodySource"
+    }
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -185,14 +200,18 @@ private fun KBStmt.appendTo(builder: CodeBuilder) = when (this) {
 
 private fun KBChainStmt.appendTo(builder: CodeBuilder) {
     val blocks = steps.filterIsInstance<KBCallBlock>()  // caller guarantees non-empty
-    val stringHead = steps.firstOrNull() as? KBStringLiteralItem
     val hasVertical = blocks.any { it.pocketLayout == KBPocketLayout.VERTICAL }
 
-    if (stringHead != null) {
-        val escaped = stringHead.value
-            .replace("\\", "\\\\").replace("\"", "\\\"")
-            .replace("\n", "\\n").replace("\r", "\\r")
-        builder.append("\"$escaped\".")
+    when (val head = steps.firstOrNull()) {
+        is KBStringLiteralItem -> {
+            val escaped = head.value
+                .replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r")
+            builder.append("\"$escaped\".")
+        }
+
+        is KBIdentifierItem -> builder.append("${head.name}.")
+        else -> {}
     }
 
     blocks.forEachIndexed { index, block ->

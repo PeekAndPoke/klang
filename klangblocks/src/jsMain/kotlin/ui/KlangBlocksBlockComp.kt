@@ -273,6 +273,23 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                                     isFirstBlock = false
                                 }
 
+                                is KBIdentifierItem -> {
+                                    span {
+                                        css {
+                                            borderRadius = 3.px
+                                            padding = Padding(horizontal = 4.px, vertical = 1.px)
+                                            fontSize = 11.px
+                                            backgroundColor = Color("rgba(0,0,0,0.25)")
+                                            border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.2)"))
+                                            color = Color("rgba(255,255,255,0.85)")
+                                            fontFamily = "monospace"
+                                            whiteSpace = WhiteSpace.nowrap
+                                        }
+                                        +nestedItem.name
+                                    }
+                                    isFirstBlock = false
+                                }
+
                                 is KBCallBlock -> {
                                     KlangBlocksDropZoneComp(
                                         chainId = arg.chain.id,

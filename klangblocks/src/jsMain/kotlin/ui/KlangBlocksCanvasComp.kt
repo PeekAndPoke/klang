@@ -135,6 +135,9 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                                         is KBStringLiteralItem -> { /* literal heads don't appear at top level */
                                         }
+
+                                        is KBIdentifierItem -> { /* identifier heads don't appear at top level */
+                                        }
                                     }
                                 }
 

@@ -36,6 +36,11 @@ class KlangBlocksHighlightBuffer {
      * and remain visible for [durationMs] ms.
      */
     fun scheduleHighlight(location: SourceLocation, startFromNowMs: Double, durationMs: Double) {
+        // Only process locations from the user's main script (source == null).
+        // Library-internal locations have a non-null source and their line/col
+        // coordinates are unrelated to the blocks-generated code.
+        if (location.source != null) return
+
         val hit = codeGenResult?.findAt(location.startLine, location.startColumn) ?: return
 
         // Compute atom end offset within the slot content (single-line atoms only).

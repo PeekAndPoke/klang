@@ -54,6 +54,13 @@ data object KBNewlineHint : KBChainItem()
  */
 data class KBStringLiteralItem(val value: String) : KBChainItem()
 
+/**
+ * A bare identifier at the head of a nested chain, acting as the receiver for the first call.
+ * e.g. `sine.range(0.25, 0.75)` is modelled as `[KBIdentifierItem("sine"), KBCallBlock("range")]`.
+ * Only valid as the **first** item in a [KBChainStmt] that lives inside a [KBNestedChainArg].
+ */
+data class KBIdentifierItem(val name: String) : KBChainItem()
+
 // ---- Statements -------------------------------------------------
 
 /**

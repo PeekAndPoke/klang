@@ -62,9 +62,10 @@ object AstToKBlocks {
         val callLocation: SourceLocation?,
     )
 
-    /** Result of [extractChain]: an optional string literal head plus the call sequence. */
+    /** Result of [extractChain]: an optional head (string or identifier) plus the call sequence. */
     private data class ChainResult(
         val stringHead: String? = null,
+        val identHead: String? = null,
         val links: List<ChainLink>,
     )
 
@@ -87,10 +88,13 @@ object AstToKBlocks {
                 // String literal is the direct receiver: "C4".func(...)
                 access.obj is StringLiteral ->
                     ChainResult(stringHead = (access.obj as StringLiteral).value, links = listOf(thisLink))
+                // Bare identifier is the direct receiver: sine.func(...)
+                access.obj is Identifier ->
+                    ChainResult(identHead = (access.obj as Identifier).name, links = listOf(thisLink))
                 // Deeper chain prefix
                 else -> {
                     val prefix = extractChain(access.obj) ?: return null
-                    ChainResult(stringHead = prefix.stringHead, links = prefix.links + thisLink)
+                    ChainResult(stringHead = prefix.stringHead, identHead = prefix.identHead, links = prefix.links + thisLink)
                 }
             }
         }
@@ -101,13 +105,15 @@ object AstToKBlocks {
     private fun chainResultToSteps(chain: ChainResult): List<KBChainItem> {
         val steps = mutableListOf<KBChainItem>()
         chain.stringHead?.let { steps.add(KBStringLiteralItem(it)) }
+        chain.identHead?.let { steps.add(KBIdentifierItem(it)) }
+        val hasHead = chain.stringHead != null || chain.identHead != null
         chain.links.forEachIndexed { i, link ->
             steps.add(
                 KBCallBlock(
                     id = uuid(),
                     funcName = link.funcName,
                     args = link.args.map { convertExpr(it) },
-                    isHead = chain.stringHead == null && i == 0,
+                    isHead = !hasHead && i == 0,
                     pocketLayout = layoutForLink(link),
                 )
             )
