@@ -398,8 +398,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 initialCode = code,
                                 onCodeChanged = { newCode ->
                                     code = newCode
-                                    codeStream(newCode)
-                                    isCodeModified = false
                                 },
                             )
                         }
