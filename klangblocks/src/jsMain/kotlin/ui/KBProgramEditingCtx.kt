@@ -109,32 +109,24 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Append a palette block to an existing chain. */
+    /** Append a palette block to an existing chain (searches top-level and nested chains). */
     fun commitChainAppend(chainId: String, funcName: String) {
+        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
         update { current ->
-            current.copy(
-                statements = current.statements.map { stmt ->
-                    if (stmt.id != chainId || stmt !is KBChainStmt) stmt
-                    else stmt.copy(
-                        steps = stmt.steps + KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
-                    )
-                }
-            )
+            current.copy(statements = appendBlockToChain(current.statements, chainId, newBlock))
         }
     }
 
-    /** Append a canvas chain's blocks onto another chain, removing the source row. */
+    /** Append a canvas chain's blocks onto another chain, removing the source row.
+     *  The target chain may be top-level or nested inside a slot. */
     fun commitCanvasChainAppend(sourceStmtId: String, sourceChain: KBChainStmt, targetChainId: String) {
         if (sourceStmtId == targetChainId) return
         val sourceBlocks = sourceChain.steps.filterIsInstance<KBCallBlock>().map { it.copy(isHead = false) }
         update { current ->
-            current.copy(
-                statements = current.statements.mapNotNull { stmt ->
-                    when {
-                        stmt.id == sourceStmtId -> null
-                        stmt.id == targetChainId && stmt is KBChainStmt -> stmt.copy(steps = stmt.steps + sourceBlocks)
-                        else -> stmt
-                    }
+            val stripped = current.copy(statements = current.statements.filter { it.id != sourceStmtId })
+            stripped.copy(
+                statements = sourceBlocks.fold(stripped.statements) { stmts, block ->
+                    appendBlockToChain(stmts, targetChainId, block)
                 }
             )
         }
@@ -204,15 +196,12 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Extract a nested block and append it to an existing chain. */
+    /** Extract a nested block and append it to an existing chain (top-level or nested). */
     fun commitNestedBlockDragToChain(draggedBlock: KBCallBlock, targetChainId: String) {
         update { current ->
             val stripped = current.copy(statements = removeBlockFromStmts(current.statements, draggedBlock.id))
             stripped.copy(
-                statements = stripped.statements.map { stmt ->
-                    if (stmt.id != targetChainId || stmt !is KBChainStmt) stmt
-                    else stmt.copy(steps = stmt.steps + draggedBlock.copy(isHead = false))
-                }
+                statements = appendBlockToChain(stripped.statements, targetChainId, draggedBlock.copy(isHead = false))
             )
         }
     }
@@ -337,24 +326,99 @@ class KBProgramEditingCtx(
         }
 
     /** Insert [block] into the chain identified by [chainId], before the block with [insertBeforeBlockId].
-     *  If [insertBeforeBlockId] is null the block is appended at the end. */
+     *  Searches top-level and nested chains.  If [insertBeforeBlockId] is null the block is appended. */
     private fun insertBlockIntoChain(
         stmts: List<KBStmt>,
         chainId: String,
         block: KBCallBlock,
         insertBeforeBlockId: String?,
     ): List<KBStmt> = stmts.map { stmt ->
-        if (stmt.id != chainId || stmt !is KBChainStmt) stmt
-        else {
-            val steps = stmt.steps.toMutableList()
-            val insertAt = if (insertBeforeBlockId == null) {
-                steps.size
-            } else {
-                steps.indexOfFirst { it is KBCallBlock && it.id == insertBeforeBlockId }
-                    .takeIf { it >= 0 } ?: steps.size
+        when {
+            stmt is KBChainStmt && stmt.id == chainId -> {
+                val steps = stmt.steps.toMutableList()
+                steps.add(insertIndexFor(steps, insertBeforeBlockId), block)
+                stmt.copy(steps = steps.fixHeads())
             }
-            steps.add(insertAt, block)
-            stmt.copy(steps = steps.fixHeads())
+
+            stmt is KBChainStmt ->
+                stmt.copy(steps = insertBlockIntoChainInItems(stmt.steps, chainId, block, insertBeforeBlockId))
+
+            else -> stmt
+        }
+    }
+
+    private fun insertBlockIntoChainInItems(
+        items: List<KBChainItem>, chainId: String, block: KBCallBlock, insertBeforeBlockId: String?,
+    ): List<KBChainItem> = items.map { item ->
+        when (item) {
+            is KBCallBlock -> item.copy(args = insertBlockIntoChainInArgs(item.args, chainId, block, insertBeforeBlockId))
+            else -> item
+        }
+    }
+
+    private fun insertBlockIntoChainInArgs(
+        args: List<KBArgValue>, chainId: String, block: KBCallBlock, insertBeforeBlockId: String?,
+    ): List<KBArgValue> = args.map { argValue ->
+        when {
+            argValue is KBNestedChainArg && argValue.chain.id == chainId -> {
+                val steps = argValue.chain.steps.toMutableList()
+                steps.add(insertIndexFor(steps, insertBeforeBlockId), block)
+                argValue.copy(chain = argValue.chain.copy(steps = steps.fixHeads()))
+            }
+
+            argValue is KBNestedChainArg ->
+                argValue.copy(
+                    chain = argValue.chain.copy(
+                        steps = insertBlockIntoChainInItems(argValue.chain.steps, chainId, block, insertBeforeBlockId)
+                    )
+                )
+
+            else -> argValue
+        }
+    }
+
+    private fun insertIndexFor(steps: List<KBChainItem>, insertBeforeBlockId: String?): Int =
+        if (insertBeforeBlockId == null) steps.size
+        else steps.indexOfFirst { it is KBCallBlock && it.id == insertBeforeBlockId }.takeIf { it >= 0 } ?: steps.size
+
+    /** Append [block] to the chain identified by [chainId], searching top-level and nested chains. */
+    private fun appendBlockToChain(stmts: List<KBStmt>, chainId: String, block: KBCallBlock): List<KBStmt> =
+        stmts.map { stmt ->
+            when {
+                stmt is KBChainStmt && stmt.id == chainId ->
+                    stmt.copy(steps = (stmt.steps + block).fixHeads())
+
+                stmt is KBChainStmt ->
+                    stmt.copy(steps = appendBlockToChainInItems(stmt.steps, chainId, block))
+
+                else -> stmt
+            }
+        }
+
+    private fun appendBlockToChainInItems(
+        items: List<KBChainItem>, chainId: String, block: KBCallBlock,
+    ): List<KBChainItem> = items.map { item ->
+        when (item) {
+            is KBCallBlock -> item.copy(args = appendBlockToChainInArgs(item.args, chainId, block))
+            else -> item
+        }
+    }
+
+    private fun appendBlockToChainInArgs(
+        args: List<KBArgValue>, chainId: String, block: KBCallBlock,
+    ): List<KBArgValue> = args.map { argValue ->
+        when {
+            argValue is KBNestedChainArg && argValue.chain.id == chainId ->
+                argValue.copy(chain = argValue.chain.copy(steps = (argValue.chain.steps + block).fixHeads()))
+
+            argValue is KBNestedChainArg ->
+                argValue.copy(
+                    chain = argValue.chain.copy(
+                        steps = appendBlockToChainInItems(argValue.chain.steps, chainId, block)
+                    )
+                )
+
+            else -> argValue
         }
     }
 

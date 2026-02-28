@@ -153,8 +153,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                             put("box-sizing", "border-box")
                         }
                     }
-                } else if (arg is KBNestedChainArg && !canDrop) {
-                    // Render the nested chain as inline mini-blocks
+                } else if (arg is KBNestedChainArg) {
+                    // Always render the nested chain as inline mini-blocks.
+                    // When a drag is active, add inline drop zones and a chain-end drop zone.
+                    val canDropInChain = dndState?.onDropToChainAt != null
                     span {
                         css {
                             display = Display.inlineFlex
@@ -163,6 +165,20 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                             borderRadius = 4.px
                             backgroundColor = Color("rgba(0,0,0,0.2)")
                             padding = Padding(horizontal = 4.px, vertical = 2.px)
+                            // Show a slot-level drop highlight when the whole chain can be replaced
+                            if (canDrop) {
+                                border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
+                                cursor = Cursor.copy
+                            } else {
+                                border = Border(1.px, BorderStyle.solid, Color.transparent)
+                            }
+                        }
+                        if (canDrop) {
+                            // Dropping on the outer container replaces the whole nested chain
+                            onMouseUp { event ->
+                                event.stopPropagation()
+                                dndState?.onDropToSlot?.invoke(props.chain.id, block.id, i)
+                            }
                         }
                         onMouseDown { event -> event.stopPropagation() }
                         var prevWasBlock = false
@@ -170,13 +186,21 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                             when (nestedItem) {
                                 is KBCallBlock -> {
                                     if (prevWasBlock) {
-                                        span {
-                                            css {
-                                                color = Color("rgba(255,255,255,0.4)")
-                                                fontSize = 10.px
-                                                padding = Padding(horizontal = 1.px)
+                                        if (canDropInChain) {
+                                            KlangBlocksInlineDropZoneComp(
+                                                chainId = arg.chain.id,
+                                                insertBeforeBlockId = nestedItem.id,
+                                                ctx = ctx,
+                                            )
+                                        } else {
+                                            span {
+                                                css {
+                                                    color = Color("rgba(255,255,255,0.4)")
+                                                    fontSize = 10.px
+                                                    padding = Padding(horizontal = 1.px)
+                                                }
+                                                +"•"
                                             }
-                                            +"•"
                                         }
                                     }
                                     KlangBlocksNestedBlockComp(
@@ -189,6 +213,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                                 is KBNewlineHint -> prevWasBlock = false
                             }
                         }
+                        KlangBlocksChainDropZoneComp(
+                            chainId = arg.chain.id,
+                            ctx = ctx,
+                        )
                     }
                 } else {
                     span {
