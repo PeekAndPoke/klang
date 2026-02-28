@@ -155,13 +155,12 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                     }
                 } else if (arg is KBNestedChainArg) {
                     // Always render the nested chain as inline mini-blocks.
-                    // When a drag is active, add inline drop zones and a chain-end drop zone.
-                    val canDropInChain = dndState?.onDropToChainAt != null
-                    span {
+                    // KlangBlocksInlineDropZoneComp handles both the normal connector and drop-zone state.
+                    div {
                         css {
                             display = Display.inlineFlex
                             alignItems = Align.center
-                            put("gap", "2px")
+                            put("gap", "8px")
                             borderRadius = 4.px
                             backgroundColor = Color("rgba(0,0,0,0.2)")
                             padding = Padding(horizontal = 4.px, vertical = 2.px)
@@ -186,22 +185,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                             when (nestedItem) {
                                 is KBCallBlock -> {
                                     if (prevWasBlock) {
-                                        if (canDropInChain) {
-                                            KlangBlocksInlineDropZoneComp(
-                                                chainId = arg.chain.id,
-                                                insertBeforeBlockId = nestedItem.id,
-                                                ctx = ctx,
-                                            )
-                                        } else {
-                                            span {
-                                                css {
-                                                    color = Color("rgba(255,255,255,0.4)")
-                                                    fontSize = 10.px
-                                                    padding = Padding(horizontal = 1.px)
-                                                }
-                                                +"•"
-                                            }
-                                        }
+                                        KlangBlocksInlineDropZoneComp(
+                                            chainId = arg.chain.id,
+                                            insertBeforeBlockId = nestedItem.id,
+                                            ctx = ctx,
+                                        )
                                     }
                                     KlangBlocksNestedBlockComp(
                                         block = nestedItem,

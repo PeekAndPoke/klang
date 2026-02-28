@@ -67,11 +67,13 @@ class KlangBlocksNestedBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksNestedB
         val ctx = props.ctx
         val doc = KlangDocsRegistry.global.get(block.funcName)
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
+        val isVertical = block.pocketLayout == KBPocketLayout.VERTICAL
 
         div("kb-nested-block") {
             css {
                 display = Display.inlineFlex
-                alignItems = Align.center
+                flexDirection = if (isVertical) FlexDirection.column else FlexDirection.row
+                alignItems = if (isVertical) Align.flexStart else Align.center
                 put("gap", "3px")
                 padding = Padding(horizontal = 7.px, vertical = 3.px)
                 borderRadius = 6.px
@@ -166,28 +168,69 @@ class KlangBlocksNestedBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksNestedB
                 }
             }
 
-            // Remove × — appears on hover
+            // Layout toggle + Remove (×) — absolutely positioned top-right, same style as top-level blocks
             if (isHovered) {
                 span {
                     css {
-                        marginLeft = 3.px
-                        fontSize = 10.px
-                        lineHeight = LineHeight("1")
-                        color = Color("rgba(255,255,255,0.55)")
-                        cursor = Cursor.pointer
-                        borderRadius = 3.px
-                        padding = Padding(horizontal = 2.px, vertical = 1.px)
-                        hover {
-                            backgroundColor = Color("rgba(255,255,255,0.18)")
-                            color = Color.white
+                        display = Display.inlineFlex
+                        alignItems = Align.center
+                        put("gap", "2px")
+                        position = Position.absolute
+                        top = (-7).px
+                        right = 0.px
+                        backgroundColor = Color(categoryColour(doc?.category))
+                        borderTopRightRadius = 8.px
+                        borderBottomLeftRadius = 6.px
+                        padding = Padding(2.px, 4.px)
+                        after {
+                            content = QuotedString("")
+                            position = Position.absolute
+                            top = 100.pct
+                            left = 0.px
+                            right = 0.px
+                            height = 10.px
                         }
                     }
-                    onClick { event ->
-                        event.stopPropagation()
-                        ctx.editing.onRemoveBlock(props.block.id)
+                    span {
+                        css {
+                            fontSize = 11.px
+                            lineHeight = LineHeight("1")
+                            color = Color("rgba(255,255,255,0.55)")
+                            cursor = Cursor.pointer
+                            borderRadius = 3.px
+                            padding = Padding(horizontal = 3.px, vertical = 1.px)
+                            hover {
+                                backgroundColor = Color("rgba(255,255,255,0.18)")
+                                color = Color.white
+                            }
+                        }
+                        onClick { event ->
+                            event.stopPropagation()
+                            ctx.editing.onToggleLayout(block.id)
+                        }
+                        onMouseDown { event -> event.stopPropagation() }
+                        +if (isVertical) "↔" else "↕"
                     }
-                    onMouseDown { event -> event.stopPropagation() }
-                    +"×"
+                    span {
+                        css {
+                            fontSize = 11.px
+                            lineHeight = LineHeight("1")
+                            color = Color("rgba(255,255,255,0.55)")
+                            cursor = Cursor.pointer
+                            borderRadius = 3.px
+                            padding = Padding(horizontal = 3.px, vertical = 1.px)
+                            hover {
+                                backgroundColor = Color("rgba(255,255,255,0.18)")
+                                color = Color.white
+                            }
+                        }
+                        onClick { event ->
+                            event.stopPropagation()
+                            ctx.editing.onRemoveBlock(block.id)
+                        }
+                        onMouseDown { event -> event.stopPropagation() }
+                        +"×"
+                    }
                 }
             }
         }
