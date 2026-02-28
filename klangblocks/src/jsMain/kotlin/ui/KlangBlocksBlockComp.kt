@@ -207,6 +207,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                                 }
                             } else {
                                 backgroundColor = Color("rgba(0,0,0,0.2)")
+                                border = Border(1.px, BorderStyle.solid, Color.transparent)
                                 cursor = Cursor.text
                                 if (arg == null || arg is KBEmptyArg) opacity = 0.6
                                 hover {
@@ -263,17 +264,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                             borderTopLeftRadius = 8.px
                             borderBottomLeftRadius = 6.px
                             padding = Padding(2.px, 4.px)
-                            // Transparent bridge fills the gap between the icons and
-                            // the block top so the mouse never leaves the element
-                            // while moving between block and icons.
-                            after {
-                                content = QuotedString("")
-                                position = Position.absolute
-                                top = 100.pct
-                                left = 0.px
-                                right = 0.px
-                                height = 10.px
-                            }
                         }
                     }
                     // Layout toggle button

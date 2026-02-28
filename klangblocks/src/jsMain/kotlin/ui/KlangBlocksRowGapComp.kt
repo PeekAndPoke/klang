@@ -41,7 +41,7 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
         // Fixed-height outer container — never changes size
         div {
             css {
-                height = 6.px
+                height = 10.px
                 position = Position.relative
             }
             onMouseEnter { isHovered = true }

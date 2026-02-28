@@ -72,7 +72,6 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             flexDirection = FlexDirection.row
                             alignItems = Align.center
                             put("gap", "8px")
-                            marginBottom = 4.px
                         }
 
                         // Row number — doubles as a drag handle for KBChainStmt rows
