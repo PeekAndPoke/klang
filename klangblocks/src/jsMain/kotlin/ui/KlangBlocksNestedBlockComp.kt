@@ -17,10 +17,12 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangBlocksNestedBlockComp(
     block: KBCallBlock,
+    chain: KBChainStmt,
     ctx: KlangBlocksCtx,
 ) = comp(
     KlangBlocksNestedBlockComp.Props(
         block = block,
+        chain = chain,
         ctx = ctx,
     )
 ) {
@@ -31,6 +33,7 @@ class KlangBlocksNestedBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksNestedB
 
     data class Props(
         val block: KBCallBlock,
+        val chain: KBChainStmt,
         val ctx: KlangBlocksCtx,
     )
 
@@ -91,7 +94,14 @@ class KlangBlocksNestedBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksNestedB
             onMouseDown { event ->
                 event.preventDefault()
                 event.stopPropagation()
-                ctx.dnd.startNestedBlockDrag(block, event.clientX.toDouble(), event.clientY.toDouble())
+                ctx.dnd.startBlockDrag(
+                    sourceChainId = props.chain.id,
+                    sourceChain = props.chain,
+                    block = block,
+                    ctrlHeld = event.ctrlKey,
+                    x = event.clientX.toDouble(),
+                    y = event.clientY.toDouble(),
+                )
             }
 
             span {

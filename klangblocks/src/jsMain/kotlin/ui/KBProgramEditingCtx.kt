@@ -100,15 +100,6 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Extract a block from wherever it lives and insert it at a specific position in a chain. */
-    fun commitInsertBlockInChain(draggedBlock: KBCallBlock, chainId: String, insertBeforeBlockId: String?) {
-        val insertBlock = draggedBlock.copy(isHead = false)
-        update { current ->
-            val stripped = current.copy(statements = removeBlockFromStmts(current.statements, draggedBlock.id))
-            stripped.copy(statements = insertBlockIntoChain(stripped.statements, chainId, insertBlock, insertBeforeBlockId))
-        }
-    }
-
     /** Append a palette block to an existing chain (searches top-level and nested chains). */
     fun commitChainAppend(chainId: String, funcName: String) {
         val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
@@ -182,38 +173,6 @@ class KBProgramEditingCtx(
     fun onRemoveBlock(blockId: String) {
         update { current ->
             current.copy(statements = removeBlockFromStmts(current.statements, blockId))
-        }
-    }
-
-    /** Extract a nested block to a new top-level chain at the given row index. */
-    fun commitNestedBlockDragToPosition(draggedBlock: KBCallBlock, index: Int) {
-        val newChain = KBChainStmt(id = uuid(), steps = listOf(draggedBlock.copy(isHead = true)))
-        update { current ->
-            val stripped = current.copy(statements = removeBlockFromStmts(current.statements, draggedBlock.id))
-            val stmts = stripped.statements.toMutableList()
-            stmts.add(index.coerceIn(0, stmts.size), newChain)
-            stripped.copy(statements = stmts)
-        }
-    }
-
-    /** Extract a nested block and append it to an existing chain (top-level or nested). */
-    fun commitNestedBlockDragToChain(draggedBlock: KBCallBlock, targetChainId: String) {
-        update { current ->
-            val stripped = current.copy(statements = removeBlockFromStmts(current.statements, draggedBlock.id))
-            stripped.copy(
-                statements = appendBlockToChain(stripped.statements, targetChainId, draggedBlock.copy(isHead = false))
-            )
-        }
-    }
-
-    /** Extract a nested block and place it into a slot of another block. */
-    fun commitNestedBlockDragToSlot(draggedBlock: KBCallBlock, targetBlockId: String, targetSlotIndex: Int) {
-        val newChain = KBChainStmt(id = uuid(), steps = listOf(draggedBlock.copy(isHead = true)))
-        update { current ->
-            val stripped = current.copy(statements = removeBlockFromStmts(current.statements, draggedBlock.id))
-            stripped.copy(
-                statements = updateBlockInStmts(stripped.statements, targetBlockId, targetSlotIndex, KBNestedChainArg(newChain))
-            )
         }
     }
 

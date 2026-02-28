@@ -59,14 +59,8 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             val ghostY: Double,
         ) : DragState()
 
-        data class DraggingNestedBlock(
-            val block: KBCallBlock,
-            val ghostX: Double,
-            val ghostY: Double,
-        ) : DragState()
-
         /**
-         * Dragging a block from a canvas chain.
+         * Dragging a block from any chain (top-level or nested).
          * [ctrlHeld] = false → single block; true → block + all following (tail).
          */
         data class DraggingBlock(
@@ -188,28 +182,6 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             onDropToChainAt = null,
         )
 
-        is DragState.DraggingNestedBlock -> DndState(
-            ghostX = ds.ghostX,
-            ghostY = ds.ghostY,
-            ghostLabel = ds.block.funcName,
-            onDropToPosition = { index ->
-                editingCtx.commitNestedBlockDragToPosition(ds.block, index)
-                dragState = DragState.None
-            },
-            onDropToChain = { chainId ->
-                editingCtx.commitNestedBlockDragToChain(ds.block, chainId)
-                dragState = DragState.None
-            },
-            onDropToSlot = { _, blockId, slotIdx ->
-                editingCtx.commitNestedBlockDragToSlot(ds.block, blockId, slotIdx)
-                dragState = DragState.None
-            },
-            onDropToChainAt = { chainId, insertBeforeBlockId ->
-                editingCtx.commitInsertBlockInChain(ds.block, chainId, insertBeforeBlockId)
-                dragState = DragState.None
-            },
-        )
-
         is DragState.DraggingBlock -> {
             // Compute the list of blocks to drag: single block or tail (block + all following)
             val allBlocks = ds.sourceChain.steps.filterIsInstance<KBCallBlock>()
@@ -264,10 +236,6 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         dragState = DragState.DraggingFromCanvas(stmtId, chain, x, y)
     }
 
-    private fun onNestedBlockDragStart(block: KBCallBlock, x: Double, y: Double) {
-        dragState = DragState.DraggingNestedBlock(block, x, y)
-    }
-
     private fun onBlockDragStart(
         sourceChainId: String, sourceChain: KBChainStmt,
         block: KBCallBlock, ctrlHeld: Boolean, x: Double, y: Double,
@@ -279,7 +247,6 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         dragState = when (val current = dragState) {
             is DragState.DraggingFromPalette -> current.copy(ghostX = x, ghostY = y)
             is DragState.DraggingFromCanvas -> current.copy(ghostX = x, ghostY = y)
-            is DragState.DraggingNestedBlock -> current.copy(ghostX = x, ghostY = y)
             is DragState.DraggingBlock -> current.copy(ghostX = x, ghostY = y)
             else -> return
         }
@@ -300,7 +267,6 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 state = dndState,
                 startPaletteDrag = DndCtrl.PaletteDragStarter(::onPaletteDragStart),
                 startCanvasDrag = DndCtrl.CanvasDragStarter(::onCanvasDragStart),
-                startNestedBlockDrag = DndCtrl.NestedBlockDragStarter(::onNestedBlockDragStart),
                 startBlockDrag = DndCtrl.BlockDragStarter(::onBlockDragStart),
             ),
         )

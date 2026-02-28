@@ -190,6 +190,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                                     }
                                     KlangBlocksNestedBlockComp(
                                         block = nestedItem,
+                                        chain = arg.chain,
                                         ctx = ctx,
                                     )
                                     prevWasBlock = true

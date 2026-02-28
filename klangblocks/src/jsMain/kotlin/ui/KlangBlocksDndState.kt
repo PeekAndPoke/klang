@@ -7,7 +7,6 @@ data class DndCtrl(
     val state: DndState?,
     val startPaletteDrag: PaletteDragStarter,
     val startCanvasDrag: CanvasDragStarter,
-    val startNestedBlockDrag: NestedBlockDragStarter,
     val startBlockDrag: BlockDragStarter,
 ) {
     /** SAM interface for starting a palette drag. */
@@ -20,12 +19,7 @@ data class DndCtrl(
         operator fun invoke(stmtId: String, chain: KBChainStmt, x: Double, y: Double)
     }
 
-    /** SAM interface for starting a nested block drag. */
-    fun interface NestedBlockDragStarter {
-        operator fun invoke(block: KBCallBlock, x: Double, y: Double)
-    }
-
-    /** SAM interface for starting a block drag, allowing named arguments at the call site. */
+    /** SAM interface for starting a block drag (top-level or nested), allowing named arguments at the call site. */
     fun interface BlockDragStarter {
         operator fun invoke(
             sourceChainId: String,
