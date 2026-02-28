@@ -43,3 +43,11 @@ sealed interface KBSlotKind {
      */
     data class NamedObject(val typeName: String) : KBSlotKind
 }
+
+/** True when this kind can hold a plain string value (directly or as a union member). */
+val KBSlotKind.isStringish: Boolean
+    get() = when (this) {
+        KBSlotKind.Str -> true
+        is KBSlotKind.Union -> members.any { it is KBSlotKind.Str }
+        else -> false
+    }

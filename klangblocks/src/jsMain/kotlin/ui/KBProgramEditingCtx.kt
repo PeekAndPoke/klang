@@ -69,25 +69,12 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Drop a palette block directly into a slot (creates a single-block nested chain). */
+    /** Drop a palette block directly into a slot (creates a single-block nested chain, preserving any existing string). */
     fun commitPaletteDropToSlot(funcName: String, targetStmtId: String, blockId: String, slotIndex: Int) {
-        val newChain = KBChainStmt(id = uuid(), steps = listOf(KBCallBlock(id = uuid(), funcName = funcName, isHead = true)))
+        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = true)
         update { current ->
             current.copy(
-                statements = current.statements.map { stmt ->
-                    if (stmt.id != targetStmtId || stmt !is KBChainStmt) stmt
-                    else stmt.copy(
-                        steps = stmt.steps.map { item ->
-                            if (item !is KBCallBlock || item.id != blockId) item
-                            else {
-                                val newArgs = item.args.toMutableList()
-                                while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
-                                newArgs[slotIndex] = KBNestedChainArg(newChain)
-                                item.copy(args = newArgs.toList())
-                            }
-                        }
-                    )
-                }
+                statements = updateSlotDropInStmts(current.statements, blockId, slotIndex, listOf(newBlock))
             )
         }
     }
@@ -176,6 +163,16 @@ class KBProgramEditingCtx(
         }
     }
 
+    /**
+     * Update the string literal head of the chain identified by [chainId].
+     * If [newValue] is empty, the literal item is removed and the first call block becomes the head.
+     */
+    fun onStringLiteralItemChanged(chainId: String, newValue: String) {
+        update { current ->
+            current.copy(statements = updateStringLiteralItemInStmts(current.statements, chainId, newValue))
+        }
+    }
+
     /** Toggle the pocket layout of a specific block between HORIZONTAL and VERTICAL. */
     fun onToggleLayout(blockId: String) {
         update { current ->
@@ -242,15 +239,14 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Remove [blocks] from wherever they live and place them as a nested chain in a slot. */
+    /** Remove [blocks] from wherever they live and place them as a nested chain in a slot, preserving any existing string. */
     fun commitMoveBlocksToSlot(blocks: List<KBCallBlock>, targetStmtId: String, blockId: String, slotIndex: Int) {
-        val newChain = KBChainStmt(
-            id = uuid(),
-            steps = blocks.mapIndexed { i, b -> b.copy(isHead = i == 0) },
-        )
         update { current ->
+            val existingArg = findArgInStmts(current.statements, blockId, slotIndex)
             var stmts = current.statements
             for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
+            val movedBlocks = blocks.mapIndexed { i, b -> b.copy(isHead = i == 0) }
+            val newChain = buildSlotDropChain(existingArg, movedBlocks)
             current.copy(
                 statements = updateBlockInStmts(stmts, blockId, slotIndex, KBNestedChainArg(newChain))
             )
@@ -335,8 +331,11 @@ class KBProgramEditingCtx(
             when (argValue) {
                 is KBNestedChainArg -> {
                     val newSteps = removeBlockFromItems(argValue.chain.steps, blockId).fixHeads()
-                    if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) KBEmptyArg("")
-                    else argValue.copy(chain = argValue.chain.copy(steps = newSteps))
+                    if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) {
+                        // No call blocks remain — restore as plain string if there was a literal head
+                        val literalHead = newSteps.filterIsInstance<KBStringLiteralItem>().firstOrNull()
+                        if (literalHead != null) KBStringArg(literalHead.value) else KBEmptyArg("")
+                    } else argValue.copy(chain = argValue.chain.copy(steps = newSteps))
                 }
 
                 else -> argValue
@@ -438,6 +437,127 @@ class KBProgramEditingCtx(
 
             else -> argValue
         }
+    }
+
+    // ---- Slot-drop helpers -------------------------------------------------
+
+    /**
+     * Builds a [KBChainStmt] for dropping [newBlocks] into a slot.
+     * If [existingArg] is a non-empty [KBStringArg], prepends a [KBStringLiteralItem] so the
+     * string is preserved as the chain receiver (e.g. `"C4".transpose(1)`).
+     */
+    private fun buildSlotDropChain(existingArg: KBArgValue?, newBlocks: List<KBCallBlock>): KBChainStmt {
+        val literalHead = (existingArg as? KBStringArg)?.takeIf { it.value.isNotEmpty() }
+            ?.let { KBStringLiteralItem(it.value) }
+        val steps: List<KBChainItem> = listOfNotNull(literalHead) +
+                newBlocks.mapIndexed { i, b -> b.copy(isHead = literalHead == null && i == 0) }
+        return KBChainStmt(id = uuid(), steps = steps)
+    }
+
+    /** Recursively find and update a slot drop target by [blockId], preserving any existing string. */
+    private fun updateSlotDropInStmts(
+        stmts: List<KBStmt>, blockId: String, slotIndex: Int, newBlocks: List<KBCallBlock>,
+    ): List<KBStmt> = stmts.map { stmt ->
+        when (stmt) {
+            is KBChainStmt -> stmt.copy(steps = updateSlotDropInItems(stmt.steps, blockId, slotIndex, newBlocks))
+            else -> stmt
+        }
+    }
+
+    private fun updateSlotDropInItems(
+        items: List<KBChainItem>, blockId: String, slotIndex: Int, newBlocks: List<KBCallBlock>,
+    ): List<KBChainItem> = items.map { item ->
+        when {
+            item is KBCallBlock && item.id == blockId -> {
+                val newChain = buildSlotDropChain(item.args.getOrNull(slotIndex), newBlocks)
+                val newArgs = item.args.toMutableList()
+                while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
+                newArgs[slotIndex] = KBNestedChainArg(newChain)
+                item.copy(args = newArgs.toList())
+            }
+
+            item is KBCallBlock -> item.copy(args = updateSlotDropInArgs(item.args, blockId, slotIndex, newBlocks))
+            else -> item
+        }
+    }
+
+    private fun updateSlotDropInArgs(
+        args: List<KBArgValue>, blockId: String, slotIndex: Int, newBlocks: List<KBCallBlock>,
+    ): List<KBArgValue> = args.map { arg ->
+        when (arg) {
+            is KBNestedChainArg -> arg.copy(
+                chain = arg.chain.copy(steps = updateSlotDropInItems(arg.chain.steps, blockId, slotIndex, newBlocks))
+            )
+
+            else -> arg
+        }
+    }
+
+    /** Lookup current arg at (blockId, slotIndex) in the tree, used before a slot-replace. */
+    private fun findArgInStmts(stmts: List<KBStmt>, blockId: String, slotIndex: Int): KBArgValue? {
+        for (stmt in stmts) {
+            if (stmt is KBChainStmt) findArgInItems(stmt.steps, blockId, slotIndex)?.let { return it }
+        }
+        return null
+    }
+
+    private fun findArgInItems(items: List<KBChainItem>, blockId: String, slotIndex: Int): KBArgValue? {
+        for (item in items) {
+            if (item is KBCallBlock) {
+                if (item.id == blockId) return item.args.getOrNull(slotIndex)
+                findArgInArgs(item.args, blockId, slotIndex)?.let { return it }
+            }
+        }
+        return null
+    }
+
+    private fun findArgInArgs(args: List<KBArgValue>, blockId: String, slotIndex: Int): KBArgValue? {
+        for (arg in args) {
+            if (arg is KBNestedChainArg) findArgInItems(arg.chain.steps, blockId, slotIndex)?.let { return it }
+        }
+        return null
+    }
+
+    // ---- String literal item helpers ----------------------------------------
+
+    private fun updateStringLiteralItemInStmts(stmts: List<KBStmt>, chainId: String, newValue: String): List<KBStmt> =
+        stmts.map { stmt ->
+            when (stmt) {
+                is KBChainStmt -> if (stmt.id == chainId)
+                    stmt.copy(steps = applyStringLiteralChange(stmt.steps, newValue))
+                else
+                    stmt.copy(steps = updateStringLiteralItemInItems(stmt.steps, chainId, newValue))
+
+                else -> stmt
+            }
+        }
+
+    private fun updateStringLiteralItemInItems(items: List<KBChainItem>, chainId: String, newValue: String): List<KBChainItem> =
+        items.map { item ->
+            when (item) {
+                is KBCallBlock -> item.copy(args = updateStringLiteralItemInArgs(item.args, chainId, newValue))
+                else -> item
+            }
+        }
+
+    private fun updateStringLiteralItemInArgs(args: List<KBArgValue>, chainId: String, newValue: String): List<KBArgValue> =
+        args.map { arg ->
+            when {
+                arg is KBNestedChainArg && arg.chain.id == chainId ->
+                    arg.copy(chain = arg.chain.copy(steps = applyStringLiteralChange(arg.chain.steps, newValue)))
+
+                arg is KBNestedChainArg ->
+                    arg.copy(chain = arg.chain.copy(steps = updateStringLiteralItemInItems(arg.chain.steps, chainId, newValue)))
+
+                else -> arg
+            }
+        }
+
+    /** Apply a string literal value change: update or remove the leading [KBStringLiteralItem]. */
+    private fun applyStringLiteralChange(steps: List<KBChainItem>, newValue: String): List<KBChainItem> {
+        if (steps.firstOrNull() !is KBStringLiteralItem) return steps
+        return if (newValue.isEmpty()) steps.drop(1).fixHeads()
+        else listOf(KBStringLiteralItem(newValue)) + steps.drop(1)
     }
 
     /** Ensure the first [KBCallBlock] in a step list has isHead=true and all others isHead=false. */

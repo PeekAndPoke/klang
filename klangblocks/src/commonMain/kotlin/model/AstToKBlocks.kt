@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.blocks.model
 
+import io.peekandpoke.klang.blocks.model.AstToKBlocks.extractChain
 import io.peekandpoke.klang.script.ast.*
 import kotlin.random.Random
 
@@ -50,16 +51,7 @@ object AstToKBlocks {
 
     private fun convertExprStmt(expr: Expression): KBChainStmt? {
         val chain = extractChain(expr) ?: return null
-        val steps = chain.mapIndexed { i, link ->
-            KBCallBlock(
-                id = uuid(),
-                funcName = link.funcName,
-                args = link.args.map { convertExpr(it) },
-                isHead = i == 0,
-                pocketLayout = layoutForLink(link),
-            )
-        }
-        return KBChainStmt(id = uuid(), steps = steps)
+        return KBChainStmt(id = uuid(), steps = chainResultToSteps(chain))
     }
 
     // ---- Chain extraction -------------------------------------------
@@ -70,24 +62,57 @@ object AstToKBlocks {
         val callLocation: SourceLocation?,
     )
 
+    /** Result of [extractChain]: an optional string literal head plus the call sequence. */
+    private data class ChainResult(
+        val stringHead: String? = null,
+        val links: List<ChainLink>,
+    )
+
     /**
-     * Recursively unwraps a left-recursive chain of calls:
-     *   sound("bd").gain(0.5)  →  [ChainLink("sound", ["bd"], loc), ChainLink("gain", [0.5], loc)]
+     * Recursively unwraps a left-recursive chain of calls, including an optional string
+     * literal receiver at the head:
+     *   sound("bd").gain(0.5)    →  ChainResult(null, [sound, gain])
+     *   "C4".transpose(1).slow(2) →  ChainResult("C4", [transpose, slow])
      *
-     * Returns null for any expression that is not a plain call chain
-     * (e.g. arbitrary member access on non-call, object/array literals, etc.).
+     * Returns null for any expression that is not a plain (possibly string-headed) call chain.
      */
-    private fun extractChain(expr: Expression): List<ChainLink>? = when {
+    private fun extractChain(expr: Expression): ChainResult? = when {
         expr is CallExpression && expr.callee is Identifier ->
-            listOf(ChainLink((expr.callee as Identifier).name, expr.arguments, expr.location))
+            ChainResult(links = listOf(ChainLink((expr.callee as Identifier).name, expr.arguments, expr.location)))
 
         expr is CallExpression && expr.callee is MemberAccess -> {
             val access = expr.callee as MemberAccess
-            val prefix = extractChain(access.obj) ?: return null
-            prefix + ChainLink(access.property, expr.arguments, expr.location)
+            val thisLink = ChainLink(access.property, expr.arguments, expr.location)
+            when {
+                // String literal is the direct receiver: "C4".func(...)
+                access.obj is StringLiteral ->
+                    ChainResult(stringHead = (access.obj as StringLiteral).value, links = listOf(thisLink))
+                // Deeper chain prefix
+                else -> {
+                    val prefix = extractChain(access.obj) ?: return null
+                    ChainResult(stringHead = prefix.stringHead, links = prefix.links + thisLink)
+                }
+            }
         }
 
         else -> null
+    }
+
+    private fun chainResultToSteps(chain: ChainResult): List<KBChainItem> {
+        val steps = mutableListOf<KBChainItem>()
+        chain.stringHead?.let { steps.add(KBStringLiteralItem(it)) }
+        chain.links.forEachIndexed { i, link ->
+            steps.add(
+                KBCallBlock(
+                    id = uuid(),
+                    funcName = link.funcName,
+                    args = link.args.map { convertExpr(it) },
+                    isHead = chain.stringHead == null && i == 0,
+                    pocketLayout = layoutForLink(link),
+                )
+            )
+        }
+        return steps
     }
 
     private fun layoutForLink(link: ChainLink): KBPocketLayout {
@@ -125,20 +150,11 @@ object AstToKBlocks {
             bodySource = expr.body.toSourceString(),
         )
 
-        // Nested call chain → KBNestedChainArg
+        // Nested call chain (possibly string-headed) → KBNestedChainArg
         is CallExpression, is MemberAccess -> {
             val chain = extractChain(expr)
             if (chain != null) {
-                val steps = chain.mapIndexed { i, link ->
-                    KBCallBlock(
-                        id = uuid(),
-                        funcName = link.funcName,
-                        args = link.args.map { convertExpr(it) },
-                        isHead = i == 0,
-                        pocketLayout = layoutForLink(link),
-                    )
-                }
-                KBNestedChainArg(KBChainStmt(id = uuid(), steps = steps))
+                KBNestedChainArg(KBChainStmt(id = uuid(), steps = chainResultToSteps(chain)))
             } else {
                 KBStringArg(expr.toSourceString())
             }

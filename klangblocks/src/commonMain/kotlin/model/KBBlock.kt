@@ -47,6 +47,13 @@ data class KBCallBlock(
  */
 data object KBNewlineHint : KBChainItem()
 
+/**
+ * A string literal at the head of a nested chain, acting as the receiver for the first call.
+ * e.g. `"C4".transpose(1)` is modelled as `[KBStringLiteralItem("C4"), KBCallBlock("transpose")]`.
+ * Only valid as the **first** item in a [KBChainStmt] that lives inside a [KBNestedChainArg].
+ */
+data class KBStringLiteralItem(val value: String) : KBChainItem()
+
 // ---- Statements -------------------------------------------------
 
 /**

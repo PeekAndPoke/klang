@@ -109,7 +109,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                         is KBCallBlock -> {
                                             // Before every block: leading zone (hidden idle) before the first,
                                             // connector/drop zone between subsequent blocks.
-                                            KlangBlocksInlineDropZoneComp(
+                                            KlangBlocksDropZoneComp(
                                                 chainId = stmt.id,
                                                 insertBeforeBlockId = item.id,
                                                 ctx = ctx,
@@ -132,11 +132,15 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                                 +"↩"
                                             }
                                         }
+
+                                        is KBStringLiteralItem -> { /* literal heads don't appear at top level */
+                                        }
                                     }
                                 }
 
-                                KlangBlocksChainDropZoneComp(
+                                KlangBlocksDropZoneComp(
                                     chainId = stmt.id,
+                                    insertBeforeBlockId = null,
                                     ctx = ctx,
                                 )
                             }

@@ -23,12 +23,19 @@ fun KBImportStmt.toCode(): String {
 fun KBChainStmt.toCode(): String? {
     val blocks = steps.filterIsInstance<KBCallBlock>()
     if (blocks.isEmpty()) return null
+    val stringHead = steps.firstOrNull() as? KBStringLiteralItem
     val hasVertical = blocks.any { it.pocketLayout == KBPocketLayout.VERTICAL }
-    return if (hasVertical) {
+    val callChain = if (hasVertical) {
         blocks.joinToString("\n  .") { it.toCode() }
     } else {
         blocks.joinToString(".") { it.toCode() }
     }
+    return if (stringHead != null) {
+        val escaped = stringHead.value
+            .replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("\n", "\\n").replace("\r", "\\r")
+        "\"$escaped\".$callChain"
+    } else callChain
 }
 
 fun KBCallBlock.toCode(): String {
