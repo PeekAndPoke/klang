@@ -129,6 +129,10 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 editingCtx.commitPaletteDropToSlot(ds.funcName, stmtId, blockId, slotIdx)
                 dragState = DragState.None
             },
+            onDropToChainAt = { chainId, insertBeforeBlockId ->
+                editingCtx.commitPaletteDropToChainAt(ds.funcName, chainId, insertBeforeBlockId)
+                dragState = DragState.None
+            },
         )
 
         is DragState.DraggingFromCanvas -> DndState(
@@ -147,6 +151,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 editingCtx.commitCanvasSlotDrop(ds.stmtId, ds.chain, stmtId, blockId, slotIdx)
                 dragState = DragState.None
             },
+            onDropToChainAt = null,
         )
 
         is DragState.DraggingNestedBlock -> DndState(
@@ -163,6 +168,10 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             },
             onDropToSlot = { _, blockId, slotIdx ->
                 editingCtx.commitNestedBlockDragToSlot(ds.block, blockId, slotIdx)
+                dragState = DragState.None
+            },
+            onDropToChainAt = { chainId, insertBeforeBlockId ->
+                editingCtx.commitInsertBlockInChain(ds.block, chainId, insertBeforeBlockId)
                 dragState = DragState.None
             },
         )

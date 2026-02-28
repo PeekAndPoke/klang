@@ -93,15 +93,23 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             }
             onMouseEnter { isHovered = true }
             onMouseLeave { isHovered = false }
-            // Start a canvas drag when pressing on the block background or function name.
+            // Start a drag when pressing on the block background or function name.
             // Slot spans stop mousedown propagation, so they won't trigger this.
+            // Head block drags the whole chain; non-head blocks are extracted individually.
             onMouseDown { event ->
                 if (!canDropToSlot) {
                     event.preventDefault()
-                    ctx.dnd.startCanvasDrag(
-                        props.chain.id, props.chain,
-                        event.clientX.toDouble(), event.clientY.toDouble(),
-                    )
+                    if (block.isHead) {
+                        ctx.dnd.startCanvasDrag(
+                            props.chain.id, props.chain,
+                            event.clientX.toDouble(), event.clientY.toDouble(),
+                        )
+                    } else {
+                        ctx.dnd.startNestedBlockDrag(
+                            block,
+                            event.clientX.toDouble(), event.clientY.toDouble(),
+                        )
+                    }
                 }
             }
 

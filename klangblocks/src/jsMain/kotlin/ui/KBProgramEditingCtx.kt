@@ -92,6 +92,23 @@ class KBProgramEditingCtx(
         }
     }
 
+    /** Insert a palette block at a specific position in a chain, before [insertBeforeBlockId]. */
+    fun commitPaletteDropToChainAt(funcName: String, chainId: String, insertBeforeBlockId: String?) {
+        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
+        update { current ->
+            current.copy(statements = insertBlockIntoChain(current.statements, chainId, newBlock, insertBeforeBlockId))
+        }
+    }
+
+    /** Extract a block from wherever it lives and insert it at a specific position in a chain. */
+    fun commitInsertBlockInChain(draggedBlock: KBCallBlock, chainId: String, insertBeforeBlockId: String?) {
+        val insertBlock = draggedBlock.copy(isHead = false)
+        update { current ->
+            val stripped = current.copy(statements = removeBlockFromStmts(current.statements, draggedBlock.id))
+            stripped.copy(statements = insertBlockIntoChain(stripped.statements, chainId, insertBlock, insertBeforeBlockId))
+        }
+    }
+
     /** Append a palette block to an existing chain. */
     fun commitChainAppend(chainId: String, funcName: String) {
         update { current ->
@@ -318,6 +335,39 @@ class KBProgramEditingCtx(
                 else -> argValue
             }
         }
+
+    /** Insert [block] into the chain identified by [chainId], before the block with [insertBeforeBlockId].
+     *  If [insertBeforeBlockId] is null the block is appended at the end. */
+    private fun insertBlockIntoChain(
+        stmts: List<KBStmt>,
+        chainId: String,
+        block: KBCallBlock,
+        insertBeforeBlockId: String?,
+    ): List<KBStmt> = stmts.map { stmt ->
+        if (stmt.id != chainId || stmt !is KBChainStmt) stmt
+        else {
+            val steps = stmt.steps.toMutableList()
+            val insertAt = if (insertBeforeBlockId == null) {
+                steps.size
+            } else {
+                steps.indexOfFirst { it is KBCallBlock && it.id == insertBeforeBlockId }
+                    .takeIf { it >= 0 } ?: steps.size
+            }
+            steps.add(insertAt, block)
+            stmt.copy(steps = steps.fixHeads())
+        }
+    }
+
+    /** Ensure the first [KBCallBlock] in a step list has isHead=true and all others isHead=false. */
+    private fun List<KBChainItem>.fixHeads(): List<KBChainItem> {
+        var isFirst = true
+        return map { item ->
+            if (item !is KBCallBlock) item
+            else if (isFirst) {
+                isFirst = false; item.copy(isHead = true)
+            } else item.copy(isHead = false)
+        }
+    }
 
     private fun toggleLayoutInStmts(stmts: List<KBStmt>, blockId: String): List<KBStmt> =
         stmts.map { stmt ->

@@ -108,7 +108,16 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                 stmt.steps.forEach { item ->
                                     when (item) {
                                         is KBCallBlock -> {
-                                            if (prevWasBlock) chainConnector()
+                                            // Always the same component between consecutive blocks;
+                                            // it switches between connector and drop-zone visuals
+                                            // without changing its layout footprint.
+                                            if (prevWasBlock) {
+                                                KlangBlocksInlineDropZoneComp(
+                                                    chainId = stmt.id,
+                                                    insertBeforeBlockId = item.id,
+                                                    ctx = ctx,
+                                                )
+                                            }
                                             KlangBlocksBlockComp(
                                                 block = item,
                                                 chain = stmt,
@@ -182,47 +191,6 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
         }
     }
 
-    /** Dot-line-dot connector rendered between consecutive blocks in a chain. */
-    private fun DIV.chainConnector() {
-        div {
-            css {
-                display = Display.inlineFlex
-                alignItems = Align.center
-                flexShrink = 0.0
-                marginLeft = (-10).px
-                marginRight = (-10).px
-            }
-            // Left dot
-            div {
-                css {
-                    width = 6.px
-                    height = 6.px
-                    borderRadius = 50.pct
-                    backgroundColor = Color("#888")
-                    flexShrink = 0.0
-                }
-            }
-            // Line
-            div {
-                css {
-                    width = 8.px
-                    height = 2.px
-                    backgroundColor = Color("#888")
-                    flexShrink = 0.0
-                }
-            }
-            // Right dot
-            div {
-                css {
-                    width = 6.px
-                    height = 6.px
-                    borderRadius = 50.pct
-                    backgroundColor = Color("#888")
-                    flexShrink = 0.0
-                }
-            }
-        }
-    }
 }
 
 /** Inline × to remove a non-chain statement (import, let, const). */

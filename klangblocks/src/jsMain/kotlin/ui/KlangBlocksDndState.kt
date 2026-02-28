@@ -20,4 +20,9 @@ class DndState(
     val onDropToChain: ((chainId: String) -> Unit)?,
     /** Drop into a specific block slot (nest as KBNestedChainArg). */
     val onDropToSlot: ((stmtId: String, blockId: String, slotIdx: Int) -> Unit)?,
+    /**
+     * Drop into a specific position within a chain, inserting before the block
+     * with [insertBeforeBlockId]. Null means append to the end of the chain.
+     */
+    val onDropToChainAt: ((chainId: String, insertBeforeBlockId: String?) -> Unit)?,
 )
