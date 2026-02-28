@@ -299,12 +299,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     }
 }
 
-/** Returns true if a slot can accept a KBChainStmt dropped from the canvas. */
-private fun slotAcceptsChainDrop(slot: KBSlot): Boolean = when (val k = slot.kind) {
-    is KBSlotKind.PatternResult -> true
-    is KBSlotKind.Union -> k.acceptsBlock
-    else -> false
-}
+/** Returns true if a slot can accept a dropped block/chain. */
+private fun slotAcceptsChainDrop(slot: KBSlot): Boolean = slot.kind.acceptsBlock
 
 internal fun KBArgValue.renderShort(): String = when (this) {
     is KBEmptyArg -> ""

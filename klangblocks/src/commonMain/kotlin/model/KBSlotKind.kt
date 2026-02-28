@@ -1,15 +1,45 @@
 package io.peekandpoke.klang.blocks.model
 
+/**
+ * The type descriptor for a [KBSlot], controlling which [KBArgValue] subtypes
+ * are valid and whether the slot lights up as a drop target during a drag.
+ */
 sealed interface KBSlotKind {
-    data object Str : KBSlotKind
-    data object Num : KBSlotKind
-    data object Bool : KBSlotKind
-    data object PatternResult : KBSlotKind
-    data class Union(val members: List<KBSlotKind>) : KBSlotKind {
-        val acceptsString: Boolean get() = members.any { it is Str }
-        val acceptsBlock: Boolean get() = members.any { it is PatternResult }
+    /** True when a dropped block/chain is a valid value for this slot. */
+    val acceptsBlock: Boolean get() = false
+
+    /** Accepts a plain string literal ([KBStringArg]) or a dropped block/chain ([KBNestedChainArg]). */
+    data object Str : KBSlotKind {
+        override val acceptsBlock: Boolean = true
     }
 
+    /** Accepts a numeric literal ([KBNumberArg]). */
+    data object Num : KBSlotKind
+
+    /** Accepts a boolean literal ([KBBoolArg]). */
+    data object Bool : KBSlotKind
+
+    /**
+     * Accepts a function-call chain ([KBNestedChainArg]) or an identifier ([KBIdentifierArg]).
+     * Used for parameters whose type is `StrudelPattern` / `Pattern`.
+     */
+    data object PatternResult : KBSlotKind {
+        override val acceptsBlock: Boolean = true
+    }
+
+    /**
+     * A union of multiple slot kinds, e.g. `PatternLike = Str | Num | PatternResult`.
+     * The slot accepts any value that is compatible with at least one member kind.
+     * [acceptsBlock] is true when any member accepts blocks.
+     */
+    data class Union(val members: List<KBSlotKind>) : KBSlotKind {
+        override val acceptsBlock: Boolean get() = members.any { it.acceptsBlock }
+    }
+
+    /**
+     * A named object or domain type that has no dedicated primitive kind,
+     * e.g. a custom class from a library. Rendered like a plain slot;
+     * the type name is available for future tooling.
+     */
     data class NamedObject(val typeName: String) : KBSlotKind
-    data class Unknown(val typeName: String) : KBSlotKind
 }

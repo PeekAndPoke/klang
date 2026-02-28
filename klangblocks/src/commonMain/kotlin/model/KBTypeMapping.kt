@@ -45,7 +45,7 @@ object KBTypeMapping {
     fun compatible(argValue: KBArgValue, kind: KBSlotKind): Boolean = when (kind) {
         is KBSlotKind.Union -> kind.members.any { compatible(argValue, it) }
         KBSlotKind.PatternResult -> argValue is KBNestedChainArg || argValue is KBIdentifierArg
-        KBSlotKind.Str -> argValue is KBStringArg || argValue is KBEmptyArg
+        KBSlotKind.Str -> argValue is KBStringArg || argValue is KBEmptyArg || argValue is KBNestedChainArg
         KBSlotKind.Num -> argValue is KBNumberArg || argValue is KBEmptyArg
         KBSlotKind.Bool -> argValue is KBBoolArg || argValue is KBEmptyArg
         else -> true
