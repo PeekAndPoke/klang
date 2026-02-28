@@ -251,12 +251,29 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         display = Display.inlineFlex
                         alignItems = Align.center
                         put("gap", "2px")
+                        position = Position.absolute
                         if (isVertical) {
-                            position = Position.absolute
                             top = 4.px
                             right = 4.px
                         } else {
-                            marginLeft = 4.px
+                            top = (-8).px
+                            right = 0.px
+                            backgroundColor = Color(categoryColour(doc?.category))
+                            borderTopRightRadius = 8.px
+                            borderTopLeftRadius = 8.px
+                            borderBottomLeftRadius = 6.px
+                            padding = Padding(2.px, 4.px)
+                            // Transparent bridge fills the gap between the icons and
+                            // the block top so the mouse never leaves the element
+                            // while moving between block and icons.
+                            after {
+                                content = QuotedString("")
+                                position = Position.absolute
+                                top = 100.pct
+                                left = 0.px
+                                right = 0.px
+                                height = 10.px
+                            }
                         }
                     }
                     // Layout toggle button
