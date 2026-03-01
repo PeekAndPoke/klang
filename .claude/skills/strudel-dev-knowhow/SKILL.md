@@ -5,36 +5,37 @@ description: Use when working on the strudel / strudel-ksp module, implementing 
 
 ## What This Skill Does
 
-Loads essential context for working on the `strudel` Kotlin/Multiplatform module — a port of the JavaScript Strudel
-pattern language for live coding music.
+Loads context for working on the `strudel` Kotlin/Multiplatform module — a port of the JavaScript
+Strudel pattern language for live coding music. Also covers `strudel-ksp`, the KSP processor that
+extracts DSL documentation from KDoc blocks on `@StrudelDsl`-annotated items.
 
 ## Context to Read
 
-Before starting any strudel work, read these files in order:
+**Always read first:**
 
-1. **`strudel/CLAUDE.md`** — Architecture, critical patterns (event structure, `_innerJoin`, `fmap`/`squeezeJoin`),
-   testing strategy, DSL documentation conventions
-2. **`strudel/MEMORY.md`** — Current implementation status, recent work, lessons learned
-3. **`strudel/TODOS.MD`** — Feature checklist (scan for pending items if doing feature work)
+1. **`strudel/CLAUDE.md`** — dispatcher: key files + which ref file to read next
+2. **`strudel/MEMORY.md`** — current status and lessons learned
 
-This skill also covers the **`strudel-ksp`** subproject — a KSP (Kotlin Symbol Processing) processor that extracts DSL
-documentation from KDoc blocks on `@StrudelDsl`-annotated functions and properties, and generates the docs/search index
-used by `StrudelDocsPage`.
+**Then read only the ref file(s) relevant to your task:**
+
+| Task                                                              | Read                              |
+|-------------------------------------------------------------------|-----------------------------------|
+| Understanding events, part/whole, isOnset, operation categories   | `strudel/ref/event-model.md`      |
+| Working with control patterns, `_innerJoin`, `fmap`/`squeezeJoin` | `strudel/ref/control-patterns.md` |
+| Adding or documenting DSL functions in `lang_*.kt`                | `strudel/ref/dsl-conventions.md`  |
+| Adding addon functions in `lang/addons/`                          | `strudel/ref/dsl-addons.md`       |
+| Running or writing tests                                          | `strudel/ref/testing.md`          |
 
 ## Testing
 
 ```bash
-# Preferred: JVM tests (fast)
-./gradlew :strudel:jvmTest
-
-# Specific test class — NO quotes around the name
-./gradlew :strudel:jvmTest --tests LangBpmSpec
-
-# JS tests only when testing browser-specific code
-./gradlew :strudel:jsTest
+./gradlew :strudel:jvmTest                          # preferred (fast)
+./gradlew :strudel:jvmTest --tests LangBpmSpec      # specific class — NO quotes
+./gradlew :strudel:jsTest                           # browser-specific only
 ```
 
 ## Notes
 
-- Update `strudel/MEMORY.md` after completing significant work or discovering new lessons.
-- Keep `strudel/MEMORY.md` lean — status and lessons only, no duplicating CLAUDE.md content.
+- Do NOT read all ref files upfront — load only what the task requires.
+- Update `strudel/MEMORY.md` after completing significant work.
+- `strudel/TODOS.MD` has the pending feature checklist.
