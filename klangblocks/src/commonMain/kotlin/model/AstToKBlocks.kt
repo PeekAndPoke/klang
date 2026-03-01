@@ -124,7 +124,8 @@ object AstToKBlocks {
     private fun layoutForLink(link: ChainLink): KBPocketLayout {
         if (link.args.isEmpty() || link.callLocation == null) return KBPocketLayout.HORIZONTAL
         val callLine = link.callLocation.startLine
-        return if (link.args.all { it.location?.startLine == callLine }) {
+        // Args with no location (e.g. NullLiteral singleton) are treated as same-line.
+        return if (link.args.all { arg -> arg.location.let { it == null || it.startLine == callLine } }) {
             KBPocketLayout.HORIZONTAL
         } else {
             KBPocketLayout.VERTICAL

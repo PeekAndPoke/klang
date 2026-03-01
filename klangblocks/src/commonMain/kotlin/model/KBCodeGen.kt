@@ -190,12 +190,18 @@ private fun KBChainStmt.toCode(): String? {
 
 // ── Private appendTo — position-tracking tree walk ───────────────────────────
 
-private fun KBStmt.appendTo(builder: CodeBuilder) = when (this) {
-    is KBImportStmt -> builder.append(toCode())
-    is KBChainStmt -> appendTo(builder)
-    is KBLetStmt -> builder.append("let $name")
-    is KBConstStmt -> builder.append("const $name")
-    is KBBlankLine -> Unit
+private fun KBStmt.appendTo(builder: CodeBuilder) {
+    when (this) {
+        is KBImportStmt -> builder.append(toCode())
+        is KBChainStmt -> appendTo(builder)
+        is KBLetStmt -> {
+            builder.append("let $name")
+            if (value != null) builder.append(" = ").append(value.toCode())
+        }
+
+        is KBConstStmt -> builder.append("const $name = ").append(value.toCode())
+        is KBBlankLine -> Unit
+    }
 }
 
 private fun KBChainStmt.appendTo(builder: CodeBuilder) {
