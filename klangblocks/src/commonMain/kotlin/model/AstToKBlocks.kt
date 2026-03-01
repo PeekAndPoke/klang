@@ -43,15 +43,25 @@ object AstToKBlocks {
             value = convertExpr(stmt.initializer),
         )
 
-        is ExpressionStatement -> convertExprStmt(stmt.expression)
+        is ExpressionStatement -> when (val inner = stmt.expression) {
+            is AssignmentExpression -> KBAssignStmt(
+                id = uuid(),
+                target = inner.target.toSourceString(),
+                value = convertExpr(inner.value),
+            )
+
+            else -> convertExprStmt(stmt.expression)
+        }
 
         // ReturnStatement / ExportStatement do not appear at top-level in user code
         else -> null
     }
 
-    private fun convertExprStmt(expr: Expression): KBChainStmt? {
-        val chain = extractChain(expr) ?: return null
-        return KBChainStmt(id = uuid(), steps = chainResultToSteps(chain))
+    private fun convertExprStmt(expr: Expression): KBStmt? {
+        val chain = extractChain(expr)
+        if (chain != null) return KBChainStmt(id = uuid(), steps = chainResultToSteps(chain))
+        // Non-chain expression statement (e.g. postfix x++, x--): preserve as KBExprStmt
+        return KBExprStmt(id = uuid(), expr = convertExpr(expr))
     }
 
     // ---- Chain extraction -------------------------------------------
@@ -150,7 +160,27 @@ object AstToKBlocks {
         is UnaryOperation -> KBUnaryArg(
             op = expr.operator.toSymbol(),
             operand = convertExpr(expr.operand),
+            position = when (expr.operator) {
+                UnaryOperator.POSTFIX_INCREMENT, UnaryOperator.POSTFIX_DECREMENT ->
+                    KBUnaryPosition.POSTFIX
+
+                else -> KBUnaryPosition.PREFIX
+            },
         )
+
+        is TernaryExpression -> KBTernaryArg(
+            condition = convertExpr(expr.condition),
+            thenExpr = convertExpr(expr.thenExpr),
+            elseExpr = convertExpr(expr.elseExpr),
+        )
+
+        is IndexAccess -> KBIndexAccessArg(
+            obj = convertExpr(expr.obj),
+            index = convertExpr(expr.index),
+        )
+
+        // Assignment as an expression (rare) — fall back to raw source
+        is AssignmentExpression -> KBStringArg(expr.toSourceString())
 
         is ArrowFunction -> KBArrowFunctionArg(
             params = expr.parameters,
@@ -181,20 +211,28 @@ private fun BinaryOperator.toSymbol(): String = when (this) {
     BinaryOperator.MULTIPLY -> "*"
     BinaryOperator.DIVIDE -> "/"
     BinaryOperator.MODULO -> "%"
+    BinaryOperator.POWER -> "**"
     BinaryOperator.EQUAL -> "=="
     BinaryOperator.NOT_EQUAL -> "!="
+    BinaryOperator.STRICT_EQUAL -> "==="
+    BinaryOperator.STRICT_NOT_EQUAL -> "!=="
     BinaryOperator.LESS_THAN -> "<"
     BinaryOperator.LESS_THAN_OR_EQUAL -> "<="
     BinaryOperator.GREATER_THAN -> ">"
     BinaryOperator.GREATER_THAN_OR_EQUAL -> ">="
     BinaryOperator.AND -> "&&"
     BinaryOperator.OR -> "||"
+    BinaryOperator.IN -> "in"
 }
 
 private fun UnaryOperator.toSymbol(): String = when (this) {
     UnaryOperator.NEGATE -> "-"
     UnaryOperator.PLUS -> "+"
     UnaryOperator.NOT -> "!"
+    UnaryOperator.PREFIX_INCREMENT -> "++"
+    UnaryOperator.PREFIX_DECREMENT -> "--"
+    UnaryOperator.POSTFIX_INCREMENT -> "++"
+    UnaryOperator.POSTFIX_DECREMENT -> "--"
 }
 
 // ---- AST → source string (for arrow function bodies, fallbacks) -----
@@ -229,7 +267,18 @@ private fun Expression.toSourceString(): String = when (this) {
     is BinaryOperation ->
         "${left.toSourceString()} ${operator.toSymbol()} ${right.toSourceString()}"
 
-    is UnaryOperation -> "${operator.toSymbol()}${operand.toSourceString()}"
+    is UnaryOperation -> when (operator) {
+        UnaryOperator.POSTFIX_INCREMENT, UnaryOperator.POSTFIX_DECREMENT ->
+            "${operand.toSourceString()}${operator.toSymbol()}"
+
+        else -> "${operator.toSymbol()}${operand.toSourceString()}"
+    }
+
+    is TernaryExpression ->
+        "${condition.toSourceString()} ? ${thenExpr.toSourceString()} : ${elseExpr.toSourceString()}"
+
+    is IndexAccess -> "${obj.toSourceString()}[${index.toSourceString()}]"
+    is AssignmentExpression -> "${target.toSourceString()} = ${value.toSourceString()}"
     is MemberAccess -> "${obj.toSourceString()}.${property}"
     is CallExpression ->
         "${callee.toSourceString()}(${arguments.joinToString(", ") { it.toSourceString() }})"

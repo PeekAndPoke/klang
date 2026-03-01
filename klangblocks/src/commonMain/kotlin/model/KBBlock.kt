@@ -120,6 +120,34 @@ data class KBChainStmt(
 ) : KBStmt()
 
 /**
+ * A fallback statement for expressions that are not call chains and not assignments,
+ * e.g. postfix `x++`, `x--`, or any bare expression used as a statement.
+ *
+ * The expression is stored as a [KBArgValue] and emitted verbatim in code gen.
+ * Not directly editable in the blocks UI — used only to preserve round-trip correctness.
+ */
+data class KBExprStmt(
+    override val id: String,
+    val expr: KBArgValue,
+) : KBStmt()
+
+/**
+ * A variable (re-)assignment statement, e.g. `x = 5` or `x = x + 1`.
+ *
+ * [target] is the raw source string of the left-hand side (e.g. `"x"`, `"arr[0]"`, `"obj.prop"`).
+ * It is emitted verbatim in the generated code — no quoting is applied.
+ * [value] is the structured right-hand side value.
+ *
+ * Compound assignments (`x += 1`) are desugared by the parser to `x = x + 1`,
+ * so they appear here as `KBAssignStmt("x", KBBinaryArg(...))`.
+ */
+data class KBAssignStmt(
+    override val id: String,
+    val target: String,
+    val value: KBArgValue,
+) : KBStmt()
+
+/**
  * A blank line in the program.
  *
  * Carries no code semantics; exists purely to preserve vertical whitespace

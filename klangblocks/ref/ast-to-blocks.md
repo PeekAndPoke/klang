@@ -10,13 +10,15 @@ Converts a KlangScript `Program` AST into a `KBProgram`.
 
 ## Statement Mapping
 
-| AST node                              | KBStmt produced                    |
-|---------------------------------------|------------------------------------|
-| `ImportStatement`                     | `KBImportStmt`                     |
-| `LetDeclaration`                      | `KBLetStmt`                        |
-| `ConstDeclaration`                    | `KBConstStmt`                      |
-| `ExpressionStatement`                 | `KBChainStmt` (via `extractChain`) |
-| `ReturnStatement` / `ExportStatement` | `null` (skipped)                   |
+| AST node                              | KBStmt produced                                                          |
+|---------------------------------------|--------------------------------------------------------------------------|
+| `ImportStatement`                     | `KBImportStmt`                                                           |
+| `LetDeclaration`                      | `KBLetStmt`                                                              |
+| `ConstDeclaration`                    | `KBConstStmt`                                                            |
+| `ExpressionStatement(AssignmentExpr)` | `KBAssignStmt` (target stored as raw source string; value is structured) |
+| `ExpressionStatement(call chain)`     | `KBChainStmt` (via `extractChain`)                                       |
+| `ExpressionStatement(other expr)`     | `KBExprStmt` (fallback — preserves non-chain stmts like `x++`)           |
+| `ReturnStatement` / `ExportStatement` | `null` (skipped)                                                         |
 
 **Blank line detection**: if the gap between consecutive statements is > 1 line, a `KBBlankLine` is inserted before the
 second statement.
@@ -41,18 +43,21 @@ Rules:
 
 ## Expression → KBArgValue Mapping
 
-| AST expression                            | KBArgValue                                 |
-|-------------------------------------------|--------------------------------------------|
-| `StringLiteral`                           | `KBStringArg`                              |
-| `NumberLiteral`                           | `KBNumberArg`                              |
-| `BooleanLiteral`                          | `KBBoolArg`                                |
-| `NullLiteral`                             | `KBIdentifierArg("null")`                  |
-| `Identifier`                              | `KBIdentifierArg`                          |
-| `BinaryOperation`                         | `KBBinaryArg`                              |
-| `UnaryOperation`                          | `KBUnaryArg`                               |
-| `ArrowFunction`                           | `KBArrowFunctionArg` (body as raw source)  |
-| `CallExpression` / `MemberAccess` (chain) | `KBNestedChainArg`                         |
-| `ObjectLiteral` / `ArrayLiteral`          | `KBStringArg(toSourceString())` (fallback) |
+| AST expression                            | KBArgValue                                                                                                                   |
+|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| `StringLiteral`                           | `KBStringArg`                                                                                                                |
+| `NumberLiteral`                           | `KBNumberArg`                                                                                                                |
+| `BooleanLiteral`                          | `KBBoolArg`                                                                                                                  |
+| `NullLiteral`                             | `KBIdentifierArg("null")`                                                                                                    |
+| `Identifier`                              | `KBIdentifierArg`                                                                                                            |
+| `BinaryOperation`                         | `KBBinaryArg` (op string: `+`, `-`, `*`, `/`, `%`, `**`, `==`, `!=`, `===`, `!==`, `<`, `<=`, `>`, `>=`, `&&`, `\|\|`, `in`) |
+| `UnaryOperation`                          | `KBUnaryArg` (position `PREFIX` or `POSTFIX`; op: `-`, `+`, `!`, `++`, `--`)                                                 |
+| `TernaryExpression`                       | `KBTernaryArg`                                                                                                               |
+| `IndexAccess`                             | `KBIndexAccessArg`                                                                                                           |
+| `AssignmentExpression`                    | `KBStringArg(toSourceString())` (fallback when used as expression, not statement)                                            |
+| `ArrowFunction`                           | `KBArrowFunctionArg` (body as raw source)                                                                                    |
+| `CallExpression` / `MemberAccess` (chain) | `KBNestedChainArg`                                                                                                           |
+| `ObjectLiteral` / `ArrayLiteral`          | `KBStringArg(toSourceString())` (fallback)                                                                                   |
 
 ## Layout Detection
 

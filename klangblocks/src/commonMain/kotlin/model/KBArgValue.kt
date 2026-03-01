@@ -48,11 +48,18 @@ data class KBBinaryArg(
 /**
  * A unary expression used as an argument, e.g. `-1` or `!flag`.
  * Produced by the AST converter; not directly editable in the blocks UI.
+ *
+ * [position] distinguishes prefix (`++x`) from postfix (`x++`) forms.
+ * Defaults to [KBUnaryPosition.PREFIX] to preserve existing behaviour.
  */
 data class KBUnaryArg(
     val op: String,
     val operand: KBArgValue,
+    val position: KBUnaryPosition = KBUnaryPosition.PREFIX,
 ) : KBArgValue()
+
+/** Whether a unary operator appears before or after its operand. */
+enum class KBUnaryPosition { PREFIX, POSTFIX }
 
 /**
  * An arrow-function literal used as an argument, e.g. `x => x * 2`.
@@ -63,4 +70,23 @@ data class KBUnaryArg(
 data class KBArrowFunctionArg(
     val params: List<String>,
     val bodySource: String,
+) : KBArgValue()
+
+/**
+ * A ternary conditional expression used as an argument, e.g. `x > 0 ? "pos" : "neg"`.
+ * All three sub-expressions are themselves [KBArgValue]s and are individually structured.
+ */
+data class KBTernaryArg(
+    val condition: KBArgValue,
+    val thenExpr: KBArgValue,
+    val elseExpr: KBArgValue,
+) : KBArgValue()
+
+/**
+ * An index/bracket access expression used as an argument, e.g. `arr[0]` or `obj["key"]`.
+ * Both the object and the index are themselves [KBArgValue]s.
+ */
+data class KBIndexAccessArg(
+    val obj: KBArgValue,
+    val index: KBArgValue,
 ) : KBArgValue()

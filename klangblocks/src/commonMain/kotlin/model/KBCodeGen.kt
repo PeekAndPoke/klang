@@ -171,7 +171,13 @@ fun KBArgValue.toCode(): String = when (this) {
     is KBIdentifierArg -> name
     is KBNestedChainArg -> chain.toCode() ?: ""  // fallback; appendTo handles tracking
     is KBBinaryArg -> "${left.toCode()} $op ${right.toCode()}"
-    is KBUnaryArg -> "$op${operand.toCode()}"
+    is KBUnaryArg -> when (position) {
+        KBUnaryPosition.PREFIX -> "$op${operand.toCode()}"
+        KBUnaryPosition.POSTFIX -> "${operand.toCode()}$op"
+    }
+
+    is KBTernaryArg -> "${condition.toCode()} ? ${thenExpr.toCode()} : ${elseExpr.toCode()}"
+    is KBIndexAccessArg -> "${obj.toCode()}[${index.toCode()}]"
     is KBArrowFunctionArg -> {
         val paramsStr = if (params.size == 1) params[0] else "(${params.joinToString(", ")})"
         "$paramsStr => $bodySource"
@@ -200,6 +206,8 @@ private fun KBStmt.appendTo(builder: CodeBuilder) {
         }
 
         is KBConstStmt -> builder.append("const $name = ").append(value.toCode())
+        is KBAssignStmt -> builder.append("$target = ").append(value.toCode())
+        is KBExprStmt -> builder.append(expr.toCode())
         is KBBlankLine -> Unit
     }
 }

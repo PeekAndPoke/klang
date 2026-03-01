@@ -24,6 +24,8 @@ KBProgram
 | `KBLetStmt`    | `let x = note("c3")`      | `value` is null when no initialiser                      |
 | `KBConstStmt`  | `const bpm = 120`         | always has `value`                                       |
 | `KBChainStmt`  | `note("c3").gain(0.5)`    | most common; sequence of `KBChainItem`s                  |
+| `KBAssignStmt` | `x = 5`, `arr[0] = v`     | `target` is the raw LHS string; `value` is structured    |
+| `KBExprStmt`   | `x++`, `x--`              | fallback for non-chain expression statements             |
 | `KBBlankLine`  | _(empty line)_            | preserves whitespace, no code semantics                  |
 
 All `KBStmt` subtypes carry a stable `id: String` for undo/redo tracking.
@@ -54,14 +56,16 @@ data class KBCallBlock(
 
 ## KBArgValue Types
 
-| Type                                     | Example           | Notes                             |
-|------------------------------------------|-------------------|-----------------------------------|
-| `KBEmptyArg(paramName)`                  | _(unfilled slot)_ | placeholder label shown in editor |
-| `KBStringArg(value)`                     | `"c3 e3"`         | multiline → backtick quoting      |
-| `KBNumberArg(value: Double)`             | `0.5`, `2`        | integer rendered without decimal  |
-| `KBBoolArg(value)`                       | `true`            |                                   |
-| `KBIdentifierArg(name)`                  | `myPattern`       | bare variable/constant reference  |
-| `KBBinaryArg(left, op, right)`           | `x + 1`           | not directly editable in UI       |
-| `KBUnaryArg(op, operand)`                | `-1`, `!flag`     | not directly editable in UI       |
-| `KBArrowFunctionArg(params, bodySource)` | `x => x * 2`      | body kept as raw source text      |
-| `KBNestedChainArg(chain: KBChainStmt)`   | `cat("c3", "e3")` | rendered as inline mini-blocks    |
+| Type                                          | Example              | Notes                                        |
+|-----------------------------------------------|----------------------|----------------------------------------------|
+| `KBEmptyArg(paramName)`                       | _(unfilled slot)_    | placeholder label shown in editor            |
+| `KBStringArg(value)`                          | `"c3 e3"`            | multiline → backtick quoting                 |
+| `KBNumberArg(value: Double)`                  | `0.5`, `2`           | integer rendered without decimal             |
+| `KBBoolArg(value)`                            | `true`               |                                              |
+| `KBIdentifierArg(name)`                       | `myPattern`          | bare variable/constant reference             |
+| `KBBinaryArg(left, op, right)`                | `x + 1`, `a ** b`    | not directly editable in UI                  |
+| `KBUnaryArg(op, operand, position)`           | `-1`, `++x`, `x++`   | `position`: `PREFIX` (default) or `POSTFIX`  |
+| `KBTernaryArg(condition, thenExpr, elseExpr)` | `c ? a : b`          | all three parts are structured `KBArgValue`s |
+| `KBIndexAccessArg(obj, index)`                | `arr[0]`, `obj["k"]` | both parts are structured `KBArgValue`s      |
+| `KBArrowFunctionArg(params, bodySource)`      | `x => x * 2`         | body kept as raw source text                 |
+| `KBNestedChainArg(chain: KBChainStmt)`        | `cat("c3", "e3")`    | rendered as inline mini-blocks               |
