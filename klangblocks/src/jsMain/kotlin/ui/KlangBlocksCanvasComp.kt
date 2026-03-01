@@ -40,6 +40,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
             css {
                 flex = Flex(1.0, 1.0, FlexBasis.auto)
                 overflowY = Overflow.auto
+                overflowX = Overflow.auto
                 padding = Padding(16.px)
                 backgroundColor = Color("#1e1e2e")
                 minHeight = 400.px

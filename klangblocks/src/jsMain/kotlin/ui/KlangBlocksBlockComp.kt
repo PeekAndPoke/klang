@@ -131,6 +131,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 fontFamily = "monospace"
                 whiteSpace = WhiteSpace.nowrap
                 userSelect = UserSelect.none
+                flexShrink = 0.0   // never let a parent flex row squeeze this block's width
                 if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
                 put("transition", "filter 0.15s ease")
                 position = Position.relative
@@ -234,6 +235,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                                 minWidth = variant.textareaMinW
                                 outline = Outline.none
                                 put("box-sizing", "border-box")
+                                put("field-sizing", "content")
                             }
                         }
                     }
@@ -505,9 +507,9 @@ private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRan
         if (pos < start) +text.substring(pos, start)
         span {
             css {
-                backgroundColor = Color("rgba(255,255,255,0.4)")
                 borderRadius = 2.px
-                padding = Padding(0.px, 1.px)
+                // box-shadow renders like a border but occupies no space — no wiggle
+                put("box-shadow", "0 0 0 2px rgba(255,255,255,0.65)")
             }
             +text.substring(start, end)
         }
