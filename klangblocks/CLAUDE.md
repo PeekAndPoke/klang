@@ -27,12 +27,13 @@ Generated code + position maps (CodeGenResult)
 
 ## Reference Files — Read Only What You Need
 
-| Topic                                       | File                        |
-|---------------------------------------------|-----------------------------|
-| KBStmt, KBChainItem, KBArgValue types       | `ref/block-model.md`        |
-| AST → blocks conversion rules               | `ref/ast-to-blocks.md`      |
-| Code generation, CodeGenResult, hit testing | `ref/code-gen.md`           |
-| Round-trip testing (6-step requirement)     | `ref/round-trip-testing.md` |
+| Topic                                                    | File                                 |
+|----------------------------------------------------------|--------------------------------------|
+| KBStmt, KBChainItem, KBArgValue types                    | `ref/block-model.md`                 |
+| AST → blocks conversion rules                            | `ref/ast-to-blocks.md`               |
+| Code generation, CodeGenResult, source map / hit testing | `ref/code-gen.md`                    |
+| Round-trip + source map testing (6-step requirement)     | `ref/round-trip-testing.md`          |
+| All features: klangscript ↔ klangblocks sync matrix      | `klangscript/ref/feature-catalog.md` |
 
 ## Build & Test
 

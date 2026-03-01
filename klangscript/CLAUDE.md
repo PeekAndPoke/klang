@@ -29,13 +29,14 @@ Interpreter (tree-walking)  →  RuntimeValue / Environment
 
 ## Reference Files — Read Only What You Need
 
-| Topic                           | File                      |
-|---------------------------------|---------------------------|
-| Language design & limitations   | `ref/language-design.md`  |
-| Parser / lexer internals        | `ref/parser-impl.md`      |
-| Interpreter / runtime internals | `ref/interpreter-impl.md` |
-| Adding a new language feature   | `ref/adding-features.md`  |
-| Testing strategy                | `ref/testing-strategy.md` |
+| Topic                                                         | File                      |
+|---------------------------------------------------------------|---------------------------|
+| Language design & limitations                                 | `ref/language-design.md`  |
+| Parser / lexer internals                                      | `ref/parser-impl.md`      |
+| Interpreter / runtime internals                               | `ref/interpreter-impl.md` |
+| Adding a new language feature                                 | `ref/adding-features.md`  |
+| Testing strategy                                              | `ref/testing-strategy.md` |
+| All implemented features + test file links + klangblocks sync | `ref/feature-catalog.md`  |
 
 ## Build & Test
 

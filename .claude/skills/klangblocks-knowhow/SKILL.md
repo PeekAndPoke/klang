@@ -17,12 +17,13 @@ editor that converts KlangScript source code into typed block model objects and 
 
 **Then read only the ref file(s) relevant to your task:**
 
-| Task                                                      | Read                                    |
-|-----------------------------------------------------------|-----------------------------------------|
-| Understanding `KBStmt`, `KBChainItem`, `KBArgValue` types | `klangblocks/ref/block-model.md`        |
-| Working on AST → blocks conversion (`AstToKBlocks`)       | `klangblocks/ref/ast-to-blocks.md`      |
-| Working on code generation or `CodeGenResult` hit testing | `klangblocks/ref/code-gen.md`           |
-| Writing or fixing round-trip tests                        | `klangblocks/ref/round-trip-testing.md` |
+| Task                                                                         | Read                                    |
+|------------------------------------------------------------------------------|-----------------------------------------|
+| Understanding `KBStmt`, `KBChainItem`, `KBArgValue` types                    | `klangblocks/ref/block-model.md`        |
+| Working on AST → blocks conversion (`AstToKBlocks`)                          | `klangblocks/ref/ast-to-blocks.md`      |
+| Working on code generation, source map, or hit testing                       | `klangblocks/ref/code-gen.md`           |
+| Writing or fixing round-trip / source-map tests                              | `klangblocks/ref/round-trip-testing.md` |
+| Checking which features exist, which tests cover them, sync with klangscript | `klangscript/ref/feature-catalog.md`    |
 
 ## Cross-Module Rules
 
