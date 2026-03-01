@@ -419,11 +419,20 @@ enum class BinaryOperator {
     /** Modulo: a % b */
     MODULO,
 
+    /** Exponentiation: a ** b */
+    POWER,
+
     /** Equality: a == b */
     EQUAL,
 
     /** Inequality: a != b */
     NOT_EQUAL,
+
+    /** Strict equality: a === b (same type AND same value) */
+    STRICT_EQUAL,
+
+    /** Strict inequality: a !== b */
+    STRICT_NOT_EQUAL,
 
     /** Less than: a < b */
     LESS_THAN,
@@ -442,6 +451,9 @@ enum class BinaryOperator {
 
     /** Logical OR: a || b */
     OR,
+
+    /** In operator: "key" in obj */
+    IN,
 }
 
 /**
@@ -467,7 +479,7 @@ data class BinaryOperation(
 ) : Expression(location)
 
 /**
- * Unary operator types for prefix operations
+ * Unary operator types for prefix and postfix operations
  */
 enum class UnaryOperator {
     /** Negation: -x (arithmetic negation) */
@@ -478,6 +490,18 @@ enum class UnaryOperator {
 
     /** Logical NOT: !x (boolean negation) */
     NOT,
+
+    /** Prefix increment: ++x (add 1, return new value) */
+    PREFIX_INCREMENT,
+
+    /** Prefix decrement: --x (subtract 1, return new value) */
+    PREFIX_DECREMENT,
+
+    /** Postfix increment: x++ (add 1, return original value) */
+    POSTFIX_INCREMENT,
+
+    /** Postfix decrement: x-- (subtract 1, return original value) */
+    POSTFIX_DECREMENT,
 }
 
 /**
@@ -751,5 +775,62 @@ data class ObjectLiteral(
  */
 data class ArrayLiteral(
     val elements: List<Expression>,
+    override val location: SourceLocation? = null,
+) : Expression(location)
+
+/**
+ * An assignment expression: target = value
+ *
+ * Assigns a value to an assignable target.
+ * Target can be:
+ * - Identifier: x = expr
+ * - MemberAccess: obj.prop = expr
+ * - IndexAccess: arr[i] = expr
+ *
+ * Assignment is right-associative and has the lowest precedence (below ternary).
+ *
+ * @param target The left-hand side expression (must be assignable)
+ * @param value The right-hand side expression to assign
+ */
+data class AssignmentExpression(
+    val target: Expression,
+    val value: Expression,
+    override val location: SourceLocation? = null,
+) : Expression(location)
+
+/**
+ * A ternary conditional expression: condition ? thenExpr : elseExpr
+ *
+ * Evaluates condition; if truthy evaluates and returns thenExpr, otherwise elseExpr.
+ * Right-associative.
+ *
+ * @param condition The condition expression
+ * @param thenExpr Expression evaluated when condition is truthy
+ * @param elseExpr Expression evaluated when condition is falsy
+ */
+data class TernaryExpression(
+    val condition: Expression,
+    val thenExpr: Expression,
+    val elseExpr: Expression,
+    override val location: SourceLocation? = null,
+) : Expression(location)
+
+/**
+ * An index access expression: obj[index]
+ *
+ * Accesses an element of an array by numeric index,
+ * or a property of an object by string key.
+ *
+ * Examples:
+ * - arr[0]       → first element of array
+ * - arr[i]       → element at index i
+ * - obj["key"]   → property "key" on object
+ *
+ * @param obj The object/array expression
+ * @param index The index/key expression
+ */
+data class IndexAccess(
+    val obj: Expression,
+    val index: Expression,
     override val location: SourceLocation? = null,
 ) : Expression(location)
