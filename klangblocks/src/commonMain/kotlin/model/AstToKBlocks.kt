@@ -200,6 +200,10 @@ object AstToKBlocks {
         // Object/array literals: fall back to raw source string
         is ObjectLiteral -> KBStringArg(expr.toSourceString())
         is ArrayLiteral -> KBStringArg(expr.toSourceString())
+
+        // New expression types: fall back to raw source string
+        is IfExpression -> KBStringArg(expr.toSourceString())
+        is TemplateLiteral -> KBStringArg(expr.toSourceString())
     }
 }
 
@@ -294,4 +298,15 @@ private fun Expression.toSourceString(): String = when (this) {
 
     is ArrayLiteral ->
         "[${elements.joinToString(", ") { it.toSourceString() }}]"
+
+    is IfExpression -> "if (${condition.toSourceString()}) { ... }"
+
+    is TemplateLiteral -> "`${
+        parts.joinToString("") { part ->
+            when (part) {
+                is TemplatePart.Text -> part.value
+                is TemplatePart.Interp -> "\${${part.expression.toSourceString()}}"
+            }
+        }
+    }`"
 }

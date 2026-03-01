@@ -88,6 +88,23 @@ class Interpreter(
     }
 
     /**
+     * Execute a block of statements and return the value of the last ExpressionStatement.
+     *
+     * This is the mechanism by which if/else branches produce values.
+     * Returns NullValue if the block is empty or the last statement is not an ExpressionStatement.
+     *
+     * @param statements The block of statements to execute
+     * @return The value of the last ExpressionStatement, or NullValue
+     */
+    internal fun executeBlock(statements: List<Statement>): RuntimeValue {
+        var lastValue: RuntimeValue = NullValue
+        for (stmt in statements) {
+            lastValue = executeStatement(stmt)
+        }
+        return lastValue
+    }
+
+    /**
      * Execute a single statement
      *
      * Statements represent actions in the program but may also produce values.
@@ -134,6 +151,64 @@ class Interpreter(
                 }
                 throw ReturnException(returnValue)
             }
+
+            // While loop
+            is WhileStatement -> {
+                while (toBoolean(evaluate(statement.condition))) {
+                    try {
+                        executeBlock(statement.body)
+                    } catch (e: BreakException) {
+                        break
+                    } catch (e: ContinueException) {
+                        // Continue to next iteration
+                    } catch (e: ReturnException) {
+                        throw e  // Propagate return out of function
+                    }
+                }
+                NullValue
+            }
+
+            // Do-while loop
+            is DoWhileStatement -> {
+                do {
+                    try {
+                        executeBlock(statement.body)
+                    } catch (e: BreakException) {
+                        break
+                    } catch (e: ContinueException) {
+                        // Continue to next iteration (condition will be checked)
+                    } catch (e: ReturnException) {
+                        throw e  // Propagate return out of function
+                    }
+                } while (toBoolean(evaluate(statement.condition)))
+                NullValue
+            }
+
+            // For loop - runs in its own scope
+            is ForStatement -> {
+                val loopEnv = Environment(parent = env)
+                val loopInterp = Interpreter(env = loopEnv, engine = engine, callStack = callStack, executionContext = executionContext)
+                statement.init?.let { loopInterp.executeStatement(it) }
+                loop@ while (statement.condition == null || loopInterp.toBoolean(loopInterp.evaluate(statement.condition))) {
+                    try {
+                        loopInterp.executeBlock(statement.body)
+                    } catch (e: BreakException) {
+                        break@loop
+                    } catch (e: ContinueException) {
+                        // Fall through to update
+                    } catch (e: ReturnException) {
+                        throw e  // Propagate return out of function
+                    }
+                    statement.update?.let { loopInterp.evaluate(it) }
+                }
+                NullValue
+            }
+
+            // Break statement - throws BreakException to exit enclosing loop
+            is BreakStatement -> throw BreakException()
+
+            // Continue statement - throws ContinueException to skip to next loop iteration
+            is ContinueStatement -> throw ContinueException()
         }
     }
 
@@ -337,6 +412,32 @@ class Interpreter(
 
             // Index access: arr[i], obj["key"]
             is IndexAccess -> evaluateIndexAccess(expression)
+
+            // If expression: if (cond) { ... } else { ... }
+            is IfExpression -> {
+                val cond = evaluate(expression.condition)
+                if (toBoolean(cond)) {
+                    executeBlock(expression.thenBranch)
+                } else {
+                    when (val eb = expression.elseBranch) {
+                        is ElseBranch.Block -> executeBlock(eb.statements)
+                        is ElseBranch.If -> evaluate(eb.ifExpr)
+                        null -> NullValue
+                    }
+                }
+            }
+
+            // Template literal: `Hello ${name}!`
+            is TemplateLiteral -> {
+                val sb = StringBuilder()
+                for (part in expression.parts) {
+                    when (part) {
+                        is TemplatePart.Text -> sb.append(part.value)
+                        is TemplatePart.Interp -> sb.append(evaluate(part.expression).toDisplayString())
+                    }
+                }
+                StringValue(sb.toString())
+            }
         }
     }
 
@@ -494,7 +595,7 @@ class Interpreter(
      * @param value The runtime value to convert
      * @return true if the value is truthy, false if falsy
      */
-    private fun toBoolean(value: RuntimeValue): Boolean {
+    internal fun toBoolean(value: RuntimeValue): Boolean {
         return when (value) {
             is BooleanValue -> value.value
             is NullValue -> false

@@ -1,6 +1,6 @@
 # KlangScript — Control Flow
 
-### 3.1 If-Else Statements ❌ `[MEDIUM]`
+### 3.1 If-Else Expression ✅
 
 ```javascript
 let x = 10;
@@ -29,7 +29,7 @@ if (x < 5) {
 
 **Expected:** Results as commented
 
-### 3.2 Switch Statements ❌ `[MEDIUM]`
+### 3.2 Switch Statements ❌ `[MEDIUM]` — not yet implemented
 
 ```javascript
 let day = 3;
@@ -67,7 +67,7 @@ switch (x) {
 
 **Expected:** Results as commented
 
-### 3.3 While Loops ❌ `[MEDIUM]`
+### 3.3 While Loops ✅
 
 ```javascript
 let i = 0;
@@ -81,7 +81,7 @@ while (i < 5) {
 
 **Expected:** sum = 10, i = 5
 
-### 3.4 Do-While Loops ❌ `[MEDIUM]`
+### 3.4 Do-While Loops ✅
 
 ```javascript
 let i = 0;
@@ -101,7 +101,7 @@ do {
 
 **Expected:** Results as commented
 
-### 3.5 For Loops ❌ `[MEDIUM]`
+### 3.5 For Loops ✅
 
 ```javascript
 let sum = 0;
@@ -126,7 +126,7 @@ for (let i = 0; i < 3; i++) {
 
 **Expected:** Results as commented
 
-### 3.6 Break and Continue ❌ `[MEDIUM]` — depends on loops (3.3–3.5)
+### 3.6 Break and Continue ✅
 
 ```javascript
 let sum = 0;

@@ -57,10 +57,11 @@ class KlangScriptParser private constructor(
 
         // Keywords (must match before IDENTIFIER)
         TRUE, FALSE, NULL, LET, CONST, IMPORT, EXPORT, FROM, AS, RETURN, IN,
+        IF, ELSE, WHILE, DO, FOR, BREAK, CONTINUE,
 
         // Punctuation
         LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
-        LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON, DOT, QUESTION,
+        LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON, DOT, QUESTION, SEMICOLON,
 
         // Multi-char operators (MUST tokenize before single-char — longer before shorter)
         ARROW,               // =>
@@ -369,6 +370,12 @@ class KlangScriptParser private constructor(
                     column++
                 }
 
+                ch == ';' -> {
+                    addToken(TokenType.SEMICOLON, ";", startColumn)
+                    i++
+                    column++
+                }
+
                 ch == '=' -> {
                     addToken(TokenType.EQUALS, "=", startColumn)
                     i++
@@ -550,6 +557,13 @@ class KlangScriptParser private constructor(
                         "as" -> TokenType.AS
                         "return" -> TokenType.RETURN
                         "in" -> TokenType.IN
+                        "if" -> TokenType.IF
+                        "else" -> TokenType.ELSE
+                        "while" -> TokenType.WHILE
+                        "do" -> TokenType.DO
+                        "for" -> TokenType.FOR
+                        "break" -> TokenType.BREAK
+                        "continue" -> TokenType.CONTINUE
                         else -> TokenType.IDENTIFIER
                     }
                     addToken(type, text, startColumn)
@@ -598,6 +612,13 @@ class KlangScriptParser private constructor(
     private fun error(message: String): Nothing {
         val token = if (isAtEnd()) previous() else peek()
         throw ParseException(ErrorResult(message, token.column, token.line))
+    }
+
+    /** Skip any semicolons (used as optional statement terminators outside for-loop headers) */
+    private fun skipSemicolons() {
+        while (check(TokenType.SEMICOLON)) {
+            advance()
+        }
     }
 
     private fun Token.toSourceLocation(): SourceLocation {
@@ -770,10 +791,7 @@ class KlangScriptParser private constructor(
 
             // Block body: { statements }
             match(TokenType.LEFT_BRACE) -> {
-                val statements = mutableListOf<Statement>()
-                while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
-                    statements.add(parseStatement())
-                }
+                val statements = parseBlockStatements()
                 consume(TokenType.RIGHT_BRACE, "Expected '}' after block")
                 ArrowFunctionBody.BlockBody(statements)
             }
@@ -1080,9 +1098,14 @@ class KlangScriptParser private constructor(
                 NumberLiteral(token.text.toDouble(), token.toSourceLocation())
             }
 
-            match(TokenType.STRING, TokenType.BACKTICK_STRING) -> {
+            match(TokenType.STRING) -> {
                 val token = previous()
                 StringLiteral(token.text, token.toSourceLocation())
+            }
+
+            match(TokenType.BACKTICK_STRING) -> {
+                val token = previous()
+                parseTemplateLiteralFromRaw(token.text, token.toSourceLocation())
             }
 
             match(TokenType.TRUE) -> {
@@ -1095,6 +1118,10 @@ class KlangScriptParser private constructor(
 
             match(TokenType.NULL) -> {
                 NullLiteral
+            }
+
+            match(TokenType.IF) -> {
+                parseIfExpression()
             }
 
             match(TokenType.IDENTIFIER) -> {
@@ -1192,6 +1219,19 @@ class KlangScriptParser private constructor(
             match(TokenType.LET) -> parseLetDeclaration()
             match(TokenType.CONST) -> parseConstDeclaration()
             match(TokenType.RETURN) -> parseReturnStatement()
+            match(TokenType.IF) -> ExpressionStatement(parseIfExpression())
+            match(TokenType.WHILE) -> parseWhileStatement()
+            match(TokenType.DO) -> parseDoWhileStatement()
+            match(TokenType.FOR) -> parseForStatement()
+            match(TokenType.BREAK) -> {
+                val tok = previous()
+                BreakStatement(tok.toSourceLocation())
+            }
+
+            match(TokenType.CONTINUE) -> {
+                val tok = previous()
+                ContinueStatement(tok.toSourceLocation())
+            }
             else -> parseExpression().let { ExpressionStatement(it, it.location) }
         }
     }
@@ -1329,9 +1369,197 @@ class KlangScriptParser private constructor(
         val statements = mutableListOf<Statement>()
 
         while (!isAtEnd()) {
+            skipSemicolons()
+            if (isAtEnd()) break
             statements.add(parseStatement())
+            skipSemicolons()
         }
 
         return Program(statements)
+    }
+
+    /**
+     * Parse if expression: if ( condition ) { then } [ else { else } | else if ... ]
+     *
+     * `if` is an expression so it can produce a value.
+     * At statement level it becomes an ExpressionStatement(IfExpression(...)).
+     */
+    private fun parseIfExpression(): IfExpression {
+        val ifToken = previous() // IF consumed
+        consume(TokenType.LEFT_PAREN, "Expected '(' after 'if'")
+        val condition = parseExpression()
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after if condition")
+        consume(TokenType.LEFT_BRACE, "Expected '{' after if condition")
+        val thenBranch = parseBlockStatements()
+        consume(TokenType.RIGHT_BRACE, "Expected '}' after if body")
+
+        val elseBranch = if (match(TokenType.ELSE)) {
+            if (match(TokenType.IF)) {
+                // else if chain
+                ElseBranch.If(parseIfExpression())
+            } else {
+                // else block
+                consume(TokenType.LEFT_BRACE, "Expected '{' after 'else'")
+                val elseStmts = parseBlockStatements()
+                consume(TokenType.RIGHT_BRACE, "Expected '}' after else body")
+                ElseBranch.Block(elseStmts)
+            }
+        } else {
+            null
+        }
+
+        return IfExpression(condition, thenBranch, elseBranch, ifToken.toSourceLocation())
+    }
+
+    /**
+     * Parse statements inside a block (until RIGHT_BRACE or EOF)
+     * Skips semicolons between statements.
+     */
+    private fun parseBlockStatements(): List<Statement> {
+        val statements = mutableListOf<Statement>()
+        while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
+            skipSemicolons()
+            if (check(TokenType.RIGHT_BRACE) || isAtEnd()) break
+            statements.add(parseStatement())
+            skipSemicolons()
+        }
+        return statements
+    }
+
+    /**
+     * Parse template literal from raw backtick string content.
+     *
+     * Scans the raw string for `${...}` patterns and builds a TemplateLiteral node.
+     * If no interpolations exist, returns a plain StringLiteral for efficiency.
+     */
+    private fun parseTemplateLiteralFromRaw(raw: String, location: SourceLocation): Expression {
+        // Quick check: if no '${' in the string, return a plain StringLiteral
+        if (!raw.contains("\${")) {
+            return StringLiteral(raw, location)
+        }
+
+        val parts = mutableListOf<TemplatePart>()
+        var idx = 0
+
+        while (idx < raw.length) {
+            // Find next `${`
+            val interpStart = raw.indexOf("\${", idx)
+            if (interpStart < 0) {
+                // Rest is plain text
+                if (idx < raw.length) {
+                    parts.add(TemplatePart.Text(raw.substring(idx)))
+                }
+                break
+            }
+
+            // Add text before `${`
+            if (interpStart > idx) {
+                parts.add(TemplatePart.Text(raw.substring(idx, interpStart)))
+            }
+
+            // Find matching `}`
+            val exprStart = interpStart + 2
+            var depth = 1
+            var j = exprStart
+            while (j < raw.length && depth > 0) {
+                when (raw[j]) {
+                    '{' -> depth++
+                    '}' -> depth--
+                }
+                if (depth > 0) j++
+            }
+            if (depth != 0) {
+                error("Unterminated template literal interpolation")
+            }
+            val exprSource = raw.substring(exprStart, j)
+
+            // Parse the expression inside ${...} using a sub-parser
+            val subProgram = KlangScriptParser.parse(exprSource, currentSource)
+            if (subProgram.statements.isEmpty()) {
+                error("Empty expression in template literal interpolation")
+            }
+            val stmt = subProgram.statements.first()
+            val expr = when (stmt) {
+                is ExpressionStatement -> stmt.expression
+                else -> error("Template literal interpolation must be an expression")
+            }
+            parts.add(TemplatePart.Interp(expr))
+
+            idx = j + 1 // Skip past the closing `}`
+        }
+
+        // If only one text part, return StringLiteral
+        if (parts.size == 1 && parts[0] is TemplatePart.Text) {
+            return StringLiteral((parts[0] as TemplatePart.Text).value, location)
+        }
+
+        return TemplateLiteral(parts, location)
+    }
+
+    /**
+     * Parse while statement: while ( condition ) { body }
+     */
+    private fun parseWhileStatement(): WhileStatement {
+        val whileToken = previous() // WHILE consumed
+        consume(TokenType.LEFT_PAREN, "Expected '(' after 'while'")
+        val condition = parseExpression()
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after while condition")
+        consume(TokenType.LEFT_BRACE, "Expected '{' after while condition")
+        val body = parseBlockStatements()
+        consume(TokenType.RIGHT_BRACE, "Expected '}' after while body")
+        return WhileStatement(condition, body, whileToken.toSourceLocation())
+    }
+
+    /**
+     * Parse do-while statement: do { body } while ( condition )
+     */
+    private fun parseDoWhileStatement(): DoWhileStatement {
+        val doToken = previous() // DO consumed
+        consume(TokenType.LEFT_BRACE, "Expected '{' after 'do'")
+        val body = parseBlockStatements()
+        consume(TokenType.RIGHT_BRACE, "Expected '}' after do body")
+        consume(TokenType.WHILE, "Expected 'while' after do body")
+        consume(TokenType.LEFT_PAREN, "Expected '(' after 'while'")
+        val condition = parseExpression()
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after do-while condition")
+        return DoWhileStatement(body, condition, doToken.toSourceLocation())
+    }
+
+    /**
+     * Parse for statement: for ( [init] ; [condition] ; [update] ) { body }
+     *
+     * The for loop runs in its own scope (init let declarations are scoped to loop).
+     * Semicolons are used as separators in the for header (not statement terminators).
+     * The init can be a let declaration, an assignment expression, or empty.
+     */
+    private fun parseForStatement(): ForStatement {
+        val forToken = previous() // FOR consumed
+        consume(TokenType.LEFT_PAREN, "Expected '(' after 'for'")
+
+        // Parse init (optional)
+        val init: Statement? = when {
+            check(TokenType.SEMICOLON) -> null  // empty init
+            match(TokenType.LET) -> parseLetDeclaration()
+            match(TokenType.CONST) -> parseConstDeclaration()
+            else -> {
+                val expr = parseExpression()
+                ExpressionStatement(expr)
+            }
+        }
+        consume(TokenType.SEMICOLON, "Expected ';' after for init")
+
+        // Parse condition (optional)
+        val condition: Expression? = if (check(TokenType.SEMICOLON)) null else parseExpression()
+        consume(TokenType.SEMICOLON, "Expected ';' after for condition")
+
+        // Parse update (optional)
+        val update: Expression? = if (check(TokenType.RIGHT_PAREN)) null else parseExpression()
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after for clauses")
+
+        consume(TokenType.LEFT_BRACE, "Expected '{' after for header")
+        val body = parseBlockStatements()
+        consume(TokenType.RIGHT_BRACE, "Expected '}' after for body")
+
+        return ForStatement(init, condition, update, body, forToken.toSourceLocation())
     }
 }

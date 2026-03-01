@@ -135,8 +135,7 @@ let padded2 = str.padEnd(3, "0");    // "500"
 
 **Expected:** Results as commented
 
-### 7.13 Template Literals (interpolation) ❌ `[MEDIUM]` — backtick strings work;
-`${expr}` interpolation requires lexer + `TemplateLiteral` AST node
+### 7.13 Template Literals (interpolation) ✅
 
 ```javascript
 let name = "Alice";
