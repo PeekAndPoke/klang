@@ -100,7 +100,7 @@ class TemplateLiteralTest : StringSpec({
             `The answer is ${dollar}{a + b}`
             """.trimIndent()
         )
-        (result as StringValue).value shouldBe "The answer is 42.0"
+        (result as StringValue).value shouldBe "The answer is 42"
     }
 
     "template: number interpolation" {
@@ -112,7 +112,7 @@ class TemplateLiteralTest : StringSpec({
             `x = ${dollar}{x}`
             """.trimIndent()
         )
-        (result as StringValue).value shouldBe "x = 42.0"
+        (result as StringValue).value shouldBe "x = 42"
     }
 
     "template: boolean interpolation" {
@@ -220,7 +220,7 @@ class TemplateLiteralTest : StringSpec({
             grade
             """.trimIndent()
         )
-        (result as StringValue).value shouldBe "B: 85.0"
+        (result as StringValue).value shouldBe "B: 85"
     }
 
     "template: works inside while loop" {
@@ -241,7 +241,7 @@ class TemplateLiteralTest : StringSpec({
             }
             """.trimIndent()
         )
-        results shouldBe listOf("item 1.0", "item 2.0", "item 3.0")
+        results shouldBe listOf("item 1", "item 2", "item 3")
     }
 
     "template: three interpolations" {

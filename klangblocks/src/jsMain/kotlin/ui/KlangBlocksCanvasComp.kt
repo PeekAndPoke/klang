@@ -173,6 +173,22 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                 removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
+                            is KBAssignStmt -> {
+                                span {
+                                    css { stmtPillStyle() }
+                                    +"${stmt.target} = …"
+                                }
+                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
+                            }
+
+                            is KBExprStmt -> {
+                                span {
+                                    css { stmtPillStyle() }
+                                    +stmt.expr.renderShort()
+                                }
+                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
+                            }
+
                             is KBBlankLine -> {
                                 span {
                                     css {

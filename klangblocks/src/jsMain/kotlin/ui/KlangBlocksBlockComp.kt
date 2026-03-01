@@ -529,6 +529,8 @@ internal fun KBArgValue.renderShort(): String = when (this) {
     is KBIdentifierArg -> name
     is KBNestedChainArg -> chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName }
     is KBBinaryArg -> "${left.renderShort()} $op ${right.renderShort()}"
-    is KBUnaryArg -> "$op${operand.renderShort()}"
+    is KBUnaryArg -> if (position == KBUnaryPosition.POSTFIX) "${operand.renderShort()}$op" else "$op${operand.renderShort()}"
     is KBArrowFunctionArg -> "(${params.joinToString()}) => …"
+    is KBTernaryArg -> "${condition.renderShort()} ? ${thenExpr.renderShort()} : ${elseExpr.renderShort()}"
+    is KBIndexAccessArg -> "${obj.renderShort()}[${index.renderShort()}]"
 }
