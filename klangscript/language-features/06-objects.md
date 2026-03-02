@@ -1,5 +1,13 @@
 # KlangScript — Objects
 
+> **Design note — Kotlin-style stdlib (not JS-style):**
+> Object utility functions (`Object.keys`, `Object.values`, `Object.entries`) are already
+> available as Kotlin-native implementations. Additional helpers (`Object.assign`,
+> `hasOwnProperty`, spread/merge) will be added in a dedicated stdlib module following
+> **Kotlin conventions**: immutable by default, no prototype-chain surprises, no
+> `this`-binding complexity. Object methods that require `this` (6.4, 6.5) are explicitly
+> out of scope — use functions stored as arrow-function properties instead (6.20).
+
 ### 6.1 Object Literals ✅
 
 ```javascript

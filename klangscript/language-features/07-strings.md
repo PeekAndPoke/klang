@@ -1,5 +1,13 @@
 # KlangScript — String Methods
 
+> **Design note — Kotlin-style stdlib (not JS-style):**
+> String methods will be modelled after **Kotlin's `String` extension functions**, not
+> JavaScript's `String.prototype`. This means: no mutating methods (strings are already
+> immutable), sensible naming (`trimStart`/`trimEnd` instead of `trimLeft`/`trimRight`),
+> and Kotlin-consistent return types. JS quirks like `substr` (deprecated in JS) and
+> `localeCompare` will be omitted. The subset of methods that map cleanly to Kotlin
+> equivalents will be prioritised.
+
 ### 7.1 String Length ❌ `[SEPARATE_STDLIB]` — `str.length()` exists in current stdlib;
 `str.length` property form in dedicated String stdlib
 

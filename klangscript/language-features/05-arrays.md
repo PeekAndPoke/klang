@@ -1,5 +1,13 @@
 # KlangScript — Arrays
 
+> **Design note — Kotlin-style stdlib (not JS-style):**
+> The array/list standard library will follow **Kotlin's immutable-first conventions**, not
+> JavaScript's mutable-by-default API. Transformation methods (`map`, `filter`, `reduce`,
+> `sorted`, `distinct`, …) will return **new arrays** rather than mutating in place.
+> Mutating operations (`push`, `pop`, `reverse`, `sort`) that already exist will be reviewed
+> for consistency. JS-specific oddities (e.g. `sort()` converting numbers to strings by
+> default) will be replaced by sane defaults.
+
 ### 5.1 Array Literals ✅
 
 ```javascript

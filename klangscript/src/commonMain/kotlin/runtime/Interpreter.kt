@@ -906,6 +906,15 @@ class Interpreter(
             }
 
             else -> {
+                // String concatenation: only when BOTH operands are strings.
+                // KlangScript does NOT do implicit type coercion (number + string, null + string, etc.).
+                // Use template literals `Hello ${name}` for mixed-type string building.
+                if (binOp.operator == BinaryOperator.ADD &&
+                    leftValue is StringValue && rightValue is StringValue
+                ) {
+                    return StringValue(leftValue.value + rightValue.value)
+                }
+
                 // Arithmetic operators - ensure both operands are numbers
                 if (leftValue !is NumberValue || rightValue !is NumberValue) {
                     throw TypeError(

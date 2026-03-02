@@ -61,16 +61,22 @@ let not3 = !!5;                 // true
 
 **Expected:** Results as commented
 
-### 2.5 String Concatenation ✅
+### 2.5 String Concatenation 🟡 — `string + string` ✅; mixed `string + number` / `number + string` ❌ `[MEDIUM]`
+
+> **Design note:** KlangScript does **not** do implicit type coercion for `+`.
+> Only `string + string` is supported. For mixed-type string building, use template literals:
+> `` `number: ${42}` `` instead of `"number: " + 42`.
 
 ```javascript
-let concat1 = "hello" + " " + "world";  // "hello world"
-let concat2 = "number: " + 42;          // "number: 42"
-let concat3 = 1 + 2 + " items";         // "3 items"
-let concat4 = "items: " + (1 + 2);      // "items: 3"
+let concat1 = "hello" + " " + "world";  // "hello world" ✅
+let concat2 = `number: ${42}`;          // "number: 42" ✅ (use template literal)
+
+// These throw TypeError — no implicit coercion:
+// "number: " + 42   ❌
+// 1 + 2 + " items"  ❌ (use `${1 + 2} items` instead)
 ```
 
-**Expected:** Results as commented
+**Expected:** concat1 = "hello world"
 
 ### 2.6 Ternary Operator ✅
 

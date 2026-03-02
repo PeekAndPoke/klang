@@ -2,15 +2,31 @@
 
 ## Current Status
 
-- **Tests**: 735 passing on JVM ✅, JS ✅ (as of 2026-02-17)
+- **Tests**: 970+ passing on JVM ✅ (as of 2026-03-02)
 - **Production**: Kotlin/JS builds working ✅
 - **Parser**: Hand-rolled recursive descent (replaced better-parse due to Kotlin/JS issue #66)
 
-## Recent Work (2026-02)
+## Recent Work (2026-03)
 
-- Parser rewritten from better-parse to hand-rolled (1005-line lexer + recursive descent)
-- Multiline backtick string source location tracking fixed (`Token.endLine` now tracked separately)
-- `MultilineStringLocationTest.kt` added to validate multiline location tracking
+- Implemented "medium" language features: `if/else` expression, `while`/`do-while`/`for` loops,
+  `break`/`continue`, template literals with `${...}` interpolation
+- Fixed per-iteration loop scoping (`executeBlockInChildScope()`) and if-branch scoping
+- Fixed template literal brace matching to handle strings inside `${}` expressions
+- Fixed `NumberValue.toDisplayString()` cross-platform: whole numbers format as `"42"` (not `"42.0"`)
+- Implemented `string + string` concatenation (no implicit coercion — not `string + number`)
+- Added `NativeInteropConversionTest` covering `wrapAsRuntimeValue`, `convertToKotlin` for all
+  array types, `convertArgToKotlin`, `checkArgsSize`, and actual arrow-function argument passing
+- Updated all `language-features/` files with correct ✅/🟡/❌ status
+
+## Design Decisions (Kotlin-style, not JS-style)
+
+- **No `switch`**: will implement `when`-expression (no fall-through, exhaustive, expression form)
+- **No implicit type coercion**: `string + number` throws TypeError; use template literals instead
+- **Immutable stdlib**: array/list/string/object methods will follow Kotlin conventions (no in-place
+  mutation where possible)
+- **No `this` keyword**: object methods use stored arrow functions (`obj.fn = (a, b) => ...`)
+- **No `var`**: only `let` and `const`
+- **No `undefined`**: only `null`
 
 ## Completed Phases
 
@@ -19,6 +35,9 @@
 - **Phase 2**: Tree-walking interpreter (all value types, scoping, native interop, error handling, stack traces,
   array/string/object built-in methods)
 - **Phase 3**: API & integration (import/export, native Kotlin interop, library system, immutable builder pattern)
+- **Phase 4a**: Medium control-flow features (if/else expr, loops, break/continue, template literals, ternary, ===)
+- **Phase 4b**: Scoping correctness audit + fixes (per-iteration scope, if-branch scope, closure tests)
+- **Phase 4c**: NativeInterop tests + string concatenation fix
 
 ## Lessons Learned
 
@@ -40,11 +59,19 @@ platforms. Do not re-introduce parser combinator libraries.
 **`ast/Ast.kt` changes have wide impact** — every AST node change requires updates to parser + interpreter + potentially
 all existing tests using `FunctionValue` or affected node constructors.
 
+**`executeBlockInChildScope()`** — always use this for any block that should not leak `let`/`const` to the outer scope
+(loop bodies, if branches). Never call bare `executeBlock()` for these.
+
+**Template literal brace matching** — naive depth counter fails for `${obj.toString("{}")}`. Track `inString`/`escaped`
+state when scanning for the closing `}`.
+
+**Feature-catalog files must be kept in sync** — after every implementation, update the relevant
+`language-features/NN-*.md` file to reflect the new ✅/🟡/❌ status.
+
 ## Pending (see TODOS.MD)
 
-- Array indexing (`arr[0]`)
-- Control flow (`if/else`, `while`, `for`)
-- Strict equality (`===`, `!==`)
-- Template string interpolation
-- Higher-order array methods (`map`, `filter`, etc.)
-- Phase 4: Documentation & examples
+- Higher-order array methods (`map`, `filter`, `forEach`, `find`, `some`, `every`, `reduce`)
+- `when`-expression (replacement for `switch`)
+- `for...in` / `for...of` loops
+- Kotlin-style string/array/object stdlib (separate module)
+- Spread operator, destructuring

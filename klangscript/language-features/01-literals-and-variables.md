@@ -1,7 +1,6 @@
 # KlangScript — Basic Literals and Variables
 
-### 1.1 Number Literals 🟡 — basic integers/decimals ✅; scientific notation `1e6` / `2.5e-3` ❌
-`[EASY]` (lexer fix needed)
+### 1.1 Number Literals ✅ — basic integers/decimals, negative, scientific notation `1e6` / `2.5e-3`
 
 ```javascript
 let a = 42;

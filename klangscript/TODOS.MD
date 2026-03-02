@@ -8,19 +8,32 @@
 - [x] Strict equality: `===`, `!==` ✅
 - [x] Control flow: `if/else`, `while`, `for`, `do/while`, `break`, `continue` ✅
 - [x] Template string interpolation: `` `hello ${name}` `` ✅
-- [ ] Higher-order array methods: `map()`, `filter()`, `forEach()`, `find()`, `some()`, `every()` — needs callback
-  execution from extension method context
+- [x] Ternary operator: `x ? y : z` ✅
+- [x] Logical operators: `&&`, `||` ✅
+- [x] String concatenation: `string + string` ✅ (no implicit coercion — use template literals for mixed types)
+- [ ] Higher-order array methods: `map()`, `filter()`, `forEach()`, `find()`, `some()`, `every()`, `reduce()` —
+  needs callback execution from extension method context
+- [ ] `when`-expression — replacement for JS `switch`; no fall-through; expression form; Kotlin semantics
+- [ ] `for...in` loop — iterate over object keys
+- [ ] `for...of` loop — iterate over array elements
 
 ## Medium Priority
 
 ### Language Features
 
-- [ ] Spread operator: `...args`
-- [ ] Destructuring: `let { a, b } = obj`
-- [x] Ternary operator: `x ? y : z` ✅
-- [ ] Default exports
-- [x] Logical operators: `&&`, `||` ✅
-- [ ] Function references (partially works, not fully tested — Step 2.9)
+- [ ] Spread operator: `...args` in function calls and array/object literals
+- [ ] Destructuring: `let { a, b } = obj` and `let [a, b] = arr`
+- [ ] `delete obj.prop`
+- [ ] Default parameters: `(x = 10) => x`
+- [ ] `function` keyword (low priority — arrow functions cover all use cases)
+- [ ] `undefined` as alias for `null`
+
+### Standard Library (Kotlin-style, not JS-style)
+
+- [ ] String stdlib module — Kotlin-convention methods (`trimStart`, `trimEnd`, `padStart`, `padEnd`, etc.)
+- [ ] Array/List stdlib module — immutable Kotlin conventions (`sorted`, `distinct`, `groupBy`, etc.)
+- [ ] Object stdlib module — `Object.assign`, `hasOwnProperty`
+- [ ] Type conversion globals: `Number()`, `String()`, `Boolean()`, `parseInt()`, `parseFloat()`
 
 ### Parser Robustness
 
@@ -28,13 +41,6 @@
 - [ ] Better error messages — show position and context
 
 ## Low Priority
-
-### Phase 4 — Documentation & Examples
-
-- [ ] KDoc on all public APIs
-- [ ] Feature showcase scripts
-- [ ] Tutorial scripts
-- [ ] Formal language specification (grammar, semantics, JS differences guide)
 
 ### Phase 5 — Testing & Quality
 
@@ -48,5 +54,4 @@
 - [ ] REPL
 - [ ] Live coding hot reload / state preservation
 - [ ] Bytecode VM (long-term)
-- [ ] `this` binding
-- [ ] Prototype chain
+- [ ] Formal language specification (grammar, semantics, JS differences guide)

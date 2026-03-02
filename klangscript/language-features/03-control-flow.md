@@ -29,40 +29,48 @@ if (x < 5) {
 
 **Expected:** Results as commented
 
-### 3.2 Switch Statements ❌ `[MEDIUM]` — not yet implemented
+### 3.2 Switch Statements ❌ `[OUT_OF_SCOPE]` — intentionally NOT implemented; use `when`-expression instead
+
+> **Design decision:** KlangScript will **not** implement JavaScript's `switch` statement.
+> Fall-through semantics (`case 1: case 2:` without `break`) are a well-known error pit
+> and a source of subtle bugs. Instead, KlangScript will implement a `when`-**expression**
+> modelled after Kotlin's `when`, which has no fall-through, always returns a value, and
+> requires exhaustive coverage. See section 3.7 below once implemented.
+
+```javascript
+// JS switch — NOT supported
+switch (x) {
+    case 1: ...
+    case 2: ...   // fall-through hazard
+    default: ...
+}
+
+// Future KlangScript when-expression (planned):
+// let result = when (x) {
+//     1 -> "one"
+//     2 -> "two"
+//     else -> "other"
+// }
+```
+
+### 3.7 When-Expression ❌ `[MEDIUM]` — planned replacement for switch
 
 ```javascript
 let day = 3;
-let name;
-switch (day) {
-    case 1:
-        name = "Monday";
-        break;
-    case 2:
-        name = "Tuesday";
-        break;
-    case 3:
-        name = "Wednesday";
-        break;
-    default:
-        name = "Other";
-}
+let name = when (day) {
+    1 -> "Monday"
+    2 -> "Tuesday"
+    3 -> "Wednesday"
+    else -> "Other"
+};
 // name should be "Wednesday"
 
-let x = 2;
-let result = "";
-switch (x) {
-    case 1:
-        result += "one";
-    case 2:
-        result += "two";
-    case 3:
-        result += "three";
-        break;
-    default:
-        result += "default";
-}
-// result should be "twothree" (fall-through)
+// Multiple values per branch
+let type = when (x) {
+    1, 2, 3 -> "small"
+    4, 5, 6 -> "medium"
+    else -> "large"
+};
 ```
 
 **Expected:** Results as commented
