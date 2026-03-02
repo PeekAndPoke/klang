@@ -71,7 +71,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                         css {
                             display = Display.flex
                             flexDirection = FlexDirection.row
-                            alignItems = Align.center
+                            alignItems = Align.flexStart
                             put("gap", "8px")
                         }
 
@@ -104,49 +104,71 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                         when (stmt) {
                             is KBChainStmt -> {
-                                var isFirstBlock = true
-                                stmt.steps.forEach { item ->
-                                    when (item) {
-                                        is KBCallBlock -> {
-                                            // Before every block: leading zone (hidden idle) before the first,
-                                            // connector/drop zone between subsequent blocks.
-                                            KlangBlocksDropZoneComp(
-                                                chainId = stmt.id,
-                                                insertBeforeBlockId = item.id,
-                                                ctx = ctx,
-                                                showConnectorWhenIdle = !isFirstBlock,
-                                            )
-                                            KlangBlocksBlockComp(
-                                                block = item,
-                                                chain = stmt,
-                                                ctx = ctx,
-                                            )
-                                            isFirstBlock = false
-                                        }
-
-                                        is KBNewlineHint -> {
-                                            span {
-                                                css {
-                                                    color = Color("#888")
-                                                    padding = Padding(horizontal = 4.px)
-                                                }
-                                                +"↩"
+                                // Split steps into visual segments at KBNewlineHint positions.
+                                // Each segment becomes its own row; the canvas scrolls as one surface.
+                                val segments = buildList {
+                                    var current = mutableListOf<KBCallBlock>()
+                                    for (step in stmt.steps) {
+                                        when (step) {
+                                            is KBCallBlock -> current.add(step)
+                                            is KBNewlineHint -> if (current.isNotEmpty()) {
+                                                add(current.toList()); current = mutableListOf()
                                             }
-                                        }
 
-                                        is KBStringLiteralItem -> { /* literal heads don't appear at top level */
+                                            else -> {} // KBStringLiteralItem / KBIdentifierItem: not shown at top level
                                         }
+                                    }
+                                    if (current.isNotEmpty()) add(current.toList())
+                                }
 
-                                        is KBIdentifierItem -> { /* identifier heads don't appear at top level */
+                                div {
+                                    css {
+                                        display = Display.flex
+                                        flexDirection = FlexDirection.column
+                                        put("gap", "4px")
+                                    }
+
+                                    segments.forEachIndexed { segIndex, blocks ->
+                                        div {
+                                            css {
+                                                display = Display.flex
+                                                flexDirection = FlexDirection.row
+                                                alignItems = Align.center
+                                                put("gap", "8px")
+                                            }
+
+                                            blocks.forEachIndexed { blockIndex, block ->
+                                                val isChainHead = segIndex == 0 && blockIndex == 0
+                                                val isFirstInSeg = blockIndex == 0
+
+                                                KlangBlocksDropZoneComp(
+                                                    chainId = stmt.id,
+                                                    insertBeforeBlockId = block.id,
+                                                    ctx = ctx,
+                                                    showConnectorWhenIdle = !isChainHead,
+                                                    hasNewlineBefore = !isChainHead && isFirstInSeg,
+                                                    onToggleNewline = if (!isChainHead) {
+                                                        { ctx.editing.onToggleNewlineBeforeBlock(stmt.id, block.id) }
+                                                    } else null,
+                                                )
+                                                KlangBlocksBlockComp(
+                                                    block = block,
+                                                    chain = stmt,
+                                                    ctx = ctx,
+                                                )
+                                            }
+
+                                            // Append drop zone only at the end of the last segment
+                                            if (segIndex == segments.lastIndex) {
+                                                KlangBlocksDropZoneComp(
+                                                    chainId = stmt.id,
+                                                    insertBeforeBlockId = null,
+                                                    ctx = ctx,
+                                                )
+                                            }
                                         }
                                     }
                                 }
-
-                                KlangBlocksDropZoneComp(
-                                    chainId = stmt.id,
-                                    insertBeforeBlockId = null,
-                                    ctx = ctx,
-                                )
                             }
 
                             is KBImportStmt -> {

@@ -173,6 +173,14 @@ class KBProgramEditingCtx(
         }
     }
 
+    /** Toggle a [KBNewlineHint] directly before the block identified by [blockId] in chain [chainId].
+     *  Inserts a hint if none exists; removes it if one does. */
+    fun onToggleNewlineBeforeBlock(chainId: String, blockId: String) {
+        update { current ->
+            current.copy(statements = toggleNewlineInStmts(current.statements, chainId, blockId))
+        }
+    }
+
     /** Toggle the pocket layout of a specific block between HORIZONTAL and VERTICAL. */
     fun onToggleLayout(blockId: String) {
         update { current ->
@@ -604,4 +612,58 @@ class KBProgramEditingCtx(
                 else -> argValue
             }
         }
+
+    private fun toggleNewlineInStmts(stmts: List<KBStmt>, chainId: String, blockId: String): List<KBStmt> =
+        stmts.map { stmt ->
+            when {
+                stmt is KBChainStmt && stmt.id == chainId ->
+                    stmt.copy(steps = toggleNewlineBeforeBlockInSteps(stmt.steps, blockId))
+
+                stmt is KBChainStmt ->
+                    stmt.copy(steps = toggleNewlineInItems(stmt.steps, chainId, blockId))
+
+                else -> stmt
+            }
+        }
+
+    private fun toggleNewlineInItems(items: List<KBChainItem>, chainId: String, blockId: String): List<KBChainItem> =
+        items.map { item ->
+            when (item) {
+                is KBCallBlock -> item.copy(args = toggleNewlineInArgs(item.args, chainId, blockId))
+                else -> item
+            }
+        }
+
+    private fun toggleNewlineInArgs(args: List<KBArgValue>, chainId: String, blockId: String): List<KBArgValue> =
+        args.map { argValue ->
+            when (argValue) {
+                is KBNestedChainArg -> when {
+                    argValue.chain.id == chainId -> argValue.copy(
+                        chain = argValue.chain.copy(
+                            steps = toggleNewlineBeforeBlockInSteps(argValue.chain.steps, blockId)
+                        )
+                    )
+
+                    else -> argValue.copy(
+                        chain = argValue.chain.copy(
+                            steps = toggleNewlineInItems(argValue.chain.steps, chainId, blockId)
+                        )
+                    )
+                }
+
+                else -> argValue
+            }
+        }
+
+    private fun toggleNewlineBeforeBlockInSteps(steps: List<KBChainItem>, blockId: String): List<KBChainItem> {
+        val idx = steps.indexOfFirst { it is KBCallBlock && it.id == blockId }
+        if (idx < 0) return steps
+        val result = steps.toMutableList()
+        if (idx > 0 && result[idx - 1] is KBNewlineHint) {
+            result.removeAt(idx - 1)
+        } else {
+            result.add(idx, KBNewlineHint)
+        }
+        return result
+    }
 }

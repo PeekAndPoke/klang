@@ -240,12 +240,30 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         }
                     }
                 } else if (arg is KBNestedChainArg) {
-                    // Render the nested chain as inline mini-blocks for both variants.
+                    // Optional string/identifier head (always the very first step if present).
+                    val headStep = arg.chain.steps.firstOrNull()
+                        ?.takeIf { it is KBStringLiteralItem || it is KBIdentifierItem }
+                    // Split remaining KBCallBlock steps at KBNewlineHint into segments.
+                    val callSteps = if (headStep != null) arg.chain.steps.drop(1) else arg.chain.steps
+                    val segments = buildList {
+                        var current = mutableListOf<KBCallBlock>()
+                        for (step in callSteps) {
+                            when (step) {
+                                is KBCallBlock -> current.add(step)
+                                is KBNewlineHint -> if (current.isNotEmpty()) {
+                                    add(current.toList()); current = mutableListOf()
+                                }
+
+                                else -> {}
+                            }
+                        }
+                        if (current.isNotEmpty()) add(current.toList())
+                    }
                     div {
                         css {
                             display = Display.inlineFlex
-                            alignItems = Align.center
-                            put("gap", "8px")
+                            flexDirection = FlexDirection.column
+                            put("gap", "2px")
                             borderRadius = 4.px
                             backgroundColor = Color("rgba(0,0,0,0.2)")
                             padding = Padding(horizontal = 4.px, vertical = 2.px)
@@ -264,59 +282,75 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         }
                         onMouseDown { event -> event.stopPropagation() }
                         var isFirstBlock = true
-                        arg.chain.steps.forEach { nestedItem ->
-                            when (nestedItem) {
-                                is KBStringLiteralItem -> {
-                                    KlangBlocksStringLiteralItemComp(
-                                        item = nestedItem,
-                                        chainId = arg.chain.id,
-                                        ctx = ctx,
-                                    )
-                                    isFirstBlock = false
+                        segments.forEachIndexed { segIndex, blocks ->
+                            div {
+                                css {
+                                    display = Display.inlineFlex
+                                    alignItems = Align.center
+                                    put("gap", "8px")
                                 }
+                                // Head item (string/identifier) only in the first segment
+                                if (segIndex == 0 && headStep != null) {
+                                    when (headStep) {
+                                        is KBStringLiteralItem -> KlangBlocksStringLiteralItemComp(
+                                            item = headStep,
+                                            chainId = arg.chain.id,
+                                            ctx = ctx,
+                                        )
 
-                                is KBIdentifierItem -> {
-                                    span {
-                                        css {
-                                            borderRadius = 3.px
-                                            padding = Padding(horizontal = 4.px, vertical = 1.px)
-                                            fontSize = 11.px
-                                            backgroundColor = Color("rgba(0,0,0,0.25)")
-                                            border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.2)"))
-                                            color = Color("rgba(255,255,255,0.85)")
-                                            fontFamily = "monospace"
-                                            whiteSpace = WhiteSpace.nowrap
+                                        is KBIdentifierItem -> span {
+                                            css {
+                                                borderRadius = 3.px
+                                                padding = Padding(horizontal = 4.px, vertical = 1.px)
+                                                fontSize = 11.px
+                                                backgroundColor = Color("rgba(0,0,0,0.25)")
+                                                border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.2)"))
+                                                color = Color("rgba(255,255,255,0.85)")
+                                                fontFamily = "monospace"
+                                                whiteSpace = WhiteSpace.nowrap
+                                            }
+                                            +headStep.name
                                         }
-                                        +nestedItem.name
-                                    }
-                                    isFirstBlock = false
-                                }
 
-                                is KBCallBlock -> {
+                                        else -> {}
+                                    }
+                                }
+                                blocks.forEach { nestedBlock ->
                                     KlangBlocksDropZoneComp(
                                         chainId = arg.chain.id,
-                                        insertBeforeBlockId = nestedItem.id,
+                                        insertBeforeBlockId = nestedBlock.id,
                                         ctx = ctx,
                                         showConnectorWhenIdle = !isFirstBlock,
+                                        onToggleNewline = if (!isFirstBlock) {
+                                            { ctx.editing.onToggleNewlineBeforeBlock(arg.chain.id, nestedBlock.id) }
+                                        } else null,
                                     )
                                     KlangBlocksBlockComp(
-                                        block = nestedItem,
+                                        block = nestedBlock,
                                         chain = arg.chain,
                                         ctx = ctx,
                                         variant = BlockVariant.Nested,
                                     )
                                     isFirstBlock = false
                                 }
-
-                                is KBNewlineHint -> { /* newline hint, no connector reset needed */
+                                // Append drop zone only after the last segment
+                                if (segIndex == segments.lastIndex) {
+                                    KlangBlocksDropZoneComp(
+                                        chainId = arg.chain.id,
+                                        insertBeforeBlockId = null,
+                                        ctx = ctx,
+                                    )
                                 }
                             }
                         }
-                        KlangBlocksDropZoneComp(
-                            chainId = arg.chain.id,
-                            insertBeforeBlockId = null,
-                            ctx = ctx,
-                        )
+                        // Empty chain (no call blocks): still show the append drop zone
+                        if (segments.isEmpty()) {
+                            KlangBlocksDropZoneComp(
+                                chainId = arg.chain.id,
+                                insertBeforeBlockId = null,
+                                ctx = ctx,
+                            )
+                        }
                     }
                 } else {
                     val isMultilineString = arg is KBStringArg && '\n' in arg.value

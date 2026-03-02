@@ -4,10 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.html.onMouseEnter
-import de.peekandpoke.ultra.html.onMouseLeave
-import de.peekandpoke.ultra.html.onMouseUp
+import de.peekandpoke.ultra.html.*
 import de.peekandpoke.ultra.semanticui.icon
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -30,12 +27,16 @@ fun Tag.KlangBlocksDropZoneComp(
     insertBeforeBlockId: String?,   // null = append to chain end
     ctx: KlangBlocksCtx,
     showConnectorWhenIdle: Boolean = true,
+    hasNewlineBefore: Boolean = false,
+    onToggleNewline: (() -> Unit)? = null,
 ) = comp(
     KlangBlocksDropZoneComp.Props(
         chainId = chainId,
         insertBeforeBlockId = insertBeforeBlockId,
         ctx = ctx,
         showConnectorWhenIdle = showConnectorWhenIdle,
+        hasNewlineBefore = hasNewlineBefore,
+        onToggleNewline = onToggleNewline,
     )
 ) {
     KlangBlocksDropZoneComp(it)
@@ -48,6 +49,8 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
         val insertBeforeBlockId: String?,
         val ctx: KlangBlocksCtx,
         val showConnectorWhenIdle: Boolean = true,
+        val hasNewlineBefore: Boolean = false,
+        val onToggleNewline: (() -> Unit)? = null,
     )
 
     private var isHovered: Boolean by value(false)
@@ -60,7 +63,9 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
         if (isInline) {
             // ── Insert-before mode (former KlangBlocksInlineDropZoneComp) ───────
             // Negative margins let it overlap the adjacent blocks' padding so the
-            // chain width never changes.
+            // chain width never changes. Half the width is absorbed on each side.
+            val connectorW = 60
+            val dotW = 5
             div {
                 css {
                     display = Display.inlineFlex
@@ -69,21 +74,34 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                     flexShrink = 0.0
                     marginLeft = (-10).px
                     marginRight = (-10).px
-                    width = 20.px
+                    width = connectorW.px
                     alignSelf = Align.stretch
                     position = Position.relative
                     zIndex = 1
-                    if (canDrop) cursor = Cursor.copy
+                    cursor = when {
+                        canDrop -> Cursor.copy
+                        props.onToggleNewline != null -> Cursor.pointer
+                        else -> Cursor.default
+                    }
                 }
+                onMouseEnter { isHovered = true }
+                onMouseLeave { isHovered = false }
+
+                if (!canDrop && props.onToggleNewline != null) {
+                    val toggle = props.onToggleNewline!!
+                    onClick { event ->
+                        event.stopPropagation()
+                        event.preventDefault()
+                        console.log("toggle new line")
+                        toggle()
+                    }
+                }
+
                 if (canDrop) {
-                    onMouseEnter { isHovered = true }
-                    onMouseLeave { isHovered = false }
                     onMouseUp { event ->
                         event.stopPropagation()
                         dndState!!.onDropToChainAt!!.invoke(props.chainId, props.insertBeforeBlockId!!)
                     }
-                    // Pill is absolutely positioned so it can be slightly larger than
-                    // the 20 px container without affecting the surrounding layout.
                     div {
                         css {
                             position = Position.absolute
@@ -112,10 +130,17 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                         }
                     }
                 } else if (props.showConnectorWhenIdle) {
-                    // dot-line-dot connector
-                    div { css { width = 6.px; height = 6.px; borderRadius = 50.pct; backgroundColor = Color("#888"); flexShrink = 0.0 } }
-                    div { css { width = 8.px; height = 2.px; backgroundColor = Color("#888"); flexShrink = 0.0 } }
-                    div { css { width = 6.px; height = 6.px; borderRadius = 50.pct; backgroundColor = Color("#888"); flexShrink = 0.0 } }
+                    div {
+                        css {
+                            width = dotW.px; height = dotW.px; borderRadius = 50.pct; backgroundColor = Color("#888"); flexShrink = 0.0
+                        }
+                    }
+                    div { css { flexGrow = 1.0; height = 2.px; backgroundColor = Color("#888"); flexShrink = 0.0 } }
+                    div {
+                        css {
+                            width = dotW.px; height = dotW.px; borderRadius = 50.pct; backgroundColor = Color("#888"); flexShrink = 0.0
+                        }
+                    }
                 }
             }
         } else {
