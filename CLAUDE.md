@@ -2,9 +2,9 @@
 
 ## Available Agent
 
-| Agent                       | Trigger                                                                                                                        | Description                                                                                                                                                         |
-|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `music-platform-strategist` | "think big picture", "what should we build", "plan the platform", "launch strategy", "user personas", "feature prioritization" | Strategic product advisor. NOT a coder. Reasons about user value, platform surface, and launch readiness. Has persistent memory. Saves output to `.claude/vision/`. |
+| Agent                       | Trigger                                                                                                       | Description                                                                                                                                                         |
+|-----------------------------|---------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `music-platform-strategist` | **Explicit only**: say "music-platform-strategist" or "talk to the strategist" or "platform strategy session" | Strategic product advisor. NOT a coder. Reasons about user value, platform surface, and launch readiness. Has persistent memory. Saves output to `.claude/vision/`. |
 
 ## Available Skills
 

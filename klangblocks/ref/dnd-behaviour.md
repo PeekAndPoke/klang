@@ -69,8 +69,8 @@ New block inserted at that position; block to the right shifts forward.
 
 ### P4 — Palette → empty slot
 
-New single-block nested chain placed in the slot.
-**Status:** Implemented ✓ (but string-literal special-casing should be removed — see P4 note)
+New single-block nested chain placed in the slot. Any existing arg value in the slot is discarded.
+**Status:** Implemented ✓
 
 ### P5 — Palette → existing block (replace)
 
