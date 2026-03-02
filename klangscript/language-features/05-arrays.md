@@ -12,7 +12,7 @@ let nested = [[1, 2], [3, 4], [5, 6]];
 
 **Expected:** All arrays created successfully
 
-### 5.2 Array Access ❌ `[EASY]` — requires `IndexAccess` AST node
+### 5.2 Array Access ✅
 
 ```javascript
 let arr = [10, 20, 30, 40];
