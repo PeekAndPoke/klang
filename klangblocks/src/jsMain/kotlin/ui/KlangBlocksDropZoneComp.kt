@@ -6,6 +6,7 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
 import de.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.klang.blocks.model.DropDestination
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -58,7 +59,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
     override fun VDom.render() {
         val dndState = props.ctx.dnd.state
         val isInline = props.insertBeforeBlockId != null
-        val canDrop = if (isInline) dndState?.onDropToChainAt != null else dndState?.onDropToChain != null
+        val canDrop = if (isInline) dndState?.accepts(DropTarget.ChainInsert) == true else dndState?.accepts(DropTarget.ChainEnd) == true
 
         if (isInline) {
             // ── Insert-before mode (former KlangBlocksInlineDropZoneComp) ───────
@@ -100,7 +101,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                 if (canDrop) {
                     onMouseUp { event ->
                         event.stopPropagation()
-                        dndState!!.onDropToChainAt!!.invoke(props.chainId, props.insertBeforeBlockId!!)
+                        dndState!!.onDrop(DropDestination.ChainInsert(props.chainId, props.insertBeforeBlockId!!))
                     }
                     div {
                         css {
@@ -171,7 +172,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                     onMouseLeave { isHovered = false }
                     onMouseUp { event ->
                         event.stopPropagation()
-                        dndState!!.onDropToChain!!.invoke(props.chainId)
+                        dndState!!.onDrop(DropDestination.ChainEnd(props.chainId))
                     }
                     icon.tiny.plus {
                         css {

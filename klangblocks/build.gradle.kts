@@ -34,6 +34,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                api(project(":common"))
                 api(project(":klangscript"))
             }
         }

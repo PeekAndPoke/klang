@@ -6,6 +6,7 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
 import de.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.klang.blocks.model.DropDestination
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -36,7 +37,7 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
 
     override fun VDom.render() {
         val dndState = props.ctx.dnd.state
-        val canDrop = dndState?.onDropToPosition != null
+        val canDrop = dndState?.accepts(DropTarget.RowGap) == true
 
         // Fixed-height outer container — never changes size
         div {
@@ -89,7 +90,7 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
                     onMouseLeave { isDropHovered = false }
                     onMouseUp { event ->
                         event.stopPropagation()
-                        dndState.onDropToPosition.invoke(props.index)
+                        dndState.onDrop(DropDestination.RowGap(props.index))
                     }
                     // Visual indicator — thin line centred in the hit area
                     div {

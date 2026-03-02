@@ -155,20 +155,9 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             ghostX = ds.ghostX,
             ghostY = ds.ghostY,
             ghostLabel = ds.funcName,
-            onDropToPosition = { index ->
-                editingCtx.commitPaletteDropAtPosition(ds.funcName, index)
-                dragState = DragState.None
-            },
-            onDropToChain = { chainId ->
-                editingCtx.commitChainAppend(chainId, ds.funcName)
-                dragState = DragState.None
-            },
-            onDropToSlot = { stmtId, blockId, slotIdx ->
-                editingCtx.commitPaletteDropToSlot(ds.funcName, stmtId, blockId, slotIdx)
-                dragState = DragState.None
-            },
-            onDropToChainAt = { chainId, insertBeforeBlockId ->
-                editingCtx.commitPaletteDropToChainAt(ds.funcName, chainId, insertBeforeBlockId)
+            targets = setOf(DropTarget.RowGap, DropTarget.ChainEnd, DropTarget.ChainInsert, DropTarget.EmptySlot),
+            onDrop = { dest ->
+                editingCtx.execute(DropAction.CreateBlock(ds.funcName, dest))
                 dragState = DragState.None
             },
         )
@@ -177,19 +166,11 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             ghostX = ds.ghostX,
             ghostY = ds.ghostY,
             ghostLabel = ds.chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName },
-            onDropToPosition = { index ->
-                editingCtx.commitMoveToPosition(ds.stmtId, index)
+            targets = setOf(DropTarget.RowGap),
+            onDrop = { dest ->
+                editingCtx.execute(DropAction.MoveRow(ds.stmtId, (dest as DropDestination.RowGap).index))
                 dragState = DragState.None
             },
-            onDropToChain = { chainId ->
-                editingCtx.commitCanvasChainAppend(ds.stmtId, ds.chain, chainId)
-                dragState = DragState.None
-            },
-            onDropToSlot = { stmtId, blockId, slotIdx ->
-                editingCtx.commitCanvasSlotDrop(ds.stmtId, ds.chain, stmtId, blockId, slotIdx)
-                dragState = DragState.None
-            },
-            onDropToChainAt = null,
         )
 
         is DragState.DraggingBlock -> {
@@ -201,20 +182,9 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 ghostX = ds.ghostX,
                 ghostY = ds.ghostY,
                 ghostLabel = blocks.joinToString(".") { it.funcName },
-                onDropToPosition = { index ->
-                    editingCtx.commitMoveBlocksToPosition(blocks, index)
-                    dragState = DragState.None
-                },
-                onDropToChain = { chainId ->
-                    editingCtx.commitMoveBlocksToChain(blocks, chainId)
-                    dragState = DragState.None
-                },
-                onDropToSlot = { stmtId, blockId, slotIdx ->
-                    editingCtx.commitMoveBlocksToSlot(blocks, stmtId, blockId, slotIdx)
-                    dragState = DragState.None
-                },
-                onDropToChainAt = { chainId, insertBeforeBlockId ->
-                    editingCtx.commitMoveBlocksToChainAt(blocks, chainId, insertBeforeBlockId)
+                targets = setOf(DropTarget.RowGap, DropTarget.ChainEnd, DropTarget.ChainInsert, DropTarget.EmptySlot),
+                onDrop = { dest ->
+                    editingCtx.execute(DropAction.MoveBlocks(blocks, dest))
                     dragState = DragState.None
                 },
             )

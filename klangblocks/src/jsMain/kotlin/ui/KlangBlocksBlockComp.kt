@@ -117,7 +117,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
         val dndState = ctx.dnd.state
         val isVertical = block.pocketLayout == KBPocketLayout.VERTICAL
-        val canDropToSlot = dndState?.onDropToSlot != null
+        val canDropToSlot = dndState?.accepts(DropTarget.EmptySlot) == true
         val docCategory = doc?.category
 
         div(if (variant.isTopLevel) "kb-block" else "kb-nested-block") {
@@ -345,7 +345,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         ?.closest(".kb-block, .kb-nested-block") != null
                     if (!isOverBlock) {
                         event.stopPropagation()
-                        dndState?.onDropToSlot?.invoke(stmtId = props.chain.id, blockId = props.block.id, slotIdx = index)
+                        dndState?.onDrop?.invoke(DropDestination.EmptySlot(props.block.id, index))
                     }
                 }
             }
@@ -397,7 +397,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             if (canDrop) {
                 onMouseUp { event ->
                     event.stopPropagation()
-                    dndState?.onDropToSlot?.invoke(stmtId = props.chain.id, blockId = props.block.id, slotIdx = index)
+                    dndState?.onDrop?.invoke(DropDestination.EmptySlot(props.block.id, index))
                 }
                 onMouseDown { event -> event.stopPropagation() }
             } else {

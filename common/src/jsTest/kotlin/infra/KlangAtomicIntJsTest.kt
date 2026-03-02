@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_bridge.infra
+package io.peekandpoke.klang.common.infra
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

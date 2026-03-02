@@ -1,10 +1,8 @@
-package io.peekandpoke.klang.blocks.ui
-
-import io.peekandpoke.klang.blocks.model.*
+package io.peekandpoke.klang.blocks.model
 
 class KBProgramEditingCtx(
     initialProgram: KBProgram,
-    private val onChanged: (KBProgram) -> Unit,
+    private val onChanged: (KBProgram) -> Unit = {},
 ) {
 
     var program: KBProgram = initialProgram
@@ -41,107 +39,31 @@ class KBProgramEditingCtx(
         onChanged(program)
     }
 
-    // ---- Top-level program mutations -----------------------------------------------
+    // ---- Drop action entry point ---------------------------------------------------
 
-    /** Insert a new single-block chain at a specific row index. */
-    fun commitPaletteDropAtPosition(funcName: String, index: Int) {
-        val chain = KBChainStmt(
-            id = uuid(),
-            steps = listOf(KBCallBlock(id = uuid(), funcName = funcName, isHead = true))
-        )
-        update { current ->
-            val stmts = current.statements.toMutableList()
-            stmts.add(index.coerceIn(0, stmts.size), chain)
-            current.copy(statements = stmts)
+    fun execute(action: DropAction) {
+        when (action) {
+            is DropAction.CreateBlock -> when (val d = action.destination) {
+                is DropDestination.RowGap -> createBlockAtRowGap(action.funcName, d.index)
+                is DropDestination.ChainEnd -> appendBlockToChainById(d.chainId, action.funcName)
+                is DropDestination.ChainInsert -> insertBlockIntoChainById(action.funcName, d.chainId, d.insertBeforeBlockId)
+                is DropDestination.EmptySlot -> dropBlockToSlot(action.funcName, d.blockId, d.slotIdx)
+            }
+
+            is DropAction.MoveBlocks -> when (val d = action.destination) {
+                is DropDestination.RowGap -> moveBlocksToRowGap(action.blocks, d.index)
+                is DropDestination.ChainEnd -> moveBlocksToChainEnd(action.blocks, d.chainId)
+                is DropDestination.ChainInsert -> moveBlocksToChainInsert(action.blocks, d.chainId, d.insertBeforeBlockId)
+                is DropDestination.EmptySlot -> moveBlocksToSlot(action.blocks, d.blockId, d.slotIdx)
+            }
+
+            is DropAction.MoveRow -> moveRow(action.sourceStmtId, action.targetIndex)
+
+            is DropAction.Compound -> action.actions.forEach { execute(it) }
         }
     }
 
-    /** Move an existing canvas chain to a new row index. */
-    fun commitMoveToPosition(stmtId: String, index: Int) {
-        update { current ->
-            val stmts = current.statements.toMutableList()
-            val srcIndex = stmts.indexOfFirst { it.id == stmtId }
-            if (srcIndex < 0) return@update current
-            val chain = stmts.removeAt(srcIndex)
-            val insertAt = if (index > srcIndex) (index - 1).coerceAtLeast(0) else index
-            stmts.add(insertAt.coerceIn(0, stmts.size), chain)
-            current.copy(statements = stmts)
-        }
-    }
-
-    /** Drop a palette block directly into a slot (creates a single-block nested chain, preserving any existing string). */
-    fun commitPaletteDropToSlot(funcName: String, targetStmtId: String, blockId: String, slotIndex: Int) {
-        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = true)
-        update { current ->
-            current.copy(
-                statements = updateSlotDropInStmts(current.statements, blockId, slotIndex, listOf(newBlock))
-            )
-        }
-    }
-
-    /** Insert a palette block at a specific position in a chain, before [insertBeforeBlockId]. */
-    fun commitPaletteDropToChainAt(funcName: String, chainId: String, insertBeforeBlockId: String?) {
-        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
-        update { current ->
-            current.copy(statements = insertBlockIntoChain(current.statements, chainId, newBlock, insertBeforeBlockId))
-        }
-    }
-
-    /** Append a palette block to an existing chain (searches top-level and nested chains). */
-    fun commitChainAppend(chainId: String, funcName: String) {
-        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
-        update { current ->
-            current.copy(statements = appendBlockToChain(current.statements, chainId, newBlock))
-        }
-    }
-
-    /** Append a canvas chain's blocks onto another chain, removing the source row.
-     *  The target chain may be top-level or nested inside a slot. */
-    fun commitCanvasChainAppend(sourceStmtId: String, sourceChain: KBChainStmt, targetChainId: String) {
-        if (sourceStmtId == targetChainId) return
-        val sourceBlocks = sourceChain.steps.filterIsInstance<KBCallBlock>().map { it.copy(isHead = false) }
-        update { current ->
-            val stripped = current.copy(statements = current.statements.filter { it.id != sourceStmtId })
-            stripped.copy(
-                statements = sourceBlocks.fold(stripped.statements) { stmts, block ->
-                    appendBlockToChain(stmts, targetChainId, block)
-                }
-            )
-        }
-    }
-
-    /** Drop a canvas chain into a block slot; removes the source row. */
-    fun commitCanvasSlotDrop(
-        sourceStmtId: String,
-        sourceChain: KBChainStmt,
-        targetStmtId: String,
-        blockId: String,
-        slotIndex: Int,
-    ) {
-        if (sourceStmtId == targetStmtId) return
-        update { current ->
-            current.copy(
-                statements = current.statements.mapNotNull { stmt ->
-                    when {
-                        stmt.id == sourceStmtId -> null
-                        stmt.id == targetStmtId && stmt is KBChainStmt -> stmt.copy(
-                            steps = stmt.steps.map { item ->
-                                if (item !is KBCallBlock || item.id != blockId) item
-                                else {
-                                    val newArgs = item.args.toMutableList()
-                                    while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
-                                    newArgs[slotIndex] = KBNestedChainArg(sourceChain)
-                                    item.copy(args = newArgs.toList())
-                                }
-                            }
-                        )
-
-                        else -> stmt
-                    }
-                }
-            )
-        }
-    }
+    // ---- Top-level program mutations (public — used directly by UI) -----------------
 
     fun commitImportLibrary(libraryName: String) {
         val import = KBImportStmt(id = uuid(), libraryName = libraryName)
@@ -203,10 +125,44 @@ class KBProgramEditingCtx(
         }
     }
 
-    // ---- Multi-block move (single block or tail chain from canvas) -----------------
+    // ---- Drop action implementations (private) -------------------------------------
 
-    /** Remove [blocks] from wherever they live and place them as a new top-level chain at [index]. */
-    fun commitMoveBlocksToPosition(blocks: List<KBCallBlock>, index: Int) {
+    private fun createBlockAtRowGap(funcName: String, index: Int) {
+        val chain = KBChainStmt(
+            id = uuid(),
+            steps = listOf(KBCallBlock(id = uuid(), funcName = funcName, isHead = true))
+        )
+        update { current ->
+            val stmts = current.statements.toMutableList()
+            stmts.add(index.coerceIn(0, stmts.size), chain)
+            current.copy(statements = stmts)
+        }
+    }
+
+    private fun appendBlockToChainById(chainId: String, funcName: String) {
+        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
+        update { current ->
+            current.copy(statements = appendBlockToChain(current.statements, chainId, newBlock))
+        }
+    }
+
+    private fun insertBlockIntoChainById(funcName: String, chainId: String, insertBeforeBlockId: String?) {
+        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
+        update { current ->
+            current.copy(statements = insertBlockIntoChain(current.statements, chainId, newBlock, insertBeforeBlockId))
+        }
+    }
+
+    private fun dropBlockToSlot(funcName: String, blockId: String, slotIndex: Int) {
+        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = true)
+        update { current ->
+            current.copy(
+                statements = updateSlotDropInStmts(current.statements, blockId, slotIndex, listOf(newBlock))
+            )
+        }
+    }
+
+    private fun moveBlocksToRowGap(blocks: List<KBCallBlock>, index: Int) {
         val newChain = KBChainStmt(
             id = uuid(),
             steps = blocks.mapIndexed { i, b -> b.copy(isHead = i == 0) },
@@ -220,8 +176,7 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Remove [blocks] from wherever they live and append them to chain [targetChainId]. */
-    fun commitMoveBlocksToChain(blocks: List<KBCallBlock>, targetChainId: String) {
+    private fun moveBlocksToChainEnd(blocks: List<KBCallBlock>, targetChainId: String) {
         update { current ->
             var stmts = current.statements
             for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
@@ -233,12 +188,10 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Remove [blocks] from wherever they live and insert them before [insertBeforeBlockId] in [targetChainId]. */
-    fun commitMoveBlocksToChainAt(blocks: List<KBCallBlock>, targetChainId: String, insertBeforeBlockId: String?) {
+    private fun moveBlocksToChainInsert(blocks: List<KBCallBlock>, targetChainId: String, insertBeforeBlockId: String?) {
         update { current ->
             var stmts = current.statements
             for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
-            // Insert in forward order; each block is inserted before the same target so they land in order.
             current.copy(
                 statements = blocks.fold(stmts) { s, block ->
                     insertBlockIntoChain(s, targetChainId, block.copy(isHead = false), insertBeforeBlockId)
@@ -247,8 +200,7 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Remove [blocks] from wherever they live and place them as a nested chain in a slot, preserving any existing string. */
-    fun commitMoveBlocksToSlot(blocks: List<KBCallBlock>, targetStmtId: String, blockId: String, slotIndex: Int) {
+    private fun moveBlocksToSlot(blocks: List<KBCallBlock>, blockId: String, slotIndex: Int) {
         update { current ->
             val existingArg = findArgInStmts(current.statements, blockId, slotIndex)
             var stmts = current.statements
@@ -258,6 +210,18 @@ class KBProgramEditingCtx(
             current.copy(
                 statements = updateBlockInStmts(stmts, blockId, slotIndex, KBNestedChainArg(newChain))
             )
+        }
+    }
+
+    private fun moveRow(sourceStmtId: String, index: Int) {
+        update { current ->
+            val stmts = current.statements.toMutableList()
+            val srcIndex = stmts.indexOfFirst { it.id == sourceStmtId }
+            if (srcIndex < 0) return@update current
+            val chain = stmts.removeAt(srcIndex)
+            val insertAt = if (index > srcIndex) (index - 1).coerceAtLeast(0) else index
+            stmts.add(insertAt.coerceIn(0, stmts.size), chain)
+            current.copy(statements = stmts)
         }
     }
 
@@ -340,7 +304,6 @@ class KBProgramEditingCtx(
                 is KBNestedChainArg -> {
                     val newSteps = removeBlockFromItems(argValue.chain.steps, blockId).fixHeads()
                     if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) {
-                        // No call blocks remain — restore as plain string if there was a literal head
                         val literalHead = newSteps.filterIsInstance<KBStringLiteralItem>().firstOrNull()
                         if (literalHead != null) KBStringArg(literalHead.value) else KBEmptyArg("")
                     } else argValue.copy(chain = argValue.chain.copy(steps = newSteps))
@@ -350,8 +313,6 @@ class KBProgramEditingCtx(
             }
         }
 
-    /** Insert [block] into the chain identified by [chainId], before the block with [insertBeforeBlockId].
-     *  Searches top-level and nested chains.  If [insertBeforeBlockId] is null the block is appended. */
     private fun insertBlockIntoChain(
         stmts: List<KBStmt>,
         chainId: String,
@@ -406,7 +367,6 @@ class KBProgramEditingCtx(
         if (insertBeforeBlockId == null) steps.size
         else steps.indexOfFirst { it is KBCallBlock && it.id == insertBeforeBlockId }.takeIf { it >= 0 } ?: steps.size
 
-    /** Append [block] to the chain identified by [chainId], searching top-level and nested chains. */
     private fun appendBlockToChain(stmts: List<KBStmt>, chainId: String, block: KBCallBlock): List<KBStmt> =
         stmts.map { stmt ->
             when {
@@ -449,11 +409,6 @@ class KBProgramEditingCtx(
 
     // ---- Slot-drop helpers -------------------------------------------------
 
-    /**
-     * Builds a [KBChainStmt] for dropping [newBlocks] into a slot.
-     * If [existingArg] is a non-empty [KBStringArg], prepends a [KBStringLiteralItem] so the
-     * string is preserved as the chain receiver (e.g. `"C4".transpose(1)`).
-     */
     private fun buildSlotDropChain(existingArg: KBArgValue?, newBlocks: List<KBCallBlock>): KBChainStmt {
         val literalHead = (existingArg as? KBStringArg)?.takeIf { it.value.isNotEmpty() }
             ?.let { KBStringLiteralItem(it.value) }
@@ -462,7 +417,6 @@ class KBProgramEditingCtx(
         return KBChainStmt(id = uuid(), steps = steps)
     }
 
-    /** Recursively find and update a slot drop target by [blockId], preserving any existing string. */
     private fun updateSlotDropInStmts(
         stmts: List<KBStmt>, blockId: String, slotIndex: Int, newBlocks: List<KBCallBlock>,
     ): List<KBStmt> = stmts.map { stmt ->
@@ -501,7 +455,6 @@ class KBProgramEditingCtx(
         }
     }
 
-    /** Lookup current arg at (blockId, slotIndex) in the tree, used before a slot-replace. */
     private fun findArgInStmts(stmts: List<KBStmt>, blockId: String, slotIndex: Int): KBArgValue? {
         for (stmt in stmts) {
             if (stmt is KBChainStmt) findArgInItems(stmt.steps, blockId, slotIndex)?.let { return it }
@@ -561,23 +514,13 @@ class KBProgramEditingCtx(
             }
         }
 
-    /** Apply a string literal value change: update or remove the leading [KBStringLiteralItem]. */
     private fun applyStringLiteralChange(steps: List<KBChainItem>, newValue: String): List<KBChainItem> {
         if (steps.firstOrNull() !is KBStringLiteralItem) return steps
         return if (newValue.isEmpty()) steps.drop(1).fixHeads()
         else listOf(KBStringLiteralItem(newValue)) + steps.drop(1)
     }
 
-    /** Ensure the first [KBCallBlock] in a step list has isHead=true and all others isHead=false. */
-    private fun List<KBChainItem>.fixHeads(): List<KBChainItem> {
-        var isFirst = true
-        return map { item ->
-            if (item !is KBCallBlock) item
-            else if (isFirst) {
-                isFirst = false; item.copy(isHead = true)
-            } else item.copy(isHead = false)
-        }
-    }
+    // ---- Layout / newline helpers -------------------------------------------
 
     private fun toggleLayoutInStmts(stmts: List<KBStmt>, blockId: String): List<KBStmt> =
         stmts.map { stmt ->
@@ -609,6 +552,7 @@ class KBProgramEditingCtx(
                         steps = toggleLayoutInItems(argValue.chain.steps, blockId)
                     )
                 )
+
                 else -> argValue
             }
         }
@@ -665,5 +609,17 @@ class KBProgramEditingCtx(
             result.add(idx, KBNewlineHint)
         }
         return result
+    }
+
+    // ---- Utility ------------------------------------------------------------
+
+    private fun List<KBChainItem>.fixHeads(): List<KBChainItem> {
+        var isFirst = true
+        return map { item ->
+            if (item !is KBCallBlock) item
+            else if (isFirst) {
+                isFirst = false; item.copy(isHead = true)
+            } else item.copy(isHead = false)
+        }
     }
 }

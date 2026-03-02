@@ -3,13 +3,13 @@ package io.peekandpoke.klang.strudel
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.infra.KlangAtomicBool
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangLock
-import io.peekandpoke.klang.audio_bridge.infra.withLock
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
+import io.peekandpoke.klang.common.infra.KlangAtomicBool
+import io.peekandpoke.klang.common.infra.KlangLock
+import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.coroutines.*

@@ -2,7 +2,6 @@ package io.peekandpoke.klang.blocks.model
 
 import io.peekandpoke.klang.blocks.model.AstToKBlocks.extractChain
 import io.peekandpoke.klang.script.ast.*
-import kotlin.random.Random
 
 object AstToKBlocks {
 
@@ -267,8 +266,9 @@ private fun Statement.toSourceString(): String = when (this) {
     is ExportStatement -> "export { ${exports.joinToString(", ") { (local, exp) -> if (local == exp) local else "$local as $exp" }} }"
 }
 
-internal fun uuid(): String =
-    (0 until 16).joinToString("") { Random.nextInt(16).toString(16) }
+private val idCounter = io.peekandpoke.klang.common.infra.KlangAtomicInt(0)
+
+internal fun uuid(): String = "id-${idCounter.incrementAndGet()}"
 
 private fun Expression.toSourceString(): String = when (this) {
     is StringLiteral -> "\"$value\""

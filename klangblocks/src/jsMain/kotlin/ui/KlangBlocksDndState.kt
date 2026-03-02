@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.blocks.ui
 
+import io.peekandpoke.klang.blocks.model.DropDestination
+import io.peekandpoke.klang.blocks.model.DropTargetType
 import io.peekandpoke.klang.blocks.model.KBCallBlock
 import io.peekandpoke.klang.blocks.model.KBChainStmt
 
@@ -32,35 +34,17 @@ data class DndCtrl(
     }
 }
 
+/** Exposed to drop zone components so they can advertise which destination types they accept. */
+typealias DropTarget = DropTargetType
+
 class DndState(
     val ghostX: Double,
     val ghostY: Double,
     val ghostLabel: String,
-    val onDropToPosition: DropToPositionHandler?,
-    val onDropToChain: DropToChainHandler?,
-    val onDropToSlot: DropToSlotHandler?,
-    val onDropToChainAt: DropToChainAtHandler?,
+    /** Set of destination types this drag operation accepts. */
+    val targets: Set<DropTarget>,
+    /** Single handler for all drop destinations. */
+    val onDrop: (DropDestination) -> Unit,
 ) {
-    /** SAM interface for dropping onto a canvas row gap at the given insertion index. */
-    fun interface DropToPositionHandler {
-        operator fun invoke(index: Int)
-    }
-
-    /** SAM interface for dropping onto the end of an existing chain (append). */
-    fun interface DropToChainHandler {
-        operator fun invoke(chainId: String)
-    }
-
-    /** SAM interface for dropping into a specific block slot (nest as KBNestedChainArg). */
-    fun interface DropToSlotHandler {
-        operator fun invoke(stmtId: String, blockId: String, slotIdx: Int)
-    }
-
-    /**
-     * SAM interface for dropping into a specific position within a chain.
-     * Pass null for insertBeforeBlockId to append to the end of the chain.
-     */
-    fun interface DropToChainAtHandler {
-        operator fun invoke(chainId: String, insertBeforeBlockId: String?)
-    }
+    fun accepts(target: DropTarget): Boolean = target in targets
 }

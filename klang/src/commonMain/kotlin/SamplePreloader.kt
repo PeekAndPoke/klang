@@ -3,9 +3,9 @@ package io.peekandpoke.klang.audio_engine
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangLock
-import io.peekandpoke.klang.audio_bridge.infra.withLock
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.common.infra.KlangLock
+import io.peekandpoke.klang.common.infra.withLock
 import kotlinx.coroutines.*
 
 /**
