@@ -34,6 +34,7 @@ Generated code + position maps (CodeGenResult)
 | Code generation, CodeGenResult, source map / hit testing | `ref/code-gen.md`                    |
 | Round-trip + source map testing (6-step requirement)     | `ref/round-trip-testing.md`          |
 | All features: klangscript ↔ klangblocks sync matrix      | `klangscript/ref/feature-catalog.md` |
+| DnD behaviour spec (all source × target cases)           | `ref/dnd-behaviour.md`               |
 
 ## Build & Test
 
