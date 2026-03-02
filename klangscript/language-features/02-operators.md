@@ -1,6 +1,6 @@
 # KlangScript — Basic Operators
 
-### 2.1 Arithmetic Operators 🟡 — `+` `-` `*` `/` `%` ✅; `**` exponentiation ❌ `[EASY]`
+### 2.1 Arithmetic Operators ✅ — `+` `-` `*` `/` `%` `**`
 
 ```javascript
 let add = 5 + 3;        // 8
@@ -13,7 +13,7 @@ let exp = 2 ** 8;       // 256
 
 **Expected:** Results as commented
 
-### 2.2 Unary Operators 🟡 — `-x` `+x` `!x` ✅; `++x` `x++` `--x` `x--` ❌ `[EASY]`
+### 2.2 Unary Operators ✅ — `-x` `+x` `!x` `++x` `x++` `--x` `x--`
 
 ```javascript
 let pos = +5;           // 5
@@ -30,7 +30,7 @@ let postDec = w--;      // 10, w is 9
 
 **Expected:** Results as commented
 
-### 2.3 Comparison Operators 🟡 — `==` `!=` `<` `<=` `>` `>=` ✅; `===` `!==` ❌ `[EASY]`
+### 2.3 Comparison Operators ✅ — `==` `!=` `<` `<=` `>` `>=` `===` `!==`
 
 ```javascript
 let eq1 = 5 == 5;           // true
@@ -72,7 +72,7 @@ let concat4 = "items: " + (1 + 2);      // "items: 3"
 
 **Expected:** Results as commented
 
-### 2.6 Ternary Operator ❌ `[EASY]`
+### 2.6 Ternary Operator ✅
 
 ```javascript
 let result1 = true ? "yes" : "no";      // "yes"

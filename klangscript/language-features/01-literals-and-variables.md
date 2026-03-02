@@ -46,7 +46,7 @@ let v;
 
 **Expected:** n is null, u and v are undefined
 
-### 1.5 Variable Reassignment ❌ `[EASY]` — assignment expression `x = expr` not yet in parser
+### 1.5 Variable Reassignment ✅
 
 ```javascript
 let x = 10;

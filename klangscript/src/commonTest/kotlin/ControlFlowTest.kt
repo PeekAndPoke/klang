@@ -656,4 +656,205 @@ class ControlFlowTest : StringSpec({
         }
         threw shouldBe true
     }
+
+    // ============================================================
+    // If-expression block scoping
+    // ============================================================
+
+    "if: let in then-branch does not leak to outer scope" {
+        val engine = klangScript()
+        engine.execute(
+            """
+            let outer = 1
+            if (true) {
+                let inner = 99
+            }
+            outer
+            """.trimIndent()
+        )
+        var threw = false
+        try {
+            engine.execute("inner")
+        } catch (e: Exception) {
+            threw = true
+        }
+        threw shouldBe true
+    }
+
+    "if: let in then-branch does not shadow outer variable" {
+        val engine = klangScript()
+        val result = engine.execute(
+            """
+            let x = 1
+            if (true) {
+                let x = 2
+            }
+            x
+            """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 1.0
+    }
+
+    "if: let in else-branch does not leak to outer scope" {
+        val engine = klangScript()
+        engine.execute(
+            """
+            if (false) {
+                let a = 1
+            } else {
+                let inner = 99
+            }
+            """.trimIndent()
+        )
+        var threw = false
+        try {
+            engine.execute("inner")
+        } catch (e: Exception) {
+            threw = true
+        }
+        threw shouldBe true
+    }
+
+    "if: assignment to outer variable works across branch boundary" {
+        val engine = klangScript()
+        val result = engine.execute(
+            """
+            let counter = 0
+            if (true) {
+                counter = counter + 1
+            }
+            counter
+            """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 1.0
+    }
+
+    "if: branch returns value of last expression" {
+        val engine = klangScript()
+        val result = engine.execute(
+            """
+            let result = if (true) { let tmp = 40; tmp + 2 } else { 0 }
+            result
+            """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 42.0
+    }
+
+    "if: nested ifs each have their own scope" {
+        val engine = klangScript()
+        val result = engine.execute(
+            """
+            let x = 0
+            if (true) {
+                let x = 1
+                if (true) {
+                    let x = 2
+                }
+                x
+            }
+            x
+            """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 0.0
+    }
+
+    "if: else-if chain has independent scopes" {
+        val engine = klangScript()
+        val result = engine.execute(
+            """
+            let x = 0
+            if (false) {
+                let x = 1
+            } else if (true) {
+                let x = 2
+            } else {
+                let x = 3
+            }
+            x
+            """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 0.0
+    }
+
+    // ============================================================
+    // Const in scoped blocks
+    // ============================================================
+
+    "const: defined in if-branch not visible outside" {
+        val engine = klangScript()
+        engine.execute(
+            """
+            if (true) {
+                const PI = 3
+            }
+            """.trimIndent()
+        )
+        var threw = false
+        try {
+            engine.execute("PI")
+        } catch (e: Exception) {
+            threw = true
+        }
+        threw shouldBe true
+    }
+
+    "const: defined in loop body not visible outside" {
+        val engine = klangScript()
+        engine.execute(
+            """
+            for (let i = 0; i < 1; i++) {
+                const once = 42
+            }
+            """.trimIndent()
+        )
+        var threw = false
+        try {
+            engine.execute("once")
+        } catch (e: Exception) {
+            threw = true
+        }
+        threw shouldBe true
+    }
+
+    // ============================================================
+    // Scope chain: reading outer variables from inner scope
+    // ============================================================
+
+    "scope chain: inner scope reads outer let" {
+        val engine = klangScript()
+        val result = engine.execute(
+            """
+            let base = 10
+            let result = if (true) { base + 5 } else { 0 }
+            result
+            """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 15.0
+    }
+
+    "scope chain: arrow function closes over outer let" {
+        val engine = klangScript()
+        val result = engine.execute(
+            """
+            let factor = 3
+            const triple = x => x * factor
+            triple(7)
+            """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 21.0
+    }
+
+    "scope chain: closure captures variable by reference" {
+        val engine = klangScript()
+        val result = engine.execute(
+            """
+            let count = 0
+            const inc = () => { count = count + 1 }
+            inc()
+            inc()
+            count
+            """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 2.0
+    }
 })

@@ -11,8 +11,7 @@ let nested = {a: 1, b: {c: 2, d: 3}};
 
 **Expected:** All objects created successfully
 
-### 6.2 Object Property Access 🟡 — dot notation `obj.prop` ✅; bracket notation `obj["key"]` ❌
-`[EASY]` (same IndexAccess as arrays)
+### 6.2 Object Property Access ✅ — dot notation `obj.prop` and bracket notation `obj["key"]`
 
 ```javascript
 let obj = {name: "Bob", age: 25};
@@ -29,8 +28,7 @@ let value = obj[key];        // "Alice"
 
 **Expected:** Results as commented
 
-### 6.3 Object Property Addition/Deletion 🟡 — `obj.prop = val` works via assignment (needs 1.5); `delete obj.prop` ❌
-`[MEDIUM]`
+### 6.3 Object Property Addition/Deletion 🟡 — `obj.prop = val` ✅; `obj["key"] = val` ✅; `delete obj.prop` ❌ `[MEDIUM]`
 
 ```javascript
 let obj = {a: 1};
@@ -87,7 +85,7 @@ let obj = {
 
 **Expected:** obj = { dynamic: "value", computedKey: 42 }
 
-### 6.7 Property Shorthand ❌ `[EASY]` — parser-only change, no AST node needed
+### 6.7 Property Shorthand ✅ — desugars to `name: name` at parse time
 
 ```javascript
 let name = "Alice";
@@ -210,7 +208,7 @@ let has_c = obj.hasOwnProperty("c");    // false
 
 **Expected:** Results as commented
 
-### 6.17 in Operator ❌ `[EASY]` — add `IN` to BinaryOperator + interpreter case
+### 6.17 in Operator ✅
 
 ```javascript
 let obj = {a: 1, b: 2};

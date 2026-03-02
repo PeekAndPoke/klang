@@ -420,13 +420,15 @@ class Interpreter(
             is IndexAccess -> evaluateIndexAccess(expression)
 
             // If expression: if (cond) { ... } else { ... }
+            // Each branch runs in its own child scope so that `let`/`const` declarations
+            // inside a branch do not leak into the enclosing scope.
             is IfExpression -> {
                 val cond = evaluate(expression.condition)
                 if (toBoolean(cond)) {
-                    executeBlock(expression.thenBranch)
+                    executeBlockInChildScope(expression.thenBranch)
                 } else {
                     when (val eb = expression.elseBranch) {
-                        is ElseBranch.Block -> executeBlock(eb.statements)
+                        is ElseBranch.Block -> executeBlockInChildScope(eb.statements)
                         is ElseBranch.If -> evaluate(eb.ifExpr)
                         null -> NullValue
                     }
