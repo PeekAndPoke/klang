@@ -104,70 +104,17 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                         when (stmt) {
                             is KBChainStmt -> {
-                                // Split steps into visual segments at KBNewlineHint positions.
-                                // Each segment becomes its own row; the canvas scrolls as one surface.
-                                val segments = buildList {
-                                    var current = mutableListOf<KBCallBlock>()
-                                    for (step in stmt.steps) {
-                                        when (step) {
-                                            is KBCallBlock -> current.add(step)
-                                            is KBNewlineHint -> if (current.isNotEmpty()) {
-                                                add(current.toList()); current = mutableListOf()
-                                            }
-
-                                            else -> {} // KBStringLiteralItem / KBIdentifierItem: not shown at top level
-                                        }
-                                    }
-                                    if (current.isNotEmpty()) add(current.toList())
-                                }
-
                                 div {
                                     css {
                                         display = Display.flex
                                         flexDirection = FlexDirection.column
                                         put("gap", "4px")
                                     }
-
-                                    segments.forEachIndexed { segIndex, blocks ->
-                                        div {
-                                            css {
-                                                display = Display.flex
-                                                flexDirection = FlexDirection.row
-                                                alignItems = Align.center
-                                                put("gap", "8px")
-                                            }
-
-                                            blocks.forEachIndexed { blockIndex, block ->
-                                                val isChainHead = segIndex == 0 && blockIndex == 0
-                                                val isFirstInSeg = blockIndex == 0
-
-                                                KlangBlocksDropZoneComp(
-                                                    chainId = stmt.id,
-                                                    insertBeforeBlockId = block.id,
-                                                    ctx = ctx,
-                                                    showConnectorWhenIdle = !isChainHead,
-                                                    hasNewlineBefore = !isChainHead && isFirstInSeg,
-                                                    onToggleNewline = if (!isChainHead) {
-                                                        { ctx.editing.onToggleNewlineBeforeBlock(stmt.id, block.id) }
-                                                    } else null,
-                                                )
-                                                KlangBlocksBlockComp(
-                                                    block = block,
-                                                    chain = stmt,
-                                                    ctx = ctx,
-                                                )
-                                            }
-
-                                            // Append drop zone only at the end of the last segment
-                                            if (segIndex == segments.lastIndex) {
-                                                KlangBlocksDropZoneComp(
-                                                    chainId = stmt.id,
-                                                    insertBeforeBlockId = null,
-                                                    ctx = ctx,
-                                                )
-                                            }
-                                        }
-                                    }
+                                    renderChainSegments(
+                                        chain = stmt,
+                                        segments = stmt.steps.toCallSegments(),
+                                        ctx = ctx,
+                                    )
                                 }
                             }
 
