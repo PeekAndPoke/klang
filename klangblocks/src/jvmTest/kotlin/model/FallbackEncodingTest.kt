@@ -84,4 +84,71 @@ class FallbackEncodingTest : StringSpec({
         val result = roundTrip("note([1, 2, 3])")
         result.resultAst shouldNotBe null
     }
+
+    // ── if expression as function argument ─────────────────────────────────────
+
+    "if expression arg is encoded as KBStringArg fallback" {
+        val result = roundTrip("note(if (true) { 1 } else { 2 })")
+        val block = result.blocks.statements
+            .filterIsInstance<KBChainStmt>()
+            .flatMap { it.steps }
+            .filterIsInstance<KBCallBlock>()
+            .first()
+        block.args.single().shouldBeInstanceOf<KBStringArg>()
+    }
+
+    "if expression fallback embeds the correct source" {
+        val result = roundTrip("note(if (true) { 1 } else { 2 })")
+        val block = result.blocks.statements
+            .filterIsInstance<KBChainStmt>()
+            .flatMap { it.steps }
+            .filterIsInstance<KBCallBlock>()
+            .first()
+        val arg = block.args.single() as KBStringArg
+        arg.value shouldBe "if (true) { 1 } else { 2 }"
+    }
+
+    "if expression fallback generated code is parseable" {
+        val result = roundTrip("note(if (true) { 1 } else { 2 })")
+        result.resultAst shouldNotBe null
+    }
+
+    "if-else-if expression fallback embeds the correct source" {
+        val result = roundTrip("note(if (x > 0) { 1 } else if (x < 0) { -1 } else { 0 })")
+        val block = result.blocks.statements
+            .filterIsInstance<KBChainStmt>()
+            .flatMap { it.steps }
+            .filterIsInstance<KBCallBlock>()
+            .first()
+        val arg = block.args.single() as KBStringArg
+        arg.value shouldBe "if (x > 0) { 1 } else if (x < 0) { -1 } else { 0 }"
+    }
+
+    // ── template literal as function argument ──────────────────────────────────
+
+    "template literal arg is encoded as KBStringArg fallback" {
+        val result = roundTrip("note(`hello`)")
+        val block = result.blocks.statements
+            .filterIsInstance<KBChainStmt>()
+            .flatMap { it.steps }
+            .filterIsInstance<KBCallBlock>()
+            .first()
+        block.args.single().shouldBeInstanceOf<KBStringArg>()
+    }
+
+    "template literal with interpolation fallback embeds the correct source" {
+        val result = roundTrip("note(`val: \${x}`)")
+        val block = result.blocks.statements
+            .filterIsInstance<KBChainStmt>()
+            .flatMap { it.steps }
+            .filterIsInstance<KBCallBlock>()
+            .first()
+        val arg = block.args.single() as KBStringArg
+        arg.value shouldBe "`val: \${x}`"
+    }
+
+    "template literal fallback generated code is parseable" {
+        val result = roundTrip("note(`val: \${x}`)")
+        result.resultAst shouldNotBe null
+    }
 })

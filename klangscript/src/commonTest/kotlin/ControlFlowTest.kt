@@ -572,4 +572,88 @@ class ControlFlowTest : StringSpec({
         )
         (result as NumberValue).value shouldBe 4.0
     }
+
+    // ============================================================
+    // Per-iteration block scoping
+    // ============================================================
+
+    "while: let inside body does not leak into outer scope" {
+        val engine = klangScript()
+        engine.execute(
+            """
+            let i = 0
+            while (i < 3) {
+                let inner = i * 10
+                i = i + 1
+            }
+            """.trimIndent()
+        )
+        // 'inner' must not be visible here — accessing it must throw
+        var threw = false
+        try {
+            engine.execute("inner")
+        } catch (e: Exception) {
+            threw = true
+        }
+        threw shouldBe true
+    }
+
+    "while: let inside body re-bound each iteration" {
+        val collected = mutableListOf<Double>()
+        val engine = klangScript {
+            registerFunctionRaw("collect") { args, _ ->
+                collected.add((args[0] as io.peekandpoke.klang.script.runtime.NumberValue).value)
+                io.peekandpoke.klang.script.runtime.NullValue
+            }
+        }
+        engine.execute(
+            """
+            let i = 0
+            while (i < 3) {
+                let snap = i
+                collect(snap)
+                i = i + 1
+            }
+            """.trimIndent()
+        )
+        collected shouldBe listOf(0.0, 1.0, 2.0)
+    }
+
+    "for: let inside body does not leak into outer scope" {
+        val engine = klangScript()
+        engine.execute(
+            """
+            for (let i = 0; i < 3; i++) {
+                let inner = i * 10
+            }
+            """.trimIndent()
+        )
+        var threw = false
+        try {
+            engine.execute("inner")
+        } catch (e: Exception) {
+            threw = true
+        }
+        threw shouldBe true
+    }
+
+    "do-while: let inside body does not leak into outer scope" {
+        val engine = klangScript()
+        engine.execute(
+            """
+            let i = 0
+            do {
+                let inner = i
+                i = i + 1
+            } while (i < 3)
+            """.trimIndent()
+        )
+        var threw = false
+        try {
+            engine.execute("inner")
+        } catch (e: Exception) {
+            threw = true
+        }
+        threw shouldBe true
+    }
 })

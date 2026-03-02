@@ -1457,14 +1457,21 @@ class KlangScriptParser private constructor(
                 parts.add(TemplatePart.Text(raw.substring(idx, interpStart)))
             }
 
-            // Find matching `}`
+            // Find matching `}`, tracking string literals so braces inside strings are ignored.
             val exprStart = interpStart + 2
             var depth = 1
             var j = exprStart
+            var inString: Char? = null   // current string delimiter (' or "), null if not in string
+            var escaped = false          // true if previous char was backslash inside a string
             while (j < raw.length && depth > 0) {
-                when (raw[j]) {
-                    '{' -> depth++
-                    '}' -> depth--
+                val c = raw[j]
+                when {
+                    escaped -> escaped = false
+                    inString != null && c == '\\' -> escaped = true
+                    inString != null && c == inString -> inString = null
+                    inString == null && (c == '\'' || c == '"') -> inString = c
+                    inString == null && c == '{' -> depth++
+                    inString == null && c == '}' -> depth--
                 }
                 if (depth > 0) j++
             }

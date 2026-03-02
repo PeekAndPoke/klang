@@ -4,10 +4,10 @@
 
 ### Language Features
 
-- [ ] Array indexing: `arr[0]`, `arr[1]` — requires `IndexAccess` AST node
-- [ ] Strict equality: `===`, `!==` — current `==` uses reference equality for objects/arrays
-- [ ] Control flow: `if/else`, `while`, `for`
-- [ ] Template string interpolation: `` `hello ${name}` ``
+- [x] Array indexing: `arr[0]`, `arr[1]` — `IndexAccess` AST node + interpreter + klangblocks ✅
+- [x] Strict equality: `===`, `!==` ✅
+- [x] Control flow: `if/else`, `while`, `for`, `do/while`, `break`, `continue` ✅
+- [x] Template string interpolation: `` `hello ${name}` `` ✅
 - [ ] Higher-order array methods: `map()`, `filter()`, `forEach()`, `find()`, `some()`, `every()` — needs callback
   execution from extension method context
 
@@ -17,9 +17,9 @@
 
 - [ ] Spread operator: `...args`
 - [ ] Destructuring: `let { a, b } = obj`
-- [ ] Ternary operator: `x ? y : z`
+- [x] Ternary operator: `x ? y : z` ✅
 - [ ] Default exports
-- [ ] Logical operators: `&&`, `||` (parser tokens exist; verify interpreter coverage)
+- [x] Logical operators: `&&`, `||` ✅
 - [ ] Function references (partially works, not fully tested — Step 2.9)
 
 ### Parser Robustness

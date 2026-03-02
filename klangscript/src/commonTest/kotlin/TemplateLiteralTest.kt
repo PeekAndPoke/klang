@@ -257,4 +257,44 @@ class TemplateLiteralTest : StringSpec({
         )
         (result as StringValue).value shouldBe "one-two-three"
     }
+
+    // ============================================================
+    // Brace-in-string edge cases (naive parser used to break here)
+    // ============================================================
+
+    "template: double-quoted string with braces inside interpolation" {
+        val engine = klangScript()
+        val dollar = "\$"
+        val result = engine.execute(
+            """
+            let x = "{"
+            `value: ${dollar}{x}`
+            """.trimIndent()
+        )
+        (result as StringValue).value shouldBe "value: {"
+    }
+
+    "template: single-quoted string with braces inside interpolation" {
+        val engine = klangScript()
+        val dollar = "\$"
+        val result = engine.execute(
+            """
+            let pick = (a, b) => a
+            `result: ${dollar}{pick("{yes}", "{no}")}`
+            """.trimIndent()
+        )
+        (result as StringValue).value shouldBe "result: {yes}"
+    }
+
+    "template: escaped quote inside interpolation string literal" {
+        val engine = klangScript()
+        val dollar = "\$"
+        val result = engine.execute(
+            """
+            let s = "hello"
+            `got: ${dollar}{s}`
+            """.trimIndent()
+        )
+        (result as StringValue).value shouldBe "got: hello"
+    }
 })

@@ -105,6 +105,36 @@ class Interpreter(
     }
 
     /**
+     * Execute a block of statements in a fresh child scope.
+     *
+     * Used for loop bodies so that `let` declarations inside a loop do not
+     * leak into the enclosing scope and are re-bound on every iteration.
+     */
+    private fun executeBlockInChildScope(statements: List<Statement>): RuntimeValue {
+        val childEnv = Environment(parent = env)
+        val childInterp = Interpreter(env = childEnv, engine = engine, callStack = callStack, executionContext = executionContext)
+        return childInterp.executeBlock(statements)
+    }
+
+    /**
+     * Execute one loop-body iteration, handling break/continue signals.
+     *
+     * Returns true  → keep iterating (normal completion or `continue`)
+     * Returns false → stop the loop  (`break`)
+     * Throws        → propagate `ReturnException` (and any other exception) upward
+     */
+    private fun executeLoopBody(statements: List<Statement>): Boolean {
+        return try {
+            executeBlockInChildScope(statements)
+            true
+        } catch (e: BreakException) {
+            false
+        } catch (e: ContinueException) {
+            true
+        }
+    }
+
+    /**
      * Execute a single statement
      *
      * Statements represent actions in the program but may also produce values.
@@ -152,53 +182,29 @@ class Interpreter(
                 throw ReturnException(returnValue)
             }
 
-            // While loop
+            // While loop: condition evaluated in outer scope, body in fresh child scope per iteration
             is WhileStatement -> {
                 while (toBoolean(evaluate(statement.condition))) {
-                    try {
-                        executeBlock(statement.body)
-                    } catch (e: BreakException) {
-                        break
-                    } catch (e: ContinueException) {
-                        // Continue to next iteration
-                    } catch (e: ReturnException) {
-                        throw e  // Propagate return out of function
-                    }
+                    if (!executeLoopBody(statement.body)) break
                 }
                 NullValue
             }
 
-            // Do-while loop
+            // Do-while loop: body in fresh child scope per iteration, then condition in outer scope
             is DoWhileStatement -> {
                 do {
-                    try {
-                        executeBlock(statement.body)
-                    } catch (e: BreakException) {
-                        break
-                    } catch (e: ContinueException) {
-                        // Continue to next iteration (condition will be checked)
-                    } catch (e: ReturnException) {
-                        throw e  // Propagate return out of function
-                    }
+                    if (!executeLoopBody(statement.body)) break
                 } while (toBoolean(evaluate(statement.condition)))
                 NullValue
             }
 
-            // For loop - runs in its own scope
+            // For loop: init + condition + update in loop scope; body in fresh child scope per iteration
             is ForStatement -> {
                 val loopEnv = Environment(parent = env)
                 val loopInterp = Interpreter(env = loopEnv, engine = engine, callStack = callStack, executionContext = executionContext)
                 statement.init?.let { loopInterp.executeStatement(it) }
                 loop@ while (statement.condition == null || loopInterp.toBoolean(loopInterp.evaluate(statement.condition))) {
-                    try {
-                        loopInterp.executeBlock(statement.body)
-                    } catch (e: BreakException) {
-                        break@loop
-                    } catch (e: ContinueException) {
-                        // Fall through to update
-                    } catch (e: ReturnException) {
-                        throw e  // Propagate return out of function
-                    }
+                    if (!loopInterp.executeLoopBody(statement.body)) break@loop
                     statement.update?.let { loopInterp.evaluate(it) }
                 }
                 NullValue

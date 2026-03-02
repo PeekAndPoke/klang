@@ -249,10 +249,22 @@ private fun ArrowFunctionBody.toSourceString(): String = when (this) {
 
 private fun Statement.toSourceString(): String = when (this) {
     is ExpressionStatement -> expression.toSourceString()
-    is ReturnStatement -> "return${value?.let { " ${it.toSourceString()}" } ?: ""}"
     is LetDeclaration -> "let $name${initializer?.let { " = ${it.toSourceString()}" } ?: ""}"
     is ConstDeclaration -> "const $name = ${initializer.toSourceString()}"
-    else -> ""
+    is ReturnStatement -> "return${value?.let { " ${it.toSourceString()}" } ?: ""}"
+    is BreakStatement -> "break"
+    is ContinueStatement -> "continue"
+    is WhileStatement -> "while (${condition.toSourceString()}) { ${body.joinToString("; ") { it.toSourceString() }} }"
+    is DoWhileStatement -> "do { ${body.joinToString("; ") { it.toSourceString() }} } while (${condition.toSourceString()})"
+    is ForStatement -> {
+        val initStr = init?.toSourceString() ?: ""
+        val condStr = condition?.toSourceString() ?: ""
+        val updateStr = update?.toSourceString() ?: ""
+        "for ($initStr; $condStr; $updateStr) { ${body.joinToString("; ") { it.toSourceString() }} }"
+    }
+
+    is ImportStatement -> "import * from \"$libraryName\""
+    is ExportStatement -> "export { ${exports.joinToString(", ") { (local, exp) -> if (local == exp) local else "$local as $exp" }} }"
 }
 
 internal fun uuid(): String =
@@ -299,7 +311,15 @@ private fun Expression.toSourceString(): String = when (this) {
     is ArrayLiteral ->
         "[${elements.joinToString(", ") { it.toSourceString() }}]"
 
-    is IfExpression -> "if (${condition.toSourceString()}) { ... }"
+    is IfExpression -> {
+        val thenStr = thenBranch.joinToString("; ") { it.toSourceString() }
+        val elseStr = when (val eb = elseBranch) {
+            is ElseBranch.Block -> " else { ${eb.statements.joinToString("; ") { it.toSourceString() }} }"
+            is ElseBranch.If -> " else ${eb.ifExpr.toSourceString()}"
+            null -> ""
+        }
+        "if (${condition.toSourceString()}) { $thenStr }$elseStr"
+    }
 
     is TemplateLiteral -> "`${
         parts.joinToString("") { part ->
