@@ -5,6 +5,8 @@
 - Visual block editor for KlangScript (Kotlin Multiplatform, JVM + JS)
 - Core pipeline implemented: parse → blocks → code generation
 - `CodeGenResult` tracks per-block and per-slot-content char ranges for editor hit-testing
+- DnD fully refactored: `DropAction` / `DropDestination` / `KBProgramEditingCtx.execute()`
+- All cases from `ref/dnd-behaviour.md` implemented (P1–P5, A1–A6, B1–B6, C1)
 
 ## Architecture Decisions
 
@@ -27,12 +29,32 @@
 - **`KBLetStmt`/`KBConstStmt` code gen** initially omitted the value — only the name was emitted.
   Fixed by adding `" = ${value.toCode()}"` in `KBCodeGen.kt`.
 
+## DnD Architecture
+
+- **`DropDestination`** sealed interface: `RowGap`, `ChainEnd`, `ChainInsert`, `EmptySlot`, `ReplaceBlock`
+- **`DropAction`**: `CreateBlock`, `MoveBlocks`, `MoveRow`, `Compound`
+- **Clone-before-remove**: all `moveBlocks*` operations clone blocks with fresh UUIDs before removing originals (
+  eliminates same-ID edge cases)
+- **No string-literal preservation**: dropping into a slot always creates a plain nested chain (old string arg is
+  discarded)
+- **`ReplaceBlock`**: replaces target block in-place; includes self-replace guard (early return) and cycle guard (
+  `blockContains`)
+- **`sourceChainId` in `DndState`**: drop zones belonging to the source chain are suppressed during drag
+- **`DropTarget.ReplaceBlock`** on each block shows white outline ring; fires `DropDestination.ReplaceBlock` on mouseUp
+
 ## Test Infrastructure
 
 - **`RoundTripSupport.kt`** — shared test helper in `jvmTest/kotlin/model/`
   - `roundTrip(source)` runs all 6 steps, wraps each in a `try/catch` that names the failing step
   - Returns `RoundTripResult(source, originalAst, blocks, generatedCode, resultAst)`
   - `result.shouldRoundTrip()` asserts AST equality with `source` + `generatedCode` in the error message
+- **DnD test split** — `jvmTest/kotlin/dnd/`:
+    - `DropActionSupport.kt` — `ctx()`, `code()`, `rowCount()`, `block()`, `chain()` (recursive at all depths), `tail()`
+      helpers
+    - `DropActionTest.kt` — P1–P4, A1–A5, B1–B5, C1, Compound, Undo/Redo + deep-nesting variants + A4/B4 self-insert (40
+      tests)
+    - `ReplaceBlockTest.kt` — P5, A6, B6 + deep-nesting variants at levels 2 and 3 (15 tests)
+    - All tests cover at least 3-level nested scenarios to verify recursive tree-walking
 
 ## Key Rules
 

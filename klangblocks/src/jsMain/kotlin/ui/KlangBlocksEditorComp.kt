@@ -155,11 +155,15 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             ghostX = ds.ghostX,
             ghostY = ds.ghostY,
             ghostLabel = ds.funcName,
-            targets = setOf(DropTarget.RowGap, DropTarget.ChainEnd, DropTarget.ChainInsert, DropTarget.EmptySlot),
+            targets = setOf(
+                DropTarget.RowGap, DropTarget.ChainEnd, DropTarget.ChainInsert,
+                DropTarget.EmptySlot, DropTarget.ReplaceBlock,
+            ),
             onDrop = { dest ->
                 editingCtx.execute(DropAction.CreateBlock(ds.funcName, dest))
                 dragState = DragState.None
             },
+            sourceChainId = null,
         )
 
         is DragState.DraggingFromCanvas -> DndState(
@@ -171,6 +175,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 editingCtx.execute(DropAction.MoveRow(ds.stmtId, (dest as DropDestination.RowGap).index))
                 dragState = DragState.None
             },
+            sourceChainId = ds.stmtId,
         )
 
         is DragState.DraggingBlock -> {
@@ -182,11 +187,15 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 ghostX = ds.ghostX,
                 ghostY = ds.ghostY,
                 ghostLabel = blocks.joinToString(".") { it.funcName },
-                targets = setOf(DropTarget.RowGap, DropTarget.ChainEnd, DropTarget.ChainInsert, DropTarget.EmptySlot),
+                targets = setOf(
+                    DropTarget.RowGap, DropTarget.ChainEnd, DropTarget.ChainInsert,
+                    DropTarget.EmptySlot, DropTarget.ReplaceBlock,
+                ),
                 onDrop = { dest ->
                     editingCtx.execute(DropAction.MoveBlocks(blocks, dest))
                     dragState = DragState.None
                 },
+                sourceChainId = ds.sourceChainId,
             )
         }
 

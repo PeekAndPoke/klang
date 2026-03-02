@@ -72,16 +72,11 @@ New block inserted at that position; block to the right shifts forward.
 New single-block nested chain placed in the slot.
 **Status:** Implemented ✓ (but string-literal special-casing should be removed — see P4 note)
 
-> **P4 Note — No special treatment for string literals:**
-> The current implementation preserves an existing `KBStringArg` as a chain head when dropping
-> into a slot. This special treatment should be removed. String args are treated like any other
-> content: dropped block becomes the sole content of the new nested chain.
-
 ### P5 — Palette → existing block (replace)
 
 The target block is replaced by the new block. The rest of the chain is preserved.
 Example: chain `[A, B, C]`, drop `X` onto `B` → `[A, X, C]`.
-**Status:** Not implemented — needs new "replace-block" drop target and operation.
+**Status:** Implemented ✓
 
 ---
 
@@ -120,7 +115,7 @@ Block removed from source, inserted before target block in target chain.
 **Implementation note:** Clone the dragged block (new ID, same content) before remove+insert.
 This eliminates all same-ID edge cases (e.g. drop before self) without any special-casing.
 
-**Status:** Implemented ✓ (cloning not yet implemented)
+**Status:** Implemented ✓
 
 ### A5 — Block → empty slot
 
@@ -134,7 +129,7 @@ Example: `[A, B, C]`, drop `X` onto `B` → `[A, X, C]`.
 
 **Edge case — self-replace:** Dropping a block onto itself → no-op.
 **Edge case — cycle:** Dropping block A onto a block nested inside A → no-op (silently ignored).
-**Status:** Not implemented — needs new "replace-block" drop target and operation.
+**Status:** Implemented ✓
 
 ---
 
@@ -167,7 +162,7 @@ If source becomes empty, it is deleted.
 
 Payload blocks inserted in order before target block.
 **Implementation note:** Clone all payload blocks before remove+insert (same rationale as A4).
-**Status:** Implemented ✓ (cloning not yet implemented)
+**Status:** Implemented ✓
 
 ### B5 — Chain drag → empty slot
 
@@ -180,7 +175,7 @@ Target block is replaced by the entire payload sequence in-place.
 Example: target `[A, T, B]`, payload `[P, Q, R]` dropped onto `T` → `[A, P, Q, R, B]`.
 
 **Edge case — cycle:** If the target block is a descendant of any block in the payload → no-op.
-**Status:** Not implemented — needs new "replace-block" drop target and operation.
+**Status:** Implemented ✓
 
 ---
 
@@ -193,8 +188,8 @@ This is the **only** active drop target during a row-handle drag.
 All chain append zones, insert zones, and slot zones are **hidden/inactive** during this drag.
 **Status:** Implemented ✓
 
-> **Note:** The source chain's own append/insert zones should not be shown as active drop
-> targets during any drag that originates from that chain (applies to A, B, and C).
+> **Note:** The source chain's own append/insert zones are suppressed during any drag that
+> originates from that chain (applies to A, B, and C). Implemented via `DndState.sourceChainId`.
 
 ---
 
@@ -202,13 +197,5 @@ All chain append zones, insert zones, and slot zones are **hidden/inactive** dur
 
 | Case | Description                                              |
 |------|----------------------------------------------------------|
-| P4   | Remove string-literal special-casing from slot drops     |
-| P5   | Replace-block drop target for palette drags              |
 | A1   | Top-level variant check before allowing row-gap drop     |
-| A4   | Clone-before-remove to eliminate same-ID edge cases      |
-| A6   | Replace-block drop target + self/cycle guards            |
 | B1   | Top-level variant check before allowing row-gap drop     |
-| B4   | Clone-before-remove                                      |
-| B6   | Replace-block drop target + cycle guard                  |
-| C1   | Hide all non-row-gap drop targets during row-handle drag |
-| All  | Hide source chain's own drop zones during any A/B drag   |

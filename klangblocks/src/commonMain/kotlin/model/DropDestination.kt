@@ -13,7 +13,10 @@ sealed interface DropDestination {
 
     /** Drop into the argument slot [slotIdx] of the block identified by [blockId]. */
     data class EmptySlot(val blockId: String, val slotIdx: Int) : DropDestination
+
+    /** Replace the block identified by [targetBlockId] in-place with the dropped payload. */
+    data class ReplaceBlock(val targetBlockId: String) : DropDestination
 }
 
 /** Enumeration of destination types; used by [DropTarget][io.peekandpoke.klang.blocks.ui.DropTarget]. */
-enum class DropTargetType { RowGap, ChainEnd, ChainInsert, EmptySlot }
+enum class DropTargetType { RowGap, ChainEnd, ChainInsert, EmptySlot, ReplaceBlock }

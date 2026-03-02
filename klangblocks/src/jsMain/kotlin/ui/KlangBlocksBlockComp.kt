@@ -118,11 +118,12 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val dndState = ctx.dnd.state
         val isVertical = block.pocketLayout == KBPocketLayout.VERTICAL
         val canDropToSlot = dndState?.accepts(DropTarget.EmptySlot) == true
+        val canDropOnBlock = dndState?.accepts(DropTarget.ReplaceBlock) == true
         val docCategory = doc?.category
 
         div(if (variant.isTopLevel) "kb-block" else "kb-nested-block") {
-            blockContainerStyle(variant, docCategory, isVertical, canDropToSlot)
-            blockDragHandlers(ctx, block, variant, canDropToSlot)
+            blockContainerStyle(variant, docCategory, isVertical, canDropToSlot, canDropOnBlock)
+            blockDragHandlers(ctx, block, variant, canDropToSlot, canDropOnBlock)
 
             renderFuncName(block)
             slots.toRenderItems(block.args).forEach { item ->
@@ -142,6 +143,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         docCategory: String?,
         isVertical: Boolean,
         canDropToSlot: Boolean,
+        canDropOnBlock: Boolean,
     ) {
         css {
             display = Display.inlineFlex
@@ -158,9 +160,14 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             userSelect = UserSelect.none
             flexShrink = 0.0   // never let a parent flex row squeeze this block's width
             if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
-            put("transition", "filter 0.15s ease")
+            put("transition", "filter 0.15s ease, outline 0.1s ease")
             position = Position.relative
-            if (!variant.isTopLevel || !canDropToSlot) cursor = Cursor.grab
+            if (canDropOnBlock) {
+                put("outline", "2px solid white")
+                cursor = Cursor.copy
+            } else if (!variant.isTopLevel || !canDropToSlot) {
+                cursor = Cursor.grab
+            }
         }
     }
 
@@ -169,13 +176,22 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         block: KBCallBlock,
         variant: BlockVariant,
         canDropToSlot: Boolean,
+        canDropOnBlock: Boolean,
     ) {
         onMouseEnter { isHovered = true }
         onMouseLeave { isHovered = false }
+        // Accept a replace-block drop when the drag is released over this block.
+        if (canDropOnBlock) {
+            val dndState = ctx.dnd.state
+            onMouseUp { event ->
+                event.stopPropagation()
+                dndState?.onDrop?.invoke(DropDestination.ReplaceBlock(block.id))
+            }
+        }
         // Start a drag when pressing on the block background or function name.
         // Slot children stop mousedown propagation so they won't trigger this.
         onMouseDown { event ->
-            val shouldDrag = if (variant.isTopLevel) !canDropToSlot else true
+            val shouldDrag = if (variant.isTopLevel) !canDropToSlot && !canDropOnBlock else true
             if (shouldDrag) {
                 event.preventDefault()
                 if (!variant.isTopLevel) event.stopPropagation()

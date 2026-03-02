@@ -59,7 +59,10 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
     override fun VDom.render() {
         val dndState = props.ctx.dnd.state
         val isInline = props.insertBeforeBlockId != null
-        val canDrop = if (isInline) dndState?.accepts(DropTarget.ChainInsert) == true else dndState?.accepts(DropTarget.ChainEnd) == true
+        val isSourceChain = dndState?.sourceChainId == props.chainId
+        val canDrop = !isSourceChain &&
+                if (isInline) dndState?.accepts(DropTarget.ChainInsert) == true
+                else dndState?.accepts(DropTarget.ChainEnd) == true
 
         if (isInline) {
             // ── Insert-before mode (former KlangBlocksInlineDropZoneComp) ───────

@@ -1,5 +1,11 @@
 # Klang Project
 
+## Available Agent
+
+| Agent                       | Trigger                                                                                                                        | Description                                                                                                                                                         |
+|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `music-platform-strategist` | "think big picture", "what should we build", "plan the platform", "launch strategy", "user personas", "feature prioritization" | Strategic product advisor. NOT a coder. Reasons about user value, platform surface, and launch readiness. Has persistent memory. Saves output to `.claude/vision/`. |
+
 ## Available Skills
 
 Use `/skill-name` or describe what you need in natural language to invoke a skill.

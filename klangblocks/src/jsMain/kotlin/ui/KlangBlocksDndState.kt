@@ -45,6 +45,11 @@ class DndState(
     val targets: Set<DropTarget>,
     /** Single handler for all drop destinations. */
     val onDrop: (DropDestination) -> Unit,
+    /**
+     * ID of the chain that is the source of the current drag (null for palette drags).
+     * Drop zones belonging to this chain suppress themselves during the drag.
+     */
+    val sourceChainId: String? = null,
 ) {
     fun accepts(target: DropTarget): Boolean = target in targets
 }

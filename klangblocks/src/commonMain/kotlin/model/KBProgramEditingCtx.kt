@@ -48,6 +48,7 @@ class KBProgramEditingCtx(
                 is DropDestination.ChainEnd -> appendBlockToChainById(d.chainId, action.funcName)
                 is DropDestination.ChainInsert -> insertBlockIntoChainById(action.funcName, d.chainId, d.insertBeforeBlockId)
                 is DropDestination.EmptySlot -> dropBlockToSlot(action.funcName, d.blockId, d.slotIdx)
+                is DropDestination.ReplaceBlock -> replaceWithNewBlock(action.funcName, d.targetBlockId)
             }
 
             is DropAction.MoveBlocks -> when (val d = action.destination) {
@@ -55,6 +56,7 @@ class KBProgramEditingCtx(
                 is DropDestination.ChainEnd -> moveBlocksToChainEnd(action.blocks, d.chainId)
                 is DropDestination.ChainInsert -> moveBlocksToChainInsert(action.blocks, d.chainId, d.insertBeforeBlockId)
                 is DropDestination.EmptySlot -> moveBlocksToSlot(action.blocks, d.blockId, d.slotIdx)
+                is DropDestination.ReplaceBlock -> replaceWithMovedBlocks(action.blocks, d.targetBlockId)
             }
 
             is DropAction.MoveRow -> moveRow(action.sourceStmtId, action.targetIndex)
@@ -163,9 +165,10 @@ class KBProgramEditingCtx(
     }
 
     private fun moveBlocksToRowGap(blocks: List<KBCallBlock>, index: Int) {
+        val clones = blocks.map { it.copy(id = uuid()) }
         val newChain = KBChainStmt(
             id = uuid(),
-            steps = blocks.mapIndexed { i, b -> b.copy(isHead = i == 0) },
+            steps = clones.mapIndexed { i, b -> b.copy(isHead = i == 0) },
         )
         update { current ->
             var stmts = current.statements
@@ -177,11 +180,12 @@ class KBProgramEditingCtx(
     }
 
     private fun moveBlocksToChainEnd(blocks: List<KBCallBlock>, targetChainId: String) {
+        val clones = blocks.map { it.copy(id = uuid()) }
         update { current ->
             var stmts = current.statements
             for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
             current.copy(
-                statements = blocks.fold(stmts) { s, block ->
+                statements = clones.fold(stmts) { s, block ->
                     appendBlockToChain(s, targetChainId, block.copy(isHead = false))
                 }
             )
@@ -189,11 +193,12 @@ class KBProgramEditingCtx(
     }
 
     private fun moveBlocksToChainInsert(blocks: List<KBCallBlock>, targetChainId: String, insertBeforeBlockId: String?) {
+        val clones = blocks.map { it.copy(id = uuid()) }
         update { current ->
             var stmts = current.statements
             for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
             current.copy(
-                statements = blocks.fold(stmts) { s, block ->
+                statements = clones.fold(stmts) { s, block ->
                     insertBlockIntoChain(s, targetChainId, block.copy(isHead = false), insertBeforeBlockId)
                 }
             )
@@ -201,17 +206,88 @@ class KBProgramEditingCtx(
     }
 
     private fun moveBlocksToSlot(blocks: List<KBCallBlock>, blockId: String, slotIndex: Int) {
+        val clones = blocks.map { it.copy(id = uuid()) }
         update { current ->
-            val existingArg = findArgInStmts(current.statements, blockId, slotIndex)
             var stmts = current.statements
             for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
-            val movedBlocks = blocks.mapIndexed { i, b -> b.copy(isHead = i == 0) }
-            val newChain = buildSlotDropChain(existingArg, movedBlocks)
+            val newChain = buildSlotDropChain(clones)
             current.copy(
                 statements = updateBlockInStmts(stmts, blockId, slotIndex, KBNestedChainArg(newChain))
             )
         }
     }
+
+    private fun replaceWithNewBlock(funcName: String, targetBlockId: String) {
+        val newBlock = KBCallBlock(id = uuid(), funcName = funcName)
+        update { current ->
+            current.copy(statements = replaceBlockInStmts(current.statements, targetBlockId, listOf(newBlock)))
+        }
+    }
+
+    private fun replaceWithMovedBlocks(blocks: List<KBCallBlock>, targetBlockId: String) {
+        if (blocks.any { it.id == targetBlockId }) return   // self-replace guard
+        val clones = blocks.map { it.copy(id = uuid()) }
+        update { current ->
+            if (blockContains(blocks, targetBlockId)) return@update current  // cycle guard
+            var stmts = current.statements
+            for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
+            current.copy(statements = replaceBlockInStmts(stmts, targetBlockId, clones))
+        }
+    }
+
+    private fun replaceBlockInStmts(
+        stmts: List<KBStmt>, targetBlockId: String, replacements: List<KBCallBlock>,
+    ): List<KBStmt> = stmts.map { stmt ->
+        when (stmt) {
+            is KBChainStmt -> stmt.copy(
+                steps = replaceBlockInItems(stmt.steps, targetBlockId, replacements).fixHeads()
+            )
+
+            else -> stmt
+        }
+    }
+
+    private fun replaceBlockInItems(
+        items: List<KBChainItem>, targetBlockId: String, replacements: List<KBCallBlock>,
+    ): List<KBChainItem> {
+        val result = mutableListOf<KBChainItem>()
+        for (item in items) {
+            when {
+                item is KBCallBlock && item.id == targetBlockId -> result.addAll(replacements)
+                item is KBCallBlock -> result.add(
+                    item.copy(args = replaceBlockInArgs(item.args, targetBlockId, replacements))
+                )
+
+                else -> result.add(item)
+            }
+        }
+        return result
+    }
+
+    private fun replaceBlockInArgs(
+        args: List<KBArgValue>, targetBlockId: String, replacements: List<KBCallBlock>,
+    ): List<KBArgValue> = args.map { arg ->
+        when (arg) {
+            is KBNestedChainArg -> arg.copy(
+                chain = arg.chain.copy(
+                    steps = replaceBlockInItems(arg.chain.steps, targetBlockId, replacements).fixHeads()
+                )
+            )
+
+            else -> arg
+        }
+    }
+
+    /** Returns true if [targetBlockId] is nested inside any of [ancestorBlocks]' argument chains. */
+    private fun blockContains(ancestorBlocks: List<KBCallBlock>, targetBlockId: String): Boolean =
+        ancestorBlocks.any { blockContainsInArgs(it.args, targetBlockId) }
+
+    private fun blockContainsInArgs(args: List<KBArgValue>, targetId: String): Boolean =
+        args.any { arg ->
+            arg is KBNestedChainArg && arg.chain.steps.any { item ->
+                item is KBCallBlock && (item.id == targetId || blockContainsInArgs(item.args, targetId))
+            }
+        }
 
     private fun moveRow(sourceStmtId: String, index: Int) {
         update { current ->
@@ -409,11 +485,8 @@ class KBProgramEditingCtx(
 
     // ---- Slot-drop helpers -------------------------------------------------
 
-    private fun buildSlotDropChain(existingArg: KBArgValue?, newBlocks: List<KBCallBlock>): KBChainStmt {
-        val literalHead = (existingArg as? KBStringArg)?.takeIf { it.value.isNotEmpty() }
-            ?.let { KBStringLiteralItem(it.value) }
-        val steps: List<KBChainItem> = listOfNotNull(literalHead) +
-                newBlocks.mapIndexed { i, b -> b.copy(isHead = literalHead == null && i == 0) }
+    private fun buildSlotDropChain(newBlocks: List<KBCallBlock>): KBChainStmt {
+        val steps = newBlocks.mapIndexed { i, b -> b.copy(isHead = i == 0) }
         return KBChainStmt(id = uuid(), steps = steps)
     }
 
@@ -431,7 +504,7 @@ class KBProgramEditingCtx(
     ): List<KBChainItem> = items.map { item ->
         when {
             item is KBCallBlock && item.id == blockId -> {
-                val newChain = buildSlotDropChain(item.args.getOrNull(slotIndex), newBlocks)
+                val newChain = buildSlotDropChain(newBlocks)
                 val newArgs = item.args.toMutableList()
                 while (newArgs.size <= slotIndex) newArgs.add(KBEmptyArg(""))
                 newArgs[slotIndex] = KBNestedChainArg(newChain)
@@ -453,30 +526,6 @@ class KBProgramEditingCtx(
 
             else -> arg
         }
-    }
-
-    private fun findArgInStmts(stmts: List<KBStmt>, blockId: String, slotIndex: Int): KBArgValue? {
-        for (stmt in stmts) {
-            if (stmt is KBChainStmt) findArgInItems(stmt.steps, blockId, slotIndex)?.let { return it }
-        }
-        return null
-    }
-
-    private fun findArgInItems(items: List<KBChainItem>, blockId: String, slotIndex: Int): KBArgValue? {
-        for (item in items) {
-            if (item is KBCallBlock) {
-                if (item.id == blockId) return item.args.getOrNull(slotIndex)
-                findArgInArgs(item.args, blockId, slotIndex)?.let { return it }
-            }
-        }
-        return null
-    }
-
-    private fun findArgInArgs(args: List<KBArgValue>, blockId: String, slotIndex: Int): KBArgValue? {
-        for (arg in args) {
-            if (arg is KBNestedChainArg) findArgInItems(arg.chain.steps, blockId, slotIndex)?.let { return it }
-        }
-        return null
     }
 
     // ---- String literal item helpers ----------------------------------------
