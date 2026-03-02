@@ -12,6 +12,7 @@ import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.html.*
+import org.w3c.dom.Element
 
 enum class BlockVariant {
     TopLevel, Nested;
@@ -338,8 +339,14 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             }
             if (canDrop) {
                 onMouseUp { event ->
-                    event.stopPropagation()
-                    dndState?.onDropToSlot?.invoke(stmtId = props.chain.id, blockId = props.block.id, slotIdx = index)
+                    // Only accept drop on the slot background — not when releasing over a block
+                    // inside the chain (which would bubble up here incorrectly).
+                    val isOverBlock = (event.target as? Element)
+                        ?.closest(".kb-block, .kb-nested-block") != null
+                    if (!isOverBlock) {
+                        event.stopPropagation()
+                        dndState?.onDropToSlot?.invoke(stmtId = props.chain.id, blockId = props.block.id, slotIdx = index)
+                    }
                 }
             }
             onMouseDown { event -> event.stopPropagation() }
