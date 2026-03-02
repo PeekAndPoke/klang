@@ -14,13 +14,11 @@ import kotlinx.html.div
 /**
  * Unified chain drop zone.
  *
- * - [insertBeforeBlockId] != null → insert-before mode: uses [DndState.onDropToChainAt],
- *   rendered with negative margins and a dot-line-dot idle connector
- *   (replaces the former KlangBlocksInlineDropZoneComp).
+ * - [insertBeforeBlockId] != null → insert-before mode: fires [DropDestination.ChainInsert]
+ *   via [DndState.onDrop]; rendered with negative margins and a dot-line-dot idle connector.
  *
- * - [insertBeforeBlockId] == null → append mode: uses [DndState.onDropToChain],
- *   rendered as a small circle with a left margin
- *   (replaces the former KlangBlocksChainDropZoneComp).
+ * - [insertBeforeBlockId] == null → append mode: fires [DropDestination.ChainEnd]
+ *   via [DndState.onDrop]; rendered as a small circle with a left margin.
  */
 @Suppress("FunctionName")
 fun Tag.KlangBlocksDropZoneComp(
@@ -65,10 +63,10 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                 else dndState?.accepts(DropTarget.ChainEnd) == true
 
         if (isInline) {
-            // ── Insert-before mode (former KlangBlocksInlineDropZoneComp) ───────
+            // ── Insert-before mode ───────────────────────────────────────────────
             // Negative margins let it overlap the adjacent blocks' padding so the
             // chain width never changes. Half the width is absorbed on each side.
-            val connectorW = 30
+            val connectorW = if (props.hasNewlineBefore) 16 else 32
             val indent = if (props.hasNewlineBefore) 16 else 0
             div {
                 css {
@@ -123,11 +121,11 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                             display = Display.flex
                             alignItems = Align.center
                             justifyContent = JustifyContent.center
-                            put("transition", "background-color 0.1s ease, border-color 0.1s ease")
+                            if (isHovered) put("transition", "background-color 0.1s ease, border-color 0.1s ease")
                         }
                         icon.tiny.plus {
                             css {
-                                color = Color(if (isHovered) "rgba(255,255,255,0.95)" else "rgba(255,255,255,0.4)")
+                                color = Color(if (isHovered) "rgba(255,255,255,0.95)" else "rgba(255,255,255,0.2)")
                                 margin = Margin(0.px)
                                 put("transition", "color 0.1s ease")
                             }
@@ -147,7 +145,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                 }
             }
         } else {
-            // ── Append mode (former KlangBlocksChainDropZoneComp) ───────────────
+            // ── Append mode ──────────────────────────────────────────────────────
             // Always rendered at fixed size so the chain row height never changes.
             div {
                 css {
@@ -167,8 +165,9 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                             Color(if (isHovered) "rgba(255,255,255,0.5)" else "rgba(255,255,255,0.2)")
                         )
                         cursor = Cursor.copy
+                        // Transition only when already visible (hover changes); no transition on drag-start appearance.
+                        if (isHovered) put("transition", "background-color 0.1s ease, border-color 0.1s ease")
                     }
-                    put("transition", "background-color 0.1s ease, border-color 0.1s ease")
                 }
                 if (canDrop) {
                     onMouseEnter { isHovered = true }

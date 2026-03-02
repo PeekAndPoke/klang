@@ -127,7 +127,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
             renderFuncName(block)
             slots.toRenderItems(block.args).forEach { item ->
-                val canDrop = canDropToSlot && slotAcceptsChainDrop(item.slot) && variant.isTopLevel
+                val slotIsEmpty = item.arg == null || item.arg is KBEmptyArg
+                val canDrop = canDropToSlot && slotAcceptsChainDrop(item.slot) && variant.isTopLevel && slotIsEmpty
                 renderSlotItem(item.index, item.arg, item.slot, ctx, variant, canDrop)
             }
             if (isHovered && (!variant.isTopLevel || !canDropToSlot)) {
@@ -160,10 +161,15 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             userSelect = UserSelect.none
             flexShrink = 0.0   // never let a parent flex row squeeze this block's width
             if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
-            put("transition", "filter 0.15s ease, outline 0.1s ease")
+            put("transition", "filter 0.15s ease")
             position = Position.relative
             if (canDropOnBlock) {
-                put("outline", "2px solid white")
+                if (isHovered) {
+                    put("outline", "2px solid rgba(255,255,255,0.85)")
+                    put("filter", "brightness(1.2)")
+                } else {
+                    put("outline", "1px dashed rgba(255,255,255,0.5)")
+                }
                 cursor = Cursor.copy
             } else if (!variant.isTopLevel || !canDropToSlot) {
                 cursor = Cursor.grab
@@ -178,8 +184,17 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         canDropToSlot: Boolean,
         canDropOnBlock: Boolean,
     ) {
-        onMouseEnter { isHovered = true }
-        onMouseLeave { isHovered = false }
+        onMouseOver { event ->
+            // Only consume the event when this block is the drop target.
+            // If nothing is dragging (normal hover for action buttons) also consume it,
+            // so only the innermost hovered block shows actions.
+            if (ctx.dnd.state == null || canDropOnBlock) event.stopPropagation()
+            isHovered = true
+        }
+        onMouseOut { event ->
+            if (ctx.dnd.state == null || canDropOnBlock) event.stopPropagation()
+            isHovered = false
+        }
         // Accept a replace-block drop when the drag is released over this block.
         if (canDropOnBlock) {
             val dndState = ctx.dnd.state
@@ -349,6 +364,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 if (canDrop) {
                     border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
                     cursor = Cursor.copy
+                    hover {
+                        border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.7)"))
+                        backgroundColor = Color("rgba(0,0,0,0.35)")
+                    }
                 } else {
                     border = Border(1.px, BorderStyle.solid, Color.transparent)
                 }
@@ -393,11 +412,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 fontSize = variant.editFontSize
                 if (isMultilineString) whiteSpace = WhiteSpace.preWrap
                 if (canDrop) {
-                    backgroundColor = Color("rgba(255,255,255,0.25)")
-                    border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.7)"))
+                    backgroundColor = Color("rgba(255,255,255,0.08)")
+                    border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
                     cursor = Cursor.copy
                     hover {
-                        backgroundColor = Color("rgba(255,255,255,0.5)")
+                        backgroundColor = Color("rgba(255,255,255,0.45)")
                         border = Border(1.px, BorderStyle.solid, Color.white)
                     }
                 } else {
@@ -411,6 +430,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 }
             }
             if (canDrop) {
+                onMouseOver { event -> event.stopPropagation() }
                 onMouseUp { event ->
                     event.stopPropagation()
                     dndState?.onDrop?.invoke(DropDestination.EmptySlot(props.block.id, index))

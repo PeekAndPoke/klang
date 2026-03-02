@@ -18,3 +18,4 @@ Use `/skill-name` or describe what you need in natural language to invoke a skil
 | `/klangblocks-knowhow` | "work on klangblocks", "block editor", "ast to blocks", "round-trip test", "code gen"          | Load klangblocks context incrementally (dispatcher + targeted ref files)                |
 | `/klangaudio-knowhow`  | "work on audio", "audio engine", "voice synthesis", "effects", "sample loading", "orbits"      | Load audio subsystem context (audio_bridge / audio_be / audio_fe / audio_jsworklet)     |
 | `/code-style`          | "apply code style", "check code style", "clean up code style", "follow code conventions"       | Project code style rules (curly braces, formatting, etc.)                               |
+| `/ultra-libs-knowhow`  | "ultra libs", "ultra.html", "ultra events", "de.peekandpoke.ultra"                             | Source reference for all `de.peekandpoke.ultra.*` modules (html, streams, common, etc.) |
