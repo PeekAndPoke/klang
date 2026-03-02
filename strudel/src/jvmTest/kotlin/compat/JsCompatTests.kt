@@ -3,7 +3,6 @@ package io.peekandpoke.klang.strudel.compat
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.test.logging.warn
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -39,23 +38,15 @@ class JsCompatTests : StringSpec() {
     init {
         // Testing that simple pattern code produces the same results
         JsCompatTestData.patterns.forEachIndexed { index, example ->
-            "Pattern ${index + 1}: ${example.name}" {
-                if (!example.skip) {
-                    runComparison(example)
-                } else {
-                    warn { "Skipping test '${example.name}' because it's marked as 'shouldRun = false'" }
-                }
+            "Pattern ${index + 1}: ${example.name}".config(enabled = !example.skip) {
+                runComparison(example)
             }
         }
 
         // Testing that songs code produces the same results
         JsCompatTestSongs.songs.forEachIndexed { index, example ->
-            "Song ${index + 1}: ${example.name}" {
-                if (!example.skip) {
-                    runComparison(example)
-                } else {
-                    warn { "Skipping test '${example.name}' because it's marked as 'shouldRun = false'" }
-                }
+            "Song ${index + 1}: ${example.name}".config(enabled = !example.skip) {
+                runComparison(example)
             }
         }
     }
