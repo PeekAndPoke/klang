@@ -193,6 +193,9 @@ class KBProgramEditingCtx(
     }
 
     private fun moveBlocksToChainInsert(blocks: List<KBCallBlock>, targetChainId: String, insertBeforeBlockId: String?) {
+        // No-op: inserting before a block that is itself part of the payload leaves the chain unchanged.
+        val blockIds = blocks.map { it.id }.toSet()
+        if (insertBeforeBlockId != null && insertBeforeBlockId in blockIds) return
         val clones = blocks.map { it.copy(id = uuid()) }
         update { current ->
             var stmts = current.statements

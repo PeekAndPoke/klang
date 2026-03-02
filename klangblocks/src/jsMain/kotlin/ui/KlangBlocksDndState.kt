@@ -41,6 +41,8 @@ class DndState(
     val ghostX: Double,
     val ghostY: Double,
     val ghostLabel: String,
+    /** Estimated pixel width of the ghost element — used to size hovered drop zones. */
+    val ghostWidth: Double,
     /** Set of destination types this drag operation accepts. */
     val targets: Set<DropTarget>,
     /** Single handler for all drop destinations. */

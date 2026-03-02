@@ -57,8 +57,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
     override fun VDom.render() {
         val dndState = props.ctx.dnd.state
         val isInline = props.insertBeforeBlockId != null
-        val isSourceChain = dndState?.sourceChainId == props.chainId
-        val canDrop = !isSourceChain &&
+        val canDrop =
                 if (isInline) dndState?.accepts(DropTarget.ChainInsert) == true
                 else dndState?.accepts(DropTarget.ChainEnd) == true
 
@@ -66,8 +65,12 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
             // ── Insert-before mode ───────────────────────────────────────────────
             // Negative margins let it overlap the adjacent blocks' padding so the
             // chain width never changes. Half the width is absorbed on each side.
+            // On hover the container grows to ghostWidth (keeping margins constant:
+            // containerWidth = ghostWidth + 20 - indent gives effectiveWidth = ghostWidth).
             val connectorW = if (props.hasNewlineBefore) 16 else 32
             val indent = if (props.hasNewlineBefore) 16 else 0
+            val expandedW = (dndState?.ghostWidth ?: 80.0) + 20.0
+            val containerW = if (canDrop && isHovered) expandedW + 20 - indent else (connectorW + indent).toDouble()
             div {
                 css {
                     display = Display.inlineFlex
@@ -76,7 +79,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                     flexShrink = 0.0
                     marginLeft = (-10 + indent).px
                     marginRight = (-10).px
-                    width = (connectorW + indent).px
+                    width = containerW.px
                     alignSelf = Align.stretch
                     position = Position.relative
                     zIndex = 1
@@ -85,6 +88,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                         props.onToggleNewline != null -> Cursor.pointer
                         else -> Cursor.default
                     }
+                    if (canDrop) put("transition", "width 0.15s ease")
                 }
                 onMouseEnter { isHovered = true }
                 onMouseLeave { isHovered = false }
@@ -100,6 +104,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                 }
 
                 if (canDrop) {
+                    onMouseOver { it.stopPropagation() }
                     onMouseUp { event ->
                         event.stopPropagation()
                         dndState!!.onDrop(DropDestination.ChainInsert(props.chainId, props.insertBeforeBlockId!!))
@@ -110,9 +115,9 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                             left = 50.pct
                             top = 50.pct
                             put("transform", "translate(-50%, -50%)")
-                            width = 24.px
+                            width = (if (isHovered) expandedW else 24.0).px
                             height = 24.px
-                            borderRadius = 50.pct
+                            borderRadius = (if (isHovered) 8 else 12).px
                             backgroundColor = Color(if (isHovered) "rgba(255,255,255,0.2)" else "rgba(255,255,255,0.08)")
                             border = Border(
                                 1.px, BorderStyle.solid,
@@ -121,7 +126,10 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                             display = Display.flex
                             alignItems = Align.center
                             justifyContent = JustifyContent.center
-                            if (isHovered) put("transition", "background-color 0.1s ease, border-color 0.1s ease")
+                            put(
+                                "transition",
+                                "width 0.15s ease, border-radius 0.15s ease, background-color 0.1s ease, border-color 0.1s ease"
+                            )
                         }
                         icon.tiny.plus {
                             css {
@@ -146,16 +154,16 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
             }
         } else {
             // ── Append mode ──────────────────────────────────────────────────────
-            // Always rendered at fixed size so the chain row height never changes.
+            val expandedW = (dndState?.ghostWidth ?: 80.0) + 20.0
             div {
                 css {
                     display = Display.inlineFlex
                     alignItems = Align.center
                     justifyContent = JustifyContent.center
                     flexShrink = 0.0
-                    width = 24.px
+                    width = (if (canDrop && isHovered) expandedW else 24.0).px
                     height = 24.px
-                    borderRadius = 50.pct
+                    borderRadius = (if (canDrop && isHovered) 8 else 12).px
                     marginLeft = 6.px
                     alignSelf = Align.center
                     if (canDrop) {
@@ -165,11 +173,11 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                             Color(if (isHovered) "rgba(255,255,255,0.5)" else "rgba(255,255,255,0.2)")
                         )
                         cursor = Cursor.copy
-                        // Transition only when already visible (hover changes); no transition on drag-start appearance.
-                        if (isHovered) put("transition", "background-color 0.1s ease, border-color 0.1s ease")
+                        put("transition", "width 0.15s ease, border-radius 0.15s ease, background-color 0.1s ease, border-color 0.1s ease")
                     }
                 }
                 if (canDrop) {
+                    onMouseOver { it.stopPropagation() }
                     onMouseEnter { isHovered = true }
                     onMouseLeave { isHovered = false }
                     onMouseUp { event ->

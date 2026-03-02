@@ -200,13 +200,13 @@ class DropActionTest : StringSpec({
         c.code() shouldBe "outer(mid(leftover()))\nother(deep(x().inner()))"
     }
 
-    "A4 self ChainInsert drag block before itself is consistent" {
+    "A4 self ChainInsert drag block before itself is a no-op" {
         val c = ctx("a().b().c()")
         val b = c.block("b")
         val chainId = c.chain("b").id
         c.execute(DropAction.MoveBlocks(listOf(b), DropDestination.ChainInsert(chainId, b.id)))
-        // b cloned as b', b removed → [a,c], b' inserted before b.id (not found) → appended
-        c.code() shouldBe "a().c().b()"
+        // insertBeforeBlockId == b.id which is in the payload → early exit, chain unchanged
+        c.code() shouldBe "a().b().c()"
     }
 
     // ── B1: Tail → row gap ────────────────────────────────────────────────────
@@ -283,14 +283,14 @@ class DropActionTest : StringSpec({
         c.code() shouldBe "gain(fast(2).slow(4))"
     }
 
-    "B4 self ChainInsert drag tail before itself is consistent" {
+    "B4 self ChainInsert drag tail before itself is a no-op" {
         val c = ctx("a().b().c()")
         val tl = c.tail("b")
         tl.size shouldBe 2
         val chainId = c.chain("b").id
         val bId = c.block("b").id
         c.execute(DropAction.MoveBlocks(tl, DropDestination.ChainInsert(chainId, bId)))
-        // clones [b',c'] remove [b,c] → [a], insert before b.id (not found) → appended
+        // insertBeforeBlockId == b.id which is in the payload → early exit, chain unchanged
         c.code() shouldBe "a().b().c()"
     }
 

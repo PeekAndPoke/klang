@@ -155,6 +155,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             ghostX = ds.ghostX,
             ghostY = ds.ghostY,
             ghostLabel = ds.funcName,
+            ghostWidth = estimateGhostWidth(ds.funcName),
             targets = setOf(
                 DropTarget.RowGap, DropTarget.ChainEnd, DropTarget.ChainInsert,
                 DropTarget.EmptySlot, DropTarget.ReplaceBlock,
@@ -170,6 +171,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             ghostX = ds.ghostX,
             ghostY = ds.ghostY,
             ghostLabel = ds.chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName },
+            ghostWidth = estimateGhostWidth(ds.chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName }),
             targets = setOf(DropTarget.RowGap),
             onDrop = { dest ->
                 editingCtx.execute(DropAction.MoveRow(ds.stmtId, (dest as DropDestination.RowGap).index))
@@ -183,10 +185,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             val allBlocks = ds.sourceChain.steps.filterIsInstance<KBCallBlock>()
             val fromIdx = allBlocks.indexOfFirst { it.id == ds.block.id }
             val blocks = if (ds.ctrlHeld && fromIdx >= 0) allBlocks.drop(fromIdx) else listOf(ds.block)
+            val label = blocks.joinToString(".") { it.funcName }
             DndState(
                 ghostX = ds.ghostX,
                 ghostY = ds.ghostY,
-                ghostLabel = blocks.joinToString(".") { it.funcName },
+                ghostLabel = label,
+                ghostWidth = estimateGhostWidth(label),
                 targets = setOf(
                     DropTarget.RowGap, DropTarget.ChainEnd, DropTarget.ChainInsert,
                     DropTarget.EmptySlot, DropTarget.ReplaceBlock,
@@ -201,6 +205,9 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
         else -> null
     }
+
+    /** Estimates the pixel width of the drag ghost element (monospace 13px, 10px horizontal padding). */
+    private fun estimateGhostWidth(label: String): Double = label.length * 7.8 + 20.0
 
     // ---- Init helpers ----------------------------------------------
 
