@@ -64,17 +64,17 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
             // ── Insert-before mode (former KlangBlocksInlineDropZoneComp) ───────
             // Negative margins let it overlap the adjacent blocks' padding so the
             // chain width never changes. Half the width is absorbed on each side.
-            val connectorW = 60
-            val dotW = 5
+            val connectorW = 30
+            val indent = if (props.hasNewlineBefore) 16 else 0
             div {
                 css {
                     display = Display.inlineFlex
                     alignItems = Align.center
                     justifyContent = JustifyContent.center
                     flexShrink = 0.0
-                    marginLeft = (-10).px
+                    marginLeft = (-10 + indent).px
                     marginRight = (-10).px
-                    width = connectorW.px
+                    width = (connectorW + indent).px
                     alignSelf = Align.stretch
                     position = Position.relative
                     zIndex = 1
@@ -130,16 +130,15 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                         }
                     }
                 } else if (props.showConnectorWhenIdle) {
-                    div {
-                        css {
-                            width = dotW.px; height = dotW.px; borderRadius = 50.pct; backgroundColor = Color("#888"); flexShrink = 0.0
-                        }
-                    }
-                    div { css { flexGrow = 1.0; height = 2.px; backgroundColor = Color("#888"); flexShrink = 0.0 } }
-                    div {
-                        css {
-                            width = dotW.px; height = dotW.px; borderRadius = 50.pct; backgroundColor = Color("#888"); flexShrink = 0.0
-                        }
+                    if (props.hasNewlineBefore) {
+                        // Leading continuation connector: - - - *
+                        connectorDashedLine()
+                        connectorDot()
+                    } else {
+                        // Standard inter-block connector: * - - - *
+                        connectorDot()
+                        connectorSolidLine()
+                        connectorDot()
                     }
                 }
             }

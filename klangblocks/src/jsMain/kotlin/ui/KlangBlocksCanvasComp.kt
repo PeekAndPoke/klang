@@ -72,7 +72,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             display = Display.flex
                             flexDirection = FlexDirection.row
                             alignItems = Align.flexStart
-                            put("gap", "8px")
+                            gap = 8.px
                         }
 
                         // Row number — doubles as a drag handle for KBChainStmt rows
@@ -108,7 +108,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                     css {
                                         display = Display.flex
                                         flexDirection = FlexDirection.column
-                                        put("gap", "4px")
+                                        gap = 4.px
                                     }
                                     renderChainSegments(
                                         chain = stmt,

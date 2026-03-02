@@ -66,7 +66,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                     display = Display.flex
                     flexDirection = FlexDirection.row
                     alignItems = Align.center
-                    put("gap", "4px")
+                    gap = 4.px
                     padding = Padding(6.px)
                     put("border-bottom", "1px solid #333")
                 }
@@ -118,7 +118,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                             css {
                                 display = Display.inlineFlex
                                 alignItems = Align.center
-                                put("gap", "4px")
+                                gap = 4.px
                                 backgroundColor = Color("#333")
                                 color = Color("#aaa")
                                 borderRadius = 4.px

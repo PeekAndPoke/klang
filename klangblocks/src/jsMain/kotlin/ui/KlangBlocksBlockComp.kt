@@ -21,7 +21,7 @@ enum class BlockVariant {
     val paddingH get() = if (this == TopLevel) 10.px else 7.px
     val paddingV get() = if (this == TopLevel) 5.px else 3.px
     val radius get() = if (this == TopLevel) 8.px else 6.px
-    val gap get() = if (this == TopLevel) "4px" else "3px"
+    val gap get() = if (this == TopLevel) 4.px else 3.px
     val slotRadius get() = if (this == TopLevel) 4.px else 3.px
     val slotPadH get() = if (this == TopLevel) 6.px else 4.px
     val slotPadV get() = if (this == TopLevel) 2.px else 1.px
@@ -106,346 +106,426 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         editText = ""
     }
 
+    // ── Main render ───────────────────────────────────────────────────────────
+
     override fun VDom.render() {
         val block = props.block
         val ctx = props.ctx
         val variant = props.variant
-        val dndState = ctx.dnd.state
-        val isVertical = block.pocketLayout == KBPocketLayout.VERTICAL
         val doc = KlangDocsRegistry.global.get(block.funcName)
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
+        val dndState = ctx.dnd.state
+        val isVertical = block.pocketLayout == KBPocketLayout.VERTICAL
         val canDropToSlot = dndState?.onDropToSlot != null
+        val docCategory = doc?.category
 
-        val cssClass = if (variant.isTopLevel) "kb-block" else "kb-nested-block"
-        div(cssClass) {
+        div(if (variant.isTopLevel) "kb-block" else "kb-nested-block") {
+            blockContainerStyle(variant, docCategory, isVertical, canDropToSlot)
+            blockDragHandlers(ctx, block, variant, canDropToSlot)
+
+            renderFuncName(block)
+            slots.toRenderItems(block.args).forEach { item ->
+                val canDrop = canDropToSlot && slotAcceptsChainDrop(item.slot) && variant.isTopLevel
+                renderSlotItem(item.index, item.arg, item.slot, ctx, variant, canDrop)
+            }
+            if (isHovered && (!variant.isTopLevel || !canDropToSlot)) {
+                renderHoverActions(ctx, block, variant, docCategory, isVertical)
+            }
+        }
+    }
+
+    // ── Block container setup ─────────────────────────────────────────────────
+
+    private fun DIV.blockContainerStyle(
+        variant: BlockVariant,
+        docCategory: String?,
+        isVertical: Boolean,
+        canDropToSlot: Boolean,
+    ) {
+        css {
+            display = Display.inlineFlex
+            flexDirection = if (isVertical) FlexDirection.column else FlexDirection.row
+            alignItems = if (isVertical) Align.flexStart else Align.center
+            gap = variant.gap
+            padding = Padding(horizontal = variant.paddingH, vertical = variant.paddingV)
+            borderRadius = variant.radius
+            backgroundColor = Color(categoryColour(docCategory))
+            color = Color.white
+            fontSize = variant.fontSize
+            fontFamily = "monospace"
+            whiteSpace = WhiteSpace.nowrap
+            userSelect = UserSelect.none
+            flexShrink = 0.0   // never let a parent flex row squeeze this block's width
+            if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
+            put("transition", "filter 0.15s ease")
+            position = Position.relative
+            if (!variant.isTopLevel || !canDropToSlot) cursor = Cursor.grab
+        }
+    }
+
+    private fun DIV.blockDragHandlers(
+        ctx: KlangBlocksCtx,
+        block: KBCallBlock,
+        variant: BlockVariant,
+        canDropToSlot: Boolean,
+    ) {
+        onMouseEnter { isHovered = true }
+        onMouseLeave { isHovered = false }
+        // Start a drag when pressing on the block background or function name.
+        // Slot children stop mousedown propagation so they won't trigger this.
+        onMouseDown { event ->
+            val shouldDrag = if (variant.isTopLevel) !canDropToSlot else true
+            if (shouldDrag) {
+                event.preventDefault()
+                if (!variant.isTopLevel) event.stopPropagation()
+                ctx.dnd.startBlockDrag(
+                    sourceChainId = props.chain.id,
+                    sourceChain = props.chain,
+                    block = block,
+                    ctrlHeld = event.ctrlKey,
+                    x = event.clientX.toDouble(),
+                    y = event.clientY.toDouble(),
+                )
+            }
+        }
+    }
+
+    // ── Function name ─────────────────────────────────────────────────────────
+
+    private fun DIV.renderFuncName(block: KBCallBlock) {
+        span {
+            css { fontWeight = FontWeight.bold }
+            +block.funcName
+        }
+    }
+
+    // ── Argument slots ────────────────────────────────────────────────────────
+
+    private fun DIV.renderSlotItem(
+        index: Int,
+        arg: KBArgValue?,
+        slot: KBSlot,
+        ctx: KlangBlocksCtx,
+        variant: BlockVariant,
+        canDrop: Boolean,
+    ) {
+        when {
+            editingSlotIndex == index -> renderEditingSlot(index, slot, variant)
+            arg is KBNestedChainArg -> renderNestedChainSlot(index, arg, ctx, canDrop)
+            else -> renderValueSlot(index, arg, slot, ctx, variant, canDrop)
+        }
+    }
+
+    private fun DIV.renderEditingSlot(index: Int, slot: KBSlot, variant: BlockVariant) {
+        if (slot.kind.isStringish) {
+            // Multiline-capable textarea: Enter = commit, Shift+Enter = newline
+            textArea {
+                +editText
+                rows = editText.lines().size.coerceAtLeast(1).toString()
+                autoFocus = true
+                onInput { event ->
+                    editText = event.asDynamic().target.value as String
+                    val el = event.asDynamic().target
+                    el.style.height = "auto"
+                    el.style.height = "${el.scrollHeight}px"
+                }
+                onBlur { commitEdit(index) }
+                onKeyDown { event ->
+                    when {
+                        event.key == "Enter" && !event.shiftKey -> {
+                            event.preventDefault(); commitEdit(index)
+                        }
+
+                        event.key == "Escape" -> cancelEdit()
+                    }
+                }
+                onMouseDown { event -> event.stopPropagation() }
+                css {
+                    backgroundColor = Color("rgba(0,0,0,0.4)")
+                    border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
+                    borderRadius = 3.px
+                    color = Color.white
+                    fontSize = variant.editFontSize
+                    fontFamily = "monospace"
+                    padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
+                    minWidth = variant.textareaMinW
+                    minHeight = variant.textareaMinH
+                    overflow = Overflow.hidden
+                    outline = Outline.none
+                    resize = Resize.none
+                    put("box-sizing", "border-box")
+                    put("field-sizing", "content")
+                }
+            }
+        } else {
+            input {
+                value = editText
+                autoFocus = true
+                onInput { event -> editText = event.asDynamic().target.value as String }
+                onBlur { commitEdit(index) }
+                onKeyDown { event ->
+                    when (event.key) {
+                        "Enter" -> commitEdit(index)
+                        "Escape" -> cancelEdit()
+                    }
+                }
+                onMouseDown { event -> event.stopPropagation() }
+                css {
+                    backgroundColor = Color("rgba(0,0,0,0.4)")
+                    border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
+                    borderRadius = 3.px
+                    color = Color.white
+                    fontSize = variant.editFontSize
+                    fontFamily = "monospace"
+                    padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
+                    minWidth = variant.textareaMinW
+                    outline = Outline.none
+                    put("box-sizing", "border-box")
+                    put("field-sizing", "content")
+                }
+            }
+        }
+    }
+
+    private fun DIV.renderNestedChainSlot(
+        index: Int,
+        arg: KBNestedChainArg,
+        ctx: KlangBlocksCtx,
+        canDrop: Boolean,
+    ) {
+        val dndState = ctx.dnd.state
+        val headContent: (DIV.() -> Unit)? = when (val h = arg.chain.steps.firstOrNull()) {
+            is KBStringLiteralItem -> {
+                val item: KBStringLiteralItem = h
+                { KlangBlocksStringLiteralItemComp(item = item, chainId = arg.chain.id, ctx = ctx) }
+            }
+
+            is KBIdentifierItem -> {
+                val name = h.name
+                {
+                    span {
+                        css {
+                            borderRadius = 3.px
+                            padding = Padding(horizontal = 4.px, vertical = 1.px)
+                            fontSize = 11.px
+                            backgroundColor = Color("rgba(0,0,0,0.25)")
+                            border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.2)"))
+                            color = Color("rgba(255,255,255,0.85)")
+                            fontFamily = "monospace"
+                            whiteSpace = WhiteSpace.nowrap
+                        }
+                        +name
+                    }
+                }
+            }
+
+            else -> null
+        }
+        div {
             css {
                 display = Display.inlineFlex
-                flexDirection = if (isVertical) FlexDirection.column else FlexDirection.row
-                alignItems = if (isVertical) Align.flexStart else Align.center
-                put("gap", variant.gap)
-                padding = Padding(horizontal = variant.paddingH, vertical = variant.paddingV)
-                borderRadius = variant.radius
-                backgroundColor = Color(categoryColour(doc?.category))
-                color = Color.white
-                fontSize = variant.fontSize
-                fontFamily = "monospace"
-                whiteSpace = WhiteSpace.nowrap
-                userSelect = UserSelect.none
-                flexShrink = 0.0   // never let a parent flex row squeeze this block's width
-                if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
-                put("transition", "filter 0.15s ease")
-                position = Position.relative
-                // Nested blocks are always draggable; top-level only when not in slot-drop mode.
-                if (!variant.isTopLevel || !canDropToSlot) cursor = Cursor.grab
-            }
-            onMouseEnter { isHovered = true }
-            onMouseLeave { isHovered = false }
-            // Start a drag when pressing on the block background or function name.
-            // Slot children stop mousedown propagation so they won't trigger this.
-            onMouseDown { event ->
-                val shouldDrag = if (variant.isTopLevel) !canDropToSlot else true
-                if (shouldDrag) {
-                    event.preventDefault()
-                    if (!variant.isTopLevel) event.stopPropagation()
-                    ctx.dnd.startBlockDrag(
-                        sourceChainId = props.chain.id,
-                        sourceChain = props.chain,
-                        block = block,
-                        ctrlHeld = event.ctrlKey,
-                        x = event.clientX.toDouble(),
-                        y = event.clientY.toDouble(),
-                    )
+                flexDirection = FlexDirection.column
+                gap = 2.px
+                borderRadius = 4.px
+                backgroundColor = Color("rgba(0,0,0,0.2)")
+                padding = Padding(horizontal = 4.px, vertical = 2.px)
+                if (canDrop) {
+                    border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
+                    cursor = Cursor.copy
+                } else {
+                    border = Border(1.px, BorderStyle.solid, Color.transparent)
                 }
             }
-
-            span {
-                css { fontWeight = FontWeight.bold }
-                +block.funcName
+            if (canDrop) {
+                onMouseUp { event ->
+                    event.stopPropagation()
+                    dndState?.onDropToSlot?.invoke(stmtId = props.chain.id, blockId = props.block.id, slotIdx = index)
+                }
             }
+            onMouseDown { event -> event.stopPropagation() }
+            renderChainSegments(
+                chain = arg.chain,
+                segments = arg.chain.steps.toCallSegments(),
+                ctx = ctx,
+                variant = BlockVariant.Nested,
+                headContent = headContent,
+            )
+        }
+    }
 
-            slots.toRenderItems(block.args).forEach { item ->
-                val i = item.index
-                val arg = item.arg
-                val slot = item.slot
-                // Drop-to-slot highlighting only applies to top-level blocks.
-                val canDrop = canDropToSlot && slotAcceptsChainDrop(slot) && variant.isTopLevel
-
-                if (editingSlotIndex == i) {
-                    if (slot.kind.isStringish) {
-                        // Multiline-capable textarea: Enter = commit, Shift+Enter = newline
-                        textArea {
-                            +editText
-                            rows = editText.lines().size.coerceAtLeast(1).toString()
-                            autoFocus = true
-                            onInput { event ->
-                                editText = event.asDynamic().target.value as String
-                                val el = event.asDynamic().target
-                                el.style.height = "auto"
-                                el.style.height = "${el.scrollHeight}px"
-                            }
-                            onBlur { commitEdit(i) }
-                            onKeyDown { event ->
-                                when {
-                                    event.key == "Enter" && !event.shiftKey -> {
-                                        event.preventDefault(); commitEdit(i)
-                                    }
-
-                                    event.key == "Escape" -> cancelEdit()
-                                }
-                            }
-                            onMouseDown { event -> event.stopPropagation() }
-                            css {
-                                backgroundColor = Color("rgba(0,0,0,0.4)")
-                                border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
-                                borderRadius = 3.px
-                                color = Color.white
-                                fontSize = variant.editFontSize
-                                fontFamily = "monospace"
-                                padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
-                                minWidth = variant.textareaMinW
-                                minHeight = variant.textareaMinH
-                                overflow = Overflow.hidden
-                                outline = Outline.none
-                                resize = Resize.none
-                                put("box-sizing", "border-box")
-                                put("field-sizing", "content")
-                            }
-                        }
-                    } else {
-                        input {
-                            value = editText
-                            autoFocus = true
-                            onInput { event -> editText = event.asDynamic().target.value as String }
-                            onBlur { commitEdit(i) }
-                            onKeyDown { event ->
-                                when (event.key) {
-                                    "Enter" -> commitEdit(i)
-                                    "Escape" -> cancelEdit()
-                                }
-                            }
-                            onMouseDown { event -> event.stopPropagation() }
-                            css {
-                                backgroundColor = Color("rgba(0,0,0,0.4)")
-                                border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
-                                borderRadius = 3.px
-                                color = Color.white
-                                fontSize = variant.editFontSize
-                                fontFamily = "monospace"
-                                padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
-                                minWidth = variant.textareaMinW
-                                outline = Outline.none
-                                put("box-sizing", "border-box")
-                                put("field-sizing", "content")
-                            }
-                        }
-                    }
-                } else if (arg is KBNestedChainArg) {
-                    // Build headContent for optional string-literal / identifier head.
-                    val headContent: (DIV.() -> Unit)? = when (val h = arg.chain.steps.firstOrNull()) {
-                        is KBStringLiteralItem -> {
-                            val item: KBStringLiteralItem = h
-                            { KlangBlocksStringLiteralItemComp(item = item, chainId = arg.chain.id, ctx = ctx) }
-                        }
-
-                        is KBIdentifierItem -> {
-                            val name = h.name
-                            {
-                                span {
-                                    css {
-                                        borderRadius = 3.px
-                                        padding = Padding(horizontal = 4.px, vertical = 1.px)
-                                        fontSize = 11.px
-                                        backgroundColor = Color("rgba(0,0,0,0.25)")
-                                        border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.2)"))
-                                        color = Color("rgba(255,255,255,0.85)")
-                                        fontFamily = "monospace"
-                                        whiteSpace = WhiteSpace.nowrap
-                                    }
-                                    +name
-                                }
-                            }
-                        }
-
-                        else -> null
-                    }
-                    div {
-                        css {
-                            display = Display.inlineFlex
-                            flexDirection = FlexDirection.column
-                            put("gap", "2px")
-                            borderRadius = 4.px
-                            backgroundColor = Color("rgba(0,0,0,0.2)")
-                            padding = Padding(horizontal = 4.px, vertical = 2.px)
-                            if (canDrop) {
-                                border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
-                                cursor = Cursor.copy
-                            } else {
-                                border = Border(1.px, BorderStyle.solid, Color.transparent)
-                            }
-                        }
-                        if (canDrop) {
-                            onMouseUp { event ->
-                                event.stopPropagation()
-                                dndState.onDropToSlot(stmtId = props.chain.id, blockId = block.id, slotIdx = i)
-                            }
-                        }
-                        onMouseDown { event -> event.stopPropagation() }
-                        renderChainSegments(
-                            chain = arg.chain,
-                            segments = arg.chain.steps.toCallSegments(),
-                            ctx = ctx,
-                            variant = BlockVariant.Nested,
-                            headContent = headContent,
-                        )
+    private fun DIV.renderValueSlot(
+        index: Int,
+        arg: KBArgValue?,
+        slot: KBSlot,
+        ctx: KlangBlocksCtx,
+        variant: BlockVariant,
+        canDrop: Boolean,
+    ) {
+        val dndState = ctx.dnd.state
+        val isMultilineString = arg is KBStringArg && '\n' in arg.value
+        span {
+            css {
+                borderRadius = variant.slotRadius
+                padding = Padding(horizontal = variant.slotPadH, vertical = variant.slotPadV)
+                fontSize = variant.editFontSize
+                if (isMultilineString) whiteSpace = WhiteSpace.preWrap
+                if (canDrop) {
+                    backgroundColor = Color("rgba(255,255,255,0.25)")
+                    border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.7)"))
+                    cursor = Cursor.copy
+                    hover {
+                        backgroundColor = Color("rgba(255,255,255,0.5)")
+                        border = Border(1.px, BorderStyle.solid, Color.white)
                     }
                 } else {
-                    val isMultilineString = arg is KBStringArg && '\n' in arg.value
-                    span {
-                        css {
-                            borderRadius = variant.slotRadius
-                            padding = Padding(horizontal = variant.slotPadH, vertical = variant.slotPadV)
-                            fontSize = variant.editFontSize
-                            if (isMultilineString) whiteSpace = WhiteSpace.preWrap
-                            if (canDrop) {
-                                // Highlight as a valid drop target
-                                backgroundColor = Color("rgba(255,255,255,0.25)")
-                                border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.7)"))
-                                cursor = Cursor.copy
-                                hover {
-                                    backgroundColor = Color("rgba(255,255,255,0.5)")
-                                    border = Border(1.px, BorderStyle.solid, Color.white)
-                                }
-                            } else {
-                                backgroundColor = Color("rgba(0,0,0,0.2)")
-                                border = Border(1.px, BorderStyle.solid, Color.transparent)
-                                cursor = Cursor.text
-                                if (arg == null || arg is KBEmptyArg) opacity = 0.6
-                                hover {
-                                    backgroundColor = Color("rgba(255,255,255,0.15)")
-                                }
-                            }
-                        }
-                        if (canDrop) {
-                            onMouseUp { event ->
-                                event.stopPropagation()
-                                dndState.onDropToSlot(stmtId = props.chain.id, blockId = block.id, slotIdx = i)
-                            }
-                            onMouseDown { event -> event.stopPropagation() }
-                        } else {
-                            onClick { event ->
-                                event.stopPropagation()
-                                val currentText = when (arg) {
-                                    is KBStringArg -> arg.value
-                                    is KBNumberArg -> {
-                                        val l = arg.value.toLong()
-                                        if (arg.value == l.toDouble()) l.toString() else arg.value.toString()
-                                    }
-
-                                    else -> ""
-                                }
-                                startEdit(i, currentText)
-                            }
-                            onMouseDown { event -> event.stopPropagation() }
-                        }
-                        when (arg) {
-                            null, is KBEmptyArg -> +"[${slot.name}]"
-                            is KBStringArg -> {
-                                val atomRanges = activeAtoms
-                                    .filter { it.slotIndex == i && it.atomStart != null && it.atomEnd != null }
-                                    .map { it.atomStart!! until it.atomEnd!! }
-                                    .sortedBy { it.first }
-                                    .let { mergeRanges(it) }
-                                renderWithHighlights(arg.value, atomRanges)
-                            }
-
-                            else -> +arg.renderShort()
-                        }
+                    backgroundColor = Color("rgba(0,0,0,0.2)")
+                    border = Border(1.px, BorderStyle.solid, Color.transparent)
+                    cursor = Cursor.text
+                    if (arg == null || arg is KBEmptyArg) opacity = 0.6
+                    hover {
+                        backgroundColor = Color("rgba(255,255,255,0.15)")
                     }
                 }
             }
+            if (canDrop) {
+                onMouseUp { event ->
+                    event.stopPropagation()
+                    dndState?.onDropToSlot?.invoke(stmtId = props.chain.id, blockId = props.block.id, slotIdx = index)
+                }
+                onMouseDown { event -> event.stopPropagation() }
+            } else {
+                onClick { event ->
+                    event.stopPropagation()
+                    val currentText = when (arg) {
+                        is KBStringArg -> arg.value
+                        is KBNumberArg -> {
+                            val l = arg.value.toLong()
+                            if (arg.value == l.toDouble()) l.toString() else arg.value.toString()
+                        }
 
-            // Layout toggle + Remove (×) — appear on hover, hidden while a slot-drop is active
-            if (isHovered && (!variant.isTopLevel || !canDropToSlot)) {
-                span {
-                    css {
-                        display = Display.inlineFlex
-                        alignItems = Align.center
-                        put("gap", "2px")
+                        else -> ""
+                    }
+                    startEdit(index, currentText)
+                }
+                onMouseDown { event -> event.stopPropagation() }
+            }
+            when (arg) {
+                null, is KBEmptyArg -> +"[${slot.name}]"
+                is KBStringArg -> {
+                    val atomRanges = activeAtoms
+                        .filter { it.slotIndex == index && it.atomStart != null && it.atomEnd != null }
+                        .map { it.atomStart!! until it.atomEnd!! }
+                        .sortedBy { it.first }
+                        .let { mergeRanges(it) }
+                    renderWithHighlights(arg.value, atomRanges)
+                }
+
+                else -> +arg.renderShort()
+            }
+        }
+    }
+
+    // ── Hover actions ─────────────────────────────────────────────────────────
+
+    private fun DIV.renderHoverActions(
+        ctx: KlangBlocksCtx,
+        block: KBCallBlock,
+        variant: BlockVariant,
+        docCategory: String?,
+        isVertical: Boolean,
+    ) {
+        span {
+            css {
+                display = Display.inlineFlex
+                alignItems = Align.center
+                gap = 2.px
+                position = Position.absolute
+                if (variant.isTopLevel) {
+                    if (isVertical) {
+                        top = 4.px
+                        right = 4.px
+                    } else {
+                        top = (-8).px
+                        right = 0.px
+                        backgroundColor = Color(categoryColour(docCategory))
+                        borderTopRightRadius = 8.px
+                        borderTopLeftRadius = 8.px
+                        borderBottomLeftRadius = 6.px
+                        padding = Padding(2.px, 4.px)
+                    }
+                } else {
+                    top = (-7).px
+                    right = 0.px
+                    backgroundColor = Color(categoryColour(docCategory))
+                    borderTopRightRadius = 8.px
+                    borderBottomLeftRadius = 6.px
+                    padding = Padding(2.px, 4.px)
+                    after {
+                        content = QuotedString("")
                         position = Position.absolute
-                        if (variant.isTopLevel) {
-                            if (isVertical) {
-                                top = 4.px
-                                right = 4.px
-                            } else {
-                                top = (-8).px
-                                right = 0.px
-                                backgroundColor = Color(categoryColour(doc?.category))
-                                borderTopRightRadius = 8.px
-                                borderTopLeftRadius = 8.px
-                                borderBottomLeftRadius = 6.px
-                                padding = Padding(2.px, 4.px)
-                            }
-                        } else {
-                            top = (-7).px
-                            right = 0.px
-                            backgroundColor = Color(categoryColour(doc?.category))
-                            borderTopRightRadius = 8.px
-                            borderBottomLeftRadius = 6.px
-                            padding = Padding(2.px, 4.px)
-                            after {
-                                content = QuotedString("")
-                                position = Position.absolute
-                                top = 100.pct
-                                left = 0.px
-                                right = 0.px
-                                height = 10.px
-                            }
-                        }
-                    }
-                    // Layout toggle button
-                    span {
-                        css {
-                            fontSize = variant.editFontSize
-                            lineHeight = LineHeight("1")
-                            color = Color("rgba(255,255,255,0.55)")
-                            cursor = Cursor.pointer
-                            borderRadius = 3.px
-                            padding = Padding(horizontal = 3.px, vertical = 1.px)
-                            hover {
-                                backgroundColor = Color("rgba(255,255,255,0.18)")
-                                color = Color.white
-                            }
-                        }
-                        onClick { event ->
-                            event.stopPropagation()
-                            ctx.editing.onToggleLayout(block.id)
-                        }
-                        onMouseDown { event -> event.stopPropagation() }
-                        +if (isVertical) "↔" else "↕"
-                    }
-                    // Remove button
-                    span {
-                        css {
-                            fontSize = variant.editFontSize
-                            lineHeight = LineHeight("1")
-                            color = Color("rgba(255,255,255,0.55)")
-                            cursor = Cursor.pointer
-                            borderRadius = 3.px
-                            padding = Padding(horizontal = 3.px, vertical = 1.px)
-                            hover {
-                                backgroundColor = Color("rgba(255,255,255,0.18)")
-                                color = Color.white
-                            }
-                        }
-                        onClick { event ->
-                            event.stopPropagation()
-                            ctx.editing.onRemoveBlock(props.block.id)
-                        }
-                        onMouseDown { event -> event.stopPropagation() }
-                        +"×"
+                        top = 100.pct
+                        left = 0.px
+                        right = 0.px
+                        height = 10.px
                     }
                 }
             }
+            layoutToggleButton(ctx, block, variant, isVertical)
+            removeBlockButton(ctx, variant)
+        }
+    }
+
+    private fun SPAN.layoutToggleButton(
+        ctx: KlangBlocksCtx,
+        block: KBCallBlock,
+        variant: BlockVariant,
+        isVertical: Boolean,
+    ) {
+        span {
+            css {
+                fontSize = variant.editFontSize
+                lineHeight = LineHeight("1")
+                color = Color("rgba(255,255,255,0.55)")
+                cursor = Cursor.pointer
+                borderRadius = 3.px
+                padding = Padding(horizontal = 3.px, vertical = 1.px)
+                hover {
+                    backgroundColor = Color("rgba(255,255,255,0.18)")
+                    color = Color.white
+                }
+            }
+            onClick { event ->
+                event.stopPropagation()
+                ctx.editing.onToggleLayout(block.id)
+            }
+            onMouseDown { event -> event.stopPropagation() }
+            +if (isVertical) "↔" else "↕"
+        }
+    }
+
+    private fun SPAN.removeBlockButton(
+        ctx: KlangBlocksCtx,
+        variant: BlockVariant,
+    ) {
+        span {
+            css {
+                fontSize = variant.editFontSize
+                lineHeight = LineHeight("1")
+                color = Color("rgba(255,255,255,0.55)")
+                cursor = Cursor.pointer
+                borderRadius = 3.px
+                padding = Padding(horizontal = 3.px, vertical = 1.px)
+                hover {
+                    backgroundColor = Color("rgba(255,255,255,0.18)")
+                    color = Color.white
+                }
+            }
+            onClick { event ->
+                event.stopPropagation()
+                ctx.editing.onRemoveBlock(props.block.id)
+            }
+            onMouseDown { event -> event.stopPropagation() }
+            +"×"
         }
     }
 }
