@@ -1128,4 +1128,48 @@ class KBCodeGenTest : StringSpec({
         val (_, result) = compile(src)
         result.code shouldBe src
     }
+
+    // ── KBNewlineHint: multi-line chain ────────────────────────────────────────
+
+    "newline hint: same-line chain has no KBNewlineHint in steps" {
+        val (program, result) = compile("""sound("bd").gain(0.5).slow(2)""")
+        val steps = (program.statements.first() as KBChainStmt).steps
+        steps.none { it is KBNewlineHint } shouldBe true
+        result.code shouldBe """sound("bd").gain(0.5).slow(2)"""
+    }
+
+    "newline hint: multi-line chain inserts KBNewlineHint between each cross-line call" {
+        // Canonical format — two spaces + dot so generated code matches source exactly.
+        val src = "sound(\"bd\")\n  .gain(0.5)\n  .slow(2)"
+        val (program, result) = compile(src)
+
+        val steps = (program.statements.first() as KBChainStmt).steps
+        // Expected step sequence: CallBlock(sound), KBNewlineHint, CallBlock(gain), KBNewlineHint, CallBlock(slow)
+        steps.size shouldBe 5
+        steps[0].let { it is KBCallBlock && it.funcName == "sound" } shouldBe true
+        steps[1] shouldBe KBNewlineHint
+        steps[2].let { it is KBCallBlock && it.funcName == "gain" } shouldBe true
+        steps[3] shouldBe KBNewlineHint
+        steps[4].let { it is KBCallBlock && it.funcName == "slow" } shouldBe true
+
+        // Generated code must reproduce the same newlines.
+        result.code shouldBe src
+    }
+
+    "newline hint: round-trip for multi-line chain" {
+        roundTrip("sound(\"bd\")\n  .gain(0.5)\n  .slow(2)").shouldRoundTrip()
+    }
+
+    "newline hint: only first dot is on a new line — second is inline" {
+        val src = "sound(\"bd\")\n  .gain(0.5).slow(2)"
+        val (program, result) = compile(src)
+
+        val steps = (program.statements.first() as KBChainStmt).steps
+        // Expected: CallBlock(sound), KBNewlineHint, CallBlock(gain), CallBlock(slow)
+        steps.size shouldBe 4
+        steps[1] shouldBe KBNewlineHint
+        steps[3].let { it is KBCallBlock && it.funcName == "slow" } shouldBe true
+
+        result.code shouldBe src
+    }
 })

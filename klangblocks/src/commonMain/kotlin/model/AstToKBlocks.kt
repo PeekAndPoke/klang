@@ -117,6 +117,14 @@ object AstToKBlocks {
         chain.identHead?.let { steps.add(KBIdentifierItem(it)) }
         val hasHead = chain.stringHead != null || chain.identHead != null
         chain.links.forEachIndexed { i, link ->
+            // Insert a KBNewlineHint when consecutive calls are on different source lines.
+            if (i > 0) {
+                val prevLine = chain.links[i - 1].callLocation?.startLine
+                val currLine = link.callLocation?.startLine
+                if (prevLine != null && currLine != null && currLine != prevLine) {
+                    steps.add(KBNewlineHint)
+                }
+            }
             steps.add(
                 KBCallBlock(
                     id = uuid(),
