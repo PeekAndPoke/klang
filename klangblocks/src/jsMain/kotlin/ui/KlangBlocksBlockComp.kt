@@ -12,7 +12,6 @@ import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.html.*
-import org.w3c.dom.Element
 
 enum class BlockVariant {
     TopLevel, Nested;
@@ -64,15 +63,15 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     private var isHovered: Boolean by value(false)
 
     // Each active atom has its own fade-out timer so concurrent atoms don't cancel each other.
-    private var activeAtoms: Set<AtomKey> by value(emptySet())
-    private val atomTimeouts = mutableMapOf<AtomKey, Int>()  // non-reactive bookkeeping
+    private var activeAtoms: Set<KlangBlockAtomKey> by value(emptySet())
+    private val atomTimeouts = mutableMapOf<KlangBlockAtomKey, Int>()  // non-reactive bookkeeping
 
     @Suppress("unused")
     private val highlightSub by subscribingTo(
         props.ctx.highlights.filter { it?.blockId == props.block.id }
     ) { signal ->
         if (signal != null) {
-            val key = AtomKey(signal.slotIndex, signal.atomStart, signal.atomEnd)
+            val key = KlangBlockAtomKey(signal.slotIndex, signal.atomStart, signal.atomEnd)
             // Cancel any existing fade-out for the same atom before restarting it.
             atomTimeouts[key]?.let { window.clearTimeout(it) }
             activeAtoms = activeAtoms + key
@@ -290,32 +289,13 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 }
             }
         } else {
-            input {
-                value = editText
-                autoFocus = true
-                onInput { event -> editText = event.asDynamic().target.value as String }
-                onBlur { commitEdit(index) }
-                onKeyDown { event ->
-                    when (event.key) {
-                        "Enter" -> commitEdit(index)
-                        "Escape" -> cancelEdit()
-                    }
-                }
-                onMouseDown { event -> event.stopPropagation() }
-                css {
-                    backgroundColor = Color("rgba(0,0,0,0.4)")
-                    border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
-                    borderRadius = 3.px
-                    color = Color.white
-                    fontSize = variant.editFontSize
-                    fontFamily = "monospace"
-                    padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
-                    minWidth = variant.textareaMinW
-                    outline = Outline.none
-                    put("box-sizing", "border-box")
-                    put("field-sizing", "content")
-                }
-            }
+            renderBlockEditInput(
+                variant = variant,
+                editText = editText,
+                onInput = { editText = it },
+                onCommit = { commitEdit(index) },
+                onCancel = ::cancelEdit,
+            )
         }
     }
 
@@ -325,74 +305,13 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         ctx: KlangBlocksCtx,
         canDrop: Boolean,
     ) {
-        val dndState = ctx.dnd.state
-        val headContent: (DIV.() -> Unit)? = when (val h = arg.chain.steps.firstOrNull()) {
-            is KBStringLiteralItem -> {
-                val item: KBStringLiteralItem = h
-                { KlangBlocksStringLiteralItemComp(item = item, chainId = arg.chain.id, ctx = ctx) }
-            }
-
-            is KBIdentifierItem -> {
-                val name = h.name
-                {
-                    span {
-                        css {
-                            borderRadius = 3.px
-                            padding = Padding(horizontal = 4.px, vertical = 1.px)
-                            fontSize = 11.px
-                            backgroundColor = Color("rgba(0,0,0,0.25)")
-                            border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.2)"))
-                            color = Color("rgba(255,255,255,0.85)")
-                            fontFamily = "monospace"
-                            whiteSpace = WhiteSpace.nowrap
-                        }
-                        +name
-                    }
-                }
-            }
-
-            else -> null
-        }
-        div {
-            css {
-                display = Display.inlineFlex
-                flexDirection = FlexDirection.column
-                gap = 2.px
-                borderRadius = 4.px
-                backgroundColor = Color("rgba(0,0,0,0.2)")
-                padding = Padding(horizontal = 4.px, vertical = 2.px)
-                if (canDrop) {
-                    border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
-                    cursor = Cursor.copy
-                    hover {
-                        border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.7)"))
-                        backgroundColor = Color("rgba(0,0,0,0.35)")
-                    }
-                } else {
-                    border = Border(1.px, BorderStyle.solid, Color.transparent)
-                }
-            }
-            if (canDrop) {
-                onMouseUp { event ->
-                    // Only accept drop on the slot background — not when releasing over a block
-                    // inside the chain (which would bubble up here incorrectly).
-                    val isOverBlock = (event.target as? Element)
-                        ?.closest(".kb-block, .kb-nested-block") != null
-                    if (!isOverBlock) {
-                        event.stopPropagation()
-                        dndState?.onDrop?.invoke(DropDestination.EmptySlot(props.block.id, index))
-                    }
-                }
-            }
-            onMouseDown { event -> event.stopPropagation() }
-            renderChainSegments(
-                chain = arg.chain,
-                segments = arg.chain.steps.toCallSegments(),
-                ctx = ctx,
-                variant = BlockVariant.Nested,
-                headContent = headContent,
-            )
-        }
+        renderNestedChainSlot(
+            chain = arg.chain,
+            canDrop = canDrop,
+            blockId = props.block.id,
+            slotIndex = index,
+            ctx = ctx,
+        )
     }
 
     private fun DIV.renderValueSlot(
@@ -572,9 +491,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         }
     }
 }
-
-/** Identifies a unique active atom by its slot and char range. */
-private data class AtomKey(val slotIndex: Int?, val atomStart: Int?, val atomEnd: Int?)
 
 /**
  * Merges overlapping or adjacent [IntRange]s in an already-sorted list.
