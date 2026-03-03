@@ -8,15 +8,15 @@ class IdentifierRoundTripTest : StringSpec({
     // ── identifier as argument (KBIdentifierArg) ──────────────────────────────
 
     "identifier as single argument round-trips" {
-        roundTrip("note(myPattern)").shouldRoundTrip()
+        roundTrip("note(myPattern)").shouldRoundTripWithCode()
     }
 
     "identifier alongside literal args round-trips" {
-        roundTrip("gain(myPattern, 0.5)").shouldRoundTrip()
+        roundTrip("gain(myPattern, 0.5)").shouldRoundTripWithCode()
     }
 
     "identifier in chained call round-trips" {
-        roundTrip("note(myPattern).gain(vol)").shouldRoundTrip()
+        roundTrip("note(myPattern).gain(vol)").shouldRoundTripWithCode()
     }
 
     "identifier produces KBIdentifierArg" {
@@ -36,11 +36,11 @@ class IdentifierRoundTripTest : StringSpec({
     // ── identifier as chain head (KBIdentifierItem) ───────────────────────────
 
     "identifier head with single chained call round-trips" {
-        roundTrip("sine.range(0.25, 0.75)").shouldRoundTrip()
+        roundTrip("sine.range(0.25, 0.75)").shouldRoundTripWithCode()
     }
 
     "identifier head with multiple chained calls round-trips" {
-        roundTrip("sine.range(0.25, 0.75).slow(2)").shouldRoundTrip()
+        roundTrip("sine.range(0.25, 0.75).slow(2)").shouldRoundTripWithCode()
     }
 
     "identifier head produces KBIdentifierItem as first step" {

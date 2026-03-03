@@ -8,15 +8,15 @@ class LiteralsRoundTripTest : StringSpec({
     // ── boolean ───────────────────────────────────────────────────────────────
 
     "bool true as argument round-trips" {
-        roundTrip("note(true)").shouldRoundTrip()
+        roundTrip("note(true)").shouldRoundTripWithCode()
     }
 
     "bool false as argument round-trips" {
-        roundTrip("note(false)").shouldRoundTrip()
+        roundTrip("note(false)").shouldRoundTripWithCode()
     }
 
     "bool in multi-arg position round-trips" {
-        roundTrip("note(\"c3\", false)").shouldRoundTrip()
+        roundTrip("note(\"c3\", false)").shouldRoundTripWithCode()
     }
 
     "bool true produces KBBoolArg(true)" {
@@ -37,11 +37,11 @@ class LiteralsRoundTripTest : StringSpec({
     // ── null ──────────────────────────────────────────────────────────────────
 
     "null as argument round-trips" {
-        roundTrip("note(null)").shouldRoundTrip()
+        roundTrip("note(null)").shouldRoundTripWithCode()
     }
 
     "null alongside other args round-trips" {
-        roundTrip("note(\"c3\", null)").shouldRoundTrip()
+        roundTrip("note(\"c3\", null)").shouldRoundTripWithCode()
     }
 
     "null produces KBIdentifierArg(\"null\")" {

@@ -66,9 +66,11 @@ Results are cached keyed by `line shl 32 or col` — repeated calls from the aud
 
 ### KBChainStmt layout
 
-- If **any** block in the chain has `VERTICAL` layout: chain separator = `\n  .`; individual args on separate lines with
-  `\n  ` indent
-- Otherwise: chain separator = `.`; args inline
+- Chain separator is `\n  .` **only** when a `KBNewlineHint` appears between two chain steps (i.e. the original source
+  had those calls on different lines). Otherwise the separator is `.` (inline).
+- `VERTICAL` pocketLayout only affects **arg rendering inside the block's `()`** — each arg on its own line with
+  `\n  ` indent. It does **not** influence the chain separator.
+- A chain can have inline `.` separators and VERTICAL arg layout on the same block at the same time.
 
 ### String quoting
 

@@ -12,7 +12,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     // ── New binary operators ──────────────────────────────────────────────────
 
     "power operator (**) round-trips" {
-        roundTrip("let x = a ** b").shouldRoundTrip()
+        roundTrip("let x = a ** b").shouldRoundTripWithCode()
     }
 
     "power operator generates correct code" {
@@ -20,7 +20,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     }
 
     "strict equal (===) round-trips" {
-        roundTrip("let x = a === b").shouldRoundTrip()
+        roundTrip("let x = a === b").shouldRoundTripWithCode()
     }
 
     "strict equal generates correct code" {
@@ -28,7 +28,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     }
 
     "strict not-equal (!==) round-trips" {
-        roundTrip("let x = a !== b").shouldRoundTrip()
+        roundTrip("let x = a !== b").shouldRoundTripWithCode()
     }
 
     "strict not-equal generates correct code" {
@@ -36,7 +36,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     }
 
     "in operator round-trips" {
-        roundTrip("let x = \"key\" in obj").shouldRoundTrip()
+        roundTrip("let x = \"key\" in obj").shouldRoundTripWithCode()
     }
 
     "in operator generates correct code" {
@@ -56,7 +56,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     // ── Prefix ++/-- ─────────────────────────────────────────────────────────
 
     "prefix ++ round-trips" {
-        roundTrip("let x = ++y").shouldRoundTrip()
+        roundTrip("let x = ++y").shouldRoundTripWithCode()
     }
 
     "prefix ++ generates correct code" {
@@ -64,7 +64,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     }
 
     "prefix -- round-trips" {
-        roundTrip("let x = --y").shouldRoundTrip()
+        roundTrip("let x = --y").shouldRoundTripWithCode()
     }
 
     "prefix -- generates correct code" {
@@ -84,7 +84,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     // ── Postfix ++/-- ─────────────────────────────────────────────────────────
 
     "postfix ++ as statement round-trips" {
-        roundTrip("x++").shouldRoundTrip()
+        roundTrip("x++").shouldRoundTripWithCode()
     }
 
     "postfix ++ generates correct code" {
@@ -92,7 +92,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     }
 
     "postfix -- as statement round-trips" {
-        roundTrip("x--").shouldRoundTrip()
+        roundTrip("x--").shouldRoundTripWithCode()
     }
 
     "postfix -- generates correct code" {
@@ -112,7 +112,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     // ── Ternary expression ────────────────────────────────────────────────────
 
     "simple ternary round-trips" {
-        roundTrip("let x = cond ? 1 : 0").shouldRoundTrip()
+        roundTrip("let x = cond ? 1 : 0").shouldRoundTripWithCode()
     }
 
     "simple ternary generates correct code" {
@@ -120,11 +120,11 @@ class EasyFeaturesRoundTripTest : StringSpec({
     }
 
     "ternary with expression branches round-trips" {
-        roundTrip("let y = a > b ? a : b").shouldRoundTrip()
+        roundTrip("let y = a > b ? a : b").shouldRoundTripWithCode()
     }
 
     "ternary as function argument round-trips" {
-        roundTrip("note(cond ? \"c3\" : \"e3\")").shouldRoundTrip()
+        roundTrip("note(cond ? \"c3\" : \"e3\")").shouldRoundTripWithCode()
     }
 
     "ternary produces KBTernaryArg with correct structure" {
@@ -140,7 +140,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     // ── Index access ─────────────────────────────────────────────────────────
 
     "array index access round-trips" {
-        roundTrip("let x = arr[0]").shouldRoundTrip()
+        roundTrip("let x = arr[0]").shouldRoundTripWithCode()
     }
 
     "array index access generates correct code" {
@@ -148,11 +148,11 @@ class EasyFeaturesRoundTripTest : StringSpec({
     }
 
     "string key index access round-trips" {
-        roundTrip("let x = obj[\"key\"]").shouldRoundTrip()
+        roundTrip("let x = obj[\"key\"]").shouldRoundTripWithCode()
     }
 
     "index access as function argument round-trips" {
-        roundTrip("note(arr[0])").shouldRoundTrip()
+        roundTrip("note(arr[0])").shouldRoundTripWithCode()
     }
 
     "index access produces KBIndexAccessArg with correct structure" {
@@ -167,7 +167,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     // ── Assignment statement ──────────────────────────────────────────────────
 
     "simple identifier assignment round-trips" {
-        roundTrip("x = 5").shouldRoundTrip()
+        roundTrip("x = 5").shouldRoundTripWithCode()
     }
 
     "simple identifier assignment generates correct code" {
@@ -175,7 +175,7 @@ class EasyFeaturesRoundTripTest : StringSpec({
     }
 
     "assignment with expression value round-trips" {
-        roundTrip("x = x + 1").shouldRoundTrip()
+        roundTrip("x = x + 1").shouldRoundTripWithCode()
     }
 
     "assignment with expression value generates correct code" {
@@ -192,13 +192,13 @@ class EasyFeaturesRoundTripTest : StringSpec({
     "compound assignment desugars and round-trips as simple assignment" {
         // x += 1 is desugared at parse time to x = x + 1
         // The round-trip emits "x = x + 1", which re-parses to the same AST — passes.
-        roundTrip("x = x + 1").shouldRoundTrip()
+        roundTrip("x = x + 1").shouldRoundTripWithCode()
     }
 
     // ── Index-access assignment (complex target) ───────────────────────────────
 
     "index access assignment round-trips" {
-        roundTrip("arr[0] = 5").shouldRoundTrip()
+        roundTrip("arr[0] = 5").shouldRoundTripWithCode()
     }
 
     "index access assignment generates correct code" {

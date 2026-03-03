@@ -8,26 +8,26 @@ class ArrowFunctionRoundTripTest : StringSpec({
     // ── expression body ───────────────────────────────────────────────────────
 
     "single param arrow function round-trips" {
-        roundTrip("note(x => x * 2)").shouldRoundTrip()
+        roundTrip("note(x => x * 2)").shouldRoundTripWithCode()
     }
 
     "multi-param arrow function round-trips" {
-        roundTrip("note((x, y) => x + y)").shouldRoundTrip()
+        roundTrip("note((x, y) => x + y)").shouldRoundTripWithCode()
     }
 
     "no-param arrow function round-trips" {
-        roundTrip("note(() => 42)").shouldRoundTrip()
+        roundTrip("note(() => 42)").shouldRoundTripWithCode()
     }
 
     "arrow function used as chain argument round-trips" {
-        roundTrip("note(\"c3\").apply(x => x * 2)").shouldRoundTrip()
+        roundTrip("note(\"c3\").apply(x => x * 2)").shouldRoundTripWithCode()
     }
 
     // ── block body ────────────────────────────────────────────────────────────
 
     "arrow function with block body round-trips" {
         // Body is stored as raw source text — round-trips via toSourceString reconstruction
-        roundTrip("note(x => { return x * 2 })").shouldRoundTrip()
+        roundTrip("note(x => { return x * 2 })").shouldRoundTripWithCode()
     }
 
     // ── block model assertions ────────────────────────────────────────────────

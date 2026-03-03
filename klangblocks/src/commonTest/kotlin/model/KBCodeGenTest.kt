@@ -858,21 +858,25 @@ class KBCodeGenTest : StringSpec({
         }
     }
 
-    // ── hasVertical chain separator ───────────────────────────────────────────
+    // ── VERTICAL pocketLayout: affects args only, NOT chain separators ────────
 
-    "hasVertical chain separator: when any block is VERTICAL the dot moves to its own line" {
+    "vertical block: VERTICAL layout formats args on separate lines but keeps inline chain dot" {
         // sound("bd") is HORIZONTAL; gain(0.5) is VERTICAL.
-        // hasVertical = true → separator between them is "\n  ." (not ".").
-        // gain ends up on line 2; its arg 0.5 is on line 3.
+        // VERTICAL only affects arg rendering inside gain's () — it does NOT force a newline
+        // before the chain dot.  The separator is "." (inline) because there is no KBNewlineHint.
         //
-        // Generated code: "sound(\"bd\")\n  .gain(\n  0.5\n)"
+        // Generated code: "sound(\"bd\").gain(\n  0.5\n)"
         //
         // Char layout:
-        //   Line 1: sound("bd")\n     → sound block 0..10, '\n' at 11
-        //   Line 2:   .gain(\n        → '  .' at 12-14, gain block 15..27, '\n' at 20
-        //   Line 3:   0.5\n           → '  ' at 21-22, '0.5' at 23-25, '\n' at 26
-        //   Line 4: )                 → char 27  (closing paren of gain block)
+        //   Line 1: sound("bd").gain(\n   → sound block 0..10, '.' at 11, gain block 12..24
+        //     sound("bd") = chars 0-10
+        //     '.'          = char 11  (not inside any block)
+        //     gain(         = chars 12-16
+        //     '\n'          = char 17
+        //   Line 2:   0.5\n              → '  ' at 18-19, '0.5' at 20-22, '\n' at 23
+        //   Line 3: )                    → char 24  (closing paren of gain block)
         //
+        // gain block range: 12..24
         // "0.5" is a numeric arg — inside gain block but no string content range.
 
         val soundBlock = KBCallBlock(
@@ -890,7 +894,7 @@ class KBCodeGenTest : StringSpec({
         )
         val result = program.toCodeGen()
 
-        result.code shouldBe "sound(\"bd\")\n  .gain(\n  0.5\n)"
+        result.code shouldBe "sound(\"bd\").gain(\n  0.5\n)"
 
         // Line 1: sound block
         result.findAt(1, 1)!!.blockId shouldBe "s1"    // 's'
@@ -900,21 +904,20 @@ class KBCodeGenTest : StringSpec({
             hit.offsetInSlot shouldBe 0
         }
 
-        // Line 2: '  .' is not inside any block range (it's the separator)
-        result.findAt(2, 1) shouldBe null   // ' '
-        result.findAt(2, 3) shouldBe null   // '.'
+        // Line 1: '.' at col 12 is between blocks — not inside any range
+        result.findAt(1, 12) shouldBe null
 
-        // Line 2: gain block starts at col 4 ('g')
-        result.findAt(2, 4)!!.blockId shouldBe "g1"
+        // Line 1: gain block starts at col 13 ('g')
+        result.findAt(1, 13)!!.blockId shouldBe "g1"
 
-        // Line 3: '0' of 0.5 — inside gain block, no string content
-        result.findAt(3, 3)!!.let { hit ->
+        // Line 2: '0' of 0.5 at col 3 — inside gain block, no string content
+        result.findAt(2, 3)!!.let { hit ->
             hit.blockId shouldBe "g1"
             hit.slotIndex shouldBe null
         }
 
-        // Line 4: ')' — last char of gain block
-        result.findAt(4, 1)!!.blockId shouldBe "g1"
+        // Line 3: ')' — last char of gain block
+        result.findAt(3, 1)!!.blockId shouldBe "g1"
     }
 
     // ── Top-level chain: block pushed to line 2 by a multiline string ─────────
@@ -1157,7 +1160,7 @@ class KBCodeGenTest : StringSpec({
     }
 
     "newline hint: round-trip for multi-line chain" {
-        roundTrip("sound(\"bd\")\n  .gain(0.5)\n  .slow(2)").shouldRoundTrip()
+        roundTrip("sound(\"bd\")\n  .gain(0.5)\n  .slow(2)").shouldRoundTripWithCode()
     }
 
     "newline hint: only first dot is on a new line — second is inline" {

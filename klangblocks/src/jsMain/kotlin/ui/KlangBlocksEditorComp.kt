@@ -83,7 +83,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     // ---- Component state -------------------------------------------
 
     private val editingCtx = KBProgramEditingCtx(
-        initialProgram = parseInitialCode(),
+        initialProgram = parseCode(props.initialCode),
         onChanged = { newProgram ->
             val result = newProgram.toCodeGen()
             props.onCodeChanged(result.code)
@@ -91,6 +91,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             triggerRedraw()
         },
     )
+
+    fun setCode(code: String) {
+        editingCtx.update {
+            parseCode(code)
+        }
+    }
 
     private var dragState: DragState by value(DragState.None)
 
@@ -211,8 +217,8 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     // ---- Init helpers ----------------------------------------------
 
-    private fun parseInitialCode(): KBProgram {
-        val src = props.initialCode.trim()
+    private fun parseCode(code: String): KBProgram {
+        val src = code.trim()
         if (src.isEmpty()) return KBProgram()
         return try {
             AstToKBlocks.convert(KlangScriptParser.parse(src))

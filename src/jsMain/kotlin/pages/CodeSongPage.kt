@@ -44,6 +44,7 @@ import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.p
+import kotlinx.html.title
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
 import kotlin.js.Date
@@ -84,7 +85,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     val cpsStream = StreamSource(builtIn?.cps ?: 0.5)
         .persistInLocalStorage("song-$songId-cps", Double.serializer())
 
-    val titleStream = StreamSource(builtIn?.title ?: "New Song")
+    val songTitleStream = StreamSource(builtIn?.title ?: "New Song")
         .persistInLocalStorage("song-$songId-title", String.serializer())
 
     val codeStream = StreamSource(builtIn?.code ?: defaultCode)
@@ -96,16 +97,17 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private var playback: StrudelPlayback? by value(null)
     private val isPlaying get() = playback != null
 
-    private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
+    private val codeEditorRef = ComponentRef.Tracker<CodeMirrorComp>()
+    private val blocksEditorRef = ComponentRef.Tracker<KlangBlocksEditorComp>()
 
-    private val highlightBuffer = CodeMirrorHighlightBuffer(editorRef)
+    private val highlightBuffer = CodeMirrorHighlightBuffer(codeEditorRef)
     private var highlightPerEvent by value(highlightBuffer.maxHighlightsPerEvent) {
         highlightBuffer.maxHighlightsPerEvent = it
     }
 
     private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
 
-    private var title: String by value(titleStream()) { titleStream(it) }
+    private var songTitle: String by value(songTitleStream()) { songTitleStream(it) }
 
     private var cps: Double by value(cpsStream()) {
         cpsStream(it)
@@ -120,11 +122,27 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private var isCodeModified by value(false)
 
+    val isBuiltInModified get() = builtIn != null && builtIn.code != code
+
     /** Current view: text editor or visual block editor. */
     private var editorMode by value(EditorMode.CODE)
 
     private suspend fun getPlayer(): KlangPlayer {
         return Player.ensure().await()
+    }
+
+    private fun resetToOriginal() {
+        builtIn?.let { b ->
+            code = b.code
+            codeStream(b.code)
+            cps = b.cps
+            cpsStream(b.cps)
+            songTitle = b.title
+            songTitleStream(b.title)
+
+            codeEditorRef { it.setCode(b.code) }
+            blocksEditorRef { it.setCode(b.code) }
+        }
     }
 
     init {
@@ -146,7 +164,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         when (val s = playback) {
             null -> launch {
                 if (!loading) {
-                    withEditorErrorHandling(editorRef) {
+                    withEditorErrorHandling(codeEditorRef) {
                         getPlayer().let { p ->
                             val pattern = StrudelPattern.compileRaw(code)
                                 ?: error("Failed to compile Strudel pattern from code")
@@ -183,7 +201,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             }
 
             else -> launch {
-                withEditorErrorHandling(editorRef) {
+                withEditorErrorHandling(codeEditorRef) {
                     val pattern = StrudelPattern.compileRaw(code)
                         ?: error("Failed to compile Strudel pattern from code")
                     s.updatePattern(pattern)
@@ -285,8 +303,19 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             ui.large.circular.icon.givenNot(isPlaying) { disabled }
                                 .given(isPlaying) { white }.button {
                                     onClick { onStop() }
+                                    title = "Stop playback"
                                     icon.black.stop()
                                 }
+                        }
+
+                        if (isBuiltInModified) {
+                            noui.item {
+                                ui.large.circular.white.icon.button {
+                                    onClick { resetToOriginal() }
+                                    title = "Reset to original code"
+                                    icon.undo()
+                                }
+                            }
                         }
 
                         // CPS field
@@ -302,7 +331,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                         // Title field
                         noui.item {
-                            UiInputField(title, { title = it }) {
+                            UiInputField(songTitle, { songTitle = it }) {
                                 appear { large }
                                 leftLabel {
                                     ui.basic.label { icon.music(); +"Title" }
@@ -392,7 +421,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 code = code,
                                 onCodeChanged = { newCode ->
                                     code = newCode
-                                    editorRef { it.setErrors(emptyList()) }
+                                    codeEditorRef { it.setErrors(emptyList()) }
                                 },
                                 extraExtensions = listOf(
                                     dslHoverTooltipExtension(
@@ -404,7 +433,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                         onNavigate = ::navToDoc,
                                     ),
                                 ),
-                            ).track(editorRef)
+                            ).track(codeEditorRef)
                         }
 
                         EditorMode.BLOCKS -> {
@@ -414,7 +443,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 onCodeChanged = { newCode -> code = newCode },
                                 onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
                                 highlights = blocksHighlightBuffer.highlights,
-                            )
+                            ).track(blocksEditorRef)
                         }
                     }
                 }

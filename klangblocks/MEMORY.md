@@ -17,6 +17,8 @@
   `KBStringArg(toSourceString())` — opaque but round-trip-safe
 - **`KBPocketLayout`**: detected from source line positions during AST→blocks; `VERTICAL` if any arg is on a different
   line than the call
+- **`KBPocketLayout.VERTICAL` only affects arg rendering** inside the block's `()` — it does NOT force `\n  .` chain
+  separators; only a `KBNewlineHint` between steps does that
 
 ## Lessons Learned
 
@@ -48,6 +50,7 @@
   - `roundTrip(source)` runs all 6 steps, wraps each in a `try/catch` that names the failing step
   - Returns `RoundTripResult(source, originalAst, blocks, generatedCode, resultAst)`
   - `result.shouldRoundTrip()` asserts AST equality with `source` + `generatedCode` in the error message
+  - `result.shouldRoundTripWithCode()` additionally asserts `generatedCode == source` (use for canonical sources)
 - **DnD test split** — `jvmTest/kotlin/dnd/`:
     - `DropActionSupport.kt` — `ctx()`, `code()`, `rowCount()`, `block()`, `chain()` (recursive at all depths), `tail()`
       helpers

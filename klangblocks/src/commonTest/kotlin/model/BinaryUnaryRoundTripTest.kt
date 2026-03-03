@@ -8,44 +8,44 @@ class BinaryUnaryRoundTripTest : StringSpec({
     // ── binary operations (KBBinaryArg) ───────────────────────────────────────
 
     "binary add round-trips" {
-        roundTrip("note(x + 1)").shouldRoundTrip()
+        roundTrip("note(x + 1)").shouldRoundTripWithCode()
     }
 
     "binary subtract round-trips" {
-        roundTrip("note(x - 1)").shouldRoundTrip()
+        roundTrip("note(x - 1)").shouldRoundTripWithCode()
     }
 
     "binary multiply round-trips" {
-        roundTrip("note(x * 2)").shouldRoundTrip()
+        roundTrip("note(x * 2)").shouldRoundTripWithCode()
     }
 
     "binary divide round-trips" {
-        roundTrip("note(x / 2)").shouldRoundTrip()
+        roundTrip("note(x / 2)").shouldRoundTripWithCode()
     }
 
     "binary equality round-trips" {
-        roundTrip("note(x == y)").shouldRoundTrip()
+        roundTrip("note(x == y)").shouldRoundTripWithCode()
     }
 
     "binary not-equal round-trips" {
-        roundTrip("note(x != y)").shouldRoundTrip()
+        roundTrip("note(x != y)").shouldRoundTripWithCode()
     }
 
     "binary less-than round-trips" {
-        roundTrip("note(x < y)").shouldRoundTrip()
+        roundTrip("note(x < y)").shouldRoundTripWithCode()
     }
 
     "binary logical AND round-trips" {
-        roundTrip("note(a && b)").shouldRoundTrip()
+        roundTrip("note(a && b)").shouldRoundTripWithCode()
     }
 
     "binary logical OR round-trips" {
-        roundTrip("note(a || b)").shouldRoundTrip()
+        roundTrip("note(a || b)").shouldRoundTripWithCode()
     }
 
     "nested binary (right-associative, no parens needed) round-trips" {
         // x + y * 2 is unambiguous: multiply binds tighter
-        roundTrip("note(x + y * 2)").shouldRoundTrip()
+        roundTrip("note(x + y * 2)").shouldRoundTripWithCode()
     }
 
     "binary produces KBBinaryArg with correct structure" {
@@ -66,15 +66,15 @@ class BinaryUnaryRoundTripTest : StringSpec({
     // ── unary operations (KBUnaryArg) ─────────────────────────────────────────
 
     "unary negate round-trips" {
-        roundTrip("note(-x)").shouldRoundTrip()
+        roundTrip("note(-x)").shouldRoundTripWithCode()
     }
 
     "unary not round-trips" {
-        roundTrip("note(!flag)").shouldRoundTrip()
+        roundTrip("note(!flag)").shouldRoundTripWithCode()
     }
 
     "unary plus round-trips" {
-        roundTrip("note(+x)").shouldRoundTrip()
+        roundTrip("note(+x)").shouldRoundTripWithCode()
     }
 
     "unary produces KBUnaryArg with correct structure" {

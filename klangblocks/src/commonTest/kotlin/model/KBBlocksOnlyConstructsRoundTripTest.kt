@@ -17,11 +17,11 @@ class KBBlocksOnlyConstructsRoundTripTest : StringSpec({
     // ── KBStringLiteralItem ───────────────────────────────────────────────────
 
     "string literal chain head round-trips" {
-        roundTrip(""""C4".transpose(1)""").shouldRoundTrip()
+        roundTrip(""""C4".transpose(1)""").shouldRoundTripWithCode()
     }
 
     "string literal head with longer chain round-trips" {
-        roundTrip(""""C4".transpose(1).slow(2)""").shouldRoundTrip()
+        roundTrip(""""C4".transpose(1).slow(2)""").shouldRoundTripWithCode()
     }
 
     "string literal head produces KBStringLiteralItem as first step" {
@@ -40,11 +40,11 @@ class KBBlocksOnlyConstructsRoundTripTest : StringSpec({
     // ── KBIdentifierItem ──────────────────────────────────────────────────────
 
     "identifier chain head round-trips" {
-        roundTrip("sine.range(0.25, 0.75)").shouldRoundTrip()
+        roundTrip("sine.range(0.25, 0.75)").shouldRoundTripWithCode()
     }
 
     "identifier head with longer chain round-trips" {
-        roundTrip("sine.range(0.25, 0.75).slow(2)").shouldRoundTrip()
+        roundTrip("sine.range(0.25, 0.75).slow(2)").shouldRoundTripWithCode()
     }
 
     "identifier head produces KBIdentifierItem as first step" {
@@ -64,12 +64,12 @@ class KBBlocksOnlyConstructsRoundTripTest : StringSpec({
 
     "blank line between two statements round-trips" {
         val src = "sound(\"bd\")\n\nnote(\"c3\")"
-        roundTrip(src).shouldRoundTrip()
+        roundTrip(src).shouldRoundTripWithCode()
     }
 
     "blank line between three statements round-trips" {
         val src = "sound(\"bd\")\n\nnote(\"c3\")\n\ngain(0.5)"
-        roundTrip(src).shouldRoundTrip()
+        roundTrip(src).shouldRoundTripWithCode()
     }
 
     "blank line is preserved as KBBlankLine node in block model" {

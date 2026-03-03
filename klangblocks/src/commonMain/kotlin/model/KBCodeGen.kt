@@ -213,9 +213,6 @@ private fun KBStmt.appendTo(builder: CodeBuilder) {
 }
 
 private fun KBChainStmt.appendTo(builder: CodeBuilder) {
-    val blocks = steps.filterIsInstance<KBCallBlock>()  // caller guarantees non-empty
-    val hasVertical = blocks.any { it.pocketLayout == KBPocketLayout.VERTICAL }
-
     // Emit string/identifier head without a trailing dot — the separator loop handles it.
     when (val head = steps.firstOrNull()) {
         is KBStringLiteralItem -> {
@@ -229,16 +226,18 @@ private fun KBChainStmt.appendTo(builder: CodeBuilder) {
         else -> {}
     }
 
-    // Walk the full step list so KBNewlineHint entries influence the separator choice.
+    // Walk the full step list; KBNewlineHint controls when the chain separator is \n  .
+    // VERTICAL pocketLayout only affects arg rendering inside the block's () — it does NOT
+    // force newlines between chain items.
     var newlinePending = false
     for (item in steps) {
         when (item) {
             is KBStringLiteralItem, is KBIdentifierItem -> {} // already emitted above
-            is KBNewlineHint -> if (!hasVertical) newlinePending = true
+            is KBNewlineHint -> newlinePending = true
             is KBCallBlock -> {
                 when {
                     item.isHead -> {}  // first call in chain, no receiver → no leading separator
-                    hasVertical || newlinePending -> builder.append("\n  .")
+                    newlinePending -> builder.append("\n  .")
                     else -> builder.append(".")
                 }
                 item.appendTo(builder)

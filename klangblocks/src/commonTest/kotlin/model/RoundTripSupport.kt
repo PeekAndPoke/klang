@@ -43,6 +43,26 @@ data class RoundTripResult(
             resultAst shouldBe originalAst
         }
     }
+
+    /**
+     * Combines [shouldRoundTrip] (AST equality, step 6) with an additional check that
+     * [generatedCode] is character-for-character identical to [source].
+     *
+     * Use only when [source] is already in canonical form — i.e. exactly as the code
+     * generator would write it. For non-canonical whitespace, use [shouldRoundTrip] instead.
+     *
+     * Returns `this` so the call can be chained with further field-level assertions.
+     */
+    fun shouldRoundTripWithCode(): RoundTripResult = apply {
+        shouldRoundTrip()
+        withClue(
+            "\nRound-trip code identity mismatch" +
+                    "\n  source   : $source" +
+                    "\n  generated: $generatedCode\n"
+        ) {
+            generatedCode shouldBe source
+        }
+    }
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────

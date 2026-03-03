@@ -4,7 +4,6 @@ class KBProgramEditingCtx(
     initialProgram: KBProgram,
     private val onChanged: (KBProgram) -> Unit = {},
 ) {
-
     var program: KBProgram = initialProgram
         private set
 
@@ -14,7 +13,7 @@ class KBProgramEditingCtx(
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
 
-    private fun update(block: (current: KBProgram) -> KBProgram) {
+    fun update(block: (current: KBProgram) -> KBProgram) {
         val current = program
         val next = block(current)
         if (next != current) {
