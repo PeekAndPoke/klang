@@ -20,6 +20,7 @@ fun Tag.KlangBlocksLetStmtComp(
 ) = comp(
     KlangBlocksLetStmtComp.Props(
         stmtId = stmt.id,
+        stmt = stmt,
         keyword = "let",
         name = stmt.name,
         value = stmt.value,
@@ -34,6 +35,7 @@ fun Tag.KlangBlocksLetStmtComp(
 ) = comp(
     KlangBlocksLetStmtComp.Props(
         stmtId = stmt.id,
+        stmt = stmt,
         keyword = "const",
         name = stmt.name,
         value = stmt.value,
@@ -45,6 +47,7 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
 
     data class Props(
         val stmtId: String,
+        val stmt: KBStmt,
         val keyword: String,
         val name: String,
         val value: KBArgValue?,
@@ -143,6 +146,14 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
             onMouseOut { event ->
                 if (ctx.dnd.state == null) event.stopPropagation()
                 isHovered = false
+            }
+            // Dragging the block tile itself reorders the row (same as the row-number drag handle)
+            onMouseDown { event ->
+                event.preventDefault()
+                ctx.dnd.startCanvasDrag(
+                    props.stmtId, props.stmt,
+                    event.clientX.toDouble(), event.clientY.toDouble(),
+                )
             }
 
             // "let name =" label
