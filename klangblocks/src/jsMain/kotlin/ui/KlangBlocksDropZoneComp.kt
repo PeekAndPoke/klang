@@ -172,7 +172,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                         put("pointer-events", if (canDrop) "auto" else "none")
                         put(
                             "transition",
-                            "opacity 0.12s ease, width 0.15s ease, border-radius 0.15s ease, background-color 0.1s ease, border-color 0.1s ease"
+                            "opacity 0.12s ease, width 0.5s ease, border-radius 0.15s ease, background-color 0.1s ease, border-color 0.1s ease"
                         )
                     }
                     icon.tiny.plus {
