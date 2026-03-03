@@ -14,6 +14,7 @@ import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
+import org.w3c.dom.Element
 
 @Suppress("FunctionName")
 fun Tag.KlangBlocksLetStmtComp(
@@ -146,6 +147,10 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
                 isHovered = true
             }
             onMouseOut { event ->
+                // Ignore events where the mouse moved to a child element (e.g. the hover remove button).
+                val currentEl = event.currentTarget as? Element
+                val relatedEl = event.relatedTarget as? Element
+                if (currentEl != null && relatedEl != null && currentEl.contains(relatedEl)) return@onMouseOut
                 if (ctx.dnd.state == null) event.stopPropagation()
                 isHovered = false
             }

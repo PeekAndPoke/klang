@@ -12,6 +12,7 @@ import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.html.*
+import org.w3c.dom.Element
 
 enum class BlockVariant {
     TopLevel, Nested;
@@ -191,6 +192,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             isHovered = true
         }
         onMouseOut { event ->
+            // Ignore events where the mouse moved to a child element (e.g. the hover action buttons).
+            val currentEl = event.currentTarget as? Element
+            val relatedEl = event.relatedTarget as? Element
+            if (currentEl != null && relatedEl != null && currentEl.contains(relatedEl)) return@onMouseOut
             if (ctx.dnd.state == null || canDropOnBlock) event.stopPropagation()
             isHovered = false
         }
@@ -225,7 +230,12 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
     private fun DIV.renderFuncName(block: KBCallBlock) {
         span {
-            css { fontWeight = FontWeight.bold }
+            css {
+                minWidth = 30.px
+                paddingLeft = 4.px
+                paddingRight = 4.px
+                fontWeight = FontWeight.bold
+            }
             +block.funcName
         }
     }
@@ -262,12 +272,12 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 }
                 onBlur { commitEdit(index) }
                 onKeyDown { event ->
-                    when {
-                        event.key == "Enter" && !event.shiftKey -> {
+                    when (event.key) {
+                        "Enter" if !event.shiftKey -> {
                             event.preventDefault(); commitEdit(index)
                         }
 
-                        event.key == "Escape" -> cancelEdit()
+                        "Escape" -> cancelEdit()
                     }
                 }
                 onMouseDown { event -> event.stopPropagation() }
@@ -420,6 +430,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                     right = 0.px
                     backgroundColor = Color(categoryColour(docCategory))
                     borderTopRightRadius = 8.px
+                    borderTopLeftRadius = 8.px
                     borderBottomLeftRadius = 6.px
                     padding = Padding(2.px, 4.px)
                     after {
@@ -432,6 +443,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                     }
                 }
             }
+
             layoutToggleButton(ctx, block, variant, isVertical)
             removeBlockButton(ctx, variant)
         }
