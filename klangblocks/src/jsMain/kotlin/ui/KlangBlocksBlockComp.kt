@@ -5,6 +5,7 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
+import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.streams.ops.filter
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
@@ -415,35 +416,18 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 alignItems = Align.center
                 gap = 2.px
                 position = Position.absolute
-                if (variant.isTopLevel) {
-                    if (isVertical) {
-                        top = 4.px
-                        right = 4.px
-                    } else {
-                        top = (-8).px
-                        right = 0.px
-                        backgroundColor = Color(categoryColour(docCategory))
-                        borderTopRightRadius = 8.px
-                        borderTopLeftRadius = 8.px
-                        borderBottomLeftRadius = 6.px
-                        padding = Padding(2.px, 4.px)
-                    }
+
+                border = Border(1.px, BorderStyle.dotted, Color("rgba(255,255,255,0.5)"))
+                backgroundColor = Color(categoryColour(docCategory))
+                borderRadius = 6.px
+                padding = Padding(2.px, 4.px, 2.px, 8.px)
+
+                right = 0.px
+
+                top = if (isVertical) {
+                    0.px
                 } else {
-                    top = (-7).px
-                    right = 0.px
-                    backgroundColor = Color(categoryColour(docCategory))
-                    borderTopRightRadius = 8.px
-                    borderTopLeftRadius = 8.px
-                    borderBottomLeftRadius = 6.px
-                    padding = Padding(2.px, 4.px)
-                    after {
-                        content = QuotedString("")
-                        position = Position.absolute
-                        top = 100.pct
-                        left = 0.px
-                        right = 0.px
-                        height = 10.px
-                    }
+                    (-10).px
                 }
             }
 
@@ -462,21 +446,21 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             css {
                 fontSize = variant.editFontSize
                 lineHeight = LineHeight("1")
-                color = Color("rgba(255,255,255,0.55)")
+                color = Color("rgba(255,255,255,1.0)")
                 cursor = Cursor.pointer
                 borderRadius = 3.px
-                padding = Padding(horizontal = 3.px, vertical = 1.px)
-                hover {
-                    backgroundColor = Color("rgba(255,255,255,0.18)")
-                    color = Color.white
-                }
             }
             onClick { event ->
                 event.stopPropagation()
                 ctx.editing.onToggleLayout(block.id)
             }
             onMouseDown { event -> event.stopPropagation() }
-            +if (isVertical) "↔" else "↕"
+
+            if (isVertical) {
+                icon.small.arrows_alternate_horizontal()
+            } else {
+                icon.small.arrows_alternate_vertical()
+            }
         }
     }
 
@@ -488,21 +472,16 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             css {
                 fontSize = variant.editFontSize
                 lineHeight = LineHeight("1")
-                color = Color("rgba(255,255,255,0.55)")
+                color = Color("rgba(255,255,255,1.0)")
                 cursor = Cursor.pointer
                 borderRadius = 3.px
-                padding = Padding(horizontal = 3.px, vertical = 1.px)
-                hover {
-                    backgroundColor = Color("rgba(255,255,255,0.18)")
-                    color = Color.white
-                }
             }
             onClick { event ->
                 event.stopPropagation()
                 ctx.editing.onRemoveBlock(props.block.id)
             }
             onMouseDown { event -> event.stopPropagation() }
-            +"×"
+            icon.small.times()
         }
     }
 }
