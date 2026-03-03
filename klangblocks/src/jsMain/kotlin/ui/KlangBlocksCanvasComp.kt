@@ -127,17 +127,67 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             }
 
                             is KBLetStmt -> {
-                                span {
-                                    css { stmtPillStyle() }
-                                    +"let ${stmt.name}"
+                                when (val v = stmt.value) {
+                                    is KBNestedChainArg -> {
+                                        div {
+                                            css {
+                                                display = Display.flex
+                                                flexDirection = FlexDirection.column
+                                                gap = 4.px
+                                            }
+                                            renderChainSegments(
+                                                chain = v.chain,
+                                                segments = v.chain.steps.toCallSegments(),
+                                                ctx = ctx,
+                                                headContent = {
+                                                    span {
+                                                        css { stmtPillStyle() }
+                                                        +"let ${stmt.name} ="
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+
+                                    else -> {
+                                        span {
+                                            css { stmtPillStyle() }
+                                            +"let ${stmt.name}${if (v != null) " = ${v.renderShort()}" else ""}"
+                                        }
+                                    }
                                 }
                                 removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
                             is KBConstStmt -> {
-                                span {
-                                    css { stmtPillStyle() }
-                                    +"const ${stmt.name}"
+                                when (val v = stmt.value) {
+                                    is KBNestedChainArg -> {
+                                        div {
+                                            css {
+                                                display = Display.flex
+                                                flexDirection = FlexDirection.column
+                                                gap = 4.px
+                                            }
+                                            renderChainSegments(
+                                                chain = v.chain,
+                                                segments = v.chain.steps.toCallSegments(),
+                                                ctx = ctx,
+                                                headContent = {
+                                                    span {
+                                                        css { stmtPillStyle() }
+                                                        +"const ${stmt.name} ="
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+
+                                    else -> {
+                                        span {
+                                            css { stmtPillStyle() }
+                                            +"const ${stmt.name} = ${v.renderShort()}"
+                                        }
+                                    }
                                 }
                                 removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
                             }
