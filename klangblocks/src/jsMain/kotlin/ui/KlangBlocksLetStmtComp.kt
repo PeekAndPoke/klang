@@ -166,7 +166,9 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
             // "let name =" label
             span {
                 css { fontWeight = FontWeight.bold }
-                +"${props.keyword} ${props.name} ="
+                +"${props.keyword} "
+                span { css { opacity = 0.85 }; +"$" }
+                +"${props.name} ="
             }
 
             // Value slot

@@ -232,8 +232,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         span {
             css {
                 minWidth = 30.px
-                paddingLeft = 4.px
-                paddingRight = 4.px
                 fontWeight = FontWeight.bold
             }
             +block.funcName
@@ -390,6 +388,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         .sortedBy { it.first }
                         .let { mergeRanges(it) }
                     renderWithHighlights(arg.value, atomRanges)
+                }
+
+                is KBIdentifierArg -> {
+                    span { css { opacity = 0.85 }; +"$" }
+                    +arg.name
                 }
 
                 else -> +arg.renderShort()

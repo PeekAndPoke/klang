@@ -112,7 +112,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                         props.onToggleNewline != null -> Cursor.pointer
                         else -> Cursor.default
                     }
-                    put("transition", "width 0.15s ease")
+                    put("transition", "width 0.5s ease")
                 }
                 onMouseEnter { isHovered = true }
                 onMouseLeave { isHovered = false }
