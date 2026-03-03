@@ -386,7 +386,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     key = "dashboard-form-code"
                     css {
                         flex = Flex(1.0, 1.0, FlexBasis.auto)
-                        overflow = Overflow.hidden
+                        minHeight = 0.px
+                        overflowY = Overflow.auto
+                        overflowX = Overflow.hidden
                         display = Display.flex
                         flexDirection = FlexDirection.column
                     }

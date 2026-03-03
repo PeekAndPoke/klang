@@ -12,6 +12,43 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.8/dist/semantic.min.css">
 
     <style>
+        /* Custom Scrollbar Styling */
+        /* For Firefox */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+        }
+
+        /* For WebKit (Chrome, Edge, Safari) */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        /* Aggressively hide all scrollbar arrows (buttons) and corners */
+        ::-webkit-scrollbar-button,
+        ::-webkit-scrollbar-corner {
+            display: none !important;
+            width: 0px !important;
+            height: 0px !important;
+            background-color: transparent !important;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
         body {
             background-color: white;
             min-height: 100vh;
