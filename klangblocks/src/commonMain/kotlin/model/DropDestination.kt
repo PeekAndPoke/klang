@@ -16,6 +16,12 @@ sealed interface DropDestination {
 
     /** Replace the block identified by [targetBlockId] in-place with the dropped payload. */
     data class ReplaceBlock(val targetBlockId: String) : DropDestination
+
+    /**
+     * Insert into a chain immediately after [afterBlockId], i.e. before any following [KBNewlineHint].
+     * Used by segment-end drop zones so dropped blocks stay on the same visual row.
+     */
+    data class ChainInsertAfterBlock(val chainId: String, val afterBlockId: String) : DropDestination
 }
 
 /** Enumeration of destination types; used by [DropTarget][io.peekandpoke.klang.blocks.ui.DropTarget]. */

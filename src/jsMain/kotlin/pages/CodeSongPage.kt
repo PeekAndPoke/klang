@@ -29,17 +29,17 @@ import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
+import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.withEditorErrorHandling
+import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
-import io.peekandpoke.klang.strudel.lang.delay
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.playStrudel
-import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -276,6 +276,15 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         flexShrink = 0.0
                     }
 
+                    // Fullscreen toggle
+                    ui.right.floated.basic.fitted.segment {
+                        ui.horizontal.list {
+                            noui.item {
+                                FullscreenToggleButton(fs = fs)
+                            }
+                        }
+                    }
+
                     ui.horizontal.list {
                         key = "dashboard-form-fields"
 
@@ -350,49 +359,25 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             }
                         }
 
-                        // Fullscreen toggle
-                        noui.item {
-                            ui.large.circular.icon.basic.black.button {
-                                if (document.fullscreenElement != null) {
-                                    onClick {
-                                        document.exitFullscreen()
-                                        launch {
-                                            delay(1000)
-                                            triggerRedraw()
-                                        }
-                                    }
-                                    icon.compress()
-                                } else {
-                                    onClick {
-                                        document.documentElement?.requestFullscreen()
-                                        launch {
-                                            delay(1000)
-                                            triggerRedraw()
-                                        }
-                                    }
-                                    icon.expand()
-                                }
-                            }
-                        }
-
                         // Code / Blocks toggle
                         noui.item {
-                            ui.large.circular
-                                .given(editorMode == EditorMode.CODE) { black }
-                                .givenNot(editorMode == EditorMode.CODE) { basic }
-                                .button {
-                                    onClick { switchToCode() }
-                                    icon.code()
-                                    +"Code"
-                                }
-                            ui.large.circular
-                                .given(editorMode == EditorMode.BLOCKS) { black }
-                                .givenNot(editorMode == EditorMode.BLOCKS) { basic }
-                                .button {
-                                    onClick { switchToBlocks(it) }
-                                    icon.puzzle_piece()
-                                    +"Blocks"
-                                }
+                            ui.large.buttons {
+                                ui.large.given(editorMode == EditorMode.CODE) { black }
+                                    .givenNot(editorMode == EditorMode.CODE) { basic }
+                                    .icon.button {
+                                        onClick { switchToCode() }
+                                        title = "Switch to code editor"
+                                        icon.code()
+                                    }
+
+                                ui.large.given(editorMode == EditorMode.BLOCKS) { black }
+                                    .givenNot(editorMode == EditorMode.BLOCKS) { basic }
+                                    .icon.button {
+                                        onClick { switchToBlocks(it) }
+                                        title = "Switch to blocks editor"
+                                        icon.puzzle_piece()
+                                    }
+                            }
                         }
                     }
                 }

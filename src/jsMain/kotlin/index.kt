@@ -5,6 +5,7 @@ import de.peekandpoke.kraft.popups.popups
 import de.peekandpoke.kraft.semanticui.semanticUI
 import de.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 import io.peekandpoke.klang.strudel.lang.initStrudelLang
+import io.peekandpoke.klang.utils.FullscreenController
 
 val kraft = kraftApp {
     semanticUI()
@@ -16,6 +17,8 @@ val kraft = kraftApp {
         mountNav()
     }
 }
+
+val fs = FullscreenController()
 
 fun main() {
     // Initialize Strudel DSL and register documentation

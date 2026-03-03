@@ -17,17 +17,26 @@ import kotlinx.html.div
  * - [insertBeforeBlockId] != null → insert-before mode: fires [DropDestination.ChainInsert]
  *   via [DndState.onDrop]; rendered with negative margins and a dot-line-dot idle connector.
  *
- * - [insertBeforeBlockId] == null → append mode: fires [DropDestination.ChainEnd]
+ * - [insertAfterBlockId] != null → insert-after mode: fires [DropDestination.ChainInsertAfterBlock]
+ *   (keeps dropped block on the same visual row, before any following [KBNewlineHint]).
+ *   Use with [compactIdle] = true for segment-end placement.
+ *
+ * - both null → append mode: fires [DropDestination.ChainEnd]
  *   via [DndState.onDrop]; rendered as a small circle with a left margin.
+ *
+ * - [compactIdle] = true → zero-width when not dragging, indicator floats right via overflow;
+ *   expands on hover. Intended for segment-end drop zones that must not shift adjacent elements.
  */
 @Suppress("FunctionName")
 fun Tag.KlangBlocksDropZoneComp(
     chainId: String,
-    insertBeforeBlockId: String?,   // null = append to chain end
+    insertBeforeBlockId: String? = null,
     ctx: KlangBlocksCtx,
     showConnectorWhenIdle: Boolean = true,
     hasNewlineBefore: Boolean = false,
     onToggleNewline: (() -> Unit)? = null,
+    insertAfterBlockId: String? = null,
+    compactIdle: Boolean = false,
 ) = comp(
     KlangBlocksDropZoneComp.Props(
         chainId = chainId,
@@ -36,6 +45,8 @@ fun Tag.KlangBlocksDropZoneComp(
         showConnectorWhenIdle = showConnectorWhenIdle,
         hasNewlineBefore = hasNewlineBefore,
         onToggleNewline = onToggleNewline,
+        insertAfterBlockId = insertAfterBlockId,
+        compactIdle = compactIdle,
     )
 ) {
     KlangBlocksDropZoneComp(it)
@@ -50,35 +61,48 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
         val showConnectorWhenIdle: Boolean = true,
         val hasNewlineBefore: Boolean = false,
         val onToggleNewline: (() -> Unit)? = null,
+        val insertAfterBlockId: String? = null,
+        val compactIdle: Boolean = false,
     )
 
     private var isHovered: Boolean by value(false)
 
     override fun VDom.render() {
         val dndState = props.ctx.dnd.state
-        val isInline = props.insertBeforeBlockId != null
+        val isInline = props.insertBeforeBlockId != null || props.insertAfterBlockId != null
         val canDrop =
                 if (isInline) dndState?.accepts(DropTarget.ChainInsert) == true
                 else dndState?.accepts(DropTarget.ChainEnd) == true
 
         if (isInline) {
-            // ── Insert-before mode ───────────────────────────────────────────────
-            // Negative margins let it overlap the adjacent blocks' padding so the
-            // chain width never changes. Half the width is absorbed on each side.
-            // On hover the container grows to ghostWidth (keeping margins constant:
-            // containerWidth = ghostWidth + 20 - indent gives effectiveWidth = ghostWidth).
+            // ── Insert-before / insert-after mode ───────────────────────────────
+            // compactIdle = false (default): negative margins overlap adjacent blocks'
+            //   padding so chain width never changes; dot-line-dot idle connector.
+            // compactIdle = true: zero-width when idle, indicator floats right via
+            //   overflow:visible; used for segment-end drop zones.
             val connectorW = if (props.hasNewlineBefore) 16 else 32
             val indent = if (props.hasNewlineBefore) 16 else 0
             val expandedW = (dndState?.ghostWidth ?: 80.0) + 20.0
-            val containerW = if (canDrop && isHovered) expandedW + 20 - indent else (connectorW + indent).toDouble()
+            val containerW = when {
+                props.compactIdle && canDrop && isHovered -> expandedW + 20.0
+                props.compactIdle -> 0.0
+                canDrop && isHovered -> expandedW + 20 - indent
+                else -> (connectorW + indent).toDouble()
+            }
             div {
                 css {
                     display = Display.inlineFlex
                     alignItems = Align.center
                     justifyContent = JustifyContent.center
                     flexShrink = 0.0
-                    marginLeft = (-10 + indent).px
-                    marginRight = (-10).px
+                    if (props.compactIdle) {
+                        marginLeft = 0.px
+                        marginRight = 0.px
+                        put("overflow", "visible")
+                    } else {
+                        marginLeft = (-10 + indent).px
+                        marginRight = (-10).px
+                    }
                     width = containerW.px
                     alignSelf = Align.stretch
                     position = Position.relative
@@ -107,7 +131,13 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                     onMouseOver { it.stopPropagation() }
                     onMouseUp { event ->
                         event.stopPropagation()
-                        dndState!!.onDrop(DropDestination.ChainInsert(props.chainId, props.insertBeforeBlockId!!))
+                        when {
+                            props.insertBeforeBlockId != null ->
+                                dndState!!.onDrop(DropDestination.ChainInsert(props.chainId, props.insertBeforeBlockId))
+
+                            props.insertAfterBlockId != null ->
+                                dndState!!.onDrop(DropDestination.ChainInsertAfterBlock(props.chainId, props.insertAfterBlockId!!))
+                        }
                     }
                 }
 
@@ -117,9 +147,16 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                 div {
                     css {
                         position = Position.absolute
-                        left = 50.pct
-                        top = 50.pct
-                        put("transform", "translate(-50%, -50%)")
+                        if (props.compactIdle) {
+                            // Float to the right of the zero-width container
+                            left = 0.px
+                            top = 50.pct
+                            put("transform", "translateY(-50%)")
+                        } else {
+                            left = 50.pct
+                            top = 50.pct
+                            put("transform", "translate(-50%, -50%)")
+                        }
                         width = (if (canDrop && isHovered) expandedW else 24.0).px
                         height = 24.px
                         borderRadius = (if (canDrop && isHovered) 8 else 12).px

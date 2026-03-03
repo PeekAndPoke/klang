@@ -46,6 +46,7 @@ class KBProgramEditingCtx(
                 is DropDestination.RowGap -> createBlockAtRowGap(action.funcName, d.index)
                 is DropDestination.ChainEnd -> appendBlockToChainById(d.chainId, action.funcName)
                 is DropDestination.ChainInsert -> insertBlockIntoChainById(action.funcName, d.chainId, d.insertBeforeBlockId)
+                is DropDestination.ChainInsertAfterBlock -> insertBlocksAfterBlockById(action.funcName, d.chainId, d.afterBlockId)
                 is DropDestination.EmptySlot -> dropBlockToSlot(action.funcName, d.blockId, d.slotIdx)
                 is DropDestination.ReplaceBlock -> replaceWithNewBlock(action.funcName, d.targetBlockId)
             }
@@ -54,6 +55,7 @@ class KBProgramEditingCtx(
                 is DropDestination.RowGap -> moveBlocksToRowGap(action.blocks, d.index)
                 is DropDestination.ChainEnd -> moveBlocksToChainEnd(action.blocks, d.chainId)
                 is DropDestination.ChainInsert -> moveBlocksToChainInsert(action.blocks, d.chainId, d.insertBeforeBlockId)
+                is DropDestination.ChainInsertAfterBlock -> moveBlocksToChainInsertAfterBlock(action.blocks, d.chainId, d.afterBlockId)
                 is DropDestination.EmptySlot -> moveBlocksToSlot(action.blocks, d.blockId, d.slotIdx)
                 is DropDestination.ReplaceBlock -> replaceWithMovedBlocks(action.blocks, d.targetBlockId)
             }
@@ -204,6 +206,79 @@ class KBProgramEditingCtx(
                     insertBlockIntoChain(s, targetChainId, block.copy(isHead = false), insertBeforeBlockId)
                 }
             )
+        }
+    }
+
+    private fun insertBlocksAfterBlockById(funcName: String, chainId: String, afterBlockId: String) {
+        val newBlock = KBCallBlock(id = uuid(), funcName = funcName, isHead = false)
+        update { current ->
+            current.copy(statements = insertBlocksAfterBlock(current.statements, chainId, listOf(newBlock), afterBlockId))
+        }
+    }
+
+    private fun moveBlocksToChainInsertAfterBlock(blocks: List<KBCallBlock>, targetChainId: String, afterBlockId: String) {
+        if (afterBlockId in blocks.map { it.id }) return
+        val clones = blocks.map { it.copy(id = uuid(), isHead = false) }
+        update { current ->
+            var stmts = current.statements
+            for (block in blocks) stmts = removeBlockFromStmts(stmts, block.id)
+            current.copy(statements = insertBlocksAfterBlock(stmts, targetChainId, clones, afterBlockId))
+        }
+    }
+
+    private fun insertBlocksAfterBlock(
+        stmts: List<KBStmt>,
+        chainId: String,
+        blocks: List<KBCallBlock>,
+        afterBlockId: String,
+    ): List<KBStmt> = stmts.map { stmt ->
+        when {
+            stmt is KBChainStmt && stmt.id == chainId -> {
+                val steps = stmt.steps.toMutableList()
+                val idx = steps.indexOfFirst { it is KBCallBlock && it.id == afterBlockId }.takeIf { it >= 0 } ?: (steps.size - 1)
+                steps.addAll(idx + 1, blocks)
+                stmt.copy(steps = steps.fixHeads())
+            }
+
+            stmt is KBChainStmt -> stmt.copy(steps = insertBlocksAfterBlockInItems(stmt.steps, chainId, blocks, afterBlockId))
+            else -> stmt
+        }
+    }
+
+    private fun insertBlocksAfterBlockInItems(
+        items: List<KBChainItem>,
+        chainId: String,
+        blocks: List<KBCallBlock>,
+        afterBlockId: String,
+    ): List<KBChainItem> = items.map { item ->
+        when (item) {
+            is KBCallBlock -> item.copy(args = insertBlocksAfterBlockInArgs(item.args, chainId, blocks, afterBlockId))
+            else -> item
+        }
+    }
+
+    private fun insertBlocksAfterBlockInArgs(
+        args: List<KBArgValue>,
+        chainId: String,
+        blocks: List<KBCallBlock>,
+        afterBlockId: String,
+    ): List<KBArgValue> = args.map { argValue ->
+        when {
+            argValue is KBNestedChainArg && argValue.chain.id == chainId -> {
+                val steps = argValue.chain.steps.toMutableList()
+                val idx = steps.indexOfFirst { it is KBCallBlock && it.id == afterBlockId }.takeIf { it >= 0 } ?: (steps.size - 1)
+                steps.addAll(idx + 1, blocks)
+                argValue.copy(chain = argValue.chain.copy(steps = steps.fixHeads()))
+            }
+
+            argValue is KBNestedChainArg ->
+                argValue.copy(
+                    chain = argValue.chain.copy(
+                        steps = insertBlocksAfterBlockInItems(argValue.chain.steps, chainId, blocks, afterBlockId)
+                    )
+                )
+
+            else -> argValue
         }
     }
 

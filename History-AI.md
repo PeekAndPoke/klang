@@ -40,3 +40,4 @@
 - 02-27-2026: bought AI credits at Anthropic -> 59.50 USD
 - 03-01-2026: bought AI credits at Anthropic -> 59.50 USD
 - 03-02-2026: bought AI credits at Anthropic -> 59.50 USD
+- 03-03-2026: bought AI credits at Anthropic -> 59.50 USD

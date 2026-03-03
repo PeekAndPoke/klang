@@ -84,8 +84,8 @@ internal fun DIV.renderChainSegments(
             if (segIndex == segments.lastIndex) {
                 KlangBlocksDropZoneComp(chainId = chain.id, insertBeforeBlockId = null, ctx = ctx)
             } else {
-                // Trailing line-break indicator: *---  (click toggles the newline back off)
                 val nextSegFirstBlockId = segments[segIndex + 1].first().id
+                // Trailing line-break indicator: *---  (click toggles the newline back off)
                 div {
                     css {
                         display = Display.inlineFlex
@@ -107,6 +107,15 @@ internal fun DIV.renderChainSegments(
                     connectorDot()
                     connectorDashedLine()
                 }
+                // Segment-end drop zone: appears to the right of *--- with zero idle width.
+                // Fires ChainInsertAfterBlock so the dropped block stays on this row (before the KBNewlineHint).
+                KlangBlocksDropZoneComp(
+                    chainId = chain.id,
+                    insertAfterBlockId = blocks.last().id,
+                    ctx = ctx,
+                    showConnectorWhenIdle = false,
+                    compactIdle = true,
+                )
             }
         }
     }
