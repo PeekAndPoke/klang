@@ -1,9 +1,6 @@
 package io.peekandpoke.klang.blocks.ui
 
-import io.peekandpoke.klang.blocks.model.DropDestination
-import io.peekandpoke.klang.blocks.model.DropTargetType
-import io.peekandpoke.klang.blocks.model.KBCallBlock
-import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.*
 
 data class DndCtrl(
     val state: DndState?,
@@ -16,9 +13,9 @@ data class DndCtrl(
         operator fun invoke(funcName: String, x: Double, y: Double)
     }
 
-    /** SAM interface for starting a canvas chain drag. */
+    /** SAM interface for starting a canvas row drag (works for any statement type). */
     fun interface CanvasDragStarter {
-        operator fun invoke(stmtId: String, chain: KBChainStmt, x: Double, y: Double)
+        operator fun invoke(stmtId: String, stmt: KBStmt, x: Double, y: Double)
     }
 
     /** SAM interface for starting a block drag (top-level or nested), allowing named arguments at the call site. */

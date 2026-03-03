@@ -25,8 +25,16 @@ internal fun KBProgramEditingCtx.block(funcName: String): KBCallBlock {
         }
         return null
     }
+    fun searchValue(value: KBArgValue?): KBCallBlock? =
+        if (value is KBNestedChainArg) search(value.chain.steps) else null
+
     for (stmt in program.statements) {
-        if (stmt is KBChainStmt) search(stmt.steps)?.let { return it }
+        when (stmt) {
+            is KBChainStmt -> search(stmt.steps)?.let { return it }
+            is KBLetStmt -> searchValue(stmt.value)?.let { return it }
+            is KBConstStmt -> searchValue(stmt.value)?.let { return it }
+            else -> {}
+        }
     }
     error("No block with funcName=$funcName found in program")
 }
@@ -48,7 +56,12 @@ internal fun KBProgramEditingCtx.chain(funcName: String): KBChainStmt {
         return null
     }
     for (stmt in program.statements) {
-        if (stmt is KBChainStmt) searchChain(stmt)?.let { return it }
+        when (stmt) {
+            is KBChainStmt -> searchChain(stmt)?.let { return it }
+            is KBLetStmt -> (stmt.value as? KBNestedChainArg)?.let { searchChain(it.chain) }?.let { return it }
+            is KBConstStmt -> (stmt.value as? KBNestedChainArg)?.let { searchChain(it.chain) }?.let { return it }
+            else -> {}
+        }
     }
     error("No chain containing funcName=$funcName found at any depth")
 }
@@ -60,3 +73,11 @@ internal fun KBProgramEditingCtx.tail(funcName: String): List<KBCallBlock> {
     val fromIdx = allBlocks.indexOfFirst { it.funcName == funcName }
     return if (fromIdx >= 0) allBlocks.drop(fromIdx) else emptyList()
 }
+
+/** Find the first [KBLetStmt] with the given variable name. */
+internal fun KBProgramEditingCtx.letStmt(name: String): KBLetStmt =
+    program.statements.filterIsInstance<KBLetStmt>().first { it.name == name }
+
+/** Find the first [KBConstStmt] with the given variable name. */
+internal fun KBProgramEditingCtx.constStmt(name: String): KBConstStmt =
+    program.statements.filterIsInstance<KBConstStmt>().first { it.name == name }

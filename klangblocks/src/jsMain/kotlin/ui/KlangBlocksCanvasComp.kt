@@ -75,7 +75,8 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             gap = 8.px
                         }
 
-                        // Row number — doubles as a drag handle for KBChainStmt rows
+                        // Row number — drag handle for rows that support reordering
+                        val isDraggableRow = stmt is KBChainStmt || stmt is KBLetStmt || stmt is KBConstStmt
                         span {
                             css {
                                 color = Color("#666")
@@ -84,12 +85,12 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                 width = 24.px
                                 flexShrink = 0.0
                                 textAlign = TextAlign.right
-                                if (stmt is KBChainStmt) {
+                                if (isDraggableRow) {
                                     cursor = Cursor.grab
                                     hover { color = Color("#aaa") }
                                 }
                             }
-                            if (stmt is KBChainStmt) {
+                            if (isDraggableRow) {
                                 onMouseDown { event ->
                                     event.preventDefault()
                                     ctx.dnd.startCanvasDrag(
@@ -127,69 +128,11 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             }
 
                             is KBLetStmt -> {
-                                when (val v = stmt.value) {
-                                    is KBNestedChainArg -> {
-                                        div {
-                                            css {
-                                                display = Display.flex
-                                                flexDirection = FlexDirection.column
-                                                gap = 4.px
-                                            }
-                                            renderChainSegments(
-                                                chain = v.chain,
-                                                segments = v.chain.steps.toCallSegments(),
-                                                ctx = ctx,
-                                                headContent = {
-                                                    span {
-                                                        css { stmtPillStyle() }
-                                                        +"let ${stmt.name} ="
-                                                    }
-                                                }
-                                            )
-                                        }
-                                    }
-
-                                    else -> {
-                                        span {
-                                            css { stmtPillStyle() }
-                                            +"let ${stmt.name}${if (v != null) " = ${v.renderShort()}" else ""}"
-                                        }
-                                    }
-                                }
-                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
+                                KlangBlocksLetStmtComp(stmt = stmt, ctx = ctx)
                             }
 
                             is KBConstStmt -> {
-                                when (val v = stmt.value) {
-                                    is KBNestedChainArg -> {
-                                        div {
-                                            css {
-                                                display = Display.flex
-                                                flexDirection = FlexDirection.column
-                                                gap = 4.px
-                                            }
-                                            renderChainSegments(
-                                                chain = v.chain,
-                                                segments = v.chain.steps.toCallSegments(),
-                                                ctx = ctx,
-                                                headContent = {
-                                                    span {
-                                                        css { stmtPillStyle() }
-                                                        +"const ${stmt.name} ="
-                                                    }
-                                                }
-                                            )
-                                        }
-                                    }
-
-                                    else -> {
-                                        span {
-                                            css { stmtPillStyle() }
-                                            +"const ${stmt.name} = ${v.renderShort()}"
-                                        }
-                                    }
-                                }
-                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
+                                KlangBlocksLetStmtComp(stmt = stmt, ctx = ctx)
                             }
 
                             is KBAssignStmt -> {

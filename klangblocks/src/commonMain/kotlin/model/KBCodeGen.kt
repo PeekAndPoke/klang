@@ -202,10 +202,27 @@ private fun KBStmt.appendTo(builder: CodeBuilder) {
         is KBChainStmt -> appendTo(builder)
         is KBLetStmt -> {
             builder.append("let $name")
-            if (value != null) builder.append(" = ").append(value.toCode())
+            if (value != null) {
+                builder.append(" = ")
+                // Nested chains: inner blocks track themselves; no stmtId wrapper needed.
+                // Scalar values (string, number, bool, …): wrap so stmtId appears in the
+                // source map and string content atoms get a slot-content range.
+                if (value is KBNestedChainArg) {
+                    value.appendTo(builder, id, 0)
+                } else {
+                    builder.trackBlock(id) { value.appendTo(this, id, 0) }
+                }
+            }
         }
 
-        is KBConstStmt -> builder.append("const $name = ").append(value.toCode())
+        is KBConstStmt -> {
+            builder.append("const $name = ")
+            if (value is KBNestedChainArg) {
+                value.appendTo(builder, id, 0)
+            } else {
+                builder.trackBlock(id) { value.appendTo(this, id, 0) }
+            }
+        }
         is KBAssignStmt -> builder.append("$target = ").append(value.toCode())
         is KBExprStmt -> builder.append(expr.toCode())
         is KBBlankLine -> Unit

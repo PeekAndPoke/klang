@@ -61,7 +61,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
         data class DraggingFromCanvas(
             val stmtId: String,
-            val chain: KBChainStmt,
+            val stmt: KBStmt,
             val ghostX: Double,
             val ghostY: Double,
         ) : DragState()
@@ -178,18 +178,21 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             sourceChainId = null,
         )
 
-        is DragState.DraggingFromCanvas -> DndState(
-            ghostX = ds.ghostX,
-            ghostY = ds.ghostY,
-            ghostLabel = ds.chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName },
-            ghostWidth = estimateGhostWidth(ds.chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName }),
-            targets = setOf(DropTarget.RowGap),
-            onDrop = { dest ->
-                editingCtx.execute(DropAction.MoveRow(ds.stmtId, (dest as DropDestination.RowGap).index))
-                dragState = DragState.None
-            },
-            sourceChainId = ds.stmtId,
-        )
+        is DragState.DraggingFromCanvas -> {
+            val label = ds.stmt.canvasGhostLabel()
+            DndState(
+                ghostX = ds.ghostX,
+                ghostY = ds.ghostY,
+                ghostLabel = label,
+                ghostWidth = estimateGhostWidth(label),
+                targets = setOf(DropTarget.RowGap),
+                onDrop = { dest ->
+                    editingCtx.execute(DropAction.MoveRow(ds.stmtId, (dest as DropDestination.RowGap).index))
+                    dragState = DragState.None
+                },
+                sourceChainId = ds.stmtId,
+            )
+        }
 
         is DragState.DraggingBlock -> {
             // Compute the list of blocks to drag: single block or tail (block + all following)
@@ -220,6 +223,13 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     /** Estimates the pixel width of the drag ghost element (monospace 13px, 10px horizontal padding). */
     private fun estimateGhostWidth(label: String): Double = label.length * 7.8 + 20.0
 
+    private fun KBStmt.canvasGhostLabel(): String = when (this) {
+        is KBChainStmt -> steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName }
+        is KBLetStmt -> "let $name"
+        is KBConstStmt -> "const $name"
+        else -> id
+    }
+
     // ---- Init helpers ----------------------------------------------
 
     private fun parseCode(code: String): KBProgram {
@@ -239,8 +249,8 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         dragState = DragState.DraggingFromPalette(funcName, x, y)
     }
 
-    private fun onCanvasDragStart(stmtId: String, chain: KBChainStmt, x: Double, y: Double) {
-        dragState = DragState.DraggingFromCanvas(stmtId, chain, x, y)
+    private fun onCanvasDragStart(stmtId: String, stmt: KBStmt, x: Double, y: Double) {
+        dragState = DragState.DraggingFromCanvas(stmtId, stmt, x, y)
     }
 
     private fun onBlockDragStart(

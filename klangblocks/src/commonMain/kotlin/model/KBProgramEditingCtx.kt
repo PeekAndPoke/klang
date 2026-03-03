@@ -239,8 +239,12 @@ class KBProgramEditingCtx(
                 steps.addAll(idx + 1, blocks)
                 stmt.copy(steps = steps.fixHeads())
             }
-
             stmt is KBChainStmt -> stmt.copy(steps = insertBlocksAfterBlockInItems(stmt.steps, chainId, blocks, afterBlockId))
+            stmt is KBLetStmt ->
+                stmt.copy(value = stmt.value.inArgs { insertBlocksAfterBlockInArgs(it, chainId, blocks, afterBlockId) })
+
+            stmt is KBConstStmt ->
+                stmt.copy(value = stmt.value.inArgs { insertBlocksAfterBlockInArgs(it, chainId, blocks, afterBlockId) } ?: stmt.value)
             else -> stmt
         }
     }
@@ -319,7 +323,8 @@ class KBProgramEditingCtx(
             is KBChainStmt -> stmt.copy(
                 steps = replaceBlockInItems(stmt.steps, targetBlockId, replacements).fixHeads()
             )
-
+            is KBLetStmt -> stmt.copy(value = stmt.value.inArgs { replaceBlockInArgs(it, targetBlockId, replacements) })
+            is KBConstStmt -> stmt.copy(value = stmt.value.inArgs { replaceBlockInArgs(it, targetBlockId, replacements) } ?: stmt.value)
             else -> stmt
         }
     }
@@ -388,6 +393,15 @@ class KBProgramEditingCtx(
     ): List<KBStmt> = stmts.map { stmt ->
         when (stmt) {
             is KBChainStmt -> stmt.copy(steps = updateBlockInItems(stmt.steps, blockId, slotIndex, arg))
+            is KBLetStmt -> when {
+                stmt.id == blockId && slotIndex == 0 -> stmt.copy(value = arg)
+                else -> stmt.copy(value = stmt.value.inArgs { updateBlockInArgs(it, blockId, slotIndex, arg) })
+            }
+
+            is KBConstStmt -> when {
+                stmt.id == blockId && slotIndex == 0 -> stmt.copy(value = arg)
+                else -> stmt.copy(value = stmt.value.inArgs { updateBlockInArgs(it, blockId, slotIndex, arg) } ?: stmt.value)
+            }
             else -> stmt
         }
     }
@@ -436,7 +450,8 @@ class KBProgramEditingCtx(
                     if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) null
                     else stmt.copy(steps = newSteps)
                 }
-
+                is KBLetStmt -> stmt.copy(value = stmt.value.inArgs { removeBlockFromArgs(it, blockId) })
+                is KBConstStmt -> stmt.copy(value = stmt.value.inArgs { removeBlockFromArgs(it, blockId) } ?: stmt.value)
                 else -> stmt
             }
         }
@@ -478,10 +493,13 @@ class KBProgramEditingCtx(
                 steps.add(insertIndexFor(steps, insertBeforeBlockId), block)
                 stmt.copy(steps = steps.fixHeads())
             }
-
             stmt is KBChainStmt ->
                 stmt.copy(steps = insertBlockIntoChainInItems(stmt.steps, chainId, block, insertBeforeBlockId))
+            stmt is KBLetStmt ->
+                stmt.copy(value = stmt.value.inArgs { insertBlockIntoChainInArgs(it, chainId, block, insertBeforeBlockId) })
 
+            stmt is KBConstStmt ->
+                stmt.copy(value = stmt.value.inArgs { insertBlockIntoChainInArgs(it, chainId, block, insertBeforeBlockId) } ?: stmt.value)
             else -> stmt
         }
     }
@@ -525,10 +543,13 @@ class KBProgramEditingCtx(
             when {
                 stmt is KBChainStmt && stmt.id == chainId ->
                     stmt.copy(steps = (stmt.steps + block).fixHeads())
-
                 stmt is KBChainStmt ->
                     stmt.copy(steps = appendBlockToChainInItems(stmt.steps, chainId, block))
+                stmt is KBLetStmt ->
+                    stmt.copy(value = stmt.value.inArgs { appendBlockToChainInArgs(it, chainId, block) })
 
+                stmt is KBConstStmt ->
+                    stmt.copy(value = stmt.value.inArgs { appendBlockToChainInArgs(it, chainId, block) } ?: stmt.value)
                 else -> stmt
             }
         }
@@ -572,6 +593,15 @@ class KBProgramEditingCtx(
     ): List<KBStmt> = stmts.map { stmt ->
         when (stmt) {
             is KBChainStmt -> stmt.copy(steps = updateSlotDropInItems(stmt.steps, blockId, slotIndex, newBlocks))
+            is KBLetStmt -> when {
+                stmt.id == blockId && slotIndex == 0 -> stmt.copy(value = KBNestedChainArg(buildSlotDropChain(newBlocks)))
+                else -> stmt.copy(value = stmt.value.inArgs { updateSlotDropInArgs(it, blockId, slotIndex, newBlocks) })
+            }
+
+            is KBConstStmt -> when {
+                stmt.id == blockId && slotIndex == 0 -> stmt.copy(value = KBNestedChainArg(buildSlotDropChain(newBlocks)))
+                else -> stmt.copy(value = stmt.value.inArgs { updateSlotDropInArgs(it, blockId, slotIndex, newBlocks) } ?: stmt.value)
+            }
             else -> stmt
         }
     }
@@ -614,7 +644,11 @@ class KBProgramEditingCtx(
                     stmt.copy(steps = applyStringLiteralChange(stmt.steps, newValue))
                 else
                     stmt.copy(steps = updateStringLiteralItemInItems(stmt.steps, chainId, newValue))
+                is KBLetStmt ->
+                    stmt.copy(value = stmt.value.inArgs { updateStringLiteralItemInArgs(it, chainId, newValue) })
 
+                is KBConstStmt ->
+                    stmt.copy(value = stmt.value.inArgs { updateStringLiteralItemInArgs(it, chainId, newValue) } ?: stmt.value)
                 else -> stmt
             }
         }
@@ -652,6 +686,8 @@ class KBProgramEditingCtx(
         stmts.map { stmt ->
             when (stmt) {
                 is KBChainStmt -> stmt.copy(steps = toggleLayoutInItems(stmt.steps, blockId))
+                is KBLetStmt -> stmt.copy(value = stmt.value.inArgs { toggleLayoutInArgs(it, blockId) })
+                is KBConstStmt -> stmt.copy(value = stmt.value.inArgs { toggleLayoutInArgs(it, blockId) } ?: stmt.value)
                 else -> stmt
             }
         }
@@ -688,10 +724,13 @@ class KBProgramEditingCtx(
             when {
                 stmt is KBChainStmt && stmt.id == chainId ->
                     stmt.copy(steps = toggleNewlineBeforeBlockInSteps(stmt.steps, blockId))
-
                 stmt is KBChainStmt ->
                     stmt.copy(steps = toggleNewlineInItems(stmt.steps, chainId, blockId))
+                stmt is KBLetStmt ->
+                    stmt.copy(value = stmt.value.inArgs { toggleNewlineInArgs(it, chainId, blockId) })
 
+                stmt is KBConstStmt ->
+                    stmt.copy(value = stmt.value.inArgs { toggleNewlineInArgs(it, chainId, blockId) } ?: stmt.value)
                 else -> stmt
             }
         }
@@ -738,6 +777,14 @@ class KBProgramEditingCtx(
     }
 
     // ---- Utility ------------------------------------------------------------
+
+    /**
+     * Applies an InArgs-style transform to a single [KBArgValue], returning the
+     * transformed value, or null when this is null.  Used to recurse into
+     * [KBLetStmt.value] / [KBConstStmt.value] without duplicating traversal code.
+     */
+    private fun KBArgValue?.inArgs(transform: (List<KBArgValue>) -> List<KBArgValue>): KBArgValue? =
+        if (this == null) null else transform(listOf(this)).firstOrNull()
 
     private fun List<KBChainItem>.fixHeads(): List<KBChainItem> {
         var isFirst = true

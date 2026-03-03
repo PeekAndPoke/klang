@@ -1175,4 +1175,146 @@ class KBCodeGenTest : StringSpec({
 
         result.code shouldBe src
     }
+
+    // ── let / const — source map ──────────────────────────────────────────────
+
+    "let with string value: stmtId is in blockRanges; content hit returns stmtId + slot 0" {
+        // let x = "c3"
+        // l=1 e=2 t=3 ' '=4 x=5 ' '=6 ==7 ' '=8 "=9 c=10 3=11 "=12
+        val src = """let x = "c3""""
+        val (program, result) = compile(src)
+        val stmtId = (program.statements.single() as KBLetStmt).id
+
+        result.code shouldBe src
+
+        // Opening quote (col 9) — blockId present but no slot info
+        result.findAt(1, 9)!!.let { hit ->
+            hit.blockId shouldBe stmtId
+            hit.slotIndex shouldBe null
+        }
+        // Content 'c' (col 10) — slot 0, offset 0
+        result.findAt(1, 10)!!.let { hit ->
+            hit.blockId shouldBe stmtId
+            hit.slotIndex shouldBe 0
+            hit.offsetInSlot shouldBe 0
+        }
+        // Content '3' (col 11) — slot 0, offset 1
+        result.findAt(1, 11)!!.let { hit ->
+            hit.blockId shouldBe stmtId
+            hit.slotIndex shouldBe 0
+            hit.offsetInSlot shouldBe 1
+        }
+        // Closing quote (col 12) — blockId present but no slot info
+        result.findAt(1, 12)!!.let { hit ->
+            hit.blockId shouldBe stmtId
+            hit.slotIndex shouldBe null
+        }
+    }
+
+    "let with number value: stmtId is in blockRanges; hit returns stmtId with no slot info" {
+        // let bpm = 120
+        // col  1= 'l', col 11= '1'(start of 120), col 13= '0'(last of 120)
+        val src = "let bpm = 120"
+        val (program, result) = compile(src)
+        val stmtId = (program.statements.single() as KBLetStmt).id
+
+        result.code shouldBe src
+
+        // 'l' of 'let' is outside the tracked range (only the value is tracked)
+        result.findAt(1, 1) shouldBe null
+
+        // '1' — first digit of 120
+        result.findAt(1, 11)!!.let { hit ->
+            hit.blockId shouldBe stmtId
+            hit.slotIndex shouldBe null
+            hit.offsetInSlot shouldBe null
+        }
+        // '0' — last digit of 120
+        result.findAt(1, 13)!!.let { hit ->
+            hit.blockId shouldBe stmtId
+            hit.slotIndex shouldBe null
+        }
+    }
+
+    "let with nested chain value: inner block tracked by its own id, stmtId NOT in blockRanges" {
+        // let p = sound("bd")
+        // col  1= 'l', col 9= 's'(start of sound), col 16= 'b'(content of "bd"), col 17= 'd'
+        val src = """let p = sound("bd")"""
+        val (program, result) = compile(src)
+        val stmtId = (program.statements.single() as KBLetStmt).id
+        val soundStmt = program.statements.single() as KBLetStmt
+        val soundId = ((soundStmt.value as KBNestedChainArg).chain.steps
+            .filterIsInstance<KBCallBlock>().first { it.funcName == "sound" }).id
+
+        result.code shouldBe src
+
+        // stmtId must NOT appear in blockRanges (inner blocks track themselves)
+        result.blockRanges.containsKey(stmtId) shouldBe false
+
+        // 's' of 'sound' → soundId, no slot
+        result.findAt(1, 9)!!.let { hit ->
+            hit.blockId shouldBe soundId
+            hit.slotIndex shouldBe null
+        }
+        // 'b' in "bd" → soundId, slot 0, offset 0
+        result.findAt(1, 16)!!.let { hit ->
+            hit.blockId shouldBe soundId
+            hit.slotIndex shouldBe 0
+            hit.offsetInSlot shouldBe 0
+        }
+    }
+
+    "const with number value: stmtId is in blockRanges; hit returns stmtId with no slot info" {
+        // const bpm = 120
+        // col  1= 'c', col 13= '1'(start of 120), col 15= '0'(last of 120)
+        val src = "const bpm = 120"
+        val (program, result) = compile(src)
+        val stmtId = (program.statements.single() as KBConstStmt).id
+
+        result.code shouldBe src
+
+        // 'c' of 'const' is outside the tracked range
+        result.findAt(1, 1) shouldBe null
+
+        // '1' of 120
+        result.findAt(1, 13)!!.let { hit ->
+            hit.blockId shouldBe stmtId
+            hit.slotIndex shouldBe null
+            hit.offsetInSlot shouldBe null
+        }
+    }
+
+    "const with nested chain value: inner block tracked by its own id, stmtId NOT in blockRanges" {
+        // const kick = sound("bd").gain(0.5)
+        val src = """const kick = sound("bd").gain(0.5)"""
+        val (program, result) = compile(src)
+        val stmtId = (program.statements.single() as KBConstStmt).id
+        val constStmt = program.statements.single() as KBConstStmt
+        val blocks = (constStmt.value as KBNestedChainArg).chain.steps.filterIsInstance<KBCallBlock>()
+        val soundId = blocks.first { it.funcName == "sound" }.id
+        val gainId = blocks.first { it.funcName == "gain" }.id
+
+        result.code shouldBe src
+
+        // stmtId must NOT appear in blockRanges
+        result.blockRanges.containsKey(stmtId) shouldBe false
+
+        // 's' of 'sound' → soundId
+        // "const kick = " is 13 chars → 's' is at col 14
+        result.findAt(1, 14)!!.blockId shouldBe soundId
+
+        // 'g' of 'gain' → gainId
+        // "const kick = sound(\"bd\")." is 25 chars → 'g' is at col 26
+        result.findAt(1, 26)!!.blockId shouldBe gainId
+    }
+
+    "let without value: stmtId absent from blockRanges" {
+        val src = "let x"
+        val (program, result) = compile(src)
+        val stmtId = (program.statements.single() as KBLetStmt).id
+
+        result.code shouldBe src
+        result.blockRanges.containsKey(stmtId) shouldBe false
+        result.findAt(1, 1) shouldBe null
+    }
 })

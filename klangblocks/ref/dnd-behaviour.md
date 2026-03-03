@@ -7,33 +7,39 @@ Use it when writing tests or implementing DnD operations in `KBProgramEditingCtx
 
 ## Drag Sources
 
-| ID | Source          | How triggered                   | Payload                                  |
-|----|-----------------|---------------------------------|------------------------------------------|
-| P  | Palette drag    | Mouse-down on a palette block   | A function name (no existing block)      |
-| A  | Single block    | Drag any canvas block (no Ctrl) | 1 block                                  |
-| B  | Chain drag      | Ctrl + drag any canvas block    | That block + all following in same chain |
-| C  | Row-handle drag | Drag the row number on the left | Full chain (reorder only — see C1)       |
+| ID | Source          | How triggered                      | Payload                                  |
+|----|-----------------|------------------------------------|------------------------------------------|
+| P  | Palette drag    | Mouse-down on a palette block      | A function name (no existing block)      |
+| A  | Single block    | Drag any canvas block (no Ctrl)    | 1 block                                  |
+| B  | Chain drag      | Ctrl + drag any canvas block       | That block + all following in same chain |
+| C  | Row-handle drag | Drag the row number on the left    | Full chain (reorder only — see C1)       |
+| D  | Row-handle drag | Drag the row number of a let/const | The entire let/const statement           |
 
 **Notes:**
 
 - Ctrl can be pressed or released at any time during a drag to switch between A and B mode.
 - Dragging the first block without Ctrl is a single-block drag (source A), not a chain drag.
 - Sources A and B follow identical rules — the payload size is the only difference.
+- Source D is the same mechanism as source C; the row-handle is active for `let`, `const`, and chain rows.
 
 ---
 
 ## Drop Targets
 
-| ID | Target            | Description                                                            |
-|----|-------------------|------------------------------------------------------------------------|
-| 1  | Row gap           | The gap between top-level rows; creates/moves a chain to that position |
-| 2  | Chain append zone | The `⊕` circle at the end of a chain; appends to that chain            |
-| 3  | Chain insert zone | The `⊕` between two blocks; inserts at that position                   |
-| 4  | Empty slot        | An argument slot with no content yet                                   |
-| 5  | Existing block    | A specific block already in a chain (replaces it)                      |
+| ID | Target               | Description                                                            |
+|----|----------------------|------------------------------------------------------------------------|
+| 1  | Row gap              | The gap between top-level rows; creates/moves a chain to that position |
+| 2  | Chain append zone    | The `⊕` circle at the end of a chain; appends to that chain            |
+| 3  | Chain insert zone    | The `⊕` between two blocks; inserts at that position                   |
+| 4  | Empty slot           | An argument slot with no content yet                                   |
+| 5  | Existing block       | A specific block already in a chain (replaces it)                      |
+| 6  | let/const value slot | The single value slot on a `let` or `const` statement row              |
 
 **There is no "slot background" drop zone.** Non-empty slots are only reachable via target 5
 (replace a specific block) or via the `⊕` zones (targets 2/3) within the nested chain.
+
+**Target 6 is mechanically identical to target 4** — both use `DropDestination.EmptySlot(blockId, 0)`.
+The `blockId` for a let/const slot is the statement's own ID (not a `KBCallBlock` ID).
 
 ---
 
@@ -179,7 +185,7 @@ Example: target `[A, T, B]`, payload `[P, Q, R]` dropped onto `T` → `[A, P, Q,
 
 ---
 
-## Row-Handle Drag (Source C)
+## Row-Handle Drag — Chain (Source C)
 
 ### C1 — Row handle → row gap
 
@@ -190,6 +196,48 @@ All chain append zones, insert zones, and slot zones are **hidden/inactive** dur
 
 > **Note:** The source chain's own append/insert zones are suppressed during any drag that
 > originates from that chain (applies to A, B, and C). Implemented via `DndState.sourceChainId`.
+
+---
+
+## Row-Handle Drag — let / const (Source D)
+
+`let` and `const` statements have a row-handle (the row number on the left) just like chains.
+Dragging it moves the entire statement to a new row position.
+
+### D1 — let/const row handle → row gap
+
+The entire `let` or `const` statement is moved to the target row position.
+All other rows shift accordingly.
+**Only `RowGap` drop targets are active** during this drag (same as C1).
+**Status:** Implemented ✓
+
+---
+
+## Palette / Block → let/const Value Slot (Sources P and A)
+
+`let` and `const` statements expose a single value slot (slot index 0) that accepts blocks
+via the palette or canvas drag exactly like a regular `EmptySlot` on a function call block.
+
+### P4-let — Palette → empty let/const value slot
+
+New single-block nested chain placed as the statement's value.
+Any existing scalar value is discarded.
+`DropDestination.EmptySlot(stmtId, 0)` with `DropAction.CreateBlock`.
+**Status:** Implemented ✓
+
+### A5-let — Single block → empty let/const value slot
+
+Block removed from source chain, placed as a new single-block nested chain in the slot.
+If source chain becomes empty, it is deleted.
+`DropDestination.EmptySlot(stmtId, 0)` with `DropAction.MoveBlocks`.
+**Status:** Implemented ✓
+
+### Chain operations within a let/const nested value
+
+Once a block is in a let/const value slot (as a `KBNestedChainArg`), the chain inside the
+slot supports all standard P2 / P3 / A3 / A1 / B-type operations. The chain's `id` is used
+as the target (not `stmtId`), so these cases fall through to the normal chain handling.
+**Status:** Implemented ✓
 
 ---
 
