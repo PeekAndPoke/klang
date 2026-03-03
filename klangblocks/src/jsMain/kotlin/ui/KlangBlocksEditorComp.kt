@@ -90,7 +90,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             props.onCodeGenChanged?.invoke(result)
             triggerRedraw()
         },
-    )
+    ).also {
+        // Update the host component (needed so that highlight are displayed correctly from the start)
+        val gen = it.program.toCodeGen()
+        props.onCodeChanged(gen.code)
+        props.onCodeGenChanged?.invoke(it.program.toCodeGen())
+    }
 
     fun setCode(code: String) {
         editingCtx.update {

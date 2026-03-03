@@ -88,7 +88,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                         props.onToggleNewline != null -> Cursor.pointer
                         else -> Cursor.default
                     }
-                    if (canDrop) put("transition", "width 0.15s ease")
+                    put("transition", "width 0.15s ease")
                 }
                 onMouseEnter { isHovered = true }
                 onMouseLeave { isHovered = false }
@@ -109,37 +109,45 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                         event.stopPropagation()
                         dndState!!.onDrop(DropDestination.ChainInsert(props.chainId, props.insertBeforeBlockId!!))
                     }
-                    div {
+                }
+
+                // Always keep the indicator div in the DOM so the opacity transition fires
+                // smoothly when canDrop becomes true.  Without this the element is created fresh
+                // and the browser paints it instantly (the "flash").
+                div {
+                    css {
+                        position = Position.absolute
+                        left = 50.pct
+                        top = 50.pct
+                        put("transform", "translate(-50%, -50%)")
+                        width = (if (canDrop && isHovered) expandedW else 24.0).px
+                        height = 24.px
+                        borderRadius = (if (canDrop && isHovered) 8 else 12).px
+                        backgroundColor = Color(if (canDrop && isHovered) "rgba(255,255,255,0.2)" else "rgba(255,255,255,0.08)")
+                        border = Border(
+                            1.px, BorderStyle.solid,
+                            Color(if (canDrop && isHovered) "rgba(255,255,255,0.5)" else "rgba(255,255,255,0.2)")
+                        )
+                        display = Display.flex
+                        alignItems = Align.center
+                        justifyContent = JustifyContent.center
+                        opacity = if (canDrop) 1.0 else 0.0
+                        put("pointer-events", if (canDrop) "auto" else "none")
+                        put(
+                            "transition",
+                            "opacity 0.12s ease, width 0.15s ease, border-radius 0.15s ease, background-color 0.1s ease, border-color 0.1s ease"
+                        )
+                    }
+                    icon.tiny.plus {
                         css {
-                            position = Position.absolute
-                            left = 50.pct
-                            top = 50.pct
-                            put("transform", "translate(-50%, -50%)")
-                            width = (if (isHovered) expandedW else 24.0).px
-                            height = 24.px
-                            borderRadius = (if (isHovered) 8 else 12).px
-                            backgroundColor = Color(if (isHovered) "rgba(255,255,255,0.2)" else "rgba(255,255,255,0.08)")
-                            border = Border(
-                                1.px, BorderStyle.solid,
-                                Color(if (isHovered) "rgba(255,255,255,0.5)" else "rgba(255,255,255,0.2)")
-                            )
-                            display = Display.flex
-                            alignItems = Align.center
-                            justifyContent = JustifyContent.center
-                            put(
-                                "transition",
-                                "width 0.15s ease, border-radius 0.15s ease, background-color 0.1s ease, border-color 0.1s ease"
-                            )
-                        }
-                        icon.tiny.plus {
-                            css {
-                                color = Color(if (isHovered) "rgba(255,255,255,0.95)" else "rgba(255,255,255,0.2)")
-                                margin = Margin(0.px)
-                                put("transition", "color 0.1s ease")
-                            }
+                            color = Color(if (canDrop && isHovered) "rgba(255,255,255,0.95)" else "rgba(255,255,255,0.2)")
+                            margin = Margin(0.px)
+                            put("transition", "color 0.1s ease")
                         }
                     }
-                } else if (props.showConnectorWhenIdle) {
+                }
+
+                if (!canDrop && props.showConnectorWhenIdle) {
                     if (props.hasNewlineBefore) {
                         // Leading continuation connector: - - - *
                         connectorDashedLine()
