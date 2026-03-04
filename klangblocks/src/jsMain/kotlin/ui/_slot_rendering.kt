@@ -5,6 +5,7 @@ import io.peekandpoke.klang.blocks.model.DropDestination
 import io.peekandpoke.klang.blocks.model.KBChainStmt
 import io.peekandpoke.klang.blocks.model.KBIdentifierItem
 import io.peekandpoke.klang.blocks.model.KBStringLiteralItem
+
 import kotlinx.css.*
 import kotlinx.html.DIV
 import kotlinx.html.div
@@ -27,7 +28,13 @@ internal fun DIV.renderNestedChainSlot(
     val headContent: (DIV.() -> Unit)? = when (val h = chain.steps.firstOrNull()) {
         is KBStringLiteralItem -> {
             val item: KBStringLiteralItem = h
-            { KlangBlocksStringLiteralItemComp(item = item, chainId = chain.id, ctx = ctx) }
+            {
+                KlangBlocksStringInlineComp(
+                    value = item.value,
+                    ctx = ctx,
+                    onCommit = { ctx.editing.onStringLiteralItemChanged(chain.id, it) },
+                )
+            }
         }
 
         is KBIdentifierItem -> {

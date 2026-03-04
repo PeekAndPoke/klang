@@ -106,9 +106,19 @@ internal fun DIV.renderChainSegments(
             }
         }
     }
-    // Empty chain: still show the append drop zone
+    // Empty (or head-only) chain: render headContent (if any) + append drop zone in a single row
     if (segments.isEmpty()) {
-        KlangBlocksDropZoneComp(variant = KlangBlocksDropZoneComp.Variant.Append(chain.id), ctx = ctx)
+        div {
+            key = "seg-0"
+            css {
+                display = if (variant.isTopLevel) Display.flex else Display.inlineFlex
+                flexDirection = FlexDirection.row
+                alignItems = Align.center
+                gap = 8.px
+            }
+            headContent?.invoke(this)
+            KlangBlocksDropZoneComp(variant = KlangBlocksDropZoneComp.Variant.Append(chain.id), ctx = ctx)
+        }
     }
 }
 

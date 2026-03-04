@@ -111,27 +111,27 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     private val keydownListener: (Event) -> Unit = listener@{ event ->
         val ke = event as? KeyboardEvent ?: return@listener
-        // Let the browser handle undo/redo inside text inputs
-        val tag = ke.target?.asDynamic()?.tagName?.toString()?.uppercase() ?: ""
-        if (tag == "INPUT" || tag == "TEXTAREA") return@listener
         // CTRL held during a block drag → switch to tail mode
         if (ke.key == "Control") {
             val ds = dragState
             if (ds is DragState.DraggingBlock && !ds.ctrlHeld) dragState = ds.copy(ctrlHeld = true)
             return@listener
         }
-        if (!ke.ctrlKey && !ke.metaKey) return@listener
-        val key = ke.key.lowercase()
-        when {
-            key == "z" && !ke.shiftKey -> {
+
+        if (!ke.ctrlKey && !ke.metaKey) {
+            return@listener
+        }
+
+        when (val key = ke.key.lowercase()) {
+            "z" if !ke.shiftKey -> {
                 ke.preventDefault(); editingCtx.undo()
             }
 
-            key == "z" && ke.shiftKey -> {
+            "z" if ke.shiftKey -> {
                 ke.preventDefault(); editingCtx.redo()
             }
 
-            key == "y" -> {
+            "y" -> {
                 ke.preventDefault(); editingCtx.redo()
             }
         }

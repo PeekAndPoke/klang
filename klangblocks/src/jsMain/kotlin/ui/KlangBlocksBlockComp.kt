@@ -121,7 +121,9 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val canDropOnBlock = dndState?.accepts(DropTarget.ReplaceBlock) == true
         val docCategory = doc?.category
 
-        div(if (variant.isTopLevel) "kb-block" else "kb-nested-block") {
+        div("${if (variant.isTopLevel) "kb-block" else "kb-nested-block"} ${ctx.theme.styles.blockBase()}") {
+            key = "block-${block.id}"
+
             blockContainerStyle(variant, docCategory, isVertical, canDropToSlot, canDropOnBlock)
             blockDragHandlers(ctx, block, variant, canDropToSlot, canDropOnBlock)
 
@@ -147,22 +149,14 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         canDropOnBlock: Boolean,
     ) {
         css {
-            display = Display.inlineFlex
             flexDirection = if (isVertical) FlexDirection.column else FlexDirection.row
             alignItems = if (isVertical) Align.flexStart else Align.center
             gap = variant.gap
             padding = Padding(horizontal = variant.paddingH, vertical = variant.paddingV)
             borderRadius = variant.radius
             backgroundColor = Color(props.ctx.theme.blockColor(docCategory))
-            color = Color(props.ctx.theme.textPrimary)
             fontSize = variant.fontSize
-            fontFamily = "monospace"
-            whiteSpace = WhiteSpace.nowrap
-            userSelect = UserSelect.none
-            flexShrink = 0.0   // never let a parent flex row squeeze this block's width
             if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
-            put("transition", "filter 0.15s ease")
-            position = Position.relative
             if (canDropOnBlock) {
                 if (isHovered) {
                     put("outline", "2px solid ${props.ctx.theme.blockDropHoverOutline}")
@@ -246,53 +240,35 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         canDrop: Boolean,
     ) {
         when {
-            editingSlotIndex == index -> renderEditingSlot(index, slot, variant, ctx)
+            editingSlotIndex == index && arg !is KBStringArg -> renderEditingSlot(index, slot, variant, ctx)
             arg is KBNestedChainArg -> renderNestedChainSlot(index, arg, ctx, canDrop)
+            arg is KBStringArg && !canDrop -> KlangBlocksStringInlineComp(
+                value = arg.value,
+                ctx = ctx,
+                onCommit = { ctx.editing.onArgChanged(props.block.id, index, KBStringArg(it)) },
+            )
+
             else -> renderValueSlot(index, arg, slot, ctx, variant, canDrop)
         }
     }
 
     private fun DIV.renderEditingSlot(index: Int, slot: KBSlot, variant: BlockVariant, ctx: KlangBlocksCtx) {
         if (slot.kind.isStringish) {
-            // Multiline-capable textarea: Enter = commit, Shift+Enter = newline
-            textArea {
-                +editText
-                rows = editText.lines().size.coerceAtLeast(1).toString()
-                autoFocus = true
-                onInput { event ->
-                    editText = event.asDynamic().target.value as String
-                    val el = event.asDynamic().target
-                    el.style.height = "auto"
-                    el.style.height = "${el.scrollHeight}px"
-                }
-                onBlur { commitEdit(index) }
-                onKeyDown { event ->
-                    when (event.key) {
-                        "Enter" if !event.shiftKey -> {
-                            event.preventDefault(); commitEdit(index)
-                        }
-
-                        "Escape" -> cancelEdit()
+            KlangBlocksStringEditorComp(
+                value = editText,
+                ctx = ctx,
+                autoFocus = true,
+                onCommit = { text ->
+                    if (editingSlotIndex == index) {
+                        val trimmed = text.trim()
+                        val arg = if (trimmed.isEmpty()) KBEmptyArg("") else KBStringArg(trimmed)
+                        props.ctx.editing.onArgChanged(props.block.id, index, arg)
+                        editingSlotIndex = null
+                        editText = ""
                     }
-                }
-                onMouseDown { event -> event.stopPropagation() }
-                css {
-                    backgroundColor = Color(ctx.theme.inputBackground)
-                    border = Border(1.px, BorderStyle.solid, Color(ctx.theme.inputBorder))
-                    borderRadius = 3.px
-                    color = Color(ctx.theme.textPrimary)
-                    fontSize = variant.editFontSize
-                    fontFamily = "monospace"
-                    padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
-                    minWidth = variant.textareaMinW
-                    minHeight = variant.textareaMinH
-                    overflow = Overflow.hidden
-                    outline = Outline.none
-                    resize = Resize.none
-                    put("box-sizing", "border-box")
-                    put("field-sizing", "content")
-                }
-            }
+                },
+                onCancel = ::cancelEdit,
+            )
         } else {
             renderBlockEditInput(
                 variant = variant,
@@ -331,6 +307,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val dndState = ctx.dnd.state
         val isMultilineString = arg is KBStringArg && '\n' in arg.value
         val slotClass = if (canDrop) ctx.theme.styles.valueSlotDrop() else ctx.theme.styles.valueSlot()
+
         span(classes = slotClass) {
             key = "slot-$index"
             css {
@@ -375,7 +352,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 }
 
                 is KBIdentifierArg -> {
-                    span { css { opacity = 0.85 }; +"$" }
+                    span(classes = ctx.theme.styles.identifierDollarSign()) { +"$" }
                     +arg.name
                 }
 
@@ -448,8 +425,12 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
  * Ranges use inclusive [IntRange.last] (i.e. built with `start until end`).
  */
 private fun mergeRanges(sorted: List<IntRange>): List<IntRange> {
-    if (sorted.isEmpty()) return emptyList()
+    if (sorted.isEmpty()) {
+        return emptyList()
+    }
+
     val result = mutableListOf(sorted[0])
+
     for (r in sorted.drop(1)) {
         val last = result.last()
         if (r.first <= last.last + 1) {
@@ -458,6 +439,7 @@ private fun mergeRanges(sorted: List<IntRange>): List<IntRange> {
             result.add(r)
         }
     }
+
     return result
 }
 
@@ -470,7 +452,9 @@ private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRan
         +text
         return
     }
+
     var pos = 0
+
     for (range in ranges) {
         val start = range.first.coerceIn(0, text.length)
         val end = (range.last + 1).coerceIn(start, text.length)
@@ -481,22 +465,50 @@ private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRan
         }
         pos = end
     }
-    if (pos < text.length) +text.substring(pos)
+
+    if (pos < text.length) {
+        +text.substring(pos)
+    }
 }
 
 /** Returns true if a slot can accept a dropped block/chain. */
 private fun slotAcceptsChainDrop(slot: KBSlot): Boolean = slot.kind.acceptsBlock
 
 internal fun KBArgValue.renderShort(): String = when (this) {
-    is KBEmptyArg -> ""
-    is KBStringArg -> "\"$value\""
-    is KBNumberArg -> value.toString()
-    is KBBoolArg -> value.toString()
-    is KBIdentifierArg -> name
-    is KBNestedChainArg -> chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName }
-    is KBBinaryArg -> "${left.renderShort()} $op ${right.renderShort()}"
-    is KBUnaryArg -> if (position == KBUnaryPosition.POSTFIX) "${operand.renderShort()}$op" else "$op${operand.renderShort()}"
-    is KBArrowFunctionArg -> "(${params.joinToString()}) => …"
-    is KBTernaryArg -> "${condition.renderShort()} ? ${thenExpr.renderShort()} : ${elseExpr.renderShort()}"
-    is KBIndexAccessArg -> "${obj.renderShort()}[${index.renderShort()}]"
+    is KBEmptyArg ->
+        ""
+
+    is KBStringArg ->
+        "\"$value\""
+
+    is KBNumberArg ->
+        value.toString()
+
+    is KBBoolArg ->
+        value.toString()
+
+    is KBIdentifierArg ->
+        name
+
+    is KBNestedChainArg ->
+        chain.steps.filterIsInstance<KBCallBlock>().joinToString(".") { it.funcName }
+
+    is KBBinaryArg ->
+        "${left.renderShort()} $op ${right.renderShort()}"
+
+    is KBUnaryArg ->
+        if (position == KBUnaryPosition.POSTFIX) {
+            "${operand.renderShort()}$op"
+        } else {
+            "$op${operand.renderShort()}"
+        }
+
+    is KBArrowFunctionArg ->
+        "(${params.joinToString()}) => …"
+
+    is KBTernaryArg ->
+        "${condition.renderShort()} ? ${thenExpr.renderShort()} : ${elseExpr.renderShort()}"
+
+    is KBIndexAccessArg ->
+        "${obj.renderShort()}[${index.renderShort()}]"
 }

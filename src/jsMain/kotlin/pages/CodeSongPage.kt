@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.popups.PopupsManager
 import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
@@ -224,8 +225,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     /** Switch to Blocks mode — asks for confirmation first if the code has comments. */
     private fun switchToBlocks(event: PointerEvent) {
         if (codeHasComments()) {
-            popups.showContextMenu(event) { handle ->
+            popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomRight) { handle ->
                 ui.compact.segment {
+                    css {
+                        width = LinearDimension.maxContent
+                    }
                     p { +"Comments will be lost when switching to Blocks mode." }
                     ui.mini.basic.button {
                         onClick { handle.close() }
