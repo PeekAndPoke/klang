@@ -555,34 +555,21 @@ data class KlangBlocksTheme(
         }
 
         // ── String literal inline widget (textarea) ──────────────────────────
-        /** Display mode: transparent textarea chip with monospace white text. */
+        /** Shared structural rule for both display and edit modes of the string literal widget. */
         val stringLiteralInline by rule {
             display = Display.inlineBlock
             borderRadius = 3.px
             padding = Padding(horizontal = 4.px, vertical = 1.px)
             fontSize = 11.px
-            fontFamily = "monospace"
-            color = Color(textPrimary)
-            backgroundColor = Color(inputBackgroundIdle)
-            border = Border(1.px, BorderStyle.solid, Color(inlineItemBorder))
+            lineHeight = LineHeight("1.8")
             whiteSpace = WhiteSpace.preWrap
-            cursor = Cursor.text
             minWidth = 30.px
             outline = Outline.none
             verticalAlign = VerticalAlign.middle
             appearance = Appearance.none
-            resize = Resize.none
             overflow = Overflow.hidden
             put("-webkit-appearance", "none")
             put("field-sizing", "content")
-        }
-
-        /** Edit mode overrides applied on top of [stringLiteralInline]. */
-        val stringLiteralInlineEditing by rule {
-            backgroundColor = Color(inputBackground)
-            border = Border(1.px, BorderStyle.solid, Color(inputBorder))
-            color = Color(textPrimary)
-            cursor = Cursor.auto
         }
     }
 
