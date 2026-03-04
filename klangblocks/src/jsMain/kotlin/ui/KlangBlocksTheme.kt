@@ -52,6 +52,7 @@ data class KlangBlocksTheme(
 
     // ── Inline text edit inputs ─────────────────────────────────────────────
     val inputBackground: String = "rgba(0,0,0,0.4)",
+    val inputBackgroundIdle: String = "rgba(0,0,0,0.2)",
     val inputBorder: String = "rgba(255,255,255,0.4)",
 
     // ── Block drop-target outlines ──────────────────────────────────────────
@@ -416,20 +417,6 @@ data class KlangBlocksTheme(
             put("transition", "filter 0.15s ease")
         }
 
-        // ── Inline edit textarea inside a block slot ───────────────────────────
-        val blockEditTextarea by rule {
-            backgroundColor = Color(inputBackground)
-            border = Border(1.px, BorderStyle.solid, Color(inputBorder))
-            borderRadius = 3.px
-            color = Color(textPrimary)
-            fontFamily = "monospace"
-            overflow = Overflow.hidden
-            outline = Outline.none
-            resize = Resize.none
-            put("box-sizing", "border-box")
-            put("field-sizing", "content")
-        }
-
         // ── Identifier arg "$" prefix ─────────────────────────────────────────
         val identifierDollarSign by rule {
             opacity = 0.85
@@ -567,25 +554,27 @@ data class KlangBlocksTheme(
             put("z-index", "1")
         }
 
-        // ── String literal inline widget (contenteditable div) ───────────────
-        /** Display mode: looks like an inlineItem chip. Always a plain div — no browser form quirks. */
+        // ── String literal inline widget (textarea) ──────────────────────────
+        /** Display mode: transparent textarea chip with monospace white text. */
         val stringLiteralInline by rule {
             display = Display.inlineBlock
             borderRadius = 3.px
             padding = Padding(horizontal = 4.px, vertical = 1.px)
             fontSize = 11.px
             fontFamily = "monospace"
-            backgroundColor = Color(inlineItemBackground)
+            color = Color(textPrimary)
+            backgroundColor = Color(inputBackgroundIdle)
             border = Border(1.px, BorderStyle.solid, Color(inlineItemBorder))
-            color = Color(inlineItemText)
             whiteSpace = WhiteSpace.preWrap
             cursor = Cursor.text
             minWidth = 30.px
             outline = Outline.none
-            put("vertical-align", "middle")
-            hover {
-                backgroundColor = Color(inlineItemHoverBackground)
-            }
+            verticalAlign = VerticalAlign.middle
+            appearance = Appearance.none
+            resize = Resize.none
+            overflow = Overflow.hidden
+            put("-webkit-appearance", "none")
+            put("field-sizing", "content")
         }
 
         /** Edit mode overrides applied on top of [stringLiteralInline]. */
@@ -593,10 +582,6 @@ data class KlangBlocksTheme(
             backgroundColor = Color(inputBackground)
             border = Border(1.px, BorderStyle.solid, Color(inputBorder))
             color = Color(textPrimary)
-            // Re-assert font properties — some browsers reset them on focused contenteditable divs
-            fontFamily = "monospace"
-            fontSize = 11.px
-            letterSpacing = LinearDimension("normal")
             cursor = Cursor.auto
         }
     }

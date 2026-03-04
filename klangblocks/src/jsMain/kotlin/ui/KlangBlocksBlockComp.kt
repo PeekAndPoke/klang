@@ -252,6 +252,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 onCommit = {
                     ctx.editing.onArgChanged(props.block.id, index, KBStringArg(it))
                 },
+                blockId = props.block.id,
+                slotIndex = index,
             )
 
             else -> renderValueSlot(index, arg, slot, ctx, variant, canDrop)
@@ -429,7 +431,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
  * Merges overlapping or adjacent [IntRange]s in an already-sorted list.
  * Ranges use inclusive [IntRange.last] (i.e. built with `start until end`).
  */
-private fun mergeRanges(sorted: List<IntRange>): List<IntRange> {
+internal fun mergeRanges(sorted: List<IntRange>): List<IntRange> {
     if (sorted.isEmpty()) {
         return emptyList()
     }
@@ -452,7 +454,7 @@ private fun mergeRanges(sorted: List<IntRange>): List<IntRange> {
  * Renders [text] as a mix of plain text nodes and highlighted `<span>`s for each
  * range in [ranges] (sorted, non-overlapping, [IntRange.last] is inclusive).
  */
-private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRange>, styles: KlangBlocksTheme.Styles) {
+internal fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRange>, styles: KlangBlocksTheme.Styles) {
     if (ranges.isEmpty()) {
         +text
         return
