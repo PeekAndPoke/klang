@@ -2,6 +2,7 @@ package io.peekandpoke.klang.blocks.ui
 
 import de.peekandpoke.kraft.addons.styling.StyleSheet
 import kotlinx.css.*
+import kotlinx.css.properties.LineHeight
 
 data class KlangBlocksTheme(
 
@@ -98,6 +99,8 @@ data class KlangBlocksTheme(
     }
 
     inner class Styles : StyleSheet("klang-blocks-theme") {
+
+        // ── Newline-toggle pill ──────────────────────────────────────────────
         val newlineAction by rule {
             cursor = Cursor.pointer
             border = Border(1.px, BorderStyle.solid, Color(pillBorder))
@@ -106,6 +109,135 @@ data class KlangBlocksTheme(
             backgroundColor = Color(pillBackground).withAlpha(0.9)
             color = Color(pillText)
             userSelect = UserSelect.none
+        }
+
+        // ── Statement pills (import / let / const / assign in canvas) ────────
+        val stmtPill by rule {
+            backgroundColor = Color(stmtPillBackground)
+            color = Color(stmtPillText)
+            padding = Padding(vertical = 4.px, horizontal = 8.px)
+            borderRadius = 4.px
+            fontFamily = "monospace"
+            fontSize = 12.px
+        }
+
+        // ── × remove button next to stmt pills ───────────────────────────────
+        val stmtPillRemoveBtn by rule {
+            fontSize = 13.px
+            color = Color(stmtPillRemoveText)
+            cursor = Cursor.pointer
+            borderRadius = 3.px
+            padding = Padding(horizontal = 4.px, vertical = 2.px)
+            hover {
+                backgroundColor = Color(stmtPillRemoveHoverBackground)
+                color = Color(stmtPillRemoveHoverText)
+            }
+        }
+
+        // ── Row number gutter ────────────────────────────────────────────────
+        val rowNumber by rule {
+            color = Color(rowNumberColor)
+            fontSize = 11.px
+            fontFamily = "monospace"
+            width = 24.px
+            flexShrink = 0.0
+            textAlign = TextAlign.right
+        }
+
+        val rowNumberDraggable by rule {
+            cursor = Cursor.grab
+            hover {
+                color = Color(rowNumberHoverColor)
+            }
+        }
+
+        // ── Inline items (identifier head, string literal display) ───────────
+        val inlineItem by rule {
+            borderRadius = 3.px
+            padding = Padding(horizontal = 4.px, vertical = 1.px)
+            fontSize = 11.px
+            backgroundColor = Color(inlineItemBackground)
+            border = Border(1.px, BorderStyle.solid, Color(inlineItemBorder))
+            color = Color(inlineItemText)
+            fontFamily = "monospace"
+            whiteSpace = WhiteSpace.nowrap
+            cursor = Cursor.text
+            hover {
+                backgroundColor = Color(inlineItemHoverBackground)
+            }
+        }
+
+        // ── Arg value slot — normal (not editing, not drop target) ───────────
+        val valueSlot by rule {
+            backgroundColor = Color(slotBackground)
+            border = Border(1.px, BorderStyle.solid, Color.transparent)
+            cursor = Cursor.text
+            hover {
+                backgroundColor = Color(slotHoverBackground)
+            }
+        }
+
+        // ── Arg value slot — drop target ──────────────────────────────────────
+        val valueSlotDrop by rule {
+            backgroundColor = Color(slotDropBackground)
+            border = Border(1.px, BorderStyle.dashed, Color(slotDropBorder))
+            cursor = Cursor.copy
+            hover {
+                backgroundColor = Color(slotDropHoverBackground)
+                border = Border(1.px, BorderStyle.solid, Color(textPrimary))
+            }
+        }
+
+        // ── Nested chain slot — drop target ───────────────────────────────────
+        val nestedSlotDrop by rule {
+            border = Border(1.px, BorderStyle.dashed, Color(slotDropBorder))
+            cursor = Cursor.copy
+            hover {
+                backgroundColor = Color(slotDropHoverBackground)
+            }
+        }
+
+        // ── Block hover-action buttons (layout toggle, remove) ────────────────
+        val blockHoverActionBtn by rule {
+            lineHeight = LineHeight("1")
+            color = Color(textPrimary)
+            cursor = Cursor.pointer
+            borderRadius = 3.px
+        }
+
+        // ── Let/const inline action button (× remove) ────────────────────────
+        val blockActionBtn by rule {
+            lineHeight = LineHeight("1")
+            color = Color(blockActionText)
+            cursor = Cursor.pointer
+            borderRadius = 3.px
+            padding = Padding(horizontal = 3.px, vertical = 1.px)
+            hover {
+                backgroundColor = Color(blockActionHoverBackground)
+                color = Color(textPrimary)
+            }
+        }
+
+        // ── Chain connector primitives ────────────────────────────────────────
+        val connectorDot by rule {
+            width = 6.px
+            height = 6.px
+            borderRadius = 50.pct
+            backgroundColor = Color(connectorColor)
+            flexShrink = 0.0
+        }
+
+        val connectorSolidLine by rule {
+            flexGrow = 1.0
+            height = 2.px
+            backgroundColor = Color(connectorColor)
+            flexShrink = 0.0
+        }
+
+        val connectorDashedLine by rule {
+            flexGrow = 1.0
+            height = 0.px
+            borderTop = Border(2.px, BorderStyle.dotted, Color(connectorColor))
         }
     }
 

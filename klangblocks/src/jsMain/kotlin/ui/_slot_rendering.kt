@@ -33,17 +33,7 @@ internal fun DIV.renderNestedChainSlot(
         is KBIdentifierItem -> {
             val name = h.name
             {
-                span {
-                    css {
-                        borderRadius = 3.px
-                        padding = Padding(horizontal = 4.px, vertical = 1.px)
-                        fontSize = 11.px
-                        backgroundColor = Color(ctx.theme.inlineItemBackground)
-                        border = Border(1.px, BorderStyle.solid, Color(ctx.theme.inlineItemBorder))
-                        color = Color(ctx.theme.inlineItemText)
-                        fontFamily = "monospace"
-                        whiteSpace = WhiteSpace.nowrap
-                    }
+                span(classes = ctx.theme.styles.inlineItem()) {
                     +name
                 }
             }
@@ -51,7 +41,7 @@ internal fun DIV.renderNestedChainSlot(
 
         else -> null
     }
-    div {
+    div(classes = if (canDrop) ctx.theme.styles.nestedSlotDrop() else "") {
         css {
             display = Display.inlineFlex
             flexDirection = FlexDirection.column
@@ -59,14 +49,7 @@ internal fun DIV.renderNestedChainSlot(
             borderRadius = 4.px
             backgroundColor = Color(ctx.theme.slotBackground)
             padding = Padding(horizontal = 4.px, vertical = 2.px)
-            if (canDrop) {
-                border = Border(1.px, BorderStyle.dashed, Color(ctx.theme.slotDropBorder))
-                cursor = Cursor.copy
-                hover {
-                    border = Border(1.px, BorderStyle.dashed, Color(ctx.theme.slotDropBorder))
-                    backgroundColor = Color(ctx.theme.slotDropHoverBackground)
-                }
-            } else {
+            if (!canDrop) {
                 border = Border(1.px, BorderStyle.solid, Color.transparent)
             }
         }

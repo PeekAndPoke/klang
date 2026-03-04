@@ -254,16 +254,16 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
 
     private fun DIV.renderIdleConnector() {
         if (canDrop || idleMode != IdleMode.Connector) return
-        val connectorColor = props.ctx.theme.connectorColor
+        val styles = props.ctx.theme.styles
         if (hasNewlineBefore) {
             // Leading continuation connector: - - - *
-            connectorDashedLine(connectorColor)
-            connectorDot(connectorColor)
+            connectorDashedLine(styles)
+            connectorDot(styles)
         } else {
             // Standard inter-block connector: * - - - *
-            connectorDot(connectorColor)
-            connectorSolidLine(connectorColor)
-            connectorDot(connectorColor)
+            connectorDot(styles)
+            connectorSolidLine(styles)
+            connectorDot(styles)
         }
     }
 

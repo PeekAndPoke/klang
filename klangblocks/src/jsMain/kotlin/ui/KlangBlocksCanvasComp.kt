@@ -5,6 +5,7 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.klang.blocks.model.*
@@ -68,6 +69,8 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                     )
 
                     div {
+                        key = stmt.id
+
                         css {
                             display = Display.flex
                             flexDirection = FlexDirection.row
@@ -77,19 +80,11 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                         // Row number — drag handle for rows that support reordering
                         val isDraggableRow = stmt is KBChainStmt || stmt is KBLetStmt || stmt is KBConstStmt
-                        span {
-                            css {
-                                color = Color(ctx.theme.rowNumberColor)
-                                fontSize = 11.px
-                                fontFamily = "monospace"
-                                width = 24.px
-                                flexShrink = 0.0
-                                textAlign = TextAlign.right
-                                if (isDraggableRow) {
-                                    cursor = Cursor.grab
-                                    hover { color = Color(ctx.theme.rowNumberHoverColor) }
-                                }
-                            }
+                        val rowNumClasses = buildString {
+                            append(ctx.theme.styles.rowNumber())
+                            if (isDraggableRow) append(" ${ctx.theme.styles.rowNumberDraggable()}")
+                        }
+                        span(classes = rowNumClasses) {
                             if (isDraggableRow) {
                                 onMouseDown { event ->
                                     event.preventDefault()
@@ -128,8 +123,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             }
 
                             is KBImportStmt -> {
-                                span {
-                                    css { stmtPillStyle(ctx.theme) }
+                                span(classes = ctx.theme.styles.stmtPill()) {
                                     +"import * from \"${stmt.libraryName}\""
                                 }
                                 removeStmtButton(ctx.theme) { ctx.editing.onRemoveStmt(stmt.id) }
@@ -144,16 +138,14 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             }
 
                             is KBAssignStmt -> {
-                                span {
-                                    css { stmtPillStyle(ctx.theme) }
+                                span(classes = ctx.theme.styles.stmtPill()) {
                                     +"${stmt.target} = …"
                                 }
                                 removeStmtButton(ctx.theme) { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
                             is KBExprStmt -> {
-                                span {
-                                    css { stmtPillStyle(ctx.theme) }
+                                span(classes = ctx.theme.styles.stmtPill()) {
                                     +stmt.expr.renderShort()
                                 }
                                 removeStmtButton(ctx.theme) { ctx.editing.onRemoveStmt(stmt.id) }
@@ -185,28 +177,8 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
 /** Inline × to remove a non-chain statement (import, let, const). */
 private fun DIV.removeStmtButton(theme: KlangBlocksTheme, onRemove: () -> Unit) {
-    span {
-        css {
-            fontSize = 13.px
-            color = Color(theme.stmtPillRemoveText)
-            cursor = Cursor.pointer
-            borderRadius = 3.px
-            padding = Padding(horizontal = 4.px, vertical = 2.px)
-            hover {
-                backgroundColor = Color(theme.stmtPillRemoveHoverBackground)
-                color = Color(theme.stmtPillRemoveHoverText)
-            }
-        }
+    span(classes = theme.styles.stmtPillRemoveBtn()) {
         onClick { onRemove() }
         +"×"
     }
-}
-
-private fun CssBuilder.stmtPillStyle(theme: KlangBlocksTheme) {
-    backgroundColor = Color(theme.stmtPillBackground)
-    color = Color(theme.stmtPillText)
-    padding = Padding(vertical = 4.px, horizontal = 8.px)
-    borderRadius = 4.px
-    fontFamily = "monospace"
-    fontSize = 12.px
 }

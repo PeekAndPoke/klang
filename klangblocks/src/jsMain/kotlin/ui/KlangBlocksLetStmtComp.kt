@@ -9,7 +9,6 @@ import de.peekandpoke.ultra.streams.ops.filter
 import io.peekandpoke.klang.blocks.model.*
 import kotlinx.browser.window
 import kotlinx.css.*
-import kotlinx.css.properties.LineHeight
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -214,28 +213,14 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
 
     private fun DIV.renderValueSlot(arg: KBArgValue?, canDrop: Boolean, ctx: KlangBlocksCtx) {
         val dndState = ctx.dnd.state
-        span {
+        val slotClass = if (canDrop) ctx.theme.styles.valueSlotDrop() else ctx.theme.styles.valueSlot()
+        span(classes = slotClass) {
+            key = "slot-0"
             css {
                 borderRadius = variant.slotRadius
                 padding = Padding(horizontal = variant.slotPadH, vertical = variant.slotPadV)
                 fontSize = variant.editFontSize
-                if (canDrop) {
-                    backgroundColor = Color(ctx.theme.slotDropBackground)
-                    border = Border(1.px, BorderStyle.dashed, Color(ctx.theme.slotDropBorder))
-                    cursor = Cursor.copy
-                    hover {
-                        backgroundColor = Color(ctx.theme.slotDropHoverBackground)
-                        border = Border(1.px, BorderStyle.solid, Color(ctx.theme.textPrimary))
-                    }
-                } else {
-                    backgroundColor = Color(ctx.theme.slotBackground)
-                    border = Border(1.px, BorderStyle.solid, Color.transparent)
-                    cursor = Cursor.text
-                    if (arg == null || arg is KBEmptyArg) opacity = 0.6
-                    hover {
-                        backgroundColor = Color(ctx.theme.slotHoverBackground)
-                    }
-                }
+                if (!canDrop && (arg == null || arg is KBEmptyArg)) opacity = 0.6
             }
             if (canDrop) {
                 onMouseOver { event -> event.stopPropagation() }
@@ -262,6 +247,7 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
 
     private fun DIV.renderHoverRemove(ctx: KlangBlocksCtx) {
         span {
+            key = "hover-remove"
             css {
                 display = Display.inlineFlex
                 alignItems = Align.center
@@ -274,19 +260,8 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
                 borderBottomLeftRadius = 6.px
                 padding = Padding(2.px, 4.px)
             }
-            span {
-                css {
-                    fontSize = variant.editFontSize
-                    lineHeight = LineHeight("1")
-                    color = Color(ctx.theme.blockActionText)
-                    cursor = Cursor.pointer
-                    borderRadius = 3.px
-                    padding = Padding(horizontal = 3.px, vertical = 1.px)
-                    hover {
-                        backgroundColor = Color(ctx.theme.blockActionHoverBackground)
-                        color = Color(ctx.theme.textPrimary)
-                    }
-                }
+            span(classes = ctx.theme.styles.blockActionBtn()) {
+                css { fontSize = variant.editFontSize }
                 onClick { event ->
                     event.stopPropagation()
                     ctx.editing.onRemoveStmt(props.stmtId)

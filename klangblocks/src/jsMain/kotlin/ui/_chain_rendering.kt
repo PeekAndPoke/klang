@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.blocks.ui
 
 import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import io.peekandpoke.klang.blocks.model.KBCallBlock
 import io.peekandpoke.klang.blocks.model.KBChainItem
@@ -53,6 +54,8 @@ internal fun DIV.renderChainSegments(
     val hasHeadContent = headContent != null
     segments.forEachIndexed { segIndex, blocks ->
         div {
+            key = "seg-$segIndex"
+
             css {
                 display = if (variant.isTopLevel) Display.flex else Display.inlineFlex
                 flexDirection = FlexDirection.row
@@ -101,8 +104,8 @@ internal fun DIV.renderChainSegments(
                         event.preventDefault()
                         ctx.editing.onToggleNewlineBeforeBlock(chain.id, nextSegFirstBlockId)
                     }
-                    connectorDot(ctx.theme.connectorColor)
-                    connectorDashedLine(ctx.theme.connectorColor)
+                    connectorDot(ctx.theme.styles)
+                    connectorDashedLine(ctx.theme.styles)
                 }
                 // Segment-end drop zone: floats right of *--- at zero idle width.
                 // Fires ChainInsertAfterBlock so the dropped block stays on this row (before the KBNewlineHint).
@@ -122,37 +125,16 @@ internal fun DIV.renderChainSegments(
 // ── Connector drawing primitives ─────────────────────────────────────────────
 
 /** A small filled circle used as a chain connector end-point. */
-internal fun DIV.connectorDot(color: String = "#888") {
-    div {
-        css {
-            width = 6.px
-            height = 6.px
-            borderRadius = 50.pct
-            backgroundColor = Color(color)
-            flexShrink = 0.0
-        }
-    }
+internal fun DIV.connectorDot(styles: KlangBlocksTheme.Styles) {
+    div(classes = styles.connectorDot()) {}
 }
 
 /** A solid horizontal line that grows to fill available width. */
-internal fun DIV.connectorSolidLine(color: String = "#888") {
-    div {
-        css {
-            flexGrow = 1.0
-            height = 2.px
-            backgroundColor = Color(color)
-            flexShrink = 0.0
-        }
-    }
+internal fun DIV.connectorSolidLine(styles: KlangBlocksTheme.Styles) {
+    div(classes = styles.connectorSolidLine()) {}
 }
 
 /** A dashed horizontal line that grows to fill available width. */
-internal fun DIV.connectorDashedLine(color: String = "#888") {
-    div {
-        css {
-            flexGrow = 1.0
-            height = 0.px
-            borderTop = Border(2.px, BorderStyle.dotted, Color(color))
-        }
-    }
+internal fun DIV.connectorDashedLine(styles: KlangBlocksTheme.Styles) {
+    div(classes = styles.connectorDashedLine()) {}
 }

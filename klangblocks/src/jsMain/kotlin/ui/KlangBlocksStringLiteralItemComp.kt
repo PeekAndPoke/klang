@@ -92,21 +92,7 @@ class KlangBlocksStringLiteralItemComp(ctx: Ctx<Props>) : Component<KlangBlocksS
                 }
             }
         } else {
-            span {
-                css {
-                    borderRadius = 3.px
-                    padding = Padding(horizontal = 4.px, vertical = 1.px)
-                    fontSize = 11.px
-                    backgroundColor = Color(props.ctx.theme.inlineItemBackground)
-                    border = Border(1.px, BorderStyle.solid, Color(props.ctx.theme.inlineItemBorder))
-                    color = Color(props.ctx.theme.inlineItemText)
-                    cursor = Cursor.text
-                    fontFamily = "monospace"
-                    whiteSpace = WhiteSpace.nowrap
-                    hover {
-                        backgroundColor = Color(props.ctx.theme.inlineItemHoverBackground)
-                    }
-                }
+            span(classes = props.ctx.theme.styles.inlineItem()) {
                 onClick { event ->
                     event.stopPropagation()
                     startEdit()

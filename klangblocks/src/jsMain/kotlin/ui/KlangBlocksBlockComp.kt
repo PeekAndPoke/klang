@@ -11,7 +11,6 @@ import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import kotlinx.browser.window
 import kotlinx.css.*
-import kotlinx.css.properties.LineHeight
 import kotlinx.html.*
 import org.w3c.dom.Element
 
@@ -231,6 +230,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
     private fun DIV.renderFuncName(block: KBCallBlock) {
         span {
+            key = "func-name"
             css {
                 minWidth = 30.px
                 fontWeight = FontWeight.bold
@@ -334,29 +334,15 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     ) {
         val dndState = ctx.dnd.state
         val isMultilineString = arg is KBStringArg && '\n' in arg.value
-        span {
+        val slotClass = if (canDrop) ctx.theme.styles.valueSlotDrop() else ctx.theme.styles.valueSlot()
+        span(classes = slotClass) {
+            key = "slot-$index"
             css {
                 borderRadius = variant.slotRadius
                 padding = Padding(horizontal = variant.slotPadH, vertical = variant.slotPadV)
                 fontSize = variant.editFontSize
                 if (isMultilineString) whiteSpace = WhiteSpace.preWrap
-                if (canDrop) {
-                    backgroundColor = Color(ctx.theme.slotDropBackground)
-                    border = Border(1.px, BorderStyle.dashed, Color(ctx.theme.slotDropBorder))
-                    cursor = Cursor.copy
-                    hover {
-                        backgroundColor = Color(ctx.theme.slotDropHoverBackground)
-                        border = Border(1.px, BorderStyle.solid, Color(ctx.theme.textPrimary))
-                    }
-                } else {
-                    backgroundColor = Color(ctx.theme.slotBackground)
-                    border = Border(1.px, BorderStyle.solid, Color.transparent)
-                    cursor = Cursor.text
-                    if (arg == null || arg is KBEmptyArg) opacity = 0.6
-                    hover {
-                        backgroundColor = Color(ctx.theme.slotHoverBackground)
-                    }
-                }
+                if (!canDrop && (arg == null || arg is KBEmptyArg)) opacity = 0.6
             }
             if (canDrop) {
                 onMouseOver { event -> event.stopPropagation() }
@@ -412,6 +398,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         isVertical: Boolean,
     ) {
         span {
+            key = "hover-actions"
             css {
                 display = Display.inlineFlex
                 alignItems = Align.center
@@ -443,14 +430,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         variant: BlockVariant,
         isVertical: Boolean,
     ) {
-        span {
-            css {
-                fontSize = variant.editFontSize
-                lineHeight = LineHeight("1")
-                color = Color(ctx.theme.textPrimary)
-                cursor = Cursor.pointer
-                borderRadius = 3.px
-            }
+        span(classes = ctx.theme.styles.blockHoverActionBtn()) {
+            css { fontSize = variant.editFontSize }
             onClick { event ->
                 event.stopPropagation()
                 ctx.editing.onToggleLayout(block.id)
@@ -469,14 +450,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         ctx: KlangBlocksCtx,
         variant: BlockVariant,
     ) {
-        span {
-            css {
-                fontSize = variant.editFontSize
-                lineHeight = LineHeight("1")
-                color = Color(ctx.theme.textPrimary)
-                cursor = Cursor.pointer
-                borderRadius = 3.px
-            }
+        span(classes = ctx.theme.styles.blockHoverActionBtn()) {
+            css { fontSize = variant.editFontSize }
             onClick { event ->
                 event.stopPropagation()
                 ctx.editing.onRemoveBlock(props.block.id)
