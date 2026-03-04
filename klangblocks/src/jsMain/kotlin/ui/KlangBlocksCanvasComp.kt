@@ -105,15 +105,23 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                         when (stmt) {
                             is KBChainStmt -> {
+                                val segments = stmt.steps.toCallSegments()
                                 div {
                                     css {
                                         display = Display.flex
                                         flexDirection = FlexDirection.column
                                         gap = 4.px
+                                        // Multi-segment chains: add matching padding so the top of the
+                                        // first row and bottom of the last row have the same breathing
+                                        // room as the internal gap between segments.
+                                        if (segments.size > 1) {
+                                            paddingTop = 4.px
+                                            paddingBottom = 4.px
+                                        }
                                     }
                                     renderChainSegments(
                                         chain = stmt,
-                                        segments = stmt.steps.toCallSegments(),
+                                        segments = segments,
                                         ctx = ctx,
                                     )
                                 }
