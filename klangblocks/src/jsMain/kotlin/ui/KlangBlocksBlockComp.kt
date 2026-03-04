@@ -28,7 +28,6 @@ enum class BlockVariant {
     val slotPadV get() = if (this == TopLevel) 2.px else 1.px
     val textareaPadH get() = if (this == TopLevel) 4.px else 3.px
     val textareaMinW get() = if (this == TopLevel) 100.px else 80.px
-    val textareaMinH get() = if (this == TopLevel) 26.px else 22.px
 
     val isTopLevel get() = this == TopLevel
 }
@@ -128,10 +127,15 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             blockDragHandlers(ctx, block, variant, canDropToSlot, canDropOnBlock)
 
             renderFuncName(block)
-            slots.toRenderItems(block.args).forEach { item ->
-                val slotIsEmpty = item.arg == null || item.arg is KBEmptyArg
-                val canDrop = canDropToSlot && slotAcceptsChainDrop(item.slot) && variant.isTopLevel && slotIsEmpty
-                renderSlotItem(item.index, item.arg, item.slot, ctx, variant, canDrop)
+            slots.toRenderItems(block.args).forEachIndexed { index, item ->
+                div {
+                    key = "slot-$index"
+                    debugId("slot-$index")
+
+                    val slotIsEmpty = item.arg == null || item.arg is KBEmptyArg
+                    val canDrop = canDropToSlot && slotAcceptsChainDrop(item.slot) && variant.isTopLevel && slotIsEmpty
+                    renderSlotItem(item.index, item.arg, item.slot, ctx, variant, canDrop)
+                }
             }
             if (isHovered && (!variant.isTopLevel || !canDropToSlot)) {
                 renderHoverActions(ctx, block, variant, docCategory, isVertical)
@@ -242,10 +246,12 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         when {
             editingSlotIndex == index && arg !is KBStringArg -> renderEditingSlot(index, slot, variant, ctx)
             arg is KBNestedChainArg -> renderNestedChainSlot(index, arg, ctx, canDrop)
-            arg is KBStringArg && !canDrop -> KlangBlocksStringInlineComp(
+            arg is KBStringArg && !canDrop -> KlangBlocksStringEditorComp(
                 value = arg.value,
                 ctx = ctx,
-                onCommit = { ctx.editing.onArgChanged(props.block.id, index, KBStringArg(it)) },
+                onCommit = {
+                    ctx.editing.onArgChanged(props.block.id, index, KBStringArg(it))
+                },
             )
 
             else -> renderValueSlot(index, arg, slot, ctx, variant, canDrop)
@@ -257,7 +263,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             KlangBlocksStringEditorComp(
                 value = editText,
                 ctx = ctx,
-                autoFocus = true,
                 onCommit = { text ->
                     if (editingSlotIndex == index) {
                         val trimmed = text.trim()

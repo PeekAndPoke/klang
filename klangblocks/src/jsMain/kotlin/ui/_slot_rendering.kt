@@ -29,10 +29,12 @@ internal fun DIV.renderNestedChainSlot(
         is KBStringLiteralItem -> {
             val item: KBStringLiteralItem = h
             {
-                KlangBlocksStringInlineComp(
+                KlangBlocksStringEditorComp(
                     value = item.value,
                     ctx = ctx,
-                    onCommit = { ctx.editing.onStringLiteralItemChanged(chain.id, it) },
+                    onCommit = {
+                        ctx.editing.onStringLiteralItemChanged(chain.id, it)
+                    },
                 )
             }
         }

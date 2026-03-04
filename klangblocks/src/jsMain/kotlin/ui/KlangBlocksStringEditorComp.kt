@@ -7,10 +7,7 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.html.Tag
-import kotlinx.html.contentEditable
-import kotlinx.html.div
-import kotlinx.html.tabIndex
+import kotlinx.html.*
 import org.w3c.dom.HTMLElement
 
 /**
@@ -22,12 +19,12 @@ fun Tag.KlangBlocksStringEditorComp(
     ctx: KlangBlocksCtx,
     onCommit: (String) -> Unit,
     onCancel: () -> Unit = {},
-    autoFocus: Boolean = false,
 ) = comp(
     KlangBlocksStringEditorComp.Props(
-        value = value, ctx = ctx,
-        onCommit = onCommit, onCancel = onCancel,
-        autoFocus = autoFocus,
+        value = value,
+        ctx = ctx,
+        onCommit = onCommit,
+        onCancel = onCancel,
     )
 ) {
     KlangBlocksStringEditorComp(it)
@@ -40,40 +37,28 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
         val ctx: KlangBlocksCtx,
         val onCommit: (String) -> Unit,
         val onCancel: () -> Unit,
-        val autoFocus: Boolean,
     )
 
     // Reactive: switching this swaps the DOM element (key="d" ↔ key="e").
-    private var isEditing: Boolean by value(props.autoFocus)
+    private var isEditing: Boolean by value(false)
 
     // Non-reactive: changes here never trigger re-renders.
     private var editText: String = props.value
     private var isCancelling: Boolean = false
-    private var justStartedEditing: Boolean = props.autoFocus
-    private var pendingClickX: Double? = null
-    private var pendingClickY: Double? = null
-
-    init {
-        lifecycle {
-            // After Preact mounts/updates the component, focus the edit div if we just entered
-            // edit mode. Using both hooks covers autoFocus=true (onMount) and click-to-edit (onUpdate).
-            onMount { handleFocusAfterEditStart() }
-            onUpdate { handleFocusAfterEditStart() }
-        }
-    }
 
     // ── Actions ───────────────────────────────────────────────────────────────
 
     private fun startEdit(x: Double? = null, y: Double? = null) {
         editText = props.value
-        pendingClickX = x
-        pendingClickY = y
-        justStartedEditing = true
         isEditing = true
+        if (x != null && y != null) {
+            tryPositionCursorAtPoint(x, y)
+        }
     }
 
     private fun commitEdit() {
         if (!isEditing) return
+        console.log("commitEdit:", editText)
         props.onCommit(editText)
         isEditing = false
     }
@@ -85,27 +70,17 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
         props.onCancel()
     }
 
-    // ── Focus management ──────────────────────────────────────────────────────
-
-    private fun handleFocusAfterEditStart() {
-        if (!justStartedEditing) return
-        justStartedEditing = false
-        val el = dom ?: return
-        el.focus()
-        val x = pendingClickX.also { pendingClickX = null }
-        val y = pendingClickY.also { pendingClickY = null }
-        if (x == null || y == null || !tryPositionCursorAtPoint(x, y)) {
-            moveCursorToEnd(el)
-        }
-    }
-
-    // ── Render ────────────────────────────────────────────────────────────────
-
     override fun VDom.render() {
         val theme = props.ctx.theme
-        if (isEditing) {
-            div(classes = "${theme.styles.stringLiteralInline()} ${theme.styles.stringLiteralInlineEditing()}") {
-                key = "e"
+
+        div(classes = theme.styles.stringLiteralInline()) {
+            key = "edit" + props.value.hashCode()
+
+            tabIndex = "0"
+
+            if (isEditing) {
+                classes += theme.styles.stringLiteralInlineEditing()
+
                 contentEditable = true
 
                 onBlur { event ->
@@ -133,14 +108,9 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
                         }
                     }
                 }
+                onMouseOut { event -> event.stopPropagation() }
                 onMouseDown { event -> event.stopPropagation() }
-
-                +editText
-            }
-        } else {
-            div(classes = theme.styles.stringLiteralInline()) {
-                key = "d"
-                tabIndex = "0"
+            } else {
                 onClick { event ->
                     event.stopPropagation()
                     startEdit(event.clientX.toDouble(), event.clientY.toDouble())
@@ -153,31 +123,19 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
                     }
                 }
                 onMouseDown { event -> event.stopPropagation() }
-
-                +props.value
             }
+
+            console.log("editText: ", editText)
+
+            +editText
         }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun readInnerText(target: dynamic): String =
-        (target.innerText as? String)?.trimEnd('\n') ?: editText
-
-    private fun moveCursorToEnd(el: HTMLElement) {
-        try {
-            val range = document.createRange()
-
-            range.selectNodeContents(el)
-            range.collapse(false)
-
-            val sel = window.asDynamic().getSelection()
-
-            if (sel != null) {
-                sel.removeAllRanges(); sel.addRange(range)
-            }
-        } catch (_: Throwable) { /* ignore */
-        }
+    private fun readInnerText(target: HTMLElement): String {
+        console.log("innerText: ", target.innerText)
+        return target.innerText
     }
 
     /**
