@@ -88,17 +88,7 @@ internal fun DIV.renderChainSegments(
             } else {
                 val nextSegFirstBlockId = segments[segIndex + 1].first().id
                 // Trailing line-break indicator: *---  (click toggles the newline back off)
-                div {
-                    css {
-                        display = Display.inlineFlex
-                        alignItems = Align.center
-                        width = 36.px
-                        flexShrink = 0.0
-                        cursor = Cursor.pointer
-                        marginLeft = (-10).px
-                        position = Position.relative
-                        zIndex = 1
-                    }
+                div(classes = ctx.theme.styles.segmentBreakConnector()) {
                     onClick { event ->
                         event.stopPropagation()
                         event.preventDefault()

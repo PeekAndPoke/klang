@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.blocks.ui
 
+import de.peekandpoke.kraft.addons.styling.StyleSheets
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
@@ -148,13 +149,13 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     init {
         lifecycle {
             onMount {
-                props.theme.styles.mount(document.head!!)
+                StyleSheets.mount(props.theme.styles)
                 props.onCodeGenChanged?.invoke(editingCtx.program.toCodeGen())
                 document.addEventListener("keydown", keydownListener)
                 document.addEventListener("keyup", keyupListener)
             }
             onUnmount {
-                props.theme.styles.unmount()
+                StyleSheets.unmount(props.theme.styles)
                 document.removeEventListener("keydown", keydownListener)
                 document.removeEventListener("keyup", keyupListener)
             }
@@ -295,17 +296,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             theme = props.theme,
         )
 
-        div {
-            css {
-                display = Display.flex
-                flexDirection = FlexDirection.row
-                width = 100.pct
-                height = 100.pct
-                position = Position.relative
-                overflow = Overflow.hidden
-                backgroundColor = Color(props.theme.canvasBackground)
-            }
-
+        div(classes = props.theme.styles.editorRoot()) {
             onMouseMove { event ->
                 onMouseMoved(event.clientX.toDouble(), event.clientY.toDouble())
             }
@@ -327,29 +318,13 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
             // Drag ghost — follows cursor during any drag
             if (dndState != null) {
-                div {
+                div(classes = props.theme.styles.dragGhostFixed()) {
                     css {
-                        position = Position.fixed
                         left = dndState.ghostX.px
                         top = dndState.ghostY.px
-                        pointerEvents = PointerEvents.none
-                        zIndex = 9999
-                        opacity = 0.85
-                        put("transform", "translate(-50%, -50%)")
                     }
-                    span {
-                        css {
-                            display = Display.inlineBlock
-                            backgroundColor = Color(props.theme.blockColor(null))
-                            color = Color.white
-                            borderRadius = 8.px
-                            padding = Padding(vertical = 5.px, horizontal = 10.px)
-                            fontSize = 13.px
-                            fontFamily = "monospace"
-                            fontWeight = FontWeight.bold
-                            whiteSpace = WhiteSpace.nowrap
-                            put("box-shadow", "0 4px 12px ${props.theme.dragGhostShadow}")
-                        }
+                    span(classes = props.theme.styles.dragGhostLabel()) {
+                        css { backgroundColor = Color(props.theme.blockColor(null)) }
                         +dndState.ghostLabel
                     }
                 }

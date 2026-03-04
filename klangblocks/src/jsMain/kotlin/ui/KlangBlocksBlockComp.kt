@@ -229,12 +229,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     // ── Function name ─────────────────────────────────────────────────────────
 
     private fun DIV.renderFuncName(block: KBCallBlock) {
-        span {
+        span(classes = props.ctx.theme.styles.blockFuncName()) {
             key = "func-name"
-            css {
-                minWidth = 30.px
-                fontWeight = FontWeight.bold
-            }
             +block.funcName
         }
     }
@@ -375,7 +371,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         .map { it.atomStart!! until it.atomEnd!! }
                         .sortedBy { it.first }
                         .let { mergeRanges(it) }
-                    renderWithHighlights(arg.value, atomRanges, ctx.theme.highlightShadow)
+                    renderWithHighlights(arg.value, atomRanges, ctx.theme.styles)
                 }
 
                 is KBIdentifierArg -> {
@@ -397,26 +393,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         docCategory: String?,
         isVertical: Boolean,
     ) {
-        span {
+        span(classes = ctx.theme.styles.blockHoverActions()) {
             key = "hover-actions"
             css {
-                display = Display.inlineFlex
-                alignItems = Align.center
-                gap = 2.px
-                position = Position.absolute
-
-                border = Border(1.px, BorderStyle.dotted, Color(ctx.theme.blockDropIdleOutline))
                 backgroundColor = Color(ctx.theme.blockColor(docCategory))
-                borderRadius = 6.px
-                padding = Padding(2.px, 4.px, 2.px, 8.px)
-
-                right = 0.px
-
-                top = if (isVertical) {
-                    0.px
-                } else {
-                    (-10).px
-                }
+                top = if (isVertical) 0.px else (-10).px
             }
 
             layoutToggleButton(ctx, block, variant, isVertical)
@@ -484,7 +465,7 @@ private fun mergeRanges(sorted: List<IntRange>): List<IntRange> {
  * Renders [text] as a mix of plain text nodes and highlighted `<span>`s for each
  * range in [ranges] (sorted, non-overlapping, [IntRange.last] is inclusive).
  */
-private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRange>, highlightColor: String) {
+private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRange>, styles: KlangBlocksTheme.Styles) {
     if (ranges.isEmpty()) {
         +text
         return
@@ -494,12 +475,8 @@ private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRan
         val start = range.first.coerceIn(0, text.length)
         val end = (range.last + 1).coerceIn(start, text.length)
         if (pos < start) +text.substring(pos, start)
-        span {
-            css {
-                borderRadius = 2.px
-                // box-shadow renders like a border but occupies no space — no wiggle
-                put("box-shadow", "0 0 0 2px $highlightColor")
-            }
+        // box-shadow renders like a border but occupies no space — no wiggle
+        span(classes = styles.highlightAtom()) {
             +text.substring(start, end)
         }
         pos = end

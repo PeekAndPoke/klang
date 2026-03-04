@@ -211,12 +211,8 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
 
     private fun DIV.renderHoverActions() {
         if (canDrop || onToggleNewline == null || !isHovered) return
-        div {
+        div(classes = props.ctx.theme.styles.hoverActionsOverlay()) {
             key = "hover-actions"
-            css {
-                position = Position.absolute
-                alignSelf = Align.center
-            }
             renderToggleNewlinePill()
         }
     }
@@ -242,13 +238,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                     "opacity 0.12s ease, width 0.5s ease, border-radius 0.15s ease, background-color 0.1s ease, border-color 0.1s ease"
                 )
             }
-            icon.tiny.plus {
-                css {
-                    color = Color(props.ctx.theme.dropZoneIcon)
-                    margin = Margin(0.px)
-                    put("transition", "color 0.1s ease")
-                }
-            }
+            icon.tiny.with(props.ctx.theme.styles.dropZoneIconCls()).plus()
         }
     }
 
@@ -269,20 +259,9 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
 
     private fun VDom.renderAppendConnector() {
         val expandedW = (dndState?.ghostWidth ?: 80.0) + 20.0
-        div {
+        div(classes = props.ctx.theme.styles.appendConnectorContainer()) {
             key = domKey
-            css {
-                display = Display.inlineFlex
-                alignItems = Align.center
-                justifyContent = JustifyContent.center
-                flexShrink = 0.0
-                width = 24.px
-                height = 24.px
-                marginLeft = 6.px
-                alignSelf = Align.center
-                position = Position.relative
-                cursor = if (canDrop) Cursor.copy else Cursor.default
-            }
+            css { cursor = if (canDrop) Cursor.copy else Cursor.default }
             onMouseEnter { isHovered = true }
             onMouseLeave { isHovered = false }
             if (canDrop) {
@@ -292,14 +271,8 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                     dndState!!.onDrop(DropDestination.ChainEnd(props.variant.chainId))
                 }
             }
-            div {
+            div(classes = props.ctx.theme.styles.appendDropIndicatorPos()) {
                 key = "drop-indicator"
-                css {
-                    position = Position.absolute
-                    left = 50.pct; top = 50.pct
-                    pointerEvents = PointerEvents.none
-                    put("transform", "translate(-50%, -50%)")
-                }
                 renderDropIndicator(expandedW)
             }
         }

@@ -121,25 +121,13 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
         val slotIsEmpty = value == null || value is KBEmptyArg
         val canDrop = canDropToSlot && slotIsEmpty
 
-        div("kb-block") {
+        div(classes = "kb-block ${ctx.theme.styles.letStmtBlock()}") {
             css {
-                display = Display.inlineFlex
-                flexDirection = FlexDirection.row
-                alignItems = Align.center
                 gap = variant.gap
                 padding = Padding(horizontal = variant.paddingH, vertical = variant.paddingV)
                 borderRadius = variant.radius
-                backgroundColor = Color(ctx.theme.blockColor("structural"))
-                color = Color(ctx.theme.textPrimary)
                 fontSize = variant.fontSize
-                fontFamily = "monospace"
-                whiteSpace = WhiteSpace.nowrap
-                userSelect = UserSelect.none
-                flexShrink = 0.0
                 if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
-                put("transition", "filter 0.15s ease")
-                position = Position.relative
-                cursor = Cursor.grab
             }
             onMouseOver { event ->
                 if (ctx.dnd.state == null) event.stopPropagation()
@@ -246,20 +234,8 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
     // ── Hover remove button ────────────────────────────────────────────────────
 
     private fun DIV.renderHoverRemove(ctx: KlangBlocksCtx) {
-        span {
+        span(classes = ctx.theme.styles.letStmtHoverRemove()) {
             key = "hover-remove"
-            css {
-                display = Display.inlineFlex
-                alignItems = Align.center
-                position = Position.absolute
-                top = (-8).px
-                right = 0.px
-                backgroundColor = Color(ctx.theme.blockColor("structural"))
-                borderTopRightRadius = 8.px
-                borderTopLeftRadius = 8.px
-                borderBottomLeftRadius = 6.px
-                padding = Padding(2.px, 4.px)
-            }
             span(classes = ctx.theme.styles.blockActionBtn()) {
                 css { fontSize = variant.editFontSize }
                 onClick { event ->

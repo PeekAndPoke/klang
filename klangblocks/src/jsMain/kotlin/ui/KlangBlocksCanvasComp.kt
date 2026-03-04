@@ -9,7 +9,9 @@ import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.klang.blocks.model.*
-import kotlinx.css.*
+import kotlinx.css.paddingBottom
+import kotlinx.css.paddingTop
+import kotlinx.css.px
 import kotlinx.html.*
 
 @Suppress("FunctionName")
@@ -36,27 +38,11 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
         val ctx = props.ctx
         val program = ctx.editing.program
 
-        div {
+        div(classes = ctx.theme.styles.canvasContainer()) {
             id = props.canvasDivId
-            css {
-                flex = Flex(1.0, 1.0, FlexBasis.auto)
-                overflowY = Overflow.auto
-                overflowX = Overflow.auto
-                padding = Padding(16.px)
-                backgroundColor = Color(ctx.theme.canvasBackground)
-                minHeight = 400.px
-            }
 
             if (program.statements.isEmpty()) {
-                div {
-                    css {
-                        display = Display.flex
-                        alignItems = Align.center
-                        justifyContent = JustifyContent.center
-                        height = 200.px
-                        color = Color(ctx.theme.textDisabled)
-                        fontSize = 16.px
-                    }
+                div(classes = ctx.theme.styles.canvasEmptyState()) {
                     +"Drop blocks here"
                 }
             } else {
@@ -68,15 +54,8 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                         ctx = ctx,
                     )
 
-                    div {
+                    div(classes = ctx.theme.styles.canvasRow()) {
                         key = stmt.id
-
-                        css {
-                            display = Display.flex
-                            flexDirection = FlexDirection.row
-                            alignItems = Align.flexStart
-                            gap = 8.px
-                        }
 
                         // Row number — drag handle for rows that support reordering
                         val isDraggableRow = stmt is KBChainStmt || stmt is KBLetStmt || stmt is KBConstStmt
@@ -101,18 +80,10 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                         when (stmt) {
                             is KBChainStmt -> {
                                 val segments = stmt.steps.toCallSegments()
-                                div {
-                                    css {
-                                        display = Display.flex
-                                        flexDirection = FlexDirection.column
-                                        gap = 4.px
-                                        // Multi-segment chains: add matching padding so the top of the
-                                        // first row and bottom of the last row have the same breathing
-                                        // room as the internal gap between segments.
-                                        if (segments.size > 1) {
-                                            paddingTop = 4.px
-                                            paddingBottom = 4.px
-                                        }
+                                div(classes = ctx.theme.styles.chainSegmentColumn()) {
+                                    // Multi-segment chains: add matching padding
+                                    if (segments.size > 1) {
+                                        css { paddingTop = 4.px; paddingBottom = 4.px }
                                     }
                                     renderChainSegments(
                                         chain = stmt,
@@ -152,12 +123,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             }
 
                             is KBBlankLine -> {
-                                span {
-                                    css {
-                                        display = Display.inlineBlock
-                                        height = 16.px
-                                    }
-                                }
+                                span(classes = ctx.theme.styles.blankLine()) {}
                                 removeStmtButton(ctx.theme) { ctx.editing.onRemoveStmt(stmt.id) }
                             }
                         }

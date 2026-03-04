@@ -239,6 +239,320 @@ data class KlangBlocksTheme(
             height = 0.px
             borderTop = Border(2.px, BorderStyle.dotted, Color(connectorColor))
         }
+
+        // ── Editor shell ──────────────────────────────────────────────────────
+        val editorRoot by rule {
+            display = Display.flex
+            flexDirection = FlexDirection.row
+            width = 100.pct
+            height = 100.pct
+            position = Position.relative
+            overflow = Overflow.hidden
+            backgroundColor = Color(canvasBackground)
+        }
+
+        val dragGhostFixed by rule {
+            position = Position.fixed
+            pointerEvents = PointerEvents.none
+            put("z-index", "9999")
+            opacity = 0.85
+            put("transform", "translate(-50%, -50%)")
+        }
+
+        val dragGhostLabel by rule {
+            display = Display.inlineBlock
+            color = Color(textPrimary)
+            borderRadius = 8.px
+            padding = Padding(vertical = 5.px, horizontal = 10.px)
+            fontSize = 13.px
+            fontFamily = "monospace"
+            fontWeight = FontWeight.bold
+            whiteSpace = WhiteSpace.nowrap
+            put("box-shadow", "0 4px 12px $dragGhostShadow")
+        }
+
+        // ── Canvas ────────────────────────────────────────────────────────────
+        val canvasContainer by rule {
+            flex = Flex(1.0, 1.0, FlexBasis.auto)
+            overflowY = Overflow.auto
+            overflowX = Overflow.auto
+            padding = Padding(16.px)
+            backgroundColor = Color(canvasBackground)
+            minHeight = 400.px
+        }
+
+        val canvasEmptyState by rule {
+            display = Display.flex
+            alignItems = Align.center
+            justifyContent = JustifyContent.center
+            height = 200.px
+            color = Color(textDisabled)
+            fontSize = 16.px
+        }
+
+        val canvasRow by rule {
+            display = Display.flex
+            flexDirection = FlexDirection.row
+            alignItems = Align.flexStart
+            gap = 8.px
+        }
+
+        val chainSegmentColumn by rule {
+            display = Display.flex
+            flexDirection = FlexDirection.column
+            gap = 4.px
+        }
+
+        val blankLine by rule {
+            display = Display.inlineBlock
+            height = 16.px
+        }
+
+        // ── Palette ───────────────────────────────────────────────────────────
+        val paletteContainer by rule {
+            width = 200.px
+            flexShrink = 0.0
+            backgroundColor = Color(paletteBackground)
+            put("border-right", "1px solid $dividerColor")
+            display = Display.flex
+            flexDirection = FlexDirection.column
+        }
+
+        val paletteToolbar by rule {
+            display = Display.flex
+            flexDirection = FlexDirection.row
+            alignItems = Align.center
+            gap = 4.px
+            padding = Padding(6.px)
+            put("border-bottom", "1px solid $dividerColor")
+        }
+
+        val paletteToolbarBtn by rule {
+            padding = Padding(4.px)
+            borderRadius = 4.px
+        }
+
+        val paletteSection by rule {
+            padding = Padding(8.px)
+            flexShrink = 0.0
+            put("border-bottom", "1px solid $dividerColor")
+        }
+
+        val paletteImportLabel by rule {
+            color = Color(textFaint)
+            fontSize = 10.px
+            fontWeight = FontWeight.bold
+            textTransform = TextTransform.uppercase
+            letterSpacing = LinearDimension("0.08em")
+            marginBottom = 6.px
+        }
+
+        val paletteImportBtn by rule {
+            display = Display.inlineFlex
+            alignItems = Align.center
+            gap = 4.px
+            backgroundColor = Color(stmtPillBackground)
+            color = Color(stmtPillText)
+            borderRadius = 4.px
+            padding = Padding(vertical = 3.px, horizontal = 8.px)
+            marginBottom = 3.px
+            fontSize = 12.px
+            fontFamily = "monospace"
+            cursor = Cursor.pointer
+            userSelect = UserSelect.none
+        }
+
+        val paletteSearchInput by rule {
+            width = 100.pct
+            backgroundColor = Color(canvasBackground)
+            color = Color(textMuted)
+            border = Border(1.px, BorderStyle.solid, Color(dividerColor))
+            borderRadius = 4.px
+            padding = Padding(vertical = 4.px, horizontal = 6.px)
+            fontSize = 12.px
+            outline = Outline.none
+            put("box-sizing", "border-box")
+        }
+
+        val paletteBlockList by rule {
+            flex = Flex(1.0, 1.0, FlexBasis.auto)
+            overflowY = Overflow.auto
+            padding = Padding(8.px)
+        }
+
+        val paletteCategoryHeader by rule {
+            fontSize = 10.px
+            fontWeight = FontWeight.bold
+            textTransform = TextTransform.uppercase
+            letterSpacing = LinearDimension("0.08em")
+            padding = Padding(vertical = 6.px, horizontal = 4.px)
+            marginTop = 4.px
+        }
+
+        val paletteBlockItem by rule {
+            display = Display.block
+            color = Color(textPrimary)
+            borderRadius = 6.px
+            padding = Padding(vertical = 4.px, horizontal = 8.px)
+            marginBottom = 3.px
+            fontSize = 12.px
+            fontFamily = "monospace"
+            cursor = Cursor.grab
+            userSelect = UserSelect.none
+            whiteSpace = WhiteSpace.nowrap
+            overflow = Overflow.hidden
+            textOverflow = TextOverflow.ellipsis
+        }
+
+        // ── Block elements ────────────────────────────────────────────────────
+        val blockFuncName by rule {
+            minWidth = 30.px
+            fontWeight = FontWeight.bold
+        }
+
+        val blockHoverActions by rule {
+            display = Display.inlineFlex
+            alignItems = Align.center
+            gap = 2.px
+            position = Position.absolute
+            border = Border(1.px, BorderStyle.dotted, Color(blockDropIdleOutline))
+            borderRadius = 6.px
+            padding = Padding(2.px, 4.px, 2.px, 8.px)
+            right = 0.px
+        }
+
+        val highlightAtom by rule {
+            borderRadius = 2.px
+            put("box-shadow", "0 0 0 2px $highlightShadow")
+        }
+
+        // ── Let/const statement block ─────────────────────────────────────────
+        val letStmtBlock by rule {
+            display = Display.inlineFlex
+            flexDirection = FlexDirection.row
+            alignItems = Align.center
+            backgroundColor = Color(blockColor("structural"))
+            color = Color(textPrimary)
+            fontFamily = "monospace"
+            whiteSpace = WhiteSpace.nowrap
+            userSelect = UserSelect.none
+            flexShrink = 0.0
+            position = Position.relative
+            cursor = Cursor.grab
+            put("transition", "filter 0.15s ease")
+        }
+
+        val letStmtHoverRemove by rule {
+            display = Display.inlineFlex
+            alignItems = Align.center
+            position = Position.absolute
+            top = (-8).px
+            right = 0.px
+            backgroundColor = Color(blockColor("structural"))
+            borderTopRightRadius = 8.px
+            borderTopLeftRadius = 8.px
+            borderBottomLeftRadius = 6.px
+            padding = Padding(2.px, 4.px)
+        }
+
+        // ── Row gap ───────────────────────────────────────────────────────────
+        val rowGapContainer by rule {
+            height = 10.px
+            position = Position.relative
+        }
+
+        val rowInsertIcon by rule {
+            position = Position.absolute
+            top = (-13).px
+            left = 4.px
+            width = 28.px
+            height = 28.px
+            display = Display.flex
+            alignItems = Align.center
+            cursor = Cursor.pointer
+            color = Color(rowInsertColor)
+        }
+
+        val rowGapDropZone by rule {
+            position = Position.absolute
+            top = (-10).px
+            bottom = (-10).px
+            left = 28.px
+            right = 0.px
+            display = Display.flex
+            alignItems = Align.center
+            cursor = Cursor.copy
+            put("z-index", "10")
+        }
+
+        val rowDropLine by rule {
+            width = 100.pct
+            height = 3.px
+            borderRadius = 2.px
+            put("transition", "background-color 0.1s ease")
+        }
+
+        // ── Drop zone ─────────────────────────────────────────────────────────
+        val appendConnectorContainer by rule {
+            display = Display.inlineFlex
+            alignItems = Align.center
+            justifyContent = JustifyContent.center
+            flexShrink = 0.0
+            width = 24.px
+            height = 24.px
+            marginLeft = 6.px
+            alignSelf = Align.center
+            position = Position.relative
+        }
+
+        val hoverActionsOverlay by rule {
+            position = Position.absolute
+            alignSelf = Align.center
+        }
+
+        val dropZoneIconCls by rule {
+            color = Color(dropZoneIcon)
+            margin = Margin(0.px)
+            put("transition", "color 0.1s ease")
+        }
+
+        val appendDropIndicatorPos by rule {
+            position = Position.absolute
+            left = 50.pct
+            top = 50.pct
+            pointerEvents = PointerEvents.none
+            put("transform", "translate(-50%, -50%)")
+        }
+
+        // ── Chain segment rendering ───────────────────────────────────────────
+        val segmentBreakConnector by rule {
+            display = Display.inlineFlex
+            alignItems = Align.center
+            width = 36.px
+            flexShrink = 0.0
+            cursor = Cursor.pointer
+            marginLeft = (-10).px
+            position = Position.relative
+            put("z-index", "1")
+        }
+
+        // ── String literal item ───────────────────────────────────────────────
+        val stringLiteralEditWrapper by rule {
+            display = Display.inlineFlex
+            position = Position.relative
+        }
+
+        val stringLiteralTextarea by rule {
+            borderRadius = 3.px
+            fontFamily = "monospace"
+            minWidth = 60.px
+            maxWidth = 200.px
+            minHeight = 24.px
+            outline = Outline.none
+            resize = Resize.none
+            put("box-sizing", "border-box")
+            put("field-sizing", "content")
+        }
     }
 
     /** Returns the block background color for the given category (falls back to [blockDefaultColor]). */

@@ -6,7 +6,6 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
 import io.peekandpoke.klang.blocks.model.KBStringLiteralItem
-import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
@@ -52,12 +51,8 @@ class KlangBlocksStringLiteralItemComp(ctx: Ctx<Props>) : Component<KlangBlocksS
 
     override fun VDom.render() {
         if (isEditing) {
-            div {
-                css {
-                    display = Display.inlineFlex
-                    position = Position.relative
-                }
-                textArea {
+            div(classes = props.ctx.theme.styles.stringLiteralEditWrapper()) {
+                textArea(classes = props.ctx.theme.styles.stringLiteralTextarea()) {
                     +editText
                     autoFocus = true
                     onInput { event -> editText = event.asDynamic().target.value as String }
@@ -73,22 +68,6 @@ class KlangBlocksStringLiteralItemComp(ctx: Ctx<Props>) : Component<KlangBlocksS
                         }
                     }
                     onMouseDown { event -> event.stopPropagation() }
-                    css {
-                        backgroundColor = Color(props.ctx.theme.inputBackground)
-                        border = Border(1.px, BorderStyle.solid, Color(props.ctx.theme.inputBorder))
-                        borderRadius = 3.px
-                        color = Color(props.ctx.theme.textPrimary)
-                        fontSize = 11.px
-                        fontFamily = "monospace"
-                        padding = Padding(horizontal = 4.px, vertical = 2.px)
-                        minWidth = 60.px
-                        maxWidth = 200.px
-                        minHeight = 24.px
-                        outline = Outline.none
-                        resize = Resize.none
-                        put("box-sizing", "border-box")
-                        put("field-sizing", "content") // auto-grow in browsers that support it
-                    }
                 }
             }
         } else {
