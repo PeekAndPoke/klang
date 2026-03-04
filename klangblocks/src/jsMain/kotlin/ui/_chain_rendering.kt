@@ -50,6 +50,7 @@ internal fun DIV.renderChainSegments(
     headContent: (DIV.() -> Unit)? = null,
 ) {
     var isFirstBlock = true
+    val hasHeadContent = headContent != null
     segments.forEachIndexed { segIndex, blocks ->
         div {
             css {
@@ -66,23 +67,21 @@ internal fun DIV.renderChainSegments(
             }
             blocks.forEachIndexed { blockIndex, block ->
                 val isFirstInSeg = blockIndex == 0
-                KlangBlocksDropZoneComp(
-                    chainId = chain.id,
-                    insertBeforeBlockId = block.id,
-                    ctx = ctx,
-                    showConnectorWhenIdle = !isFirstBlock,
-                    hasNewlineBefore = !isFirstBlock && isFirstInSeg,
-                    onToggleNewline = if (!isFirstBlock) {
-                        { ctx.editing.onToggleNewlineBeforeBlock(chain.id, block.id) }
-                    } else {
-                        null
-                    },
-                )
+                val dropZoneVariant = when {
+                    isFirstBlock && !hasHeadContent -> KlangBlocksDropZoneComp.Variant.InsertBeforeFirst(chain.id, block.id)
+                    else -> KlangBlocksDropZoneComp.Variant.InsertBefore(
+                        chainId = chain.id,
+                        blockId = block.id,
+                        hasNewlineBefore = !isFirstBlock && isFirstInSeg,
+                        onToggleNewline = { ctx.editing.onToggleNewlineBeforeBlock(chain.id, block.id) },
+                    )
+                }
+                KlangBlocksDropZoneComp(variant = dropZoneVariant, ctx = ctx)
                 KlangBlocksBlockComp(block = block, chain = chain, ctx = ctx, variant = variant)
                 isFirstBlock = false
             }
             if (segIndex == segments.lastIndex) {
-                KlangBlocksDropZoneComp(chainId = chain.id, insertBeforeBlockId = null, ctx = ctx)
+                KlangBlocksDropZoneComp(variant = KlangBlocksDropZoneComp.Variant.Append(chain.id), ctx = ctx)
             } else {
                 val nextSegFirstBlockId = segments[segIndex + 1].first().id
                 // Trailing line-break indicator: *---  (click toggles the newline back off)
@@ -97,31 +96,26 @@ internal fun DIV.renderChainSegments(
                         position = Position.relative
                         zIndex = 1
                     }
-
                     onClick { event ->
                         event.stopPropagation()
                         event.preventDefault()
                         ctx.editing.onToggleNewlineBeforeBlock(chain.id, nextSegFirstBlockId)
                     }
-
                     connectorDot()
                     connectorDashedLine()
                 }
-                // Segment-end drop zone: appears to the right of *--- with zero idle width.
+                // Segment-end drop zone: floats right of *--- at zero idle width.
                 // Fires ChainInsertAfterBlock so the dropped block stays on this row (before the KBNewlineHint).
                 KlangBlocksDropZoneComp(
-                    chainId = chain.id,
-                    insertAfterBlockId = blocks.last().id,
+                    variant = KlangBlocksDropZoneComp.Variant.InsertAfterSegment(chain.id, blocks.last().id),
                     ctx = ctx,
-                    showConnectorWhenIdle = false,
-                    compactIdle = true,
                 )
             }
         }
     }
     // Empty chain: still show the append drop zone
     if (segments.isEmpty()) {
-        KlangBlocksDropZoneComp(chainId = chain.id, insertBeforeBlockId = null, ctx = ctx)
+        KlangBlocksDropZoneComp(variant = KlangBlocksDropZoneComp.Variant.Append(chain.id), ctx = ctx)
     }
 }
 
