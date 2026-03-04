@@ -229,8 +229,9 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                 width = (if (canDrop && isHovered) expandedW else 24.0).px
                 height = 24.px
                 borderRadius = (if (canDrop && isHovered) 8 else 12).px
-                backgroundColor = Color(if (isHovered) "#888" else "#666").withAlpha(0.9)
-                border = Border(1.px, BorderStyle.solid, Color("#BBB"))
+                backgroundColor =
+                    Color(if (isHovered) props.ctx.theme.dropZoneBackgroundHover else props.ctx.theme.dropZoneBackground).withAlpha(0.9)
+                border = Border(1.px, BorderStyle.solid, Color(props.ctx.theme.dropZoneBorder))
                 display = Display.flex
                 alignItems = Align.center
                 justifyContent = JustifyContent.center
@@ -243,7 +244,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
             }
             icon.tiny.plus {
                 css {
-                    color = Color("#DDD")
+                    color = Color(props.ctx.theme.dropZoneIcon)
                     margin = Margin(0.px)
                     put("transition", "color 0.1s ease")
                 }
@@ -253,15 +254,16 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
 
     private fun DIV.renderIdleConnector() {
         if (canDrop || idleMode != IdleMode.Connector) return
+        val connectorColor = props.ctx.theme.connectorColor
         if (hasNewlineBefore) {
             // Leading continuation connector: - - - *
-            connectorDashedLine()
-            connectorDot()
+            connectorDashedLine(connectorColor)
+            connectorDot(connectorColor)
         } else {
             // Standard inter-block connector: * - - - *
-            connectorDot()
-            connectorSolidLine()
-            connectorDot()
+            connectorDot(connectorColor)
+            connectorSolidLine(connectorColor)
+            connectorDot(connectorColor)
         }
     }
 
@@ -304,17 +306,8 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
     }
 
     private fun DIV.renderToggleNewlinePill() {
-        span {
+        span(classes = props.ctx.theme.styles.newlineAction()) {
             key = "toggle-newline"
-            css {
-                cursor = Cursor.pointer
-                border = Border(1.px, BorderStyle.solid, Color("#BBB"))
-                borderRadius = 16.px
-                padding = Padding(top = 3.px, bottom = 3.px, left = 4.px, right = 0.px)
-                backgroundColor = Color("#666").withAlpha(0.9)
-                color = Color("#BBB")
-                userSelect = UserSelect.none
-            }
             onClick { event ->
                 event.stopPropagation()
                 event.preventDefault()

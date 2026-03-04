@@ -26,6 +26,7 @@ fun Tag.KlangBlocksEditorComp(
     onCodeChanged: (String) -> Unit,
     onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
     highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
+    theme: KlangBlocksTheme = KlangBlocksTheme.Default,
 ) = comp(
     KlangBlocksEditorComp.Props(
         availableLibraries = availableLibraries,
@@ -33,6 +34,7 @@ fun Tag.KlangBlocksEditorComp(
         onCodeChanged = onCodeChanged,
         onCodeGenChanged = onCodeGenChanged,
         highlights = highlights,
+        theme = theme,
     )
 ) {
     KlangBlocksEditorComp(it)
@@ -46,6 +48,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         val onCodeChanged: (String) -> Unit,
         val onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
         val highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
+        val theme: KlangBlocksTheme = KlangBlocksTheme.Default,
     )
 
     // ---- Drag state FSM --------------------------------------------
@@ -145,11 +148,13 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
     init {
         lifecycle {
             onMount {
+                props.theme.styles.mount(document.head!!)
                 props.onCodeGenChanged?.invoke(editingCtx.program.toCodeGen())
                 document.addEventListener("keydown", keydownListener)
                 document.addEventListener("keyup", keyupListener)
             }
             onUnmount {
+                props.theme.styles.unmount()
                 document.removeEventListener("keydown", keydownListener)
                 document.removeEventListener("keyup", keyupListener)
             }
@@ -287,6 +292,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 startCanvasDrag = DndCtrl.CanvasDragStarter(::onCanvasDragStart),
                 startBlockDrag = DndCtrl.BlockDragStarter(::onBlockDragStart),
             ),
+            theme = props.theme,
         )
 
         div {
@@ -297,7 +303,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 height = 100.pct
                 position = Position.relative
                 overflow = Overflow.hidden
-                backgroundColor = Color("#1e1e2e")
+                backgroundColor = Color(props.theme.canvasBackground)
             }
 
             onMouseMove { event ->
@@ -334,7 +340,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                     span {
                         css {
                             display = Display.inlineBlock
-                            backgroundColor = Color(categoryColour(null))
+                            backgroundColor = Color(props.theme.blockColor(null))
                             color = Color.white
                             borderRadius = 8.px
                             padding = Padding(vertical = 5.px, horizontal = 10.px)
@@ -342,7 +348,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                             fontFamily = "monospace"
                             fontWeight = FontWeight.bold
                             whiteSpace = WhiteSpace.nowrap
-                            put("box-shadow", "0 4px 12px rgba(0,0,0,0.4)")
+                            put("box-shadow", "0 4px 12px ${props.theme.dragGhostShadow}")
                         }
                         +dndState.ghostLabel
                     }

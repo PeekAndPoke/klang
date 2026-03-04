@@ -60,13 +60,13 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
                         display = Display.flex
                         alignItems = Align.center
                         cursor = Cursor.pointer
-                        color = Color("#888")
+                        color = Color(props.ctx.theme.rowInsertColor)
                     }
                     onClick { props.ctx.editing.insertBlankLine(props.index) }
                     onMouseDown { event -> event.preventDefault() }
                     icon.bordered.plus {
                         css {
-                            color = Color("#888")
+                            color = Color(props.ctx.theme.rowInsertColor)
                         }
                     }
                 }
@@ -98,7 +98,8 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
                             width = 100.pct
                             height = 3.px
                             borderRadius = 2.px
-                            backgroundColor = Color(if (isDropHovered) "#6a9fd8" else "rgba(106,159,216,0.35)")
+                            backgroundColor =
+                                Color(if (isDropHovered) props.ctx.theme.rowDropLineHover else props.ctx.theme.rowDropLineIdle)
                             put("transition", "background-color 0.1s ease")
                         }
                     }

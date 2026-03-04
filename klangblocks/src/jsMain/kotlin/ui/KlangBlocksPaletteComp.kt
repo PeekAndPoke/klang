@@ -48,12 +48,13 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
         val importedLibraries = props.availableLibraries.filter { it.name in importedLibraryNames }
         val notImportedLibraries = props.availableLibraries.filter { it.name !in importedLibraryNames }
 
+        val theme = props.ctx.theme
         div {
             css {
                 width = 200.px
                 flexShrink = 0.0
-                backgroundColor = Color("#252535")
-                put("border-right", "1px solid #333")
+                backgroundColor = Color(theme.paletteBackground)
+                put("border-right", "1px solid ${theme.dividerColor}")
                 display = Display.flex
                 flexDirection = FlexDirection.column
             }
@@ -68,7 +69,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                     alignItems = Align.center
                     gap = 4.px
                     padding = Padding(6.px)
-                    put("border-bottom", "1px solid #333")
+                    put("border-bottom", "1px solid ${theme.dividerColor}")
                 }
                 // Undo
                 div {
@@ -100,11 +101,11 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                     css {
                         padding = Padding(8.px)
                         flexShrink = 0.0
-                        put("border-bottom", "1px solid #333")
+                        put("border-bottom", "1px solid ${theme.dividerColor}")
                     }
                     div {
                         css {
-                            color = Color("#888")
+                            color = Color(theme.textFaint)
                             fontSize = 10.px
                             fontWeight = FontWeight.bold
                             textTransform = TextTransform.uppercase
@@ -119,8 +120,8 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                                 display = Display.inlineFlex
                                 alignItems = Align.center
                                 gap = 4.px
-                                backgroundColor = Color("#333")
-                                color = Color("#aaa")
+                                backgroundColor = Color(theme.stmtPillBackground)
+                                color = Color(theme.stmtPillText)
                                 borderRadius = 4.px
                                 padding = Padding(vertical = 3.px, horizontal = 8.px)
                                 marginBottom = 3.px
@@ -130,7 +131,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                                 userSelect = UserSelect.none
                             }
                             onClick { props.ctx.editing.commitImportLibrary(library.name) }
-                            span { css { color = Color("#666"); marginRight = 4.px }; +"+" }
+                            span { css { color = Color(theme.textSubdued); marginRight = 4.px }; +"+" }
                             +library.name
                         }
                     }
@@ -142,7 +143,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                 css {
                     padding = Padding(8.px)
                     flexShrink = 0.0
-                    put("border-bottom", "1px solid #333")
+                    put("border-bottom", "1px solid ${theme.dividerColor}")
                 }
                 input {
                     placeholder = "Search blocks…"
@@ -152,9 +153,9 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                     }
                     css {
                         width = 100.pct
-                        backgroundColor = Color("#1e1e2e")
-                        color = Color("#ccc")
-                        border = Border(1.px, BorderStyle.solid, Color("#444"))
+                        backgroundColor = Color(theme.canvasBackground)
+                        color = Color(theme.textMuted)
+                        border = Border(1.px, BorderStyle.solid, Color(theme.dividerColor))
                         borderRadius = 4.px
                         padding = Padding(vertical = 4.px, horizontal = 6.px)
                         fontSize = 12.px
@@ -175,7 +176,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                 if (importedLibraries.isEmpty()) {
                     div {
                         css {
-                            color = Color("#555")
+                            color = Color(theme.textDisabled)
                             fontSize = 12.px
                             padding = Padding(8.px)
                             textAlign = TextAlign.center
@@ -197,7 +198,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                             // Category header
                             div {
                                 css {
-                                    color = Color(categoryColour(category))
+                                    color = Color(theme.blockColor(category))
                                     fontSize = 10.px
                                     fontWeight = FontWeight.bold
                                     textTransform = TextTransform.uppercase
@@ -212,8 +213,8 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                                 div {
                                     css {
                                         display = Display.block
-                                        backgroundColor = Color(categoryColour(category))
-                                        color = Color.white
+                                        backgroundColor = Color(theme.blockColor(category))
+                                        color = Color(theme.textPrimary)
                                         borderRadius = 6.px
                                         padding = Padding(vertical = 4.px, horizontal = 8.px)
                                         marginBottom = 3.px

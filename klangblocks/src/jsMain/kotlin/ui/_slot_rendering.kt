@@ -38,9 +38,9 @@ internal fun DIV.renderNestedChainSlot(
                         borderRadius = 3.px
                         padding = Padding(horizontal = 4.px, vertical = 1.px)
                         fontSize = 11.px
-                        backgroundColor = Color("rgba(0,0,0,0.25)")
-                        border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.2)"))
-                        color = Color("rgba(255,255,255,0.85)")
+                        backgroundColor = Color(ctx.theme.inlineItemBackground)
+                        border = Border(1.px, BorderStyle.solid, Color(ctx.theme.inlineItemBorder))
+                        color = Color(ctx.theme.inlineItemText)
                         fontFamily = "monospace"
                         whiteSpace = WhiteSpace.nowrap
                     }
@@ -57,14 +57,14 @@ internal fun DIV.renderNestedChainSlot(
             flexDirection = FlexDirection.column
             gap = 2.px
             borderRadius = 4.px
-            backgroundColor = Color("rgba(0,0,0,0.2)")
+            backgroundColor = Color(ctx.theme.slotBackground)
             padding = Padding(horizontal = 4.px, vertical = 2.px)
             if (canDrop) {
-                border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
+                border = Border(1.px, BorderStyle.dashed, Color(ctx.theme.slotDropBorder))
                 cursor = Cursor.copy
                 hover {
-                    border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.7)"))
-                    backgroundColor = Color("rgba(0,0,0,0.35)")
+                    border = Border(1.px, BorderStyle.dashed, Color(ctx.theme.slotDropBorder))
+                    backgroundColor = Color(ctx.theme.slotDropHoverBackground)
                 }
             } else {
                 border = Border(1.px, BorderStyle.solid, Color.transparent)
@@ -97,6 +97,7 @@ internal fun DIV.renderNestedChainSlot(
  */
 internal fun DIV.renderBlockEditInput(
     variant: BlockVariant,
+    theme: KlangBlocksTheme,
     editText: String,
     onInput: (String) -> Unit,
     onCommit: () -> Unit,
@@ -115,10 +116,10 @@ internal fun DIV.renderBlockEditInput(
         }
         onMouseDown { event -> event.stopPropagation() }
         css {
-            backgroundColor = Color("rgba(0,0,0,0.4)")
-            border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
+            backgroundColor = Color(theme.inputBackground)
+            border = Border(1.px, BorderStyle.solid, Color(theme.inputBorder))
             borderRadius = 3.px
-            color = Color.white
+            color = Color(theme.textPrimary)
             fontSize = variant.editFontSize
             fontFamily = "monospace"
             padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)

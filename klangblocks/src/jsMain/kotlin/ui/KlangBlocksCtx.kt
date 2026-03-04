@@ -7,4 +7,5 @@ data class KlangBlocksCtx(
     val editing: KBProgramEditingCtx,
     val dnd: DndCtrl,
     val highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
+    val theme: KlangBlocksTheme = KlangBlocksTheme.Default,
 )

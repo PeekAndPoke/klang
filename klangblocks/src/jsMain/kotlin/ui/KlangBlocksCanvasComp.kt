@@ -42,7 +42,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                 overflowY = Overflow.auto
                 overflowX = Overflow.auto
                 padding = Padding(16.px)
-                backgroundColor = Color("#1e1e2e")
+                backgroundColor = Color(ctx.theme.canvasBackground)
                 minHeight = 400.px
             }
 
@@ -53,7 +53,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                         alignItems = Align.center
                         justifyContent = JustifyContent.center
                         height = 200.px
-                        color = Color("#555")
+                        color = Color(ctx.theme.textDisabled)
                         fontSize = 16.px
                     }
                     +"Drop blocks here"
@@ -79,7 +79,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                         val isDraggableRow = stmt is KBChainStmt || stmt is KBLetStmt || stmt is KBConstStmt
                         span {
                             css {
-                                color = Color("#666")
+                                color = Color(ctx.theme.rowNumberColor)
                                 fontSize = 11.px
                                 fontFamily = "monospace"
                                 width = 24.px
@@ -87,7 +87,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                 textAlign = TextAlign.right
                                 if (isDraggableRow) {
                                     cursor = Cursor.grab
-                                    hover { color = Color("#aaa") }
+                                    hover { color = Color(ctx.theme.rowNumberHoverColor) }
                                 }
                             }
                             if (isDraggableRow) {
@@ -129,10 +129,10 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                             is KBImportStmt -> {
                                 span {
-                                    css { stmtPillStyle() }
+                                    css { stmtPillStyle(ctx.theme) }
                                     +"import * from \"${stmt.libraryName}\""
                                 }
-                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
+                                removeStmtButton(ctx.theme) { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
                             is KBLetStmt -> {
@@ -145,18 +145,18 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 
                             is KBAssignStmt -> {
                                 span {
-                                    css { stmtPillStyle() }
+                                    css { stmtPillStyle(ctx.theme) }
                                     +"${stmt.target} = …"
                                 }
-                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
+                                removeStmtButton(ctx.theme) { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
                             is KBExprStmt -> {
                                 span {
-                                    css { stmtPillStyle() }
+                                    css { stmtPillStyle(ctx.theme) }
                                     +stmt.expr.renderShort()
                                 }
-                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
+                                removeStmtButton(ctx.theme) { ctx.editing.onRemoveStmt(stmt.id) }
                             }
 
                             is KBBlankLine -> {
@@ -166,7 +166,7 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                                         height = 16.px
                                     }
                                 }
-                                removeStmtButton { ctx.editing.onRemoveStmt(stmt.id) }
+                                removeStmtButton(ctx.theme) { ctx.editing.onRemoveStmt(stmt.id) }
                             }
                         }
                     }
@@ -184,17 +184,17 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
 }
 
 /** Inline × to remove a non-chain statement (import, let, const). */
-private fun DIV.removeStmtButton(onRemove: () -> Unit) {
+private fun DIV.removeStmtButton(theme: KlangBlocksTheme, onRemove: () -> Unit) {
     span {
         css {
             fontSize = 13.px
-            color = Color("#555")
+            color = Color(theme.stmtPillRemoveText)
             cursor = Cursor.pointer
             borderRadius = 3.px
             padding = Padding(horizontal = 4.px, vertical = 2.px)
             hover {
-                backgroundColor = Color("rgba(255,255,255,0.08)")
-                color = Color("#ccc")
+                backgroundColor = Color(theme.stmtPillRemoveHoverBackground)
+                color = Color(theme.stmtPillRemoveHoverText)
             }
         }
         onClick { onRemove() }
@@ -202,9 +202,9 @@ private fun DIV.removeStmtButton(onRemove: () -> Unit) {
     }
 }
 
-private fun CssBuilder.stmtPillStyle() {
-    backgroundColor = Color("#333")
-    color = Color("#aaa")
+private fun CssBuilder.stmtPillStyle(theme: KlangBlocksTheme) {
+    backgroundColor = Color(theme.stmtPillBackground)
+    color = Color(theme.stmtPillText)
     padding = Padding(vertical = 4.px, horizontal = 8.px)
     borderRadius = 4.px
     fontFamily = "monospace"

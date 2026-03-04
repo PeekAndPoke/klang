@@ -74,10 +74,10 @@ class KlangBlocksStringLiteralItemComp(ctx: Ctx<Props>) : Component<KlangBlocksS
                     }
                     onMouseDown { event -> event.stopPropagation() }
                     css {
-                        backgroundColor = Color("rgba(0,0,0,0.4)")
-                        border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
+                        backgroundColor = Color(props.ctx.theme.inputBackground)
+                        border = Border(1.px, BorderStyle.solid, Color(props.ctx.theme.inputBorder))
                         borderRadius = 3.px
-                        color = Color.white
+                        color = Color(props.ctx.theme.textPrimary)
                         fontSize = 11.px
                         fontFamily = "monospace"
                         padding = Padding(horizontal = 4.px, vertical = 2.px)
@@ -97,14 +97,14 @@ class KlangBlocksStringLiteralItemComp(ctx: Ctx<Props>) : Component<KlangBlocksS
                     borderRadius = 3.px
                     padding = Padding(horizontal = 4.px, vertical = 1.px)
                     fontSize = 11.px
-                    backgroundColor = Color("rgba(0,0,0,0.25)")
-                    border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.2)"))
-                    color = Color("rgba(255,255,255,0.85)")
+                    backgroundColor = Color(props.ctx.theme.inlineItemBackground)
+                    border = Border(1.px, BorderStyle.solid, Color(props.ctx.theme.inlineItemBorder))
+                    color = Color(props.ctx.theme.inlineItemText)
                     cursor = Cursor.text
                     fontFamily = "monospace"
                     whiteSpace = WhiteSpace.nowrap
                     hover {
-                        backgroundColor = Color("rgba(255,255,255,0.15)")
+                        backgroundColor = Color(props.ctx.theme.inlineItemHoverBackground)
                     }
                 }
                 onClick { event ->

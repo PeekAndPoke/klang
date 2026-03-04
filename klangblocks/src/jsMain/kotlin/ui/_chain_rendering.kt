@@ -101,8 +101,8 @@ internal fun DIV.renderChainSegments(
                         event.preventDefault()
                         ctx.editing.onToggleNewlineBeforeBlock(chain.id, nextSegFirstBlockId)
                     }
-                    connectorDot()
-                    connectorDashedLine()
+                    connectorDot(ctx.theme.connectorColor)
+                    connectorDashedLine(ctx.theme.connectorColor)
                 }
                 // Segment-end drop zone: floats right of *--- at zero idle width.
                 // Fires ChainInsertAfterBlock so the dropped block stays on this row (before the KBNewlineHint).

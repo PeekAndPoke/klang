@@ -130,8 +130,8 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
                 gap = variant.gap
                 padding = Padding(horizontal = variant.paddingH, vertical = variant.paddingV)
                 borderRadius = variant.radius
-                backgroundColor = Color(categoryColour("structural"))
-                color = Color.white
+                backgroundColor = Color(ctx.theme.blockColor("structural"))
+                color = Color(ctx.theme.textPrimary)
                 fontSize = variant.fontSize
                 fontFamily = "monospace"
                 whiteSpace = WhiteSpace.nowrap
@@ -202,6 +202,7 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
     private fun DIV.renderEditingSlot() {
         renderBlockEditInput(
             variant = variant,
+            theme = props.ctx.theme,
             editText = editText,
             onInput = { editText = it },
             onCommit = ::commitEdit,
@@ -219,20 +220,20 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
                 padding = Padding(horizontal = variant.slotPadH, vertical = variant.slotPadV)
                 fontSize = variant.editFontSize
                 if (canDrop) {
-                    backgroundColor = Color("rgba(255,255,255,0.08)")
-                    border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
+                    backgroundColor = Color(ctx.theme.slotDropBackground)
+                    border = Border(1.px, BorderStyle.dashed, Color(ctx.theme.slotDropBorder))
                     cursor = Cursor.copy
                     hover {
-                        backgroundColor = Color("rgba(255,255,255,0.45)")
-                        border = Border(1.px, BorderStyle.solid, Color.white)
+                        backgroundColor = Color(ctx.theme.slotDropHoverBackground)
+                        border = Border(1.px, BorderStyle.solid, Color(ctx.theme.textPrimary))
                     }
                 } else {
-                    backgroundColor = Color("rgba(0,0,0,0.2)")
+                    backgroundColor = Color(ctx.theme.slotBackground)
                     border = Border(1.px, BorderStyle.solid, Color.transparent)
                     cursor = Cursor.text
                     if (arg == null || arg is KBEmptyArg) opacity = 0.6
                     hover {
-                        backgroundColor = Color("rgba(255,255,255,0.15)")
+                        backgroundColor = Color(ctx.theme.slotHoverBackground)
                     }
                 }
             }
@@ -267,7 +268,7 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
                 position = Position.absolute
                 top = (-8).px
                 right = 0.px
-                backgroundColor = Color(categoryColour("structural"))
+                backgroundColor = Color(ctx.theme.blockColor("structural"))
                 borderTopRightRadius = 8.px
                 borderTopLeftRadius = 8.px
                 borderBottomLeftRadius = 6.px
@@ -277,13 +278,13 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
                 css {
                     fontSize = variant.editFontSize
                     lineHeight = LineHeight("1")
-                    color = Color("rgba(255,255,255,0.55)")
+                    color = Color(ctx.theme.blockActionText)
                     cursor = Cursor.pointer
                     borderRadius = 3.px
                     padding = Padding(horizontal = 3.px, vertical = 1.px)
                     hover {
-                        backgroundColor = Color("rgba(255,255,255,0.18)")
-                        color = Color.white
+                        backgroundColor = Color(ctx.theme.blockActionHoverBackground)
+                        color = Color(ctx.theme.textPrimary)
                     }
                 }
                 onClick { event ->

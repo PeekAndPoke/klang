@@ -154,8 +154,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             gap = variant.gap
             padding = Padding(horizontal = variant.paddingH, vertical = variant.paddingV)
             borderRadius = variant.radius
-            backgroundColor = Color(categoryColour(docCategory))
-            color = Color.white
+            backgroundColor = Color(props.ctx.theme.blockColor(docCategory))
+            color = Color(props.ctx.theme.textPrimary)
             fontSize = variant.fontSize
             fontFamily = "monospace"
             whiteSpace = WhiteSpace.nowrap
@@ -166,10 +166,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             position = Position.relative
             if (canDropOnBlock) {
                 if (isHovered) {
-                    put("outline", "2px solid rgba(255,255,255,0.85)")
+                    put("outline", "2px solid ${props.ctx.theme.blockDropHoverOutline}")
                     put("filter", "brightness(1.2)")
                 } else {
-                    put("outline", "1px dashed rgba(255,255,255,0.5)")
+                    put("outline", "1px dashed ${props.ctx.theme.blockDropIdleOutline}")
                 }
                 cursor = Cursor.copy
             } else if (!variant.isTopLevel || !canDropToSlot) {
@@ -250,13 +250,13 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         canDrop: Boolean,
     ) {
         when {
-            editingSlotIndex == index -> renderEditingSlot(index, slot, variant)
+            editingSlotIndex == index -> renderEditingSlot(index, slot, variant, ctx)
             arg is KBNestedChainArg -> renderNestedChainSlot(index, arg, ctx, canDrop)
             else -> renderValueSlot(index, arg, slot, ctx, variant, canDrop)
         }
     }
 
-    private fun DIV.renderEditingSlot(index: Int, slot: KBSlot, variant: BlockVariant) {
+    private fun DIV.renderEditingSlot(index: Int, slot: KBSlot, variant: BlockVariant, ctx: KlangBlocksCtx) {
         if (slot.kind.isStringish) {
             // Multiline-capable textarea: Enter = commit, Shift+Enter = newline
             textArea {
@@ -281,10 +281,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 }
                 onMouseDown { event -> event.stopPropagation() }
                 css {
-                    backgroundColor = Color("rgba(0,0,0,0.4)")
-                    border = Border(1.px, BorderStyle.solid, Color("rgba(255,255,255,0.4)"))
+                    backgroundColor = Color(ctx.theme.inputBackground)
+                    border = Border(1.px, BorderStyle.solid, Color(ctx.theme.inputBorder))
                     borderRadius = 3.px
-                    color = Color.white
+                    color = Color(ctx.theme.textPrimary)
                     fontSize = variant.editFontSize
                     fontFamily = "monospace"
                     padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
@@ -300,6 +300,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         } else {
             renderBlockEditInput(
                 variant = variant,
+                theme = ctx.theme,
                 editText = editText,
                 onInput = { editText = it },
                 onCommit = { commitEdit(index) },
@@ -340,20 +341,20 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 fontSize = variant.editFontSize
                 if (isMultilineString) whiteSpace = WhiteSpace.preWrap
                 if (canDrop) {
-                    backgroundColor = Color("rgba(255,255,255,0.08)")
-                    border = Border(1.px, BorderStyle.dashed, Color("rgba(255,255,255,0.5)"))
+                    backgroundColor = Color(ctx.theme.slotDropBackground)
+                    border = Border(1.px, BorderStyle.dashed, Color(ctx.theme.slotDropBorder))
                     cursor = Cursor.copy
                     hover {
-                        backgroundColor = Color("rgba(255,255,255,0.45)")
-                        border = Border(1.px, BorderStyle.solid, Color.white)
+                        backgroundColor = Color(ctx.theme.slotDropHoverBackground)
+                        border = Border(1.px, BorderStyle.solid, Color(ctx.theme.textPrimary))
                     }
                 } else {
-                    backgroundColor = Color("rgba(0,0,0,0.2)")
+                    backgroundColor = Color(ctx.theme.slotBackground)
                     border = Border(1.px, BorderStyle.solid, Color.transparent)
                     cursor = Cursor.text
                     if (arg == null || arg is KBEmptyArg) opacity = 0.6
                     hover {
-                        backgroundColor = Color("rgba(255,255,255,0.15)")
+                        backgroundColor = Color(ctx.theme.slotHoverBackground)
                     }
                 }
             }
@@ -388,7 +389,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                         .map { it.atomStart!! until it.atomEnd!! }
                         .sortedBy { it.first }
                         .let { mergeRanges(it) }
-                    renderWithHighlights(arg.value, atomRanges)
+                    renderWithHighlights(arg.value, atomRanges, ctx.theme.highlightShadow)
                 }
 
                 is KBIdentifierArg -> {
@@ -417,8 +418,8 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 gap = 2.px
                 position = Position.absolute
 
-                border = Border(1.px, BorderStyle.dotted, Color("rgba(255,255,255,0.5)"))
-                backgroundColor = Color(categoryColour(docCategory))
+                border = Border(1.px, BorderStyle.dotted, Color(ctx.theme.blockDropIdleOutline))
+                backgroundColor = Color(ctx.theme.blockColor(docCategory))
                 borderRadius = 6.px
                 padding = Padding(2.px, 4.px, 2.px, 8.px)
 
@@ -446,7 +447,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             css {
                 fontSize = variant.editFontSize
                 lineHeight = LineHeight("1")
-                color = Color("rgba(255,255,255,1.0)")
+                color = Color(ctx.theme.textPrimary)
                 cursor = Cursor.pointer
                 borderRadius = 3.px
             }
@@ -472,7 +473,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             css {
                 fontSize = variant.editFontSize
                 lineHeight = LineHeight("1")
-                color = Color("rgba(255,255,255,1.0)")
+                color = Color(ctx.theme.textPrimary)
                 cursor = Cursor.pointer
                 borderRadius = 3.px
             }
@@ -508,7 +509,7 @@ private fun mergeRanges(sorted: List<IntRange>): List<IntRange> {
  * Renders [text] as a mix of plain text nodes and highlighted `<span>`s for each
  * range in [ranges] (sorted, non-overlapping, [IntRange.last] is inclusive).
  */
-private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRange>) {
+private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRange>, highlightColor: String) {
     if (ranges.isEmpty()) {
         +text
         return
@@ -522,7 +523,7 @@ private fun HtmlInlineTag.renderWithHighlights(text: String, ranges: List<IntRan
             css {
                 borderRadius = 2.px
                 // box-shadow renders like a border but occupies no space — no wiggle
-                put("box-shadow", "0 0 0 2px rgba(255,255,255,0.65)")
+                put("box-shadow", "0 0 0 2px $highlightColor")
             }
             +text.substring(start, end)
         }
