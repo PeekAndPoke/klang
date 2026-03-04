@@ -68,18 +68,21 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
     private val atomTimeouts = mutableMapOf<KlangBlockAtomKey, Int>()
     private var pendingCursorOffset: Int? = null
 
+    // Set to true only on the display→edit transition; cleared after the first onUpdate.
+    private var justStartedEditing: Boolean = false
+
     init {
         lifecycle {
             onUpdate {
-                if (isEditing) {
-                    // Focus the textarea and optionally restore click cursor position.
-                    val el = dom as? HTMLTextAreaElement ?: return@onUpdate
-                    el.focus()
-                    val offset = pendingCursorOffset
-                    if (offset != null) {
-                        pendingCursorOffset = null
-                        el.setSelectionRange(offset, offset)
-                    }
+                // Only act on the single render that switches display→edit.
+                if (!justStartedEditing) return@onUpdate
+                justStartedEditing = false
+                val el = dom as? HTMLTextAreaElement ?: return@onUpdate
+                el.focus()
+                val offset = pendingCursorOffset
+                if (offset != null) {
+                    pendingCursorOffset = null
+                    el.setSelectionRange(offset, offset)
                 }
             }
         }
@@ -107,6 +110,7 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
     private fun startEdit(cursorOffset: Int? = null) {
         editText = props.value
         pendingCursorOffset = cursorOffset
+        justStartedEditing = true
         isEditing = true
     }
 
@@ -159,7 +163,6 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
                 event.stopPropagation()
                 startEdit(cursorOffset = textOffsetAtPoint(event.clientX.toDouble(), event.clientY.toDouble()))
             }
-            onFocus { startEdit() }
             onKeyDown { event ->
                 if (event.key == "Enter" || event.key == " ") {
                     event.preventDefault()
