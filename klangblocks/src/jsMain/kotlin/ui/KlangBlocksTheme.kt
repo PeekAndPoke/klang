@@ -560,7 +560,7 @@ data class KlangBlocksTheme(
             display = Display.inlineBlock
             borderRadius = 3.px
             padding = Padding(horizontal = 4.px, vertical = 1.px)
-            fontSize = 11.px
+            fontSize = 12.px
             lineHeight = LineHeight("1.8")
             whiteSpace = WhiteSpace.preWrap
             minWidth = 30.px

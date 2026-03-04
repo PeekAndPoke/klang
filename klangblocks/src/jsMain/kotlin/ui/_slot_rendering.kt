@@ -77,7 +77,7 @@ internal fun DIV.renderNestedChainSlot(
             chain = chain,
             segments = chain.steps.toCallSegments(),
             ctx = ctx,
-            variant = BlockVariant.Nested,
+            isTopLevel = false,
             headContent = headContent,
         )
     }
@@ -88,7 +88,6 @@ internal fun DIV.renderNestedChainSlot(
  * Used by both [KlangBlocksBlockComp] and [KlangBlocksLetStmtComp].
  */
 internal fun DIV.renderBlockEditInput(
-    variant: BlockVariant,
     theme: KlangBlocksTheme,
     editText: String,
     onInput: (String) -> Unit,
@@ -112,10 +111,10 @@ internal fun DIV.renderBlockEditInput(
             border = Border(1.px, BorderStyle.solid, Color(theme.inputBorder))
             borderRadius = 3.px
             color = Color(theme.textPrimary)
-            fontSize = variant.editFontSize
+            fontSize = 12.px
             fontFamily = "monospace"
-            padding = Padding(horizontal = variant.textareaPadH, vertical = 1.px)
-            minWidth = variant.textareaMinW
+            padding = Padding(horizontal = 4.px, vertical = 1.px)
+            minWidth = 100.px
             outline = Outline.none
             put("box-sizing", "border-box")
             put("field-sizing", "content")

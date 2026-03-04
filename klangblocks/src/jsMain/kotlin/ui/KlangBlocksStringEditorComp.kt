@@ -189,6 +189,7 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
                 backgroundColor = Color(theme.inputBackground)
                 color = Color(theme.textPrimary)
                 fontFamily = "monospace"
+                fontSize = 12.px
                 lineHeight = LineHeight("1.8")
                 padding = Padding(1.px, 4.px)
                 border = Border(1.px, BorderStyle.solid, Color(theme.inputBorder))

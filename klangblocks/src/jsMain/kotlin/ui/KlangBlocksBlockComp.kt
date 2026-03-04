@@ -14,36 +14,18 @@ import kotlinx.css.*
 import kotlinx.html.*
 import org.w3c.dom.Element
 
-enum class BlockVariant {
-    TopLevel, Nested;
-
-    val fontSize get() = if (this == TopLevel) 13.px else 11.px
-    val editFontSize get() = if (this == TopLevel) 12.px else 11.px
-    val paddingH get() = if (this == TopLevel) 10.px else 7.px
-    val paddingV get() = if (this == TopLevel) 5.px else 3.px
-    val radius get() = if (this == TopLevel) 8.px else 6.px
-    val gap get() = if (this == TopLevel) 4.px else 3.px
-    val slotRadius get() = if (this == TopLevel) 4.px else 3.px
-    val slotPadH get() = if (this == TopLevel) 6.px else 4.px
-    val slotPadV get() = if (this == TopLevel) 2.px else 1.px
-    val textareaPadH get() = if (this == TopLevel) 4.px else 3.px
-    val textareaMinW get() = if (this == TopLevel) 100.px else 80.px
-
-    val isTopLevel get() = this == TopLevel
-}
-
 @Suppress("FunctionName")
 fun Tag.KlangBlocksBlockComp(
     block: KBCallBlock,
     chain: KBChainStmt,
     ctx: KlangBlocksCtx,
-    variant: BlockVariant = BlockVariant.TopLevel,
+    isTopLevel: Boolean = true,
 ) = comp(
     KlangBlocksBlockComp.Props(
         block = block,
         chain = chain,
         ctx = ctx,
-        variant = variant,
+        isTopLevel = isTopLevel,
     )
 ) {
     KlangBlocksBlockComp(it)
@@ -55,7 +37,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val block: KBCallBlock,
         val chain: KBChainStmt,
         val ctx: KlangBlocksCtx,
-        val variant: BlockVariant = BlockVariant.TopLevel,
+        val isTopLevel: Boolean = true,
     )
 
     private var editingSlotIndex: Int? by value(null)
@@ -111,7 +93,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     override fun VDom.render() {
         val block = props.block
         val ctx = props.ctx
-        val variant = props.variant
+        val isTopLevel = props.isTopLevel
         val doc = KlangDocsRegistry.global.get(block.funcName)
         val slots = if (doc != null) KBTypeMapping.slotsFor(doc) else emptyList()
         val dndState = ctx.dnd.state
@@ -120,11 +102,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         val canDropOnBlock = dndState?.accepts(DropTarget.ReplaceBlock) == true
         val docCategory = doc?.category
 
-        div("${if (variant.isTopLevel) "kb-block" else "kb-nested-block"} ${ctx.theme.styles.blockBase()}") {
+        div("kb-block ${ctx.theme.styles.blockBase()}") {
             key = "block-${block.id}"
 
-            blockContainerStyle(variant, docCategory, isVertical, canDropToSlot, canDropOnBlock)
-            blockDragHandlers(ctx, block, variant, canDropToSlot, canDropOnBlock)
+            blockContainerStyle(isTopLevel, docCategory, isVertical, canDropToSlot, canDropOnBlock)
+            blockDragHandlers(ctx, block, isTopLevel, canDropToSlot, canDropOnBlock)
 
             renderFuncName(block)
             slots.toRenderItems(block.args).forEachIndexed { index, item ->
@@ -133,12 +115,12 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                     debugId("slot-$index")
 
                     val slotIsEmpty = item.arg == null || item.arg is KBEmptyArg
-                    val canDrop = canDropToSlot && slotAcceptsChainDrop(item.slot) && variant.isTopLevel && slotIsEmpty
-                    renderSlotItem(item.index, item.arg, item.slot, ctx, variant, canDrop)
+                    val canDrop = canDropToSlot && slotAcceptsChainDrop(item.slot) && isTopLevel && slotIsEmpty
+                    renderSlotItem(item.index, item.arg, item.slot, ctx, canDrop)
                 }
             }
-            if (isHovered && (!variant.isTopLevel || !canDropToSlot)) {
-                renderHoverActions(ctx, block, variant, docCategory, isVertical)
+            if (isHovered && (!isTopLevel || !canDropToSlot)) {
+                renderHoverActions(ctx, block, docCategory, isVertical)
             }
         }
     }
@@ -146,7 +128,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     // ── Block container setup ─────────────────────────────────────────────────
 
     private fun DIV.blockContainerStyle(
-        variant: BlockVariant,
+        isTopLevel: Boolean,
         docCategory: String?,
         isVertical: Boolean,
         canDropToSlot: Boolean,
@@ -155,11 +137,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         css {
             flexDirection = if (isVertical) FlexDirection.column else FlexDirection.row
             alignItems = if (isVertical) Align.flexStart else Align.center
-            gap = variant.gap
-            padding = Padding(horizontal = variant.paddingH, vertical = variant.paddingV)
-            borderRadius = variant.radius
+            gap = 4.px
+            padding = Padding(horizontal = 10.px, vertical = 5.px)
+            borderRadius = 8.px
             backgroundColor = Color(props.ctx.theme.blockColor(docCategory))
-            fontSize = variant.fontSize
+            fontSize = 13.px
             if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
             if (canDropOnBlock) {
                 if (isHovered) {
@@ -169,7 +151,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                     put("outline", "1px dashed ${props.ctx.theme.blockDropIdleOutline}")
                 }
                 cursor = Cursor.copy
-            } else if (!variant.isTopLevel || !canDropToSlot) {
+            } else if (!isTopLevel || !canDropToSlot) {
                 cursor = Cursor.grab
             }
         }
@@ -178,7 +160,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     private fun DIV.blockDragHandlers(
         ctx: KlangBlocksCtx,
         block: KBCallBlock,
-        variant: BlockVariant,
+        isTopLevel: Boolean,
         canDropToSlot: Boolean,
         canDropOnBlock: Boolean,
     ) {
@@ -208,10 +190,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         // Start a drag when pressing on the block background or function name.
         // Slot children stop mousedown propagation so they won't trigger this.
         onMouseDown { event ->
-            val shouldDrag = if (variant.isTopLevel) !canDropToSlot && !canDropOnBlock else true
+            val shouldDrag = if (isTopLevel) !canDropToSlot && !canDropOnBlock else true
             if (shouldDrag) {
                 event.preventDefault()
-                if (!variant.isTopLevel) event.stopPropagation()
+                if (!isTopLevel) event.stopPropagation()
                 ctx.dnd.startBlockDrag(
                     sourceChainId = props.chain.id,
                     sourceChain = props.chain,
@@ -240,11 +222,10 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         arg: KBArgValue?,
         slot: KBSlot,
         ctx: KlangBlocksCtx,
-        variant: BlockVariant,
         canDrop: Boolean,
     ) {
         when {
-            editingSlotIndex == index && arg !is KBStringArg -> renderEditingSlot(index, slot, variant, ctx)
+            editingSlotIndex == index && arg !is KBStringArg -> renderEditingSlot(index, slot, ctx)
             arg is KBNestedChainArg -> renderNestedChainSlot(index, arg, ctx, canDrop)
             arg is KBStringArg && !canDrop -> KlangBlocksStringEditorComp(
                 value = arg.value,
@@ -256,11 +237,11 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 slotIndex = index,
             )
 
-            else -> renderValueSlot(index, arg, slot, ctx, variant, canDrop)
+            else -> renderValueSlot(index, arg, slot, ctx, canDrop)
         }
     }
 
-    private fun DIV.renderEditingSlot(index: Int, slot: KBSlot, variant: BlockVariant, ctx: KlangBlocksCtx) {
+    private fun DIV.renderEditingSlot(index: Int, slot: KBSlot, ctx: KlangBlocksCtx) {
         if (slot.kind.isStringish) {
             KlangBlocksStringEditorComp(
                 value = editText,
@@ -278,7 +259,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             )
         } else {
             renderBlockEditInput(
-                variant = variant,
                 theme = ctx.theme,
                 editText = editText,
                 onInput = { editText = it },
@@ -308,7 +288,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         arg: KBArgValue?,
         slot: KBSlot,
         ctx: KlangBlocksCtx,
-        variant: BlockVariant,
         canDrop: Boolean,
     ) {
         val dndState = ctx.dnd.state
@@ -318,9 +297,9 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         span(classes = slotClass) {
             key = "slot-$index"
             css {
-                borderRadius = variant.slotRadius
-                padding = Padding(horizontal = variant.slotPadH, vertical = variant.slotPadV)
-                fontSize = variant.editFontSize
+                borderRadius = 4.px
+                padding = Padding(horizontal = 6.px, vertical = 2.px)
+                fontSize = 12.px
                 if (isMultilineString) whiteSpace = WhiteSpace.preWrap
                 if (!canDrop && (arg == null || arg is KBEmptyArg)) opacity = 0.6
             }
@@ -373,7 +352,6 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     private fun DIV.renderHoverActions(
         ctx: KlangBlocksCtx,
         block: KBCallBlock,
-        variant: BlockVariant,
         docCategory: String?,
         isVertical: Boolean,
     ) {
@@ -384,19 +362,18 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                 top = if (isVertical) 0.px else (-10).px
             }
 
-            layoutToggleButton(ctx, block, variant, isVertical)
-            removeBlockButton(ctx, variant)
+            layoutToggleButton(ctx, block, isVertical)
+            removeBlockButton(ctx)
         }
     }
 
     private fun SPAN.layoutToggleButton(
         ctx: KlangBlocksCtx,
         block: KBCallBlock,
-        variant: BlockVariant,
         isVertical: Boolean,
     ) {
         span(classes = ctx.theme.styles.blockHoverActionBtn()) {
-            css { fontSize = variant.editFontSize }
+            css { fontSize = 12.px }
             onClick { event ->
                 event.stopPropagation()
                 ctx.editing.onToggleLayout(block.id)
@@ -411,12 +388,9 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
         }
     }
 
-    private fun SPAN.removeBlockButton(
-        ctx: KlangBlocksCtx,
-        variant: BlockVariant,
-    ) {
+    private fun SPAN.removeBlockButton(ctx: KlangBlocksCtx) {
         span(classes = ctx.theme.styles.blockHoverActionBtn()) {
-            css { fontSize = variant.editFontSize }
+            css { fontSize = 12.px }
             onClick { event ->
                 event.stopPropagation()
                 ctx.editing.onRemoveBlock(props.block.id)

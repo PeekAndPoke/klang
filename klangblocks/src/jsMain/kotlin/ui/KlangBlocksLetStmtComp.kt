@@ -56,7 +56,6 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
         val ctx: KlangBlocksCtx,
     )
 
-    private val variant = BlockVariant.TopLevel
     private var isEditing: Boolean by value(false)
     private var editText: String by value("")
     private var isHovered: Boolean by value(false)
@@ -123,10 +122,10 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
 
         div(classes = "kb-block ${ctx.theme.styles.letStmtBlock()}") {
             css {
-                gap = variant.gap
-                padding = Padding(horizontal = variant.paddingH, vertical = variant.paddingV)
-                borderRadius = variant.radius
-                fontSize = variant.fontSize
+                gap = 4.px
+                padding = Padding(horizontal = 10.px, vertical = 5.px)
+                borderRadius = 8.px
+                fontSize = 13.px
                 if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
             }
             onMouseOver { event ->
@@ -188,7 +187,6 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
 
     private fun DIV.renderEditingSlot() {
         renderBlockEditInput(
-            variant = variant,
             theme = props.ctx.theme,
             editText = editText,
             onInput = { editText = it },
@@ -205,9 +203,9 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
         span(classes = slotClass) {
             key = "slot-0"
             css {
-                borderRadius = variant.slotRadius
-                padding = Padding(horizontal = variant.slotPadH, vertical = variant.slotPadV)
-                fontSize = variant.editFontSize
+                borderRadius = 4.px
+                padding = Padding(horizontal = 6.px, vertical = 2.px)
+                fontSize = 12.px
                 if (!canDrop && (arg == null || arg is KBEmptyArg)) opacity = 0.6
             }
             if (canDrop) {
@@ -237,7 +235,7 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
         span(classes = ctx.theme.styles.letStmtHoverRemove()) {
             key = "hover-remove"
             span(classes = ctx.theme.styles.blockActionBtn()) {
-                css { fontSize = variant.editFontSize }
+                css { fontSize = 12.px }
                 onClick { event ->
                     event.stopPropagation()
                     ctx.editing.onRemoveStmt(props.stmtId)

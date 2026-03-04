@@ -47,7 +47,7 @@ internal fun DIV.renderChainSegments(
     chain: KBChainStmt,
     segments: List<List<KBCallBlock>>,
     ctx: KlangBlocksCtx,
-    variant: BlockVariant = BlockVariant.TopLevel,
+    isTopLevel: Boolean = true,
     headContent: (DIV.() -> Unit)? = null,
 ) {
     var isFirstBlock = true
@@ -57,7 +57,7 @@ internal fun DIV.renderChainSegments(
             key = "seg-$segIndex"
 
             css {
-                display = if (variant.isTopLevel) Display.flex else Display.inlineFlex
+                display = if (isTopLevel) Display.flex else Display.inlineFlex
                 flexDirection = FlexDirection.row
                 alignItems = Align.center
                 gap = 8.px
@@ -80,7 +80,7 @@ internal fun DIV.renderChainSegments(
                     )
                 }
                 KlangBlocksDropZoneComp(variant = dropZoneVariant, ctx = ctx)
-                KlangBlocksBlockComp(block = block, chain = chain, ctx = ctx, variant = variant)
+                KlangBlocksBlockComp(block = block, chain = chain, ctx = ctx, isTopLevel = isTopLevel)
                 isFirstBlock = false
             }
             if (segIndex == segments.lastIndex) {
@@ -111,7 +111,7 @@ internal fun DIV.renderChainSegments(
         div {
             key = "seg-0"
             css {
-                display = if (variant.isTopLevel) Display.flex else Display.inlineFlex
+                display = if (isTopLevel) Display.flex else Display.inlineFlex
                 flexDirection = FlexDirection.row
                 alignItems = Align.center
                 gap = 8.px
