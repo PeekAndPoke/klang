@@ -47,6 +47,7 @@ kotlin {
 
         jsMain {
             dependencies {
+                api(project(":klangui"))
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)
             }

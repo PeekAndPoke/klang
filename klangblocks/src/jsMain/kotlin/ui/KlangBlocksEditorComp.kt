@@ -12,6 +12,7 @@ import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -28,6 +29,7 @@ fun Tag.KlangBlocksEditorComp(
     onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
     highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
     theme: KlangBlocksTheme = KlangBlocksTheme.Default,
+    hoverPopup: KlangDocsHoverPopupCtrl? = null,
 ) = comp(
     KlangBlocksEditorComp.Props(
         availableLibraries = availableLibraries,
@@ -36,6 +38,7 @@ fun Tag.KlangBlocksEditorComp(
         onCodeGenChanged = onCodeGenChanged,
         highlights = highlights,
         theme = theme,
+        hoverPopup = hoverPopup,
     )
 ) {
     KlangBlocksEditorComp(it)
@@ -50,6 +53,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         val onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
         val highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
         val theme: KlangBlocksTheme = KlangBlocksTheme.Default,
+        val hoverPopup: KlangDocsHoverPopupCtrl? = null,
     )
 
     // ---- Drag state FSM --------------------------------------------
@@ -309,6 +313,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 startBlockDrag = DndCtrl.BlockDragStarter(::onBlockDragStart),
             ),
             theme = props.theme,
+            hoverPopup = props.hoverPopup,
         )
 
         div(classes = props.theme.styles.editorRoot()) {

@@ -10,6 +10,8 @@ include(
     ":klangscript",
     // Visual block editor
     ":klangblocks",
+    // Shared UI utilities (kraft + klangscript, JS-only)
+    ":klangui",
 
     // Common
     ":common",

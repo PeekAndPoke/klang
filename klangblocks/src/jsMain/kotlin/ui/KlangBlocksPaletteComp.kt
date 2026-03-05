@@ -4,10 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.html.onClick
-import de.peekandpoke.ultra.html.onInput
-import de.peekandpoke.ultra.html.onMouseDown
+import de.peekandpoke.ultra.html.*
 import de.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.klang.blocks.model.KBImportStmt
 import io.peekandpoke.klang.script.KlangScriptLibrary
@@ -135,6 +132,7 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                             funcs.sortedBy { it.name }.forEach { doc ->
                                 div(classes = styles.paletteBlockItem()) {
                                     css { backgroundColor = Color(theme.blockColor(category)) }
+
                                     onMouseDown { event ->
                                         event.preventDefault()
                                         props.ctx.dnd.startPaletteDrag(
@@ -143,6 +141,10 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                                             event.clientY.toDouble(),
                                         )
                                     }
+
+                                    onMouseEnter { event -> props.ctx.hoverPopup?.scheduleShow(doc, event) }
+                                    onMouseLeave { props.ctx.hoverPopup?.scheduleClose() }
+
                                     +doc.name
                                 }
                             }

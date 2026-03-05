@@ -88,7 +88,13 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             blockContainerStyle(isTopLevel, docCategory, isVertical, canDropToSlot, canDropOnBlock)
             blockDragHandlers(ctx, block, isTopLevel, canDropToSlot, canDropOnBlock)
 
+            if (doc != null) {
+                onMouseEnter { event -> ctx.hoverPopup?.scheduleShow(doc, event) }
+                onMouseLeave { ctx.hoverPopup?.scheduleClose() }
+            }
+
             renderFuncName(block)
+
             slots.toRenderItems(block.args).forEachIndexed { index, item ->
                 div {
                     key = "slot-$index"

@@ -14,14 +14,20 @@ import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.browser.window
 import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.html.FlowContent
+import kotlinx.html.Tag
+import kotlinx.html.div
+import kotlinx.html.pre
 
 @Suppress("FunctionName")
 fun Tag.KlangSymbolDocsComp(
     symbol: KlangSymbol,
     onNavigate: (KlangSymbol, dynamic) -> Unit,
 ) = comp(
-    KlangSymbolDocsComp.Props(symbol = symbol, onNavigate = onNavigate)
+    KlangSymbolDocsComp.Props(
+        symbol = symbol,
+        onNavigate = onNavigate,
+    )
 ) { KlangSymbolDocsComp(it) }
 
 class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props>(ctx) {
@@ -55,7 +61,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
         ui.segment {
             css {
                 width = LinearDimension.fitContent
-                minWidth = 400.px
+                minWidth = 20.vw
                 maxWidth = 50.vw
             }
 
@@ -87,7 +93,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                     if (firstSample != null) {
                         sectionLabel("Example")
                         noui.content {
-                            codeBlock(firstSample)
+                            codeBlock(firstSample, copyToClipboard = true)
                         }
                     }
                 }
@@ -121,42 +127,52 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
     private fun FlowContent.codeBlock(text: String, copyToClipboard: Boolean = false) {
         div {
             css {
-                position = Position.relative
+                display = Display.flex
+                flexDirection = FlexDirection.row
+                alignItems = Align.flexStart
+                gap = 8.px
                 padding = Padding(6.px, 8.px)
-                paddingRight = 32.px
                 margin = Margin(0.px)
                 backgroundColor = Color("#f8f8f8")
                 border = Border(1.px, BorderStyle.solid, Color("#ddd"))
             }
 
+            // Copy button
+            if (copyToClipboard) {
+                div {
+                    css {
+                        flexShrink = 0.0
+                        cursor = Cursor.pointer
+                        color = if (copiedIndex == 0) {
+                            Color("#27ae60")
+                        } else {
+                            Color("#999")
+                        }
+                    }
+                    onClick { event ->
+                        event.stopPropagation()
+                        window.asDynamic().navigator.clipboard.writeText(text)
+                        copiedIndex = 0
+                        window.setTimeout({ copiedIndex = null }, 2000)
+                    }
+
+                    if (copiedIndex == 0) {
+                        icon.small.check()
+                    } else {
+                        icon.small.copy()
+                    }
+                }
+            }
+
             pre {
                 css {
+                    flex = Flex(1.0, 1.0, FlexBasis.auto)
                     fontFamily = "monospace"
                     fontSize = 12.px
                     margin = Margin(0.px)
                     overflowX = Overflow.auto
                 }
                 +text
-            }
-
-            // Copy button
-            if (copyToClipboard) {
-                span {
-                    css {
-                        position = Position.absolute
-                        top = 4.px
-                        right = 4.px
-                        cursor = Cursor.pointer
-                        color = if (copiedIndex == 0) Color("#27ae60") else Color("#999")
-                    }
-                    onClick { event ->
-                        event.stopPropagation()
-                        window.asDynamic().navigator.clipboard.writeText(text)
-                        copiedIndex = 0
-                        window.setTimeout({ copiedIndex = null }, 1500)
-                    }
-                    if (copiedIndex == 0) icon.small.check() else icon.small.copy()
-                }
             }
         }
     }

@@ -26,10 +26,10 @@ import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.playStrudel
+import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
-import org.w3c.dom.pointerevents.PointerEvent
 
 @Suppress("FunctionName")
 fun Tag.PlayableCodeExample(
@@ -68,6 +68,22 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private var currentCycle: Long by value(0)
 
     private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
+
+    private val hoverPopup: KlangDocsHoverPopupCtrl by lazy {
+        KlangDocsHoverPopupCtrl(popups = popups) { doc ->
+            KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
+        }
+    }
+
+    private fun navToDoc(doc: KlangSymbol, event: dynamic) {
+        val uri = Nav.docsStrudelSearch("function:${doc.name}")
+        val pointerEvent = event as? org.w3c.dom.pointerevents.PointerEvent
+        if (pointerEvent?.shiftKey == true) {
+            router.navToUri(pointerEvent, uri)
+        } else {
+            router.navToUri(uri)
+        }
+    }
 
     init {
         lifecycle {
@@ -233,15 +249,6 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 }
             }
 
-            fun navToDoc(doc: KlangSymbol, event: PointerEvent) {
-                val uri = Nav.docsStrudelSearch("function:${doc.name}")
-                if (event.shiftKey) {
-                    router.navToUri(event, uri)
-                } else {
-                    router.navToUri(uri)
-                }
-            }
-
             // Code editor
             CodeMirrorComp(
                 code = currentCode,
@@ -252,8 +259,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 extraExtensions = listOf(
                     dslHoverTooltipExtension(
                         docProvider = { KlangDocsRegistry.global.get(it) },
-                        onNavigate = ::navToDoc,
-                        popups = popups,
+                        hoverPopup = hoverPopup,
                     ),
                     dslGoToDocsExtension(
                         docProvider = { KlangDocsRegistry.global.get(it) },

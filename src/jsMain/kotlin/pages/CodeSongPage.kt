@@ -31,6 +31,7 @@ import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
 import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
 import io.peekandpoke.klang.comp.FullscreenToggleButton
+import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.ast.SourceLocationChain
@@ -41,6 +42,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.playStrudel
+import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -127,6 +129,22 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     /** Current view: text editor or visual block editor. */
     private var editorMode by value(EditorMode.CODE)
+
+    private val hoverPopup: KlangDocsHoverPopupCtrl by lazy {
+        KlangDocsHoverPopupCtrl(popups = popups) { doc ->
+            KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
+        }
+    }
+
+    private fun navToDoc(doc: KlangSymbol, event: dynamic) {
+        val uri = Nav.docsStrudelSearch("function:${doc.name}")
+        val pointerEvent = event as? PointerEvent
+        if (pointerEvent?.shiftKey == true) {
+            router.navToUri(pointerEvent, uri)
+        } else {
+            router.navToUri(uri)
+        }
+    }
 
     private suspend fun getPlayer(): KlangPlayer {
         return Player.ensure().await()
@@ -397,15 +415,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         flexDirection = FlexDirection.column
                     }
 
-                    fun navToDoc(doc: KlangSymbol, event: PointerEvent) {
-                        val uri = Nav.docsStrudelSearch("function:${doc.name}")
-                        if (event.shiftKey) {
-                            router.navToUri(event, uri)
-                        } else {
-                            router.navToUri(uri)
-                        }
-                    }
-
                     when (editorMode) {
                         EditorMode.CODE -> {
                             CodeMirrorComp(
@@ -417,8 +426,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 extraExtensions = listOf(
                                     dslHoverTooltipExtension(
                                         docProvider = { KlangDocsRegistry.global.get(it) },
-                                        onNavigate = ::navToDoc,
-                                        popups = popups,
+                                        hoverPopup = hoverPopup,
                                     ),
                                     dslGoToDocsExtension(
                                         docProvider = { KlangDocsRegistry.global.get(it) },
@@ -435,6 +443,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 onCodeChanged = { newCode -> code = newCode },
                                 onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
                                 highlights = blocksHighlightBuffer.highlights,
+                                hoverPopup = hoverPopup,
                             ).track(blocksEditorRef)
                         }
                     }
