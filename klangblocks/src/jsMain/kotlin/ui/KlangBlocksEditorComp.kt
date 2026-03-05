@@ -111,6 +111,13 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
 
     private val keydownListener: (Event) -> Unit = listener@{ event ->
         val ke = event as? KeyboardEvent ?: return@listener
+
+        // Escape cancels any active drag.
+        if (ke.key == "Escape" && dragState != DragState.None) {
+            dragState = DragState.None
+            return@listener
+        }
+
         // CTRL held during a block drag → switch to tail mode
         if (ke.key == "Control") {
             val ds = dragState
@@ -146,6 +153,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         }
     }
 
+    private val contextmenuListener: (Event) -> Unit = listener@{ event ->
+        if (dragState == DragState.None) return@listener
+        event.preventDefault()
+        dragState = DragState.None
+    }
+
     init {
         lifecycle {
             onMount {
@@ -153,11 +166,13 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
                 props.onCodeGenChanged?.invoke(editingCtx.program.toCodeGen())
                 document.addEventListener("keydown", keydownListener)
                 document.addEventListener("keyup", keyupListener)
+                document.addEventListener("contextmenu", contextmenuListener)
             }
             onUnmount {
                 StyleSheets.unmount(props.theme.styles)
                 document.removeEventListener("keydown", keydownListener)
                 document.removeEventListener("keyup", keyupListener)
+                document.removeEventListener("contextmenu", contextmenuListener)
             }
         }
     }

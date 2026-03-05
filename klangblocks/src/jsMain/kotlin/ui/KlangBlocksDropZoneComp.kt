@@ -72,7 +72,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
 
     // ── Private idle-mode enum (internal implementation detail) ───────────────
 
-    private enum class IdleMode { Connector, Hidden, FloatIndicator }
+    private enum class IdleMode { Connector, Hidden, HiddenEnd, FloatIndicator }
 
     // ── Derived state ─────────────────────────────────────────────────────────
 
@@ -85,13 +85,11 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
             is Variant.InsertBeforeFirst -> IdleMode.Hidden
             is Variant.InsertBefore -> IdleMode.Connector
             is Variant.InsertAfterSegment -> IdleMode.FloatIndicator
-            is Variant.Append -> IdleMode.Connector // unused — append has its own render path
+            is Variant.Append -> IdleMode.HiddenEnd
         }
 
     private val hasNewlineBefore get() = (props.variant as? Variant.InsertBefore)?.hasNewlineBefore ?: false
     private val onToggleNewline get() = (props.variant as? Variant.InsertBefore)?.onToggleNewline
-
-    private val isInline get() = props.variant !is Variant.Append
 
     private val canDrop
         get() = when (props.variant) {
@@ -110,11 +108,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
     // ── Render ────────────────────────────────────────────────────────────────
 
     override fun VDom.render() {
-        if (isInline) {
-            renderInlineConnector()
-        } else {
-            renderAppendConnector()
-        }
+        renderInlineConnector()
     }
 
     private fun VDom.renderInlineConnector() {
@@ -144,6 +138,16 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                             marginLeft = (-10 + indent).px; marginRight = (-10).px
                         } else {
                             marginLeft = 0.px; marginRight = (-8).px
+                        }
+                    }
+
+                    // Same as Hidden but placed at chain end — left margin absorbs the gap.
+                    IdleMode.HiddenEnd -> {
+                        overflow = Overflow.hidden
+                        if (canDrop) {
+                            marginLeft = (-10).px; marginRight = (-10).px
+                        } else {
+                            marginLeft = (-8).px; marginRight = 0.px
                         }
                     }
 
@@ -189,6 +193,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
             idleMode == IdleMode.FloatIndicator && canDrop && isHovered -> expandedW + 20.0
             idleMode == IdleMode.FloatIndicator -> 0.0
             idleMode == IdleMode.Hidden && !canDrop -> 0.0
+            idleMode == IdleMode.HiddenEnd && !canDrop -> 0.0
             canDrop && isHovered -> expandedW + 20 - indent
             else -> (connectorW + indent).toDouble()
         }
@@ -224,9 +229,15 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
             css {
                 width = (if (canDrop && isHovered) expandedW else 24.0).px
                 height = 24.px
+                paddingLeft = 3.px
                 borderRadius = (if (canDrop && isHovered) 8 else 12).px
-                backgroundColor =
-                    Color(if (isHovered) props.ctx.theme.dropZoneBackgroundHover else props.ctx.theme.dropZoneBackground).withAlpha(0.9)
+                backgroundColor = Color(
+                    if (isHovered) {
+                        props.ctx.theme.dropZoneBackgroundHover
+                    } else {
+                        props.ctx.theme.dropZoneBackground
+                    }
+                ).withAlpha(0.9)
                 border = Border(1.px, BorderStyle.solid, Color(props.ctx.theme.dropZoneBorder))
                 display = Display.flex
                 alignItems = Align.center
@@ -238,7 +249,7 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                     "opacity 0.12s ease, width 0.5s ease, border-radius 0.15s ease, background-color 0.1s ease, border-color 0.1s ease"
                 )
             }
-            icon.tiny.with(props.ctx.theme.styles.dropZoneIconCls()).plus()
+            icon.small.with(props.ctx.theme.styles.dropZoneIconCls()).plus()
         }
     }
 
@@ -257,27 +268,6 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
         }
     }
 
-    private fun VDom.renderAppendConnector() {
-        val expandedW = (dndState?.ghostWidth ?: 80.0) + 20.0
-        div(classes = props.ctx.theme.styles.appendConnectorContainer()) {
-            key = domKey
-            css { cursor = if (canDrop) Cursor.copy else Cursor.default }
-            onMouseEnter { isHovered = true }
-            onMouseLeave { isHovered = false }
-            if (canDrop) {
-                onMouseOver { it.stopPropagation() }
-                onMouseUp { event ->
-                    event.stopPropagation()
-                    dndState!!.onDrop(DropDestination.ChainEnd(props.variant.chainId))
-                }
-            }
-            div(classes = props.ctx.theme.styles.appendDropIndicatorPos()) {
-                key = "drop-indicator"
-                renderDropIndicator(expandedW)
-            }
-        }
-    }
-
     private fun DIV.renderToggleNewlinePill() {
         span(classes = props.ctx.theme.styles.newlineAction()) {
             key = "toggle-newline"
@@ -289,9 +279,9 @@ class KlangBlocksDropZoneComp(ctx: Ctx<Props>) : Component<KlangBlocksDropZoneCo
                 onToggleNewline?.invoke()
             }
             if (hasNewlineBefore) {
-                icon.small.level_up_alternate()
+                icon.level_up_alternate()
             } else {
-                icon.small.level_down_alternate()
+                icon.level_down_alternate()
             }
         }
     }

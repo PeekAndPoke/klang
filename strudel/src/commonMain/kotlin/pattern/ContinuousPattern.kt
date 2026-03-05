@@ -17,9 +17,6 @@ class ContinuousPattern private constructor(
     companion object {
         val minKey = QueryContext.Key<Double>("rangeMin")
         val maxKey = QueryContext.Key<Double>("rangeMax")
-        val granularityKey = QueryContext.Key<Rational>("granularity")
-
-        val minGranularity = Rational(1 / 16.0)
 
         operator fun invoke(getValue: (from: Double) -> Double) =
             ContinuousPattern { from, _, _ -> getValue(from) }
@@ -43,11 +40,7 @@ class ContinuousPattern private constructor(
         ).asVoiceValue()
 
         // Make sure we do not run into an infinite loop
-        val granularity = maxOf(
-            minGranularity,
-            ctx.getOrDefault(granularityKey, (to - from))
-        )
-
+        val granularity = 1.0
         val result = createEventList()
         var currentFrom = from
 
