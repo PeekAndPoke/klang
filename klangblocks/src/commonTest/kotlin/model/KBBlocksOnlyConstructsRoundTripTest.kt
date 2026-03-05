@@ -8,9 +8,11 @@ import io.kotest.matchers.types.shouldBeInstanceOf
  * Round-trip tests for KlangBlocks-only chain items that have no direct
  * counterpart in a single AST node:
  *
- * - [KBStringLiteralItem] — string literal as chain receiver: `"C4".transpose(1)`
- * - [KBIdentifierItem]    — identifier as chain receiver: `sine.range(0.25, 0.75)`
- * - [KBBlankLine]         — blank line between statements
+ * - [KBStringLiteralItem]   — string literal as chain receiver: `"C4".transpose(1)`
+ * - [KBIdentifierItem]      — identifier as chain receiver: `sine.range(0.25, 0.75)`
+ * - [KBBlankLine]           — blank line between statements
+ * - [KBNewlineHint]         — `\n  .` line break between chained calls
+ * - [KBPocketLayout.VERTICAL] — multi-line argument layout inside a block
  */
 class KBBlocksOnlyConstructsRoundTripTest : StringSpec({
 
@@ -84,5 +86,53 @@ class KBBlocksOnlyConstructsRoundTripTest : StringSpec({
     "blank line generates an empty line in the output" {
         val src = "sound(\"bd\")\n\nnote(\"c3\")"
         roundTrip(src).generatedCode shouldBe src
+    }
+
+    // ── KBNewlineHint ─────────────────────────────────────────────────────────
+
+    "newline hint: multi-line chain round-trips" {
+        roundTrip("sound(\"bd\")\n  .gain(0.5)").shouldRoundTripWithCode()
+    }
+
+    "newline hint: longer multi-line chain round-trips" {
+        roundTrip("sound(\"bd\")\n  .gain(0.5)\n  .slow(2)").shouldRoundTripWithCode()
+    }
+
+    "newline hint: inserts KBNewlineHint between cross-line calls" {
+        val result = roundTrip("sound(\"bd\")\n  .gain(0.5)")
+        val steps = result.blocks.statements
+            .filterIsInstance<KBChainStmt>()
+            .first().steps
+        // [KBCallBlock(sound), KBNewlineHint, KBCallBlock(gain)]
+        steps.size shouldBe 3
+        steps[0].shouldBeInstanceOf<KBCallBlock>()
+        (steps[0] as KBCallBlock).funcName shouldBe "sound"
+        steps[1].shouldBeInstanceOf<KBNewlineHint>()
+        steps[2].shouldBeInstanceOf<KBCallBlock>()
+        (steps[2] as KBCallBlock).funcName shouldBe "gain"
+    }
+
+    "newline hint: generates correct multi-line code" {
+        roundTrip("sound(\"bd\")\n  .gain(0.5)").generatedCode shouldBe "sound(\"bd\")\n  .gain(0.5)"
+    }
+
+    // ── KBPocketLayout.VERTICAL ───────────────────────────────────────────────
+
+    "vertical layout: block with multiple args round-trips" {
+        roundTrip("sound(\n  \"bd\",\n  0.5\n)").shouldRoundTrip()
+    }
+
+    "vertical layout: produces KBPocketLayout.VERTICAL on the block" {
+        val result = roundTrip("sound(\n  \"bd\",\n  0.5\n)")
+        val block = result.blocks.statements
+            .filterIsInstance<KBChainStmt>()
+            .first().steps
+            .filterIsInstance<KBCallBlock>()
+            .first()
+        block.pocketLayout shouldBe KBPocketLayout.VERTICAL
+    }
+
+    "vertical layout: generates args on separate lines" {
+        roundTrip("sound(\n  \"bd\",\n  0.5\n)").generatedCode shouldBe "sound(\n  \"bd\",\n  0.5\n)"
     }
 })

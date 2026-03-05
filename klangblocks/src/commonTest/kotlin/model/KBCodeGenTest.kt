@@ -1343,4 +1343,130 @@ class KBCodeGenTest : StringSpec({
         result.blockRanges.containsKey(stmtId) shouldBe false
         result.findAt(1, 1) shouldBe null
     }
+
+    // ── Scalar arg types — no slot content tracking ───────────────────────────
+
+    "bool arg: position inside bool value resolves to block with no slot info" {
+        // play(true)
+        // 0:p, 1:l, 2:a, 3:y, 4:(, 5:t, 6:r, 7:u, 8:e, 9:)
+        val (program, result) = compile("play(true)")
+        val playId = program.allBlocks().first { it.funcName == "play" }.id
+
+        result.code shouldBe "play(true)"
+
+        // function name — block hit
+        result.findAt(1, 1)!!.blockId shouldBe playId
+
+        // inside 'true' — block hit, no slot content
+        result.findAt(1, 6)!!.let { hit ->
+            hit.blockId shouldBe playId
+            hit.slotIndex shouldBe null
+        }
+    }
+
+    "binary arg: positions inside binary expression resolve to block with no slot info" {
+        // sound(1 + 2)
+        // 0:s, 1:o, 2:u, 3:n, 4:d, 5:(, 6:1, 7: , 8:+, 9: , 10:2, 11:)
+        val (program, result) = compile("sound(1 + 2)")
+        val soundId = program.allBlocks().first { it.funcName == "sound" }.id
+
+        result.code shouldBe "sound(1 + 2)"
+
+        // inside '1' — block hit, no slot content
+        result.findAt(1, 7)!!.let { hit ->
+            hit.blockId shouldBe soundId
+            hit.slotIndex shouldBe null
+        }
+
+        // inside '+' — still in block range
+        result.findAt(1, 9)!!.let { hit ->
+            hit.blockId shouldBe soundId
+            hit.slotIndex shouldBe null
+        }
+    }
+
+    "unary arg: position inside unary expression resolves to block with no slot info" {
+        // play(-1)
+        // 0:p, 1:l, 2:a, 3:y, 4:(, 5:-, 6:1, 7:)
+        val (program, result) = compile("play(-1)")
+        val playId = program.allBlocks().first { it.funcName == "play" }.id
+
+        result.code shouldBe "play(-1)"
+
+        // inside '-1' — block hit, no slot content
+        result.findAt(1, 6)!!.let { hit ->
+            hit.blockId shouldBe playId
+            hit.slotIndex shouldBe null
+        }
+    }
+
+    "ternary arg: positions inside ternary expression resolve to block with no slot info" {
+        // sound(a ? 1 : 2)
+        // 0:s, 1:o, 2:u, 3:n, 4:d, 5:(, 6:a, 7: , 8:?, 9: , 10:1, 11: , 12::, 13: , 14:2, 15:)
+        val (program, result) = compile("sound(a ? 1 : 2)")
+        val soundId = program.allBlocks().first { it.funcName == "sound" }.id
+
+        result.code shouldBe "sound(a ? 1 : 2)"
+
+        // inside 'a' (ternary condition) — block hit, no slot content
+        result.findAt(1, 7)!!.let { hit ->
+            hit.blockId shouldBe soundId
+            hit.slotIndex shouldBe null
+        }
+
+        // inside '?' — block hit, no slot content
+        result.findAt(1, 9)!!.let { hit ->
+            hit.blockId shouldBe soundId
+            hit.slotIndex shouldBe null
+        }
+    }
+
+    "index access arg: positions inside index expression resolve to block with no slot info" {
+        // play(arr[0])
+        // 0:p, 1:l, 2:a, 3:y, 4:(, 5:a, 6:r, 7:r, 8:[, 9:0, 10:], 11:)
+        val (program, result) = compile("play(arr[0])")
+        val playId = program.allBlocks().first { it.funcName == "play" }.id
+
+        result.code shouldBe "play(arr[0])"
+
+        // inside 'arr' — block hit, no slot content
+        result.findAt(1, 6)!!.let { hit ->
+            hit.blockId shouldBe playId
+            hit.slotIndex shouldBe null
+        }
+
+        // inside '0' — block hit, no slot content
+        result.findAt(1, 10)!!.let { hit ->
+            hit.blockId shouldBe playId
+            hit.slotIndex shouldBe null
+        }
+    }
+
+    // ── KBAssignStmt — not tracked ────────────────────────────────────────────
+
+    "assign stmt: not tracked in blockRanges; findAt returns null at all positions" {
+        // x = 1
+        // 0:x, 1: , 2:=, 3: , 4:1
+        val (program, result) = compile("x = 1")
+        val assignId = program.statements.filterIsInstance<KBAssignStmt>().first().id
+
+        result.code shouldBe "x = 1"
+        result.blockRanges.containsKey(assignId) shouldBe false
+        result.findAt(1, 1) shouldBe null   // 'x'
+        result.findAt(1, 5) shouldBe null   // '1'
+    }
+
+    // ── KBExprStmt — not tracked ──────────────────────────────────────────────
+
+    "expr stmt: not tracked in blockRanges; findAt returns null at all positions" {
+        // x++
+        // 0:x, 1:+, 2:+
+        val (program, result) = compile("x++")
+        val exprId = program.statements.filterIsInstance<KBExprStmt>().first().id
+
+        result.code shouldBe "x++"
+        result.blockRanges.containsKey(exprId) shouldBe false
+        result.findAt(1, 1) shouldBe null   // 'x'
+        result.findAt(1, 2) shouldBe null   // first '+'
+    }
 })
