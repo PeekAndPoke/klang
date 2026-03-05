@@ -8,6 +8,7 @@ import de.peekandpoke.ultra.html.*
 import de.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.css.*
 import kotlinx.html.*
 import org.w3c.dom.Element
@@ -88,12 +89,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             blockContainerStyle(isTopLevel, docCategory, isVertical, canDropToSlot, canDropOnBlock)
             blockDragHandlers(ctx, block, isTopLevel, canDropToSlot, canDropOnBlock)
 
-            if (doc != null) {
-                onMouseEnter { event -> ctx.hoverPopup?.scheduleShow(doc, event) }
-                onMouseLeave { ctx.hoverPopup?.scheduleClose() }
-            }
-
-            renderFuncName(block)
+            renderFuncName(block, doc)
 
             slots.toRenderItems(block.args).forEachIndexed { index, item ->
                 div {
@@ -194,10 +190,15 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
 
     // ── Function name ─────────────────────────────────────────────────────────
 
-    private fun DIV.renderFuncName(block: KBCallBlock) {
+    private fun DIV.renderFuncName(block: KBCallBlock, doc: KlangSymbol?) {
         span(classes = props.ctx.theme.styles.blockFuncName()) {
             key = "func-name"
             +block.funcName
+
+            doc?.let {
+                onMouseEnter { event -> props.ctx.hoverPopup?.scheduleShow(doc, event) }
+                onMouseLeave { props.ctx.hoverPopup?.scheduleClose() }
+            }
         }
     }
 
