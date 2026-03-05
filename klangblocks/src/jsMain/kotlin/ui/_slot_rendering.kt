@@ -35,6 +35,8 @@ internal fun DIV.renderNestedChainSlot(
                     onCommit = {
                         ctx.editing.onStringLiteralItemChanged(chain.id, it)
                     },
+                    blockId = chain.id,
+                    slotIndex = 0,
                 )
             }
         }

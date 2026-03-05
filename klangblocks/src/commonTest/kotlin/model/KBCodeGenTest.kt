@@ -702,29 +702,55 @@ class KBCodeGenTest : StringSpec({
 
     // ── String-headed chain ───────────────────────────────────────────────────
 
-    "string-headed chain: head text is not tracked; block offsets shift by head length" {
+    "string-headed chain: head text is tracked with the chain id; block offsets unchanged" {
         // "C4".transpose(1).slow(2)
         //
-        // KBStringLiteralItem("C4") prepends "\"C4\"." (5 chars, 0–4) to the
-        // generated code.  This prefix has NO block range — positions on the
-        // head return null.  The first block (transpose) begins at char 5.
+        // KBStringLiteralItem("C4") is now wrapped in trackBlock(chainId) and
+        // trackSlotContent(chainId, 0, 1..2).  The chain itself is the top-level
+        // KBChainStmt; positions on the head return chainId.
         //
         // Char layout:
-        //   "=0, C=1, 4=2, "=3, .=4             ← string head, not tracked
+        //   "=0, C=1, 4=2, "=3                   ← chain id, slot 0 content = chars 1..2
+        //   .=4                                   ← separator, null
         //   t=5..e=13, (=14, 1=15, )=16          ← transpose block 5..16
         //   .=17
         //   s=18..w=21, (=22, 2=23, )=24         ← slow block 18..24
 
         val (program, result) = compile(""""C4".transpose(1).slow(2)""")
+        val chainId = program.statements.filterIsInstance<KBChainStmt>().first().id
         val transposeId = program.allBlocks().first { it.funcName == "transpose" }.id
         val slowId = program.allBlocks().first { it.funcName == "slow" }.id
 
         result.code shouldBe """"C4".transpose(1).slow(2)"""
 
-        // Positions inside the string head — NOT inside any block
-        result.findAt(1, 1) shouldBe null   // '"'
-        result.findAt(1, 3) shouldBe null   // '4'
-        result.findAt(1, 5) shouldBe null   // '.' after "C4"
+        // Opening '"' — inside chainId block range, not in slot content
+        result.findAt(1, 1)!!.let { hit ->
+            hit.blockId shouldBe chainId
+            hit.slotIndex shouldBe null
+        }
+
+        // 'C' — inside slot content, offsetInSlot=0
+        result.findAt(1, 2)!!.let { hit ->
+            hit.blockId shouldBe chainId
+            hit.slotIndex shouldBe 0
+            hit.offsetInSlot shouldBe 0
+        }
+
+        // '4' — inside slot content, offsetInSlot=1
+        result.findAt(1, 3)!!.let { hit ->
+            hit.blockId shouldBe chainId
+            hit.slotIndex shouldBe 0
+            hit.offsetInSlot shouldBe 1
+        }
+
+        // Closing '"' — inside chainId block range, not in slot content
+        result.findAt(1, 4)!!.let { hit ->
+            hit.blockId shouldBe chainId
+            hit.slotIndex shouldBe null
+        }
+
+        // '.' separator — not inside any block range
+        result.findAt(1, 5) shouldBe null
 
         // First char of transpose block
         result.findAt(1, 6)!!.blockId shouldBe transposeId   // 't'

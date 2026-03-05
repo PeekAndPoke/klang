@@ -233,10 +233,17 @@ private fun KBChainStmt.appendTo(builder: CodeBuilder) {
     // Emit string/identifier head without a trailing dot — the separator loop handles it.
     when (val head = steps.firstOrNull()) {
         is KBStringLiteralItem -> {
-            val escaped = head.value
+            val multiline = '\n' in head.value || '\r' in head.value
+            val escaped = if (multiline) head.value else head.value
                 .replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "\\r")
-            builder.append("\"$escaped\"")
+            builder.trackBlock(id) {
+                append(if (multiline) "`" else "\"")
+                val contentStart = length
+                append(escaped)
+                trackSlotContent(id, 0, contentStart until length)
+                append(if (multiline) "`" else "\"")
+            }
         }
 
         is KBIdentifierItem -> builder.append(head.name)
