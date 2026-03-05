@@ -418,6 +418,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                     dslHoverTooltipExtension(
                                         docProvider = { KlangDocsRegistry.global.get(it) },
                                         onNavigate = ::navToDoc,
+                                        popups = popups,
                                     ),
                                     dslGoToDocsExtension(
                                         docProvider = { KlangDocsRegistry.global.get(it) },

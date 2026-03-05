@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
@@ -252,6 +253,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     dslHoverTooltipExtension(
                         docProvider = { KlangDocsRegistry.global.get(it) },
                         onNavigate = ::navToDoc,
+                        popups = popups,
                     ),
                     dslGoToDocsExtension(
                         docProvider = { KlangDocsRegistry.global.get(it) },
