@@ -146,12 +146,14 @@ internal class StrudelPlaybackController(
             }
 
             is KlangCommLink.Feedback.Diagnostics -> {
-                // Ignore - diagnostics are handled at player level
+                val rawOffset = (feedback.backendNowMs - klangTime.internalMsNow()) + feedback.outputLatencyMs
+                // EMA α=0.05: ~1 second convergence at 20 Hz; smooths message-transit jitter
+                backendLatencyMs = backendLatencyMs * 0.95 + rawOffset * 0.05
             }
 
             is KlangCommLink.Feedback.PlaybackLatency -> {
                 backendLatencyMs = feedback.backendTimestampMs - startTimeMs
-                backendLatencyMs = backendLatencyMs.coerceIn(0.0, 5000.0)
+                backendLatencyMs = backendLatencyMs.coerceIn(-5000.0, 5000.0)
             }
 
             is KlangCommLink.Feedback.SampleReceived -> {

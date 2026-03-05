@@ -438,7 +438,8 @@ class VoiceScheduler(
                     playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID, // System-wide diagnostics
                     renderHeadroom = avgHeadroom,
                     activeVoiceCount = active.size,
-                    orbits = orbitStates
+                    orbits = orbitStates,
+                    backendNowMs = endMs,
                 )
             )
 

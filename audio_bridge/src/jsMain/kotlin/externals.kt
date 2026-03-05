@@ -12,6 +12,12 @@ external class AudioContext(options: AudioContextOptions = definedExternally) {
     val destination: AudioNode
     val state: String
     val sampleRate: Float
+
+    /** Estimated latency of the current output device in seconds (hardware buffer → speakers). */
+    val outputLatency: Double
+
+    /** Estimated latency added by the browser's audio processing pipeline in seconds. */
+    val baseLatency: Double
     fun resume(): Promise<Unit>
     fun close(): Promise<Unit>
     fun decodeAudioData(audioData: ArrayBuffer): Promise<AudioBuffer>
