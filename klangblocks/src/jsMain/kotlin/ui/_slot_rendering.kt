@@ -15,7 +15,7 @@ import org.w3c.dom.Element
 
 /**
  * Renders a nested chain slot container, including the chain segments inside it.
- * Used by both [KlangBlocksBlockComp] and [KlangBlocksLetStmtComp].
+ * Used by both [KlangBlocksBlockComp] and [KlangBlocksVariableStmtComp].
  */
 internal fun DIV.renderNestedChainSlot(
     chain: KBChainStmt,
@@ -85,7 +85,7 @@ internal fun DIV.renderNestedChainSlot(
 
 /**
  * Renders the inline edit `<input>` used when editing a non-string block slot.
- * Used by both [KlangBlocksBlockComp] and [KlangBlocksLetStmtComp].
+ * Used by both [KlangBlocksBlockComp] and [KlangBlocksVariableStmtComp].
  */
 internal fun DIV.renderBlockEditInput(
     theme: KlangBlocksTheme,

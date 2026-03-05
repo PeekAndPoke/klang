@@ -101,11 +101,11 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             }
 
                             is KBLetStmt -> {
-                                KlangBlocksLetStmtComp(stmt = stmt, ctx = ctx)
+                                KlangBlocksVariableStmtComp(stmt = stmt, ctx = ctx)
                             }
 
                             is KBConstStmt -> {
-                                KlangBlocksLetStmtComp(stmt = stmt, ctx = ctx)
+                                KlangBlocksVariableStmtComp(stmt = stmt, ctx = ctx)
                             }
 
                             is KBAssignStmt -> {

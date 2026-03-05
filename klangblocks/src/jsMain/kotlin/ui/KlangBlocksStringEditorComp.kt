@@ -5,9 +5,7 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
-import de.peekandpoke.ultra.streams.ops.filter
 import kotlinx.browser.document
-import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.html.Tag
@@ -60,12 +58,9 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
 
     // Reactive: triggers re-render on change.
     private var isEditing: Boolean by value(false)
-    private var activeAtoms: Set<KlangBlockAtomKey> by value(emptySet())
-
     // Non-reactive: changes here never trigger re-renders.
     private var editText: String = props.value
     private var isCancelling: Boolean = false
-    private val atomTimeouts = mutableMapOf<KlangBlockAtomKey, Int>()
     private var pendingCursorOffset: Int? = null
 
     // Set to true only on the display→edit transition; cleared after the first onUpdate.
@@ -88,21 +83,9 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
         }
     }
 
-    @Suppress("unused")
-    private val highlightSub by subscribingTo(
-        props.ctx.highlights.filter { signal ->
-            signal?.blockId == props.blockId && signal?.slotIndex == props.slotIndex
-        }
-    ) { signal ->
-        if (signal != null && props.blockId != null) {
-            val key = KlangBlockAtomKey(signal.slotIndex, signal.atomStart, signal.atomEnd)
-            atomTimeouts[key]?.let { window.clearTimeout(it) }
-            activeAtoms = activeAtoms + key
-            atomTimeouts[key] = window.setTimeout({
-                activeAtoms = activeAtoms - key
-                atomTimeouts.remove(key)
-            }, signal.durationMs.toInt())
-        }
+    /** Subscribe to highlights signals */
+    private val highlights = highlights(props.ctx.highlights) { signal ->
+        props.blockId != null && signal?.blockId == props.blockId && signal?.slotIndex == props.slotIndex
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────
@@ -140,7 +123,7 @@ class KlangBlocksStringEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksString
     // ── Display mode — span with highlight spans ──────────────────────────────
 
     private fun VDom.renderDisplay(theme: KlangBlocksTheme) {
-        val atomRanges = activeAtoms
+        val atomRanges = highlights.activeAtoms
             .filter { it.atomStart != null && it.atomEnd != null }
             .map { it.atomStart!! until it.atomEnd!! }
             .sortedBy { it.first }

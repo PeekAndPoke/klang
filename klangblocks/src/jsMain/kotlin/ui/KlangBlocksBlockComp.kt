@@ -6,10 +6,8 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
 import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.streams.ops.filter
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.*
 import org.w3c.dom.Element
@@ -44,25 +42,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
     private var editText: String by value("")
     private var isHovered: Boolean by value(false)
 
-    // Each active atom has its own fade-out timer so concurrent atoms don't cancel each other.
-    private var activeAtoms: Set<KlangBlockAtomKey> by value(emptySet())
-    private val atomTimeouts = mutableMapOf<KlangBlockAtomKey, Int>()  // non-reactive bookkeeping
-
-    @Suppress("unused")
-    private val highlightSub by subscribingTo(
-        props.ctx.highlights.filter { it?.blockId == props.block.id }
-    ) { signal ->
-        if (signal != null) {
-            val key = KlangBlockAtomKey(signal.slotIndex, signal.atomStart, signal.atomEnd)
-            // Cancel any existing fade-out for the same atom before restarting it.
-            atomTimeouts[key]?.let { window.clearTimeout(it) }
-            activeAtoms = activeAtoms + key
-            atomTimeouts[key] = window.setTimeout({
-                activeAtoms = activeAtoms - key
-                atomTimeouts.remove(key)
-            }, signal.durationMs.toInt())
-        }
-    }
+    private val highlights = highlights(props.ctx.highlights) { it?.blockId == props.block.id }
 
     private fun startEdit(slotIndex: Int, currentText: String) {
         editingSlotIndex = slotIndex
@@ -142,7 +122,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             borderRadius = 8.px
             backgroundColor = Color(props.ctx.theme.blockColor(docCategory))
             fontSize = 13.px
-            if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
+            if (highlights.activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
             if (canDropOnBlock) {
                 if (isHovered) {
                     put("outline", "2px solid ${props.ctx.theme.blockDropHoverOutline}")
@@ -329,7 +309,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             when (arg) {
                 null, is KBEmptyArg -> +"[${slot.name}]"
                 is KBStringArg -> {
-                    val atomRanges = activeAtoms
+                    val atomRanges = highlights.activeAtoms
                         .filter { it.slotIndex == index && it.atomStart != null && it.atomEnd != null }
                         .map { it.atomStart!! until it.atomEnd!! }
                         .sortedBy { it.first }

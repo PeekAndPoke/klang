@@ -5,9 +5,7 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
-import de.peekandpoke.ultra.streams.ops.filter
 import io.peekandpoke.klang.blocks.model.*
-import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.DIV
 import kotlinx.html.Tag
@@ -16,11 +14,11 @@ import kotlinx.html.span
 import org.w3c.dom.Element
 
 @Suppress("FunctionName")
-fun Tag.KlangBlocksLetStmtComp(
+fun Tag.KlangBlocksVariableStmtComp(
     stmt: KBLetStmt,
     ctx: KlangBlocksCtx,
 ) = comp(
-    KlangBlocksLetStmtComp.Props(
+    KlangBlocksVariableStmtComp.Props(
         stmtId = stmt.id,
         stmt = stmt,
         keyword = "let",
@@ -28,14 +26,14 @@ fun Tag.KlangBlocksLetStmtComp(
         value = stmt.value,
         ctx = ctx,
     )
-) { KlangBlocksLetStmtComp(it) }
+) { KlangBlocksVariableStmtComp(it) }
 
 @Suppress("FunctionName")
-fun Tag.KlangBlocksLetStmtComp(
+fun Tag.KlangBlocksVariableStmtComp(
     stmt: KBConstStmt,
     ctx: KlangBlocksCtx,
 ) = comp(
-    KlangBlocksLetStmtComp.Props(
+    KlangBlocksVariableStmtComp.Props(
         stmtId = stmt.id,
         stmt = stmt,
         keyword = "const",
@@ -43,9 +41,9 @@ fun Tag.KlangBlocksLetStmtComp(
         value = stmt.value,
         ctx = ctx,
     )
-) { KlangBlocksLetStmtComp(it) }
+) { KlangBlocksVariableStmtComp(it) }
 
-class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp.Props>(ctx) {
+class KlangBlocksVariableStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksVariableStmtComp.Props>(ctx) {
 
     data class Props(
         val stmtId: String,
@@ -59,27 +57,10 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
     private var isEditing: Boolean by value(false)
     private var editText: String by value("")
     private var isHovered: Boolean by value(false)
-    private var activeAtoms: Set<KlangBlockAtomKey> by value(emptySet())
-    private val atomTimeouts = mutableMapOf<KlangBlockAtomKey, Int>()
-
-    @Suppress("unused")
-    private val highlightSub by subscribingTo(
-        props.ctx.highlights.filter { it?.blockId == props.stmtId }
-    ) { signal ->
-        if (signal != null) {
-            val key = KlangBlockAtomKey(signal.slotIndex, signal.atomStart, signal.atomEnd)
-            atomTimeouts[key]?.let { window.clearTimeout(it) }
-            activeAtoms = activeAtoms + key
-            atomTimeouts[key] = window.setTimeout({
-                activeAtoms = activeAtoms - key
-                atomTimeouts.remove(key)
-            }, signal.durationMs.toInt())
-        }
-    }
+    private val highlights = highlights(props.ctx.highlights) { it?.blockId == props.stmtId }
 
     private fun startEdit() {
         val currentText = when (val v = props.value) {
-            is KBStringArg -> v.value
             is KBNumberArg -> {
                 val l = v.value.toLong()
                 if (v.value == l.toDouble()) l.toString() else v.value.toString()
@@ -126,7 +107,7 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
                 padding = Padding(horizontal = 10.px, vertical = 5.px)
                 borderRadius = 8.px
                 fontSize = 13.px
-                if (activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
+                if (highlights.activeAtoms.isNotEmpty()) put("filter", "brightness(1.4)")
             }
             onMouseOver { event ->
                 if (ctx.dnd.state == null) event.stopPropagation()
@@ -160,6 +141,13 @@ class KlangBlocksLetStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksLetStmtComp
             // Value slot
             when {
                 value is KBNestedChainArg -> renderNestedChainSlot(value, ctx, canDrop)
+                value is KBStringArg && !canDrop -> KlangBlocksStringEditorComp(
+                    value = value.value,
+                    ctx = ctx,
+                    onCommit = { ctx.editing.onArgChanged(props.stmtId, 0, KBStringArg(it)) },
+                    blockId = props.stmtId,
+                    slotIndex = 0,
+                )
                 isEditing -> renderEditingSlot()
                 else -> renderValueSlot(value, canDrop, ctx)
             }
