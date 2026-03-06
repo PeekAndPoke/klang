@@ -369,7 +369,24 @@ fun String.sound(): StrudelPattern = this._sound(emptyList())
 @StrudelDsl
 fun sound(name: PatternLike): StrudelPattern = _sound(listOf(name).asStrudelDslArgs())
 
-/** Alias for [sound]. Sets the sound/instrument on this pattern. */
+/** Alias for [sound]. Creates a pattern selecting a sound (instrument or sample bank) by name.
+ *
+ * Each event's value selects the instrument or sample bank used during playback.
+ * The format `"name:index"` also sets the sample index, e.g. `"bd:2"` selects sample 2
+ * from the `bd` bank.
+ *
+ * ```KlangScript
+ * sound("bd sd hh")  // basic drum pattern
+ * ```
+ *
+ * ```KlangScript
+ * sound("bd bd bd bd ").n("0 1 2 3")  // changes the sound variants
+ * ```
+ *
+ * @alias sound
+ * @category tonal
+ * @tags sound, sample, instrument, s, pattern-creator
+ */
 @StrudelDsl
 fun StrudelPattern.s(name: PatternLike): StrudelPattern = this._s(listOf(name).asStrudelDslArgs())
 

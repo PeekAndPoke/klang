@@ -3,6 +3,7 @@ package io.peekandpoke.klang.codetools
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.forms.formController
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -16,6 +17,7 @@ import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.unsafe
 
 // ── Registration helper ───────────────────────────────────────────────────────
 
@@ -40,6 +42,8 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
 
     // ── Parse current value from raw source text ──────────────────────────────
 
+    private val formCtrl = formController()
+
     private val parsed = run {
         val raw = props.toolCtx.currentValue
             ?.trim()
@@ -60,7 +64,8 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     private var sustain by value(parsed[2])
     private var release by value(parsed[3])
 
-    private var currentValue by value(props.toolCtx.currentValue ?: "")
+    private val initialValue = props.toolCtx.currentValue ?: ""
+    private var currentValue by value(initialValue)
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -70,10 +75,22 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     private fun buildValue(): String =
         "\"${attack.fmt()}:${decay.fmt()}:${sustain.fmt()}:${release.fmt()}\""
 
-    private val isModified get() = currentValue != buildValue()
+    private val isInitialModified get() = initialValue != buildValue()
+
+    private val isCurrentModified get() = currentValue != buildValue()
 
     private fun onCancel() {
         props.toolCtx.onCancel()
+    }
+
+    private fun onReset() {
+        currentValue = initialValue
+        attack = parsed[0]
+        decay = parsed[1]
+        sustain = parsed[2]
+        release = parsed[3]
+        formCtrl.resetAllFields()
+        props.toolCtx.onCommit(currentValue)
     }
 
     private fun onCommit() {
@@ -101,6 +118,13 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
             ui.divider {}
 
             div {
+                css { marginBottom = 1.rem }
+                unsafe { raw(buildAdsrSvg()) }
+            }
+
+            ui.divider {}
+
+            div {
                 css {
                     display = Display.flex
                     justifyContent = JustifyContent.flexEnd
@@ -112,13 +136,67 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
                     icon.times()
                     +"Cancel"
                 }
-                ui.black.givenNot(isModified) { disabled }.button {
+
+                ui.basic.givenNot(isInitialModified) { disabled }.button {
+                    onClick { onReset() }
+                    icon.undo()
+                    +"Reset"
+                }
+
+                ui.black.givenNot(isCurrentModified) { disabled }.button {
                     onClick { onCommit() }
                     icon.check()
                     +"Update"
                 }
             }
         }
+    }
+
+    // ── SVG curve ─────────────────────────────────────────────────────────────
+
+    private fun buildAdsrSvg(): String {
+        val w = 560.0
+        val h = 120.0
+        val padL = 12.0;
+        val padR = 12.0
+        val padT = 10.0;
+        val padB = 22.0
+        val drawW = w - padL - padR
+        val drawH = h - padT - padB
+
+        // Sustain hold is a fixed visual segment so the shape is always readable
+        val sustainHold = maxOf(attack + decay, 0.3)
+        val totalTime = attack + decay + sustainHold + release
+        val scale = drawW / totalTime
+
+        val x0 = padL
+        val x1 = x0 + attack * scale
+        val x2 = x1 + decay * scale
+        val x3 = x2 + sustainHold * scale
+        val x4 = x3 + release * scale
+
+        val yBot = padT + drawH
+        val yTop = padT
+        val ySus = padT + drawH * (1.0 - sustain.coerceIn(0.0, 1.0))
+
+        val pts = "$x0,$yBot $x1,$yTop $x2,$ySus $x3,$ySus $x4,$yBot"
+        val fill = "M$x0 ${yBot}L$x1 ${yTop}L$x2 ${ySus}L$x3 ${ySus}L$x4 ${yBot}Z"
+
+        fun lx(x: Double) = """<line x1="$x" y1="$yBot" x2="$x" y2="$yTop" stroke="#e8e8e8" stroke-width="1" stroke-dasharray="3,3"/>"""
+        fun label(x: Double, txt: String) = """<text x="$x" y="${h - 5}" text-anchor="middle" font-size="10" fill="#aaa">$txt</text>"""
+
+        return """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $w $h" width="100%" style="display:block">
+              ${lx(x1)} ${lx(x2)} ${lx(x3)}
+              <line x1="$x0" y1="$ySus" x2="$x4" y2="$ySus" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4"/>
+              <path d="$fill" fill="rgba(33,133,208,0.12)" stroke="none"/>
+              <polyline points="$pts" fill="none" stroke="#2185d0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              ${label((x0 + x1) / 2, "A")}
+              ${label((x1 + x2) / 2, "D")}
+              ${label((x2 + x3) / 2, "S")}
+              ${label((x3 + x4) / 2, "R")}
+            </svg>
+        """.trimIndent()
     }
 
     private fun FlowContent.adsrRow(

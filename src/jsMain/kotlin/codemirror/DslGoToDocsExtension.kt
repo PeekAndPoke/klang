@@ -146,6 +146,15 @@ fun dslEditorExtension(
                     if (func != null) noui.divider {}
                     argInfo.tools.forEach { (toolName, _) ->
                         item("Open $toolName\u2026") {
+                            // argTo is tracked as a mutable local because the tool can commit
+                            // multiple times (e.g. the user tweaks values and hits Update
+                            // repeatedly without closing the modal). Each commit may insert a
+                            // result of a different length than the previous one, shifting all
+                            // subsequent document positions. argFrom never moves (it is always
+                            // the start of the argument), but argTo must be updated to
+                            // argFrom + result.length after every commit so the next commit
+                            // replaces exactly the text that was just written.
+                            var argTo = argInfo.argTo
                             val ctx = KlangUiToolContext(
                                 symbol = argInfo.symbol,
                                 paramName = argInfo.paramName,
@@ -155,11 +164,12 @@ fun dslEditorExtension(
                                         view.state.update(jsObject {
                                             this.changes = jsObject<dynamic> {
                                                 this.from = argInfo.argFrom
-                                                this.to = argInfo.argTo
+                                                this.to = argTo
                                                 this.insert = result
                                             }
                                         })
                                     )
+                                    argTo = argInfo.argFrom + result.length
                                 },
                                 onCancel = {},
                             )

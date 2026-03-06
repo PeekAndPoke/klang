@@ -88,6 +88,21 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                     }
                 }
 
+                // ── Aliases ───────────────────────────────────────────────────────
+                if (symbol.aliases.isNotEmpty()) {
+                    noui.item {
+                        sectionLabel("Aliases")
+                        noui.content {
+                            ui.horizontal.list {
+                                symbol.aliases.forEach { alias ->
+                                    noui.item {
+                                        +alias
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 // ── Examples ───────────────────────────────────────────────────────
                 noui.item {
                     if (firstSample != null) {
