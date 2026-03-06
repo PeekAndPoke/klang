@@ -21,6 +21,7 @@ kotlin {
         jsMain {
             dependencies {
                 api(project(":klangscript"))
+                api(project(":tones"))
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)
             }

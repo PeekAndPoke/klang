@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.codetools
+package io.peekandpoke.klang.ui.codetools
 
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp

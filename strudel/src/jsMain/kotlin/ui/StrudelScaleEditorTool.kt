@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.codetools
+package io.peekandpoke.klang.strudel.ui
 
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
@@ -12,11 +12,11 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.comp.NoteStaffComp
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.tones.scale.ScaleTypeDictionary
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.comp.NoteStaffComp
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.css.*
 import kotlinx.html.FlowContent

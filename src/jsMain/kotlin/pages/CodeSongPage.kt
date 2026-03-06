@@ -30,7 +30,6 @@ import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.dslEditorExtension
-import io.peekandpoke.klang.codetools.CodeToolModal
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
@@ -46,6 +45,7 @@ import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
+import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
